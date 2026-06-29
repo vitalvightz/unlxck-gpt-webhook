@@ -168,22 +168,22 @@
           ]
         },
         {
+          "name": "Band-Resisted Straight Punch Release",
+          "score": 1.8825,
+          "reason_codes": [
+            "taper_plyometric_guarantee",
+            "late_conditioning_boost_alactic_sharpness",
+            "late_conditioning_boost_structured_freshness",
+            "late_conditioning_boost_window_fit"
+          ]
+        },
+        {
           "name": "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
           "score": 0.9875,
           "reason_codes": [
             "bridge_glycolytic_touch_fallback",
             "late_conditioning_boost_freshness",
             "late_conditioning_penalty_fight_pace_leak",
-            "late_conditioning_boost_structured_freshness",
-            "late_conditioning_boost_window_fit"
-          ]
-        },
-        {
-          "name": "Band-Resisted Straight Punch Release",
-          "score": 1.8825,
-          "reason_codes": [
-            "taper_plyometric_guarantee",
-            "late_conditioning_boost_alactic_sharpness",
             "late_conditioning_boost_structured_freshness",
             "late_conditioning_boost_window_fit"
           ]
@@ -682,6 +682,20 @@
           ]
         },
         {
+          "name": "Band-Resisted Straight Punch Release",
+          "score": 0.0,
+          "reason_codes": [
+            "late_conditioning_block_band_work_lockout"
+          ]
+        },
+        {
+          "name": "Band-Resisted Vertical Jump",
+          "score": 0.0,
+          "reason_codes": [
+            "late_conditioning_block_band_work_lockout"
+          ]
+        },
+        {
           "name": "Cooldown Flow (Striking + Mobility)",
           "score": 3.2575,
           "reason_codes": [
@@ -783,7 +797,17 @@
         }
       ]
     },
-    "ambiguous_tag_gaps": []
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Low Box Jump (Fast Reset)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive",
+          "plyometric"
+        ]
+      }
+    ]
   },
   "d6_to_d5": {
     "strength": {
@@ -1003,6 +1027,20 @@
           ]
         },
         {
+          "name": "Band-Resisted Straight Punch Release",
+          "score": 0.0,
+          "reason_codes": [
+            "late_conditioning_block_band_work_lockout"
+          ]
+        },
+        {
+          "name": "Band-Resisted Vertical Jump",
+          "score": 0.0,
+          "reason_codes": [
+            "late_conditioning_block_band_work_lockout"
+          ]
+        },
+        {
           "name": "Cooldown Flow (Striking + Mobility)",
           "score": 3.2725,
           "reason_codes": [
@@ -1104,7 +1142,17 @@
         }
       ]
     },
-    "ambiguous_tag_gaps": []
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Low Box Jump (Fast Reset)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive",
+          "plyometric"
+        ]
+      }
+    ]
   },
   "d4_to_d2": {
     "strength": {
@@ -1398,6 +1446,20 @@
           ]
         },
         {
+          "name": "Band-Resisted Straight Punch Release",
+          "score": 0.0,
+          "reason_codes": [
+            "late_conditioning_block_band_work_lockout"
+          ]
+        },
+        {
+          "name": "Band-Resisted Vertical Jump",
+          "score": 0.0,
+          "reason_codes": [
+            "late_conditioning_block_band_work_lockout"
+          ]
+        },
+        {
           "name": "Cooldown Flow (Striking + Mobility)",
           "score": 3.2875,
           "reason_codes": [
@@ -1514,7 +1576,17 @@
         }
       ]
     },
-    "ambiguous_tag_gaps": []
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Low Box Jump (Fast Reset)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive",
+          "plyometric"
+        ]
+      }
+    ]
   },
   "d1": {
     "strength": {

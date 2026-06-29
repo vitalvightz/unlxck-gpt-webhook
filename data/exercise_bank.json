@@ -3875,7 +3875,8 @@
       "rehab_friendly",
       "low_impact",
       "low_eccentric",
-      "cns_freshness"
+      "cns_freshness",
+      "mobility"
     ],
     "equipment": "bands",
     "movement_cost": "low",
@@ -3916,7 +3917,8 @@
     "type": "unilateral",
     "tags": [
       "quad_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "bench",
     "movement_cost": "low",
@@ -4013,7 +4015,8 @@
     "type": "unilateral",
     "tags": [
       "hip_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "bands",
     "movement_cost": "low",
@@ -4043,7 +4046,8 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "wall",
     "movement_cost": "low",
@@ -4074,7 +4078,8 @@
     "tags": [
       "core",
       "rehab_friendly",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mobility"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
@@ -4106,7 +4111,8 @@
     "type": "unilateral",
     "tags": [
       "hip_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
@@ -4141,7 +4147,8 @@
       "mech_trunk_stability",
       "low_impact",
       "low_eccentric",
-      "cns_freshness"
+      "cns_freshness",
+      "mobility"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
@@ -12035,7 +12042,8 @@
       "low_soreness",
       "taper_micro_support",
       "no_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12100,7 +12108,8 @@
       "d1_ok",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12166,7 +12175,8 @@
       "boxer_stance",
       "d1_if_familiar",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12231,7 +12241,8 @@
       "d1_ok",
       "balance_static",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12297,7 +12308,8 @@
       "d1_ok",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12362,7 +12374,8 @@
       "boxer_stance",
       "d1_if_familiar",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12426,7 +12439,8 @@
       "wall_supported",
       "d1_ok",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12490,7 +12504,8 @@
       "scap_control",
       "d1_ok",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12555,7 +12570,8 @@
       "wall_supported",
       "d1_ok",
       "shoulder_readiness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12621,7 +12637,8 @@
       "d1_ok",
       "shoulder_readiness",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12687,7 +12704,8 @@
       "low_soreness",
       "taper_micro_support",
       "no_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12753,7 +12771,8 @@
       "no_high_cut",
       "no_d4_to_d1",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12814,7 +12833,8 @@
       "no_d1",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12878,7 +12898,8 @@
       "no_d1",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12942,7 +12963,8 @@
       "familiarity_preferred",
       "no_d4_to_d1",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13002,7 +13024,8 @@
       "hip_control",
       "familiarity_required",
       "no_d4_to_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13064,7 +13087,8 @@
       "balance_challenge",
       "familiarity_required",
       "no_d7_to_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13124,7 +13148,8 @@
       "t_spine_rotation",
       "no_d1",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13186,7 +13211,8 @@
     "tags": [
       "t_spine_rotation",
       "no_d4_to_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13247,7 +13273,8 @@
     "tags": [
       "t_spine_rotation",
       "no_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13312,7 +13339,8 @@
       "anti_extension",
       "low_soreness",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13376,7 +13404,8 @@
       "light_band",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bands"
@@ -13440,7 +13469,8 @@
       "no_high_cut",
       "boxer_footwork",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13504,7 +13534,8 @@
       "no_d4_to_d1",
       "boxer_footwork",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13568,7 +13599,8 @@
       "no_d1",
       "balance_static",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13633,7 +13665,8 @@
       "no_d1",
       "balance_static",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13698,7 +13731,8 @@
       "d1_if_familiar",
       "no_high_cut",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13763,7 +13797,8 @@
       "no_d4_to_d1",
       "no_high_cut",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13826,7 +13861,8 @@
       "light_band",
       "no_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bands"
@@ -13889,7 +13925,8 @@
       "shoulder_mobility",
       "no_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13952,7 +13989,8 @@
       "serratus",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14015,7 +14053,8 @@
       "daily_rehab_only",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14078,7 +14117,8 @@
       "daily_rehab_only",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14141,7 +14181,8 @@
       "familiarity_required",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14202,7 +14243,8 @@
       "familiarity_required",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14263,7 +14305,8 @@
       "familiarity_required",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"

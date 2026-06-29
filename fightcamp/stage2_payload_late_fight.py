@@ -3,6 +3,7 @@ import logging
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
+from .performance_bias import BRIDGE_EXTRA_EXPOSURE_DAY_RANGE, bridge_low_risk_profile
 
 from itertools import combinations, permutations
 from typing import Any
@@ -753,18 +754,18 @@ def _bridge_target_active_roles(
     days = bridge_rules.get("days_until_fight") or 0
     fatigue = str(bridge_rules.get("fatigue") or "").strip().lower()
     cut = str(bridge_rules.get("weight_cut_bucket") or "").strip().lower()
-    hard_cap = bridge_rules.get("hard_sparring_cap") or 0
-    glycolytic_max = bridge_rules.get("glycolytic_touch_max") or 0
 
     if cut in {"high", "critical", "extreme"} or fatigue in {"high", "critical", "extreme"}:
         return 1
 
-    if 19 <= days <= 21:
-        if fatigue in {"none", "low"} and cut in {"none", "low"} and glycolytic_max >= 1:
-            return 3
-        return 2
-    if 16 <= days <= 18:
-        if fatigue in {"none", "low"} and cut in {"none", "low"} and hard_cap >= 1:
+    # Unified D-21..D-18 active-role cap (single source of truth with
+    # _bridge_active_role_cap): a low-fatigue athlete on a none/low/moderate cut
+    # keeps one extra low-risk active role. Hard sparring + glycolytic caps are
+    # unchanged, so the extra role is filled by low-risk work only. Closer days
+    # (D-17..D-14) and any high-pressure signal stay at the conservative 2.
+    low, high = BRIDGE_EXTRA_EXPOSURE_DAY_RANGE
+    if isinstance(days, int) and low <= days <= high:
+        if fatigue in {"none", "low"} and cut in {"none", "low", "moderate"}:
             return 3
         return 2
     return 2
@@ -1240,7 +1241,7 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
 
     allowed_role_keys: list[str] = []
     if mode in {"bridge_compression_payload", "pre_fight_compressed_payload"}:
-        allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "technical_touch_day", "fight_week_freshness_day"]
+        allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_week_payload":
         allowed_role_keys = ["hard_sparring_day", "neural_primer_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_transition_payload":
@@ -1285,10 +1286,44 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     }
 
 
+def _bridge_active_role_cap(days_until_fight: Any, athlete_model: dict[str, Any]) -> int | None:
+    """Single source of truth for the binding D-21..D-18 active-role cap.
+
+    The flat late-fight budget caps D-14..D-21 at 2 app-owned active roles. That
+    silently overrode the bridge baseline of 3 and shrank plans for clean /
+    mildly-managed athletes. This unifies the two: a low-risk athlete (low
+    fatigue, at most mild injury, none/low/moderate cut) keeps one extra
+    low-risk active role in the D-21..D-18 window; any safety signal — high
+    fatigue, moderate+ injury, aggressive cut, restricted injury mode — drops
+    them back to the conservative baseline. Hard sparring and glycolytic caps
+    are untouched, so the extra role is filled by low-risk work only.
+
+    From D-17 the bridge converts all declared hard sparring to technical/rhythm.
+    Coach-owned sparring is excluded from the app's active-role budget, so when it
+    leaves the week the app plan would otherwise shrink. For a low-risk athlete who
+    *declared* hard sparring, reallocate that freed slot: keep the extra low-risk
+    active role through D-17..D-14 too. Athletes who never declared sparring (no
+    freed slot) stay at the conservative baseline.
+    """
+    base = _late_fight_max_active_roles(days_until_fight)
+    if base is None:
+        return None
+    days = _coerce_days(days_until_fight)
+    if not (isinstance(days, int) and bridge_low_risk_profile(athlete_model)):
+        return base
+    low, high = BRIDGE_EXTRA_EXPOSURE_DAY_RANGE
+    if low <= days <= high:
+        return max(base, 3)
+    declared_hard_sparring = bool(clean_list(athlete_model.get("hard_sparring_days", [])))
+    if 14 <= days < low and declared_hard_sparring:
+        return max(base, 3)
+    return base
+
+
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
     return {
         "mode": _days_out_payload_mode(days_until_fight),
-        "max_active_roles": _late_fight_max_active_roles(days_until_fight),
+        "max_active_roles": _bridge_active_role_cap(days_until_fight, athlete_model),
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
@@ -1716,6 +1751,11 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
                 clean_list(athlete_model.get("hard_sparring_days", []))
             ),
         )
+        # One source of truth: the binding allocation cap (_bridge_active_role_cap)
+        # is athlete-aware (injury severity, declared-sparring freed slot) where the
+        # scalar bridge guidance is not. Align the surfaced guidance to it so the
+        # bridge policy never under-reports the plan it will actually allocate.
+        bridge_rules["max_active_roles"] = _bridge_active_role_cap(days_until_fight, athlete_model)
         return {
             "mode": mode,
             "allow_full_weekly_structure": False,
@@ -2340,6 +2380,30 @@ def _late_fight_candidate_roles(
                     selection_rule="D-21 to D-19 only: one short specific-interval touch is allowed when sparring is not owning the window.",
                     placement_rule="Keep it light. Do not describe it as a conditioning build and do not place between hard days.",
                     selection_priority=96 if has_downgraded_hard_days else 100,
+                    legal_countdown_labels=legal_countdown_labels,
+                )
+            )
+        elif (
+            days is not None
+            and days <= 17
+            and has_downgraded_hard_days
+            and bridge_low_risk_profile(athlete_model)
+        ):
+            # From D-17 declared hard sparring is converted to technical, freeing a
+            # coach-owned slot. For a low-risk athlete, reallocate it to one
+            # taper-appropriate alactic sharpness touch (low metabolic fatigue,
+            # freshness-preserving) so the week is not under-dosed once sparring
+            # drops out. Non-glycolytic, so it respects the bridge glycolytic
+            # suppression; the active-role cap (_bridge_active_role_cap) admits it.
+            candidates.append(
+                _late_fight_role_entry(
+                    category="conditioning",
+                    role_key="alactic_sharpness_day",
+                    preferred_pool="conditioning_slots",
+                    preferred_system="alactic",
+                    selection_rule="One short alactic sharpness touch only, replacing the removed hard sparring stimulus. Keep it crisp and non-fatiguing.",
+                    placement_rule="Keep this brief and very low volume; never describe it as a conditioning build and never place it on the freshness day.",
+                    selection_priority=96,
                     legal_countdown_labels=legal_countdown_labels,
                 )
             )
@@ -3963,7 +4027,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "taper_micro_support_policy": _late_fight_taper_micro_support_policy(days_until_fight, athlete_model),
         "rendering_rules": payload_block["rendering_rules"],
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
-        "max_active_roles": _late_fight_max_active_roles(days_until_fight),
+        "max_active_roles": _bridge_active_role_cap(days_until_fight, athlete_model),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "countdown_weekday_map": resolved_countdown_map,
         "role_budget": role_budget,

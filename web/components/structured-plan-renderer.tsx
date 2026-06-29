@@ -33,8 +33,6 @@ import {
 } from "@/lib/structured-plan";
 import {
   dayCompletion,
-  findDayByISO,
-  getReadinessStrip,
   resolveNextPlanFocusDay,
   resolvePlanProgress,
   weekCompletion,
@@ -228,13 +226,26 @@ export function SessionCard({
   session,
   day,
   defaultOpenBlocks,
+  showDayContext = true,
 }: {
   session: StructuredSession;
   day?: StructuredDay;
   defaultOpenBlocks?: boolean;
+  /** When false, day-level context like warnings/nutrition/mindset is rendered by
+   * the parent day card instead, so the same information does not repeat inside
+   * every session. */
+  showDayContext?: boolean;
 }) {
   const detailsId = useId();
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
+  const userToggledDetails = useRef(false);
+
+  useEffect(() => {
+    if (!userToggledDetails.current) {
+      setShowDetails(Boolean(defaultOpenBlocks));
+    }
+  }, [defaultOpenBlocks]);
+
   const card = day?.today_card;
   const title =
     cleanText(session.title) ||
@@ -246,18 +257,18 @@ export function SessionCard({
   const date = cleanText(day?.date);
   const countdown = cleanText(day?.countdown_label);
   const dayType = cleanText(day?.day_type);
-  const warning = cleanText(card?.primary_warning);
-  const nutrition = cleanText(card?.nutrition_summary);
-  const weightCut = cleanText(card?.weight_cut_warning);
+  const warning = showDayContext ? cleanText(card?.primary_warning) : null;
+  const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
+  const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
   const blocks = getBlocks(session);
   const rehabBlocks = getRehabOrMobilityBlocks(session);
   const blocksLabel = blockCountLabel(blocks.length);
-  // Prefer the session mindset only when it actually has displayable lines; an
-  // empty/blank session.mindset_anchor should still fall back to the day card.
   const sessionMindset =
     getMindsetLines(session.mindset_anchor).length > 0
       ? session.mindset_anchor
-      : card?.mindset_anchor;
+      : showDayContext
+        ? card?.mindset_anchor
+        : undefined;
 
   return (
     <article className="sp-session">
@@ -278,11 +289,14 @@ export function SessionCard({
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
       </header>
+
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+
       <MindsetAnchorCard anchor={sessionMindset} />
       <RehabSummary blocks={rehabBlocks} />
+
       {blocks.length > 0 ? (
         <>
           <button
@@ -291,10 +305,14 @@ export function SessionCard({
             aria-expanded={showDetails}
             aria-controls={detailsId}
             aria-label={showDetails ? "Show less session detail" : `Show more session detail: ${blocksLabel}`}
-            onClick={() => setShowDetails((prev) => !prev)}
+            onClick={() => {
+              userToggledDetails.current = true;
+              setShowDetails((prev) => !prev);
+            }}
           >
             {showDetails ? "Show less" : `Show more (${blocksLabel})`}
           </button>
+
           {showDetails ? (
             <div id={detailsId} className="sp-blocks">
               {blocks.map((block, index) => (
@@ -432,15 +450,34 @@ export function CampDayCard({
   currentLabel?: string;
   defaultOpen?: boolean;
 }) {
-  // Local open state synced via onToggle so a user toggle is not reset on
-  // re-render (a bare open={defaultOpen} would force <details> back each render).
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
+  const userToggledOpen = useRef(false);
+
+  useEffect(() => {
+    if (!userToggledOpen.current) {
+      setOpen(Boolean(defaultOpen));
+    }
+  }, [defaultOpen]);
+
   const sessions = getSessions(day);
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
   const dayType = cleanText(day.day_type);
-  const warning = cleanText(day.today_card?.primary_warning);
+  const card = day.today_card;
+  const warning = cleanText(card?.primary_warning);
+  const nutrition = cleanText(card?.nutrition_summary);
+  const weightCut = cleanText(card?.weight_cut_warning);
+  // Day-level mindset is surfaced once here, in the grouped day context, rather
+  // than repeated inside every session. It only shows when no session carries its
+  // own mindset, so a session-specific anchor still wins when present.
+  const sessionsHaveMindset = sessions.some(
+    (session) => getMindsetLines(session.mindset_anchor).length > 0,
+  );
+  const dayMindset = sessionsHaveMindset ? null : card?.mindset_anchor;
+  const hasDayContext = Boolean(
+    warning || nutrition || weightCut || getMindsetLines(dayMindset).length > 0,
+  );
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
 
@@ -450,11 +487,22 @@ export function CampDayCard({
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="sp-week-summary cm-day-summary">
+      <summary
+        className="sp-week-summary cm-day-summary"
+        onClick={() => {
+          userToggledOpen.current = true;
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            userToggledOpen.current = true;
+          }
+        }}
+      >
         <span className="cm-day-head">
           {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
           <span className="sp-week-title">{weekday || date || "Day"}</span>
         </span>
+
         <span className="cm-day-meta">
           {isCurrent ? <span className="sp-tag sp-accent">{currentLabel}</span> : null}
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
@@ -466,8 +514,17 @@ export function CampDayCard({
           <CompletionTag completion={completion} />
         </span>
       </summary>
+
       <div className="sp-week-body">
-        {warning ? <p className="sp-warning">{warning}</p> : null}
+        {sessions.length > 0 && hasDayContext ? (
+          <div className="cm-day-context">
+            {warning ? <p className="sp-warning">{warning}</p> : null}
+            {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
+            {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+            <MindsetAnchorCard anchor={dayMindset} />
+          </div>
+        ) : null}
+
         {sessions.length > 0 ? (
           <div className="sp-sessions">
             {sessions.map((session, index) => (
@@ -476,6 +533,7 @@ export function CampDayCard({
                 session={session}
                 day={index === 0 ? day : undefined}
                 defaultOpenBlocks={isCurrent}
+                showDayContext={false}
               />
             ))}
           </div>
@@ -484,90 +542,6 @@ export function CampDayCard({
         )}
       </div>
     </details>
-  );
-}
-
-const MONTH_ABBR = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/**
- * Format an ISO date/timestamp's date portion as "11 Jun 2026", or null.
- * Parses the YYYY-MM-DD prefix directly (no Date) so the output is timezone- and
- * locale-stable — renderToStaticMarkup must produce the same string everywhere.
- */
-function formatGeneratedDate(value: string | null | undefined): string | null {
-  const iso = cleanText(value)?.slice(0, 10);
-  const match = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null;
-  if (!match) {
-    return null;
-  }
-  const [, year, month, day] = match;
-  const monthName = MONTH_ABBR[Number(month) - 1];
-  if (!monthName) {
-    return null;
-  }
-  return `${Number(day)} ${monthName} ${year}`;
-}
-
-// Statuses that mean a saved plan is genuinely publishable/ready get the calm
-// success tone; every other lifecycle state (awaiting review, safety hold,
-// archived, still processing) stays a neutral pill so an unsafe or in-progress
-// plan never reads as "good to go".
-const SUCCESS_STATUS_TOKENS = new Set(["ready", "publishable_with_flags"]);
-
-function statusTagClass(status: string): string {
-  const token = status.toLowerCase().replace(/[\s-]+/g, "_");
-  return SUCCESS_STATUS_TOKENS.has(token) ? "sp-tag sp-done" : "sp-tag";
-}
-
-export function PlanHeader({
-  plan,
-  createdAt,
-  planStatus,
-}: {
-  plan: StructuredPlan;
-  /** ISO date/timestamp the plan was generated (from the plan record), shown as
-   * "Generated <date>". Omitted in contexts without a record (e.g. previews). */
-  createdAt?: string | null;
-  /** The saved plan record's authoritative lifecycle status. This wins; the
-   * structured plan_metadata.status is only a fallback for preview/test contexts
-   * that have no record, because it uses a different vocabulary
-   * (draft/active/completed/archived) that must not override the record's
-   * ready/held_for_review/publishable_with_flags states. */
-  planStatus?: string | null;
-}) {
-  const meta = plan.plan_metadata;
-  const title = cleanText(meta?.title) || "Training Plan";
-  const sport = cleanText(meta?.sport);
-  const athlete = plan.athlete_context;
-  const profile = cleanText(athlete?.sport_profile) || cleanText(athlete?.style_profile);
-  // Sport stands in as the subtitle when there's no richer athlete profile, so the
-  // discipline still reads in the header without a separate pill. The plan type,
-  // event type and event date are intentionally dropped here — the camp-status
-  // line below already carries phase, week, D-label and fight date, so repeating
-  // them as a row of pills was pure duplication.
-  const subtitle = profile || (sport ? titleize(sport) : null);
-  // The saved-plan record status is authoritative; plan_metadata.status is only a
-  // fallback for record-less preview/test contexts.
-  const status = cleanText(planStatus) || cleanText(meta?.status);
-  const generatedOn = formatGeneratedDate(createdAt);
-
-  return (
-    <header className="sp-header cm-command">
-      <div className="cm-command-row">
-        <div className="cm-command-id">
-          <p className="sp-eyebrow">Camp map</p>
-          <h3 className="sp-title">{title}</h3>
-        </div>
-        {status ? (
-          <span className={`${statusTagClass(status)} cm-command-status`}>{titleize(status)}</span>
-        ) : null}
-      </div>
-      {subtitle ? <p className="sp-subtitle">{subtitle}</p> : null}
-      {generatedOn ? <p className="sp-header-meta">Generated {generatedOn}</p> : null}
-    </header>
   );
 }
 
@@ -907,89 +881,6 @@ export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-/** Compact camp-status chips: phase, "Week X of Y", D-label, event date. */
-function CampStatusLine({
-  plan,
-  progress,
-  phaseWeek,
-}: {
-  plan: StructuredPlan;
-  progress: ReturnType<typeof resolvePlanProgress>;
-  phaseWeek?: StructuredWeek;
-}) {
-  const phase = cleanText(phaseWeek?.phase_label);
-  const eventDate =
-    cleanText(plan.event_context?.fight_date) || cleanText(plan.event_context?.match_date);
-  const weekPosLabel =
-    progress.currentWeekPos != null
-      ? `Week ${progress.currentWeekPos + 1} of ${progress.weekCount}`
-      : progress.weekCount > 0
-        ? `${progress.weekCount} week camp`
-        : null;
-  const chips = [
-    phase ? titleize(phase) : null,
-    weekPosLabel,
-    progress.dLabel,
-    eventDate ? `Fight ${eventDate}` : null,
-  ].filter((chip): chip is string => Boolean(chip));
-  if (chips.length === 0) {
-    return null;
-  }
-  return (
-    <div className="cm-status-line" aria-label="Camp status">
-      {chips.map((chip, index) => (
-        <span key={`${chip}-${index}`} className="cm-status-chip">
-          {chip}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/**
- * The plan page's lighter camp-readiness strip: focus, injury watch and weekly
- * load. Values come from getReadinessStrip (explicit plan.readiness_snapshot
- * first, then derived from the current day / week).
- *
- * It intentionally does NOT show the exact "train / modify / pull back" call —
- * that decision belongs to the Today surface (Today = execution, plan page =
- * camp map), so the strip gives risk context without becoming a second Today
- * page. Phase/camp status is omitted too: the CampStatusLine above already shows
- * it. Empty cards are dropped and the whole strip is hidden when nothing
- * resolves, so no fake metrics are ever shown.
- */
-function ReadinessStrip({
-  plan,
-  currentDay,
-  focusWeek,
-}: {
-  plan: StructuredPlan;
-  currentDay: StructuredDay | null;
-  focusWeek?: StructuredWeek;
-}) {
-  const strip = getReadinessStrip(plan, currentDay, focusWeek);
-  const cards: { label: string; value: string; risk?: boolean }[] = [];
-  if (strip.focus) cards.push({ label: "Focus", value: strip.focus });
-  if (strip.risk) cards.push({ label: "Injury watch", value: strip.risk, risk: true });
-  if (strip.load) cards.push({ label: "Weekly load", value: strip.load });
-  if (cards.length === 0) {
-    return null;
-  }
-  return (
-    <section className="sp-card sp-readiness" aria-label="Camp readiness and risk">
-      <p className="sp-eyebrow">Camp readiness</p>
-      <div className="sp-block-stats">
-        {cards.map((card) => (
-          <span key={card.label} className="sp-stat">
-            <span className="sp-stat-label">{card.label}</span>
-            {card.risk ? <span className="sp-warning">{card.value}</span> : card.value}
-          </span>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 /** Horizontal, mobile-scrollable strip of week pills used to pick the week. */
 function WeekStrip({
   weeks,
@@ -1037,9 +928,9 @@ function WeekStrip({
 }
 
 /** The selected week's countdown/dates, load proxy and completion. The phase is
- *  intentionally not repeated here: it is shown in the status chips and the week
- *  pill. The week goal renders once, as the descriptive subtitle under the short
- *  "Week N" heading. */
+ *  intentionally not repeated here: it is already visible in the week pill. The
+ *  week goal renders once, as the descriptive subtitle under the short "Week N"
+ *  heading. */
 function WeekOverview({ week }: { week: StructuredWeek }) {
   // Keep the main heading short ("Week N"); the AI-written goal is a descriptive
   // subtitle below, not the title, so it wraps in full instead of being truncated
@@ -1050,7 +941,6 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   const load = weekLoadProxy(week);
   const completion = weekCompletion(week);
   const sessionSummary = weekSessionSummary(week);
-  const days = getDays(week);
   const countdownStart = cleanText(week.countdown_start);
   const countdownEnd = cleanText(week.countdown_end);
   const countdownRange =
@@ -1061,9 +951,7 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   const endDate = cleanText(week.end_date);
   const dateRange =
     startDate && endDate ? `${startDate} → ${endDate}` : startDate || endDate;
-  const warning = days
-    .map((day) => cleanText(day.today_card?.primary_warning))
-    .find((value): value is string => Boolean(value));
+
   const rows = [
     { label: "Countdown", value: countdownRange },
     { label: "Dates", value: dateRange },
@@ -1093,6 +981,7 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
         <h4 className="sp-redflags-title">{weekTitle}</h4>
         {weekGoal ? <p className="cm-week-goal">{weekGoal}</p> : null}
       </div>
+
       {rows.length > 0 ? (
         <div className="sp-block-stats cm-week-overview-stats">
           {rows.map((row) => (
@@ -1103,7 +992,6 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
           ))}
         </div>
       ) : null}
-      {warning ? <p className="sp-warning">{warning}</p> : null}
     </section>
   );
 }
@@ -1113,84 +1001,63 @@ export function StructuredPlanRenderer({
   today,
   focusDay,
   currentDayLabel = "Today",
-  createdAt,
-  planStatus,
 }: {
   plan: StructuredPlan;
   today?: Date;
-  /** ISO date/timestamp the plan was generated (plan record `created_at`), shown
-   * in the command header as "Generated <date>". Optional — omitted in contexts
-   * with no record. */
+  /** Accepted for compatibility with callers, but not rendered on this plan view. */
   createdAt?: string | null;
-  /** The saved plan record's authoritative lifecycle status, shown as a header
-   * pill. This wins; plan_metadata.status is only a record-less fallback. */
+  /** Accepted for compatibility with callers, but not rendered on this plan view. */
   planStatus?: string | null;
   /** Optional advance target: the next scheduled session's day, passed once
    * today is already logged. It moves ONLY the opened week + day highlight, never
-   * the truthful "current week" marker or the camp-status countdown (those stay
-   * on the real `today`). Omit it for the normal calendar view. */
+   * the truthful current week marker. Omit it for the normal calendar view. */
   focusDay?: Date;
   /** Badge text for the highlighted day. Callers pass "Next session" alongside
    * `focusDay` so the advanced day is not mislabelled "Today". */
   currentDayLabel?: string;
 }) {
   const weeks = getWeeks(plan);
+
   // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
-  // and the Today tab can never disagree on the current day. The hook is null
-  // until the client mounts (SSR-safe: no hydration mismatch) and advances
-  // across the rollover on long-lived tabs. Tests pass an explicit `today`.
+  // and the Today tab can never disagree on the current day.
   const mountedDay = useTrainingDay();
-  // The real calendar training day is the authority for the truthful "current
-  // week" marker and the camp-status countdown. `focusDay` (next session, once
-  // today is logged) only advances the opened week + day highlight below, so the
-  // view never lies about which week is actually current. With no `focusDay` the
-  // two progressions collapse to the same value (normal calendar behaviour).
+
+  // The real calendar training day owns the truthful current week marker.
+  // `focusDay` only advances the opened week/day highlight.
   const calendarProgress = resolvePlanProgress(plan, today ?? mountedDay);
   const resolvedFocusDay = focusDay
     ? resolveNextPlanFocusDay(plan, today ?? mountedDay, focusDay)
     : undefined;
-  const focusProgress = resolvedFocusDay ? resolvePlanProgress(plan, resolvedFocusDay) : calendarProgress;
-  // The selected week is user-controllable; default to the focused week (current
-  // week, or the next session's week when advanced; first week when today falls
-  // outside the camp). `selectedPos` stays null until the user picks a week so
-  // that, once the client-mounted focus week resolves, the view follows it
-  // instead of being stuck on the first-render default.
+  const focusProgress = resolvedFocusDay
+    ? resolvePlanProgress(plan, resolvedFocusDay)
+    : calendarProgress;
+
   const [selectedPos, setSelectedPos] = useState<number | null>(null);
   const userSelectedWeek = useRef(false);
+
   useEffect(() => {
     if (!userSelectedWeek.current && focusProgress.currentWeekPos != null) {
       setSelectedPos(focusProgress.currentWeekPos);
     }
   }, [focusProgress.currentWeekPos]);
+
   const handleSelectWeek = (pos: number) => {
     userSelectedWeek.current = true;
     setSelectedPos(pos);
   };
+
   const effectivePos = selectedPos ?? focusProgress.currentWeekPos ?? 0;
-  // Clamp against weeks length so a stale index can never index past the array.
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
-  // Phase/status follows the real current week, not the advanced focus week.
-  const phaseWeek = weeks[calendarProgress.currentWeekPos ?? safePos] ?? selectedWeek;
 
-  // The truthful current day (real calendar today, not the advanced focus day)
-  // feeds the readiness strip so it always reflects "right now", even when the
-  // opened week/day has advanced to the next scheduled session.
-  const currentDay = findDayByISO(plan, calendarProgress.currentDayDate);
   const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
   const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
   const hasRecoverySupport = getRecoveryPhaseItems(plan).length > 0;
-  const dayList = getDays(selectedWeek);
+  const dayList = selectedWeek ? getDays(selectedWeek) : [];
 
   return (
     <div className="sp-root cm-root">
-      <PlanHeader plan={plan} createdAt={createdAt} planStatus={planStatus} />
-      <CampStatusLine plan={plan} progress={calendarProgress} phaseWeek={phaseWeek} />
-      <ReadinessStrip plan={plan} currentDay={currentDay} focusWeek={phaseWeek} />
-      <ActiveNotesCard plan={plan} />
-      <RedFlagsCard plan={plan} />
-
       {weeks.length > 0 ? (
         <>
           <WeekStrip
@@ -1199,13 +1066,16 @@ export function StructuredPlanRenderer({
             currentPos={calendarProgress.currentWeekPos}
             onSelect={handleSelectWeek}
           />
+
           {selectedWeek ? <WeekOverview week={selectedWeek} /> : null}
+
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
               dayList.map((day, index) => {
                 const isCurrent =
                   focusProgress.currentDayDate != null &&
                   cleanText(day.date)?.slice(0, 10) === focusProgress.currentDayDate;
+
                 return (
                   <CampDayCard
                     key={cleanText(day.date) || `day-${index}`}
@@ -1223,28 +1093,35 @@ export function StructuredPlanRenderer({
         </>
       ) : null}
 
-      {hasRecoverySupport || hasNutritionSupport ? (
-        <section className="sp-card cm-support" aria-label="Support">
-          <p className="sp-eyebrow">Support</p>
-          {hasRecoverySupport ? (
-            <CollapsibleSection title="Recovery" detailLabel="recovery">
-              <RecoveryCard plan={plan} />
-            </CollapsibleSection>
-          ) : null}
-          {hasNutritionSupport ? (
-            <CollapsibleSection title="Nutrition" detailLabel="nutrition">
-              <NutritionCard plan={plan} />
-            </CollapsibleSection>
-          ) : null}
-        </section>
-      ) : null}
-
-      {progressionNotes ? (
+            {progressionNotes ? (
         <section className="sp-card sp-progression">
           <p className="sp-eyebrow">Progression notes</p>
           <p className="sp-block-purpose">{progressionNotes}</p>
         </section>
       ) : null}
+
+      {hasRecoverySupport ? (
+        <CollapsibleSection
+          title="Recovery"
+          detailLabel="recovery"
+          className="cm-support-section"
+        >
+          <RecoveryCard plan={plan} />
+        </CollapsibleSection>
+      ) : null}
+
+      {hasNutritionSupport ? (
+        <CollapsibleSection
+          title="Nutrition"
+          detailLabel="nutrition"
+          className="cm-support-section"
+        >
+          <NutritionCard plan={plan} />
+        </CollapsibleSection>
+      ) : null}
+
+      <ActiveNotesCard plan={plan} />
+      <RedFlagsCard plan={plan} />
 
       {rawFallback ? (
         <details className="sp-collapse cm-raw-fallback">
