@@ -317,9 +317,9 @@ _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
 # (e.g. "Watch 8-12 min") that would otherwise read as a dose.
 _LATE_FIGHT_NON_EXERCISE_TASK = re.compile(
     r"\b(?:"
-    r"re-?watch|watch|film\s+(?:study|review|clips?)|video\s+review|"
-    r"cue\s+card|tactical\s+cue|game\s*plan|"
-    r"take\s+notes|journal(?:ing)?|visuali[sz]e|mental\s+rehearsal"
+    r"re-?watch(?:es)?|watch(?:es)?|film\s+(?:stud(?:y|ies)|reviews?|clips?)|video\s+reviews?|"
+    r"cue\s+cards?|tactical\s+cues?|game\s*plans?|"
+    r"take\s+notes|journal(?:ing|s)?|visuali[sz]e|mental\s+rehearsals?"
     r")\b",
     re.IGNORECASE,
 )
