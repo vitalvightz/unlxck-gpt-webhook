@@ -17,10 +17,10 @@ def test_validate_training_item_rejects_missing_name_and_logs_once(monkeypatch: 
     monkeypatch.setattr(bank_schema.logger, "warning", warnings.append)
 
     with pytest.raises(ValueError, match="Missing required 'name'"):
-        bank_schema.validate_training_item({}, source="unit")
+        bank_schema.validate_training_item({}, source="unit", mode="runtime")
 
     with pytest.raises(ValueError, match="Missing required 'name'"):
-        bank_schema.validate_training_item({}, source="unit")
+        bank_schema.validate_training_item({}, source="unit", mode="runtime")
 
     assert len(warnings) == 1
     assert "Missing required 'name'" in warnings[0]
@@ -30,8 +30,8 @@ def test_validate_training_item_runtime_marks_missing_tags_and_phases_without_de
     warnings: list[str] = []
     monkeypatch.setattr(bank_schema.logger, "warning", warnings.append)
 
-    item = bank_schema.validate_training_item({"name": "Band Circuit"}, source="unit")
-    repeated = bank_schema.validate_training_item({"name": "Band Circuit"}, source="unit")
+    item = bank_schema.validate_training_item({"name": "Band Circuit"}, source="unit", mode="runtime")
+    repeated = bank_schema.validate_training_item({"name": "Band Circuit"}, source="unit", mode="runtime")
 
     assert "tags" not in item
     assert "phases" not in item
@@ -69,6 +69,7 @@ def test_validate_training_item_requires_system_when_requested(monkeypatch: pyte
             {"name": "Sprint Circuit", "tags": [], "phases": ["SPP"]},
             source="conditioning",
             require_system=True,
+            mode="runtime",
         )
 
     assert len(warnings) == 1
@@ -108,6 +109,7 @@ def test_validate_training_item_runtime_exposes_missing_late_window_state():
     item = bank_schema.validate_training_item(
         {"name": "Easy Bike", "tags": ["aerobic"], "phases": ["TAPER"], "system": "aerobic"},
         source="conditioning_bank.json",
+        mode="runtime",
     )
 
     assert "late_windows" not in item

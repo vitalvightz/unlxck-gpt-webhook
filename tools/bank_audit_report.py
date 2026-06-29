@@ -79,7 +79,7 @@ def audit_bank(name: str, items: list[dict], tag_vocab: set[str]) -> dict:
 
 def main() -> None:
     tag_vocab = load_tag_vocabulary()
-    banks = collect_banks()
+    banks = collect_banks(mode="audit")
     summary_counts = defaultdict(int)
 
     print("🏦 Bank Audit Report")

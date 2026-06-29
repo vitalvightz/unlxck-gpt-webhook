@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 
 from fightcamp import conditioning
-from fightcamp.bank_schema import validate_training_item
-from fightcamp.late_selector_windows import D6_TO_D5
+from fightcamp.bank_schema import is_late_fight_metadata_safe, validate_training_item
+from fightcamp.late_selector_windows import D1, D6_TO_D5, D7, D13_TO_D8, D21_TO_D14
 from tools import validate_banks
 
 
@@ -126,6 +126,7 @@ def test_runtime_missing_late_windows_blocks_late_fight_selection():
     item = validate_training_item(
         {"name": "Easy Bike", "tags": ["aerobic"], "phases": ["TAPER"], "system": "aerobic"},
         source="conditioning_bank.json",
+        mode="runtime",
     )
 
     result = conditioning._evaluate_conditioning_late_window(
@@ -137,4 +138,135 @@ def test_runtime_missing_late_windows_blocks_late_fight_selection():
 
     assert item["_schema_safety"]["late_fight_eligible"] is False
     assert result["blocked"] is True
-    assert "late_conditioning_block_missing_late_windows" in result["block_codes"]
+    assert "late_block_missing_late_windows" in result["block_codes"]
+
+
+def _safe_conditioning(**overrides) -> dict:
+    item = {
+        "name": "Safe Rhythm",
+        "tags": ["conditioning"],
+        "phases": ["TAPER"],
+        "system": "aerobic",
+        "late_windows": [D21_TO_D14, D13_TO_D8, D7, D6_TO_D5, D1],
+        "impact_cost": "low",
+        "movement_cost": "low",
+        "lactate_load": "low",
+        "rpe": 5,
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
+    }
+    item.update(overrides)
+    return item
+
+
+def _safe_strength(**overrides) -> dict:
+    item = {
+        "name": "Safe Strength Touch",
+        "tags": ["strength"],
+        "phases": ["TAPER"],
+        "late_windows": [D21_TO_D14, D13_TO_D8, D7, D6_TO_D5, D1],
+        "impact_cost": "low",
+        "movement_cost": "low",
+        "cns_load": "low",
+        "soreness_risk": "low",
+        "eccentric_cost": "low",
+        "landing_cost": "low",
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
+        "equipment": [],
+    }
+    item.update(overrides)
+    return item
+
+
+def test_runtime_missing_cost_metadata_blocks_late_fight_selection():
+    safety = is_late_fight_metadata_safe(
+        _safe_conditioning(impact_cost=""),
+        "conditioning_bank.json",
+        D21_TO_D14,
+    )
+
+    assert safety["safe"] is False
+    assert "late_block_missing_cost_metadata" in safety["block_codes"]
+
+
+def test_runtime_unknown_conditioning_system_blocks_late_fight_selection():
+    safety = is_late_fight_metadata_safe(
+        _safe_conditioning(system="mystery"),
+        "conditioning_bank.json",
+        D21_TO_D14,
+    )
+
+    assert safety["safe"] is False
+    assert "late_block_unknown_system" in safety["block_codes"]
+
+
+def test_support_alias_system_does_not_become_meaningful_stress_by_default():
+    safety = is_late_fight_metadata_safe(
+        _safe_conditioning(system="skill", support_only=False, stress_class="meaningful_stress"),
+        "style_conditioning_bank.json",
+        D21_TO_D14,
+    )
+
+    assert safety["safe"] is False
+    assert "late_block_alias_system_without_meaningful_stress" in safety["block_codes"]
+
+
+def test_runtime_high_intensity_gates_use_countdown_windows():
+    assert "late_block_high_rpe" in is_late_fight_metadata_safe(
+        _safe_conditioning(rpe=8),
+        "conditioning_bank.json",
+        D7,
+    )["block_codes"]
+    assert "late_block_high_lactate" in is_late_fight_metadata_safe(
+        _safe_conditioning(lactate_load="high"),
+        "conditioning_bank.json",
+        D13_TO_D8,
+    )["block_codes"]
+    assert "late_block_high_movement_cost" in is_late_fight_metadata_safe(
+        _safe_conditioning(movement_cost="high"),
+        "conditioning_bank.json",
+        D13_TO_D8,
+    )["block_codes"]
+
+
+def test_runtime_d1_blocks_forbidden_modalities_without_final_day_policy():
+    safety = is_late_fight_metadata_safe(
+        _safe_strength(equipment=["bands"], tags=["strength", "ballistic"]),
+        "exercise_bank.json",
+        D1,
+    )
+
+    assert safety["safe"] is False
+    assert "late_block_d1_forbidden_modality" in safety["block_codes"]
+
+
+def test_runtime_primer_only_cannot_satisfy_strength_maintenance():
+    safety = is_late_fight_metadata_safe(
+        _safe_strength(tags=["strength", "neural_primer", "late_strength_touch"], primer_only=True),
+        "exercise_bank.json",
+        D21_TO_D14,
+    )
+
+    assert safety["safe"] is False
+    assert "late_block_primer_only_strength_fulfillment" in safety["block_codes"]
+
+
+def test_support_only_false_stress_cannot_satisfy_anchor_requirements():
+    strength_safety = is_late_fight_metadata_safe(
+        _safe_strength(tags=["strength", "maximal_strength_maintenance"]),
+        "exercise_bank.json",
+        D21_TO_D14,
+    )
+    conditioning_safety = is_late_fight_metadata_safe(
+        _safe_conditioning(stress_class="meaningful_stress"),
+        "conditioning_bank.json",
+        D21_TO_D14,
+    )
+
+    assert "late_block_support_only_anchor_fulfillment" in strength_safety["block_codes"]
+    assert "late_block_support_only_anchor_fulfillment" in conditioning_safety["block_codes"]

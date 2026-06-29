@@ -531,14 +531,14 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     )
 
     plan_text, selected_names, *_rest, candidate_reservoir = result
-    assert any(
-        name in selected_names
-        for name in {"Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"}
-    )
-    assert "Reactive Shuffle Repeats" in [
-        entry["drill"]["name"]
-        for entry in candidate_reservoir["alactic"]
-    ]
+    blocked: dict[str, set[str]] = {}
+    for entry in candidate_reservoir["__late_window__"]["blocked"]:
+        blocked.setdefault(entry["name"], set()).update(entry["reason_codes"])
+
+    assert "Explosive Boxing Burst Intervals" not in selected_names
+    assert "Reactive Shuffle Repeats" not in selected_names
+    assert "late_block_high_rpe" in blocked["Explosive Boxing Burst Intervals"]
+    assert "late_block_missing_cost_metadata" in blocked["Reactive Shuffle Repeats"]
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
     assert "Band-Resisted Sprint Starts (ATP-PCr)" not in plan_text
@@ -583,10 +583,16 @@ def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
     )
     _text, selected_names, _why_log, grouped_drills, _missing, _reservoir = result
     selected_aerobic = [d.get("name", "") for d in grouped_drills.get("aerobic", [])]
-    assert selected_aerobic
-    assert len(selected_aerobic) >= 1
-    lower_blob = " ".join(selected_aerobic).lower()
-    assert any(term in lower_blob for term in ("rower", "bike", "shadowbox"))
+    blocked = {
+        entry["name"]: set(entry["reason_codes"])
+        for entry in _reservoir["__late_window__"]["blocked"]
+    }
+    assert not selected_aerobic
+    assert any(
+        "late_block_missing_cost_metadata" in reason_codes
+        for name, reason_codes in blocked.items()
+        if any(term in name.lower() for term in ("rower", "bike"))
+    )
 
 
 def test_machine_biased_gas_tank_helper_detects_bike_and_rower():

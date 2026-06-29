@@ -12,7 +12,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
-from .bank_schema import validate_training_item
+from .bank_schema import is_late_fight_metadata_safe, validate_training_item
 from .tagging import normalize_item_tags, normalize_tag, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
@@ -730,6 +730,7 @@ def _evaluate_strength_late_window(
     window: str | None,
     days_until_fight=None,
     cut_bucket: str = "none",
+    source: str = "exercise_bank.json",
 ) -> dict:
     if not is_active_late_selector_window(window):
         return {
@@ -739,16 +740,19 @@ def _evaluate_strength_late_window(
             "adjustment": 0.0,
             "ambiguous_gap": None,
         }
-    schema_safety = exercise.get("_schema_safety") or {}
-    schema_issues = set(exercise.get("_schema_issues") or [])
-    if schema_safety.get("late_fight_eligible") is False or "missing_late_windows" in schema_issues:
-        return {
-            "blocked": True,
-            "block_codes": ["late_strength_block_missing_late_windows"],
-            "reason_codes": ["late_strength_penalty_missing_late_windows"],
-            "adjustment": -1.0,
-            "ambiguous_gap": None,
-        }
+    metadata_safety = None
+    if exercise.get("_schema_source") or exercise.get("_schema_issues") or exercise.get("_schema_safety"):
+        metadata_source = str(exercise.get("_schema_source") or source)
+        metadata_safety = is_late_fight_metadata_safe(exercise, metadata_source, window)
+        if not metadata_safety["safe"]:
+            return {
+                "blocked": True,
+                "block_codes": metadata_safety["block_codes"],
+                "reason_codes": metadata_safety["reason_codes"],
+                "adjustment": -1.0,
+                "ambiguous_gap": None,
+                "unsafe_metadata": metadata_safety["unsafe_metadata"],
+            }
 
     penalties, blocks, profile = _strength_contextual_risk_patterns(exercise)
     tags = profile["tags"]
@@ -1320,7 +1324,7 @@ def get_exercise_bank() -> list[dict]:
             (DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8")
         )
         for item in _exercise_bank_cache:
-            validate_training_item(item, source="exercise_bank.json", require_phases=True)
+            validate_training_item(item, source="exercise_bank.json", require_phases=True, mode="runtime")
             normalize_item_tags(item)
     return _exercise_bank_cache
 
@@ -1337,7 +1341,7 @@ def get_universal_strength() -> list[dict]:
             _universal_strength_cache = []
         else:
             for item in _universal_strength_cache:
-                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
+                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True, mode="runtime")
                 normalize_item_tags(item)
     return _universal_strength_cache
 
