@@ -39,6 +39,7 @@ from .schema_requirements import (
 )
 from .state_machine import (
     ADMIN_REVIEW_PLAN_STATUSES,
+    ATHLETE_DISPLAYABLE_PLAN_STATUSES,
     is_generation_job_status,
     is_plan_status,
     require_generation_job_transition,
@@ -85,7 +86,10 @@ def _guard_persisted_json(
         ) from None
 
 
-PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, pdf_url, created_at"
+PLAN_SUMMARY_SELECT = (
+    "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
+    "stage2_validator_report, pdf_url, created_at"
+)
 GENERATION_JOB_SELECT = "*"
 # Admin job-list endpoints render diagnostics that need request_payload and
 # final_result but never read stage1_result (the largest intermediate blob,
@@ -153,6 +157,9 @@ _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS = (
 )
 PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
     "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
+)
+PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL = (
+    "profiles table is missing active_plan_id; apply latest Supabase schema and redeploy"
 )
 GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL = (
     "generation job active lock is missing; apply latest Supabase migrations and redeploy"
@@ -240,6 +247,7 @@ class AppStore(Protocol):
         technical_style: list[str],
     ) -> dict[str, Any]: ...
 
+
     def create_plan(
         self,
         *,
@@ -257,6 +265,10 @@ class AppStore(Protocol):
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None: ...
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None: ...
+
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
     def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict[str, Any]: ...
@@ -268,6 +280,7 @@ class AppStore(Protocol):
     def delete_plan(self, plan_id: str) -> None: ...
 
     def delete_plan_for_athlete(self, plan_id: str, athlete_id: str) -> None: ...
+
 
     def create_or_get_generation_job(
         self,
@@ -313,7 +326,7 @@ class AppStore(Protocol):
     def recover_generation_job_if_stale(self, job: dict[str, Any] | None) -> dict[str, Any] | None: ...
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
     def get_visible_active_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
-    def get_active_generation_job_for_athlete(
+    def reconcile_active_generation_job_for_athlete(
         self,
         athlete_id: str,
         *,
@@ -374,13 +387,17 @@ class AppStore(Protocol):
     def record_stage2_cost(self, job_id: str, metadata: dict[str, Any]) -> None: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
-    def update_plan_structured_output(
+    def update_plan_stage2_if_unchanged(
+        self, plan_id: str, result: dict[str, Any], expected_snapshot: dict[str, Any]
+    ) -> dict[str, Any]: ...
+    def update_plan_structured_artifacts(
         self,
         plan_id: str,
         *,
-        structured_plan: Any,
-        schema_version: Any,
+        structured_plan: dict[str, Any] | None,
+        schema_version: str | None,
         stage2_validator_report: dict[str, Any],
+        expected_final_plan_text: str | None = None,
     ) -> dict[str, Any]: ...
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
 
@@ -389,6 +406,8 @@ class AppStore(Protocol):
     ) -> list[dict[str, Any]]: ...
 
     def list_admin_review_plans(self, *, limit: int = 100) -> list[dict[str, Any]]: ...
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
@@ -411,6 +430,32 @@ class AppStore(Protocol):
     def create_session_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict[str, Any]]: ...
+
+    # --- Block 4 Today/Overview persistence (api/routes/today.py) ---
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def get_today_checkin(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None: ...
+
+    def list_today_checkins_for_day(
+        self, athlete_id: str, training_day: str
+    ) -> list[dict[str, Any]]: ...
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def get_session_completion(
+        self, athlete_id: str, session_id: str, training_day: str
+    ) -> dict[str, Any] | None: ...
+
+    def list_session_completions(
+        self, athlete_id: str, *, limit: int = 30
+    ) -> list[dict[str, Any]]: ...
+
+    def list_today_checkins(
+        self, athlete_id: str, *, limit: int = 14
+    ) -> list[dict[str, Any]]: ...
 
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -480,6 +525,15 @@ def _parse_datetime(value: Any) -> datetime | None:
     return None
 
 
+def _parse_datetime_utc(value: Any) -> datetime | None:
+    parsed = _parse_datetime(value)
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
@@ -493,6 +547,53 @@ def _has_milestone_code(milestones: list[Any], code: str) -> bool:
         if isinstance(entry, dict) and str(entry.get("code") or "") == code:
             return True
     return False
+
+
+def _latest_generation_job_activity_at(job: dict[str, Any]) -> datetime | None:
+    latest: datetime | None = None
+    for field in ("heartbeat_at", "updated_at", "started_at", "created_at"):
+        parsed = _parse_datetime_utc(job.get(field))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    for entry in _progress_milestones(job.get("progress_milestones")):
+        if not isinstance(entry, dict):
+            continue
+        parsed = _parse_datetime_utc(entry.get("at"))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    return latest
+
+
+def _is_active_generation_job_stale_by_latest_activity(
+    job: dict[str, Any],
+    *,
+    stale_after_seconds: int,
+) -> bool:
+    if str(job.get("status") or "") not in {"queued", "running"}:
+        return False
+    latest = _latest_generation_job_activity_at(job)
+    if latest is None:
+        return False
+    if latest.tzinfo is None:
+        latest = latest.replace(tzinfo=timezone.utc)
+    else:
+        latest = latest.astimezone(timezone.utc)
+    return (datetime.now(timezone.utc) - latest).total_seconds() >= max(1, stale_after_seconds)
+
+
+def _stale_job_reaped_milestones(job: dict[str, Any], *, now_iso: str) -> list[Any]:
+    milestones = list(_progress_milestones(job.get("progress_milestones")))
+    if not _has_milestone_code(milestones, "stale_job_reaped"):
+        milestones.append(
+            {
+                "code": "stale_job_reaped",
+                "label": "Stale job reaped",
+                "detail": "Job activity timed out and was failed so a new generation can start.",
+                "meta": {},
+                "at": now_iso,
+            }
+        )
+    return milestones
 
 
 def _should_recover_stalled_job(job: dict[str, Any]) -> bool:
@@ -663,6 +764,20 @@ def _generation_startup_max_attempts() -> int:
     return max(1, parsed)
 
 
+def _positive_float_env(name: str, default: float) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
+        return default
+    try:
+        parsed = float(raw_value.strip())
+    except ValueError:
+        return default
+    import math
+    if not math.isfinite(parsed) or parsed <= 0:
+        return default
+    return parsed
+
+
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
     return {
         "code": "job_loaded",
@@ -701,17 +816,17 @@ class SupabaseAppStore:
         # to this class of failure.
         #
         # Explicit timeout + pool limits mirror api/auth.py: httpx's default
-        # 5s read timeout turns ordinary Supabase latency spikes (especially
-        # while the instance is under CPU/memory contention from concurrent
-        # users or a warming process) into false 503 "store service
-        # temporarily unavailable" outages. A 30s read budget tolerates those
-        # spikes, while the bounded pool keeps connection reuse predictable
-        # across concurrent requests.
+        # 5s read timeout turns ordinary Supabase latency spikes into false
+        # store outages. Env overrides keep this tunable for ops while the
+        # bounded pool keeps connection reuse predictable across concurrent
+        # requests.
+        read_timeout = _positive_float_env("SUPABASE_HTTP_TIMEOUT_SECONDS", 30.0)
+        connect_timeout = _positive_float_env("SUPABASE_HTTP_CONNECT_TIMEOUT_SECONDS", 5.0)
         http_client = httpx.Client(
             http2=False,
             timeout=httpx.Timeout(
-                connect=5.0,
-                read=30.0,
+                connect=connect_timeout,
+                read=read_timeout,
                 write=5.0,
                 pool=15.0,
             ),
@@ -757,6 +872,65 @@ class SupabaseAppStore:
         if (datetime.now(timezone.utc) - reference_time).total_seconds() < max(1, stale_after_seconds):
             return "fresh"
         return "mid_pipeline_stale"
+
+    def _fail_stale_active_generation_jobs_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int,
+        exclude_client_request_id: str | None = None,
+    ) -> None:
+        try:
+            query = self.client.table("generation_jobs") \
+                .select(GENERATION_JOB_SELECT) \
+                .eq("athlete_id", athlete_id) \
+                .in_("status", ["queued", "running"])
+            if exclude_client_request_id:
+                query = query.neq("client_request_id", exclude_client_request_id)
+            response = self._run_with_transient_retry(
+                operation=f"fail_stale_active_generation_jobs_for_athlete:select athlete_id={athlete_id}",
+                fn=lambda: query.order("created_at", desc=True).limit(25).execute(),
+            )
+            rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+            for row in rows:
+                if not _is_active_generation_job_stale_by_latest_activity(
+                    row,
+                    stale_after_seconds=stale_after_seconds,
+                ):
+                    continue
+                now_iso = _utc_now_iso()
+                self._run_with_transient_retry(
+                    operation="fail_stale_active_generation_jobs_for_athlete:update",
+                    fn=lambda row=row, now_iso=now_iso: self.client.table("generation_jobs")
+                    .update(
+                        {
+                            "status": "failed",
+                            "error": "Generation job stalled. Please try again.",
+                            "completed_at": now_iso,
+                            "failed_at": now_iso,
+                            "heartbeat_at": now_iso,
+                            "progress_milestones": _stale_job_reaped_milestones(row, now_iso=now_iso),
+                        }
+                    )
+                    .eq("id", str(row.get("id") or ""))
+                    .in_("status", ["queued", "running"])
+                    .execute(),
+                )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to reap stale generation jobs",
+            ) from exc
 
     def _log_profile_event(self, *, operation: str, user: AuthenticatedUser, **fields: Any) -> None:
         details = " ".join(f"{key}=%r" % value for key, value in sorted(fields.items()))
@@ -829,6 +1003,21 @@ class SupabaseAppStore:
             if part
         ).lower()
         return any(snippet in text for snippet in _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS)
+
+
+    def _is_profiles_active_plan_schema_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        return (
+            "profiles" in text
+            and "active_plan_id" in text
+            and any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS)
+        )
 
     def _is_plan_schema_column_error(self, exc: Exception) -> bool:
         if not isinstance(exc, PostgrestAPIError):
@@ -1161,24 +1350,10 @@ class SupabaseAppStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         try:
             self._log_profile_event(operation="ensure_start", user=user)
-            existing = None
-            _last_read_exc: Exception | None = None
-            for _attempt in range(2):
-                try:
-                    existing = self._get_profile_by_id(user.user_id)
-                    _last_read_exc = None
-                    break
-                except _TRANSIENT_SUPABASE_ERRORS as exc:
-                    _last_read_exc = exc
-                    logger.warning(
-                        "[store] ensure_profile:transient_read_error attempt=%d athlete_id=%s error_type=%s",
-                        _attempt,
-                        user.user_id,
-                        type(exc).__name__,
-                    )
-                    time.sleep(0.5)
-            if _last_read_exc is not None:
-                raise _last_read_exc
+            existing = self._run_with_transient_retry(
+                operation=f"ensure_profile:read athlete_id={user.user_id}",
+                fn=lambda: self._get_profile_by_id(user.user_id),
+            )
             if existing:
                 self._log_profile_event(
                     operation="ensure_existing",
@@ -1203,7 +1378,10 @@ class SupabaseAppStore:
                         "error_code": "profile_ensure_upsert_exception",
                     },
                 )
-                fallback = self._get_profile_by_id(user.user_id)
+                fallback = self._run_with_transient_retry(
+                    operation=f"ensure_profile:fallback_read athlete_id={user.user_id}",
+                    fn=lambda: self._get_profile_by_id(user.user_id),
+                )
                 if fallback:
                     self._log_profile_event(operation="ensure_fallback_read_success", user=user)
                     return fallback
@@ -1214,7 +1392,10 @@ class SupabaseAppStore:
                     ) from exc
                 raise
 
-            profile = self._require_profile(user.user_id)
+            profile = self._run_with_transient_retry(
+                operation=f"ensure_profile:post_upsert_read athlete_id={user.user_id}",
+                fn=lambda: self._require_profile(user.user_id),
+            )
             self._log_profile_event(operation="ensure_created", user=user, role=profile.get("role"))
             return profile
         except HTTPException:
@@ -1232,7 +1413,7 @@ class SupabaseAppStore:
                     "error_code": "ensure_profile_exception",
                 },
             )
-            if isinstance(exc, _TRANSIENT_SUPABASE_ERRORS):
+            if self._is_transient_profile_error(exc):
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="profile service temporarily unavailable",
@@ -1794,6 +1975,48 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        try:
+            row = self._run_with_transient_retry(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self._select_first(
+                    self.client.table("profiles").select("active_plan_id").eq("id", athlete_id)
+                ),
+            )
+            return (str(row.get("active_plan_id") or "").strip() or None) if row else None
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_profiles_active_plan_schema_error(exc):
+                logger.exception("[store] get_active_plan_id:schema_mismatch athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                detail="failed to read active plan",
+                exc=exc,
+            )
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        try:
+            self._run_with_transient_retry(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self.client.table("profiles").update({"active_plan_id": plan_id}).eq("id", athlete_id).execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_profiles_active_plan_schema_error(exc):
+                logger.exception("[store] set_active_plan_id:schema_mismatch athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                detail="failed to set active plan",
+                exc=exc,
+            )
+
+
     def create_or_get_generation_job(
         self,
         *,
@@ -1814,6 +2037,11 @@ class SupabaseAppStore:
             context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
         )
         payload_hash = _stable_payload_hash(request_payload)
+        self._fail_stale_active_generation_jobs_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+            exclude_client_request_id=client_request_id,
+        )
 
         try:
             existing = self._run_with_transient_retry(
@@ -1847,7 +2075,6 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
-            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             if is_startup_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
                 reset_payload = {
                     "status": "queued",
@@ -1883,8 +2110,9 @@ class SupabaseAppStore:
                 refreshed = self.get_generation_job(str(existing["id"]))
                 if refreshed:
                     return refreshed
+            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             return existing
-        active_job = self.get_active_generation_job_for_athlete(
+        active_job = self.reconcile_active_generation_job_for_athlete(
             athlete_id,
             stale_after_seconds=stale_after_seconds,
         )
@@ -1968,7 +2196,7 @@ class SupabaseAppStore:
         if existing:
             _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             return existing
-        active_job = self.get_active_generation_job_for_athlete(
+        active_job = self.reconcile_active_generation_job_for_athlete(
             athlete_id,
             stale_after_seconds=stale_after_seconds,
         )
@@ -2020,6 +2248,11 @@ class SupabaseAppStore:
             context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
         )
         payload_hash = _stable_payload_hash(request_payload)
+        self._fail_stale_active_generation_jobs_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+            exclude_client_request_id=client_request_id,
+        )
 
         # Recover stale `running` jobs before the atomic RPC runs. The RPC's
         # in-flight guard checks `status in ('queued', 'running')` purely at the
@@ -2027,9 +2260,9 @@ class SupabaseAppStore:
         # `running` row left by a crashed worker would raise
         # `generation_job_in_flight` and permanently block new generation
         # requests. This mirrors the recovery that create_or_get_generation_job
-        # performs via get_active_generation_job_for_athlete; the requeue/fail
+        # performs via reconcile_active_generation_job_for_athlete; the requeue/fail
         # mutations land before the RPC re-checks in-flight state atomically.
-        self.get_active_generation_job_for_athlete(
+        self.reconcile_active_generation_job_for_athlete(
             athlete_id,
             stale_after_seconds=stale_after_seconds,
         )
@@ -2409,17 +2642,27 @@ class SupabaseAppStore:
                 detail="failed to load generation job",
             ) from exc
 
-    def get_active_generation_job_for_athlete(
+    def reconcile_active_generation_job_for_athlete(
         self,
         athlete_id: str,
         *,
         stale_after_seconds: int | None = None,
     ) -> dict[str, Any] | None:
+        """Reconcile (requeue/fail/recover) the athlete's stale ``running`` jobs.
+
+        This is an explicit **write/control** path — it mutates job state — and
+        must only be called from write/reconciliation flows (job creation,
+        retry, daily-limit create). Polling/read endpoints must use
+        :meth:`get_visible_active_generation_job_for_athlete` or
+        :meth:`get_generation_job`, which never mutate. It returns the active
+        queued/running job (after recovery) or a job recovered to a terminal
+        state so callers can decide whether a new request is in flight.
+        """
         if stale_after_seconds is None:
             stale_after_seconds = generation_job_stale_after_seconds()
         try:
             response = self._run_with_transient_retry(
-                operation=f"get_active_generation_job_for_athlete athlete_id={athlete_id}",
+                operation=f"reconcile_active_generation_job_for_athlete athlete_id={athlete_id}",
                 fn=lambda: self.client.table("generation_jobs")
                 .select(GENERATION_JOB_SELECT)
                 .eq("athlete_id", athlete_id)
@@ -2443,7 +2686,7 @@ class SupabaseAppStore:
                     return row
                 if staleness == "startup_stale":
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:reset_startup_stale",
+                        operation="reconcile_active_generation_job_for_athlete:reset_startup_stale",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
@@ -2476,7 +2719,7 @@ class SupabaseAppStore:
                             }
                         )
                         self._run_with_transient_retry(
-                            operation="get_active_generation_job_for_athlete:requeue_job_loaded_stalled",
+                            operation="reconcile_active_generation_job_for_athlete:requeue_job_loaded_stalled",
                             fn=lambda: self.client.table("generation_jobs")
                             .update(
                                 {
@@ -2503,7 +2746,7 @@ class SupabaseAppStore:
                             }
                         )
                         self._run_with_transient_retry(
-                            operation="get_active_generation_job_for_athlete:fail_job_loaded_stalled",
+                            operation="reconcile_active_generation_job_for_athlete:fail_job_loaded_stalled",
                             fn=lambda: self.client.table("generation_jobs")
                             .update(
                                 {
@@ -2544,7 +2787,7 @@ class SupabaseAppStore:
                             }
                         )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:resolve_stage1_stalled",
+                        operation="reconcile_active_generation_job_for_athlete:resolve_stage1_stalled",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
@@ -2576,7 +2819,7 @@ class SupabaseAppStore:
                             }
                         )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:resolve_mid_pipeline_stale",
+                        operation="reconcile_active_generation_job_for_athlete:resolve_mid_pipeline_stale",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
@@ -3509,13 +3752,9 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
-    def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
-        existing = self.get_plan(plan_id)
-        if not existing:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="plan not found",
-            )
+    def _build_plan_stage2_payload(
+        self, existing: dict[str, Any], result: dict[str, Any]
+    ) -> dict[str, Any]:
         try:
             current_status = existing.get("status") or "generated"
             next_status_input = result.get("status") or current_status
@@ -3554,15 +3793,25 @@ class SupabaseAppStore:
                 payload.get("stage2_payload"),
                 field="stage2_payload",
                 max_bytes=MAX_SERVER_JSON_BYTES,
-                context=f"plan_id={plan_id}",
+                context=f"plan_id={existing.get('id') or ''}",
             )
         if "structured_plan" in payload:
             _guard_persisted_json(
                 payload.get("structured_plan"),
                 field="structured_plan",
                 max_bytes=MAX_SERVER_JSON_BYTES,
-                context=f"plan_id={plan_id}",
+                context=f"plan_id={existing.get('id') or ''}",
             )
+        return payload
+
+    def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        existing = self.get_plan(plan_id)
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="plan not found",
+            )
+        payload = self._build_plan_stage2_payload(existing, result)
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()
@@ -3584,13 +3833,68 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
-    def update_plan_structured_output(
+    def update_plan_stage2_if_unchanged(
+        self, plan_id: str, result: dict[str, Any], expected_snapshot: dict[str, Any]
+    ) -> dict[str, Any]:
+        if not expected_snapshot:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        payload = self._build_plan_stage2_payload(expected_snapshot, result)
+        # Guard only on lightweight state markers, never on the multi-KB text
+        # bodies. PostgREST serializes `.eq()` filters into the request URL, so
+        # filtering on plan_text/draft_plan_text/final_plan_text/stage2_retry_text
+        # pushes the entire plan into the query string and trips PostgREST's URL
+        # length limit, which returns a bare "400 Bad Request" (plain text, not
+        # JSON) and surfaces as an opaque APIError. Every write that mutates plan
+        # text also advances one of these markers (status transition,
+        # stage2_status, or stage2_attempt_count), so a concurrent change is still
+        # detected without inflating the URL.
+        guarded_fields = (
+            "status",
+            "stage2_status",
+            "stage2_attempt_count",
+        )
+        try:
+            logger.info(
+                "[store] update_plan_stage2_if_unchanged:start plan_id=%s status=%s",
+                plan_id,
+                payload["status"],
+            )
+            query = self.client.table("plans").update(payload).eq("id", plan_id)
+            for field in guarded_fields:
+                expected_value = expected_snapshot.get(field)
+                if expected_value is None:
+                    query = query.is_(field, "null")
+                else:
+                    query = query.eq(field, expected_value)
+            response = query.execute()
+            data = getattr(response, "data", None) or []
+            if not data:
+                if not self.get_plan(plan_id):
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Plan changed while Stage 2 structured processing was running; reload and try again.",
+                )
+            updated = dict(data[0])
+            logger.info("[store] update_plan_stage2_if_unchanged:success plan_id=%s", plan_id)
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_plan_stage2_if_unchanged plan_id={plan_id}",
+                detail="failed to conditionally update plan stage 2",
+                exc=exc,
+            )
+
+    def update_plan_structured_artifacts(
         self,
         plan_id: str,
         *,
-        structured_plan: Any,
-        schema_version: Any,
+        structured_plan: dict[str, Any] | None,
+        schema_version: str | None,
         stage2_validator_report: dict[str, Any],
+        expected_final_plan_text: str | None = None,
     ) -> dict[str, Any]:
         """Persist only the structured-plan output columns for a plan.
 
@@ -3604,7 +3908,29 @@ class SupabaseAppStore:
         written by a concurrent admin action (reject, archive, rename, manual
         Stage 2 edit) in the meantime. No status transition is enforced because
         the plan's lifecycle status is intentionally left untouched.
+
+        When ``expected_final_plan_text`` is supplied it is the plan text the
+        structured card was converted from. The card is only persisted if the
+        row's current ``final_plan_text`` (falling back to ``plan_text``) still
+        matches it. If the text changed during the async conversion/backfill the
+        card is now a *stale* projection of superseded text, so the write is
+        skipped and the existing row (raw-markdown fallback) is left intact.
         """
+
+        if expected_final_plan_text is not None:
+            current = self.get_plan(plan_id)
+            if not current:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            current_text = str(current.get("final_plan_text") or current.get("plan_text") or "")
+            if current_text != str(expected_final_plan_text):
+                logger.info(
+                    "[store] update_plan_structured_artifacts:stale_text_skip plan_id=%s",
+                    plan_id,
+                )
+                return current
 
         payload = {
             "structured_plan": structured_plan,
@@ -3618,25 +3944,25 @@ class SupabaseAppStore:
             context=f"plan_id={plan_id}",
         )
         try:
-            logger.info("[store] update_plan_structured_output:start plan_id=%s", plan_id)
+            logger.info("[store] update_plan_structured_artifacts:start plan_id=%s", plan_id)
             self.client.table("plans").update(payload).eq("id", plan_id).execute()
             updated = self.get_plan(plan_id)
             if not updated:
                 logger.warning(
-                    "[store] update_plan_structured_output:plan_missing_after_update plan_id=%s",
+                    "[store] update_plan_structured_artifacts:plan_missing_after_update plan_id=%s",
                     plan_id,
                 )
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="plan not found",
                 )
-            logger.info("[store] update_plan_structured_output:success plan_id=%s", plan_id)
+            logger.info("[store] update_plan_structured_artifacts:success plan_id=%s", plan_id)
             return updated
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_operation_http_error(
-                operation=f"update_plan_structured_output plan_id={plan_id}",
+                operation=f"update_plan_structured_artifacts plan_id={plan_id}",
                 detail="failed to update plan structured output",
                 exc=exc,
             )
@@ -3710,6 +4036,27 @@ class SupabaseAppStore:
         )
         rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
         return self._attach_profile_contacts(rows)
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        """Athlete-displayable plans that have no structured card yet (backfill).
+
+        Selects ``ready``/``publishable_with_flags`` rows where ``structured_plan``
+        is NULL so the structured-plan backfill can re-attempt conversion for plans
+        generated/approved before structured generation was enabled. ``plan_text``
+        presence is enforced downstream by the conversion trigger, so a row with no
+        approved text simply short-circuits there.
+        """
+        response = self._run_with_transient_retry(
+            operation=f"list_plans_missing_structured_plan limit={limit}",
+            fn=lambda: self.client.table("plans")
+            .select("id, status, created_at")
+            .in_("status", list(ATHLETE_DISPLAYABLE_PLAN_STATUSES))
+            .is_("structured_plan", "null")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute(),
+        )
+        return [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
@@ -3837,6 +4184,119 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .order("session_date", desc=True)
             .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("today_checkins")
+                .upsert(payload, on_conflict="athlete_id,plan_id,training_day")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_today_checkin:no_rows athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist Today check-in",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_today_checkin athlete_id={athlete_id}",
+                detail="failed to persist Today check-in",
+                exc=exc,
+            )
+
+    def get_today_checkin(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("today_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("plan_id", plan_id)
+            .eq("training_day", training_day)
+        )
+
+    def list_today_checkins_for_day(
+        self, athlete_id: str, training_day: str
+    ) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("today_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("training_day", training_day)
+            .order("updated_at", desc=True)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("session_completions")
+                .upsert(payload, on_conflict="athlete_id,session_id,training_day")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_session_completion:no_rows athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist session completion",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_session_completion athlete_id={athlete_id}",
+                detail="failed to persist session completion",
+                exc=exc,
+            )
+
+    def get_session_completion(
+        self, athlete_id: str, session_id: str, training_day: str
+    ) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("session_id", session_id)
+            .eq("training_day", training_day)
+        )
+
+    def list_session_completions(
+        self, athlete_id: str, *, limit: int = 30
+    ) -> list[dict[str, Any]]:
+        """Recent completions (newest training day first) for the derived signal."""
+        response = (
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("training_day", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def list_today_checkins(
+        self, athlete_id: str, *, limit: int = 14
+    ) -> list[dict[str, Any]]:
+        """Recent check-ins (newest training day first) for the derived signal."""
+        response = (
+            self.client.table("today_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("training_day", desc=True)
             .limit(limit)
             .execute()
         )

@@ -16,19 +16,41 @@ function isQuickBuildDraft(draft: PlanRequest | null): draft is DraftWithSource 
 }
 
 
+// `hard_sparring_days` and `support_work_days` are subordinate to
+// `training_availability`: the backend rejects any day in them that is not also
+// an available training day. They must track the resolved availability, never
+// get resurrected independently from a stale layer.
+const AVAILABILITY_BOUND_DAY_FIELDS = ["hard_sparring_days", "support_work_days"] as const;
+
 // Layer `top` on `base` field-by-field, preferring `top` only when it carries a non-empty value.
 // Lets a partial onboarding_draft pull untouched fields from latest_intake instead of clobbering them.
-function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
+function mergeIntakeLayers(base: PlanRequest, top: Partial<PlanRequest>): PlanRequest {
   const merged: Record<string, unknown> = { ...base };
+
   for (const key of Object.keys(top) as (keyof PlanRequest)[]) {
     if (key === "athlete") continue;
+
     const topValue = top[key];
-    merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
+
+    // Undefined means "draft never saved this field".
+    // Empty string / empty array means "athlete intentionally cleared this field".
+    if (topValue !== undefined) {
+      merged[key] = topValue;
+    }
   }
+
+  const availability = new Set((merged.training_availability as string[] | undefined) ?? []);
+
+  for (const field of AVAILABILITY_BOUND_DAY_FIELDS) {
+    const days = (merged[field] as string[] | undefined) ?? [];
+    merged[field] = days.filter((day) => availability.has(day));
+  }
+
   if (top.no_scheduled_fight === true) {
     merged.fight_date = "";
     merged.no_scheduled_fight = true;
   }
+
   return merged as PlanRequest;
 }
 
@@ -46,16 +68,56 @@ export function applyNoScheduledFightSnapshot(form: PlanRequest, noScheduledFigh
   };
 }
 
+function canonicalizePrimaryFocusValue(
+  selectedValues: string[],
+  primaryValue: string | null | undefined,
+): string {
+  if (selectedValues.length === 1) {
+    return selectedValues[0] ?? "";
+  }
+  if (primaryValue && selectedValues.includes(primaryValue)) {
+    return primaryValue;
+  }
+  return "";
+}
+
+export function canonicalizePerformanceFocus(form: PlanRequest): PlanRequest {
+  const primaryGoal = canonicalizePrimaryFocusValue(form.key_goals ?? [], form.primary_goal);
+  const primaryWeakArea = canonicalizePrimaryFocusValue(form.weak_areas ?? [], form.primary_weak_area);
+
+  if (form.primary_goal === primaryGoal && form.primary_weak_area === primaryWeakArea) {
+    return form;
+  }
+
+  return {
+    ...form,
+    primary_goal: primaryGoal,
+    primary_weak_area: primaryWeakArea,
+  };
+}
+
 function mergeAthleteLayers(
   base: PlanRequest["athlete"],
   top?: Partial<PlanRequest["athlete"]> | null,
+  mode: "non_empty" | "explicit" = "non_empty",
 ): PlanRequest["athlete"] {
   if (!top) return base;
+
   const merged: Record<string, unknown> = { ...base };
+
   for (const key of Object.keys(top) as (keyof PlanRequest["athlete"])[]) {
     const topValue = top[key];
+
+    if (mode === "explicit") {
+      if (topValue !== undefined) {
+        merged[key] = topValue;
+      }
+      continue;
+    }
+
     merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
   }
+
   return merged as PlanRequest["athlete"];
 }
 
@@ -80,7 +142,7 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
     no_scheduled_fight: false,
     rounds_format: "3 x 3",
     weekly_training_frequency: 4,
-    fatigue_level: "moderate",
+    fatigue_level: "low",
     equipment_access: [],
     training_availability: [],
     hard_sparring_days: [],
@@ -140,13 +202,13 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
 
   const withProfile = mergeAthleteLayers(fallback.athlete, profileAthlete);
   const withIntake = mergeAthleteLayers(withProfile, base.athlete);
-  const finalAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete);
+  const finalAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete, "explicit");
 
-  return {
+  return canonicalizePerformanceFocus({
     ...fallback,
     ...layered,
     athlete: finalAthlete,
-  };
+  });
 }
 
 export function mergePlanRequestDraft(

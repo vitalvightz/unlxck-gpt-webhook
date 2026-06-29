@@ -121,12 +121,6 @@ SEVERITY_SYNONYMS = {
         "inflamed",
         "hot",
         "heat",
-        "bruise",
-        "bruised",
-        "bruising",
-        "black and blue",
-        "hematoma",
-        "discoloration",
         "limp",
         "limping",
         "cannot walk",
@@ -242,6 +236,21 @@ SEVERITY_SYNONYMS = {
         "4/10",
     ],
     "low": [
+        # Contusion/bruise family: a bruise is a surface-level impact injury.
+        # It should penalize exercises that directly load/impact the bruised
+        # region, not auto-escalate to high severity (which forces broad
+        # exclusions across the region). Matches contusion's taxonomy
+        # default_severity of "low". Genuine danger signs (severe, swelling +
+        # impact, cannot bear weight, etc.) still escalate via their own terms.
+        "bruise",
+        "bruised",
+        "bruising",
+        "black and blue",
+        "hematoma",
+        "discoloration",
+        "discolored",
+        "contusion",
+        "contusions",
         "niggle",
         "niggling",
         "twinge",
@@ -669,10 +678,18 @@ def _surface_injury_assessment(injuries: Iterable[str | dict]) -> tuple[int, int
         for phrase in split_injury_text(raw_text):
             if is_restriction_phrase(phrase):
                 continue
+            lowered = phrase.lower()
+            # A surface-tissue keyword in the phrase (e.g. "cut") marks a surface
+            # wound even when a red-flag modifier reclassifies the parsed type
+            # (e.g. "infected cut" parses as "infection"): it is still a surface
+            # wound, now with a red flag.
+            surface_keyword = any(
+                re.search(rf"\b{re.escape(term)}\b", lowered) for term in SURFACE_TISSUE_TYPES
+            )
             parsed = parse_injury_entry(phrase)
             if parsed:
                 parsed_type = str(parsed.get("injury_type") or "").lower()
-                if parsed_type in SURFACE_TISSUE_TYPES:
+                if parsed_type in SURFACE_TISSUE_TYPES or surface_keyword:
                     surface_count += 1
                     parsed_type_found = True
                 elif parsed_type:
@@ -681,7 +698,6 @@ def _surface_injury_assessment(injuries: Iterable[str | dict]) -> tuple[int, int
                 else:
                     non_surface_count += 1
                     parsed_type_found = True
-            lowered = phrase.lower()
             for term in SURFACE_RED_FLAG_TERMS:
                 if re.search(rf"\b{re.escape(term)}\b", lowered):
                     red_flags.add(term)

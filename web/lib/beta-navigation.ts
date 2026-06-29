@@ -19,14 +19,14 @@ export const NUTRITION_DISABLED_REDIRECT = "/";
 
 export const BOTTOM_NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Overview" },
-  { href: "/dashboard", label: "Today" },
+  { href: "/today", label: "Today" },
   { href: "/plans", label: "Plan" },
   { href: "/onboarding", label: "Intake" },
 ] as const;
 
 export const SIDE_NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Overview", meta: "Camp status" },
-  { href: "/dashboard", label: "Today", meta: "Check-in and session log" },
+  { href: "/today", label: "Today", meta: "Check-in and session log" },
   { href: "/plans", label: "Plan", meta: "Active and saved plans" },
   { href: "/onboarding", label: "Intake", meta: "Profile and camp setup" },
   { href: "/settings", label: "Settings", meta: "Athlete profile" },

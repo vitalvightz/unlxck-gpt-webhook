@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
 from api.app import create_app
 from api.auth import AuthenticatedUser
+from api.generation.persistence import persist_plan_and_finalize
 from api.models import ManualStage2SubmissionRequest
 from support import (
     FakeAuthService,
@@ -578,6 +580,65 @@ def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_
     assert body["outputs"]["plan_text"]
     assert body["admin_outputs"]["stage2_status"] == "manual_stage2_pass"
     assert body["admin_outputs"]["stage2_validator_report"]["review_flag_count"] >= 1
+
+
+def test_manual_stage2_submission_holds_publish_blocking_quality_flags():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="",
+            planning_brief={
+                "athlete_model": {"sport": "boxing"},
+                "phase_strategy": {"SPP": {"must_keep": ["alactic"]}},
+                "candidate_pools": {
+                    "SPP": {
+                        "strength_slots": [],
+                        "conditioning_slots": [
+                            {
+                                "role": "alactic",
+                                "selected": {"name": "Air Bike Sprint"},
+                                "alternates": [],
+                            }
+                        ],
+                        "rehab_slots": [],
+                    }
+                },
+            },
+            stage2_status="stage2_failed",
+            stage2_retry_text="",
+            stage2_attempt_count=2,
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/manual-stage2",
+        headers={"Authorization": "Bearer admin-token"},
+        json=ManualStage2SubmissionRequest(
+            final_plan_text="## PHASE 2: SPP\n- Landmine Press - 4x5"
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "held_for_review"
+    assert body["outputs"]["plan_text"] == ""
+    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
+    assert body["admin_outputs"]["stage2_retry_text"]
+    assert body["admin_outputs"]["stage2_validator_report"]["publish_blocking_review_flags"][
+        0
+    ]["code"] == "missing_required_element"
 
 
 def test_manual_stage2_submission_requires_admin_role():
@@ -2504,6 +2565,92 @@ def test_admin_permanent_delete_blocked_by_active_generation_job():
     assert store.get_plan(plan["id"]) is not None
 
 
+def test_admin_can_cancel_active_generation_job_to_unblock_plan_cleanup():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-cancel-cleanup",
+        source="web_intake",
+        request_payload=_build_request().model_dump(mode="json"),
+        plan_id=plan["id"],
+        intake_id="intake_x",
+    )
+    store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+    client.app.state.active_generation_tasks.add(job["id"])
+
+    response = client.delete(
+        f"/api/admin/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "failed"
+    saved = store.get_generation_job(job["id"])
+    assert saved["status"] == "failed"
+    assert saved["error"] == "Generation cancelled by admin."
+    assert job["id"] not in client.app.state.active_generation_tasks
+    assert store.has_active_generation_job_for_plan(plan["id"]) is False
+
+
+def test_admin_cancel_generation_job_requires_admin_role():
+    client, store, _ = _build_client()
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-cancel-denied",
+        source="web_intake",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+
+    response = client.delete(
+        f"/api/admin/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 403
+    assert store.get_generation_job(job["id"])["status"] == "running"
+
+
+def test_cancelled_generation_job_does_not_persist_plan_after_stage2_finishes():
+    _, store, _ = _build_client()
+    request = _build_request()
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-before-persist",
+        source="web_intake",
+        request_payload=request.model_dump(mode="json"),
+    )
+    running_job = store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+    store.update_generation_job(job["id"], status="failed", error="Generation cancelled by admin.")
+    milestones: list[str] = []
+
+    async def direct_thread_call(fn, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    asyncio.run(
+        persist_plan_and_finalize(
+            job=running_job,
+            job_id=job["id"],
+            athlete_id="athlete-1",
+            plan_id=None,
+            intake_id=None,
+            job_source="web_intake",
+            resume_from_job_only=False,
+            admin_resume_plan_row=None,
+            final_result=finalized_result(),
+            request_body=request,
+            store=store,
+            emit_milestone=lambda code, *_args, **_kwargs: milestones.append(code),
+            to_thread_with_heartbeat=direct_thread_call,
+            t_start=0.0,
+        )
+    )
+
+    assert store.plans == {}
+    assert "generation_cancelled_before_plan_persist" in milestones
+
+
 def test_admin_permanent_delete_unknown_plan_returns_404():
     client, _, _ = _build_client()
 
@@ -2522,6 +2669,97 @@ def test_admin_permanent_delete_unknown_plan_returns_404():
         json={"confirm_plan_name": "Camp Plan"},
     )
     assert malformed.status_code == 404
+
+
+def _archive_plan(client, plan_id: str) -> None:
+    response = client.post(
+        f"/api/admin/plans/{plan_id}/archive",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 200
+
+
+def test_admin_permanent_delete_archived_plan_skips_name_confirmation():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+    _archive_plan(client, plan["id"])
+
+    # No confirmation body is required once a plan is archived.
+    response = client.request(
+        "DELETE",
+        f"/api/admin/plans/{plan['id']}/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 204
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_admin_bulk_permanent_delete_removes_archived_and_skips_others():
+    client, store, _ = _build_client()
+    archived = _seed_named_plan(store, name="Archived Camp")
+    live = _seed_named_plan(store, name="Live Camp")
+    _archive_plan(client, archived["id"])
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": [archived["id"], live["id"]]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["deleted"] == [archived["id"]]
+    assert body["deleted_count"] == 1
+    assert body["skipped_count"] == 1
+    assert body["skipped"] == [{"plan_id": live["id"], "reason": "not_archived"}]
+    assert store.get_plan(archived["id"]) is None
+    assert store.get_plan(live["id"]) is not None
+
+
+def test_admin_bulk_permanent_delete_requires_admin_role():
+    client, store, _ = _build_client()
+    archived = _seed_named_plan(store, name="Archived Camp")
+    _archive_plan(client, archived["id"])
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"plan_ids": [archived["id"]]},
+    )
+
+    assert response.status_code == 403
+    assert store.get_plan(archived["id"]) is not None
+
+
+def test_admin_bulk_permanent_delete_empty_list_returns_422():
+    client, _, _ = _build_client()
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": []},
+    )
+
+    assert response.status_code == 422
+
+
+def test_admin_bulk_permanent_delete_reports_unknown_ids_as_skipped():
+    client, store, _ = _build_client()
+    archived = _seed_named_plan(store, name="Archived Camp")
+    _archive_plan(client, archived["id"])
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": [archived["id"], "not-a-uuid"]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["deleted"] == [archived["id"]]
+    assert body["skipped"] == [{"plan_id": "not-a-uuid", "reason": "not_found"}]
+    assert store.get_plan(archived["id"]) is None
 
 
 # ---------------------------------------------------------------------------

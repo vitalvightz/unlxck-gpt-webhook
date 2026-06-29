@@ -159,7 +159,44 @@ def test_review_stage2_output_keeps_empty_safety_language_non_blocking():
     assert review["needs_retry"] is False
 
 
-def test_review_stage2_output_treats_countdown_banded_lockout_as_non_blocking():
+def _late_fight_review_brief(days_out: str = "D-3", allowed: list[str] | None = None) -> dict:
+    return {
+        "athlete_model": {"sport": "boxing", "days_until_fight": int(days_out.split("-")[-1])},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "late_fight_plan_spec": {
+            "days_out_bucket": days_out,
+            "payload_mode": "late_fight_session_payload",
+            "allowed_exercises_by_day": {days_out: allowed or []},
+            "countdown_exercise_rules": [
+                {
+                    "countdown_label": "D-1",
+                    "blocked_drills": [
+                        "Staggered-Stance Medicine-Ball Punch Throw",
+                        "Band-Resisted Sprint Start",
+                    ],
+                }
+            ],
+        },
+    }
+
+
+def _blocking_codes(review: dict) -> set[str]:
+    return {
+        warning["code"]
+        for warning in review["validator_report"].get("blocking_warnings", [])
+    }
+
+
+def _assert_non_publishable_retry(review: dict, code: str) -> None:
+    assert review["status"] in {"WARN", "FAIL"}
+    assert review["needs_retry"] is True
+    assert review["validator_report"]["is_publishable"] is False
+    assert code in _blocking_codes(review)
+
+
+def test_review_stage2_output_treats_countdown_banded_lockout_as_blocking():
     planning_brief = _stage1_result_fixture()["planning_brief"]
     planning_brief["late_fight_plan_spec"] = {
         "days_out_bucket": "D-7",
@@ -174,11 +211,10 @@ def test_review_stage2_output_treats_countdown_banded_lockout_as_non_blocking():
         """,
     )
 
-    assert review["status"] == "PASS"
-    assert review["needs_retry"] is False
+    _assert_non_publishable_retry(review, "late_fight_countdown_blocked_drill")
 
 
-def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_non_blocking():
+def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_blocking():
     planning_brief = _stage1_result_fixture()["planning_brief"]
     planning_brief["late_fight_plan_spec"] = {
         "days_out_bucket": "D-13",
@@ -193,8 +229,102 @@ def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_non_block
         """,
     )
 
+    _assert_non_publishable_retry(review, "late_fight_unapproved_exercise_rendered")
+
+
+def test_review_stage2_output_retries_when_d3_renders_sandbag_shouldering():
+    review = review_stage2_output(
+        planning_brief=_late_fight_review_brief("D-3", ["Mobility Reset Flow", "Breathing Reset"]),
+        final_plan_text="""
+        D-3 (Wednesday) — Fight-week freshness
+        - Sandbag Shouldering — 4 x 4-6 reps each side
+        - Breathing Reset — 3 min
+        D-0 (Saturday) — Fight day protocol
+        - Fight day protocol only — follow coach warm-up and fight protocol.
+        """,
+    )
+
+    _assert_non_publishable_retry(review, "late_fight_unapproved_exercise_rendered")
+
+
+def test_review_stage2_output_retries_when_d1_renders_med_ball_punch_throw():
+    review = review_stage2_output(
+        planning_brief=_late_fight_review_brief("D-1", ["Technical Shadowboxing Tempo", "Breathing Reset"]),
+        final_plan_text="""
+        D-1 (Friday) — Final neural primer
+        - Staggered-Stance Medicine-Ball Punch Throw — 2 x 3-4 throws per side
+        - Breathing Reset — 3 min
+        D-0 (Saturday) — Fight day protocol
+        - Fight day protocol only — follow coach warm-up and fight protocol.
+        """,
+    )
+
+    _assert_non_publishable_retry(review, "late_fight_countdown_blocked_drill")
+    assert "late_fight_window_forbidden_exercise" in _blocking_codes(review)
+
+
+def test_review_stage2_output_retries_when_d3_renders_unallowed_exercise():
+    review = review_stage2_output(
+        planning_brief=_late_fight_review_brief("D-3", ["Mobility Reset Flow", "Breathing Reset"]),
+        final_plan_text="""
+        D-3 (Wednesday) — Fight-week freshness
+        - Mystery Power Drill — 2 x 3
+        - Breathing Reset — 3 min
+        D-0 (Saturday) — Fight day protocol
+        - Fight day protocol only — follow coach warm-up and fight protocol.
+        """,
+    )
+
+    _assert_non_publishable_retry(review, "late_fight_unapproved_exercise_rendered")
+
+
+def test_review_stage2_output_retries_when_d1_renders_countdown_blocked_drill():
+    review = review_stage2_output(
+        planning_brief=_late_fight_review_brief("D-1", ["Technical Shadowboxing Tempo", "Breathing Reset"]),
+        final_plan_text="""
+        D-1 (Friday) — Final neural primer
+        - Band-Resisted Sprint Start — 2 x 5 m
+        - Breathing Reset — 3 min
+        D-0 (Saturday) — Fight day protocol
+        - Fight day protocol only — follow coach warm-up and fight protocol.
+        """,
+    )
+
+    _assert_non_publishable_retry(review, "late_fight_countdown_blocked_drill")
+
+
+def test_review_stage2_output_passes_valid_d3_allowed_exercise():
+    review = review_stage2_output(
+        planning_brief=_late_fight_review_brief("D-3", ["Mobility Reset Flow", "Breathing Reset"]),
+        final_plan_text="""
+        D-3 (Wednesday) — Fight-week freshness
+        - Mobility Reset Flow — 6 min
+        - Breathing Reset — 3 min
+        D-0 (Saturday) — Fight day protocol
+        - Fight day protocol only — follow coach warm-up and fight protocol.
+        """,
+    )
+
     assert review["status"] == "PASS"
     assert review["needs_retry"] is False
+    assert review["validator_report"]["is_publishable"] is True
+
+
+def test_review_stage2_output_passes_valid_d1_primer_reset():
+    review = review_stage2_output(
+        planning_brief=_late_fight_review_brief("D-1", ["Technical Shadowboxing Tempo", "Breathing Reset"]),
+        final_plan_text="""
+        D-1 (Friday) — Final neural primer
+        - Technical Shadowboxing Tempo — 2 light rounds
+        - Breathing Reset — 3 min
+        D-0 (Saturday) — Fight day protocol
+        - Fight day protocol only — follow coach warm-up and fight protocol.
+        """,
+    )
+
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
+    assert review["validator_report"]["is_publishable"] is True
 
 
 def test_build_stage2_retry_returns_repair_prompt_when_needed():
@@ -248,6 +378,106 @@ def test_build_stage2_retry_skips_prompt_when_only_review_flags_exist():
     assert retry["status"] == "PASS"
     assert retry["needs_retry"] is False
     assert retry["repair_prompt"] is None
+
+
+def test_build_stage2_retry_skips_prompt_when_only_card_rescuable_blocking_warning_exists():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="SPP\n- Landmine Press - 4x5",
+        validator_report={
+            "errors": [],
+            "warnings": [
+                {
+                    "code": "generic_filler_phrase",
+                    "message": "Low-trust filler.",
+                    "severity": "blocker",
+                }
+            ],
+        },
+    )
+
+    assert retry["status"] == "PASS"
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+
+
+def test_build_stage2_retry_prompt_includes_publish_blocking_warnings_for_hard_blocker():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="SPP\n- Push Press - 4x3",
+        validator_report={
+            "errors": [{"code": "restriction_violation", "line": "Push Press"}],
+            "warnings": [
+                {
+                    "code": "generic_filler_phrase",
+                    "message": "Low-trust filler.",
+                    "severity": "warning",
+                }
+            ],
+            "blocking_warnings": [
+                {
+                    "code": "missing_required_element",
+                    "message": "Missing phase-critical element.",
+                    "severity": "blocker",
+                }
+            ],
+            "review_flags": [
+                {
+                    "code": "sport_language_leak",
+                    "message": "Cross-sport wording leaked in.",
+                }
+            ],
+            "restricted_hits": [{"restriction": "heavy_overhead_pressing", "line": "Push Press"}],
+        },
+    )
+
+    assert retry["status"] == "FAIL"
+    assert retry["needs_retry"] is True
+    assert retry["repair_prompt"] is not None
+    assert "restriction_violation" in retry["repair_prompt"]
+    assert "generic_filler_phrase" not in retry["repair_prompt"]
+    assert "missing_required_element" in retry["repair_prompt"]
+    assert "sport_language_leak" not in retry["repair_prompt"]
+
+
+def test_build_stage2_retry_prompts_for_publish_blocking_review_flag():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="SPP\n- Landmine Press - 4x5",
+        validator_report={
+            "errors": [],
+            "warnings": [
+                {
+                    "code": "missing_required_element",
+                    "message": "Missing phase-critical element.",
+                    "phase": "SPP",
+                    "requirement": "alactic",
+                    "candidate_names": ["Air Bike Sprint"],
+                }
+            ],
+            "review_flags": [
+                {
+                    "code": "missing_required_element",
+                    "phase": "SPP",
+                    "requirement": "alactic",
+                    "candidate_names": ["Air Bike Sprint"],
+                }
+            ],
+            "missing_required_elements": [
+                {
+                    "phase": "SPP",
+                    "requirement": "alactic",
+                    "candidate_names": ["Air Bike Sprint"],
+                }
+            ],
+        },
+    )
+
+    assert retry["status"] == "WARN"
+    assert retry["needs_retry"] is True
+    assert retry["repair_prompt"] is not None
+    assert "restore_phase_critical_element" in retry["repair_prompt"]
+    assert "Air Bike Sprint" in retry["repair_prompt"]
 
 
 def test_review_stage2_output_keeps_weekly_session_overage_as_review_flag():

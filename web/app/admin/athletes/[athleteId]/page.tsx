@@ -12,6 +12,8 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import {
   approveAndResumeGenerationFromJob,
+  bulkPermanentlyDeleteArchivedPlans,
+  cancelAdminGenerationJob,
   getAdminAthleteGenerationJobs,
   generateAdminAthletePlanFromLatestIntake,
   getAdminAthlete,
@@ -22,6 +24,7 @@ import {
   updateAdminAthleteLatestIntake,
 } from "@/lib/api";
 import { loadAdminAthleteProfileData } from "@/lib/admin-athlete-profile-loader";
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import { useGenerationController } from "@/lib/generation-controller";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import {
@@ -52,7 +55,7 @@ function formatDateTime(value: string | null | undefined): string {
     return "Not recorded";
   }
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "Not recorded" : formatAppDateTime(value);
 }
 
 function formatListOrDash(values: string[] | null | undefined): string {
@@ -81,13 +84,76 @@ function toNutritionUpdateRequest(workspace: NutritionWorkspaceState): Nutrition
   };
 }
 
+function isArchivedPlan(plan: AdminPlanSummary): boolean {
+  return (plan.status || "").trim().toLowerCase() === "archived";
+}
+
 function AthletePlanAccessCard({
   plans,
   warning,
+  accessToken,
+  onPlansDeleted,
 }: {
   plans: AdminPlanSummary[];
   warning: string | null;
+  accessToken: string | null;
+  onPlansDeleted: (deletedPlanIds: string[]) => void;
 }) {
+  const archivedIds = plans.filter(isArchivedPlan).map((plan) => plan.plan_id);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Ignore any selections whose plans have left the list (after deletes/reloads)
+  // by deriving the effective set from the archived plans currently on screen.
+  const archivedIdSet = new Set(archivedIds);
+  const selectedArchivedIds = selectedIds.filter((id) => archivedIdSet.has(id));
+  const selectedCount = selectedArchivedIds.length;
+  const allArchivedSelected = archivedIds.length > 0 && selectedCount === archivedIds.length;
+
+  function toggleSelected(planId: string) {
+    setMessage(null);
+    setError(null);
+    setSelectedIds((current) =>
+      current.includes(planId) ? current.filter((id) => id !== planId) : [...current, planId],
+    );
+  }
+
+  function toggleSelectAll() {
+    setMessage(null);
+    setError(null);
+    setSelectedIds(allArchivedSelected ? [] : [...archivedIds]);
+  }
+
+  async function handleBulkDelete() {
+    if (!accessToken || selectedCount === 0 || isDeleting) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Permanently delete ${selectedCount} archived plan${selectedCount === 1 ? "" : "s"}? This cannot be undone.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    setIsDeleting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await bulkPermanentlyDeleteArchivedPlans(accessToken, selectedArchivedIds);
+      onPlansDeleted(result.deleted);
+      setSelectedIds((current) => current.filter((id) => !result.deleted.includes(id)));
+      setMessage(
+        `Deleted ${result.deleted_count} plan${result.deleted_count === 1 ? "" : "s"}.` +
+          (result.skipped_count ? ` ${result.skipped_count} skipped.` : ""),
+      );
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete the selected plans.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <article className="step-card admin-athlete-plan-access">
       <div className="form-section-header">
@@ -98,19 +164,62 @@ function AthletePlanAccessCard({
         <span className="badge">{plans.length} plan{plans.length === 1 ? "" : "s"}</span>
       </div>
       {warning ? <p className="error-text">{warning}</p> : null}
+      {archivedIds.length ? (
+        <div className="admin-athlete-plan-bulkbar">
+          <label className="admin-athlete-plan-select">
+            <input
+              type="checkbox"
+              checked={allArchivedSelected}
+              onChange={toggleSelectAll}
+              disabled={isDeleting}
+              aria-label="Select all archived plans"
+            />
+            <span className="muted">
+              {selectedCount > 0 ? `${selectedCount} selected` : `Select archived (${archivedIds.length})`}
+            </span>
+          </label>
+          <button
+            type="button"
+            className="ghost-button danger-button"
+            onClick={() => void handleBulkDelete()}
+            disabled={selectedCount === 0 || isDeleting || !accessToken}
+          >
+            {isDeleting ? "Deleting..." : `Delete selected${selectedCount ? ` (${selectedCount})` : ""}`}
+          </button>
+        </div>
+      ) : null}
+      {error ? <p className="error-text">{error}</p> : null}
+      {message ? <p className="success-banner">{message}</p> : null}
       {plans.length === 0 ? (
         <p className="muted">No saved plans were found for this athlete.</p>
       ) : (
         <div className="admin-athlete-plan-list">
-          {plans.map((plan) => (
-            <Link key={plan.plan_id} href={`/plans/${plan.plan_id}`} className="admin-athlete-plan-row">
-              <span>
-                <strong>{getPlanDisplayName(plan)}</strong>
-                <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date || "not set"}</small>
-              </span>
-              <span className="badge">{statusLabel(plan.status)}</span>
-            </Link>
-          ))}
+          {plans.map((plan) => {
+            const archived = isArchivedPlan(plan);
+            return (
+              <div key={plan.plan_id} className="admin-athlete-plan-item">
+                {archived ? (
+                  <label className="admin-athlete-plan-select" aria-label={`Select ${getPlanDisplayName(plan)}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(plan.plan_id)}
+                      onChange={() => toggleSelected(plan.plan_id)}
+                      disabled={isDeleting}
+                    />
+                  </label>
+                ) : (
+                  <span className="admin-athlete-plan-select-spacer" aria-hidden="true" />
+                )}
+                <Link href={`/plans/${plan.plan_id}`} className="admin-athlete-plan-row">
+                  <span>
+                    <strong>{getPlanDisplayName(plan)}</strong>
+                    <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date ? formatAppDate(plan.fight_date) : "not set"}</small>
+                  </span>
+                  <span className="badge">{statusLabel(plan.status)}</span>
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
     </article>
@@ -128,19 +237,24 @@ function DiagnosticMetaItem({ label, value }: { label: string; value: string | n
 
 function GenerationDiagnosticCard({
   job,
+  cancellingJobId,
   retryingJobId,
   resumingJobId,
+  onCancel,
   onRetry,
   onApproveAndResume,
 }: {
   job: AdminGenerationJobDiagnostic;
+  cancellingJobId: string | null;
   retryingJobId: string | null;
   resumingJobId: string | null;
+  onCancel: (job: AdminGenerationJobDiagnostic) => void;
   onRetry: (jobId: string) => void;
   onApproveAndResume: (jobId: string) => void;
 }) {
   const summary = job.request_payload_summary ?? {};
   const showProfileRefreshWarning = hasProfileRefreshFailedWarning(job);
+  const canCancel = job.status === "queued" || job.status === "running";
 
   return (
     <article className="admin-diagnostic-card">
@@ -167,11 +281,11 @@ function GenerationDiagnosticCard({
         <p className="admin-diagnostic-section-title">Request summary</p>
         <div className="admin-diagnostic-summary-grid">
           <DiagnosticMetaItem label="Athlete" value={summary.athlete_name} />
-          <DiagnosticMetaItem label="Fight date" value={summary.fight_date} />
-          <DiagnosticMetaItem label="Phase" value={summary.phase} />
-          <DiagnosticMetaItem label="Format" value={summary.fight_format} />
-          <DiagnosticMetaItem label="Fatigue" value={summary.fatigue_level} />
-          <DiagnosticMetaItem label="Availability" value={summary.training_availability} />
+          <DiagnosticMetaItem label="Fight date" value={summary.fight_date ? formatAppDate(summary.fight_date) : summary.fight_date} />
+          <DiagnosticMetaItem label="Phase" value={humanizeEnumValue(summary.phase, "-")} />
+          <DiagnosticMetaItem label="Format" value={humanizeEnumValue(summary.fight_format, "-")} />
+          <DiagnosticMetaItem label="Fatigue" value={humanizeEnumValue(summary.fatigue_level, "-")} />
+          <DiagnosticMetaItem label="Availability" value={humanizeEnumValue(summary.training_availability, "-")} />
         </div>
       </div>
 
@@ -222,6 +336,16 @@ function GenerationDiagnosticCard({
             {retryingJobId === job.job_id ? "Retrying..." : "Retry job"}
           </button>
         ) : null}
+        {canCancel ? (
+          <button
+            type="button"
+            className="ghost-button danger-button"
+            onClick={() => onCancel(job)}
+            disabled={cancellingJobId !== null}
+          >
+            {cancellingJobId === job.job_id ? "Cancelling..." : "Cancel generation"}
+          </button>
+        ) : null}
         {job.requires_admin_resume && !job.plan_id ? (
           <button
             type="button"
@@ -252,6 +376,7 @@ export default function AdminAthletePage() {
   const [jobs, setJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [athletePlans, setAthletePlans] = useState<AdminPlanSummary[]>([]);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
+  const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
   const [nutritionLoadWarning, setNutritionLoadWarning] = useState<string | null>(null);
   const [jobsLoadWarning, setJobsLoadWarning] = useState<string | null>(null);
   const [plansLoadWarning, setPlansLoadWarning] = useState<string | null>(null);
@@ -264,6 +389,13 @@ export default function AdminAthletePage() {
   const handleRetry = useCallback(() => {
     setLoadError(null);
     setReloadKey((value) => value + 1);
+  }, []);
+  const handlePlansDeleted = useCallback((deletedPlanIds: string[]) => {
+    if (!deletedPlanIds.length) {
+      return;
+    }
+    const removed = new Set(deletedPlanIds);
+    setAthletePlans((current) => current.filter((plan) => !removed.has(plan.plan_id)));
   }, []);
   const latestIntakeFocusValidation = athlete?.latest_intake
     ? validatePerformanceFocusSelections(
@@ -299,8 +431,11 @@ export default function AdminAthletePage() {
     token: session?.access_token ?? null,
     storageKey: athleteId ? `unlxck:pending-generation:admin:${athleteId}` : null,
     createJob: async (clientRequestId) => {
-      if (!session?.access_token || !athleteId) {
-        throw new Error("Session or athlete context is missing.");
+      if (!session?.access_token) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+      if (!athleteId) {
+        throw new Error("We couldn't identify this athlete. Go back and try again.");
       }
       return generateAdminAthletePlanFromLatestIntake(session.access_token, athleteId, clientRequestId);
     },
@@ -382,6 +517,37 @@ export default function AdminAthletePage() {
       handleRetry();
     } finally {
       setRetryingJobId(null);
+    }
+  }
+
+  async function handleCancelGenerationJob(job: AdminGenerationJobDiagnostic) {
+    if (!session?.access_token || cancellingJobId) return;
+    const confirmed = window.confirm(
+      `Cancel generation for ${job.athlete_full_name || job.athlete_email || job.athlete_id || "this athlete"}?`,
+    );
+    if (!confirmed) return;
+    setCancellingJobId(job.job_id);
+    setError(null);
+    setMessage(null);
+    try {
+      await cancelAdminGenerationJob(session.access_token, job.job_id);
+      setJobs((current) =>
+        current.map((item) =>
+          item.job_id === job.job_id
+            ? {
+              ...item,
+              status: "failed",
+              error: "Generation cancelled by admin.",
+              is_stale: false,
+            }
+            : item,
+        ),
+      );
+      setMessage("Generation cancelled. Archived plan cleanup is now available.");
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Unable to cancel generation.");
+    } finally {
+      setCancellingJobId(null);
     }
   }
 
@@ -542,7 +708,12 @@ export default function AdminAthletePage() {
           ) : null}
 
           <AthleteProfileOverviewCard athlete={athlete} />
-          <AthletePlanAccessCard plans={athletePlans} warning={plansLoadWarning} />
+          <AthletePlanAccessCard
+            plans={athletePlans}
+            warning={plansLoadWarning}
+            accessToken={session?.access_token ?? null}
+            onPlansDeleted={handlePlansDeleted}
+          />
           <article className="step-card">
             <div className="form-section-header">
               <div>
@@ -561,8 +732,10 @@ export default function AdminAthletePage() {
                   <GenerationDiagnosticCard
                     key={job.job_id}
                     job={job}
+                    cancellingJobId={cancellingJobId}
                     retryingJobId={retryingJobId}
                     resumingJobId={resumingJobId}
+                    onCancel={(selectedJob) => void handleCancelGenerationJob(selectedJob)}
                     onRetry={(jobId) => void handleRetryJob(jobId)}
                     onApproveAndResume={(jobId) => void handleApproveAndResumeJob(jobId)}
                   />

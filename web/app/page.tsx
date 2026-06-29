@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
-import { listPlans } from "@/lib/api";
+import { getToday } from "@/lib/api";
 import {
   getOptionLabel,
   PROFESSIONAL_STATUS_OPTIONS,
@@ -15,8 +15,16 @@ import {
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
+import { humanizeIfRawEnum } from "@/lib/plan-labels";
+import { formatAppDate } from "@/lib/date-format";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
-import type { PlanSummary } from "@/lib/types";
+import {
+  getSessionDayLabel,
+  getSessionFocus,
+  getSessionTitle,
+  hasTodaySession,
+} from "@/lib/today";
+import type { PlanSummary, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
 
 const landingPreviewStages = [
   {
@@ -198,10 +206,32 @@ function WorkspaceOverviewSkeleton() {
   );
 }
 
+function enrichConfirmedActivePlan(
+  commandPlan: TodayActivePlan | null | undefined,
+  latestPlan: PlanSummary | null | undefined,
+): TodayActivePlan {
+  if (!commandPlan?.id) {
+    return commandPlan ?? {};
+  }
+
+  const canUseLatestPlanFields = latestPlan?.plan_id === commandPlan.id;
+  if (!canUseLatestPlanFields) {
+    return commandPlan;
+  }
+
+  return {
+    ...commandPlan,
+    name: commandPlan.name || getPlanDisplayName(latestPlan),
+    status: commandPlan.status || latestPlan.status,
+    fight_date: commandPlan.fight_date || latestPlan.fight_date,
+  };
+}
+
 export default function HomePage() {
-  const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut } = useAppSession();
+  const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
-  const [recentPlans, setRecentPlans] = useState<PlanSummary[]>([]);
+  const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
+  const [commandError, setCommandError] = useState<string | null>(null);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
 
@@ -240,54 +270,72 @@ export default function HomePage() {
     }
   }, [isReady, isMeHydrated, me, router, session]);
 
+  const [isReloadingCommand, setIsReloadingCommand] = useState(false);
+  const latestTokenRef = useRef(session?.access_token);
+
+  useEffect(() => {
+    latestTokenRef.current = session?.access_token;
+  }, [session?.access_token]);
+
+  const loadCommandState = useCallback(async () => {
+    const token = session?.access_token;
+    if (!token) {
+      setCommandState(null);
+      return;
+    }
+    setIsReloadingCommand(true);
+    setCommandError(null);
+    try {
+      const state = await getToday(token);
+      // Ignore results from a request the current session has moved past.
+      if (latestTokenRef.current !== token) {
+        return;
+      }
+      setCommandState(state);
+      setCommandError(null);
+    } catch {
+      if (latestTokenRef.current !== token) {
+        return;
+      }
+      setCommandError("We couldn't load your camp status. Please try again.");
+    } finally {
+      if (latestTokenRef.current === token) {
+        setIsReloadingCommand(false);
+      }
+    }
+  }, [session?.access_token]);
+
   useEffect(() => {
     let active = true;
-
-    const fallbackPlans = me?.latest_plan ? [me.latest_plan] : [];
-
     if (!session?.access_token) {
-      setRecentPlans(fallbackPlans);
+      setCommandState(null);
       return () => {
         active = false;
       };
     }
-
-    if (me && me.plan_count <= 1) {
-      setRecentPlans(fallbackPlans);
-      return () => {
-        active = false;
-      };
-    }
-
-    setRecentPlans(fallbackPlans);
-
-    void listPlans(session.access_token)
-      .then((plans) => {
-        if (!active) {
-          return;
-        }
-        setRecentPlans(plans.slice(0, 2));
+    void getToday(session.access_token)
+      .then((state) => {
+        if (!active) return;
+        setCommandState(state);
+        setCommandError(null);
       })
       .catch(() => {
-        if (!active) {
-          return;
-        }
-        setRecentPlans(fallbackPlans);
+        if (!active) return;
+        setCommandError("We couldn't load your camp status. Please try again.");
       });
-
     return () => {
       active = false;
     };
-  }, [me, session?.access_token]);
+  }, [session?.access_token]);
 
   if (session && hasTransientMeError) {
     return (
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
         <h1>Workspace temporarily unavailable</h1>
-        <p className="muted">Your session exists, but the app could not load your athlete profile.</p>
+        <p className="muted">We couldn&apos;t load your athlete profile. Please try again.</p>
         <div className="hero-actions">
-          <button type="button" className="cta" onClick={() => window.location.reload()}>
+          <button type="button" className="cta" onClick={() => void refreshMe()}>
             Retry
           </button>
           <button type="button" className="secondary-button" onClick={() => void signOut()}>
@@ -360,58 +408,61 @@ export default function HomePage() {
       );
     }
 
-    const nextStepNumber = Number.isFinite(Number(draft?.current_step ?? 0)) ? Number(draft?.current_step ?? 0) + 1 : 1;
-    const totalOnboardingSteps = 6;
-    const remainingSteps = draft ? Math.max(totalOnboardingSteps - nextStepNumber, 0) : totalOnboardingSteps;
-    const progressValue = draft ? (nextStepNumber / totalOnboardingSteps) * 100 : 0;
-    const displayedPlans = recentPlans.length ? recentPlans : latestPlan ? [latestPlan] : [];
-    const fightDate = latestIntake?.fight_date || latestPlan?.fight_date || null;
-    const primaryStyle = getOptionLabel(TECHNICAL_STYLE_OPTIONS, me.profile.technical_style[0] ?? "") || "Not provided";
-    const tacticalStyle = getOptionLabel(TACTICAL_STYLE_OPTIONS, me.profile.tactical_style[0] ?? "") || "Not provided";
-    const stance = getOptionLabel(STANCE_OPTIONS, me.profile.stance ?? "") || "Not provided";
-    const status = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, me.profile.professional_status ?? "") || "Not provided";
-    const readinessBadge = draft ? "In progress" : "Ready to start";
-    const nextActionSummary = latestPlan
-      ? `Latest plan saved ${formatPlanTimestamp(latestPlan.created_at)}.`
-      : draft
-        ? `Draft is parked on step ${nextStepNumber} of 6.`
-        : "Profile is ready for the first intake.";
-    const primaryActionHref = latestPlan ? `/plans/${latestPlan.plan_id}` : "/onboarding";
-    const primaryActionLabel = latestPlan ? "Open latest plan" : draft ? "Resume intake" : "Start intake";
-    const primaryActionTitle = latestPlan ? "Open current plan" : draft ? "Finish intake" : "Start intake";
-    const operationalItems = [
-      { label: "Latest update", value: latestPlan ? formatPlanTimestamp(latestPlan.created_at) : formatPlanTimestamp(me.profile.updated_at) },
-      { label: "Fight date", value: formatPlanFightDate(fightDate) },
-      { label: "Primary style", value: primaryStyle },
-    ];
-    const decisionItems = [
-      {
-        label: "Advanced Intake",
-        value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
-      },
-      { label: "Saved plans", value: formatPlanCount(me.plan_count) },
-      { label: "Fight date", value: formatPlanFightDate(fightDate) },
-    ];
-    const profileStateItems = [
-      { label: "Full name", value: me.profile.full_name || "Not provided" },
-      { label: "Technical style", value: primaryStyle },
-      { label: "Tactical style", value: tacticalStyle },
-      { label: "Stance", value: stance },
-      { label: "Status", value: status },
-      { label: "Record", value: me.profile.record || "Not provided" },
-      {
-        label: "Intake progress",
-        value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
-        highlight: true,
-        badgeText: readinessBadge,
-        helperText: draft
-          ? remainingSteps === 0
-            ? "All intake steps are complete."
-            : `${remainingSteps} step${remainingSteps === 1 ? "" : "s"} remaining before plan generation.`
-          : "Start Advanced Intake to unlock guided plan generation.",
-        progressValue,
-      },
-    ];
+    if (!commandState && !commandError) {
+      return <WorkspaceOverviewSkeleton />;
+    }
+
+    if (!commandState && commandError) {
+      return (
+        <section className="panel loading-card">
+          <p className="kicker">Overview</p>
+          <h1>Camp command view unavailable</h1>
+          <p className="muted">{commandError}</p>
+          <div className="hero-actions">
+            <button type="button" className="cta" onClick={() => window.location.reload()}>
+              Retry
+            </button>
+            <Link href="/plans" className="secondary-button">
+              View plans
+            </Link>
+          </div>
+        </section>
+      );
+    }
+
+    const activePlan = enrichConfirmedActivePlan(commandState?.active_plan, latestPlan);
+    const hasActivePlan = Boolean(activePlan.id);
+    const sessionPreview = (commandState?.today?.next_session ?? {}) as TodaySession;
+    const hasNextSession = hasTodaySession(sessionPreview);
+    const nextSessionTitle = hasNextSession ? getSessionTitle(sessionPreview) : "No upcoming session";
+    const nextSessionDay = hasNextSession ? getSessionDayLabel(sessionPreview) : "";
+    const nextSessionFocus = hasNextSession
+      ? getSessionFocus(sessionPreview)
+      : hasActivePlan
+        ? "Open Today for the matched session."
+        : "Generate a plan to see your next session.";
+    const risks = commandState?.risk_watch ?? [];
+    const visibleRisks = risks.slice(0, 2);
+    const riskOverflow = Math.max(0, risks.length - visibleRisks.length);
+    const recommendation = commandState?.today?.recommendation_state ?? "not_checked_in";
+    const todayStateLabel = recommendation === "train_as_planned"
+      ? "Train as planned"
+      : recommendation === "modify"
+        ? "Modify today"
+        : recommendation === "pull_back"
+          ? "Pull back today"
+          : "Check in required";
+    // Decision tone drives the colour accents on the command cards (matches Today).
+    const decisionTone =
+      recommendation === "train_as_planned"
+        ? "green"
+        : recommendation === "modify"
+          ? "amber"
+          : recommendation === "pull_back"
+            ? "red"
+            : undefined;
+    const primaryHref = hasActivePlan ? "/today" : "/onboarding";
+    const primaryLabel = hasActivePlan ? (recommendation === "not_checked_in" ? "Open Today / Check in" : "Open Today") : "Complete Intake";
 
     return (
       <>
@@ -419,102 +470,60 @@ export default function HomePage() {
           <div className="overview-command-grid">
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
-              <h1 className="hero-title">One workspace, one clear next step.</h1>
-              <p className="overview-command-summary">Pick up the latest camp action first, then open profile detail and history only when you need them.</p>
-              <div className="overview-operational-strip" aria-label="Workspace status">
-                {operationalItems.map((item) => (
-                  <div key={item.label} className="overview-operational-item">
-                    <span className="overview-operational-label">{item.label}</span>
-                    <span className="overview-operational-value">{item.value}</span>
-                  </div>
-                ))}
+              <h1 className="hero-title">Camp command centre</h1>
+              <p className="overview-command-summary">Current camp status, today&apos;s decision, and the next training target from the active plan.</p>
+              <div className="overview-operational-strip" aria-label="Camp status">
+                <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today?.training_day ? formatAppDate(commandState.today.training_day) : "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
+              {commandError ? (
+                <div className="error-banner" role="alert">
+                  <span>{commandError}</span>
+                  <button
+                    type="button"
+                    className="error-banner-retry"
+                    onClick={() => void loadCommandState()}
+                    disabled={isReloadingCommand}
+                  >
+                    {isReloadingCommand ? "Retrying..." : "Retry"}
+                  </button>
+                </div>
+              ) : null}
             </div>
-            <div className="status-card overview-next-action overview-decision-card">
-              <p className="status-label">Next action</p>
-              <h2 className="plan-summary-title">{primaryActionTitle}</h2>
-              <div className="overview-next-action-state">
-                <span className={latestPlan ? "badge" : "badge status-badge-neutral"}>{latestPlan ? latestPlan.status : "Intake"}</span>
-                <p className="muted">{nextActionSummary}</p>
-              </div>
-              <div className="overview-decision-strip" aria-label="Next step details">
-                {decisionItems.map((item) => (
-                  <div key={item.label} className="overview-decision-item">
-                    <span className="overview-operational-label">{item.label}</span>
-                    <span className="overview-operational-value">{item.value}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="status-card overview-next-action overview-decision-card overview-command-card" data-tone={decisionTone}>
+              <p className="status-label">Today&apos;s state</p>
+              <h2 className="plan-summary-title">{todayStateLabel}</h2>
+              <p className="muted">{commandState?.today?.recommendation_reason || "Open Today for the current decision and session log."}</p>
               <div className="plan-summary-actions">
-                <Link href={primaryActionHref} className="cta overview-primary-action">
-                  {primaryActionLabel}
-                </Link>
-                <Link href="/quick-build" className="ghost-button">
-                  Quick Build - 2 min
-                </Link>
+                <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
+                {hasActivePlan ? (
+                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">View full plan</Link>
+                ) : (
+                  <Link href="/quick-build" className="secondary-button">Quick Build</Link>
+                )}
               </div>
             </div>
           </div>
 
           <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-            <OverviewDisclosure
-              title="Profile snapshot"
-              summary={draft ? `Advanced Intake is ${remainingSteps === 0 ? "ready for review" : `still ${remainingSteps} step${remainingSteps === 1 ? "" : "s"} away`}.` : "Profile fields currently saved for the next plan."}
-              badge={readinessBadge}
-            >
-              <OverviewDetailGrid items={profileStateItems} />
-              <div className="plan-card-actions overview-card-actions">
-                <Link href="/onboarding" className="secondary-button">
-                  {draft ? "Resume intake" : "Start Advanced Intake"}
-                </Link>
-                <Link href="/quick-build" className="ghost-button">
-                  Quick Build - 2 min
-                </Link>
-                <Link href="/settings" className="ghost-button">
-                  Update settings
-                </Link>
-              </div>
-            </OverviewDisclosure>
-
-            <OverviewDisclosure
-              title="Recent plans"
-              summary={displayedPlans.length ? `${displayedPlans.length === 1 ? "1 saved plan is ready to reopen." : `${displayedPlans.length} recent plans are ready to reopen.`}` : "No plans yet. Start with Quick Build or complete Advanced Intake."}
-              badge={formatPlanCount(me.plan_count)}
-            >
-              {displayedPlans.length ? (
-                <div className="plan-history-list">
-                  {displayedPlans.map((plan, index) => (
-                    <article key={plan.plan_id} className="plan-history-row overview-history-row">
-                      <div className="plan-history-copy">
-                        <p className="label">{index === 0 ? "Latest saved plan" : "Recent saved plan"}</p>
-                        <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
-                        <p className="overview-history-meta-line">Created {formatPlanTimestamp(plan.created_at)}</p>
-                      </div>
-                      <div className="plan-history-meta">
-                        <span className="badge">{plan.status}</span>
-                        <Link href={`/plans/${plan.plan_id}`} className="ghost-button overview-history-action">
-                          Open plan
-                        </Link>
-                      </div>
-                    </article>
-                  ))}
-                  <div className="plan-card-actions overview-card-actions">
-                    <Link href="/plans" className="ghost-button">
-                      View full history
-                    </Link>
-                  </div>
+            <article className="status-card overview-command-card overview-next-session-card" data-tone={decisionTone}>
+              <p className="status-label">Next session</p>
+              <h2 className="plan-summary-title">{nextSessionTitle}</h2>
+              {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
+              <p className="muted">{nextSessionFocus}</p>
+            </article>
+            <article className="status-card overview-command-card overview-risk-card">
+              <p className="status-label">Risk watch</p>
+              {visibleRisks.length ? visibleRisks.map((risk) => (
+                <div key={`${risk.category}-${risk.label}`} className="overview-risk-row" data-tone={risk.tone}>
+                  <span className="overview-risk-row-label">{humanizeIfRawEnum(risk.label) || risk.label}</span>
+                  <span className="overview-risk-row-text">{risk.text || "Monitor before training."}</span>
                 </div>
-              ) : (
-                <EmptyState
-                  eyebrow="Plan history"
-                  title="No camp plans yet."
-                  description="Complete Advanced Intake to generate your first training plan."
-                  example="Your generated camps will list here with fight date, status, and a one-tap reopen."
-                  primaryAction={{ label: "Start Advanced Intake", href: "/onboarding" }}
-                  secondaryAction={{ label: "Use Quick Build", href: "/quick-build" }}
-                />
-              )}
-            </OverviewDisclosure>
+              )) : <p className="muted">No risk flags from today&apos;s command view.</p>}
+              {riskOverflow ? <span className="badge status-badge-neutral">+{riskOverflow} more</span> : null}
+            </article>
           </div>
         </section>
       </>

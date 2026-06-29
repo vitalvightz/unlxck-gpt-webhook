@@ -8,7 +8,7 @@ import {
   WEAK_AREA_OPTIONS,
   retainKnownOptionValues,
 } from "@/lib/intake-options";
-import { applyNoScheduledFightSnapshot, emptyPlanRequest } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest } from "@/lib/onboarding";
 import {
   buildDaysOutContext,
   computeDaysUntilFight,
@@ -16,6 +16,7 @@ import {
 } from "@/lib/days-out-policy";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { HARD_SPARRING_DAY_CAP } from "@/lib/training-schedule";
+import { buildAthleteInjuryTexts } from "@/lib/guided-injury";
 import type { PlanRequest } from "@/lib/types";
 
 export const QUICK_BUILD_KEY_GOAL_CAP = 3;
@@ -100,7 +101,12 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
       0,
       QUICK_BUILD_WEAK_AREA_CAP,
     ),
-    injuries: (plan.injuries ?? "").trim(),
+    // When the athlete completed the advanced intake, plan.injuries holds the
+    // planner's structured comprehension ("Left shoulder is bruised (low,
+    // stable). Type: surface_injury. Surface: bruise..."), not their own words.
+    // Show what they actually typed; fall back to the free-text field only when
+    // there are no structured guided injuries to draw from.
+    injuries: buildAthleteInjuryTexts(plan.guided_injuries) || (plan.injuries ?? "").trim(),
   };
 }
 
@@ -117,7 +123,9 @@ export type QuickBuildValidationErrors = Partial<Record<keyof QuickBuildInput | 
 
 export function sanitizeQuickBuildFocusByDaysOut(input: QuickBuildInput, now?: Date): Pick<QuickBuildInput, "key_goals" | "weak_areas"> {
   const daysUntilFight = input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date, now);
-  const daysOutCtx = buildDaysOutContext(daysUntilFight);
+  const daysOutCtx = buildDaysOutContext(daysUntilFight, {
+    hasHardSparring: input.hard_sparring_days.length > 0,
+  });
   return {
     key_goals: filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", input.key_goals),
     weak_areas: filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", input.weak_areas),
@@ -209,6 +217,8 @@ export function validateQuickBuildInput(
 export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
   const trimmedName = input.full_name.trim();
   const base = emptyPlanRequest(trimmedName);
+  const keyGoals = retainKnownOptionValues(input.key_goals, KEY_GOAL_OPTIONS);
+  const weakAreas = retainKnownOptionValues(input.weak_areas, WEAK_AREA_OPTIONS);
   const plan: PlanRequest = {
     ...base,
     athlete: {
@@ -222,7 +232,7 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     no_scheduled_fight: input.no_scheduled_fight,
     rounds_format: input.rounds_format || "3 x 3",
     weekly_training_frequency: input.weekly_training_frequency,
-    fatigue_level: "moderate",
+    fatigue_level: "low",
     training_availability: retainKnownOptionValues(input.training_availability, TRAINING_AVAILABILITY_OPTIONS),
     hard_sparring_days: retainKnownOptionValues(input.hard_sparring_days, TRAINING_AVAILABILITY_OPTIONS)
       .filter((day) => input.training_availability.includes(day))
@@ -230,10 +240,10 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     support_work_days: [],
     equipment_access: retainKnownOptionValues(input.equipment_access, EQUIPMENT_ACCESS_OPTIONS),
     injuries: input.injuries.trim(),
-    key_goals: retainKnownOptionValues(input.key_goals, KEY_GOAL_OPTIONS),
-    primary_goal: "",
-    weak_areas: retainKnownOptionValues(input.weak_areas, WEAK_AREA_OPTIONS),
-    primary_weak_area: "",
+    key_goals: keyGoals,
+    primary_goal: keyGoals[0] ?? "",
+    weak_areas: weakAreas,
+    primary_weak_area: weakAreas[0] ?? "",
     goal_weakness_collision_detail: "",
     goal_weakness_collision_tags: [],
     goal_weakness_collision_details: [],
@@ -241,5 +251,5 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     mindset_challenges: "",
     notes: "",
   };
-  return applyNoScheduledFightSnapshot(plan, input.no_scheduled_fight);
+  return canonicalizePerformanceFocus(applyNoScheduledFightSnapshot(plan, input.no_scheduled_fight));
 }

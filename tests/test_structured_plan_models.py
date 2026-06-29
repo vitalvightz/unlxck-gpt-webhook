@@ -406,3 +406,16 @@ def test_structured_plan_row_decodes_when_present():
     structured, version = _decode_structured_plan(_valid_plan(), raw_markdown="# md")
     assert structured is not None
     assert version == SCHEMA_VERSION
+
+
+def test_malformed_structured_plan_column_warns_and_falls_back(caplog):
+    # A stored structured payload that no longer parses must surface a warning
+    # (not silently drop to the markdown fallback) so a regression is visible.
+    from api.plan_mappers import _decode_structured_plan
+
+    malformed = {"schema_version": "x", "weeks": "not-a-list"}
+    with caplog.at_level("WARNING", logger="api.plan_mappers"):
+        structured, version = _decode_structured_plan(malformed, raw_markdown="# md")
+    assert structured is None
+    assert version is None
+    assert any("structured_plan column failed to parse" in r.message for r in caplog.records)

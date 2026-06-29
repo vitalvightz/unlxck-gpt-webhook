@@ -1,3 +1,4 @@
+import { formatAppDate } from "@/lib/date-format";
 import type { NutritionBodyweightLogEntry, NutritionWorkspaceState } from "@/lib/types";
 
 export type BodyweightRange = "7D" | "30D" | "All";
@@ -119,13 +120,7 @@ export function formatTargetGapLabel(value: number | null | undefined): string {
 export function formatBodyweightDate(value: string | null | undefined): string {
   const normalized = String(value || "").trim();
   if (!normalized) return "No entry yet";
-  const parsed = new Date(`${normalized}T00:00:00`);
-  if (!Number.isFinite(parsed.getTime())) return normalized;
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(parsed);
+  return formatAppDate(normalized);
 }
 
 export function formatBodyweightTime(value: string | null | undefined): string {

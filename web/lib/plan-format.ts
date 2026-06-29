@@ -1,4 +1,6 @@
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
+import { formatPlanLabel } from "@/lib/plan-labels";
 
 type PlanDisplayFields = {
   fight_date?: string | null;
@@ -16,37 +18,14 @@ export function formatPlanTimestamp(value?: string | null): string {
   if (!value) {
     return "Not available";
   }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(parsed);
+  return formatAppDateTime(value);
 }
 
 export function formatPlanFightDate(value?: string | null): string {
   if (!value) {
     return "Not provided";
   }
-
-  const parsed = new Date(`${value}T12:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(parsed);
+  return formatAppDate(value);
 }
 
 export function getPlanDisplayName(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): string {
@@ -81,7 +60,5 @@ export function formatPlanStatus(value?: string | null): string {
     return "Pending";
   }
 
-  return normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+  return formatPlanLabel(normalized);
 }

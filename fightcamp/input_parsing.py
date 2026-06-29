@@ -19,6 +19,8 @@ from .guided_injury_display import (
 )
 from .guided_injury_resolver import resolve_guided_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, SEVERITY_RANK, normalize_severity
+from .injury_negation import remove_negated_phrases
+from .injury_registry import SURFACE_TISSUE_TYPES
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
 from .normalization import normalize_injury_marker as _normalize_injury_marker
 from .normalization import normalize_label as _normalize_label
@@ -27,6 +29,13 @@ from .restriction_parsing import ParsedRestriction, parse_restriction_entry
 
 def _normalize_list(field: str | None) -> list[str]:
     return [w.strip().lower() for w in field.split(",") if w.strip()] if field else []
+
+
+_HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT = 20
+
+
+def _without_strength_focus(values: list[str]) -> list[str]:
+    return [value for value in values if value.strip().lower() != "strength"]
 
 
 _EMPTY_INJURY_MARKERS = {
@@ -562,7 +571,22 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
                 injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
         injuries.append(injury_entry)
 
-    if guided_injury.avoid:
+    # A surface/skin injury's "avoid" is wound-care guidance (e.g. "avoid
+    # friction on the wound"), not a training-load restriction. Promoting it to
+    # a hard restriction makes the Stage-2 validator flag the plan's own
+    # wound-care references as violations and falsely hold the plan, so we keep
+    # it as injury guidance (already stored on injury_entry["avoid"]) instead.
+    is_surface_injury = (
+        str(guided_injury.injury_type or "").strip().lower() == "surface_injury"
+        or bool(str(guided_injury.surface_type or "").strip())
+        or any(
+            str(entry.get("injury_type") or "").strip().lower() in SURFACE_TISSUE_TYPES
+            or str(entry.get("rehab_type") or "").strip().lower() in SURFACE_TISSUE_TYPES
+            for entry in injuries
+        )
+    )
+
+    if guided_injury.avoid and not is_surface_injury:
         restriction_phrase = guided_injury.avoid
         if not _GUIDED_TRIGGER_PREFIX.match(restriction_phrase):
             restriction_phrase = f"avoid {restriction_phrase}"
@@ -587,6 +611,17 @@ def _parse_guided_injuries(
     return parsed_injuries, parsed_restrictions
 
 
+def _phrase_present(haystack: str, needle: str) -> bool:
+    """Whether *needle* appears in *haystack* as a whole phrase.
+
+    Word-boundary aware so a short term like "hip"/"arm"/"ear" is not matched
+    inside an unrelated word ("chipped", "warm", "forearm").
+    """
+    if not needle:
+        return False
+    return re.search(rf"(?<!\w){re.escape(needle)}(?!\w)", haystack) is not None
+
+
 def _attach_severity_provenance(
     parsed_injuries: list[dict[str, str | None | list[str]]],
 ) -> list[dict[str, str | None | list[str]]]:
@@ -596,7 +631,26 @@ def _attach_severity_provenance(
             str(injury.get("notes") or ""),
             str(injury.get("avoid") or ""),
         ]
-        return " ".join(part.strip() for part in parts if str(part).strip())
+        # Dedupe parts: guided formatting often folds the notes into
+        # original_phrase, so adding notes again double-counts the text (and can
+        # split a negated phrase apart). Skip a part only when it already appears
+        # as a whole phrase earlier — a word-boundary check so a short term like
+        # "hip" is not treated as a duplicate because it sits inside "chipped".
+        kept: list[str] = []
+        accumulated = ""
+        for part in parts:
+            cleaned = part.strip()
+            if cleaned:
+                # Use word boundaries to prevent false-positive substring matches
+                # (e.g., "hip" matching inside "chipped", or "arm" inside "warm").
+                pattern = rf"\b{re.escape(cleaned.lower())}\b"
+                if not re.search(pattern, accumulated.lower()):
+                    kept.append(cleaned)
+                    accumulated = f"{accumulated} {cleaned}"
+        joined = " ".join(kept)
+        # Strip negated content so denials ("no fracture") never escalate
+        # severity off the negated structural noun.
+        return remove_negated_phrases(joined) if joined else joined
 
     def _severity_rank(value: str) -> int:
         return SEVERITY_RANK.get(value, SEVERITY_RANK["moderate"])
@@ -627,13 +681,27 @@ def _attach_severity_provenance(
             injury["severity_evidence"] = [f"guided severity: {guided_severity}"]
             continue
 
+        default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
+        # "unspecified" (and empty) injury types carry no real severity signal,
+        # so they must fall through to the explicit fallback default rather than
+        # borrowing a default-type severity.
+        if injury_type in ("", "unspecified"):
+            default_type_severity = None
+
         if text_has_signal:
+            # Benign qualifiers like "minor"/"slight" escalate nothing and must
+            # not pull a recognised injury type below its default floor: "minor
+            # swelling" stays at the swelling default (moderate), not low.
+            if default_type_severity and _severity_rank(text_severity) < _severity_rank(default_type_severity):
+                injury["severity"] = default_type_severity
+                injury["severity_source"] = "injury_type_default"
+                injury["severity_evidence"] = [f"injury type default: {injury_type}"]
+                continue
             injury["severity"] = text_severity
             injury["severity_source"] = "text_detected"
             injury["severity_evidence"] = [f"text severity: {text_severity}", *text_hits]
             continue
 
-        default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
         if default_type_severity:
             injury["severity"] = default_type_severity
             injury["severity_source"] = "injury_type_default"
@@ -951,10 +1019,31 @@ class PlanInput:
 
         camp_timeline_type: CampTimelineType = "open_camp" if no_scheduled_fight else "scheduled_fight"
 
+        if (
+            hard_sparring_days
+            and not no_scheduled_fight
+            and isinstance(days_until_fight, int)
+            and days_until_fight <= _HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT
+        ):
+            primary_goal_was_strength = primary_goal.strip().lower() == "strength"
+            primary_weak_area_was_strength = primary_weak_area.strip().lower() == "strength"
+            key_goals_list = _without_strength_focus(key_goals_list)
+            weak_areas_list = _without_strength_focus(weak_areas_list)
+            if primary_goal_was_strength:
+                primary_goal = ""
+            elif primary_goal and primary_goal not in key_goals_list:
+                primary_goal = key_goals_list[0] if key_goals_list else ""
+            if primary_weak_area_was_strength:
+                primary_weak_area = ""
+            elif primary_weak_area and primary_weak_area not in weak_areas_list:
+                primary_weak_area = weak_areas_list[0] if weak_areas_list else ""
+
         normalized_values = {
             **values,
             "athlete_timezone": effective_athlete_timezone,
+            "key_goals": ", ".join(key_goals_list),
             "primary_goal": primary_goal,
+            "weak_areas": ", ".join(weak_areas_list),
             "primary_weak_area": primary_weak_area,
             "goal_weakness_collision_detail": goal_weakness_collision_detail,
             "goal_weakness_collision_tags": goal_weakness_collision_tags,

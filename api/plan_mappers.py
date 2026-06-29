@@ -2,11 +2,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
 
+from fightcamp.stage2_policy import (
+    is_hard_stage2_blocker,
+    publish_blocking_review_findings,
+)
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
@@ -27,6 +32,17 @@ from .models import (
 )
 from .store import AppStore
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
+
+logger = logging.getLogger(__name__)
+
+_REVIEW_CODE_LABELS = {
+    "calendar_spine_fight_day_protocol_violation": "fight-day protocol timing needs review",
+    "equipment_incongruent_selection": "selected equipment does not match the programmed work",
+    "late_camp_session_incomplete": "late-camp session detail is incomplete",
+    "missing_required_element": "required plan elements are missing",
+    "restriction_violation": "training restrictions were violated",
+    "true_internal_system_leak": "blocked release content was detected",
+}
 
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
@@ -109,21 +125,96 @@ def _username_rate_limit_info(history: list[str]) -> UsernameRateLimitInfo:
     )
 
 
+def _review_finding_label(item: Any) -> str | None:
+    if not isinstance(item, dict):
+        return None
+    code = str(item.get("code") or "").strip()
+    if not code:
+        return None
+    return _REVIEW_CODE_LABELS.get(code) or code.replace("_", " ")
+
+
+def _review_finding_labels(items: Any) -> list[str]:
+    if not isinstance(items, list):
+        return []
+    labels: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        label = _review_finding_label(item)
+        if not label or label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
+    return labels
+
+
+def _finding_list(items: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
+def _format_review_reason(report: dict[str, Any], *, normalized_status: str) -> str | None:
+    if normalized_status != "held_for_review":
+        return None
+    if not report:
+        return (
+            "Admin review is required before release because validation did not "
+            "return a publishable report."
+        )
+
+    error_labels = _review_finding_labels(report.get("errors"))
+    if error_labels:
+        return (
+            "Admin review is required before release because Stage 2 validation "
+            f"found errors: {', '.join(error_labels[:3])}."
+        )
+
+    blocking_labels = _review_finding_labels(
+        [*_finding_list(report.get("blocking_warnings")), *publish_blocking_review_findings(report)]
+    )
+    if blocking_labels:
+        return (
+            "Admin review is required before release because Stage 2 validation "
+            f"found blocking issues: {', '.join(blocking_labels[:3])}."
+        )
+
+    return "Admin review is required before this plan can be released to the athlete."
+
+
 def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
     raw_status = str(row.get("status") or "generated")
     normalized_status = raw_status
+    report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
     if raw_status == "review_required":
-        report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
         report_exists = bool(report)
         if not report_exists:
             normalized_status = "held_for_review"
         else:
             has_errors = bool(report.get("errors"))
-            has_blocking = bool(report.get("blocking_warnings"))
+            blocking_warnings = [
+                warning
+                for warning in (report.get("blocking_warnings") or [])
+                if isinstance(warning, dict)
+                and is_hard_stage2_blocker(str(warning.get("code") or ""))
+            ]
+            has_blocking = bool(blocking_warnings) or bool(
+                publish_blocking_review_findings(report)
+            )
             if not has_blocking:
                 warnings = list(report.get("warnings") or [])
-                has_blocking = any(bool(w.get("blocking")) for w in warnings if isinstance(w, dict))
-            normalized_status = "held_for_review" if has_errors or has_blocking else "publishable_with_flags"
+                has_blocking = any(
+                    is_hard_stage2_blocker(str(w.get("code") or ""))
+                    for w in warnings
+                    if isinstance(w, dict)
+                )
+            has_review_flags = bool(report.get("warnings") or report.get("review_flags"))
+            if has_errors or has_blocking:
+                normalized_status = "held_for_review"
+            elif has_review_flags:
+                normalized_status = "publishable_with_flags"
+            else:
+                normalized_status = "ready"
     return PlanSummary(
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
@@ -134,6 +225,7 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         created_at=str(row.get("created_at") or ""),
         status=normalized_status,
         pdf_url=row.get("pdf_url"),
+        review_reason=_format_review_reason(report, normalized_status=normalized_status),
     )
 
 
@@ -285,11 +377,13 @@ def _map_plan_detail(
     )
     parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
     display_plan_text = str(row.get("plan_text") or "")
+    if not display_plan_text and summary.status == "archived":
+        display_plan_text = str(row.get("final_plan_text") or row.get("draft_plan_text") or "")
     is_legacy_review_required = str(row.get("status") or "").strip().lower() == "review_required"
     if (
         not display_plan_text
         and is_legacy_review_required
-        and summary.status == "publishable_with_flags"
+        and summary.status in {"ready", "publishable_with_flags"}
     ):
         display_plan_text = str(row.get("final_plan_text") or "")
     structured_plan, structured_schema_version = _decode_structured_plan(
@@ -357,6 +451,13 @@ def _decode_structured_plan(
         return None, None
     result = safe_parse_structured_plan(decoded, raw_markdown=raw_markdown or None)
     if not result.ok or result.plan is None:
+        # The column carried a structured payload that no longer parses against
+        # the schema. Surface it instead of silently dropping to the markdown
+        # fallback, so a stored-card regression is visible rather than invisible.
+        logger.warning(
+            "structured_plan column failed to parse; falling back to markdown (errors=%s)",
+            "; ".join(result.errors) if getattr(result, "errors", None) else "unknown",
+        )
         return None, None
     return result.plan, result.plan.schema_version
 

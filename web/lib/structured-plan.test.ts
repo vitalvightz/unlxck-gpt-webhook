@@ -2,11 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  classifySessionlessDay,
   cleanText,
   formatBlockLoad,
   formatMacroRange,
   formatMeasured,
   formatWeightCutBand,
+  getActiveNotesExcludingRedFlags,
   getBlocks,
   getCoachingCues,
   getDays,
@@ -14,6 +16,8 @@ import {
   getDeterministicRecoveryPhases,
   getDisplayableRedFlags,
   getMindsetLines,
+  getPlanNotes,
+  planNoteLabel,
   getSessions,
   getStringList,
   getWeeks,
@@ -28,6 +32,7 @@ import {
   shouldRenderStructuredPlan,
   shouldShowRest,
   splitMindsetLines,
+  weekLabel,
 } from "./structured-plan.ts";
 
 // An athlete-safe deterministic_support projection (as the backend emits it,
@@ -173,6 +178,132 @@ test("selectors return safe empties on missing/partial fields", () => {
   assert.equal(week.length, 0); // wrong-shaped input -> empty, no crash
 });
 
+// --- plan-level active notes ------------------------------------------------
+
+test("getPlanNotes keeps notes with text, drops empties, lowercases category", () => {
+  const notes = getPlanNotes({
+    plan_notes: [
+      { category: "Weight_Cut", label: "Active weight cut", text: "~5.7% target." },
+      { category: "injury", text: "Keep the wound covered and dry." },
+      { category: "nutrition", text: "   " },
+      { text: "Stay disciplined." },
+      "not an object" as never,
+    ],
+  } as never);
+  assert.equal(notes.length, 3);
+  assert.deepEqual(notes[0], {
+    category: "weight_cut",
+    label: "Active weight cut",
+    text: "~5.7% target.",
+  });
+  assert.equal(notes[1].category, "injury");
+  assert.equal(notes[2].category, "general");
+  assert.equal(notes[2].label, null);
+});
+
+test("getPlanNotes is safe on missing / malformed plan_notes", () => {
+  assert.deepEqual(getPlanNotes(null), []);
+  assert.deepEqual(getPlanNotes({} as never), []);
+  assert.deepEqual(getPlanNotes({ plan_notes: "nope" } as never), []);
+});
+
+test("getActiveNotesExcludingRedFlags drops notes that restate a red flag", () => {
+  const plan = {
+    red_flag_rules: [
+      {
+        rule_id: "rf-1",
+        display_text:
+          "If weight-cut symptoms worsen (lightheadedness, excessive weakness), stop non-essential activity and escalate to coach/medical staff.",
+      },
+    ],
+    plan_notes: [
+      // A shorter paraphrase of the red flag (missing the parenthetical) — dropped.
+      {
+        category: "weight_cut",
+        label: "Note",
+        text: "If weight-cut symptoms worsen, stop non-essential activity and escalate to coach/medical staff.",
+      },
+      // Richer context that merely shares a phrase with the flag — kept.
+      {
+        category: "injury",
+        label: "Left shoulder contusion",
+        text: "High-severity bruise, stable. Avoid direct contact; stop any drill on sharp pain or new swelling. Rehab drills included each session.",
+      },
+      // Unrelated context — kept.
+      { category: "weight_cut", label: "Active weight cut", text: "Cut ~3.5%; recovery tolerance reduced." },
+    ],
+  } as never;
+
+  const notes = getActiveNotesExcludingRedFlags(plan);
+  assert.equal(notes.length, 2);
+  assert.equal(
+    notes.some((note) => note.label === "Note"),
+    false,
+  );
+  assert.equal(
+    notes.some((note) => note.label === "Left shoulder contusion"),
+    true,
+  );
+  assert.equal(
+    notes.some((note) => note.label === "Active weight cut"),
+    true,
+  );
+});
+
+test("getActiveNotesExcludingRedFlags returns all notes when there are no red flags", () => {
+  const plan = {
+    plan_notes: [{ category: "general", text: "Stay disciplined." }],
+  } as never;
+  assert.equal(getActiveNotesExcludingRedFlags(plan).length, 1);
+});
+
+test("planNoteLabel prefers an explicit label, else a category title", () => {
+  assert.equal(planNoteLabel({ category: "weight_cut", label: "Cut", text: "x" }), "Cut");
+  assert.equal(planNoteLabel({ category: "injury", label: null, text: "x" }), "Injury");
+  assert.equal(planNoteLabel({ category: "unknown", label: null, text: "x" }), "Note");
+});
+
+// --- session-less day classification ----------------------------------------
+
+test("classifies coach-led / sparring / technical days from the headline", () => {
+  const make = (headline: string, day_type = "moderate") => ({
+    day_type,
+    today_card: { headline },
+  });
+
+  assert.equal(classifySessionlessDay(make("Coach-led boxing session")).kind, "coach_led");
+  const lightCombat = classifySessionlessDay(make("Light technical combat"));
+  assert.equal(lightCombat.kind, "light_combat");
+  assert.equal(lightCombat.tag, "Light combat");
+  assert.equal(lightCombat.coachLed, false);
+  assert.equal(classifySessionlessDay(make("Hard sparring")).kind, "sparring");
+  assert.equal(classifySessionlessDay(make("Coach-led sparring")).kind, "sparring");
+  assert.equal(classifySessionlessDay(make("Coach-led boxing \u2014 technical only")).kind, "technical");
+  // "technical only / no hard sparring" must read as technical, not sparring.
+  assert.equal(
+    classifySessionlessDay(make("Coach-led boxing — no hard sparring / technical only")).kind,
+    "technical",
+  );
+  // A coach-led/sparring/technical day carries its headline as the card title
+  // and flags the "train with your coach" note.
+  const sparring = classifySessionlessDay(make("Hard sparring"));
+  assert.equal(sparring.title, "Hard sparring");
+  assert.equal(sparring.tag, "Sparring");
+  assert.equal(sparring.coachLed, true);
+});
+
+test("classifies a headline-less or rest day as a true rest day", () => {
+  assert.equal(classifySessionlessDay({ day_type: "rest", today_card: {} }).kind, "rest");
+  assert.equal(classifySessionlessDay({ day_type: "recovery" } as never).kind, "rest");
+  assert.equal(classifySessionlessDay(null).kind, "rest");
+  assert.equal(classifySessionlessDay({} as never).coachLed, false);
+  // A headline with no contact keyword still gets its own card (not "Rest day").
+  const scheduled = classifySessionlessDay({ today_card: { headline: "Active recovery flush" } });
+  assert.equal(scheduled.kind, "scheduled");
+  assert.equal(scheduled.title, "Active recovery flush");
+  assert.equal(scheduled.tag, null);
+});
+
 // --- field display rules ----------------------------------------------------
 
 test("hides 0-second rest, shows positive rest", () => {
@@ -270,10 +401,10 @@ test("extracts session blocks from a valid plan", () => {
 test("extracts mindset anchor lines", () => {
   const session = getSessions(getDays(getWeeks(validPlan())[0])[0])[0];
   const lines = getMindsetLines(session.mindset_anchor);
-  assert.equal(lines.length, 3);
+  assert.equal(lines.length, 2);
   assert.deepEqual(
     lines.map((line) => line.label),
-    ["Intent", "Focus", "Reset"],
+    ["Intent", "Focus"],
   );
 });
 
@@ -296,7 +427,7 @@ test("getStringList cleans, drops blanks, and tolerates null", () => {
   assert.deepEqual(getStringList([]), []);
 });
 
-test("getMindsetLines includes confidence_anchor and context when present", () => {
+test("getMindsetLines keeps the simplified Intent/Focus/Context structure", () => {
   const lines = getMindsetLines({
     intent: "Move fast",
     focus_cue: "Drive",
@@ -306,7 +437,7 @@ test("getMindsetLines includes confidence_anchor and context when present", () =
   });
   assert.deepEqual(
     lines.map((l) => l.label),
-    ["Intent", "Focus", "Reset", "Anchor", "Context"],
+    ["Intent", "Focus", "Context"],
   );
   // Empty anchor object yields no lines (renderer hides it).
   assert.deepEqual(getMindsetLines({}), []);
@@ -314,6 +445,25 @@ test("getMindsetLines includes confidence_anchor and context when present", () =
 });
 
 // --- deterministic (Stage 1) nutrition + recovery (PR-6) -------------------
+
+test("weekLabel keeps short goals verbatim but caps long ones to a glanceable heading", () => {
+  // Short goal: returned untouched, trailing punctuation preserved.
+  assert.equal(
+    weekLabel({ week_index: 2, week_goal: "Convert strength into speed." } as never),
+    "Week 2 — Convert strength into speed.",
+  );
+  // Long multi-clause goal: keep the first clause when it already fits in 6 words.\n  assert.equal(\n    weekLabel({\n      week_index: 1,\n      week_goal:\n        \"Build single-leg drive and balance; maintain punch speed and shoulder-friendly maintenance while preserving freshness.\",\n    } as never),\n    \"Week 1 — Build single-leg drive and balance\",\n  );\n  // Goal with decimal numbers: should not split on the decimal point.\n  assert.equal(\n    weekLabel({\n      week_index: 5,\n      week_goal:\n        \"Build 1.5x bodyweight squat and power; maintain punch speed and shoulder-friendly maintenance.\",\n    } as never),\n    \"Week 5 — Build 1.5x bodyweight squat and…\",\n  );
+  // Long single clause with no early break: hard-cap at 6 words with an ellipsis.
+  assert.equal(
+    weekLabel({
+      week_index: 3,
+      week_goal: "Sharpen reactive power speed timing and ring distance control",
+    } as never),
+    "Week 3 — Sharpen reactive power speed timing and…",
+  );
+  // No goal: just the week number.
+  assert.equal(weekLabel({ week_index: 4 } as never), "Week 4");
+});
 
 test("formatMacroRange handles full / max-only / min-only / empty", () => {
   assert.equal(formatMacroRange({ min: 112, max: 140 }, "g/day"), "112–140 g/day");
@@ -457,7 +607,7 @@ test("redFlagView tolerates missing fields", () => {
   assert.equal(empty.severityLabel, null);
 });
 
-test("splitMindsetLines keeps Intent/Focus/Reset primary, Anchor/Context secondary", () => {
+test("splitMindsetLines keeps all simplified mindset lines primary", () => {
   const { primary, secondary } = splitMindsetLines({
     intent: "Stay sharp",
     focus_cue: "Hands up",
@@ -467,15 +617,12 @@ test("splitMindsetLines keeps Intent/Focus/Reset primary, Anchor/Context seconda
   });
   assert.deepEqual(
     primary.map((line) => line.label),
-    ["Intent", "Focus", "Reset"],
+    ["Intent", "Focus", "Context"],
   );
-  assert.deepEqual(
-    secondary.map((line) => line.label),
-    ["Anchor", "Context"],
-  );
+  assert.deepEqual(secondary, []);
 });
 
-test("splitMindsetLines returns empty secondary when no anchor/context present", () => {
+test("splitMindsetLines returns empty secondary for simplified mindset", () => {
   const { primary, secondary } = splitMindsetLines({ intent: "Go" });
   assert.deepEqual(primary.map((line) => line.label), ["Intent"]);
   assert.deepEqual(secondary, []);

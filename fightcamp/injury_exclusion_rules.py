@@ -223,7 +223,8 @@ INJURY_RULES = {
             "handstand push-up",
             "handstand push up",
             "hspu",
-            # olympic / ballistic overhead
+            # olympic / ballistic shoulder load
+            "high pull",
             "snatch",
             "power snatch",
             "hang snatch",
@@ -262,7 +263,6 @@ INJURY_RULES = {
             "dynamic_overhead",
             "explosive_upper_push",
             "mech_upper_press",
-            "mech_ballistic",
         ],
     },
     "chest": {
@@ -806,12 +806,18 @@ INJURY_REGION_KEYWORDS = {
     "toe": ["toe"],
 }
 
-from .injury_location_registry import LOCATION_REGISTRY  # noqa: E402
+from .injury_location_registry import LOCATION_REGISTRY, build_location_synonym_map  # noqa: E402
 
 
 def get_exclusion_regions(location: str) -> list[str]:
     normalized_location = (location or "").strip().lower().replace("_", " ")
     entry = LOCATION_REGISTRY.get(normalized_location)
+    if not entry:
+        # Resolve a synonym (e.g. "quad") to its canonical registry key ("quads")
+        # so its full exclusion routing (incl. secondary regions) is returned.
+        canonical = build_location_synonym_map().get(normalized_location)
+        if canonical:
+            entry = LOCATION_REGISTRY.get(canonical)
     if not entry:
         direct_key = normalized_location.replace(" ", "_")
         if direct_key in INJURY_RULES:

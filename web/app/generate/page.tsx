@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -9,6 +9,12 @@ import { createGenerationJob, getActiveGenerationJob } from "@/lib/api";
 import { COMPLETED_GENERATION_KEY, parseCompletedGeneration } from "@/lib/completed-generation";
 import { useGenerationController } from "@/lib/generation-controller";
 import { clearGenerationIntent, hasGenerationIntent } from "@/lib/generation-intent";
+import {
+  buildGenerationPayloadDebugSummary,
+  buildPlanRequestPayloadHash,
+  clearPendingGenerationPayload,
+  readPendingGenerationPayload,
+} from "@/lib/generation-pending-payload";
 import {
   resolveGenerateAutoStartDecision,
   resolveMatchingPayloadGenerationAction,
@@ -38,9 +44,13 @@ export default function GeneratePage() {
   const router = useRouter();
   const { me, session } = useAppSession();
   const autoStartRef = useRef(false);
+  const [pendingGeneration] = useState(() => readPendingGenerationPayload());
   // Memoize so a re-render with the same session doesn't rebuild a fresh
   // payload object on every pass (which would churn the start effect below).
-  const payload = useMemo(() => (me ? hydratePlanRequest(me) : null), [me]);
+  const payload = useMemo(
+    () => pendingGeneration?.payload ?? (me ? hydratePlanRequest(me) : null),
+    [me, pendingGeneration],
+  );
   // Canonical hash so re-ordered-but-identical payloads are treated as equal.
   const payloadHash = useMemo(() => stableStringify(payload), [payload]);
   const performanceFocusValidation = useMemo(
@@ -65,9 +75,22 @@ export default function GeneratePage() {
     storageKey: STORAGE_KEY,
     createJob: async (clientRequestId) => {
       if (!session?.access_token || !payload) {
-        throw new Error("Session or intake payload is missing.");
+        throw new Error("We couldn't start generation. Please reload the page and try again.");
       }
-      return createGenerationJob(session.access_token, payload, clientRequestId, resolvePlanSource(me));
+      const planSource = pendingGeneration?.planSource ?? resolvePlanSource(me);
+      if (process.env.NODE_ENV !== "production") {
+        console.info("[generation] create_job:payload_summary", {
+          client_request_id: clientRequestId,
+          payload_hash: pendingGeneration?.payloadHash ?? buildPlanRequestPayloadHash(payload),
+          plan_source: planSource,
+          ...buildGenerationPayloadDebugSummary(payload),
+        });
+      }
+      const job = await createGenerationJob(session.access_token, payload, clientRequestId, planSource);
+      if (pendingGeneration) {
+        clearPendingGenerationPayload();
+      }
+      return job;
     },
     recoverActiveJob: async () => {
       if (!session?.access_token) {
@@ -119,17 +142,26 @@ export default function GeneratePage() {
     if (matchingPayloadAction.type === "redirect") {
       // A matching plan already exists — open it. Any stale intent is moot.
       clearGenerationIntent();
+      if (pendingGeneration) {
+        clearPendingGenerationPayload();
+      }
       router.replace(`/plans/${matchingPayloadAction.planId}`);
       return;
     }
 
     if ((!payload.fight_date && !payload.no_scheduled_fight) || !payload.athlete.technical_style.length) {
       clearGenerationIntent();
+      if (pendingGeneration) {
+        clearPendingGenerationPayload();
+      }
       router.replace("/onboarding");
       return;
     }
     if (performanceFocusValidation?.isOverCap) {
       clearGenerationIntent();
+      if (pendingGeneration) {
+        clearPendingGenerationPayload();
+      }
       router.replace("/onboarding?issue=focus-cap&step=performance");
       return;
     }
@@ -150,11 +182,14 @@ export default function GeneratePage() {
 
       const decision = resolveGenerateAutoStartDecision({
         hasActiveJob: Boolean(activeJob),
-        hasIntent: hasGenerationIntent(),
+        hasIntent: hasGenerationIntent() || Boolean(pendingGeneration),
       });
 
       if (decision === "recover" && activeJob) {
         clearGenerationIntent();
+        if (pendingGeneration) {
+          clearPendingGenerationPayload();
+        }
         await controller.startGeneration({
           clientRequestId: activeJob.client_request_id,
           recovered: true,
@@ -167,6 +202,9 @@ export default function GeneratePage() {
         // The page mounted without an explicit request to generate (e.g. a
         // reopened or reloaded tab) and there is nothing to reconnect to. Do
         // not silently start a new build — return the user to the workspace.
+        if (pendingGeneration) {
+          clearPendingGenerationPayload();
+        }
         router.replace("/");
         return;
       }
@@ -178,7 +216,7 @@ export default function GeneratePage() {
     return () => {
       cancelled = true;
     };
-  }, [controller, payload, payloadHash, performanceFocusValidation?.isOverCap, router, session?.access_token]);
+  }, [controller, payload, payloadHash, pendingGeneration, performanceFocusValidation?.isOverCap, router, session?.access_token]);
 
   return (
     <RequireAuth>

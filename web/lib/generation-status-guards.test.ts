@@ -8,7 +8,7 @@ import {
   resolveGenerateAutoStartDecision,
   resolveMatchingPayloadGenerationAction,
   shouldBlockGenerateAutoStartForMatchingPayload,
-} from "@/lib/generation-status-guards";
+} from "./generation-status-guards.ts";
 import type { GenerationJobResponse } from "@/lib/types";
 
 const NOW_MS = Date.parse("2026-05-23T00:00:00.000Z");
@@ -46,11 +46,31 @@ test("fresh running job remains active", () => {
   const freshJob = buildJob({
     status: "running",
     created_at: "2026-05-22T23:00:00.000Z",
-    updated_at: "2026-05-22T23:30:00.000Z",
+    updated_at: "2026-05-22T23:59:00.000Z",
     started_at: "2026-05-22T23:00:00.000Z",
-    heartbeat_at: "2026-05-22T23:30:00.000Z",
+    heartbeat_at: "2026-05-22T23:59:00.000Z",
   });
   assert.equal(isStaleVisibleGenerationJob(freshJob, NOW_MS), false);
+});
+
+test("recent progress milestone keeps a running job visible even if heartbeat is old", () => {
+  const jobWithRecentPlannerActivity = buildJob({
+    status: "running",
+    created_at: "2026-05-22T23:00:00.000Z",
+    updated_at: "2026-05-22T23:00:00.000Z",
+    started_at: "2026-05-22T23:00:00.000Z",
+    heartbeat_at: "2026-05-22T23:00:00.000Z",
+    progress_milestones: [
+      {
+        code: "stage2_finalizer_drafting",
+        label: "Stage 2 finalizer drafting",
+        detail: "Sending the planning brief to the AI finalizer.",
+        at: "2026-05-22T23:59:12.000Z",
+      },
+    ],
+  });
+
+  assert.equal(isStaleVisibleGenerationJob(jobWithRecentPlannerActivity, NOW_MS), false);
 });
 
 test("generate auto-start is blocked only when payload hash matches completed marker", () => {

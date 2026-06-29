@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, get_args
 
 from .state_machine import is_athlete_displayable_plan_status
+from .structured_plan_faithfulness import check_structured_faithfulness
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan
 from .structured_plan_models import (
     SCHEMA_VERSION,
@@ -35,6 +36,7 @@ from .structured_plan_models import (
     EventType,
     LoadFocusValue,
     PhaseLabel,
+    PlanNoteCategory,
     PlanStatus,
     PlanType,
     ReadinessStatus,
@@ -152,6 +154,36 @@ def should_attempt_structured_plan(plan: Any, env_enabled: bool) -> bool:
     return is_athlete_displayable_plan_status(plan.get("status"))
 
 
+# Structured-plan attempt statuses that count as a successfully validated card.
+# ``invalid_fallback_used`` / ``not_attempted`` are excluded: they mean the raw
+# plan_text fallback is in play, so there is no schema-valid card to trust.
+_CLEAN_STRUCTURED_PLAN_STATUSES: frozenset[StructuredPlanStatus] = frozenset(
+    {"valid", "repair_attempted_valid"}
+)
+
+
+def has_clean_structured_card(plan: Any) -> bool:
+    """True when ``plan`` carries a schema-valid structured card.
+
+    A clean card is a non-empty ``structured_plan`` dict whose recorded attempt
+    status validated (``valid`` or ``repair_attempted_valid``). It is used as a
+    trust signal: a plan that produced a schema-valid card is treated as
+    publishable rather than held for non-safety findings. Accepts either a
+    Stage 2 result dict or a persisted plan row (the attempt status lives under
+    ``stage2_validator_report.structured_plan.status`` in both).
+    """
+
+    if not isinstance(plan, dict):
+        return False
+    card = plan.get("structured_plan")
+    if not isinstance(card, dict) or not card:
+        return False
+    report = plan.get("stage2_validator_report")
+    debug = report.get("structured_plan") if isinstance(report, dict) else None
+    status = debug.get("status") if isinstance(debug, dict) else None
+    return status in _CLEAN_STRUCTURED_PLAN_STATUSES
+
+
 def strip_biometric_fields(data: Any) -> tuple[Any, list[str]]:
     """Recursively drop banned biometric keys.
 
@@ -208,6 +240,7 @@ _SESSION_TYPE_VALUES = frozenset(get_args(SessionType))
 _COMPLETION_VALUES = frozenset(get_args(CompletionStatus))
 _BLOCK_TYPE_VALUES = frozenset(get_args(BlockType))
 _RISK_LEVEL_VALUES = frozenset(get_args(RiskLevel))
+_PLAN_NOTE_CATEGORY_VALUES = frozenset(get_args(PlanNoteCategory))
 
 # Conservative enum aliases for the most common loose values.
 _SESSION_TYPE_ALIASES = {
@@ -240,6 +273,37 @@ _BLOCK_TYPE_ALIASES = {
     "recovery": "cooldown_recovery",
 }
 
+# --- day_type (intensity badge) classification -----------------------------
+#
+# day_type is the athlete-facing intensity badge (high / moderate / low / ...).
+# The conversion model guesses it from prose and lands on the wrong bucket often;
+# worse, the old normalizer silently defaulted *every* unrecognized value (e.g.
+# "primer", "light", "easy") to "moderate", which reads as risky one day before a
+# fight even when the session is a light primer. Instead we derive the badge
+# deterministically from the day's actual content — session types and per-block
+# effort (RPE), load (%1RM), and intensity tags — and a day is rated as hard as
+# its hardest *real* work block. Categorical days (competition, rest, recovery,
+# travel, reintegration) are detected first and never collapsed into an intensity
+# bucket. The model's value is only consulted as a last-resort fallback, and even
+# then an unreadable day falls to "low" rather than silently "moderate".
+
+# Block intensity tags that read as hard / easy regardless of the numbers.
+# "explosive" is deliberately excluded: taper/primer work is often "explosive"
+# but low-volume, high-intent and light, so it must not auto-flag a hard day —
+# the block's RPE/load decides.
+_HIGH_INTENSITY_WORDS = frozenset(
+    {"max", "maximal", "near_max", "very_high", "high"}
+)
+_LOW_INTENSITY_WORDS = frozenset(
+    {"none", "very_low", "low", "easy", "light", "primer", "recovery"}
+)
+# Max-output block types: when a block carries no readable effort/load number,
+# their presence still implies a high-CNS day (true power/speed work).
+_HIGH_OUTPUT_BLOCK_TYPES = frozenset({"plyometric_power", "speed", "strength_speed"})
+# Session types that are intrinsically light when they carry no measurable block.
+_LOW_SESSION_TYPES = frozenset({"primer", "recovery", "rehab"})
+_INTENSITY_RANK = {"low": 1, "moderate": 2, "high": 3}
+
 _DURATION_UNIT_ALIASES = {
     "s": "seconds",
     "sec": "seconds",
@@ -260,6 +324,9 @@ _DURATION_UNIT_ALIASES = {
 
 _COUNTDOWN_RE = re.compile(r"^[Dd]\s*([+-]?\d+)$")
 _MEASURED_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]+)\s*$")
+# First number or numeric range in a string. group(2) is the upper bound of a
+# range ("7-8" → 8) and is ``None`` for a lone number ("7" → group(1) = 7).
+_NUMBER_RANGE_RE = re.compile(r"(\d+(?:\.\d+)?)(?:\s*[-–—]\s*(\d+(?:\.\d+)?))?")
 # Capture a percentage anywhere in the string plus an optional trailing reference
 # such as "1RM" or "of 1RM" (bank prescriptions read like "3x5 @ 75-85% 1RM").
 # group(2) is optional and may be ``None`` — callers must guard it.
@@ -339,6 +406,28 @@ def _coerce_optional_int(value: Any) -> int | None:
         except ValueError:
             return None
         return int(number) if number.is_integer() else None
+    return None
+
+
+def _coerce_float(value: Any) -> float | None:
+    """Best-effort float, reading the *upper* bound of the first range in a string.
+
+    "RPE 7-8" → 8, "3-4" → 4, "85% 1RM" → 85. Ranges resolve to their upper bound
+    because an athlete given a 7-8 block may actually work at 8, so the intensity
+    badge should reflect the harder end. Returns ``None`` when no number is
+    present so callers can tell "no signal" from a real zero.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        match = _NUMBER_RANGE_RE.search(value)
+        if match:
+            try:
+                return float(match.group(2) or match.group(1))
+            except ValueError:
+                return None
     return None
 
 
@@ -536,14 +625,127 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
     return out
 
 
+def _block_intensity(block: Any) -> str | None:
+    """Rate a single block "high" / "moderate" / "low", or ``None`` when silent.
+
+    Reads, in priority order, the explicit intensity tag, the RPE effort, the
+    %1RM load, and finally the block type. Explicit effort/load always wins over
+    block type, so a light primer plyo (RPE 3–4) reads "low" rather than being
+    flagged "high" just for being plyometric.
+    """
+    if not isinstance(block, dict):
+        return None
+    tag = _coerce_str(block.get("intensity")).strip().lower()
+    effort = block.get("effort")
+    rpe = None
+    if isinstance(effort, dict) and str(effort.get("method") or "").upper() == "RPE":
+        rpe = _coerce_float(effort.get("value"))
+    if rpe is None and "rpe" in tag:  # an RPE buried in the tag ("rpe 3-4")
+        rpe = _coerce_float(tag)
+    pct = None
+    load = block.get("load")
+    if isinstance(load, dict) and str(load.get("method") or "") == "percentage":
+        pct = _coerce_float(load.get("value"))
+
+    # Explicit hard signals.
+    if tag in _HIGH_INTENSITY_WORDS:
+        return "high"
+    if rpe is not None and rpe >= 8:
+        return "high"
+    if pct is not None and pct >= 85:
+        return "high"
+
+    # Explicit easy/moderate signals in priority order.
+    if tag in _LOW_INTENSITY_WORDS:
+        return "low"
+    if rpe is not None:
+        return "low" if rpe <= 5 else "moderate"
+    if pct is not None:
+        return "low" if pct < 70 else "moderate"
+    if tag in {"moderate", "medium"}:
+        return "moderate"
+    # No effort/load number at all: a true power/speed block implies a hard day.
+    if str(block.get("block_type") or "") in _HIGH_OUTPUT_BLOCK_TYPES:
+        return "high"
+    return None
+
+
+def _session_intensity(session: Any) -> str | None:
+    """Rate a session by its hardest block, falling back to the session type."""
+    if not isinstance(session, dict):
+        return None
+    levels = [lvl for lvl in (_block_intensity(b) for b in _as_list(session.get("blocks"))) if lvl]
+    if levels:
+        return max(levels, key=_INTENSITY_RANK.__getitem__)
+    stype = str(session.get("session_type") or "")
+    if stype in _LOW_SESSION_TYPES:
+        return "low"
+    if stype == "sparring":
+        return "high"
+    return None
+
+
+def _classify_day_type(day: dict[str, Any], fallback: str) -> str:
+    """Derive the day's intensity badge from its content (overrides the model).
+
+    ``fallback`` is the model's own value already coerced onto a valid enum (or
+    ``""`` when it was missing/unrecognized). It is consulted only when the day
+    carries no readable intensity signal at all.
+    """
+    sessions = [s for s in _as_list(day.get("sessions")) if isinstance(s, dict)]
+    session_types = {str(s.get("session_type") or "") for s in sessions}
+
+    # Competition / fight day is categorical, anchored on the countdown or a
+    # fight session — never an intensity bucket.
+    if _countdown_distance(day.get("countdown_label")) == 0 or "fight_or_match" in session_types:
+        return "competition"
+    # travel / reintegration are model-only states content cannot contradict.
+    if fallback in {"travel", "reintegration"}:
+        return fallback
+    # A purely recovery day stays "recovery" even when its mobility/breathing/
+    # cooldown work is broken into blocks — it is categorical, not an intensity.
+    if session_types and session_types <= {"recovery"}:
+        return "recovery"
+
+    # The day is as hard as its hardest session. _session_intensity reads each
+    # session by its hardest block and, for a session with no readable block,
+    # falls back to its type (e.g. an empty coach-led sparring day is still
+    # "high", never "rest").
+    levels = [lvl for lvl in (_session_intensity(s) for s in sessions) if lvl]
+    if levels:
+        return max(levels, key=_INTENSITY_RANK.__getitem__)
+
+    # No sessions / no readable signal at all: an empty day is "rest", otherwise
+    # keep a valid model intensity guess, else default low (never silently
+    # "moderate").
+    if not sessions:
+        return fallback if fallback in {"rest", "recovery"} else "rest"
+    if fallback in {"high", "moderate", "low", "recovery", "rest"}:
+        return fallback
+    return "low"
+
+
+def _countdown_distance(label: Any) -> int | None:
+    """Parse the days-to-event from a countdown label (``D-1`` → 1, ``D0`` → 0)."""
+    match = _COUNTDOWN_RE.match(_coerce_str(label).strip())
+    if not match:
+        return None
+    try:
+        return abs(int(match.group(1)))
+    except ValueError:
+        return None
+
+
 def _normalize_day(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["date"] = _coerce_str(out.get("date"))
-    out["day_type"] = _enum(out.get("day_type"), _DAY_TYPE_VALUES, "moderate")
     out["countdown_label"] = _coerce_str(out.get("countdown_label"))
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
     out["today_card"] = _normalize_today_card(out.get("today_card"))
     out["sessions"] = [_normalize_session(session) for session in _as_dict_list(out.get("sessions"))]
+    # Derive the intensity badge from the now-normalized content; the model's own
+    # value is only a last-resort fallback (see _classify_day_type).
+    out["day_type"] = _classify_day_type(out, _enum(out.get("day_type"), _DAY_TYPE_VALUES, ""))
     return out
 
 
@@ -573,6 +775,39 @@ def _normalize_week(value: Any) -> dict[str, Any]:
     out["progression"] = _normalize_progression(out.get("progression"))
     out["days"] = [_normalize_day(day) for day in _as_dict_list(out.get("days"))]
     return out
+
+
+def _normalize_plan_note(value: Any) -> dict[str, Any] | None:
+    """Coerce a plan-level note, or ``None`` when it carries no text.
+
+    Keeps only formatting fixes: the category is aliased onto a valid enum value
+    (defaulting to ``general``), and label/text are coerced to strings. A note
+    with no usable text is dropped rather than fabricated.
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        return {"category": "general", "text": text} if text else None
+    if not isinstance(value, dict):
+        return None
+    text = _coerce_str(value.get("text")).strip()
+    if not text:
+        return None
+    out: dict[str, Any] = {
+        "category": _enum(value.get("category"), _PLAN_NOTE_CATEGORY_VALUES, "general", {"weight cut": "weight_cut", "weight-cut": "weight_cut"}),
+        "text": text,
+    }
+    label = _coerce_str(value.get("label")).strip()
+    if label:
+        out["label"] = label
+    return out
+
+
+def _normalize_plan_notes(value: Any) -> list[dict[str, Any]]:
+    return [
+        note
+        for note in (_normalize_plan_note(item) for item in _as_list(value))
+        if note is not None
+    ]
 
 
 def _normalize_red_flag(value: Any) -> dict[str, Any]:
@@ -771,15 +1006,114 @@ def _normalize_daily_check_ins(
     return out
 
 
+# Intensity-label typo fix. Coaches read effort as ``RPE`` (rate of perceived
+# exertion); models occasionally emit ``PRE`` instead. Only an all-caps ``PRE``
+# immediately preceding a value on the RPE scale (1-10, optionally a range like
+# ``7–8``) is corrected, so ordinary words (``pre-fight``, ``PRE-FIGHT WEEK``)
+# and unrelated numbers (``PRE 2024``) are never touched.
+_RPE_LABEL_TYPO_RE = re.compile(r"\bPRE\b(?=\s*(?:10|[1-9])\b)")
+
+# Keys whose verbatim text must never be rewritten by cosmetic label fixes.
+_LABEL_FIX_SKIP_KEYS = frozenset({"raw_markdown_fallback"})
+
+
+def _fix_label_typos(node: Any) -> Any:
+    """Recursively correct intensity-label typos (``PRE`` → ``RPE``) in text.
+
+    A pure formatting fix applied to every string leaf except the verbatim
+    ``raw_markdown_fallback``. The regex is deliberately narrow so it only
+    rewrites the effort label, never coaching content.
+    """
+    if isinstance(node, dict):
+        return {
+            key: value if key in _LABEL_FIX_SKIP_KEYS else _fix_label_typos(value)
+            for key, value in node.items()
+        }
+    if isinstance(node, list):
+        return [_fix_label_typos(item) for item in node]
+    if isinstance(node, str):
+        return _RPE_LABEL_TYPO_RE.sub("RPE", node)
+    return node
+
+
+def _normalize_safety_text(text: Any) -> str:
+    """Lowercase, collapse whitespace, drop trailing punctuation — for dedup."""
+    cleaned = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+    return cleaned.rstrip(".!;: ").strip()
+
+
+def _dedupe_plan_safety_text(plan: dict[str, Any]) -> dict[str, Any]:
+    """Drop repeated athlete-facing warning/constraint text (PR-QC).
+
+    Stop/warning language tends to echo across active notes, red flags, and
+    final notes. The authoritative place for a stop rule is the red-flag rule,
+    so this keeps the strongest copy there and removes only exact duplicates:
+
+    * collapses red-flag rules that are byte-for-byte identical (same text,
+      action, severity, and trigger) — never distinct or session-specific rules;
+    * drops a plan note whose text repeats an earlier plan note or an existing
+      red-flag ``display_text``.
+
+    Mutates and returns ``plan``. No safety rule is ever removed outright — the
+    warning always survives in at least one place.
+    """
+    rules = plan.get("red_flag_rules")
+    if isinstance(rules, list):
+        seen_rules: set[tuple] = set()
+        deduped_rules: list[Any] = []
+        for rule in rules:
+            if not isinstance(rule, dict):
+                deduped_rules.append(rule)
+                continue
+            display = _normalize_safety_text(rule.get("display_text"))
+            key = (
+                display,
+                _normalize_safety_text(rule.get("action")),
+                rule.get("severity"),
+                rule.get("when"),
+            )
+            if display and key in seen_rules:
+                continue
+            seen_rules.add(key)
+            deduped_rules.append(rule)
+        plan["red_flag_rules"] = deduped_rules
+        rules = deduped_rules
+
+    red_flag_texts = {
+        _normalize_safety_text(rule.get("display_text"))
+        for rule in (rules or [])
+        if isinstance(rule, dict) and _normalize_safety_text(rule.get("display_text"))
+    }
+
+    notes = plan.get("plan_notes")
+    if isinstance(notes, list):
+        seen_notes: set[str] = set()
+        deduped_notes: list[Any] = []
+        for note in notes:
+            if not isinstance(note, dict):
+                deduped_notes.append(note)
+                continue
+            norm = _normalize_safety_text(note.get("text"))
+            if norm and (norm in seen_notes or norm in red_flag_texts):
+                continue
+            if norm:
+                seen_notes.add(norm)
+            deduped_notes.append(note)
+        plan["plan_notes"] = deduped_notes
+
+    return plan
+
+
 def normalize_structured_plan_candidate(data: Any) -> Any:
     """Conservatively coerce a model's near-miss structured JSON into schema shape.
 
     Only fixes obvious *formatting* mistakes (enum aliases, string loads/rests,
     string countdown labels, non-list ``daily_check_ins``, non-string
-    ``progression_notes``, and missing required meta fields filled with neutral
-    structural defaults). It never invents training content and never alters
-    ``raw_markdown_fallback`` text. Non-dict input is returned unchanged so the
-    strict schema can reject it. Never raises.
+    ``progression_notes``, missing required meta fields filled with neutral
+    structural defaults, intensity-label typos, and duplicated warning text). It
+    never invents training content and never alters ``raw_markdown_fallback``
+    text. Non-dict input is returned unchanged so the strict schema can reject
+    it. Never raises.
     """
 
     if not isinstance(data, dict):
@@ -799,6 +1133,7 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
         if label is not None
     ]
     plan["red_flag_rules"] = [_normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))]
+    plan["plan_notes"] = _normalize_plan_notes(plan.get("plan_notes"))
     plan["weeks"] = [_normalize_week(week) for week in _as_dict_list(plan.get("weeks"))]
     # daily_check_ins must be a list of fully-valid entries; a non-list, or a
     # partial/garbled entry, must never fail the whole plan. Malformed entries are
@@ -810,6 +1145,11 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
     plan["nutrition"] = _normalize_nutrition(plan.get("nutrition"))
     plan["progression_notes"] = _coerce_str(plan.get("progression_notes"))
     plan["raw_markdown_fallback"] = _coerce_str(plan.get("raw_markdown_fallback"))
+    # Cosmetic label fix first (so dedup compares corrected text), then collapse
+    # repeated athlete-facing warnings. Both are formatting-only and never touch
+    # raw_markdown_fallback or drop a safety rule outright.
+    plan = _fix_label_typos(plan)
+    plan = _dedupe_plan_safety_text(plan)
     return plan
 
 
@@ -991,6 +1331,12 @@ def build_structured_plan_outcome(
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        if unfaithful:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"faithfulness: {issue}" for issue in unfaithful],
+            )
         return StructuredPlanOutcome(
             status="valid",
             structured_plan=plan_dict,
@@ -1014,6 +1360,12 @@ def build_structured_plan_outcome(
     )
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        if unfaithful:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"faithfulness: {issue}" for issue in unfaithful],
+            )
         return StructuredPlanOutcome(
             status="repair_attempted_valid",
             structured_plan=plan_dict,
@@ -1101,8 +1453,8 @@ The root JSON object IS the StructuredTrainingPlan.
 Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
 
   schema_version, plan_metadata, athlete_context, event_context,
-  countdown_labels, red_flag_rules, weeks, daily_check_ins, nutrition,
-  progression_notes, raw_markdown_fallback.
+  countdown_labels, red_flag_rules, plan_notes, weeks, daily_check_ins,
+  nutrition, progression_notes, raw_markdown_fallback.
 
 The nested training hierarchy lives inside the root object as:
 weeks[] -> days[] -> sessions[] -> blocks[].
@@ -1126,6 +1478,12 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   morning check-in only.
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
+- Coach-led, sparring, or technical days where the app prescribes NO S&C work
+  (e.g. "Coach-led boxing session", "no app S&C today", "technical only") MUST
+  still be emitted as a day. Leave that day's "sessions" as [] and set a concise
+  today_card.headline naming what it is (e.g. "Coach-led boxing", "Hard
+  sparring", "Technical only") so the day renders as its own card. Do NOT invent
+  S&C blocks for these days and do NOT drop the day.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"
@@ -1135,6 +1493,17 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   cannot fill every field from the plan, leave daily_check_ins as [].
 - Provide red_flag_rules[] with machine fields (metric/operator/threshold/logic)
   kept separate from a human-readable display_text.
+- Capture short plan-level reminders that live OUTSIDE any week — e.g. a header
+  "Active notes" block and footer "End of plan notes" — in plan_notes[]. Each
+  entry is {{"category": one of weight_cut|injury|nutrition|training|recovery|
+  general, "label": optional short label, "text": the reminder}}. Use plan_notes
+  for the active weight-cut summary, injury/wound handling, nutrition reminders,
+  and general non-negotiables. Keep stop/modify/report SAFETY thresholds in
+  red_flag_rules and full nutrition macros in nutrition — plan_notes is for the
+  brief, always-on context. A weight_cut note MUST express a risk requiring
+  qualified supervision, NEVER acute-cut directives (no sauna, dehydration,
+  water-loading, or sodium manipulation). Omit plan_notes entirely if the plan
+  states none.
 - Provide nutrition with a summary and, where a weight cut applies, a
   weight_cut_warning. Weight-cut guidance MUST be expressed as a risk requiring
   qualified supervision — NEVER direct acute-cut instructions (no sauna,
@@ -1144,9 +1513,29 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   alternative exercises the plan offers), and "progression_rule" (how to advance).
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
   the day level (today_card.mindset_anchor), including "confidence_anchor" and
-  "context" when the plan provides them.
+  "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a
+  mindset.athlete_note (the athlete's own words about their mental/confidence
+  issue), personalise the mindset_anchor to that note — reflect their specific
+  concern in "intent"/"focus_cue"/"confidence_anchor"/"context" rather than
+  emitting only the generic phase cue. Keep it athlete-safe and supportive; never
+  quote the note verbatim if it is distressing, and never invent clinical or
+  mental-health diagnoses or treatment.
 - Omit any of the above the plan does not state — leave the field out rather than
   inventing content.
+
+VOICE & CONCISENESS (athlete-facing text — week_goal, today_card.headline,
+session title/objective, plan_notes, mindset_anchor, nutrition prose):
+- week_goal MUST be a SHORT label of AT MOST 6 words — a phrase, not a sentence.
+  No semicolons, no "while …" tails, no second clause. Compress the source goal
+  to its single most important driver (e.g. "Build single-leg drive and balance",
+  "Sharpen punch speed, stay fresh"). Do NOT add content — only shorten.
+- Keep every athlete-facing string tight: prefer short phrases over full
+  sentences, drop filler and hedging, and never repeat the same point across two
+  fields.
+- Do NOT refer to "the app", "this app", "the platform", or "app sessions" in any
+  athlete-facing text. The athlete is reading their own plan, so name the work
+  directly ("S&C and rehab inserts on the listed D-days", "your sessions") rather
+  than attributing it to "the app".
 
 DETERMINISTIC AUTHORITY (when a "STAGE 1 COMPUTED SUPPORT" section is provided):
 - Treat STAGE 1 COMPUTED SUPPORT as AUTHORITATIVE for nutrition macros,
@@ -1181,9 +1570,10 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
   "event_context": {{"event_type": "fight", "fight_date": "YYYY-MM-DD"}},
   "countdown_labels": [{{"date": "YYYY-MM-DD", "days_to_event": 28, "label": "D-28", "anchor": "fight"}}],
   "red_flag_rules": [{{"rule_id": "...", "when": "morning_check_in", "severity": "amber", "display_text": "...", "action": "..."}}],
+  "plan_notes": [{{"category": "weight_cut", "label": "Active weight cut", "text": "..."}}],
   "weeks": [
     {{
-      "week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "week_goal": "...",
+      "week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "week_goal": "<short label, max 6 words>",
       "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD",
       "load_focus": {{"volume": "moderate", "intensity": "high", "specificity": "high", "fatigue_target": "reduced"}},
       "progression": {{"week_type": "build", "planned_change_from_previous": "..."}},

@@ -5728,6 +5728,9 @@
     "duration": "4x10s, 30s rest",
     "tags": [
       "plyometric",
+      "speed",
+      "footwork",
+      "reactive",
       "coordination",
       "mech_reactive",
       "mech_lower_jump",
@@ -5912,6 +5915,8 @@
     "tags": [
       "boxing",
       "footwork",
+      "speed",
+      "reactive",
       "coordination",
       "sharpness",
       "low_impact",
@@ -5974,6 +5979,9 @@
     "duration": "4x6/side, 30s rest",
     "tags": [
       "plyometric",
+      "speed",
+      "footwork",
+      "reactive",
       "lateral",
       "mech_lower_lateral",
       "mech_lower_jump",
@@ -6114,6 +6122,9 @@
     "duration": "4x4 reps, 60s rest",
     "tags": [
       "plyometric",
+      "speed",
+      "footwork",
+      "reactive",
       "hip_dominant",
       "mech_lower_lunge",
       "mech_lower_jump",
@@ -8326,6 +8337,7 @@
     "intensity": "low",
     "tags": [
       "neural_primer",
+      "speed",
       "reactive",
       "low_impact",
       "footwork",

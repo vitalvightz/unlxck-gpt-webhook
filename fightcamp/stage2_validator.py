@@ -69,8 +69,6 @@ _SPORT_LANGUAGE_LEAKS = {
         "takedown",
         "double-leg",
         "double leg",
-        "single-leg",
-        "single leg",
         "sprawl",
         "thai clinch",
         "clinch knee",
@@ -94,6 +92,10 @@ _SESSION_TITLE_HINTS = {
     "technical rhythm",
     "technical touch",
     "freshness session",
+    "freshness primer",
+    "fight-week freshness",
+    "neural speed touch",
+    "rhythm flush",
     "activation",
     "warm-up",
     "fight-day warm-up",
@@ -181,6 +183,13 @@ _WEIGHT_CUT_LEAD_SUMMARY_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
+    3: (
+        "throw",
+        "toss",
+        "medicine ball pass",
+        "medicine-ball pass",
+        "med-ball pass",
+    ),
     13: (
         "Band-Resisted Sprint Start",
         "Band-Resisted Sprint Starts (ATP-PCr)",
@@ -196,6 +205,8 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "Staggered-Stance Medicine-Ball Punch Throw",
         "medicine ball",
         "med-ball",
+        "band",
+        "banded",
         "Band-Resisted Sprint Start",
         "Band-Resisted Sprint Starts (ATP-PCr)",
         "Jump Reset",
@@ -1374,6 +1385,31 @@ def _late_fight_d0_protocol_warnings(
         }
     ]
 
+def _late_fight_missing_terminal_d0_warnings(
+    planning_brief: dict,
+    final_plan_text: str,
+) -> list[dict]:
+    spec = _late_fight_plan_spec(planning_brief)
+    if not spec:
+        return []
+
+    payload_mode = str(spec.get("payload_mode") or "")
+    if payload_mode in {"", "camp_payload"}:
+        return []
+
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if 0 in day_blocks:
+        return []
+
+    return [
+        {
+            "code": "late_fight_missing_terminal_d0_protocol",
+            "message": "Late-fight output must include a terminal D-0 fight-day protocol block.",
+            "payload_mode": payload_mode,
+            "days_out_bucket": spec.get("days_out_bucket"),
+            "blocking": True,
+        }
+    ]
 
 def _internal_render_contract_leak_warnings(plan_lines: list[str]) -> list[dict]:
     warnings: list[dict] = []
@@ -1838,25 +1874,24 @@ _LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
         "preferred": ["Trap Bar Deadlift", "Staggered-Stance Medicine-Ball Punch Throw", "Band-Resisted Jab-Cross Primer", "Mobility Reset Flow"],
     },
     "d13_to_d8": {
-        "blocked": ["Hang Power Clean", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Dense Conditioning Circuit"],
+        "blocked": ["Sandbag Shouldering", "Hang Power Clean", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Dense Conditioning Circuit"],
         "preferred": ["Staggered-Stance Medicine-Ball Punch Throw", "Band-Resisted Jab-Cross Primer", "Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats", "Mobility Reset Flow", "Breathing Reset"],
     },
     "d7": {
-        "blocked": ["Hang Power Clean", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Heavy Bag Density Rounds", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "blocked": ["Sandbag Shouldering", "Hang Power Clean", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Heavy Bag Density Rounds", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": ["Reactive Shuffle Repeats", "Explosive Boxing Burst Intervals", "Technical Shadowboxing Tempo", "Mobility Reset Flow"],
     },
     "d6_to_d5": {
-        "blocked": ["Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Dense Conditioning Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "blocked": ["Sandbag Shouldering", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Dense Conditioning Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": ["Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"],
     },
     "d4_to_d2": {
-        "blocked": ["Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Heavy Bag Density Rounds", "Medicine Ball Power Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "blocked": ["Sandbag Shouldering", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Heavy Bag Density Rounds", "Medicine Ball Power Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": ["Technical Shadowboxing Tempo", "Mobility Reset Flow", "Breathing Reset", "Band Face Pull", "Light Band Punch Cue", "Mirror Drill"],
     },
     "d1": {
-        "blocked": ["Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Hang Power Clean", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "blocked": ["Sandbag Shouldering", "Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "band", "banded", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Hang Power Clean", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": [
-            "Band Face Pull",
             "Technical Shadowboxing Tempo",
             "Mobility Reset Flow",
             "Breathing Reset",
@@ -1894,8 +1929,19 @@ def _countdown_sections(final_plan_text: str) -> list[dict[str, Any]]:
 
 def _late_fight_session_blocks(final_plan_text: str) -> list[list[str]]:
     blocks = _phase_session_blocks(_extract_plan_lines(final_plan_text))
-    return [block for block in blocks if block]
+    active_blocks: list[list[str]] = []
 
+    for block in blocks:
+        if not block:
+            continue
+
+        header_match = _COUNTDOWN_LABEL_LINE.match(block[0])
+        if header_match and int(header_match.group(2)) == 0:
+            continue
+
+        active_blocks.append(block)
+
+    return active_blocks
 
 def _late_fight_block_body(block: list[str]) -> list[str]:
     if len(block) <= 1:
@@ -1965,6 +2011,9 @@ def _late_fight_countdown_blocks_by_day(final_plan_text: str) -> dict[int, list[
         if match:
             current_day = int(match.group(2))
             blocks.setdefault(current_day, []).append(cleaned)
+            continue
+        if _is_countdown_block_boundary(cleaned):
+            current_day = None
             continue
         if current_day is not None:
             blocks.setdefault(current_day, []).append(cleaned)
@@ -2043,6 +2092,18 @@ def _late_fight_countdown_blocked_drill_warnings(
     return warnings
 
 
+def _late_fight_d3_throw_signal(line: str) -> bool:
+    if _line_is_instruction_only(line):
+        return False
+    return (
+        any(phrase_in_text(line, phrase) for phrase in ("throw", "toss"))
+        or (
+            any(phrase_in_text(line, phrase) for phrase in ("medicine ball", "med-ball", "medicine-ball"))
+            and phrase_in_text(line, "pass")
+        )
+    )
+
+
 def _late_fight_countdown_banded_lockout_warnings(
     spec: dict[str, Any],
     final_plan_text: str,
@@ -2065,6 +2126,7 @@ def _late_fight_countdown_banded_lockout_warnings(
             has_band_token = any(
                 phrase_in_text(line, token)
                 for token in (
+                    "band",
                     "band resisted",
                     "banded",
                     "resistance band",
@@ -2078,14 +2140,18 @@ def _late_fight_countdown_banded_lockout_warnings(
             )
             if not has_band_token:
                 continue
-            if any(phrase_in_text(line, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES):
+            if day != 1 and any(phrase_in_text(line, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES):
                 continue
             warnings.append(
                 {
                     "code": "late_fight_countdown_blocked_drill",
-                    "message": f"D-{day} includes non-rehab band work, which is blocked from D-7 and closer.",
+                    "message": (
+                        f"D-{day} includes band work, which is fully blocked on D-1."
+                        if day == 1
+                        else f"D-{day} includes non-rehab band work, which is blocked from D-7 and closer."
+                    ),
                     "days_out_bucket": f"D-{day}",
-                    "blocked_drill": "non_rehab_band_work",
+                    "blocked_drill": "d1_band_work" if day == 1 else "non_rehab_band_work",
                     "line": line,
                     "blocking": True,
                 }
@@ -2552,6 +2618,9 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                 if _line_is_instruction_only(line):
                     continue
                 lowered = line.lower()
+                if day_label.upper() == "D-3" and _late_fight_d3_throw_signal(line):
+                    matched_hits.append({"term": "D3 throw lockout", "line": line})
+                    continue
                 for term in window_rules.get("blocked", []):
                     if phrase_in_text(lowered, term.lower()):
                         matched_hits.append({"term": term, "line": line})
@@ -2639,6 +2708,23 @@ def _stage2_output_incomplete_errors(final_plan_text: str) -> list[dict[str, Any
     return []
 
 
+def _is_countdown_block_boundary(line: str) -> bool:
+    """Return True when a line ends the current countdown day's body.
+
+    Countdown days (``D-X ...``) render as a header line followed by their own
+    bullet/why body. Everything *after* the last countdown day — ``## Nutrition``,
+    ``## Recovery``, ``## Selection Rationale``, ``## Athlete Profile`` and the
+    like — is a separate top-level section, not part of that day. Those sections
+    routinely mention "strength", "conditioning", etc. in prose, so if they get
+    absorbed into the final (often D-0) block they trip the day-level training
+    guards as a false positive. A markdown section header is a reliable boundary
+    because countdown days themselves are never sub-sectioned with headers.
+    """
+    if _COUNTDOWN_LABEL_LINE.match(line):
+        return False
+    return bool(_MARKDOWN_HEADER.match(line))
+
+
 def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
     blocks: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
@@ -2651,6 +2737,11 @@ def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
             if current:
                 blocks.append(current)
             current = {"day": int(match.group(2)), "header": line, "lines": []}
+            continue
+        if _is_countdown_block_boundary(line):
+            if current:
+                blocks.append(current)
+            current = None
             continue
         if current:
             current["lines"].append(line)
@@ -2730,10 +2821,29 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
                 errors.append(_issue(code="true_internal_system_leak", message=f"Internal system term leaked: {leaked}.", severity="blocker", confidence="high", line=line))
                 break
     d1_risk_pattern = re.compile(r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap bar|barbell)\b", re.IGNORECASE)
-    d0_extra_pattern = re.compile(r"\b(?:extra|plus|add|conditioning|strength|finisher|circuit|sprint|lift)\b", re.IGNORECASE)
+    # Only concrete app-prescribed training modalities should block fight day.
+    # Generic prose words ("extra", "plus", "add") live in coach notes/rationale
+    # and caused false fight_day_protocol_violation flags.
+    d0_extra_pattern = re.compile(r"\b(?:conditioning|strength|finisher|circuit|sprint|lift|deadlift|squat|barbell)\b", re.IGNORECASE)
+    protocol_full = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+    protocol_body = _normalize_render_line(
+        re.sub(r"^fight day protocol\s*[—:-]\s*", "", FIGHT_DAY_PROTOCOL_TEXT, flags=re.IGNORECASE)
+    )
+
+    def _is_fight_day_protocol_line(line: str) -> bool:
+        cleaned = _BULLET_PREFIX.sub("", line).strip()
+        normalized = _normalize_render_line(cleaned)
+        if not normalized:
+            return False
+        return normalized in {protocol_full, protocol_body} or normalized in protocol_full
+
     for block in countdown_blocks:
         day = int(block["day"])
-        safe_lines = [line for line in block["lines"] if not _line_is_instruction_only(line)]
+        safe_lines = [
+            line
+            for line in block["lines"]
+            if not _line_is_instruction_only(line) and not _is_fight_day_protocol_line(line)
+        ]
         joined = " ".join(safe_lines)
         has_blocking_hard_sparring = _has_blocking_hard_sparring(block["header"]) or _has_blocking_hard_sparring(joined)
         if day == 12 and has_blocking_hard_sparring:
@@ -2758,6 +2868,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(planning_brief, final_plan_text)
     late_fight_header_contract_warnings = _late_fight_header_contract_warnings(planning_brief, plan_lines)
     late_fight_d0_protocol_warnings = _late_fight_d0_protocol_warnings(planning_brief, final_plan_text, plan_lines)
+    late_fight_missing_terminal_d0_warnings = _late_fight_missing_terminal_d0_warnings(
+        planning_brief,
+        final_plan_text,
+    )
     internal_render_contract_leak_warnings = _internal_render_contract_leak_warnings(plan_lines)
     coach_owned_sparring_detail_warnings = _coach_owned_sparring_detail_warnings(final_plan_text)
     lead_summary_contract_warnings = _lead_summary_contract_warnings(planning_brief, plan_lines)
@@ -2800,6 +2914,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(_normalize_warning(item) for item in weight_cut_contradiction_warnings)
     warnings.extend(_normalize_warning(item) for item in late_fight_header_contract_warnings)
     warnings.extend(_normalize_warning(item) for item in late_fight_d0_protocol_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_missing_terminal_d0_warnings)
     warnings.extend(_normalize_warning(item) for item in internal_render_contract_leak_warnings)
     warnings.extend(_normalize_warning(item) for item in coach_owned_sparring_detail_warnings)
     warnings.extend(_normalize_warning(item) for item in lead_summary_contract_warnings)
@@ -2827,6 +2942,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "weight_cut_contradiction_warnings": weight_cut_contradiction_warnings,
         "late_fight_header_contract_warnings": late_fight_header_contract_warnings,
         "late_fight_d0_protocol_warnings": late_fight_d0_protocol_warnings,
+        "late_fight_missing_terminal_d0_warnings": late_fight_missing_terminal_d0_warnings,
         "internal_render_contract_leak_warnings": internal_render_contract_leak_warnings,
         "coach_owned_sparring_detail_warnings": coach_owned_sparring_detail_warnings,
         "lead_summary_contract_warnings": lead_summary_contract_warnings,

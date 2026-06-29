@@ -12,7 +12,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
-from .bank_schema import validate_training_item
+from .bank_schema import is_late_fight_metadata_safe, validate_training_item
 from .tagging import normalize_item_tags, normalize_tag, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
@@ -46,6 +46,7 @@ from .late_selector_windows import (
     D6_TO_D5,
     D7,
     classify_late_selector_window,
+    coerce_days_until_fight,
     is_active_late_selector_window,
 )
 from .normalization import normalize_fight_format as _normalize_fight_format
@@ -139,7 +140,48 @@ LATE_STRENGTH_SAFE_TAGS = {
     "maximal_strength_maintenance",
 }
 LATE_STRENGTH_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
+EARLY_TAPER_STRENGTH_WINDOWS = {D21_TO_D14, D13_TO_D8}
+STRENGTH_MAINTENANCE_INTENT_TAGS = {
+    "strength",
+    "maximal_strength",
+    "maximal_strength_maintenance",
+}
+STRENGTH_MAINTENANCE_MATCH_TAGS = {
+    "late_strength_touch",
+    "maximal_strength_maintenance",
+}
+PRIMER_ONLY_STRENGTH_TOUCH_TAGS = {
+    "neural_primer",
+    "speed",
+    "reactive",
+    "mobility",
+    "rehab_support",
+    "support_accessory",
+}
+STRENGTH_MAINTENANCE_QUALITY_CLASSES = {
+    "anchor_loaded",
+    "anchor_force_isometric",
+    "anchor_power",
+}
+STRENGTH_MAINTENANCE_SUPPORT_TAGS = {
+    "low_eccentric",
+    "cns_freshness",
+    "low_impact",
+}
+# Safety-critical hard blocks apply across every active late window where their
+# condition fires (e.g. D13-D8), not just the tight windows. They must not be
+# dropped by the tight-window block filter.
+LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS = frozenset(
+    {
+        "late_strength_block_high_cut_balance_risk",
+        "late_strength_block_familiarity_required_late",
+    }
+)
 LATE_STRENGTH_TRUE_CLUSTER_BAND = 0.05
+# Bias applied to posterior-chain-specific late-touches when posterior_chain is a
+# stated weakness, so they win the posterior-chain slot ahead of quad-dominant
+# isometrics that merely also carry the posterior_chain tag.
+POSTERIOR_CHAIN_LATE_TOUCH_BIAS = 1.0
 LATE_SAFE_STRENGTH_FIELDS = {
     "late_strength_touch",
     "low_eccentric",
@@ -159,6 +201,28 @@ LATE_STRENGTH_CUT_BUCKET_MULTIPLIER = {
     "critical": 1.2,
     "extreme": 1.4,
 }
+
+# Trap-bar-vs-back-squat anchor preference.
+# When any risk condition fires (a flare in a joint loaded by the squat bar
+# position, an active weight cut, moderate/high fatigue, a compressed camp, or
+# poor squat tolerance) the trap-bar deadlift is preferred over a barbell
+# back-squat-pattern anchor: barbell squat anchors are penalised and the
+# trap-bar hinge anchor is boosted. The magnitudes express a *preference* — a
+# strong goal/weakness fit can still override it — rather than a hard block.
+# Joints loaded by the back-/front-rack bar position that a trap-bar deadlift
+# spares; a flare in any of them biases selection toward the trap-bar hinge.
+SQUAT_BAR_POSITION_INJURY_REGIONS = ("wrist", "shoulder", "elbow", "neck")
+# Weight-cut buckets treated as an "active cut" for the preference rule.
+TRAP_BAR_PREFERENCE_ACTIVE_CUT_BUCKETS = {"moderate", "high", "critical", "extreme"}
+# Total camp days at or below this are treated as a compressed camp when no
+# explicit ``camp_compressed`` flag is supplied (matches the short-notice
+# compressed band in ``camp_phases``).
+COMPRESSED_CAMP_DAYS_THRESHOLD = 13
+# Squat-tolerance levels that count as "poor" when no explicit
+# ``poor_squat_tolerance`` boolean is supplied.
+POOR_SQUAT_TOLERANCE_LEVELS = {"poor", "low", "limited", "bad"}
+TRAP_BAR_PREFERENCE_SQUAT_PENALTY = -0.6
+TRAP_BAR_PREFERENCE_HINGE_BOOST = 0.4
 
 
 def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
@@ -221,12 +285,88 @@ def _exercise_late_windows(exercise: dict) -> set[str]:
     return set(_normalized_metadata_list(exercise.get("late_windows")))
 
 
+def _exercise_phase_role(exercise: dict) -> str:
+    return normalize_tag(str(exercise.get("phase_role") or ""))
+
+
 def _exercise_cut_buckets_allowed(exercise: dict) -> set[str]:
     return {
         bucket
         for bucket in _normalized_metadata_list(exercise.get("cut_buckets_allowed"))
         if bucket in VALID_CUT_BUCKETS
     }
+
+
+def _has_strength_maintenance_intent(*, goals, weaknesses, flags: dict) -> bool:
+    raw_values: list[str] = []
+    for value in goals or []:
+        raw_values.append(str(value))
+    for value in weaknesses or []:
+        raw_values.append(str(value))
+    for value in flags.get("weaknesses") or []:
+        raw_values.append(str(value))
+    for field in ("primary_goal", "primary_weak_area"):
+        value = flags.get(field)
+        if value:
+            raw_values.append(str(value))
+
+    normalized_values = {normalize_tag(value) for value in raw_values if str(value).strip()}
+    normalized_values.discard(None)
+    if normalized_values & STRENGTH_MAINTENANCE_INTENT_TAGS:
+        return True
+    return any('strength' in value for value in normalized_values)
+
+
+def _strength_maintenance_match_tags(exercise: dict) -> set[str]:
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    matches = set(tags & STRENGTH_MAINTENANCE_MATCH_TAGS)
+    phase_role = _exercise_phase_role(exercise)
+    if phase_role in STRENGTH_MAINTENANCE_MATCH_TAGS:
+        matches.add(phase_role)
+    for field in STRENGTH_MAINTENANCE_MATCH_TAGS:
+        if exercise.get(field) is True:
+            matches.add(field)
+    return matches
+
+
+def _is_primer_only_strength_touch(exercise: dict, profile: dict) -> bool:
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    if "maximal_strength_maintenance" in _strength_maintenance_match_tags(exercise):
+        return False
+    method = normalize_tag(str(exercise.get("method") or ""))
+    quality_class = str(profile.get("quality_class") or "")
+    has_primer_signal = bool(tags & PRIMER_ONLY_STRENGTH_TOUCH_TAGS)
+    has_strength_method = method == "strength"
+    has_real_anchor = quality_class in STRENGTH_MAINTENANCE_QUALITY_CLASSES
+    return has_primer_signal and not has_strength_method and not (
+        has_real_anchor and "late_strength_touch" in tags and "strength" in tags
+    )
+
+
+def _is_real_strength_maintenance_touch(exercise: dict, profile: dict) -> bool:
+    if not _strength_maintenance_match_tags(exercise):
+        return False
+    if _is_primer_only_strength_touch(exercise, profile):
+        return False
+    if "maximal_strength_maintenance" in _strength_maintenance_match_tags(exercise):
+        return True
+    method = normalize_tag(str(exercise.get("method") or ""))
+    return method == "strength" or profile.get("quality_class") in STRENGTH_MAINTENANCE_QUALITY_CLASSES
+
+
+def _strength_maintenance_support_score(exercise: dict, profile: dict, *, window: str | None) -> int:
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    support = len(tags & STRENGTH_MAINTENANCE_SUPPORT_TAGS)
+    late_windows = _exercise_late_windows(exercise)
+    if window and (window in late_windows or "all" in late_windows):
+        support += 1
+    if profile.get("quality_class") in STRENGTH_MAINTENANCE_QUALITY_CLASSES:
+        support += 1
+    if _exercise_phase_role(exercise) == "late_strength_touch":
+        support += 1
+    if "maximal_strength_maintenance" in _strength_maintenance_match_tags(exercise):
+        support += 1
+    return support
 
 
 def _exercise_profile_flag(exercise: dict, tags: set[str], field_name: str, *, tag_name: str | None = None) -> bool:
@@ -284,6 +424,105 @@ def _resolved_cut_severity_bucket(flags: dict) -> str:
             flags.get("days_until_fight"),
         )
     )
+
+
+def _camp_is_compressed(flags: dict) -> bool:
+    """Return True when the camp is compressed.
+
+    Prefers an explicit ``camp_compressed`` flag; otherwise falls back to the
+    total camp length recorded in ``phase_weeks['days']`` and treats a camp at
+    or below ``COMPRESSED_CAMP_DAYS_THRESHOLD`` days as compressed. ``days_until_fight``
+    is deliberately not used as a proxy — it shrinks for every athlete during the
+    taper, compressed camp or not.
+    """
+    explicit = flags.get("camp_compressed")
+    if explicit is not None:
+        return bool(explicit)
+    phase_weeks = flags.get("phase_weeks")
+    if not isinstance(phase_weeks, dict):
+        return False
+    days = phase_weeks.get("days")
+    if not isinstance(days, dict) or not days:
+        return False
+    total_days = sum(v for v in days.values() if isinstance(v, (int, float)))
+    return 0 < total_days <= COMPRESSED_CAMP_DAYS_THRESHOLD
+
+
+def _squat_tolerance_is_poor(flags: dict) -> bool:
+    """Return True when the athlete has poor squat tolerance.
+
+    Optional signal that degrades gracefully: an explicit ``poor_squat_tolerance``
+    boolean wins; otherwise a ``squat_tolerance`` level string is read and treated
+    as poor when it names a low tier. Absent both keys, returns False.
+    """
+    explicit = flags.get("poor_squat_tolerance")
+    if explicit is not None:
+        return bool(explicit)
+    level = str(flags.get("squat_tolerance") or "").strip().lower()
+    return level in POOR_SQUAT_TOLERANCE_LEVELS
+
+
+def _trap_bar_preference_context(flags: dict, *, cut_bucket: str) -> tuple[bool, list[str]]:
+    """Resolve whether the trap-bar-over-back-squat preference should fire.
+
+    Returns ``(active, reason_codes)`` where ``reason_codes`` names which
+    condition(s) triggered it. Computed once per strength block since it depends
+    only on the athlete's flags, not the candidate exercise.
+    """
+    reasons: list[str] = []
+
+    injuries = flags.get("injuries") or []
+    injury_blob = " ".join(str(injury) for injury in injuries).lower()
+    hit_regions = [
+        region
+        for region in SQUAT_BAR_POSITION_INJURY_REGIONS
+        if region in injury_blob
+    ]
+    if hit_regions:
+        reasons.append("trap_bar_pref_injury:" + "/".join(hit_regions))
+
+    if cut_bucket in TRAP_BAR_PREFERENCE_ACTIVE_CUT_BUCKETS or bool(flags.get("weight_cut_risk")):
+        reasons.append("trap_bar_pref_active_cut")
+
+    if str(flags.get("fatigue", "")).strip().lower() in {"moderate", "high"}:
+        reasons.append("trap_bar_pref_fatigue")
+
+    if _camp_is_compressed(flags):
+        reasons.append("trap_bar_pref_compressed_camp")
+
+    if _squat_tolerance_is_poor(flags):
+        reasons.append("trap_bar_pref_poor_squat_tolerance")
+
+    return bool(reasons), reasons
+
+
+def _trap_bar_anchor_preference_adjustment(
+    exercise: dict,
+    *,
+    active: bool,
+    context_reasons: list[str],
+) -> tuple[float, list[str]]:
+    """Bias a candidate toward the trap-bar deadlift over a barbell squat anchor.
+
+    Only fires when the preference is ``active``. Penalises barbell
+    back-/front-rack squat-pattern anchors (which load the spared joints and
+    carry more axial/recovery cost) and boosts the trap-bar hinge anchor. Other
+    movements — including bodyweight/dumbbell squats and trap-bar jump squats —
+    are left untouched.
+    """
+    if not active:
+        return 0.0, []
+    equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
+    movement = normalize_exercise_movement(exercise)
+    if movement == "squat" and "barbell" in equipment and "trap_bar" not in equipment:
+        return TRAP_BAR_PREFERENCE_SQUAT_PENALTY, context_reasons + [
+            "trap_bar_pref_squat_anchor_penalty"
+        ]
+    if movement == "hinge" and "trap_bar" in equipment:
+        return TRAP_BAR_PREFERENCE_HINGE_BOOST, context_reasons + [
+            "trap_bar_pref_trap_bar_anchor_boost"
+        ]
+    return 0.0, []
 
 
 def _strength_is_lower_body(exercise: dict, tags: set[str]) -> bool:
@@ -407,6 +646,24 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     }
 
 
+def _strength_throw_signal(exercise: dict, equipment: set[str]) -> bool:
+    profile = exercise.get("profile") or {}
+    text = str(profile.get("text") or _strength_text_blob(exercise)).lower()
+    if re.search(r"\b(?:throw|throws|throwing|toss|tosses|tossing)\b", text):
+        return True
+    if "medicine_ball" in equipment and re.search(r"\b(?:pass|passes|passing)\b", text):
+        return True
+    return False
+
+
+def _strength_band_signal(exercise: dict, equipment: set[str]) -> bool:
+    if "bands" in equipment:
+        return True
+    profile = exercise.get("profile") or {}
+    text = str(profile.get("text") or _strength_text_blob(exercise)).lower()
+    return bool(re.search(r"\b(?:band|bands|banded)\b", text))
+
+
 def _strength_metadata_score_adjustment(
     exercise: dict,
     *,
@@ -471,16 +728,40 @@ def _evaluate_strength_late_window(
     exercise: dict,
     *,
     window: str | None,
+    days_until_fight=None,
     cut_bucket: str = "none",
+    source: str = "exercise_bank.json",
 ) -> dict:
     if not is_active_late_selector_window(window):
         return {
             "blocked": False,
+            "severity": "safe",
             "block_codes": [],
             "reason_codes": [],
+            "penalty_codes": [],
             "adjustment": 0.0,
             "ambiguous_gap": None,
         }
+    metadata_safety = None
+    metadata_penalty_codes: list[str] = []
+    metadata_adjustment = 0.0
+    if exercise.get("_schema_source") or exercise.get("_schema_issues") or exercise.get("_schema_safety"):
+        metadata_source = str(exercise.get("_schema_source") or source)
+        metadata_safety = is_late_fight_metadata_safe(exercise, metadata_source, window)
+        if metadata_safety.get("severity") == "blocked":
+            return {
+                "blocked": True,
+                "severity": "blocked",
+                "block_codes": metadata_safety["block_codes"],
+                "reason_codes": metadata_safety["reason_codes"],
+                "penalty_codes": metadata_safety.get("penalty_codes", []),
+                "adjustment": -1.0,
+                "ambiguous_gap": None,
+                "unsafe_metadata": metadata_safety["unsafe_metadata"],
+            }
+        metadata_penalty_codes = list(metadata_safety.get("penalty_codes", []))
+        if metadata_penalty_codes:
+            metadata_adjustment = max(-0.75, -0.35 * len(metadata_penalty_codes))
 
     penalties, blocks, profile = _strength_contextual_risk_patterns(exercise)
     tags = profile["tags"]
@@ -513,8 +794,10 @@ def _evaluate_strength_late_window(
     explicit_late_metadata = bool(late_windows or phase_role or subfamily or explicit_late_touch)
     safe_tags = sorted(tags & LATE_STRENGTH_SAFE_TAGS)
     severity = _strength_late_window_severity(window)
-    reason_codes: list[str] = []
-    adjustment = 0.0
+    reason_codes: list[str] = list(metadata_penalty_codes)
+    penalty_codes: list[str] = list(metadata_penalty_codes)
+    adjustment = metadata_adjustment
+    exact_days_until_fight = coerce_days_until_fight(days_until_fight)
     cut_multiplier = LATE_STRENGTH_CUT_BUCKET_MULTIPLIER.get(cut_bucket, 0.0)
     high_cut_window = window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
     late_band_lockout_window = window in {D7, D6_TO_D5, D4_TO_D2, D1}
@@ -529,9 +812,26 @@ def _evaluate_strength_late_window(
             "injury_prevention",
         }
     )
-    if late_band_lockout_window and "bands" in equipment and not rehab_mobility_band_ok:
+    # The band-work lockout targets loaded/dense band strength work in the final
+    # week. Low-dose late-safe primers (neural primers, explicit late-strength
+    # touches, ballistic low-volume work) are kept through the earlier final-week
+    # windows, but D1 is the strictest day: no band work survives there, so the
+    # primer exemption does not apply on D1.
+    late_safe_band_primer = (
+        window != D1
+        and (neural_primer or explicit_late_touch or ballistic_low_volume)
+    )
+    if (
+        late_band_lockout_window
+        and _strength_band_signal(exercise, equipment)
+        and (window == D1 or not rehab_mobility_band_ok)
+        and not late_safe_band_primer
+    ):
         blocks.append("late_strength_block_band_work_lockout")
         reason_codes.append("late_strength_penalty_band_work_lockout")
+    if exact_days_until_fight == 3 and _strength_throw_signal(exercise, equipment):
+        blocks.append("late_strength_block_d3_throw_lockout")
+        reason_codes.append("late_strength_penalty_d3_throw_lockout")
 
     if window == D1 and not ("d1_ok" in tags or "d1_if_familiar" in tags):
         blocks.append("late_strength_block_d1_requires_d1_tags")
@@ -546,6 +846,12 @@ def _evaluate_strength_late_window(
     }:
         adjustment -= 0.45 * (1.0 + cut_multiplier)
         reason_codes.append("late_strength_penalty_high_cut_sensitive_tags")
+    # Balance is materially compromised during a hard weight cut, so balance-risk
+    # work is hard-blocked (not just penalised) in the late window.
+    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS and tags & {
+        "single_leg", "vestibular_sensitive", "balance_challenge"
+    }:
+        blocks.append("late_strength_block_high_cut_balance_risk")
 
     if late_windows:
         if window in late_windows:
@@ -675,7 +981,12 @@ def _evaluate_strength_late_window(
     if window == D1 and "medicine_ball" in set(normalize_equipment_list(exercise.get("equipment", []))) and not explicit_late_metadata:
         blocks.append("late_strength_block_nonexplicit_ballistic_med_ball")
 
-    block_codes = sorted(set(blocks)) if window in LATE_STRENGTH_TIGHT_WINDOWS else []
+    if window in LATE_STRENGTH_TIGHT_WINDOWS:
+        block_codes = sorted(set(blocks))
+    else:
+        # Outside the tight windows (e.g. D13-D8) only safety-critical hard blocks
+        # survive; the window-specific noise/diversity blocks are dropped.
+        block_codes = sorted(b for b in set(blocks) if b in LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS)
     if window in LATE_STRENGTH_TIGHT_WINDOWS and high_cut_window:
         if profile["loaded_lower"] and (
             profile["heavy_loaded_pattern"]
@@ -709,8 +1020,10 @@ def _evaluate_strength_late_window(
 
     return {
         "blocked": bool(block_codes),
+        "severity": "blocked" if block_codes else "penalty" if penalty_codes else "safe",
         "block_codes": block_codes,
-        "reason_codes": reason_codes,
+        "reason_codes": list(dict.fromkeys(reason_codes)),
+        "penalty_codes": list(dict.fromkeys(penalty_codes)),
         "adjustment": round(adjustment, 4),
         "ambiguous_gap": ambiguous_gap,
     }
@@ -850,6 +1163,20 @@ def score_exercise(
     score += priority_bonus
     reasons["weakness_hits"] = weakness_matches
     reasons["goal_hits"] = goal_matches
+    # A stated posterior-chain weakness should surface a posterior-chain-specific
+    # late-touch (e.g. Isometric Mid-Thigh Pull / Trap-Bar Pin Pull Isometric)
+    # rather than letting a quad-dominant isometric stand in as the posterior-chain
+    # answer. Bias the specific options up so at least one is preferred where it is
+    # safe and available; mixed quad/posterior options stay valid but no longer win
+    # the posterior-chain slot by default.
+    if (
+        "posterior_chain" in weakness_tags
+        and "late_strength_touch" in exercise_tags
+        and "posterior_chain" in exercise_tags
+        and "quad_dominant" not in exercise_tags
+    ):
+        score += POSTERIOR_CHAIN_LATE_TOUCH_BIAS
+        reasons["reason_codes"].append("priority_posterior_chain_late_touch_bias")
     if derived_clarification_tags:
         matched_clarification_tags = sorted(set(exercise_tags) & set(derived_clarification_tags))
         clarification_bonus = min(
@@ -1009,7 +1336,7 @@ def get_exercise_bank() -> list[dict]:
             (DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8")
         )
         for item in _exercise_bank_cache:
-            validate_training_item(item, source="exercise_bank.json", require_phases=True)
+            validate_training_item(item, source="exercise_bank.json", require_phases=True, mode="runtime")
             normalize_item_tags(item)
     return _exercise_bank_cache
 
@@ -1026,7 +1353,7 @@ def get_universal_strength() -> list[dict]:
             _universal_strength_cache = []
         else:
             for item in _universal_strength_cache:
-                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
+                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True, mode="runtime")
                 normalize_item_tags(item)
     return _universal_strength_cache
 
@@ -1339,7 +1666,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     prev_exercises = flags.get("prev_exercises", [])
     recent_movements = set(flags.get("recent_exercises", []))
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
-    exercise_bank = get_exercise_bank()
+    # Bracket the candidate-pool source fetch with substep milestones so a
+    # failure loading the strength bank stays visible (the "*_started" event is
+    # emitted before the fetch) and the warm/cold prime paths report the same
+    # substep.
+    exercise_bank = _run_substep("candidate_pool", get_exercise_bank)
     style_exercises = get_style_exercises()
     universal_strength_names = get_universal_strength_names()
 
@@ -1359,7 +1690,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     must_have_by_phase = {
         "GPP": ["compound", "posterior_chain", "unilateral", "push", "pull"],
         "SPP": ["compound", "posterior_chain", "unilateral", "explosive", "rate_of_force"],
-        "TAPER": ["reactive", "neural_primer", "speed", "explosive"],
+        "TAPER": ["late_strength_touch", "maximal_strength_maintenance", "neural_primer", "speed"],
     }
     must_have_tags = must_have_by_phase.get(phase, [])
     phase_dict = PHASE_TAG_BOOST.get(phase, {})
@@ -1374,6 +1705,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
     active_late_window = is_active_late_selector_window(late_window)
     cut_bucket = _resolved_cut_severity_bucket(flags)
+    trap_bar_pref_active, trap_bar_pref_reasons = _trap_bar_preference_context(
+        flags, cut_bucket=cut_bucket
+    )
     high_pressure_late_cut = active_late_window and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
     must_have_bonus_multiplier = (
         LATE_MUST_HAVE_BONUS_MULTIPLIER if high_pressure_late_cut else 1.0
@@ -1403,6 +1737,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     restriction_warning_counts: dict[str, int] = defaultdict(int)
     restriction_blocked_items: list[dict] = []
     late_window_blocked: list[dict] = []
+    late_window_penalized: list[dict] = []
     late_window_ambiguous: dict[str, dict] = {}
     post_score_late_eval_cache: dict[str, dict] = {}
 
@@ -1414,6 +1749,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 "name": exercise.get("name", "<unnamed>"),
                 "score": round(float(score), 4),
                 "reason_codes": list(reason_codes),
+            }
+        )
+
+    def _record_late_penalty(exercise: dict, score: float, penalty_codes: list[str]) -> None:
+        if not active_late_window or not penalty_codes:
+            return
+        late_window_penalized.append(
+            {
+                "name": exercise.get("name", "<unnamed>"),
+                "score": round(float(score), 4),
+                "penalty_codes": list(penalty_codes),
             }
         )
 
@@ -1447,12 +1793,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             late_eval = _evaluate_strength_late_window(
                 exercise,
                 window=late_window,
+                days_until_fight=days_until_fight,
                 cut_bucket=cut_bucket,
             )
             post_score_late_eval_cache[cache_key] = late_eval
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
             if late_eval["blocked"]:
                 _record_late_block(exercise, fallback_score, late_eval["block_codes"])
+            elif late_eval.get("penalty_codes"):
+                _record_late_penalty(exercise, fallback_score, late_eval["penalty_codes"])
         return post_score_late_eval_cache[cache_key]
 
     def _late_safe_marker_profile(
@@ -1501,6 +1850,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if late_eval.get("reason_codes"):
             existing_codes = [str(code) for code in merged.get("reason_codes", []) if str(code).strip()]
             merged["reason_codes"] = list(dict.fromkeys(existing_codes + list(late_eval["reason_codes"])))
+        if late_eval.get("penalty_codes"):
+            existing_penalties = [str(code) for code in merged.get("penalty_codes", []) if str(code).strip()]
+            merged["penalty_codes"] = list(dict.fromkeys(existing_penalties + list(late_eval["penalty_codes"])))
         if active_late_window:
             merged.setdefault("late_window_adjustment", late_eval.get("adjustment", 0.0))
         merged.setdefault("quality_class", profile.get("quality_class"))
@@ -1535,7 +1887,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             -order_idx,
         )
 
-    for ex in _run_substep("candidate_pool", lambda: exercise_bank):
+    for ex in exercise_bank:
         tags = ex.get("tags", [])
         tags_lower = set(normalize_tags(tags))
         if _exercise_late_windows(ex) and not active_late_window:
@@ -1649,20 +2001,43 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             breakdown["reason_codes"] = list(
                 dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(metadata_reason_codes))
             )
+        trap_bar_adjustment, trap_bar_reason_codes = _trap_bar_anchor_preference_adjustment(
+            ex,
+            active=trap_bar_pref_active,
+            context_reasons=trap_bar_pref_reasons,
+        )
+        if trap_bar_adjustment:
+            score += trap_bar_adjustment
+            breakdown["trap_bar_preference_adjustment"] = trap_bar_adjustment
+        if trap_bar_reason_codes:
+            breakdown["reason_codes"] = list(
+                dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(trap_bar_reason_codes))
+            )
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
             breakdown["restriction_hits"] = len(matched_restrictions)
-        late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
+        late_eval = _evaluate_strength_late_window(
+            ex,
+            window=late_window,
+            days_until_fight=days_until_fight,
+            cut_bucket=cut_bucket,
+        )
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(ex, score, late_eval["block_codes"])
             continue
+        if late_eval.get("penalty_codes"):
+            _record_late_penalty(ex, score, late_eval["penalty_codes"])
         if late_eval["adjustment"]:
             score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
             breakdown["reason_codes"] = list(
                 dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(late_eval["reason_codes"]))
+            )
+        if late_eval.get("penalty_codes"):
+            breakdown["penalty_codes"] = list(
+                dict.fromkeys(list(breakdown.get("penalty_codes", [])) + list(late_eval["penalty_codes"]))
             )
         breakdown["late_window_adjustment"] = late_eval["adjustment"]
         breakdown["final_score"] = round(score, 4)
@@ -1760,11 +2135,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     continue
                 if not any(t in taper_allowed for t in tags_lower):
                     continue
-            late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
+            late_eval = _evaluate_strength_late_window(
+                ex,
+                window=late_window,
+                days_until_fight=days_until_fight,
+                cut_bucket=cut_bucket,
+            )
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
             if late_eval["blocked"]:
                 _record_late_block(ex, 0.0, late_eval["block_codes"])
                 continue
+            if late_eval.get("penalty_codes"):
+                _record_late_penalty(ex, 0.0, late_eval["penalty_codes"])
             fallback_exercises.append(ex)
             if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
                 break
@@ -2185,6 +2567,75 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 updated[first_position], updated[anchor_position] = updated[anchor_position], updated[first_position]
         return updated
 
+    strength_maintenance_intent = _has_strength_maintenance_intent(
+        goals=goals,
+        weaknesses=weaknesses,
+        flags=flags,
+    )
+
+    def _ensure_early_taper_strength_maintenance_touch(exercises: list[dict]) -> list[dict]:
+        if not (
+            phase == "TAPER"
+            and late_window in EARLY_TAPER_STRENGTH_WINDOWS
+            and strength_maintenance_intent
+            and exercises
+        ):
+            return exercises
+        if any(
+            _is_real_strength_maintenance_touch(exercise, _cached_classify(exercise))
+            for exercise in exercises
+        ):
+            return exercises
+
+        selected_names = _selected_names(exercises)
+        replacement_entry = _best_candidate(
+            lambda cand, _score, _reasons, profile: _is_real_strength_maintenance_touch(cand, profile)
+            and _cached_guarded_decision(cand).action != "exclude",
+            exclude_names=selected_names,
+        )
+        if not replacement_entry:
+            return exercises
+
+        replacement, replacement_score, replacement_reasons, _replacement_profile, _late_safe_profile = replacement_entry
+        replacement_name = replacement.get("name")
+        if not replacement_name:
+            return exercises
+
+        updated = list(exercises)
+        primer_only_indices = [
+            idx
+            for idx, exercise in enumerate(updated)
+            if _is_primer_only_strength_touch(exercise, _cached_classify(exercise))
+        ]
+        candidate_indices = primer_only_indices or list(range(len(updated)))
+        replace_index = min(
+            candidate_indices,
+            key=lambda idx: (
+                score_lookup.get(updated[idx].get("name"), 0.0),
+                -_strength_maintenance_support_score(
+                    updated[idx],
+                    _cached_classify(updated[idx]),
+                    window=late_window,
+                ),
+                -idx,
+            ),
+        )
+        replacement_reasons.setdefault("reason_codes", [])
+        replacement_reasons["reason_codes"] = list(
+            dict.fromkeys(
+                list(replacement_reasons.get("reason_codes", []))
+                + ["early_taper_strength_maintenance_selected"]
+            )
+        )
+        _replace_exercise(
+            updated,
+            index=replace_index,
+            replacement=replacement,
+            replacement_score=replacement_score,
+            replacement_reasons=replacement_reasons,
+        )
+        return updated
+
     candidate_metadata: dict[str, dict[str, object]] = {}
     for ex, score, reasons in weighted_exercises:
         name = ex.get("name")
@@ -2321,16 +2772,27 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             style_reasons["reason_codes"] = list(
                 dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(metadata_reason_codes))
             )
-        late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
+        late_eval = _evaluate_strength_late_window(
+            ex,
+            window=late_window,
+            days_until_fight=days_until_fight,
+            cut_bucket=cut_bucket,
+        )
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(ex, style_score, late_eval["block_codes"])
             continue
+        if late_eval.get("penalty_codes"):
+            _record_late_penalty(ex, style_score, late_eval["penalty_codes"])
         if late_eval["adjustment"]:
             style_score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
             style_reasons["reason_codes"] = list(
                 dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(late_eval["reason_codes"]))
+            )
+        if late_eval.get("penalty_codes"):
+            style_reasons["penalty_codes"] = list(
+                dict.fromkeys(list(style_reasons.get("penalty_codes", [])) + list(late_eval["penalty_codes"]))
             )
         style_reasons["late_window_adjustment"] = late_eval["adjustment"]
         style_reasons["final_score"] = round(style_score, 4)
@@ -2613,6 +3075,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _run_real_poststep("movement_caps_final", lambda: _apply_movement_caps(base_exercises))
     base_exercises = _run_real_poststep("injury_safe_finalize_2", lambda: _finalize_injury_safe_exercises(base_exercises))
     base_exercises = _run_real_poststep("keyword_guard", lambda: _final_keyword_guard(base_exercises))
+    base_exercises = _run_real_poststep(
+        "early_taper_strength_maintenance_final",
+        lambda: _ensure_early_taper_strength_maintenance_touch(base_exercises),
+    )
 
     _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])
 
@@ -2668,10 +3134,21 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         ): entry
         for entry in late_window_blocked
     }
+    deduped_late_penalties = {
+        (
+            entry.get("name", ""),
+            tuple(entry.get("penalty_codes", [])),
+        ): entry
+        for entry in late_window_penalized
+    }
     candidate_reservoir["__late_window__"] = {
         "window": late_window,
         "blocked": sorted(
             deduped_late_blocks.values(),
+            key=lambda entry: (entry.get("name", ""), entry.get("score", 0.0)),
+        ),
+        "penalized": sorted(
+            deduped_late_penalties.values(),
             key=lambda entry: (entry.get("name", ""), entry.get("score", 0.0)),
         ),
         "ambiguous_tag_gaps": [

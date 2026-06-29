@@ -1,0 +1,6 @@
+from __future__ import annotations
+
+from .footwork_conditioning_loader import install as _install_footwork_conditioning_loader
+
+_install_footwork_conditioning_loader()
+del _install_footwork_conditioning_loader

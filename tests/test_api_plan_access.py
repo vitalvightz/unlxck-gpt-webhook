@@ -45,6 +45,22 @@ def _weekly_schedule_planning_brief() -> dict:
     }
 
 
+def _structured_date_range(start: str, end: str) -> dict:
+    return {
+        "schema_version": "structured_plan.v1",
+        "weeks": [
+            {
+                "week_id": "wk-1",
+                "week_index": 1,
+                "phase_label": "SPP",
+                "start_date": start,
+                "end_date": end,
+                "days": [{"date": start}, {"date": end}],
+            }
+        ],
+    }
+
+
 def test_athlete_cannot_read_another_athlete_plan():
     client, store, _ = _build_client()
     other_user = AuthenticatedUser(
@@ -328,6 +344,37 @@ def test_legacy_review_required_without_validator_report_stays_held_and_hidden()
     assert body["outputs"]["plan_text"] == ""
 
 
+def test_plan_summary_explains_held_for_review_reason():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="# Held final plan",
+            stage2_validator_report={
+                "errors": [],
+                "warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "blocking_warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+            },
+        ),
+    )
+
+    response = client.get("/api/plans", headers={"Authorization": "Bearer athlete-token"})
+
+    assert response.status_code == 200
+    listed_plan = next(item for item in response.json() if item["plan_id"] == plan["id"])
+    assert listed_plan["status"] == "held_for_review"
+    assert listed_plan["review_reason"] == (
+        "Admin review is required before release because Stage 2 validation "
+        "found blocking issues: required plan elements are missing."
+    )
+
+
 def test_legacy_rows_with_only_plan_text_remain_readable():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
@@ -465,6 +512,52 @@ def test_latest_plan_endpoint_returns_latest_saved_plan():
     assert latest.json()["plan_id"] == next(iter(store.plans.values()))["id"]
 
 
+def test_set_active_endpoint_blocks_overlapping_active_plan_until_user_chooses():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    current = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_current",
+        request=_build_request({"fight_date": "2026-07-12"}),
+        result=finalized_result(structured_plan=_structured_date_range("2026-06-12", "2026-07-12")),
+    )
+    draft = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_draft",
+        request=_build_request({"fight_date": "2026-07-20"}),
+        result=finalized_result(structured_plan=_structured_date_range("2026-06-20", "2026-07-20")),
+    )
+    store.set_active_plan_id("athlete-1", current["id"])
+
+    blocked = client.post(
+        f"/api/plans/{draft['id']}/set-active",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"] == {
+        "code": "active_plan_overlap",
+        "message": "This overlaps with your current active plan. Do you want to replace the current plan, pause it, or choose a new start date?",
+    }
+    assert store.get_active_plan_id("athlete-1") == current["id"]
+
+    paused = client.post(
+        f"/api/plans/{draft['id']}/set-active",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"overlap_action": "pause"},
+    )
+
+    assert paused.status_code == 200
+    assert paused.json()["plan_id"] == draft["id"]
+    assert store.get_active_plan_id("athlete-1") == draft["id"]
+    assert store.get_plan(current["id"])["status"] == "ready"
+
+
 def test_athlete_can_rename_their_saved_plan():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
@@ -520,7 +613,7 @@ def test_athlete_can_rename_their_saved_plan_via_documented_name_route():
     assert store.get_plan(plan["id"])["plan_name"] == "Camp A"
 
 
-def test_archived_plan_is_hidden_from_athlete_routes():
+def test_archived_plan_is_preview_only_for_athlete_history():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -560,13 +653,15 @@ def test_archived_plan_is_hidden_from_athlete_routes():
     )
 
     assert list_response.status_code == 200
-    assert [plan["plan_id"] for plan in list_response.json()] == [visible_plan["id"]]
+    assert {plan["plan_id"] for plan in list_response.json()} == {archived_plan["id"], visible_plan["id"]}
     assert latest_response.status_code == 200
     assert latest_response.json()["plan_id"] == visible_plan["id"]
     assert me_response.status_code == 200
     assert me_response.json()["latest_plan"]["plan_id"] == visible_plan["id"]
     assert me_response.json()["plan_count"] == 1
-    assert archived_detail_response.status_code == 404
+    assert archived_detail_response.status_code == 200
+    assert archived_detail_response.json()["status"] == "archived"
+    assert archived_detail_response.json()["outputs"]["plan_text"] == "# Archived copy"
     assert admin_detail_response.status_code == 200
     assert admin_detail_response.json()["status"] == "archived"
 
@@ -604,9 +699,10 @@ def test_athlete_can_archive_their_saved_plan():
         headers={"Authorization": "Bearer athlete-token"},
     )
     assert list_response.status_code == 200
-    assert list_response.json() == []
+    assert [item["plan_id"] for item in list_response.json()] == [plan["id"]]
     assert latest_response.status_code == 404
-    assert detail_response.status_code == 404
+    assert detail_response.status_code == 200
+    assert detail_response.json()["status"] == "archived"
 
 
 def test_athlete_cannot_archive_someone_elses_plan():

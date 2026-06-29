@@ -5,8 +5,12 @@ def _is_high_pressure_weight_cut(flags: dict) -> bool:
         return True
     fatigue = str(flags.get("fatigue", "")).strip().lower()
     days_until_fight = flags.get("days_until_fight")
+    # A low-fatigue, non-aggressive active cut only counts as high-pressure inside
+    # the final two weeks (<=14). Aggressive cuts (>=5%) and moderate+ fatigue stay
+    # high-pressure at any distance via the clauses above. (Was <=28, which flagged
+    # a routine 3-3.5% cut at D-21 as high-pressure even at low fatigue.)
     return fatigue in {"moderate", "high"} or (
-        isinstance(days_until_fight, int) and days_until_fight <= 28
+        isinstance(days_until_fight, int) and days_until_fight <= 14
     )
 
 
@@ -191,7 +195,7 @@ def generate_nutrition_block(*, flags: dict) -> str:
         elif phase == "TAPER":
             nutrition_block += "\n**High Fatigue in Taper:**\n"
             nutrition_block += "- Reduce training volume calories by ~5-10%\n"
-            nutrition_block += "- Focus on easily digestible carbs, hydrate well\n"
+            nutrition_block += "- Use easily digestible carbs and hydrate well\n"
             nutrition_block += "- Magnesium glycinate 200 mg + taurine 1 g\n"
             nutrition_block += "- Light electrolyte intake only\n"
     elif fatigue == "moderate":

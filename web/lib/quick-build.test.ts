@@ -82,6 +82,19 @@ test("quickBuildToPlanRequest drops hard sparring days that are not training day
   assert.deepEqual(plan.hard_sparring_days, ["Monday"]);
 });
 
+test("quickBuildToPlanRequest promotes first quick build focus values to primary", () => {
+  const input = buildValidInput();
+  input.key_goals = ["power", "conditioning"];
+  input.weak_areas = ["mobility", "coordination"];
+
+  const plan = quickBuildToPlanRequest(input);
+
+  assert.deepEqual(plan.key_goals, ["power", "conditioning"]);
+  assert.equal(plan.primary_goal, "power");
+  assert.deepEqual(plan.weak_areas, ["mobility", "coordination"]);
+  assert.equal(plan.primary_weak_area, "mobility");
+});
+
 test("planRequestToQuickBuildInput pulls advanced onboarding fields", () => {
   const plan = emptyPlanRequest("Athlete");
   plan.athlete.technical_style = ["boxing"];
@@ -125,6 +138,37 @@ test("planRequestToQuickBuildInput drops hard sparring days outside availability
   plan.hard_sparring_days = ["Monday", "Saturday"];
   const input = planRequestToQuickBuildInput(plan);
   assert.deepEqual(input.hard_sparring_days, ["Monday"]);
+});
+
+test("planRequestToQuickBuildInput shows the athlete's own words, not the structured comprehension", () => {
+  const plan = emptyPlanRequest("Athlete");
+  // plan.injuries holds the planner's derived comprehension after advanced intake.
+  plan.injuries =
+    "Left shoulder is bruised (low, stable). Type: surface_injury. Surface: bruise. Impact related: yes";
+  plan.guided_injuries = [
+    {
+      area: "Left shoulder is bruised",
+      severity: "low",
+      trend: "stable",
+      injury_type: "surface_injury",
+      surface_type: "bruise",
+      impact_related: "yes",
+      notes: "knocked it sparring [chest_symptoms:none]",
+    },
+  ];
+
+  const input = planRequestToQuickBuildInput(plan);
+  // The athlete sees what they typed (area + free-text note), with the derived
+  // fields and internal [tag:...] flags stripped — not the comprehension blob.
+  assert.equal(input.injuries, "Left shoulder is bruised. knocked it sparring");
+});
+
+test("planRequestToQuickBuildInput keeps free-text injuries when there are no guided injuries", () => {
+  const plan = emptyPlanRequest("Athlete");
+  plan.injuries = "Left knee tightness.";
+  plan.guided_injuries = [];
+  const input = planRequestToQuickBuildInput(plan);
+  assert.equal(input.injuries, "Left knee tightness.");
 });
 
 test("planRequestToQuickBuildInput clears fight_date when no_scheduled_fight is true", () => {
@@ -199,6 +243,60 @@ test("sanitizeQuickBuildFocusByDaysOut removes gas_tank when fight date changes 
   input.fight_date = "2026-05-25";
   const d1 = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
   assert.deepEqual(d1.weak_areas, ["mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut removes strength when hard sparring is added at D-20", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-06-13";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["strength", "mobility"];
+  input.weak_areas = ["strength", "mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.key_goals, ["mobility"]);
+  assert.deepEqual(sanitized.weak_areas, ["mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut keeps strength key goals for no scheduled fight with hard sparring", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = true;
+  input.fight_date = "";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["strength", "mobility"];
+  input.weak_areas = ["mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.key_goals, ["strength", "mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut keeps strength weak areas for no scheduled fight with hard sparring", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = true;
+  input.fight_date = "";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["mobility"];
+  input.weak_areas = ["strength", "mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.weak_areas, ["strength", "mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut does not auto-readd strength when hard sparring is removed", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-06-13";
+  input.hard_sparring_days = [];
+  input.key_goals = ["mobility"];
+  input.weak_areas = ["mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.key_goals, ["mobility"]);
+  assert.deepEqual(sanitized.weak_areas, ["mobility"]);
 });
 
 test("validateQuickBuildInput blocks generation when focus cap is exceeded", () => {

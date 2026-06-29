@@ -26,9 +26,16 @@ import type {
   SessionLogRecord,
   SessionLogRequest,
   SessionLogResponse,
+  TodayCheckinRequest,
+  TodayCheckinResponse,
+  TodayCommandView,
+  TodayInjuryCheckinRequest,
+  TodayInjuryCheckinResponse,
+  TodaySessionCompletionRequest,
+  TodaySessionCompletionResponse,
   UsernameChangeRequest,
-  WeeklySchedule,
 } from "@/lib/types";
+import type { ActivePlanOverlapAction } from "@/lib/plan-active";
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
@@ -340,7 +347,21 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
       const bodyRequestId =
         "request_id" in parsedBody ? (parsedBody as { request_id?: unknown }).request_id : null;
       const rawCode = "code" in parsedBody ? (parsedBody as { code?: unknown }).code : null;
-      const errorCode = typeof rawCode === "string" && rawCode ? rawCode : undefined;
+      let errorCode = typeof rawCode === "string" && rawCode ? rawCode : undefined;
+
+      if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+        const detailBody = detail as { code?: unknown; message?: unknown };
+        const detailCode = typeof detailBody.code === "string" && detailBody.code ? detailBody.code : undefined;
+        const detailMessage = typeof detailBody.message === "string" ? detailBody.message : null;
+        errorCode = errorCode ?? detailCode;
+        if (detailMessage) {
+          throw new ApiError(
+            bodyRequestId ? `${detailMessage} (request id: ${String(bodyRequestId)})` : detailMessage,
+            response.status,
+            errorCode,
+          );
+        }
+      }
 
       if (typeof detail === "string") {
         throw new ApiError(
@@ -498,8 +519,8 @@ export function saveOnboardingDraft(
     ProfileUpdateRequest,
     "onboarding_draft" | "full_name" | "technical_style" | "tactical_style" | "stance" | "professional_status" | "record" | "athlete_timezone"
   >,
-): Promise<{ ok: boolean; updated_at: string }> {
-  return readJson<{ ok: boolean; updated_at: string }>("/api/onboarding/draft", {
+): Promise<MeResponse> {
+  return readJson<MeResponse>("/api/onboarding/draft", {
     method: "PATCH",
     token,
     body: JSON.stringify(payload),
@@ -578,28 +599,29 @@ export function listPlans(token: string): Promise<PlanSummary[]> {
   return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
 }
 
+export function getActivePlan(token: string): Promise<PlanSummary> {
+  return withTransientRetries(() => readJson<PlanSummary>("/api/plans/active", { token }));
+}
+
+export function setActivePlan(
+  token: string,
+  planId: string,
+  options?: { overlapAction?: ActivePlanOverlapAction },
+): Promise<PlanSummary> {
+  const overlapAction = options?.overlapAction;
+  return withTransientRetries(() =>
+    readJson<PlanSummary>(`/api/plans/${encodeURIComponent(planId)}/set-active`, {
+      method: "POST",
+      token,
+      body: overlapAction ? JSON.stringify({ overlap_action: overlapAction }) : undefined,
+    }),
+  );
+}
+
 export function getPlan(token: string, planId: string): Promise<PlanDetail> {
   return withTransientRetries(() =>
     readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token }),
   );
-}
-
-export async function fetchWeeklySchedule(
-  planId: string,
-  weekIndex = 0,
-  token?: string | null,
-): Promise<WeeklySchedule | null> {
-  try {
-    return await readJson<WeeklySchedule>(
-      `/api/plans/${encodeURIComponent(planId)}/weekly-schedule?week_index=${weekIndex}`,
-      { token },
-    );
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null;
-    }
-    throw error;
-  }
 }
 
 export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
@@ -612,8 +634,8 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
   );
 }
 
-// Archives the plan (soft delete). The server-side DELETE route is archive-only;
-// the plan stays recoverable in the athlete's archived list.
+// Archives the plan. The server-side DELETE route is archive-only; the plan
+// stays recoverable in the athlete's archived list.
 export async function deletePlan(token: string, planId: string): Promise<void> {
   return withTransientRetries(() =>
     requestVoid(`/api/plans/${encodeURIComponent(planId)}`, {
@@ -623,16 +645,42 @@ export async function deletePlan(token: string, planId: string): Promise<void> {
   );
 }
 
-// Admin-only hard delete. Requires the exact plan name as typed confirmation.
-export async function permanentlyDeletePlan(
+export async function archivePlan(token: string, planId: string): Promise<void> {
+  return deletePlan(token, planId);
+}
+
+// Admin-only hard delete. Non-archived plans require the exact plan name as
+// typed confirmation; archived plans can be deleted without it (pass no name).
+export async function adminPermanentlyDeletePlan(
   token: string,
   planId: string,
-  confirmPlanName: string,
+  confirmPlanName?: string,
 ): Promise<void> {
+  const trimmedName = confirmPlanName?.trim();
   return requestVoid(`/api/admin/plans/${encodeURIComponent(planId)}/permanent`, {
     method: "DELETE",
     token,
-    body: JSON.stringify({ confirm_plan_name: confirmPlanName }),
+    body: trimmedName ? JSON.stringify({ confirm_plan_name: trimmedName }) : undefined,
+  });
+}
+
+export type BulkPermanentDeleteResult = {
+  deleted: string[];
+  skipped: { plan_id: string; reason: string }[];
+  deleted_count: number;
+  skipped_count: number;
+};
+
+// Admin-only bulk hard delete. Only already-archived plans are removed; any
+// non-archived ids are reported back in `skipped`.
+export async function bulkPermanentlyDeleteArchivedPlans(
+  token: string,
+  planIds: string[],
+): Promise<BulkPermanentDeleteResult> {
+  return readJson<BulkPermanentDeleteResult>("/api/admin/plans/bulk-permanent-delete", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ plan_ids: planIds }),
   });
 }
 
@@ -767,6 +815,19 @@ export function listAdminActiveGenerationJobs(
   );
 }
 
+export function cancelAdminGenerationJob(
+  token: string,
+  jobId: string,
+): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(
+    `/api/admin/generation-jobs/${encodeURIComponent(jobId)}`,
+    {
+      method: "DELETE",
+      token,
+    },
+  );
+}
+
 export function listAdminPlans(
   token: string,
   query?: AdminListQuery,
@@ -853,11 +914,37 @@ export function rejectApprovedPlan(token: string, planId: string): Promise<PlanD
   });
 }
 
-export function archivePlan(token: string, planId: string): Promise<PlanDetail> {
+export function adminArchivePlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${encodeURIComponent(planId)}/archive`, {
     method: "POST",
     token,
   });
+}
+
+export type StructuredPlanBackfillResult = {
+  queued: number;
+  plan_ids: string[];
+};
+
+/**
+ * Trigger a background backfill that re-runs structured-plan conversion for
+ * athlete-displayable plans that have no structured card yet (legacy plans
+ * generated before structured generation existed). Returns immediately with the
+ * queued plan ids; cards appear on each plan as its conversion lands.
+ */
+export function backfillStructuredPlans(
+  token: string,
+  options?: { limit?: number },
+): Promise<StructuredPlanBackfillResult> {
+  const query =
+    typeof options?.limit === "number" ? `?limit=${encodeURIComponent(options.limit)}` : "";
+  return readJson<StructuredPlanBackfillResult>(
+    `/api/admin/plans/structured-plan/backfill${query}`,
+    {
+      method: "POST",
+      token,
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -970,4 +1057,41 @@ export function getAdminAthleteDailyStatus(
       { token },
     ),
   );
+}
+
+export function getToday(token: string): Promise<TodayCommandView> {
+  return withTransientRetries(() => readJson<TodayCommandView>("/api/today", { token }));
+}
+
+export function submitTodayCheckin(
+  token: string,
+  payload: TodayCheckinRequest,
+): Promise<TodayCheckinResponse> {
+  return readJson<TodayCheckinResponse>("/api/today/checkin", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function submitTodaySessionCompletion(
+  token: string,
+  payload: TodaySessionCompletionRequest,
+): Promise<TodaySessionCompletionResponse> {
+  return readJson<TodaySessionCompletionResponse>("/api/today/session-completion", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function submitTodayInjuryCheckin(
+  token: string,
+  payload: TodayInjuryCheckinRequest,
+): Promise<TodayInjuryCheckinResponse> {
+  return readJson<TodayInjuryCheckinResponse>("/api/today/injury-checkin", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
 }

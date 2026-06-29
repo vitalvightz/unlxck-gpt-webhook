@@ -1,3 +1,5 @@
+from fightcamp.nutrition import generate_nutrition_block
+from fightcamp.recovery import generate_recovery_block
 from fightcamp.stage2_pipeline import review_stage2_output
 from fightcamp.stage2_validator import validate_stage2_output
 
@@ -615,7 +617,7 @@ def test_validate_stage2_output_accepts_new_d3_sharpness_and_freshness_titles():
         planning_brief=_late_fight_planning_brief("D-3"),
         final_plan_text="""
         Monday - Sharpness Session
-        - Power Touch - 3 x 2 med-ball scoop toss
+        - Mirror drill - 4 x 20 sec
         Tuesday - Freshness Session
         - Mobility / reset - 12 min
         - Breathing reset - 5 min
@@ -660,6 +662,22 @@ def test_late_fight_window_rules_block_d3_med_ball_volume():
     assert blocked[0]["days_out_bucket"] == "D-3"
     assert blocked[0]["window"] == "d4_to_d2"
     assert "Medicine Ball Power Circuit" in blocked[0]["line"]
+
+
+def test_late_fight_window_rules_block_d3_med_ball_punch_throw():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-3"),
+        final_plan_text="""
+        ## D-3
+        Wednesday - Freshness Session
+        - Staggered-Stance Medicine-Ball Punch Throw - 2 x 2
+        - Breathing reset - 5 min
+        """,
+    )
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_window_forbidden_exercise"]
+    assert blocked
+    assert blocked[0]["days_out_bucket"] == "D-3"
+    assert blocked[0]["window"] == "d4_to_d2"
 
 
 def test_late_fight_window_rules_accept_new_taper_mirror_drill_cue():
@@ -847,7 +865,7 @@ def test_late_fight_window_rules_clean_d13_d6_d3_d1_sections_pass():
         - Mirror drill - 4 x 20 sec
         - Breathing reset - 5 min
         ## D-1
-        - Band-Resisted Jab-Cross Primer - 2 x 6 sec
+        - Technical Shadowboxing Tempo - 2 rounds
         - Mobility Reset Flow - 8 min
         """,
     )
@@ -1080,6 +1098,24 @@ def test_validate_stage2_output_blocks_option_overload_in_adjustment_context():
     assert overload_warnings[0]["blocking"] is True
 
 
+def test_stage1_recovery_and_nutrition_text_avoid_generic_instruction_openers():
+    stage1_text = "\n".join(
+        [
+            generate_nutrition_block(flags={"phase": "TAPER", "fatigue": "high", "weight": 70}),
+            generate_recovery_block({"phase": "GPP", "fatigue": "low", "age": 28}),
+        ]
+    )
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text=stage1_text,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "generic_instruction_opener" not in warning_codes
+    assert "Use easily digestible carbs and hydrate well" in stage1_text
+    assert "Prepare tissue and restore joint mobility" in stage1_text
+
+
 def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
@@ -1102,19 +1138,37 @@ def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
 
 
 def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
+    for leak_line in ("Double-leg sprint entry - 6 x 6 sec", "Single-leg takedown entry - 4 x 10 sec", "Sprawl drill - 4 x 10 sec"):
+        report = validate_stage2_output(
+            planning_brief=_planning_brief_fixture(),
+            final_plan_text=f"""
+            SPP
+            - Landmine Press - 4x5
+            - {leak_line}
+            - Hard Shuttle - 6x20s / 60s
+            - Band External Rotation - 2x15
+            """,
+        )
+
+        warning_codes = [warning["code"] for warning in report["warnings"]]
+        assert "sport_language_leak" in warning_codes
+
+
+def test_validate_stage2_output_allows_boxing_single_leg_strength_names():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
         final_plan_text="""
         SPP
-        - Landmine Press - 4x5
-        - Double-leg sprint entry - 6 x 6 sec
+        - Single-Leg Bridge Hold - 3 x 20 sec each side
+        - Single-Leg Forward Hops - 3 x 5 each side
+        - Single-Leg RDL - 3 x 8 each side
         - Hard Shuttle - 6x20s / 60s
         - Band External Rotation - 2x15
         """,
     )
 
     warning_codes = [warning["code"] for warning in report["warnings"]]
-    assert "sport_language_leak" in warning_codes
+    assert "sport_language_leak" not in warning_codes
 
 
 def test_validate_stage2_output_normalizes_warning_shape():
@@ -1823,7 +1877,7 @@ def test_late_fight_countdown_clean_sample_has_no_d6_or_d1_blocked_drills():
         - Breathing + shoulder mobility
 
         D-1 — Neural primer
-        - Band Face Pull — 1 x 10
+        - Technical Shadowboxing Tempo — 2 rounds
         - Breathing reset
         """,
     )
@@ -1848,7 +1902,7 @@ def test_late_fight_countdown_blocks_non_rehab_band_work_on_d7_and_d1():
     )
     blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
     assert any(w["days_out_bucket"] == "D-7" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
-    assert any(w["days_out_bucket"] == "D-1" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
+    assert any(w["days_out_bucket"] == "D-1" and w["blocked_drill"] == "d1_band_work" for w in blocked)
 
 
 def test_late_fight_flags_d7_fight_day_mislabel():
@@ -1927,8 +1981,8 @@ def test_late_fight_allowlist_blocks_d7_band_resisted_jab_cross_with_unicode_hyp
     )
 
     blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
-    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
     assert "late_fight_countdown_blocked_drill" in blocking_codes
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
 
 
 def test_late_fight_allowlist_blocks_d1_band_resisted_jab_cross():
@@ -1947,7 +2001,7 @@ def test_late_fight_allowlist_blocks_d1_band_resisted_jab_cross():
     assert "late_fight_countdown_blocked_drill" in blocking_codes
 
 
-def test_late_fight_d1_rehab_band_work_passes_with_rehab_context():
+def test_late_fight_d1_rehab_band_work_is_blocked_even_with_rehab_context():
     brief = _late_fight_brief_with_allowed("D-1", ["Technical Shadowboxing Tempo", "Breathing Reset"])
 
     report = validate_stage2_output(
@@ -1962,8 +2016,8 @@ def test_late_fight_d1_rehab_band_work_passes_with_rehab_context():
     )
 
     blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
-    assert "late_fight_unapproved_exercise_rendered" not in blocking_codes
-    assert "late_fight_countdown_blocked_drill" not in blocking_codes
+    assert "late_fight_countdown_blocked_drill" in blocking_codes
+    assert "late_fight_window_forbidden_exercise" in blocking_codes
 
 
 def test_late_fight_d7_neural_power_stacking_triggers_retry_warning():
@@ -2401,6 +2455,48 @@ def test_validate_stage2_output_ignores_negated_safety_lines_in_d1_and_d0():
     assert "fight_day_protocol_violation" not in error_codes
 
 
+def test_validate_stage2_output_does_not_absorb_trailing_sections_into_d0():
+    """Sections rendered after the final D-0 day (nutrition, recovery, rationale)
+    must not be vacuumed into the D-0 countdown block and trip the fight-day
+    protocol guard with their prose mentions of strength/conditioning."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        ## Countdown Sessions
+
+        D-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+
+        ## Nutrition
+        - Standard fight-day fueling.
+
+        ## Recovery
+        - Light mobility and breathing.
+
+        ## Selection Rationale
+        Strength and conditioning were tapered earlier; we added recovery focus.
+        """,
+    )
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "fight_day_protocol_violation" not in error_codes
+
+
+def test_validate_stage2_output_still_blocks_real_training_on_d0():
+    """Genuine app-prescribed training on the fight day must still block."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        D-0 (Sunday) — Fight day protocol
+        - Back squat 5x5 heavy
+        - Conditioning circuit 4 rounds
+
+        ## Recovery
+        - Breathing.
+        """,
+    )
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "fight_day_protocol_violation" in error_codes
+
+
 def test_validate_stage2_output_blocks_hard_sparring_from_d11_to_d0():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
@@ -2501,3 +2597,57 @@ def test_validate_stage2_output_blocks_controlled_hard_sparring():
         """,
     )
     assert any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_late_fight_requires_terminal_d0_protocol():
+    planning_brief = {
+        "athlete_model": {"sport": "boxing"},
+        "late_fight_plan_spec": {
+            "payload_mode": "bridge_compression_payload",
+            "days_out_bucket": "D-21",
+        },
+    }
+
+    final_plan_text = """
+D-21 (Friday) — Power Transfer Touch
+- Fast technical work.
+
+D-1 (Thursday) — Freshness
+- Mobility only.
+"""
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+
+    codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_missing_terminal_d0_protocol" in codes
+
+
+def test_late_fight_accepts_terminal_d0_protocol_without_counting_it_as_active_role():
+    planning_brief = {
+        "athlete_model": {"sport": "boxing"},
+        "late_fight_plan_spec": {
+            "payload_mode": "bridge_compression_payload",
+            "days_out_bucket": "D-21",
+            "max_active_roles": 1,
+        },
+    }
+
+    final_plan_text = """
+D-21 (Friday) — Power Transfer Touch
+- Fast technical work.
+
+D-0 (Friday) — Fight day protocol
+Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+"""
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+
+    codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_missing_terminal_d0_protocol" not in codes
+    assert "late_fight_active_role_overage" not in codes

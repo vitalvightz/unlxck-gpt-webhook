@@ -41,6 +41,35 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _parse_iso(value: object) -> datetime | None:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+def _latest_job_activity_at(job: dict) -> datetime | None:
+    latest: datetime | None = None
+    for field_name in ("heartbeat_at", "updated_at", "started_at", "created_at"):
+        parsed = _parse_iso(job.get(field_name))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    for milestone in job.get("progress_milestones") or []:
+        if not isinstance(milestone, dict):
+            continue
+        parsed = _parse_iso(milestone.get("at"))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    return latest
+
+
 def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
@@ -77,9 +106,12 @@ class FakeStore:
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}
         self.plans: dict[str, dict] = {}
+        self.active_plan_ids: dict[str, str] = {}
         self.generation_jobs: dict[str, dict] = {}
         self.daily_checkins: dict[str, list[dict]] = {}
         self.session_logs: dict[str, list[dict]] = {}
+        self.today_checkins: dict[str, list[dict]] = {}
+        self.session_completions: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
@@ -150,11 +182,7 @@ class FakeStore:
             return "startup_stale"
         if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_stale_after_seconds):
             return "stage1_planner_stalled"
-        heartbeat_raw = job.get("heartbeat_at")
-        started_raw = job.get("started_at")
-        heartbeat = datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00")) if heartbeat_raw else None
-        started_at = datetime.fromisoformat(str(started_raw).replace("Z", "+00:00")) if started_raw else None
-        reference = heartbeat or started_at
+        reference = _latest_job_activity_at(job)
         if reference is None:
             return "fresh"
         age = (datetime.now(timezone.utc) - reference).total_seconds()
@@ -337,6 +365,12 @@ class FakeStore:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        return self.active_plan_ids.get(athlete_id)
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        self.active_plan_ids[athlete_id] = plan_id
+
     def rename_plan(self, plan_id: str, plan_name: str) -> dict:
         row = self.plans.get(plan_id)
         if not row:
@@ -394,11 +428,12 @@ class FakeStore:
         stale_after_seconds: int = 90,
     ) -> dict:
         payload_hash = _stable_payload_hash(request_payload)
+        self._fail_stale_active_generation_jobs_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
-                existing_hash = job.get("payload_hash")
-                if existing_hash and str(existing_hash) != payload_hash:
-                    raise client_request_id_payload_mismatch_error()
                 if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                     now = _now()
                     reset_changes = {
@@ -424,10 +459,13 @@ class FakeStore:
                         reset_changes["intake_id"] = intake_id
 
                     job.update(reset_changes)
+                existing_hash = job.get("payload_hash")
+                if existing_hash and str(existing_hash) != payload_hash:
+                    raise client_request_id_payload_mismatch_error()
                 return dict(job)
-        active = self.get_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
+        active = self.reconcile_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
         # Mirror SupabaseAppStore.create_or_get_generation_job: only a job that is
-        # still queued/running blocks a new request. get_active_generation_job_for_athlete
+        # still queued/running blocks a new request. reconcile_active_generation_job_for_athlete
         # recovers a stale running job to a terminal status (e.g. failed) and returns
         # it; such a job must not be treated as in-flight, otherwise a mid-pipeline
         # stale job would wrongly 409 a new request instead of being superseded.
@@ -469,6 +507,60 @@ class FakeStore:
         }
         self.generation_jobs[job_id] = job
         return dict(job)
+
+    def _fail_stale_active_generation_jobs_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int,
+        exclude_client_request_id: str | None = None,
+    ) -> None:
+        cutoff_seconds = max(1, stale_after_seconds)
+        now_dt = datetime.now(timezone.utc)
+        now = _now()
+        for job in self.generation_jobs.values():
+            if str(job.get("athlete_id") or "") != athlete_id:
+                continue
+            if exclude_client_request_id and str(job.get("client_request_id") or "") == exclude_client_request_id:
+                continue
+            if str(job.get("status") or "") not in {"queued", "running"}:
+                continue
+        cutoff_seconds = max(1, stale_after_seconds)
+        now_dt = datetime.now(timezone.utc)
+        now = _now()
+        for job in self.generation_jobs.values():
+            if str(job.get("athlete_id") or "") != athlete_id:
+                continue
+            if str(job.get("status") or "") not in {"queued", "running"}:
+                continue
+            latest = _latest_job_activity_at(job)
+            if latest is None:
+                continue
+            latest = latest.astimezone(timezone.utc)
+            if (now_dt - latest).total_seconds() < cutoff_seconds:
+                continue
+            milestones = list(job.get("progress_milestones") or [])
+            if not any(isinstance(item, dict) and item.get("code") == "stale_job_reaped" for item in milestones):
+                milestones.append(
+                    {
+                        "code": "stale_job_reaped",
+                        "label": "Stale job reaped",
+                        "detail": "Job activity timed out and was failed so a new generation can start.",
+                        "meta": {},
+                        "at": now,
+                    }
+                )
+            job.update(
+                {
+                    "status": "failed",
+                    "error": "Generation job stalled. Please try again.",
+                    "completed_at": now,
+                    "failed_at": now,
+                    "heartbeat_at": now,
+                    "progress_milestones": milestones,
+                    "updated_at": now,
+                }
+            )
 
     def create_or_get_generation_job_with_daily_limit(
         self,
@@ -574,7 +666,7 @@ class FakeStore:
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[0] if rows else None
 
-    def get_active_generation_job_for_athlete(
+    def reconcile_active_generation_job_for_athlete(
         self,
         athlete_id: str,
         *,
@@ -1090,17 +1182,43 @@ class FakeStore:
                 row[optional_field] = result.get(optional_field)
         return row
 
-    def update_plan_structured_output(
+    def update_plan_stage2_if_unchanged(self, plan_id: str, result: dict, expected_snapshot: dict) -> dict:
+        row = self.plans.get(plan_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        # Mirror the production guard: lightweight state markers only, never the
+        # large text bodies (which PostgREST would push into the request URL).
+        guarded_fields = (
+            "status",
+            "stage2_status",
+            "stage2_attempt_count",
+        )
+        if any(row.get(field) != expected_snapshot.get(field) for field in guarded_fields):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Plan changed while Stage 2 structured processing was running; reload and try again.",
+            )
+        return self.update_plan_stage2(plan_id, result)
+
+    def update_plan_structured_artifacts(
         self,
         plan_id: str,
         *,
         structured_plan,
         schema_version,
         stage2_validator_report: dict,
+        expected_final_plan_text: str | None = None,
     ) -> dict:
         row = self.plans.get(plan_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        # Stale-write guard: when the conversion's source text is supplied, only
+        # persist the card if the row's current text still matches. A concurrent
+        # edit/reject mid-conversion makes the card stale, so the write is skipped.
+        if expected_final_plan_text is not None:
+            current_text = str(row.get("final_plan_text") or row.get("plan_text") or "")
+            if current_text != str(expected_final_plan_text):
+                return row
         # Narrow write: only the structured-plan output fields. Status / plan_text
         # / stage2 fields are intentionally left untouched so a concurrent admin
         # action cannot be clobbered by a slow background conversion.
@@ -1140,6 +1258,17 @@ class FakeStore:
         ]
         rows.sort(key=lambda row: row["created_at"], reverse=True)
         return self._attach_profile_contacts(rows[:limit])
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict]:
+        displayable = {"ready", "publishable_with_flags"}
+        rows = [
+            dict(plan)
+            for plan in self.plans.values()
+            if str(plan.get("status") or "").strip().lower() in displayable
+            and plan.get("structured_plan") is None
+        ]
+        rows.sort(key=lambda row: row.get("created_at") or "", reverse=True)
+        return rows[:limit]
 
     def list_admin_athletes(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
@@ -1225,6 +1354,86 @@ class FakeStore:
         rows = sorted(
             self.daily_checkins.get(athlete_id, []),
             key=lambda row: row["checkin_date"],
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict) -> dict:
+        bucket = self.today_checkins.setdefault(athlete_id, [])
+        for row in bucket:
+            if row["plan_id"] == fields["plan_id"] and row["training_day"] == fields["training_day"]:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "athlete_timezone": "",
+            "active_injury": "none",
+            "previous_session": "none",
+            "recommendation_reason": "",
+            "recommendation_triggers": [],
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        bucket.append(row)
+        return dict(row)
+
+    def get_today_checkin(self, athlete_id: str, plan_id: str, training_day: str) -> dict | None:
+        for row in self.today_checkins.get(athlete_id, []):
+            if row["plan_id"] == plan_id and row["training_day"] == training_day:
+                return dict(row)
+        return None
+
+    def list_today_checkins_for_day(self, athlete_id: str, training_day: str) -> list[dict]:
+        return [
+            dict(row)
+            for row in self.today_checkins.get(athlete_id, [])
+            if row["training_day"] == training_day
+        ]
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict) -> dict:
+        bucket = self.session_completions.setdefault(athlete_id, [])
+        for row in bucket:
+            if row["session_id"] == fields["session_id"] and row["training_day"] == fields["training_day"]:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "session_rpe": None,
+            "pain_after": None,
+            "modification_reason": "",
+            "notes": "",
+            "started_at": None,
+            "completed_at": None,
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        bucket.append(row)
+        return dict(row)
+
+    def get_session_completion(self, athlete_id: str, session_id: str, training_day: str) -> dict | None:
+        for row in self.session_completions.get(athlete_id, []):
+            if row["session_id"] == session_id and row["training_day"] == training_day:
+                return dict(row)
+        return None
+
+    def list_session_completions(self, athlete_id: str, *, limit: int = 30) -> list[dict]:
+        rows = sorted(
+            self.session_completions.get(athlete_id, []),
+            key=lambda row: row["training_day"],
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
+    def list_today_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict]:
+        rows = sorted(
+            self.today_checkins.get(athlete_id, []),
+            key=lambda row: row["training_day"],
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]

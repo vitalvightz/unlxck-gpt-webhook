@@ -10,6 +10,18 @@ import api.stage2_automation as stage2_module
 from api.stage2_automation import OpenAIStage2Automator, Stage2AutomationError
 
 
+@pytest.fixture(autouse=True)
+def _structured_plan_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin structured-plan generation OFF for this module.
+
+    These tests exercise the single-call plan-text finalize/retry flow and
+    assert exact provider call counts. Structured generation is on by default
+    now (a second conversion call), so disable it here; the structured path has
+    dedicated coverage in test_stage2_structured_persistence.py.
+    """
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
+
+
 class FakeResponses:
     def __init__(self, outputs: list[object]) -> None:
         self.outputs = list(outputs)
@@ -54,7 +66,7 @@ def _incomplete_response() -> SimpleNamespace:
 
 def _review(status_value: str) -> dict:
     errors = [{"code": "restriction_violation"}] if status_value == "FAIL" else []
-    warnings = [{"code": "missing_required_element", "blocking": True}] if status_value == "WARN" else []
+    warnings = [{"code": "generic_filler_phrase", "blocking": True}] if status_value == "WARN" else []
     review_flags = [{"code": "generic_filler_phrase"}] if status_value == "PASS_WITH_FLAGS" else []
     return {
         "status": "PASS" if status_value == "PASS_WITH_FLAGS" else status_value,
@@ -140,21 +152,48 @@ def test_first_pass_incomplete_response_fails_the_job(monkeypatch: pytest.Monkey
         asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
 
-def test_first_pass_pass_with_review_flags_returns_publishable_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_pass_with_review_flags_returns_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS_WITH_FLAGS"))
     client = FakeClient([_response("# final plan with minor flags")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "ready"
     assert result["plan_text"] == "# final plan with minor flags"
 
 
-@pytest.mark.parametrize("review_status", ["FAIL", "WARN"])
-def test_first_pass_non_pass_returns_held_for_review_with_one_provider_call(
+def test_first_pass_publish_blocking_review_flags_hold_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _quality_blocked_review(**_: object) -> dict:
+        finding = {"code": "missing_required_element", "phase": "SPP"}
+        return {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {
+                "errors": [],
+                "warnings": [finding],
+                "review_flags": [finding],
+                "review_flag_count": 1,
+            },
+        }
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _quality_blocked_review)
+    client = FakeClient([_response("# final plan missing required work")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert len(client.responses.calls) == 1
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan missing required work"
+    assert result["stage2_validator_report"]["publish_blocking_review_flags"] == [
+        {"code": "missing_required_element", "phase": "SPP"}
+    ]
+
+
+def test_first_pass_hard_failure_returns_held_for_review_with_one_provider_call(
     monkeypatch: pytest.MonkeyPatch,
-    review_status: str,
 ) -> None:
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review(review_status))
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("FAIL"))
     client = FakeClient([_response("# first pass needs review")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
@@ -177,7 +216,45 @@ def test_first_pass_non_pass_returns_held_for_review_with_one_provider_call(
         "warnings": [],
         "schema_version": None,
     }
-    assert report == _review(review_status)["validator_report"]
+    assert report == _review("FAIL")["validator_report"]
+
+
+def test_first_pass_non_pass_without_release_blockers_returns_ready(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("WARN"))
+    client = FakeClient([_response("# first pass clean enough to release")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert len(client.responses.calls) == 1
+    assert result["status"] == "ready"
+    assert result["plan_text"] == "# first pass clean enough to release"
+    assert result["final_plan_text"] == "# first pass clean enough to release"
+    assert result["stage2_status"] == "stage2_pass"
+    assert result["stage2_attempt_count"] == 1
+    assert result["stage2_retry_text"] == ""
+
+
+def test_stage2_report_blocks_release_when_warnings_is_not_a_list() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [],
+        "warnings": {"code": "generic_filler_phrase"},
+    }
+
+    assert stage2_module._stage2_report_blocks_release(report) is True
+
+
+def test_stage2_report_allows_non_blocking_warning_array() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [],
+        "warnings": [{"code": "generic_filler_phrase"}],
+    }
+
+    assert stage2_module._stage2_report_blocks_release(report) is False
 
 
 def test_build_stage2_retry_is_not_called_during_automatic_finalization(
@@ -405,3 +482,147 @@ def test_from_env_invalid_timeout_falls_back_to_210(monkeypatch: pytest.MonkeyPa
 
     assert isinstance(automator, OpenAIStage2Automator)
     assert captured_kwargs["timeout"] == 210.0
+
+
+# ---------------------------------------------------------------------------
+# _stage2_hold_is_card_rescuable: defensive predicate
+# ---------------------------------------------------------------------------
+
+_is_rescuable = stage2_module._stage2_hold_is_card_rescuable
+
+
+def test_rescuable_true_for_soft_non_safety_error() -> None:
+    assert _is_rescuable({"errors": [{"code": "true_internal_system_leak"}]}) is True
+
+
+def test_rescuable_false_for_safety_error() -> None:
+    assert _is_rescuable({"errors": [{"code": "restriction_violation"}]}) is False
+
+
+def test_rescuable_false_when_any_error_is_unrescuable() -> None:
+    # A mix of one soft and one safety error must hold (the safety one wins).
+    report = {"errors": [{"code": "true_internal_system_leak"}, {"code": "restriction_violation"}]}
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_true_when_only_card_rescuable_blocking_warnings_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "generic_filler_phrase"}],
+    }
+    assert _is_rescuable(report) is True
+
+
+def test_rescuable_false_when_publish_blocking_warning_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "missing_required_element"}],
+    }
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_false_when_unknown_blocking_warning_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "brand_new_warning_code"}],
+    }
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_false_when_hard_blocking_warning_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "calendar_spine_fight_day_protocol_violation"}],
+    }
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_false_for_non_dict_report() -> None:
+    assert _is_rescuable(None) is False
+    assert _is_rescuable([]) is False
+    assert _is_rescuable("nope") is False
+
+
+def test_rescuable_false_for_non_list_or_empty_errors() -> None:
+    assert _is_rescuable({}) is False  # missing errors
+    assert _is_rescuable({"errors": []}) is False  # empty
+    assert _is_rescuable({"errors": "boom"}) is False  # not a list
+
+
+def test_rescuable_false_for_malformed_error_entries() -> None:
+    assert _is_rescuable({"errors": [None]}) is False
+    assert _is_rescuable({"errors": ["malformed_error"]}) is False
+    assert _is_rescuable({"errors": [{}]}) is False  # no code
+    assert _is_rescuable({"errors": [{"code": ""}]}) is False  # blank code
+    assert _is_rescuable({"errors": [{"code": "   "}]}) is False  # whitespace-only code
+
+
+def test_rescuable_false_for_mixed_valid_soft_and_malformed_error() -> None:
+    report = {"errors": [{"code": "true_internal_system_leak"}, None]}
+    assert _is_rescuable(report) is False
+    report = {"errors": [{"code": "true_internal_system_leak"}, {}]}
+    assert _is_rescuable(report) is False
+
+
+def test_structured_repair_disabled_skips_second_model_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With the repair lever off, an invalid first pass is not retried.
+
+    The repair retry is the second sequential structured model call. When
+    ``UNLXCK_STAGE2_STRUCTURED_REPAIR`` is disabled, a first pass that parses but
+    fails validation returns the first-pass outcome as-is — no second call — so
+    worst-case latency is halved.
+    """
+    import json
+
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
+    automator = OpenAIStage2Automator(client=FakeClient([]), model="test-model")
+
+    labels: list[str] = []
+
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None):
+        labels.append(attempt_label)
+        # Valid JSON that is not a schema-valid plan: parses, then fails
+        # validation so the repair gate is reached (but skipped while disabled).
+        return json.dumps([1, 2, 3]), {}
+
+    monkeypatch.setattr(automator, "_generate_text", _fake_generate_text)
+
+    outcome, costs = asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan",
+            planning_brief={},
+            source="test",
+            costs=[],
+        )
+    )
+
+    assert labels == ["structured_first"]  # repair call was skipped
+    assert len(costs) == 1
+    assert outcome.structured_plan is None
+
+
+def test_structured_repair_enabled_makes_second_model_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default behaviour: an invalid first pass triggers exactly one repair retry."""
+    import json
+
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", raising=False)
+    automator = OpenAIStage2Automator(client=FakeClient([]), model="test-model")
+
+    labels: list[str] = []
+
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None):
+        labels.append(attempt_label)
+        return json.dumps([1, 2, 3]), {}
+
+    monkeypatch.setattr(automator, "_generate_text", _fake_generate_text)
+
+    asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan",
+            planning_brief={},
+            source="test",
+            costs=[],
+        )
+    )
+
+    assert labels == ["structured_first", "structured_repair"]

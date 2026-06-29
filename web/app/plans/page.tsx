@@ -3,22 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
-import { deletePlan, listPlans, renamePlan } from "@/lib/api";
+import { ApiError, archivePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
-  getOptionLabel,
   getOptionLabels,
-  KEY_GOAL_OPTIONS,
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
-  WEAK_AREA_OPTIONS,
 } from "@/lib/intake-options";
 import {
   formatPlanFightDate,
@@ -27,6 +24,14 @@ import {
   getPlanDisplayName,
   getPlanStyleSummary,
 } from "@/lib/plan-format";
+import {
+  ACTIVE_PLAN_OVERLAP_MESSAGE,
+  type ActivePlanOverlapAction,
+  canSetActivePlan,
+  isActivePlanOverlapError,
+  isArchivedPlan,
+} from "@/lib/plan-active";
+import { getPlanReviewReason, isHeldForAdminReviewPlan } from "@/lib/plan-review";
 import type { MeResponse, PlanRequest, PlanSummary, ProfileRecord } from "@/lib/types";
 
 type SummaryLine = {
@@ -38,12 +43,16 @@ function getRenameDraftValue(plan: PlanSummary): string {
   return plan.plan_name?.trim() || plan.fight_date || "";
 }
 
-function getLatestPlan(plans: PlanSummary[]): PlanSummary | null {
-  return plans[0] ?? null;
+function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
+  return plans.filter((plan) => isArchivedPlan(plan.status));
 }
 
-function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
-  return plans.slice(1);
+function canSetActive(plan: PlanSummary): boolean {
+  return canSetActivePlan(plan.status);
+}
+
+function isActivePlan(plan: PlanSummary, activePlanId: string | null): boolean {
+  return Boolean(activePlanId && plan.plan_id === activePlanId);
 }
 
 function formatCompactList(values: string[], fallback: string): string {
@@ -74,19 +83,11 @@ function summarizeEquipment(equipmentAccess: string[] | undefined): string | nul
   return remaining > 0 ? `${visible.join(", ")} +${remaining} more` : visible.join(", ");
 }
 
-function getPrimaryFocus(intake: PlanRequest | null | undefined): string | null {
-  if (!intake) {
-    return null;
+function getPlanVersionLabel(plan: PlanSummary): string {
+  if (plan.plan_name?.trim()) {
+    return "Named plan";
   }
-  const goal = intake.primary_goal ? getOptionLabel(KEY_GOAL_OPTIONS, intake.primary_goal) : "";
-  if (goal) {
-    return goal;
-  }
-  const weakArea = intake.primary_weak_area ? getOptionLabel(WEAK_AREA_OPTIONS, intake.primary_weak_area) : "";
-  if (weakArea) {
-    return weakArea;
-  }
-  return null;
+  return plan.fight_date ? "Fight camp" : "Open camp";
 }
 
 function getProfileSource(me: MeResponse | null): ProfileRecord | null {
@@ -156,16 +157,67 @@ function summarizeIntake(me: MeResponse | null): SummaryLine[] {
   return lines;
 }
 
+function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
+  const visibleHeldPlans = plans.slice(0, 3);
+  const remainingCount = Math.max(0, plans.length - visibleHeldPlans.length);
+
+  return (
+    <article className="list-card plans-dashboard-card athlete-motion-slot athlete-motion-status">
+      <div className="plans-dashboard-card-header">
+        <div className="plans-dashboard-card-copy">
+          <p className="kicker">Admin review hold</p>
+          <h2>{plans.length === 1 ? "A plan is held for review" : `${plans.length} plans are held for review`}</h2>
+          <p className="muted">
+            These plans are saved, but they are not released to Overview or Today until admin approval clears the hold.
+          </p>
+        </div>
+        <span className="badge">HELD</span>
+      </div>
+
+      <div className="plan-history-list plans-history-list">
+        {visibleHeldPlans.map((plan) => (
+          <div key={plan.plan_id} className="plan-history-row">
+            <div className="plan-history-copy">
+              <p className="label">{formatPlanStatus(plan.status)}</p>
+              <Link href={`/plans/${plan.plan_id}`}>
+                <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
+              </Link>
+              <p className="muted">{getPlanReviewReason(plan)}</p>
+            </div>
+            <div className="plan-history-meta">
+              <Link href={`/plans/${plan.plan_id}?review_required=1`} className="ghost-button">
+                Review hold
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {remainingCount > 0 ? (
+        <p className="muted">
+          {remainingCount} more held plan{remainingCount === 1 ? "" : "s"} shown in saved plan history.
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
 function PlanCard({
   plan,
   accessToken,
   onPlanDeleted,
   onPlanRenamed,
+  activePlanId,
+  onSetActive,
+  isSettingActive,
 }: {
   plan: PlanSummary;
   accessToken: string | null;
   onPlanDeleted: (planId: string) => void;
   onPlanRenamed: (updatedPlan: PlanSummary) => void;
+  activePlanId: string | null;
+  onSetActive: (plan: PlanSummary) => Promise<void>;
+  isSettingActive: boolean;
 }) {
   const { showToast } = useToast();
   const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
@@ -180,8 +232,13 @@ function PlanCard({
   const createdLabel = formatPlanTimestamp(plan.created_at);
   const styleSummary = getPlanStyleSummary(plan);
   const statusLabel = formatPlanStatus(plan.status);
-  const isActionPending = pendingAction !== null;
+  const versionLabel = getPlanVersionLabel(plan);
+  const isActionPending = pendingAction !== null || isSettingActive;
   const renameInputId = `rename-plan-${plan.plan_id}`;
+  const active = isActivePlan(plan, activePlanId);
+  const eligibleForActive = canSetActive(plan);
+  const archived = isArchivedPlan(plan.status);
+  const reviewReason = getPlanReviewReason(plan);
 
   useEffect(() => {
     if (!isRenaming) {
@@ -291,7 +348,7 @@ function PlanCard({
     setError(null);
     setMessage(null);
     try {
-      await deletePlan(accessToken, plan.plan_id);
+      await archivePlan(accessToken, plan.plan_id);
       setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
       showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
@@ -373,28 +430,45 @@ function PlanCard({
     <>
       <article className="plan-history-row plan-history-row-card">
         <div className="plan-history-copy">
-          <p className="label">{fightDateLabel}</p>
+          <p className="label">{versionLabel}</p>
           <Link href={`/plans/${plan.plan_id}`}>
             <h2 className="plan-card-title">{planTitle}</h2>
           </Link>
           {inlineRenameForm}
           <div className="plan-card-meta">
+            {plan.fight_date ? <span className="muted">Fight {fightDateLabel}</span> : null}
             <span className="muted">{styleSummary}</span>
-            <span className="muted">Created {createdLabel}</span>
+            <span className="muted">Built {createdLabel}</span>
           </div>
+          {reviewReason ? <p className="muted">{reviewReason}</p> : null}
         </div>
         <div className="plan-history-meta">
-          <span className="badge">{statusLabel}</span>
+          <span className="badge">{active ? "ACTIVE" : statusLabel}</span>
+          {!active && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-              Open
+              {archived ? "Preview" : "Review"}
             </Link>
-            <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-              {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
-            </button>
-            <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-              {pendingAction === "delete" ? "Archiving..." : "Archive"}
-            </button>
+            {archived ? (
+              <Link href="/onboarding" className="ghost-button">
+                Create New Plan
+              </Link>
+            ) : null}
+            {!archived && !active && eligibleForActive ? (
+              <button type="button" className="secondary-button" onClick={() => void onSetActive(plan)} disabled={isActionPending || isRenaming}>
+                {isSettingActive ? "Setting..." : "Set active"}
+              </button>
+            ) : null}
+            {!archived ? (
+              <>
+                <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
+                  {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+                </button>
+                <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+                  {pendingAction === "delete" ? "Archiving..." : "Archive"}
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
         {message || (error && !isDeleteConfirmOpen) ? (
@@ -406,6 +480,62 @@ function PlanCard({
       </article>
       {deleteConfirmationModal}
     </>
+  );
+}
+
+function PlanActivationConflictDialog({
+  plan,
+  isPending,
+  onConfirm,
+  onStartAfter,
+  onCancel,
+}: {
+  plan: PlanSummary;
+  isPending: boolean;
+  onConfirm: (action: ActivePlanOverlapAction) => Promise<void>;
+  onStartAfter: () => void;
+  onCancel: () => void;
+}) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div className="plan-dialog-backdrop" role="presentation" onClick={onCancel}>
+      <div
+        className="plan-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`activate-conflict-title-${plan.plan_id}`}
+        aria-describedby={`activate-conflict-body-${plan.plan_id}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="plan-dialog-header">
+          <p className="kicker">Active plan conflict</p>
+          <h2 id={`activate-conflict-title-${plan.plan_id}`} className="plan-dialog-title">
+            {getPlanDisplayName(plan)}
+          </h2>
+        </div>
+        <p id={`activate-conflict-body-${plan.plan_id}`} className="muted">
+          {ACTIVE_PLAN_OVERLAP_MESSAGE}
+        </p>
+        <div className="plan-dialog-actions">
+          <button type="button" className="secondary-button" onClick={() => void onConfirm("replace")} disabled={isPending}>
+            Replace current plan
+          </button>
+          <button type="button" className="secondary-button" onClick={() => void onConfirm("pause")} disabled={isPending}>
+            Pause current plan
+          </button>
+          <button type="button" className="ghost-button" onClick={onStartAfter} disabled={isPending}>
+            Start after current plan ends
+          </button>
+          <button type="button" className="ghost-button" onClick={onCancel} disabled={isPending}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -457,8 +587,7 @@ function LatestPlanCard({
   const [renameDraft, setRenameDraft] = useState(() => (plan ? getRenameDraftValue(plan) : ""));
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
-  const primaryFocus = getPrimaryFocus(intake);
-  const fightDate = plan?.fight_date || intake?.fight_date || "";
+  const fightDate = plan?.fight_date || "";
   const hasSavedIntake = Boolean(intake);
   const latestPlanLines: SummaryLine[] = [];
   const renameInputId = plan ? `rename-latest-plan-${plan.plan_id}` : "rename-latest-plan";
@@ -471,9 +600,6 @@ function LatestPlanCard({
     }
     if (plan.status?.trim()) {
       latestPlanLines.push({ label: "Status", value: formatPlanStatus(plan.status) });
-    }
-    if (primaryFocus) {
-      latestPlanLines.push({ label: "Primary focus", value: primaryFocus });
     }
   }
 
@@ -593,7 +719,7 @@ function LatestPlanCard({
     setPendingAction("delete");
     setError(null);
     try {
-      await deletePlan(accessToken, plan.plan_id);
+      await archivePlan(accessToken, plan.plan_id);
       setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
       showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
@@ -676,61 +802,58 @@ function LatestPlanCard({
       <article className="list-card plans-dashboard-card plans-dashboard-primary-card">
         <div className="plans-dashboard-card-header">
           <div className="plans-dashboard-card-copy">
-            <p className="kicker">Latest Plan</p>
-            <h2>{plan ? getPlanDisplayName(plan) : "No camp plans yet."}</h2>
+            <p className="kicker">Active Plan</p>
+            <h2>{plan ? getPlanDisplayName(plan) : "No active plan"}</h2>
             <p className="muted">
               {plan
-                ? "Open the current camp, tighten the intake, or route straight into a fresh generation."
+                ? "This plan controls Overview and Today."
                 : hasSavedIntake
-                  ? "Your detailed intake is already saved. Reopen it before starting a new plan so those constraints stay in place."
-                  : "Start fast with Quick Build, or use Advanced Intake when you want every detail set first."}
+                  ? "No active plan is selected. Generate or set one active from saved plans."
+                  : "Complete Intake or Quick Build to create your first active plan."}
             </p>
             {!plan ? (
               <div className="empty-state-example plans-dashboard-empty-example">
                 <p className="label">What appears here next</p>
                 <p className="empty-state-example-body">
-                  Once generated, your latest camp opens here with fight date, status, and rename or delete actions.
+                  Once a plan is active, it opens here with fight date, status, and management actions.
                 </p>
               </div>
             ) : null}
           </div>
-          {plan?.status ? <span className="badge">{formatPlanStatus(plan.status)}</span> : null}
+          {plan?.status ? <span className="badge">ACTIVE</span> : null}
         </div>
 
         <DashboardSummary
           title="Current snapshot"
           lines={latestPlanLines}
-          emptyLabel="No latest plan metadata yet."
+          emptyLabel="No active plan metadata yet."
         />
 
         {inlineRenameForm}
 
         <div className="plan-card-actions plans-dashboard-actions">
           {plan ? (
-            <Link href={`/plans/${plan.plan_id}`} className="cta">
-              Open plan
-            </Link>
+            <>
+              <Link href={`/plans/${plan.plan_id}`} className="cta">
+                Open plan
+              </Link>
+              <Link
+                href={intake ? "/generate" : "/onboarding"}
+                className="ghost-button"
+                onClick={() => {
+                  if (intake) {
+                    markGenerationIntent();
+                  }
+                }}
+              >
+                Generate new version
+              </Link>
+            </>
           ) : (
             <Link href={hasSavedIntake ? "/onboarding" : "/quick-build"} className="cta">
               {hasSavedIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
             </Link>
           )}
-          <Link href="/onboarding" className="ghost-button">
-            {plan ? "Refine intake" : "Edit Advanced Intake"}
-          </Link>
-          {plan ? (
-            <Link
-              href={intake ? "/generate" : "/onboarding"}
-              className="ghost-button"
-              onClick={() => {
-                if (intake) {
-                  markGenerationIntent();
-                }
-              }}
-            >
-              Generate updated plan
-            </Link>
-          ) : null}
         </div>
 
         {plan ? (
@@ -768,7 +891,7 @@ function IntakeCard({
           <p className="kicker">Current Athlete Profile / Intake</p>
           <h2>{profileLines[0]?.value || "Athlete profile"}</h2>
           <p className="muted">
-            Review the saved intake before generating again so the next camp reflects the current profile, volume, and equipment setup.
+            This is the source for your next generated camp. Review it before starting another build.
           </p>
         </div>
         <span className={`badge ${hasIntake ? "status-badge-success" : "status-badge-neutral"}`}>
@@ -790,11 +913,8 @@ function IntakeCard({
       </div>
 
       <div className="plan-card-actions plans-dashboard-actions">
-        <Link href={hasIntake ? "/onboarding" : "/quick-build"} className="cta">
-          {hasIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
-        </Link>
-        <Link href="/onboarding" className="ghost-button">
-          Edit Advanced Intake
+        <Link href="/onboarding" className="cta">
+          {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
         </Link>
       </div>
     </article>
@@ -803,43 +923,77 @@ function IntakeCard({
 
 export default function PlansPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const { isMeHydrated, me, session } = useAppSession();
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [isSettingActivePlanId, setIsSettingActivePlanId] = useState<string | null>(null);
+  const [overlapConflictPlan, setOverlapConflictPlan] = useState<PlanSummary | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const latestTokenRef = useRef(session?.access_token);
+
+  useEffect(() => {
+    latestTokenRef.current = session?.access_token;
+  }, [session?.access_token]);
 
   const visiblePlans = useMemo(() => {
     const sourcePlans = localPlans ?? plans;
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
   }, [localPlans, plans]);
-  const latestPlan = getLatestPlan(visiblePlans);
+  const latestEligiblePlan = visiblePlans.find(canSetActive) ?? null;
+  const explicitActivePlan = activePlanId ? visiblePlans.find((plan) => plan.plan_id === activePlanId) ?? null : null;
+  const activePlan = explicitActivePlan && canSetActive(explicitActivePlan) ? explicitActivePlan : latestEligiblePlan;
   const intakeSource = getIntakeSource(me);
+  const heldForReviewPlans = visiblePlans.filter(isHeldForAdminReviewPlan);
   const archivedPlans = getArchivedPlans(visiblePlans);
+  const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && !isArchivedPlan(plan.status));
   const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
   const hasPlans = visiblePlans.length > 0;
 
-  useEffect(() => {
-    if (!session?.access_token) {
+  const loadPlans = useCallback(async () => {
+    const token = session?.access_token;
+    if (!token) {
       return;
     }
     setIsLoading(true);
     setError(null);
-    listPlans(session.access_token)
-      .then((nextPlans) => {
-        setPlans(nextPlans);
-      })
-      .catch((plansError) => {
-        const message = plansError instanceof Error ? plansError.message : "";
-        setError(message.includes("401") || message.toLowerCase().includes("session")
-          ? "Session expired. Sign in again."
-          : "Connection issue. Try again in a minute.");
-      })
-      .finally(() => {
+    try {
+      const [nextPlans, active] = await Promise.all([
+        listPlans(token),
+        getActivePlan(token).catch((activeError) => {
+          if (activeError instanceof ApiError && activeError.status === 404) {
+            return null;
+          }
+          throw activeError;
+        }),
+      ]);
+      // Ignore results from a request that the current session has moved past.
+      if (latestTokenRef.current !== token) {
+        return;
+      }
+      setPlans(nextPlans);
+      setActivePlanId(active?.plan_id ?? null);
+    } catch (plansError) {
+      if (latestTokenRef.current !== token) {
+        return;
+      }
+      const message = plansError instanceof Error ? plansError.message : "";
+      setError(message.includes("401") || message.toLowerCase().includes("session")
+        ? "Session expired. Sign in again."
+        : "Connection issue. Try again in a minute.");
+    } finally {
+      if (latestTokenRef.current === token) {
         setIsLoading(false);
-      });
+      }
+    }
   }, [session?.access_token]);
+
+  useEffect(() => {
+    void loadPlans();
+  }, [loadPlans]);
 
   useEffect(() => {
     if (!archivedPlans.length) {
@@ -863,6 +1017,48 @@ export default function PlansPage() {
     router.refresh();
   }
 
+  async function activatePlan(plan: PlanSummary, overlapAction?: ActivePlanOverlapAction): Promise<void> {
+    const token = session?.access_token;
+    if (!token || !canSetActive(plan)) {
+      return;
+    }
+    setIsSettingActivePlanId(plan.plan_id);
+    try {
+      const active = await setActivePlan(token, plan.plan_id, { overlapAction });
+      setActivePlanId(active.plan_id);
+      setOverlapConflictPlan(null);
+      showToast("Active plan updated.", { tone: "success" });
+      await loadPlans();
+      router.refresh();
+    } catch (activeError) {
+      if (!overlapAction && isActivePlanOverlapError(activeError)) {
+        setOverlapConflictPlan(plan);
+        return;
+      }
+      const message = activeError instanceof Error ? activeError.message : "Unable to set active plan.";
+      showToast(message, { tone: "error" });
+    } finally {
+      setIsSettingActivePlanId(null);
+    }
+  }
+
+  async function handleSetActive(plan: PlanSummary): Promise<void> {
+    await activatePlan(plan);
+  }
+
+  async function handleOverlapConfirm(action: ActivePlanOverlapAction): Promise<void> {
+    if (!overlapConflictPlan) {
+      return;
+    }
+    await activatePlan(overlapConflictPlan, action);
+  }
+
+  function handleStartAfterCurrentPlan() {
+    setOverlapConflictPlan(null);
+    showToast("Choose a new start date before generating the next version.", { tone: "success" });
+    router.push("/onboarding");
+  }
+
   const isPlanListLoading = isLoading;
   const isProfileLoading = !isMeHydrated;
 
@@ -873,18 +1069,36 @@ export default function PlansPage() {
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Plan Dashboard</p>
             <h1>Your plan workspace</h1>
-            <p className="muted">Reopen the latest camp fast, adjust the saved intake, and keep older plan versions in the archive below.</p>
+            <p className="muted">Open the active camp, review your current intake, or generate a new version from the current profile.</p>
           </div>
         </div>
 
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? (
+          <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
+            <span>{error}</span>
+            {error.includes("Session expired") ? null : (
+              <button
+                type="button"
+                className="error-banner-retry"
+                onClick={() => void loadPlans()}
+                disabled={isLoading}
+              >
+                {isLoading ? "Retrying..." : "Retry"}
+              </button>
+            )}
+          </div>
+        ) : null}
+
+        {!isLoading && heldForReviewPlans.length > 0 ? (
+          <HeldPlansReviewNotice plans={heldForReviewPlans} />
+        ) : null}
 
         <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
           {isPlanListLoading ? (
             <PlansFeaturedSkeleton />
           ) : (
             <LatestPlanCard
-              plan={latestPlan}
+              plan={activePlan}
               intake={intakeSource}
               accessToken={session?.access_token ?? null}
               onPlanDeleted={handlePlanDeleted}
@@ -907,9 +1121,9 @@ export default function PlansPage() {
           <div className="plans-history-block athlete-motion-slot athlete-motion-main">
             <div className="plans-history-header">
               <div className="plans-history-header-copy">
-                <p className="kicker">Plan Archive</p>
-                <h2>Older saved plans</h2>
-                <p className="muted">Keep the current plan up top. Reopen, rename, delete, or export older versions here.</p>
+                <p className="kicker">Plan Manager</p>
+                <h2>Other saved plans</h2>
+                <p className="muted">Compare previous versions by fight date, build time, and status before making one active.</p>
               </div>
               {archivedPlans.length ? (
                 <button
@@ -933,6 +1147,26 @@ export default function PlansPage() {
               )}
             </div>
 
+
+            {otherSavedPlans.length > 0 ? (
+              <div className="plan-history-list plans-history-list">
+                {otherSavedPlans.map((plan) => (
+                  <PlanCard
+                    key={plan.plan_id}
+                    plan={plan}
+                    accessToken={session?.access_token ?? null}
+                    onPlanDeleted={handlePlanDeleted}
+                    onPlanRenamed={handlePlanRenamed}
+                    activePlanId={activePlanId}
+                    onSetActive={handleSetActive}
+                    isSettingActive={isSettingActivePlanId === plan.plan_id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="muted">No other saved plans.</p>
+            )}
+
             {archivedPlans.length > 0 && isArchiveOpen ? (
               <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label="Older saved plans">
                 <div className="plan-history-list plans-history-list">
@@ -943,12 +1177,24 @@ export default function PlansPage() {
                       accessToken={session?.access_token ?? null}
                       onPlanDeleted={handlePlanDeleted}
                       onPlanRenamed={handlePlanRenamed}
+                      activePlanId={activePlanId}
+                      onSetActive={handleSetActive}
+                      isSettingActive={isSettingActivePlanId === plan.plan_id}
                     />
                   ))}
                 </div>
               </div>
             ) : null}
           </div>
+        ) : null}
+        {overlapConflictPlan ? (
+          <PlanActivationConflictDialog
+            plan={overlapConflictPlan}
+            isPending={isSettingActivePlanId === overlapConflictPlan.plan_id}
+            onConfirm={handleOverlapConfirm}
+            onStartAfter={handleStartAfterCurrentPlan}
+            onCancel={() => setOverlapConflictPlan(null)}
+          />
         ) : null}
       </section>
     </RequireAuth>

@@ -8,7 +8,7 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Any, Callable
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -34,6 +34,8 @@ from .models import (
     GenerationJobResponse,
     ManualStage2SubmissionRequest,
     NutritionWorkspaceUpdateRequest,
+    PlanBulkPermanentDeleteRequest,
+    PlanBulkPermanentDeleteResult,
     PlanDetail,
     PlanPermanentDeleteRequest,
     PlanRequest,
@@ -45,6 +47,7 @@ from .generation_runtime import (
     default_planner as runtime_default_planner,
     is_in_process_generation_enabled,
     schedule_generation_job_if_needed,
+    utc_now_iso,
 )
 from .stage2_automation import (
     Stage2Automator,
@@ -55,7 +58,11 @@ from .sentry_config import init_sentry
 from .services.generation_request_service import generate_plan_for_current_user
 from .services.admin_stage2_service import (
     approve_review_required_plan as approve_review_required_plan_service,
+    backfill_structured_plans as backfill_structured_plans_service,
+    list_structured_plan_backfill_candidates as list_structured_plan_backfill_candidates_service,
+    prewarm_structured_plan as prewarm_structured_plan_service,
     run_structured_plan_post_processing as run_structured_plan_post_processing_service,
+    should_prewarm_review_plan_row,
     submit_manual_stage2 as submit_manual_stage2_service,
 )
 from .services.generation_retry_service import retry_generation_job as retry_generation_job_service
@@ -94,6 +101,7 @@ from .routes import (
     build_nutrition_router,
     build_plans_router,
     build_profile_router,
+    build_today_router,
 )
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
@@ -704,8 +712,6 @@ def create_app(
         is_admin = is_effective_admin_profile(profile, store)
         if not is_admin and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if not is_admin and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 
     @app.get("/", include_in_schema=False)
@@ -745,6 +751,12 @@ def create_app(
         build_daily_router(
             require_profile=require_profile,
             require_admin=require_admin,
+            get_store=get_store,
+        )
+    )
+    app.include_router(
+        build_today_router(
+            require_profile=require_profile,
             get_store=get_store,
         )
     )
@@ -839,18 +851,31 @@ def create_app(
         ]
 
     @app.get("/api/admin/plans/review", response_model=list[AdminPlanSummary])
-    def list_admin_review_plans(
+    async def list_admin_review_plans(
+        background_tasks: BackgroundTasks,
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(100, ge=1, le=200),
         store: AppStore = Depends(get_store),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> list[AdminPlanSummary]:
         # Held/blocked plans awaiting an admin decision. Kept separate from the
         # general plan history so a paused plan stays visible even when profile
         # enrichment is degraded.
-        return [
-            _map_admin_plan_summary(row)
-            for row in store.list_admin_review_plans(limit=limit)
-        ]
+        rows = store.list_admin_review_plans(limit=limit)
+        # Pre-warm the structured card for the approvable held plans in the queue.
+        # The admin almost always approves, and the card conversion is the slow
+        # step at approval, so building it now (while they review) lets the
+        # approval ship the live card immediately. Best-effort and deduped — see
+        # prewarm_structured_plan.
+        for row in rows:
+            if should_prewarm_review_plan_row(row):
+                background_tasks.add_task(
+                    prewarm_structured_plan_service,
+                    plan_id=str(row.get("id") or ""),
+                    store=store,
+                    stage2=stage2,
+                )
+        return [_map_admin_plan_summary(row) for row in rows]
 
     @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_triage_generation_jobs(
@@ -876,6 +901,42 @@ def create_app(
             _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
             for job in store.list_admin_active_generation_jobs(limit=limit)
         ]
+
+    @app.delete("/api/admin/generation-jobs/{job_id}", response_model=GenerationJobResponse)
+    def cancel_admin_generation_job(
+        job_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        active_tasks: set[str] = Depends(get_active_generation_tasks),
+    ) -> GenerationJobResponse:
+        try:
+            uuid.UUID(job_id)
+        except (ValueError, TypeError, AttributeError):
+            if not str(job_id or "").startswith("job_"):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+
+        job = store.get_generation_job(job_id)
+        if not job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+
+        job_status = str(job.get("status") or "").strip().lower()
+        if job_status not in {"queued", "running"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only queued or running generation jobs can be cancelled.",
+            )
+
+        now_iso = utc_now_iso()
+        updated = store.update_generation_job(
+            job_id,
+            status="failed",
+            error="Generation cancelled by admin.",
+            completed_at=now_iso,
+            failed_at=now_iso,
+            heartbeat_at=now_iso,
+        )
+        active_tasks.discard(job_id)
+        return _job_response(updated, store=store, viewer_role="admin")
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     async def submit_manual_stage2(
@@ -916,6 +977,27 @@ def create_app(
             stage2=stage2,
         )
         return detail
+
+    @app.post("/api/admin/plans/structured-plan/backfill", status_code=202)
+    async def backfill_structured_plans(
+        background_tasks: BackgroundTasks,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        limit: int = Query(default=25, ge=1, le=200),
+    ) -> dict[str, Any]:
+        # Find displayable plans with no structured card, then convert them in the
+        # background (one model call each) so the admin request returns immediately
+        # — the same fast-response/background-conversion contract as approval. Cards
+        # appear on the affected plans as each conversion lands.
+        plan_ids = await list_structured_plan_backfill_candidates_service(store=store, limit=limit)
+        background_tasks.add_task(
+            backfill_structured_plans_service,
+            store=store,
+            stage2=stage2,
+            plan_ids=plan_ids,
+        )
+        return {"queued": len(plan_ids), "plan_ids": plan_ids}
 
     @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
     async def approve_and_resume_generation(
@@ -1023,7 +1105,7 @@ def create_app(
     )
     def permanent_delete_plan(
         plan_id: str,
-        request_body: PlanPermanentDeleteRequest,
+        request_body: PlanPermanentDeleteRequest | None = Body(default=None),
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> Response:
@@ -1039,19 +1121,63 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Plan has an active generation job. Cancel or wait before deleting.",
             )
-        expected = str(plan_row.get("plan_name") or "").strip()
-        if not expected:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Plan has no name. Rename it before permanent deletion.",
-            )
-        if request_body.confirm_plan_name != expected:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Confirmation does not match the plan name.",
-            )
+        # Archived plans are already retired from the athlete's view, so they can
+        # be permanently deleted without retyping the plan name. Live plans still
+        # require the typed confirmation to guard against accidental deletion.
+        if not _is_archived_plan(plan_row):
+            expected = str(plan_row.get("plan_name") or "").strip()
+            if not expected:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Plan has no name. Rename it before permanent deletion.",
+                )
+            confirm = request_body.confirm_plan_name if request_body else None
+            if confirm != expected:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Confirmation does not match the plan name.",
+                )
         store.delete_plan(plan_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        response_model=PlanBulkPermanentDeleteResult,
+    )
+    def bulk_permanent_delete_plans(
+        request_body: PlanBulkPermanentDeleteRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> PlanBulkPermanentDeleteResult:
+        # Bulk deletion is intentionally restricted to already-archived plans so a
+        # single confirmation never wipes a live plan. Non-archived ids are
+        # reported back as skipped rather than failing the whole batch.
+        deleted: list[str] = []
+        skipped: list[dict[str, str]] = []
+        for plan_id in request_body.plan_ids:
+            try:
+                uuid.UUID(plan_id)
+            except (ValueError, AttributeError):
+                skipped.append({"plan_id": plan_id, "reason": "not_found"})
+                continue
+            plan_row = store.get_plan(plan_id)
+            if not plan_row:
+                skipped.append({"plan_id": plan_id, "reason": "not_found"})
+                continue
+            if not _is_archived_plan(plan_row):
+                skipped.append({"plan_id": plan_id, "reason": "not_archived"})
+                continue
+            if store.has_active_generation_job_for_plan(plan_id):
+                skipped.append({"plan_id": plan_id, "reason": "active_generation_job"})
+                continue
+            store.delete_plan(plan_id)
+            deleted.append(plan_id)
+        return PlanBulkPermanentDeleteResult(
+            deleted=deleted,
+            skipped=skipped,
+            deleted_count=len(deleted),
+            skipped_count=len(skipped),
+        )
 
     @app.get("/api/admin/athletes", response_model=list[AdminAthleteRecord])
     def list_admin_athletes(
@@ -1319,6 +1445,10 @@ def _build_runtime_app() -> FastAPI:
         bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
         enable_in_process_generation,
     )
+
+    if not (os.getenv("SUPABASE_URL", "").strip() and os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()):
+        logger.warning("[app] build_runtime_app:missing_supabase_config")
+        return _build_startup_failure_app("missing supabase configuration")
     logger.info("[app] build_runtime_app:using_supabase_mode")
     store = SupabaseAppStore.from_env()
     store.validate_runtime_schema()
@@ -1330,7 +1460,7 @@ def _build_runtime_app() -> FastAPI:
     )
 
 
-def _build_startup_failure_app() -> FastAPI:
+def _build_startup_failure_app(detail: str = "service temporarily unavailable") -> FastAPI:
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
 
     def _failure_response() -> JSONResponse:
@@ -1339,7 +1469,7 @@ def _build_startup_failure_app() -> FastAPI:
             content={
                 "ok": False,
                 "app": "unlxck-fight-camp-api",
-                "detail": "service temporarily unavailable",
+                "detail": detail,
             },
         )
 
@@ -1360,14 +1490,16 @@ def _build_startup_failure_app() -> FastAPI:
 
 try:
     app = _build_runtime_app()
-except RuntimeError as exc:
-    logger.exception("[app] runtime_app_build_failed")
-    del exc
-    app = _build_startup_failure_app()
-except PostgrestAPIError as exc:
-    logger.exception("[app] runtime_app_build_failed")
-    del exc
-    app = _build_startup_failure_app()
 except ValueError:
+    # Invalid runtime configuration (e.g. malformed CORS origins).
+    logger.exception("[app] runtime_app_build_failed:invalid_config")
+    app = _build_startup_failure_app("application startup failed")
+except PostgrestAPIError:
+    # Backend/database connectivity or quota failure during startup. Listed
+    # before the broad ``except Exception`` below — PostgrestAPIError subclasses
+    # Exception, so a later clause would never be reached.
+    logger.exception("[app] runtime_app_build_failed:postgrest")
+    app = _build_startup_failure_app("service temporarily unavailable")
+except Exception:
     logger.exception("[app] runtime_app_build_failed")
-    app = _build_startup_failure_app()
+    app = _build_startup_failure_app("service temporarily unavailable")

@@ -20,11 +20,16 @@ def test_daily_limit_create_recovers_stale_running_job_before_rpc():
 
     call_order: list[str] = []
 
+    def _fake_fail_stale(athlete_id, *, stale_after_seconds, exclude_client_request_id=None):
+        call_order.append("fail_stale")
+        return None
+
     def _fake_recover(athlete_id, *, stale_after_seconds):
         call_order.append("recover")
         return None
 
-    store.get_active_generation_job_for_athlete = _fake_recover
+    store._fail_stale_active_generation_jobs_for_athlete = _fake_fail_stale
+    store.reconcile_active_generation_job_for_athlete = _fake_recover
 
     created_job = {"id": "job-1", "status": "queued", "client_request_id": "req-1"}
 
@@ -53,5 +58,7 @@ def test_daily_limit_create_recovers_stale_running_job_before_rpc():
     )
 
     assert job == created_job
-    # Recovery must happen, and it must precede the RPC's in-flight guard.
-    assert call_order == ["recover", "rpc"]
+    # Both stale-recovery passes must run, and both must precede the RPC's
+    # in-flight guard: the table-level stale failer first, then the active-job
+    # recovery, then the atomic daily-limit RPC.
+    assert call_order == ["fail_stale", "recover", "rpc"]

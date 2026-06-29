@@ -3,22 +3,17 @@
     "strength": {
       "winners": [
         {
-          "name": "Band-Resisted Push Press",
-          "score": 1.6453,
+          "name": "Single-Leg Balance (Eyes Closed)",
+          "score": 0.0,
           "reason_codes": []
         },
         {
-          "name": "Medicine-Ball Chest Toss",
-          "score": 1.6174,
+          "name": "Deadbug (Band-Resisted)",
+          "score": 0.0,
           "reason_codes": []
         },
         {
-          "name": "Anti-Rotation Med Ball Slam",
-          "score": 0.6971,
-          "reason_codes": []
-        },
-        {
-          "name": "Band Face Pull",
+          "name": "Wall ISO Deadbug",
           "score": 0.0,
           "reason_codes": []
         }
@@ -33,14 +28,11 @@
           "reason_codes": []
         },
         {
-          "name": "Shadowboxing Intervals",
-          "score": 0.15,
-          "reason_codes": []
-        },
-        {
-          "name": "Explosive Boxing Burst Intervals",
-          "score": 0.0,
-          "reason_codes": []
+          "name": "Reactive Shuffle Repeats",
+          "score": 1.65,
+          "reason_codes": [
+            "conditioning_boost_late_taper_low_risk"
+          ]
         }
       ],
       "blocked": []

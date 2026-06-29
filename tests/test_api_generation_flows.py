@@ -20,6 +20,7 @@ from api.generation_runtime import run_generation_job, schedule_generation_job_i
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from api.store import (
+    _latest_generation_job_activity_at,
     is_job_loaded_stalled_generation_job,
     is_stage1_planner_stalled_generation_job,
     is_worker_start_stale_generation_job,
@@ -36,6 +37,7 @@ from support import (
     _planner,
     _start_generation,
     finalized_result,
+    seed_default_profiles,
     stage1_result,
 )
 
@@ -73,6 +75,25 @@ def _under_threshold_stage1_planner_for_test(payload: dict, *, progress_callback
     return stage1_result()
 
 
+def _payload_fields_by_label(payload: dict) -> dict[str, Any]:
+    return {
+        str(field.get("label")): field.get("value")
+        for field in payload.get("data", {}).get("fields", [])
+        if isinstance(field, dict)
+    }
+
+
+def _assert_strength_request_planner_for_test(payload: dict, *, progress_callback=None) -> dict:
+    fields = _payload_fields_by_label(payload)
+    assert fields["What are your key performance goals?"] == ["strength", "mobility"]
+    assert fields["Primary goal"] == "strength"
+    assert fields["Where do you feel weakest right now?"] == ["footwork"]
+    assert fields["Primary weak area"] == "footwork"
+    assert fields["Fatigue Level"] == "low"
+    assert fields["Professional Status"] == "amateur"
+    return stage1_result()
+
+
 def test_generate_plan_persists_validated_final_plan_and_history():
     client, store, stage2 = _build_client()
     payload = _build_request().model_dump(mode="json")
@@ -102,6 +123,69 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert saved["stage2_status"] == "stage2_pass"
     assert saved["pdf_url"] is None
     assert stage2.calls[0]["stage2_handoff_text"] == "handoff"
+
+
+def test_generate_plan_uses_submitted_request_over_stale_latest_intake():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store = FakeStore()
+    seed_default_profiles(store)
+    stage2 = FakeStage2Automator(result=finalized_result())
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete}),
+            planner=_assert_strength_request_planner_for_test,
+            stage2_automator=stage2,
+            enable_in_process_generation=True,
+        )
+    )
+    stale_request = _build_request(
+        {
+            "athlete": {"professional_status": "professional"},
+            "key_goals": ["speed"],
+            "primary_goal": "speed",
+            "weak_areas": ["conditioning"],
+            "primary_weak_area": "conditioning",
+            "fatigue_level": "moderate",
+        }
+    )
+    store.create_intake("athlete-1", stale_request)
+
+    submitted_request = _build_request(
+        {
+            "athlete": {"professional_status": "amateur"},
+            "key_goals": ["strength", "mobility"],
+            "primary_goal": "strength",
+            "weak_areas": ["footwork"],
+            "primary_weak_area": "footwork",
+            "fatigue_level": "low",
+            "equipment_access": ["barbell", "heavy_bag", "dumbbell"],
+        }
+    )
+
+    _, job = _start_generation(client, submitted_request)
+
+    assert job["status"] == "completed"
+    stored_job = store.get_generation_job(job["job_id"])
+    assert stored_job["request_payload"]["key_goals"] == ["strength", "mobility"]
+    assert stored_job["request_payload"]["primary_goal"] == "strength"
+    assert stored_job["request_payload"]["weak_areas"] == ["footwork"]
+    assert stored_job["request_payload"]["primary_weak_area"] == "footwork"
+    assert stored_job["request_payload"]["fatigue_level"] == "low"
+    assert stored_job["request_payload"]["athlete"]["professional_status"] == "amateur"
+
+    created_intake = store.get_latest_intake("athlete-1")["intake"]
+    assert created_intake["key_goals"] == ["strength", "mobility"]
+    assert created_intake["primary_goal"] == "strength"
+    assert created_intake["weak_areas"] == ["footwork"]
+    assert created_intake["primary_weak_area"] == "footwork"
+    assert created_intake["fatigue_level"] == "low"
+    assert created_intake["athlete"]["professional_status"] == "amateur"
 
 
 def test_generate_plan_reuses_existing_terminal_job_for_same_payload():
@@ -623,6 +707,68 @@ def test_recover_generation_job_if_stale_is_noop_for_non_running_jobs():
 
     assert store.recover_generation_job_if_stale(failed) == failed
     assert store.recover_generation_job_if_stale(None) is None
+
+
+def _make_stale_running_job(store, *, client_request_id: str):
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id=client_request_id,
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        attempt_count=1,
+        started_at=old_iso,
+        heartbeat_at=old_iso,
+        progress_milestones=[{"code": "job_loaded", "label": "Generation job loaded", "detail": "", "at": old_iso}],
+    )
+    return created
+
+
+def test_get_active_endpoint_does_not_mutate_stale_running_job():
+    # Polling GET /api/generation-jobs/active must be side-effect free even when
+    # the active job is a stale `running` row. Recovery is owned by the explicit
+    # reconcile/worker write paths, never by reads.
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = _make_stale_running_job(store, client_request_id="active-stale-pure-read")
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+    # The stale running job is untouched by the read.
+    assert store.get_generation_job(created["id"])["status"] == "running"
+    # A second poll still sees running — no hidden state change accumulated.
+    second = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert second.json()["status"] == "running"
+    assert store.get_generation_job(created["id"])["status"] == "running"
+
+
+def test_get_job_by_id_endpoint_does_not_mutate_stale_running_job():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = _make_stale_running_job(store, client_request_id="byid-stale-pure-read")
+
+    response = client.get(
+        f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"}
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+    assert store.get_generation_job(created["id"])["status"] == "running"
+
+
+def test_reconcile_active_generation_job_mutates_stale_running_job():
+    # The explicit reconciliation write path DOES recover a stale running job so
+    # stuck jobs cannot remain active forever.
+    _client, store, _ = _build_client(enable_in_process_generation=False)
+    created = _make_stale_running_job(store, client_request_id="active-stale-reconcile")
+
+    recovered = store.reconcile_active_generation_job_for_athlete("athlete-1")
+    assert recovered is not None
+    # job_loaded_stalled with attempts remaining is requeued out of `running`.
+    assert recovered["status"] == "queued"
+    assert store.get_generation_job(created["id"])["status"] == "queued"
 
 
 def test_get_generation_job_keeps_running_when_heartbeat_is_fresh():
@@ -1306,8 +1452,12 @@ def test_create_generation_job_allows_new_request_after_mid_pipeline_stale_is_fa
         status="running",
         started_at=old_iso,
         heartbeat_at=old_iso,
+        created_at=old_iso,
+        updated_at=old_iso,
         stage1_result=stage1_result(),
     )
+    store.generation_jobs[old["id"]]["created_at"] = old_iso
+    store.generation_jobs[old["id"]]["updated_at"] = old_iso
     new_job = store.create_or_get_generation_job(
         athlete_id="athlete-1",
         client_request_id="new-request",
@@ -3900,6 +4050,152 @@ def test_stage2_gateway_failure_returns_failed_job_without_persisting_plan():
     assert job["status"] == "failed"
     assert "Stage 2 model request failed" in job["error"]
     assert len(store.plans) == 0
+
+
+def test_stale_running_job_is_failed_before_new_job_is_created():
+    store = FakeStore()
+    old = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    stale = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stale-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        stale["id"],
+        status="running",
+        started_at=old,
+        heartbeat_at=old,
+        updated_at=old,
+        created_at=old,
+        progress_milestones=[{"code": "stage2_drafting", "at": old}],
+    )
+    store.generation_jobs[stale["id"]]["updated_at"] = old
+
+    fresh = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="fresh-after-stale",
+        source="self_serve",
+        request_payload=_build_request({"athlete": {"full_name": "Fresh Athlete"}}).model_dump(mode="json"),
+        stale_after_seconds=90,
+    )
+
+    reaped = store.get_generation_job(stale["id"])
+    assert reaped["status"] == "failed"
+    assert any(m["code"] == "stale_job_reaped" for m in reaped["progress_milestones"])
+    assert fresh["id"] != stale["id"]
+    assert fresh["status"] == "queued"
+
+
+def test_fresh_running_job_is_not_failed_before_new_job_is_created():
+    store = FakeStore()
+    now = datetime.now(timezone.utc).isoformat()
+    active = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="fresh-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(active["id"], status="running", started_at=now, heartbeat_at=now)
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="blocked-by-fresh",
+            source="self_serve",
+            request_payload=_build_request({"athlete": {"full_name": "Blocked Athlete"}}).model_dump(mode="json"),
+            stale_after_seconds=90,
+        )
+
+    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+    assert store.get_generation_job(active["id"])["status"] == "running"
+
+
+def test_recent_progress_milestone_activity_keeps_job_fresh():
+    store = FakeStore()
+    old = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    recent = datetime.now(timezone.utc).isoformat()
+    active = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="recent-milestone",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        active["id"],
+        status="running",
+        started_at=old,
+        heartbeat_at=old,
+        updated_at=old,
+        progress_milestones=[{"code": "stage2_drafting", "at": recent}],
+    )
+
+    with pytest.raises(HTTPException):
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="blocked-by-recent-milestone",
+            source="self_serve",
+            request_payload=_build_request({"athlete": {"full_name": "Blocked Athlete"}}).model_dump(mode="json"),
+            stale_after_seconds=90,
+        )
+
+    assert store.get_generation_job(active["id"])["status"] == "running"
+
+
+def test_latest_activity_handles_mixed_naive_and_aware_datetimes():
+    old_aware = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    recent_naive = datetime.now().replace(tzinfo=None)
+
+    latest = _latest_generation_job_activity_at(
+        {
+            "started_at": old_aware,
+            "heartbeat_at": old_aware,
+            "updated_at": recent_naive,
+            "progress_milestones": [{"code": "stage2_drafting", "at": old_aware}],
+        }
+    )
+
+    assert latest == recent_naive.replace(tzinfo=timezone.utc)
+
+
+def test_stage2_drafting_old_heartbeat_is_reaped_and_does_not_block_new_job():
+    store = FakeStore()
+    old = (datetime.now(timezone.utc) - timedelta(minutes=20)).isoformat()
+    stuck = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stuck-stage2",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        stuck["id"],
+        status="running",
+        started_at=old,
+        heartbeat_at=old,
+        updated_at=old,
+        created_at=old,
+        progress_milestones=[
+            {
+                "code": "stage2_drafting",
+                "label": "Stage 2 finalizer drafting",
+                "detail": "Sending the planning brief to the AI finalizer.",
+                "at": old,
+            }
+        ],
+    )
+    store.generation_jobs[stuck["id"]]["updated_at"] = old
+
+    fresh = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="new-after-stage2-stuck",
+        source="self_serve",
+        request_payload=_build_request({"athlete": {"full_name": "Fresh Athlete"}}).model_dump(mode="json"),
+        stale_after_seconds=90,
+    )
+
+    assert store.get_generation_job(stuck["id"])["status"] == "failed"
+    assert fresh["status"] == "queued"
+    assert fresh["id"] != stuck["id"]
 
 
 def test_stage2_insufficient_quota_masks_athlete_error_and_preserves_admin_detail():

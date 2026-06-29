@@ -7,7 +7,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { saveOnboardingDraft } from "@/lib/api";
+import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import {
@@ -27,6 +29,7 @@ import {
   computeDaysUntilFight,
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
+  HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE,
 } from "@/lib/days-out-policy";
 import {
   buildRoundsFormat,
@@ -53,6 +56,7 @@ import {
   matchesEquipmentPreset,
   matchesFocusPreset,
   matchesTrainingPreset,
+  resolveFocusPresetSelections,
   type EquipmentPreset,
   type EquipmentPresetKey,
   type FocusPreset,
@@ -87,18 +91,34 @@ const QUICK_BUILD_STARTERS: QuickBuildStarter[] = [
   {
     key: "power",
     label: "Power build",
-    description: "5 days, full gym, explosive power",
+    description: "5 days, full gym, power",
     trainingPreset: "five_days",
     equipmentPreset: "full_gym",
     focusPreset: "explosive_power",
   },
   {
-    key: "home",
-    label: "Home camp",
-    description: "3 days, home kit, recovery",
+    key: "speed",
+    label: "Speed camp",
+    description: "4 days, basic gym, speed",
+    trainingPreset: "four_days",
+    equipmentPreset: "basic_gym",
+    focusPreset: "speed_footwork",
+  },
+  {
+    key: "cut_support",
+    label: "Cut support",
+    description: "5 days, basic gym, weight cut",
+    trainingPreset: "five_days",
+    equipmentPreset: "basic_gym",
+    focusPreset: "weight_cut_support",
+  },
+  {
+    key: "home_control",
+    label: "Home control",
+    description: "3 days, home kit, mobility",
     trainingPreset: "three_days",
     equipmentPreset: "home",
-    focusPreset: "mobility_recovery",
+    focusPreset: "mobility_control",
   },
 ];
 
@@ -118,6 +138,7 @@ type ChipMultiSelectProps = {
   disableAdditionalSelections?: boolean;
   disabledValues?: string[];
   disabledValueReason?: string;
+  getOptionDisabledReason?: (option: IntakeOption, checked: boolean) => string | null;
 };
 
 function ChipMultiSelect({
@@ -129,6 +150,7 @@ function ChipMultiSelect({
   disableAdditionalSelections = false,
   disabledValues,
   disabledValueReason,
+  getOptionDisabledReason,
 }: ChipMultiSelectProps) {
   const disabledValueSet = disabledValues && disabledValues.length > 0 ? new Set(disabledValues) : null;
   return (
@@ -137,10 +159,11 @@ function ChipMultiSelect({
       <div className="checkbox-grid">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
-          const valueDisabled = !checked && disabledValueSet?.has(option.value) === true;
+          const optionDisabledReason = getOptionDisabledReason?.(option, checked) ?? null;
+          const valueDisabled = !checked && (Boolean(optionDisabledReason) || disabledValueSet?.has(option.value) === true);
           const capDisabled = !valueDisabled && disableAdditionalSelections && !checked;
           const disabled = valueDisabled || capDisabled;
-          const reason = valueDisabled ? disabledValueReason : capDisabled ? capDisabledReason : undefined;
+          const reason = valueDisabled ? optionDisabledReason ?? disabledValueReason : capDisabled ? capDisabledReason : undefined;
           return (
             <label
               key={option.value}
@@ -156,10 +179,15 @@ function ChipMultiSelect({
               />
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
-                {disabled && reason ? (
-                  <span className="checkbox-card-tag">{reason}</span>
-                ) : null}
               </span>
+              {disabled && reason ? (
+                <WhyTooltip
+                  title="Unavailable"
+                  body={reason}
+                  triggerLabel="?"
+                  ariaLabel={`Why ${option.label} is unavailable`}
+                />
+              ) : null}
             </label>
           );
         })}
@@ -226,7 +254,7 @@ type LabelledPreset = {
 
 function presetToOption(preset: LabelledPreset): IntakeOption {
   return {
-    label: `${preset.label} — ${preset.description}`,
+    label: `${preset.label} - ${preset.description}`,
     value: preset.key,
   };
 }
@@ -286,13 +314,23 @@ function QuickBuildFormInner() {
     () => (input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date)),
     [input.fight_date, input.no_scheduled_fight],
   );
+  const hasHardSparring = input.hard_sparring_days.length > 0;
   const daysOutCtx = useMemo(
-    () => buildDaysOutContext(daysUntilFight),
-    [daysUntilFight],
+    () => buildDaysOutContext(daysUntilFight, { hasHardSparring }),
+    [daysUntilFight, hasHardSparring],
   );
   const sharedFocusCap = focusValidation?.cap?.maxSelections ?? null;
   const sharedFocusCount = input.key_goals.length + input.weak_areas.length;
   const sharedFocusCapReached = sharedFocusCap !== null && sharedFocusCount >= sharedFocusCap;
+  const focusPresetLimits = useMemo(
+    () => ({
+      goalLimit: QUICK_BUILD_KEY_GOAL_CAP,
+      weakAreaLimit: QUICK_BUILD_WEAK_AREA_CAP,
+      sharedLimit: sharedFocusCap,
+      daysOutCtx,
+    }),
+    [daysOutCtx, sharedFocusCap],
+  );
   const unavailableGoalValues = useMemo(
     () => KEY_GOAL_OPTIONS
       .filter((option) => !getPerformanceFocusOptionAvailability(daysOutCtx, "key_goals", option.value).available)
@@ -315,16 +353,16 @@ function QuickBuildFormInner() {
     [input.training_availability, input.weekly_training_frequency],
   );
   const activeFocusPreset = useMemo(
-    () => matchesFocusPreset(input.key_goals, input.weak_areas),
-    [input.key_goals, input.weak_areas],
+    () => matchesFocusPreset(input.key_goals, input.weak_areas, focusPresetLimits),
+    [focusPresetLimits, input.key_goals, input.weak_areas],
   );
   const availableFocusPresets = useMemo(
     () => getAvailableFocusPresets({
       fightDate: input.fight_date,
       noScheduledFight: input.no_scheduled_fight,
-      timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+      limits: focusPresetLimits,
     }),
-    [input.fight_date, input.no_scheduled_fight],
+    [focusPresetLimits, input.fight_date, input.no_scheduled_fight],
   );
   const maxWeeklySessions = input.training_availability.length;
   const sessionsSelectDisabled = maxWeeklySessions === 0;
@@ -401,7 +439,16 @@ function QuickBuildFormInner() {
       if (nextKeyGoals.length === current.key_goals.length && nextWeakAreas.length === current.weak_areas.length) {
         return current;
       }
-      setMessage("Some picks were removed because they are not available this close to fight day.");
+      const removedStrengthForHardSparring =
+        daysOutCtx.hasHardSparring &&
+        daysOutCtx.daysOut !== null &&
+        daysOutCtx.daysOut <= 20 &&
+        (current.key_goals.includes("strength") || current.weak_areas.includes("strength"));
+      setMessage(
+        removedStrengthForHardSparring
+          ? HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE
+          : "Some picks were removed because they are not available this close to fight day.",
+      );
       return {
         ...current,
         key_goals: nextKeyGoals,
@@ -503,6 +550,7 @@ function QuickBuildFormInner() {
       return;
     }
     setSubmitError(null);
+    const focusSelections = resolveFocusPresetSelections(focusEntry.preset, focusPresetLimits);
     setInput((currentInput) => ({
       ...currentInput,
       training_availability: [...trainingPreset.training_availability],
@@ -511,8 +559,8 @@ function QuickBuildFormInner() {
         trainingPreset.training_availability.includes(day),
       ),
       equipment_access: [...equipmentPreset.equipment_access],
-      key_goals: [...focusEntry.preset.key_goals],
-      weak_areas: [...focusEntry.preset.weak_areas],
+      key_goals: focusSelections.key_goals,
+      weak_areas: focusSelections.weak_areas,
     }));
   }
 
@@ -578,10 +626,11 @@ function QuickBuildFormInner() {
       setMessage(null);
     }
     setSubmitError(null);
+    const focusSelections = resolveFocusPresetSelections(preset, focusPresetLimits);
     setInput((currentInput) => ({
       ...currentInput,
-      key_goals: [...preset.key_goals],
-      weak_areas: [...preset.weak_areas],
+      key_goals: focusSelections.key_goals,
+      weak_areas: focusSelections.weak_areas,
     }));
   }
 
@@ -662,7 +711,7 @@ function QuickBuildFormInner() {
           planRequest.training_availability,
           planRequest.weekly_training_frequency ?? 0,
         );
-        const focusPresetMatch = matchesFocusPreset(planRequest.key_goals, planRequest.weak_areas);
+        const focusPresetMatch = matchesFocusPreset(planRequest.key_goals, planRequest.weak_areas, focusPresetLimits);
         const draft = {
           ...planRequest,
           current_step: 0,
@@ -676,7 +725,7 @@ function QuickBuildFormInner() {
           training_preset: trainingPresetMatch,
           focus_preset: focusPresetMatch,
         };
-        await saveOnboardingDraft(session.access_token, {
+        const updatedMe = await saveOnboardingDraft(session.access_token, {
           full_name: planRequest.athlete.full_name,
           technical_style: planRequest.athlete.technical_style,
           tactical_style: planRequest.athlete.tactical_style,
@@ -686,18 +735,11 @@ function QuickBuildFormInner() {
           athlete_timezone: planRequest.athlete.athlete_timezone ?? "",
           onboarding_draft: draft,
         });
-        if (me) {
-          replaceMe({
-            ...me,
-            profile: {
-              ...me.profile,
-              full_name: planRequest.athlete.full_name,
-              technical_style: planRequest.athlete.technical_style,
-              tactical_style: planRequest.athlete.tactical_style,
-              athlete_timezone: planRequest.athlete.athlete_timezone ?? me.profile.athlete_timezone,
-              onboarding_draft: draft,
-            },
-          });
+        
+        replaceMe(updatedMe);
+        if (!writePendingGenerationPayload(planRequest, "quick_build")) {
+          setSubmitError("Unable to prepare the generation payload. Reload and try again.");
+          return;
         }
         markGenerationIntent();
         router.push("/generate");
@@ -938,6 +980,11 @@ function QuickBuildFormInner() {
           capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
           disabledValues={unavailableGoalValues}
           disabledValueReason="Not available for this fight window"
+          getOptionDisabledReason={(option, checked) => {
+            if (checked) return null;
+            const availability = getPerformanceFocusOptionAvailability(daysOutCtx, "key_goals", option.value);
+            return availability.available ? null : availability.reason ?? "Not available for this fight window";
+          }}
         />
         <FieldError message={visibleError("key_goals")} />
         <ChipMultiSelect
@@ -949,6 +996,11 @@ function QuickBuildFormInner() {
           capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
           disabledValues={unavailableWeakAreaValues}
           disabledValueReason="Not available for this fight window"
+          getOptionDisabledReason={(option, checked) => {
+            if (checked) return null;
+            const availability = getPerformanceFocusOptionAvailability(daysOutCtx, "weak_areas", option.value);
+            return availability.available ? null : availability.reason ?? "Not available for this fight window";
+          }}
         />
         <FieldError message={visibleError("weak_areas")} />
         <FieldError message={visibleError("focus_cap")} />

@@ -6,8 +6,12 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
   approveAndResumeGenerationFromJob,
+  backfillStructuredPlans,
+  bulkPermanentlyDeleteArchivedPlans,
+  cancelAdminGenerationJob,
   listAdminActiveGenerationJobs,
   listAdminAthletes,
   listAdminPlans,
@@ -22,8 +26,6 @@ import {
   hasProfileRefreshFailedWarning,
 } from "@/lib/profile-refresh-warning";
 import {
-  PROFILE_SERVICE_WARNING_BODY,
-  PROFILE_SERVICE_WARNING_TITLE,
   PROFILE_UNAVAILABLE_ROW_LABEL,
   isProfileServiceUnavailableMessage,
   nonProfileSectionError,
@@ -49,7 +51,7 @@ function formatDateTime(value: string | null | undefined): string {
     return "Not recorded";
   }
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "Not recorded" : formatAppDateTime(value);
 }
 
 function normalizeForSearch(...parts: unknown[]): string {
@@ -111,6 +113,10 @@ function countActiveJobStates(jobs: AdminGenerationJobDiagnostic[]) {
   );
 }
 
+function isArchivedPlan(plan: AdminPlanSummary): boolean {
+  return (plan.status || "").trim().toLowerCase() === "archived";
+}
+
 function ProfileUnavailableNote({ unavailable }: { unavailable?: boolean }) {
   if (!unavailable) {
     return null;
@@ -160,7 +166,15 @@ export default function AdminPage() {
   const [athletesHasMore, setAthletesHasMore] = useState(false);
   const [plansHasMore, setPlansHasMore] = useState(false);
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
+  const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
+  const [selectedArchivedPlanIds, setSelectedArchivedPlanIds] = useState<string[]>([]);
+  const [bulkDeletingPlans, setBulkDeletingPlans] = useState(false);
+
+  useEffect(() => {
+    setSelectedArchivedPlanIds([]);
+  }, [plansOffset, searchNeedle]);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [backfillPending, setBackfillPending] = useState(false);
 
   const token = session?.access_token;
   const isAdminReady =
@@ -212,6 +226,19 @@ export default function AdminPage() {
   );
 
   const activeJobStates = useMemo(() => countActiveJobStates(activeJobs), [activeJobs]);
+
+  const archivedPlanIds = useMemo(
+    () => plans.filter(isArchivedPlan).map((plan) => plan.plan_id),
+    [plans],
+  );
+  const archivedPlanIdSet = useMemo(() => new Set(archivedPlanIds), [archivedPlanIds]);
+  const selectedArchivedIds = useMemo(
+    () => selectedArchivedPlanIds.filter((planId) => archivedPlanIdSet.has(planId)),
+    [archivedPlanIdSet, selectedArchivedPlanIds],
+  );
+  const selectedArchivedCount = selectedArchivedIds.length;
+  const allArchivedPlansSelected =
+    archivedPlanIds.length > 0 && selectedArchivedCount === archivedPlanIds.length;
 
   const triageAthleteCount = useMemo(
     () => new Set(triageJobs.map((job) => job.athlete_id).filter(Boolean)).size,
@@ -395,6 +422,29 @@ export default function AdminPage() {
     }
   }
 
+  async function handleBackfillStructuredPlans() {
+    if (!session?.access_token || backfillPending) return;
+    setBackfillPending(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await backfillStructuredPlans(session.access_token);
+      setMessage(
+        result.queued > 0
+          ? `Queued ${result.queued} plan${result.queued === 1 ? "" : "s"} for structured-card backfill. Cards appear as each conversion finishes.`
+          : "No plans need a structured-card backfill — every displayable plan already has one.",
+      );
+    } catch (backfillError) {
+      setError(
+        backfillError instanceof Error
+          ? backfillError.message
+          : "Failed to queue the structured-card backfill.",
+      );
+    } finally {
+      setBackfillPending(false);
+    }
+  }
+
   async function handleApproveAndResumeJob(jobId: string) {
     if (!session?.access_token || resumingJobId) return;
     setResumingJobId(jobId);
@@ -412,6 +462,66 @@ export default function AdminPage() {
       setError(resumeError instanceof Error ? resumeError.message : "Failed to approve and resume generation.");
     } finally {
       setResumingJobId(null);
+    }
+  }
+
+  async function handleCancelGenerationJob(job: AdminGenerationJobDiagnostic) {
+    if (!session?.access_token || cancellingJobId) return;
+    const confirmed = window.confirm(
+      `Cancel generation for ${getJobDisplayName(job)}? This stops the active job so cleanup can continue.`,
+    );
+    if (!confirmed) return;
+    setCancellingJobId(job.job_id);
+    setError(null);
+    setMessage(null);
+    try {
+      await cancelAdminGenerationJob(session.access_token, job.job_id);
+      setActiveJobs((jobs) => jobs.filter((item) => item.job_id !== job.job_id));
+      setMessage("Generation cancelled. You can archive or delete the related plan now.");
+      setReloadKey((value) => value + 1);
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel generation.");
+    } finally {
+      setCancellingJobId(null);
+    }
+  }
+
+  function toggleArchivedPlan(planId: string) {
+    setMessage(null);
+    setError(null);
+    setSelectedArchivedPlanIds((current) =>
+      current.includes(planId) ? current.filter((id) => id !== planId) : [...current, planId],
+    );
+  }
+
+  function toggleAllArchivedPlans() {
+    setMessage(null);
+    setError(null);
+    setSelectedArchivedPlanIds(allArchivedPlansSelected ? [] : [...archivedPlanIds]);
+  }
+
+  async function handleBulkDeleteArchivedPlans() {
+    if (!session?.access_token || selectedArchivedCount === 0 || bulkDeletingPlans) return;
+    const confirmed = window.confirm(
+      `Permanently delete ${selectedArchivedCount} archived plan${selectedArchivedCount === 1 ? "" : "s"}? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    setBulkDeletingPlans(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await bulkPermanentlyDeleteArchivedPlans(session.access_token, selectedArchivedIds);
+      const deleted = new Set(result.deleted);
+      setPlans((current) => current.filter((plan) => !deleted.has(plan.plan_id)));
+      setSelectedArchivedPlanIds((current) => current.filter((planId) => !deleted.has(planId)));
+      setMessage(
+        `Deleted ${result.deleted_count} archived plan${result.deleted_count === 1 ? "" : "s"}.` +
+          (result.skipped_count ? ` ${result.skipped_count} skipped.` : ""),
+      );
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete archived plans.");
+    } finally {
+      setBulkDeletingPlans(false);
     }
   }
 
@@ -479,8 +589,8 @@ export default function AdminPage() {
         {profileWarning.show ? (
           <div className="warning-banner admin-profile-warning-banner" role="status">
             <div className="admin-profile-warning-copy">
-              <strong>{PROFILE_SERVICE_WARNING_TITLE}</strong>
-              <span>{PROFILE_SERVICE_WARNING_BODY}</span>
+              <strong>{profileWarning.title}</strong>
+              <span>{profileWarning.body}</span>
               {profileWarning.requestId ? (
                 <span className="muted admin-profile-warning-request">
                   Latest request id: {profileWarning.requestId}
@@ -532,6 +642,15 @@ export default function AdminPage() {
             disabled={isLoading}
           >
             {isLoading ? "Refreshing..." : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className="ghost-button admin-backfill-button"
+            onClick={() => void handleBackfillStructuredPlans()}
+            disabled={backfillPending}
+            title="Re-run structured-card conversion for legacy plans that still fall back to plain text"
+          >
+            {backfillPending ? "Backfilling..." : "Backfill structured cards"}
           </button>
         </div>
 
@@ -609,7 +728,7 @@ export default function AdminPage() {
                   <div className="admin-job-summary">
                     <ProfileRefreshWarningBanner job={job} />
                     {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
-                    <p className="muted">Fight date: {job.request_payload_summary?.fight_date || "Not set"}</p>
+                    <p className="muted">Fight date: {job.request_payload_summary?.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
                     <p className="muted">Format: {job.request_payload_summary?.fight_format || "Not set"}</p>
                     <p className="muted">Goals: {joinOrDash(job.request_payload_summary?.goals)}</p>
                   </div>
@@ -624,6 +743,14 @@ export default function AdminPage() {
                         Open plan
                       </Link>
                     ) : null}
+                    <button
+                      type="button"
+                      className="ghost-button danger-button"
+                      onClick={() => void handleCancelGenerationJob(job)}
+                      disabled={cancellingJobId !== null}
+                    >
+                      {cancellingJobId === job.job_id ? "Cancelling..." : "Cancel generation"}
+                    </button>
                   </div>
                 </article>
               ))}
@@ -681,7 +808,7 @@ export default function AdminPage() {
                   </div>
                   <div className="admin-job-summary">
                     <ProfileRefreshWarningBanner job={job} />
-                    <p className="muted">Fight date: {job.request_payload_summary.fight_date || "Not set"}</p>
+                    <p className="muted">Fight date: {job.request_payload_summary.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
                     <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
                     <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>
                   </div>
@@ -906,8 +1033,13 @@ export default function AdminPage() {
 
           <article className="list-card">
             <div className="form-section-header">
-              <p className="kicker">Plans</p>
-              <h2>{searchNeedle ? "Matching generations" : "Latest generations"}</h2>
+              <div>
+                <p className="kicker">Plans</p>
+                <h2>{searchNeedle ? "Matching generations" : "Latest generations"}</h2>
+              </div>
+              {archivedPlanIds.length ? (
+                <span className="badge">{archivedPlanIds.length} archived</span>
+              ) : null}
             </div>
 
             {isDirectoryLoading ? (
@@ -932,15 +1064,55 @@ export default function AdminPage() {
               />
             ) : (
               <>
+                {archivedPlanIds.length ? (
+                  <div className="admin-athlete-plan-bulkbar admin-plan-cleanup-bar">
+                    <label className="admin-athlete-plan-select">
+                      <input
+                        type="checkbox"
+                        checked={allArchivedPlansSelected}
+                        onChange={toggleAllArchivedPlans}
+                        disabled={bulkDeletingPlans}
+                        aria-label="Select archived plans on this page"
+                      />
+                      <span className="muted">
+                        {selectedArchivedCount > 0
+                          ? `${selectedArchivedCount} archived selected`
+                          : `Select archived (${archivedPlanIds.length})`}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      className="ghost-button danger-button"
+                      onClick={() => void handleBulkDeleteArchivedPlans()}
+                      disabled={selectedArchivedCount === 0 || bulkDeletingPlans}
+                    >
+                      {bulkDeletingPlans
+                        ? "Deleting..."
+                        : `Delete archived${selectedArchivedCount ? ` (${selectedArchivedCount})` : ""}`}
+                    </button>
+                  </div>
+                ) : null}
                 <div className="plans-grid">
                   {plans.map((plan) => (
                     <article key={plan.plan_id} className="plan-card">
                       <div className="plan-card-header">
-                        <div>
-                          <Link href={`/plans/${plan.plan_id}`}>
-                            <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
-                          </Link>
-                          <p className="muted">{plan.athlete_email}</p>
+                        <div className="admin-plan-title-row">
+                          {isArchivedPlan(plan) ? (
+                            <label className="admin-athlete-plan-select" aria-label={`Select ${getPlanDisplayName(plan)}`}>
+                              <input
+                                type="checkbox"
+                                checked={selectedArchivedIds.includes(plan.plan_id)}
+                                onChange={() => toggleArchivedPlan(plan.plan_id)}
+                                disabled={bulkDeletingPlans}
+                              />
+                            </label>
+                          ) : null}
+                          <div>
+                            <Link href={`/plans/${plan.plan_id}`}>
+                              <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
+                            </Link>
+                            <p className="muted">{plan.athlete_email}</p>
+                          </div>
                         </div>
                         <span className="badge">{plan.status}</span>
                       </div>

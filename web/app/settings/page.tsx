@@ -8,6 +8,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { ApiError, changeUsername, updateMe } from "@/lib/api";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -153,18 +154,14 @@ function formatNextAvailable(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatAppDate(iso);
 }
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "Not saved yet";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "Not saved yet";
-  return date.toLocaleString();
+  return formatAppDateTime(iso);
 }
 
 function formatList(values: string[], fallback = "Not set", maxItems = 3): string {
@@ -246,7 +243,15 @@ function writeLocalJson(key: string, value: unknown) {
   }
 }
 
-function SettingsNav({ sections }: Readonly<{ sections: SettingsSection[] }>) {
+function SettingsNav({
+  isSaving,
+  onSave,
+  sections,
+}: Readonly<{
+  isSaving: boolean;
+  onSave: () => void;
+  sections: SettingsSection[];
+}>) {
   return (
     <nav className="settings-section-nav" aria-label="Settings sections">
       {sections.map((section) => (
@@ -254,6 +259,9 @@ function SettingsNav({ sections }: Readonly<{ sections: SettingsSection[] }>) {
           {section.label}
         </a>
       ))}
+      <button type="button" className="settings-section-save" onClick={onSave} disabled={isSaving}>
+        {isSaving ? "Saving..." : "Save"}
+      </button>
     </nav>
   );
 }
@@ -1105,7 +1113,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <SettingsNav sections={sections} />
+        <SettingsNav sections={sections} isSaving={isPending} onSave={handleSaveAccount} />
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}

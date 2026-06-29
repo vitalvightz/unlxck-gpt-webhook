@@ -11,13 +11,19 @@ test("formatPlanLabel maps readiness/decision enums to readable labels", () => {
 });
 
 test("formatPlanLabel maps plan status flags", () => {
-  assert.equal(formatPlanLabel("publishable_with_flags"), "Ready with notes");
+  assert.equal(formatPlanLabel("ready"), "Ready");
+  assert.equal(formatPlanLabel("publishable_with_flags"), "Ready — review notes included");
+  assert.equal(formatPlanLabel("review_required"), "Awaiting review");
+  assert.equal(formatPlanLabel("triage_blocked"), "Paused for safety review");
+  assert.equal(formatPlanLabel("archived"), "Archived");
+  assert.equal(formatPlanLabel("generated"), "Processing");
 });
 
 test("formatPlanLabel maps phase labels", () => {
   assert.equal(formatPlanLabel("SPP"), "Specific prep");
   assert.equal(formatPlanLabel("GPP"), "General prep");
-  assert.equal(formatPlanLabel("TAPER"), "Fight week taper");
+  assert.equal(formatPlanLabel("TAPER"), "Taper");
+  assert.equal(formatPlanLabel("FIGHT_WEEK"), "Fight week");
 });
 
 test("formatPlanLabel maps session/block types including spaced raw forms", () => {

@@ -76,9 +76,16 @@ def test_unused_day_gas_tank_conversion_removes_day_from_intentionally_unused():
     athlete_model = {"key_goals": ["conditioning"]}
 
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
-    assert len(upgraded) == 2
+    assert len(upgraded) == 1
     assert all(role["role_key"] == "converted_low_aerobic_gas_tank_day" for role in upgraded)
-    assert week["intentionally_unused_days"] == []
+    assert week["intentionally_unused_days"] == [
+        {
+            "day": "saturday",
+            "role": "off_day",
+            "low_aerobic_cap_skipped": True,
+            "low_aerobic_cap_reason": "Low-aerobic support cap reached (1); cut severity, phase, fatigue, or readiness blocked the upgrade for saturday.",
+        }
+    ]
 
 
 def test_unused_day_upgrade_protects_d_minus_1_and_d_minus_0():

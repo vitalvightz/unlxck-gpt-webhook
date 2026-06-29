@@ -6,7 +6,18 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
+from .contracts.checkin_decision import (
+    ActiveInjury as CheckinActiveInjury,
+    Body as CheckinBody,
+    CheckinDecisionValue,
+    Pain as CheckinPain,
+    Phase as CheckinPhase,
+    PreviousSession as CheckinPreviousSession,
+    Sleep as CheckinSleep,
+)
+from .contracts.completion import CompletionStatus, LandingSessionState
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
+from .performance_focus import get_performance_focus_cap
 from .state_machine import GenerationJobStatus
 from .structured_plan_models import StructuredTrainingPlan
 
@@ -49,6 +60,7 @@ _GUIDED_INJURY_SEVERITY_ALIASES = {
     "severe": "high",
 }
 _HARD_SPARRING_DAY_CAP = 4
+_HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT = 20
 
 # Upper bound on a manually submitted Stage 2 plan body (admin-only path).
 MANUAL_STAGE2_MAX_CHARS = 80_000
@@ -96,6 +108,10 @@ _PLAN_TEXT_LIMITS = {
 
 def _clean_list(values: list[str] | None) -> list[str]:
     return [str(value).strip() for value in values or [] if str(value).strip()]
+
+
+def _without_strength_focus(values: list[str]) -> list[str]:
+    return [value for value in values if str(value).strip().lower() != "strength"]
 
 
 def _clean_optional_text(value: Any) -> str | None:
@@ -282,6 +298,10 @@ class GuidedInjuryInput(BaseModel):
     # UI submissions (selections/free-text top out well under these) and present
     # only to bound abuse, complementing the global json_limits guards.
     area: str = Field(default="", max_length=200)
+    # UI-only body-map zone key (e.g. "l_shoulder"). Lets the web map stay lit
+    # after the athlete rewrites the free-text area; not a planning signal, so it
+    # is intentionally omitted from the Stage 1 prompt serialization below.
+    zone: str = Field(default="", max_length=64)
     severity: GuidedInjurySeverity = ""
     trend: str = Field(default="", max_length=50)
     avoid: str = Field(default="", max_length=2000)
@@ -299,6 +319,7 @@ class GuidedInjuryInput(BaseModel):
 
     @field_validator(
         "area",
+        "zone",
         "trend",
         "avoid",
         "notes",
@@ -960,6 +981,31 @@ class PlanRequest(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def normalize_strength_focus_for_hard_sparring(self) -> "PlanRequest":
+        if not self.hard_sparring_days:
+            return self
+
+        cap = get_performance_focus_cap(
+            None if self.no_scheduled_fight else self.fight_date,
+            time_zone=self.athlete.athlete_timezone,
+        )
+        if cap is None or cap.days_until_fight > _HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT:
+            return self
+
+        key_goals = _without_strength_focus(self.key_goals)
+        weak_areas = _without_strength_focus(self.weak_areas)
+        if len(key_goals) == len(self.key_goals) and len(weak_areas) == len(self.weak_areas):
+            return self
+
+        self.key_goals = key_goals
+        self.weak_areas = weak_areas
+        if self.primary_goal and self.primary_goal.strip().lower() == "strength":
+            self.primary_goal = ""
+        if self.primary_weak_area and self.primary_weak_area.strip().lower() == "strength":
+            self.primary_weak_area = ""
+        return self
+
     def to_payload(self) -> dict[str, Any]:
         def _guided_injury_payload(guided: GuidedInjuryInput) -> dict[str, Any]:
             # Forward the full structured guided-injury contract. Stage 1
@@ -1213,15 +1259,52 @@ class PlanRenameRequest(BaseModel):
 
 
 class PlanPermanentDeleteRequest(BaseModel):
-    confirm_plan_name: str
+    # Optional: archived plans are deleted without typed confirmation. The name
+    # is only required when permanently deleting a plan that is not archived.
+    confirm_plan_name: str | None = None
 
     @field_validator("confirm_plan_name")
     @classmethod
-    def validate_confirm_plan_name(cls, value: str) -> str:
-        normalized = str(value or "").strip()
+    def validate_confirm_plan_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+
+PLAN_BULK_PERMANENT_DELETE_MAX = 100
+
+
+class PlanBulkPermanentDeleteRequest(BaseModel):
+    plan_ids: list[str]
+
+    @field_validator("plan_ids")
+    @classmethod
+    def validate_plan_ids(cls, value: list[str]) -> list[str]:
+        seen: set[str] = set()
+        normalized: list[str] = []
+        for raw in value or []:
+            plan_id = str(raw or "").strip()
+            if not plan_id or plan_id in seen:
+                continue
+            seen.add(plan_id)
+            normalized.append(plan_id)
         if not normalized:
-            raise ValueError("confirm_plan_name is required")
+            raise ValueError("plan_ids is required")
+        # Cap the batch on the deduplicated list so a single request can never
+        # fan out into an unbounded number of deletes.
+        if len(normalized) > PLAN_BULK_PERMANENT_DELETE_MAX:
+            raise ValueError(
+                f"plan_ids cannot exceed {PLAN_BULK_PERMANENT_DELETE_MAX} unique ids per request"
+            )
         return normalized
+
+
+class PlanBulkPermanentDeleteResult(BaseModel):
+    deleted: list[str]
+    skipped: list[dict[str, str]]
+    deleted_count: int
+    skipped_count: int
 
 
 USERNAME_MAX_CHANGES_PER_WINDOW = 4
@@ -1294,6 +1377,7 @@ class PlanSummary(BaseModel):
     created_at: str
     status: str = "generated"
     pdf_url: str | None = None
+    review_reason: str | None = None
 
 
 class PlanOutputs(BaseModel):
@@ -1753,3 +1837,142 @@ class AdminAthleteDailyStatus(BaseModel):
     recent_session_logs: list[SessionLogRecord] = Field(default_factory=list)
     recent_adaptation_notes: list[AdaptationNoteRecord] = Field(default_factory=list)
     pending_review_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Block 4 Today/Overview persistence (api/routes/today.py,
+# api/services/today_service.py). The categorical Today check-in carries the
+# six structured inputs + red-flag safety toggles; the recommendation is always
+# computed server-side via api.contracts.checkin_decision.evaluate_checkin().
+# Any client-supplied recommendation field is ignored (extra inputs dropped).
+# ---------------------------------------------------------------------------
+
+
+class TodayCheckinRequest(BaseModel):
+    plan_id: str = Field(min_length=1)
+    sleep: CheckinSleep
+    body: CheckinBody
+    pain: CheckinPain
+    phase: CheckinPhase
+    active_injury: CheckinActiveInjury = "none"
+    previous_session: CheckinPreviousSession = "none"
+    sharp_pain: bool = False
+    instability: bool = False
+    swelling: bool = False
+    neurological_symptoms: bool = False
+    illness_symptoms: bool = False
+    cannot_warm_into_movement: bool = False
+    worse_next_day_pain: bool = False
+
+
+class TodayCheckinRecord(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str
+    training_day: str
+    athlete_timezone: str = ""
+    sleep: CheckinSleep
+    body: CheckinBody
+    pain: CheckinPain
+    phase: CheckinPhase
+    active_injury: CheckinActiveInjury = "none"
+    previous_session: CheckinPreviousSession = "none"
+    sharp_pain: bool = False
+    instability: bool = False
+    swelling: bool = False
+    neurological_symptoms: bool = False
+    illness_symptoms: bool = False
+    cannot_warm_into_movement: bool = False
+    worse_next_day_pain: bool = False
+    recommendation_state: CheckinDecisionValue
+    recommendation_reason: str = ""
+    recommendation_triggers: list[str] = Field(default_factory=list)
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class TodayCheckinResponse(BaseModel):
+    checkin: TodayCheckinRecord
+    training_day: str
+    recommendation_state: CheckinDecisionValue
+    recommendation_reason: str = ""
+    triggers: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class SessionCompletionRequest(BaseModel):
+    plan_id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    status: CompletionStatus
+    session_rpe: int | None = Field(default=None, ge=1, le=10)
+    pain_after: int | None = Field(default=None, ge=0, le=10)
+    modification_reason: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+    notes: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+
+    @field_validator("modification_reason", "notes", mode="before")
+    @classmethod
+    def clean_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class SessionCompletionRecordResponse(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str
+    session_id: str
+    training_day: str
+    status: CompletionStatus = "not_started"
+    session_rpe: int | None = None
+    pain_after: int | None = None
+    modification_reason: str = ""
+    notes: str = ""
+    started_at: str | None = None
+    completed_at: str | None = None
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class SessionCompletionResponse(BaseModel):
+    completion: SessionCompletionRecordResponse
+    completion_status: CompletionStatus
+    landing_session_state: LandingSessionState
+
+
+class LandingResponse(BaseModel):
+    target: str
+    cta: str
+    row: int
+    reason: str
+
+
+class TodayInjuryDeclaration(BaseModel):
+    """One injury as reported on the Today daily injury check-in.
+
+    ``flag_id`` targets an existing open flag to update; without it the report is
+    a new injury and needs a ``body_area`` or ``description``.
+    """
+
+    flag_id: str | None = None
+    body_area: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+    severity: InjuryFlagSeverity | None = None
+    status: Literal["ongoing", "improving", "worse", "resolved"] = "ongoing"
+
+    @field_validator("flag_id", mode="before")
+    @classmethod
+    def clean_flag_id(cls, value: Any) -> str | None:
+        text = str(value or "").strip()
+        return text or None
+
+    @field_validator("body_area", "description", mode="before")
+    @classmethod
+    def clean_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class TodayInjuryCheckinRequest(BaseModel):
+    injuries: list[TodayInjuryDeclaration] = Field(default_factory=list, max_length=20)
+
+
+class TodayInjuryCheckinResponse(BaseModel):
+    open_injuries: list[InjuryFlagRecord] = Field(default_factory=list)

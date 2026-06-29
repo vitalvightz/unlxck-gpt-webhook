@@ -1,4 +1,7 @@
-from fightcamp.stage2_payload import build_planning_brief
+from fightcamp.stage2_payload import (
+    _late_fight_assignment_is_unsafe,
+    build_planning_brief,
+)
 from fightcamp.stage2_validator import validate_stage2_output
 
 
@@ -154,6 +157,100 @@ def test_unknown_exercise_is_blocked_for_that_specific_countdown_day():
 
     blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
     assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+
+
+def test_late_fight_assignment_is_unsafe_guards_only_d1_loaded_work():
+    # Loaded / strength / conditioning keywords are unsafe on D-1 only.
+    assert _late_fight_assignment_is_unsafe("D-1", "Iso Deadlift Hold") is True
+    assert _late_fight_assignment_is_unsafe("D-1", "Front Squat") is True
+    assert _late_fight_assignment_is_unsafe("D-1", "Bag Sprint Repeats") is True
+    # Separator variants of "trap bar" are all caught (hyphen / underscore / space).
+    assert _late_fight_assignment_is_unsafe("D-1", "Trap-Bar Hold") is True
+    assert _late_fight_assignment_is_unsafe("D-1", "trap_bar carry") is True
+    # Safe primers / cues stay allowed on D-1.
+    assert _late_fight_assignment_is_unsafe("D-1", "Punch-Specific Max Isometric Hold") is False
+    assert _late_fight_assignment_is_unsafe("D-1", "Mobility Reset Flow") is False
+    # Other countdown days are not guarded by this rule.
+    assert _late_fight_assignment_is_unsafe("D-2", "Iso Deadlift Hold") is False
+    assert _late_fight_assignment_is_unsafe("D-9", "Front Squat") is False
+
+
+def test_d1_never_receives_loaded_strength_exercise():
+    # Force the D-1-bound slot to carry a loaded (deadlift) exercise; the
+    # allocator must drop it rather than place dangerous work on D-1.
+    brief = build_planning_brief(
+        athlete_model={
+            "sport": "boxing",
+            "days_until_fight": 13,
+            "plan_creation_weekday": "monday",
+            "fatigue": "moderate",
+            "readiness_flags": [],
+            "training_days": ["monday", "wednesday", "friday"],
+            "hard_sparring_days": [],
+        },
+        restrictions=[],
+        phase_briefs={
+            "TAPER": {
+                "objective": "fresh sharpness",
+                "emphasize": ["speed"],
+                "deprioritize": [],
+                "risk_flags": [],
+                "selection_guardrails": {},
+            }
+        },
+        candidate_pools={
+            "TAPER": {
+                "strength_slots": [
+                    {
+                        "slot_id": "taper_power_transfer",
+                        "role": "rotational",
+                        "anchor_capable": True,
+                        "support_only": False,
+                        "selected": {
+                            "name": "Staggered-Stance Medicine-Ball Punch Throw",
+                            "movement_patterns": ["power", "rotational"],
+                            "quality_class": "anchor_power",
+                            "anchor_capable": True,
+                        },
+                    },
+                    {
+                        "slot_id": "taper_final_neural_cue",
+                        "role": "isometric",
+                        "anchor_capable": True,
+                        "support_only": False,
+                        "selected": {
+                            # Loaded name that the validator hard-blocks on D-1.
+                            "name": "Iso Deadlift Hold",
+                            "movement_patterns": ["isometric", "neural_primer"],
+                            "quality_class": "anchor_force_isometric",
+                            "anchor_capable": True,
+                        },
+                    },
+                ],
+                "conditioning_slots": [],
+                "rehab_slots": [
+                    {
+                        "slot_id": "taper_breathing_reset",
+                        "role": "reset",
+                        "selected": {"name": "Breathing Reset"},
+                    }
+                ],
+            }
+        },
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+
+    allowed = brief["late_fight_plan_spec"]["allowed_exercises_by_day"]
+    assert "Iso Deadlift Hold" not in allowed.get("D-1", [])
+    # No D-1 exercise may match the validator's D-1 danger pattern.
+    import re as _re
+
+    danger = _re.compile(
+        r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap bar|barbell)\b",
+        _re.IGNORECASE,
+    )
+    assert not [name for name in allowed.get("D-1", []) if danger.search(name)]
 
 
 def test_valid_late_fight_output_using_each_days_allowed_exercises_passes():

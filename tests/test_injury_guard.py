@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 import pytest
@@ -277,14 +278,14 @@ def test_normalize_injury_regions_parses_phrases():
     assert normalize_injury_regions(["ACL tear"]) == {"knee"}
     assert normalize_injury_regions(["lumbar strain"]) == {"lower_back"}
     assert normalize_injury_regions(["lower back pain"]) == {"lower_back"}
-    assert normalize_injury_regions(["thigh pain"]) == {"quad"}
+    assert normalize_injury_regions(["thigh pain"]) == {"quad", "knee"}
     assert normalize_injury_regions(["arm pain"]) == {"unspecified"}
     assert normalize_injury_regions(["leg pain"]) == {"unspecified"}
     assert normalize_injury_regions(["lower leg pain"]) == {"shin"}
     assert normalize_injury_regions(["back of thigh pain"]) == {"hamstring"}
     assert normalize_injury_regions(["rear thigh pain"]) == {"hamstring"}
     assert normalize_injury_regions(["inner leg pain"]) == {"groin"}
-    assert normalize_injury_regions(["upper leg pain"]) == {"quad"}
+    assert normalize_injury_regions(["upper leg pain"]) == {"quad", "knee"}
 
 
 def test_joint_instability_does_not_normalize_to_ankle_region():
@@ -603,6 +604,7 @@ def test_regression_shoulders_exclusion_allowlist():
         "Ring Dip",
         "Snatch Balance",
         "Jerk Complex",
+        "High Pull",
     ]
     allowed = [
         "Pressure Cooker",
@@ -652,6 +654,7 @@ def test_regression_sentinel_drills_per_region():
                 "Snatch Balance",
                 "Jerk Complex",
                 "Wall Ball Throws",
+                "High Pull",
             ],
             "allowed": [
                 "Pressure Cooker",
@@ -786,3 +789,48 @@ def test_medicine_ball_chest_toss_is_excluded_for_upper_body_injuries():
     for injury in ("shoulder impingement", "elbow tendonitis", "wrist pain", "chest strain", "forearm strain"):
         decision = injury_decision(exercise, [injury], "SPP", "low")
         assert decision.action == "exclude"
+
+
+def test_anti_rotation_core_exercises_are_not_false_positive_shoulder_exclusions():
+    data_paths = [
+        Path(__file__).resolve().parents[1] / "data" / "exercise_bank.json",
+        Path(__file__).resolve().parents[1] / "data" / "universal_gpp_strength.json",
+    ]
+    target_names = {
+        "Cable Pallof Press",
+        "Anti-Rotation Press",
+        "Pallof Press",
+        "Pallof Press Iso (Against Resistance)",
+    }
+    found_names: set[str] = set()
+    checked_count = 0
+    for data_path in data_paths:
+        with data_path.open(encoding="utf-8") as f:
+            for exercise in json.load(f):
+                name = exercise.get("name")
+                if name not in target_names:
+                    continue
+                found_names.add(name)
+                checked_count += 1
+                location = f"{name} in {data_path.name}"
+                decision = injury_decision(exercise, ["shoulder impingement"], "GPP", "low")
+                assert decision.action != "exclude", f"{location} should not be excluded as an upper press"
+                assert "mech_upper_press" not in (exercise.get("tags") or []), f"{location} should not tag upper press"
+                assert "mech_upper_press" not in (exercise.get("mechanical_risk_tags") or []), f"{location} should not risk-tag upper press"
+
+    assert target_names <= found_names
+    assert checked_count == 5
+
+
+def test_med_ball_scoop_toss_is_not_false_positive_shoulder_press_exclusion():
+    data_path = Path(__file__).resolve().parents[1] / "data" / "exercise_bank.json"
+    with data_path.open(encoding="utf-8") as f:
+        exercises = json.load(f)
+    exercise = next((item for item in exercises if item.get("name") == "Med Ball Scoop Toss"), None)
+    assert exercise is not None, "Med Ball Scoop Toss not found in exercise_bank.json"
+
+    decision = injury_decision(exercise, ["shoulder impingement"], "GPP", "low")
+
+    assert decision.action != "exclude"
+    assert "mech_upper_press" not in (exercise.get("tags") or [])
+    assert "mech_upper_press" not in (exercise.get("mechanical_risk_tags") or [])

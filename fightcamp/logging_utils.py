@@ -71,10 +71,16 @@ def configure_logging() -> None:
     level = os.getenv("LOG_LEVEL", "INFO").upper()
     log_format = os.getenv("LOG_FORMAT", "json").lower()
     root_logger = logging.getLogger()
-    root_logger.handlers.clear()
+    # Remove only handlers we previously installed so reconfiguration does not
+    # duplicate output, while leaving externally attached handlers in place
+    # (e.g. pytest's caplog capture handler).
+    for existing in list(root_logger.handlers):
+        if getattr(existing, "_unlxck_app_handler", False):
+            root_logger.removeHandler(existing)
     root_logger.setLevel(level)
 
     handler = logging.StreamHandler(sys.stdout)
+    handler._unlxck_app_handler = True  # type: ignore[attr-defined]
     if structlog is not None:
         shared_processors = [
             structlog.contextvars.merge_contextvars,

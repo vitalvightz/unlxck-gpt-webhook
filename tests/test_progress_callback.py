@@ -37,9 +37,9 @@ def test_progress_callback_emits_full_pipeline_milestones():
         "stage1_blocks_generation_started",
         "stage1_strength_block_started",
         "stage1_strength_block_finished",
+        "strength_scored",
         "stage1_conditioning_block_started",
         "stage1_conditioning_block_finished",
-        "strength_scored",
         "conditioning_scored",
         "rehab_support_built",
         "coach_review_done",
@@ -149,8 +149,9 @@ def test_conditioning_direct_gpp_call_returns_expected_structure():
     result = conditioning_module.generate_conditioning_block(normal_gpp_flags)
     assert isinstance(result, tuple)
     assert len(result) == 6
-    output_lines, selected, why, grouped, missing, reservoir = result
-    assert isinstance(output_lines, list)
+    block_text, selected, why, grouped, missing, reservoir = result
+    # The first element is the rendered conditioning block text, not a list.
+    assert isinstance(block_text, str)
     assert isinstance(selected, list)
     assert isinstance(why, list)
     assert isinstance(grouped, dict)

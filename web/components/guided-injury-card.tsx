@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { GUIDED_INJURY_AREA_MAX, GUIDED_INJURY_NOTES_MAX } from "@/lib/input-limits";
-import type { GuidedInjuryState } from "@/lib/guided-injury";
+import { hasGuidedInjuryReviewRisk, type GuidedInjuryState } from "@/lib/guided-injury";
 import {
   GUIDED_INJURY_SEVERITY_OPTIONS,
   type IntakeOption,
@@ -177,13 +177,6 @@ const HEAD_RED_FLAGS = [
   { label: "Confusion", value: "confusion" },
 ];
 
-// ── Serious-type set (triggers review warning) ───────────────────────
-
-const SERIOUS_TYPES = new Set([
-  "fracture", "dislocation", "tendon_ligament", "post_surgery",
-  "head_impact", "nerve_symptoms", "chest_breathing",
-]);
-
 // ── Trend options ────────────────────────────────────────────────────
 
 const INJURY_TREND_OPTIONS: IntakeOption[] = [
@@ -290,17 +283,6 @@ function isSafetyComplete(injury: GuidedInjuryState, family: InjuryFamily | ""):
   return true;
 }
 
-function shouldShowReviewWarning(injury: GuidedInjuryState): boolean {
-  if (SERIOUS_TYPES.has(injury.injury_type)) return true;
-  if (injury.injury_type === "surface_injury") {
-    if (injury.open_wound === "yes") return true;
-    if (injury.bleeding_status === "wont_stop") return true;
-    if (injury.infection_signs.some((s) => ["pus", "fever", "spreading"].includes(s))) return true;
-    if (injury.sensitive_area === "eye") return true;
-  }
-  return false;
-}
-
 function getAvoidChipsForInjury(injury: GuidedInjuryState): string[] {
   if (injury.injury_type === "surface_injury" && injury.surface_type) {
     return AVOID_CHIPS[`surface_${injury.surface_type}`] ?? [];
@@ -367,6 +349,26 @@ function stripTaggedNotes(notes: string, prefixes: string[]): string {
   return prefixes
     .reduce((next, prefix) => next.replace(new RegExp(`\\s*\\[${prefix}:[^\\]]*\\]`, "g"), ""), notes)
     .trim();
+}
+
+// The notes field is overloaded: it holds the athlete's free-text extra detail
+// plus structured safety flags such as "[red_flags:none]". These helpers keep
+// the two apart so the visible "Extra detail" box only ever shows real prose.
+
+const NOTE_TAG_PATTERN = /\s?\[[a-z_]+:[^\]]*\]/gi;
+
+// Returns the athlete-typed prose with the structured flags removed. Internal
+// spacing is preserved so the value can drive a controlled textarea faithfully.
+function getNotesFreeText(notes: string): string {
+  return notes.replace(NOTE_TAG_PATTERN, "");
+}
+
+// Rewrites the free-text portion while keeping any structured flags appended.
+function setNotesFreeText(notes: string, freeText: string): string {
+  const tags = notes.match(/\[[a-z_]+:[^\]]*\]/gi) ?? [];
+  if (!tags.length) return freeText;
+  if (!freeText.trim()) return tags.join(" ");
+  return `${freeText} ${tags.join(" ")}`;
 }
 
 function clearTypeSpecificFields(onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void) {
@@ -926,13 +928,25 @@ export function GuidedInjuryCard({
   onUpdate,
   onRemove,
 }: GuidedInjuryCardProps) {
-  const [notesOpen, setNotesOpen] = useState(Boolean(injury.notes.trim()));
+  const notesFreeText = getNotesFreeText(injury.notes);
+  const hasExtraDetail = Boolean(notesFreeText.trim());
+  const [notesOpen, setNotesOpen] = useState(hasExtraDetail);
+  const [staleNote, setStaleNote] = useState(false);
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
-  const [familyExpanded, setFamilyExpanded] = useState(true);
-  const [subtypeExpanded, setSubtypeExpanded] = useState(true);
+  // One progressive "Injury type" picker (family → subtype) replaces the old
+  // pair of always-expanded blocks. Start collapsed when a type is already set
+  // (e.g. a hydrated or revisited injury) so the card stays compact.
+  const [isEditingType, setIsEditingType] = useState(
+    !(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)),
+  );
+  const [prevInjury, setPrevInjury] = useState(injury);
+  if (injury !== prevInjury) {
+    setPrevInjury(injury);
+    setIsEditingType(!(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)));
+  }
   const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
   const compactSummary = truncateForHeader(buildCompactSummary(injury), 80);
-  const showWarning = shouldShowReviewWarning(injury);
+  const showWarning = hasGuidedInjuryReviewRisk(injury);
   const hasFollowUp = injury.injury_type !== "";
   const derivedFamily = getFamilyForInjury(injury);
   const activeFamily = derivedFamily || draftFamily;
@@ -967,51 +981,73 @@ export function GuidedInjuryCard({
       ? "Step 2 of 3 · Choose injury type"
       : "Step 3 of 3 · Safety details";
 
-function handleTypeSelect(opt: InjuryTypeOption | null) {
-  if (!opt) {
-    onUpdate("injury_type", "");
-    onUpdate("injury_subtypes", []);
-    clearTypeSpecificFields(onUpdate);
-    onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
-    return;
+  function flagStaleExtraDetail() {
+    if (!getNotesFreeText(injury.notes).trim()) {
+      return;
+    }
+    setStaleNote(true);
+    setNotesOpen(true);
   }
 
-  const isSame =
-    injury.injury_type === opt.value &&
-    (opt.value !== "surface_injury" ||
-      injury.surface_type === (opt.surface_type ?? ""));
+  function handleTypeSelect(opt: InjuryTypeOption | null) {
+    if (!opt) {
+      onUpdate("injury_type", "");
+      onUpdate("injury_subtypes", []);
+      clearTypeSpecificFields(onUpdate);
+      onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
+      return;
+    }
 
-  if (isSame) {
-    onUpdate("injury_type", "");
+    const isSame =
+      injury.injury_type === opt.value &&
+      (opt.value !== "surface_injury" ||
+        injury.surface_type === (opt.surface_type ?? ""));
+
+    if (isSame) {
+      onUpdate("injury_type", "");
+      clearTypeSpecificFields(onUpdate);
+      onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
+      return;
+    }
+
+    const currentType = injury.injury_type;
+    // The injury is being rewritten as a different type. Free-text extra detail
+    // written for the old injury may no longer apply - flag it for the athlete.
+    if (currentType && getNotesFreeText(injury.notes).trim()) {
+      flagStaleExtraDetail();
+    }
     clearTypeSpecificFields(onUpdate);
-    onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
-    return;
+    onUpdate("injury_type", opt.value);
+    onUpdate("surface_type", opt.surface_type ?? "");
+    const stripPrefixes: string[] = [];
+    if (currentType === "head_impact" && opt.value !== "head_impact") stripPrefixes.push("red_flags");
+    if (currentType === "dislocation" && opt.value !== "dislocation") stripPrefixes.push("dislocation");
+    if (currentType === "nerve_symptoms" && opt.value !== "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
+    if (currentType === "chest_breathing" && opt.value !== "chest_breathing") stripPrefixes.push("chest_symptoms");
+    if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
   }
-
-  const currentType = injury.injury_type;
-  clearTypeSpecificFields(onUpdate);
-  onUpdate("injury_type", opt.value);
-  onUpdate("surface_type", opt.surface_type ?? "");
-  const stripPrefixes: string[] = [];
-  if (currentType === "head_impact" && opt.value !== "head_impact") stripPrefixes.push("red_flags");
-  if (currentType === "dislocation" && opt.value !== "dislocation") stripPrefixes.push("dislocation");
-  if (currentType === "nerve_symptoms" && opt.value !== "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
-  if (currentType === "chest_breathing" && opt.value !== "chest_breathing") stripPrefixes.push("chest_symptoms");
-  if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
-}
 
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
-    setFamilyExpanded(false);
-    setSubtypeExpanded(true);
     const currentFamily = getFamilyForInjury(injury);
     if (family === "not_sure") {
+      // "Not sure" resolves straight to a type, so collapse the picker.
       handleTypeSelect({ label: "Not sure", value: "unspecified" });
+      setIsEditingType(false);
       return;
     }
     if (currentFamily && currentFamily !== family) {
       handleTypeSelect(null);
     }
+    // Stay in edit mode; the picker advances to the subtype step now that a
+    // family is selected.
+  }
+
+  // Return to the family step, discarding the current type/subtype selection.
+  function handleChangeCategory() {
+    setDraftFamily("");
+    handleTypeSelect(null);
+    setIsEditingType(true);
   }
 
   return (
@@ -1037,7 +1073,19 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
           ) : (
             <p className="injury-card-live-summary">{liveSummary}</p>
           )}
-          {!isActive ? <span className="injury-card-status-pill">{collapsedStatus}</span> : null}
+          {!isActive ? (
+            <div className="injury-card-pills">
+              <span className="injury-card-status-pill">{collapsedStatus}</span>
+              {hasExtraDetail ? (
+                <span className="injury-card-note-pill" title={notesFreeText}>
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path d="M2.5 2.5h9M2.5 5.5h9M2.5 8.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                  Note
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <div className="injury-card-badges">
           {injury.severity ? (
@@ -1058,7 +1106,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
             type="button"
             className="injury-card-remove-btn"
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            aria-label={`Remove ${injuryLabel}`}
+            aria-label={`Remove injury ${index + 1}`}
           >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -1096,52 +1144,63 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
             </div>
           </div>
 
-          {/* Injury family + stepped selector */}
-          <div className="gi-field">
-            <label className="gi-label">Closest category, if known</label>
-            <p className="gi-selection-helper">Used as a fallback if the description is unclear.</p>
-            {activeFamily && !familyExpanded ? (
-              <div className="gi-selection-summary">
-                <div>
-                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
-                  <p className="gi-selection-helper">{selectedFamilyOption?.helper}</p>
-                </div>
-                <button type="button" className="gi-change-btn" onClick={() => setFamilyExpanded(true)} aria-expanded={familyExpanded}>Change</button>
+          {staleNote && hasExtraDetail ? (
+            <div className="gi-stale-note gi-stale-note-flash" role="alert">
+              <div>
+                <strong>Old extra detail is still attached.</strong>
+                <span> Review it now or clear it before continuing.</span>
               </div>
-            ) : null}
-            {familyExpanded || !activeFamily ? (
+              <button
+                type="button"
+                className="gi-stale-note-clear"
+                onClick={() => {
+                  onUpdate("notes", setNotesFreeText(injury.notes, ""));
+                  setStaleNote(false);
+                  setNotesOpen(false);
+                }}
+              >
+                Clear old detail
+              </button>
+            </div>
+          ) : null}
+
+          {/* Injury type — one progressive picker: family → subtype, collapsing
+              to a single summary once a type is chosen. */}
+          <div className="gi-field">
+            <label className="gi-label">Injury type</label>
+            <p className="gi-selection-helper">Pick the closest match so we can flag safety risks. Used as a fallback if the description is unclear.</p>
+
+            {typeComplete && !isEditingType ? (
+              <div className="gi-selection-summary">
+                <p className="gi-selection-title">
+                  {selectedSubtypeLabels.length
+                    ? `${selectedFamilyOption ? `${selectedFamilyOption.label} · ` : ""}${selectedSubtypeLabels.join(", ")}`
+                    : getInjuryTypeLabel(injury)}
+                </p>
+                <button type="button" className="gi-change-btn" onClick={() => setIsEditingType(true)} aria-expanded={isEditingType}>Change</button>
+              </div>
+            ) : !activeFamily ? (
               <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
-              {INJURY_FAMILIES.map((family) => {
-                const selected = activeFamily === family.family;
-                return (
+                {INJURY_FAMILIES.map((family) => (
                   <button
                     key={family.family}
                     type="button"
                     role="radio"
-                    aria-checked={selected}
-                    className={`gi-family-card ${selected ? "gi-family-card-selected" : ""}`.trim()}
+                    aria-checked={false}
+                    className="gi-family-card"
                     onClick={() => handleFamilySelect(family.family)}
                   >
                     <span>{family.label}</span>
                     <small>{family.helper}</small>
                   </button>
-                );
-              })}
+                ))}
               </div>
-            ) : null}
-          </div>
-
-          {activeFamily ? (
-            <div className="gi-field">
-              <label className="gi-label">Injury type and extra subtypes</label>
-              <p className="gi-selection-helper">Pick the closest type first. Add more if several apply.</p>
-              {selectedSubtypeLabels.length > 0 && !subtypeExpanded ? (
+            ) : (
+              <>
                 <div className="gi-selection-summary">
-                  <p className="gi-selection-title">{selectedSubtypeLabels.join(", ")}</p>
-                  <button type="button" className="gi-change-btn" onClick={() => setSubtypeExpanded(true)} aria-expanded={subtypeExpanded}>Change</button>
+                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
+                  <button type="button" className="gi-change-btn" onClick={handleChangeCategory}>Change category</button>
                 </div>
-              ) : null}
-              {subtypeExpanded || selectedSubtypeLabels.length === 0 ? (
                 <div className="gi-subtype-grid" role="group" aria-label="Injury subtype">
                   {getOptionsForFamily(activeFamily).map((opt) => {
                     if (opt.value === "unspecified") return null;
@@ -1174,9 +1233,12 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
                     );
                   })}
                 </div>
-              ) : null}
-            </div>
-          ) : null}
+                {typeComplete ? (
+                  <button type="button" className="gi-notes-toggle" onClick={() => setIsEditingType(false)}>Done</button>
+                ) : null}
+              </>
+            )}
+          </div>
 
           {/* Default visible: Severity + Trend */}
           <div className="form-grid">
@@ -1239,8 +1301,11 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
               <label htmlFor={`gi-notes-${index}`} className="gi-label">Extra detail</label>
               <textarea
                 id={`gi-notes-${index}`}
-                value={injury.notes}
-                onChange={(e) => onUpdate("notes", e.target.value)}
+                value={notesFreeText}
+                onChange={(e) => {
+                  onUpdate("notes", setNotesFreeText(injury.notes, e.target.value));
+                  setStaleNote(false);
+                }}
                 maxLength={GUIDED_INJURY_NOTES_MAX}
                 placeholder="What happened, what irritates it, anything else the planner should know"
                 rows={2}

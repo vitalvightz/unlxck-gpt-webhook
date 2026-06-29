@@ -196,6 +196,13 @@ def _resolve_current_week(plan_row: dict[str, Any], *, today: date) -> tuple[int
 _WEEKDAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
+def _has_scheduled_day_content(entry: WeeklyDayEntry) -> bool:
+    effective_load = str(entry.effective_load or "").strip().lower()
+    if effective_load in {"none", "off", "rest"}:
+        return False
+    return bool(effective_load != "" or entry.status or entry.coach_note)
+
+
 def _resolve_today_and_next(week: WeeklySchedule | None, *, today: date) -> tuple[WeeklyDayEntry | None, WeeklyDayEntry | None]:
     if week is None or not week.days:
         return None, None
@@ -208,9 +215,20 @@ def _resolve_today_and_next(week: WeeklySchedule | None, *, today: date) -> tupl
             today_index = index
             break
     next_entry: WeeklyDayEntry | None = None
+    future_dated_entries: list[tuple[date, WeeklyDayEntry]] = []
+    for entry in week.days:
+        if not _has_scheduled_day_content(entry):
+            continue
+        entry_date = _parse_iso_date(entry.calendar_date) if entry.calendar_date else None
+        if entry_date is not None and entry_date > today:
+            future_dated_entries.append((entry_date, entry))
+    if future_dated_entries:
+        future_dated_entries.sort(key=lambda item: item[0])
+        return today_entry, future_dated_entries[0][1]
+
     if today_index is not None:
         for entry in week.days[today_index + 1:]:
-            if entry.effective_load != "none":
+            if _has_scheduled_day_content(entry):
                 next_entry = entry
                 break
     return today_entry, next_entry

@@ -674,9 +674,15 @@ select:focus-visible {
   border-radius: 8px;
 }
 
-.app-main {
+.app-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
   padding: 28px 28px 40px;
 }
 
@@ -1323,6 +1329,22 @@ select:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
+.admin-plan-cleanup-bar,
+.admin-plan-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-plan-cleanup-bar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-radius: var(--radius-support);
+  border: 1px solid rgba(181, 18, 43, 0.18);
+  background: rgba(181, 18, 43, 0.08);
+}
+
 .admin-triage-card {
   padding: 14px;
   border-radius: var(--radius-support);
@@ -1512,6 +1534,120 @@ select:focus-visible {
 .overview-primary-action {
   position: relative;
   isolation: isolate;
+}
+
+/* Overview command cards (Today's state / Next session / Risk watch) share the
+   Today screen's tone-driven accent so the page reads at a glance and matches. */
+.overview-command-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.overview-command-card[data-tone]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.overview-command-card[data-tone="green"] {
+  border-color: rgba(39, 174, 96, 0.34);
+  box-shadow: inset 3px 0 0 #2bb56e, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(39, 174, 96, 0.13), transparent 48%);
+}
+
+.overview-command-card[data-tone="amber"] {
+  border-color: rgba(214, 175, 106, 0.34);
+  box-shadow: inset 3px 0 0 #d6af6a, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(214, 175, 106, 0.14), transparent 48%);
+}
+
+.overview-command-card[data-tone="red"] {
+  border-color: rgba(219, 47, 64, 0.4);
+  box-shadow: inset 3px 0 0 #e23a4c, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(219, 47, 64, 0.14), transparent 48%);
+}
+
+.overview-next-session-day {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.overview-risk-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+/* Coloured risk rows — meaning never rests on colour alone (label + text carry
+   it), but each tone now reads instantly instead of a flat grey list. */
+.overview-risk-row {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  border-left: 3px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.overview-risk-row[data-tone="stop"],
+.overview-risk-row[data-tone="warning"] {
+  border-left-color: #e23a4c;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.12), rgba(219, 47, 64, 0.02));
+}
+
+.overview-risk-row[data-tone="caution"] {
+  border-left-color: #d6af6a;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.13), rgba(214, 175, 106, 0.02));
+}
+
+.overview-risk-row[data-tone="info"] {
+  border-left-color: #6ea2e0;
+  background: linear-gradient(135deg, rgba(120, 168, 224, 0.12), rgba(120, 168, 224, 0.02));
+}
+
+.overview-risk-row-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.overview-risk-row[data-tone="stop"] .overview-risk-row-label,
+.overview-risk-row[data-tone="warning"] .overview-risk-row-label {
+  color: #ff8d9a;
+}
+
+.overview-risk-row[data-tone="caution"] .overview-risk-row-label {
+  color: #e6c27d;
+}
+
+.overview-risk-row[data-tone="info"] .overview-risk-row-label {
+  color: #a9c8ef;
+}
+
+.overview-risk-row-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .overview-primary-action::after {
@@ -2589,7 +2725,6 @@ select:focus-visible {
   background: linear-gradient(180deg, rgba(20, 22, 27, 0.7), rgba(15, 17, 21, 0.7));
   color: var(--text-muted);
   cursor: not-allowed;
-  opacity: 0.68;
   transform: none;
 }
 
@@ -2614,6 +2749,17 @@ select:focus-visible {
 .checkbox-card-title {
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.checkbox-card .why-tooltip {
+  flex-shrink: 0;
+}
+
+.checkbox-card .why-tooltip-trigger {
+  min-width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 10px;
 }
 
 .checkbox-card-tag {
@@ -2841,6 +2987,30 @@ select:focus-visible {
   background: var(--danger-soft);
   border-color: rgba(255, 141, 161, 0.16);
   color: var(--danger-ink);
+}
+
+.error-banner:has(.error-banner-retry) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.error-banner-retry {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.error-banner-retry:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .quick-build-refine-banner {
@@ -3240,6 +3410,11 @@ button.mobile-step-rail-item {
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
 }
 
+/* Athlete view has no operational sidebar — the plan spans the full width. */
+.plan-detail-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .auth-layout {
   grid-template-columns: minmax(280px, 0.88fr) minmax(360px, 1.05fr);
 }
@@ -3540,28 +3715,6 @@ button.mobile-step-rail-item {
 
 .sparring-advisory-suggestion {
   color: var(--text-primary);
-}
-
-.sparring-advisory-why-toggle {
-  align-self: flex-start;
-  margin: 4px 0 0;
-  padding: 0;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.sparring-advisory-why-toggle:hover {
-  color: var(--text-primary);
-}
-
-.sparring-advisory-reason {
-  margin: 6px 0 0;
 }
 
 .sparring-advisory-disclaimer {
@@ -4192,6 +4345,39 @@ button.mobile-step-rail-item {
   transform: translateY(-1px);
 }
 
+.settings-section-save {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 18px;
+  border: 1px solid rgba(181, 18, 43, 0.62);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e01438, #9f1026);
+  color: #fff;
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(181, 18, 43, 0.24);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.settings-section-save:hover,
+.settings-section-save:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 18px 38px rgba(181, 18, 43, 0.32);
+}
+
+.settings-section-save:disabled {
+  cursor: progress;
+  opacity: 0.72;
+  transform: none;
+}
+
 .settings-stack {
   display: grid;
   gap: 24px;
@@ -4723,6 +4909,959 @@ button.mobile-step-rail-item {
   padding-inline: 13px;
 }
 
+.today-page {
+  display: grid;
+  gap: 16px;
+}
+
+.today-shell {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  gap: 16px;
+  border-color: rgba(181, 18, 43, 0.16) !important;
+  background: linear-gradient(180deg, rgba(22, 16, 19, 0.96), rgba(13, 14, 18, 0.96)) !important;
+}
+
+.today-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top left, rgba(181, 18, 43, 0.2), transparent 38%),
+    radial-gradient(circle at 88% -10%, rgba(214, 175, 106, 0.08), transparent 34%);
+  pointer-events: none;
+}
+
+.today-empty-state {
+  min-height: min(520px, calc(100vh - 180px));
+  align-content: center;
+}
+
+.today-hero-grid,
+.today-card-head,
+.today-action-row {
+  display: flex;
+  align-items: center;
+}
+
+.today-hero-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.today-hero-grid {
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.today-hero-copy {
+  display: grid;
+  gap: 7px;
+  max-width: 760px;
+}
+
+.today-hero-copy h1 {
+  font-size: clamp(32px, 4.7vw, 54px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.today-hero-actions,
+.today-action-row {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.today-hero-actions {
+  display: flex;
+  align-items: center;
+}
+
+.today-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(12, 13, 16, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.today-card[data-tone]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.today-card[data-tone="red"] {
+  border-color: rgba(219, 47, 64, 0.4);
+  box-shadow: inset 3px 0 0 #e23a4c, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(219, 47, 64, 0.14), transparent 46%);
+}
+
+.today-card[data-tone="amber"] {
+  border-color: rgba(214, 175, 106, 0.34);
+  box-shadow: inset 3px 0 0 #d6af6a, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(214, 175, 106, 0.14), transparent 46%);
+}
+
+.today-card[data-tone="green"] {
+  border-color: rgba(39, 174, 96, 0.34);
+  box-shadow: inset 3px 0 0 #2bb56e, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(39, 174, 96, 0.13), transparent 46%);
+}
+
+/* Compact train/modify/pull-back decision banner shown above today's blocks. */
+.today-decision-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left-width: 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.today-decision-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.today-decision-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.today-decision-banner[data-tone="red"] {
+  border-left-color: #ff6b75;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.14), rgba(219, 47, 64, 0.05));
+}
+
+.today-decision-banner[data-tone="red"] .today-decision-icon {
+  background: linear-gradient(180deg, #e23a4c, #b5122b);
+  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.4);
+}
+
+.today-decision-banner[data-tone="amber"] {
+  border-left-color: #f1bd61;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.16), rgba(214, 175, 106, 0.05));
+}
+
+.today-decision-banner[data-tone="amber"] .today-decision-icon {
+  background: linear-gradient(180deg, #e6c27d, #c79a45);
+  color: #2a2007;
+  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.32);
+}
+
+.today-decision-banner[data-tone="green"] {
+  border-left-color: #76d393;
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.16), rgba(39, 174, 96, 0.05));
+}
+
+.today-decision-banner[data-tone="green"] .today-decision-icon {
+  background: linear-gradient(180deg, #4cc47e, #1f9d5a);
+  box-shadow: 0 4px 14px rgba(39, 174, 96, 0.32);
+}
+
+.today-decision-title {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.today-decision-detail {
+  margin: 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.today-decision-safety {
+  margin: 2px 0 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 12.5px;
+  line-height: 1.35;
+  opacity: 0.85;
+}
+
+/* Today's resolved session blocks reuse the structured-plan (camp map) cards so
+   they stay visually identical to Plan Detail, scoped to today's day only. */
+.today-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.today-card-head {
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.today-card-head h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(21px, 2.2vw, 28px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.today-risk-overflow {
+  display: contents;
+}
+
+.today-risk-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.today-terminal-status,
+.today-risk-text,
+.today-session-summary p,
+.today-field-label {
+  margin: 0;
+}
+
+.today-terminal-status {
+  border-left: 3px solid rgba(219, 47, 64, 0.72);
+  padding-left: 12px;
+  color: var(--text-secondary);
+}
+
+.today-risk-more {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.today-risk-more:hover,
+.today-risk-more:focus-visible {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
+}
+
+.today-checkin-form,
+.today-completion-form,
+.today-completion-fields,
+.today-session-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.today-field-group {
+  display: grid;
+  gap: 8px;
+}
+
+.today-field-label,
+.today-detail-label,
+.today-risk-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-segment-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.today-segment {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.today-segment-active {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.today-red-flags {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.today-red-flags summary {
+  color: var(--text-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.today-flag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding-top: 12px;
+}
+
+.today-flag-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.today-primary-action {
+  min-height: 48px;
+}
+
+.today-injury-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.today-injury-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today-injury-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.today-injury-name {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.today-injury-item .today-segment-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.today-injury-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 120, 120, 0.32);
+  border-radius: 10px;
+  background: rgba(255, 90, 90, 0.08);
+}
+
+.today-injury-confirm-text {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.today-injury-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.today-injury-confirm-yes,
+.today-injury-confirm-cancel {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.today-injury-confirm-yes {
+  border: 1px solid rgba(255, 120, 120, 0.5);
+  background: rgba(220, 60, 60, 0.9);
+  color: #fff;
+}
+
+.today-injury-confirm-yes:disabled,
+.today-injury-confirm-cancel:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.today-injury-confirm-cancel {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .today-injury-confirm {
+  border-color: rgba(200, 50, 50, 0.3);
+  background: rgba(220, 60, 60, 0.07);
+}
+
+html[data-theme="light"] .today-injury-confirm-cancel {
+  border-color: rgba(20, 20, 30, 0.16);
+  background: rgba(20, 20, 30, 0.04);
+}
+
+.today-injury-add {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.today-risk-watch {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.today-risk-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: min(100%, 260px);
+  flex: 1 1 260px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 3px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* The "!" badge is a filled, branded chip — meaning never rests on colour alone
+   (the label + text still carry it), but each tone now reads instantly. */
+.today-risk-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border-color: transparent;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #fff;
+}
+
+.today-risk-item[data-tone="stop"],
+.today-risk-item[data-tone="warning"] {
+  border-color: rgba(219, 47, 64, 0.45);
+  border-left-color: #e23a4c;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.12), rgba(219, 47, 64, 0.03));
+}
+
+.today-risk-item[data-tone="stop"] .today-risk-icon,
+.today-risk-item[data-tone="warning"] .today-risk-icon {
+  background: linear-gradient(180deg, #e23a4c, #b5122b);
+  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.42);
+}
+
+.today-risk-item[data-tone="caution"] {
+  border-color: rgba(214, 175, 106, 0.42);
+  border-left-color: #d6af6a;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.14), rgba(214, 175, 106, 0.03));
+}
+
+.today-risk-item[data-tone="caution"] .today-risk-icon {
+  background: linear-gradient(180deg, #e6c27d, #c79a45);
+  color: #2a2007;
+  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.34);
+}
+
+.today-risk-item[data-tone="info"] {
+  border-color: rgba(120, 168, 224, 0.36);
+  border-left-color: #78a8e0;
+  background: linear-gradient(135deg, rgba(120, 168, 224, 0.12), rgba(120, 168, 224, 0.03));
+}
+
+.today-risk-item[data-tone="info"] .today-risk-icon {
+  background: linear-gradient(180deg, #6ea2e0, #3f6fb0);
+  box-shadow: 0 4px 14px rgba(63, 111, 176, 0.34);
+}
+
+.today-risk-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.today-risk-item[data-tone="caution"] .today-risk-label {
+  color: var(--progress-gold, #96713b);
+}
+
+.today-risk-item[data-tone="stop"] .today-risk-label,
+.today-risk-item[data-tone="warning"] .today-risk-label {
+  color: var(--danger-ink, #8e2d2f);
+}
+
+.today-risk-item[data-tone="info"] .today-risk-label {
+  color: #2b5c8f;
+}
+
+.today-risk-more {
+  align-self: center;
+}
+
+.today-session-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 2px 0;
+}
+
+.today-session-summary > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 10px;
+}
+
+.today-session-summary p:not(.today-detail-label) {
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.today-sticky-actions {
+  position: sticky;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba(10, 11, 13, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.today-completion-fields {
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Rating controls — effort slider (RPE), pain face scale, level slider
+ * (fatigue). Theme-token driven so they sit inside the dark UI.
+ * ------------------------------------------------------------------ */
+
+/* Effort slider (Session RPE) — 1-9, no numerals shown. */
+.effort-slider {
+  display: grid;
+  gap: 10px;
+}
+
+.effort-slider-readout {
+  min-height: 18px;
+}
+
+.effort-slider-descriptor {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-red);
+}
+
+.effort-slider[data-empty="true"] .effort-slider-descriptor {
+  color: var(--text-muted);
+}
+
+.effort-slider-track-wrap {
+  position: relative;
+  padding: 4px 0;
+}
+
+.effort-slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--brand-red) 0%,
+    var(--brand-red) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+.effort-slider[data-empty="true"] .effort-slider-input {
+  background: linear-gradient(
+    to right,
+    rgba(181, 18, 43, 0.35) 0%,
+    rgba(181, 18, 43, 0.35) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) 100%
+  );
+}
+
+.effort-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--brand-red);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+  transition: transform 120ms ease;
+}
+
+.effort-slider-input::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.12);
+}
+
+.effort-slider-input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--brand-red);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+}
+
+.effort-slider[data-empty="true"] .effort-slider-input::-webkit-slider-thumb {
+  border-color: rgba(181, 18, 43, 0.5);
+  background: #d7d9de;
+}
+
+.effort-slider[data-empty="true"] .effort-slider-input::-moz-range-thumb {
+  border-color: rgba(181, 18, 43, 0.5);
+  background: #d7d9de;
+}
+
+.effort-slider-input:focus-visible {
+  box-shadow: 0 0 0 4px rgba(181, 18, 43, 0.18);
+}
+
+.effort-slider-anchors {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Pain face scale — row of five outline faces. */
+.face-scale-row {
+  display: flex;
+  gap: 8px;
+  border-radius: var(--radius-input);
+  outline: none;
+}
+
+.face-scale-row:focus-visible {
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.18);
+}
+
+.face-scale-face {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border-radius: 14px;
+  border: 1px solid var(--border-default);
+  background: linear-gradient(180deg, rgba(20, 22, 27, 0.98), rgba(15, 17, 21, 0.98));
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, color 120ms ease,
+    background 120ms ease, box-shadow 120ms ease;
+}
+
+.face-scale-face:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.face-scale-face[data-selected="true"] {
+  color: var(--brand-red);
+  border-color: rgba(181, 18, 43, 0.65);
+  background: linear-gradient(180deg, rgba(40, 18, 24, 0.95), rgba(24, 14, 18, 0.95));
+  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.4), 0 0 18px rgba(181, 18, 43, 0.22);
+  transform: translateY(-2px);
+}
+
+.face-scale-svg {
+  display: block;
+}
+
+.face-scale-caption {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Level slider (fatigue) — three-position segmented control. */
+.level-slider {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: rgba(15, 17, 21, 0.92);
+  outline: none;
+  isolation: isolate;
+  touch-action: pan-y;
+}
+
+.level-slider:focus-within {
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.18);
+}
+
+.level-slider-input {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.level-slider-input::-webkit-slider-thumb {
+  width: 34%;
+  height: 44px;
+  cursor: grab;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.level-slider-input::-moz-range-thumb {
+  width: 34%;
+  height: 44px;
+  border: 0;
+  cursor: grab;
+}
+
+.level-slider-indicator {
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--level-count));
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, var(--brand-red), var(--brand-red-hover));
+  box-shadow: 0 2px 12px rgba(181, 18, 43, 0.4);
+  transform: translateX(calc(100% * var(--level-index)));
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.level-slider-segment {
+  position: relative;
+  z-index: 1;
+  padding: 11px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+  pointer-events: none;
+  transition: color 160ms ease;
+}
+
+.level-slider:not([data-empty="true"]):hover .level-slider-segment {
+  color: var(--text-secondary);
+}
+
+.level-slider-segment[data-selected="true"] {
+  color: #ffffff;
+}
+
+/* Label row with an optional inline "Clear" affordance (nutrition fatigue). */
+.level-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.level-slider-clear {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.level-slider-clear:hover {
+  color: var(--brand-red);
+}
+
+@media (max-width: 720px) {
+  .face-scale-face {
+    padding: 10px 2px;
+  }
+
+  .face-scale-caption {
+    font-size: 9px;
+  }
+}
+
+.today-inline-error {
+  margin: 0;
+  color: #ff8d9a;
+  font-size: 14px;
+}
+
+.today-inline-warning {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(181, 18, 43, 0.38);
+  border-radius: var(--radius-sm);
+  background: rgba(181, 18, 43, 0.1);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .today-page {
+    gap: 14px;
+  }
+
+  .today-shell,
+  .today-card {
+    padding: 16px;
+  }
+
+  .today-hero-copy h1 {
+    font-size: 34px;
+  }
+
+  .today-hero-actions,
+  .today-action-row,
+  .today-action-row .cta,
+  .today-action-row .secondary-button,
+  .today-action-row .ghost-button {
+    width: 100%;
+  }
+
+  .today-session-summary,
+  .today-completion-fields,
+  .today-flag-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-card-head h2 {
+    font-size: 22px;
+  }
+
+  .today-segment-row {
+    gap: 6px;
+  }
+
+  .today-injury-item .today-segment-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .today-segment {
+    min-height: 44px;
+    padding-inline: 8px;
+    font-size: 14px;
+  }
+
+  .today-sticky-actions {
+    margin-inline: -6px;
+  }
+}
+
 .plans-featured-card {
   position: relative;
   overflow: hidden;
@@ -4998,6 +6137,20 @@ button.mobile-step-rail-item {
 .plan-history-row-card:hover {
   background: rgba(255, 255, 255, 0.025);
   transform: translateX(2px);
+}
+
+.plan-history-row-card .plan-card-meta {
+  gap: 8px 14px;
+}
+
+.plan-history-row-card .plan-card-meta .muted {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
 }
 
 .plans-history-actions {
@@ -5785,6 +6938,11 @@ button.mobile-step-rail-item {
     justify-content: space-between;
   }
 
+  .settings-section-save {
+    width: 100%;
+    margin-left: 0;
+  }
+
   .onboarding-panel {
     gap: 18px;
     padding-bottom: calc(110px + var(--safe-area-bottom));
@@ -5913,16 +7071,29 @@ button.mobile-step-rail-item {
   }
 
   .onboarding-action-buttons {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     width: 100%;
     margin-left: 0;
   }
 
-  .onboarding-action-primary,
+  /* Secondary actions (Save draft / Back) share a single row and split it
+     evenly. Using flex-basis: 0 means they always spread symmetrically
+     whether one or both are present — no leftover empty column. */
   .onboarding-action-secondary {
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 8px;
+  }
+
+  /* The primary CTA takes its own full-width row so longer labels like
+     "Generate plan" render on one line under normal conditions. It can still
+     wrap gracefully as a fallback on extremely narrow screens or with long
+     localized strings, avoiding overflow. */
+  .onboarding-action-primary {
+    flex: 1 1 100%;
     min-width: 0;
     min-height: 44px;
     padding-inline: 8px;
@@ -7646,6 +8817,45 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   gap: 12px;
 }
 
+.admin-athlete-plan-bulkbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-athlete-plan-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-athlete-plan-item .admin-athlete-plan-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-athlete-plan-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.admin-athlete-plan-select-spacer {
+  display: inline-flex;
+  width: 18px;
+  flex: none;
+}
+
+.admin-athlete-plan-select input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #b5122b;
+}
+
 .admin-athlete-plan-row {
   display: flex;
   align-items: center;
@@ -7961,6 +9171,35 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.injury-card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.injury-card-note-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.injury-card-note-pill svg {
+  opacity: 0.7;
+}
+
+html[data-theme="light"] .injury-card-note-pill {
+  border-color: rgba(98, 77, 69, 0.18);
 }
 
 .injury-card-controls {
@@ -8869,10 +10108,42 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   flex-wrap: wrap;
 }
 
+/* Remove-injury confirm: a quieter, more compact variant of the clear-confirm
+   panel so it sits unobtrusively above the cards rather than reading as an
+   amber alert. */
+.gi-remove-confirm-panel {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  gap: 6px;
+}
+
+.gi-remove-confirm-panel .gi-clear-confirm-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.gi-remove-confirm-panel .muted {
+  font-size: 0.8rem;
+}
+
+.gi-remove-confirm-panel .secondary-button,
+.gi-remove-confirm-panel .danger-button {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 0.85rem;
+}
+
 .gi-review-warning-icon {
   flex-shrink: 0;
   margin-top: 2px;
   color: #ffcb6b;
+}
+
+.gi-no-restrictions-btn {
+  margin-top: 14px;
 }
 
 .gi-notes-toggle {
@@ -8892,6 +10163,78 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
 .gi-notes-toggle:hover {
   border-color: rgba(255, 255, 255, 0.22);
   color: var(--text-primary);
+}
+
+.gi-stale-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(220, 38, 38, 0.46);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.18), rgba(214, 175, 106, 0.12));
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.1), 0 16px 36px rgba(0, 0, 0, 0.22);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.gi-stale-note strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gi-stale-note-flash {
+  animation: gi-stale-note-pulse 1.2s ease-out 0s 2;
+}
+
+@keyframes gi-stale-note-pulse {
+  0% {
+    border-color: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.58), 0 16px 36px rgba(0, 0, 0, 0.22);
+  }
+  100% {
+    border-color: rgba(220, 38, 38, 0.46);
+    box-shadow: 0 0 0 12px rgba(220, 38, 38, 0), 0 16px 36px rgba(0, 0, 0, 0.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gi-stale-note-flash {
+    animation: none;
+  }
+}
+
+.gi-stale-note-clear {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gi-stale-note-clear:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+html[data-theme="light"] .gi-stale-note {
+  border-color: rgba(185, 28, 28, 0.34);
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.95), rgba(250, 238, 218, 0.78));
+  color: #5f1717;
+}
+
+html[data-theme="light"] .gi-stale-note-clear {
+  border-color: rgba(98, 77, 69, 0.2);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 /* ── Light theme overrides ─────────────────────────────────────────── */
@@ -8946,6 +10289,16 @@ html[data-theme="light"] .gi-review-warning {
 
 html[data-theme="light"] .gi-review-warning-icon {
   color: #854f0b;
+}
+
+html[data-theme="light"] .gi-remove-confirm-panel {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(248, 242, 235, 0.58);
+}
+
+html[data-theme="light"] .gi-remove-confirm-panel {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 html[data-theme="light"] .gi-notes-toggle {
@@ -10604,6 +11957,199 @@ html[data-theme="light"] .appearance-mode-state {
   color: var(--brand-red);
 }
 
+html[data-theme="light"] .settings-subsection,
+html[data-theme="light"] .settings-toggle-row,
+html[data-theme="light"] .settings-segmented-control,
+html[data-theme="light"] .settings-coming-soon {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"] {
+  border-color: rgba(98, 77, 69, 0.18);
+  background: rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"]::after {
+  background: rgba(98, 77, 69, 0.58);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked {
+  border-color: color-mix(in srgb, var(--brand-red) 34%, transparent);
+  background: color-mix(in srgb, var(--brand-red) 18%, transparent);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked::after {
+  background: var(--brand-red);
+}
+
+html[data-theme="light"] .settings-segmented-control button:hover,
+html[data-theme="light"] .settings-segmented-control button:focus-visible,
+html[data-theme="light"] .settings-segmented-control .settings-segment-active {
+  border-color: rgba(146, 43, 45, 0.2);
+  background: rgba(146, 43, 45, 0.08);
+}
+
+html[data-theme="light"] .settings-mobile-save {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 36px rgba(79, 60, 52, 0.12);
+}
+
+/* Today uses custom dark cards; keep light mode explicit so it cannot regress. */
+html[data-theme="light"] .today-shell {
+  border-color: rgba(146, 43, 45, 0.12) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(250, 245, 238, 0.985)) !important;
+  box-shadow: 0 18px 40px rgba(79, 60, 52, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="light"] .today-shell::before {
+  background:
+    radial-gradient(circle at top left, rgba(146, 43, 45, 0.08), transparent 34%),
+    radial-gradient(circle at 88% -10%, rgba(150, 113, 59, 0.06), transparent 32%);
+}
+
+html[data-theme="light"] .today-card {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 28px rgba(79, 60, 52, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.64);
+}
+
+html[data-theme="light"] .today-card[data-tone="red"] {
+  border-color: color-mix(in srgb, var(--brand-red) 26%, transparent);
+  box-shadow: inset 3px 0 0 var(--brand-red), 0 12px 28px rgba(79, 60, 52, 0.05);
+}
+
+html[data-theme="light"] .today-card[data-tone="amber"] {
+  border-color: color-mix(in srgb, var(--progress-gold) 26%, transparent);
+  box-shadow: inset 3px 0 0 var(--progress-gold), 0 12px 28px rgba(79, 60, 52, 0.05);
+}
+
+html[data-theme="light"] .today-card[data-tone="green"] {
+  border-color: color-mix(in srgb, var(--success-ink) 24%, transparent);
+  box-shadow: inset 3px 0 0 var(--success-ink), 0 12px 28px rgba(79, 60, 52, 0.05);
+}
+
+html[data-theme="light"] .today-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(146, 43, 45, 0.08), transparent 46%);
+}
+
+html[data-theme="light"] .today-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(150, 113, 59, 0.09), transparent 46%);
+}
+
+html[data-theme="light"] .today-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(37, 131, 82, 0.08), transparent 46%);
+}
+
+html[data-theme="light"] .today-decision-banner,
+html[data-theme="light"] .today-red-flags,
+html[data-theme="light"] .today-injury-item,
+html[data-theme="light"] .today-risk-item,
+html[data-theme="light"] .today-sticky-actions,
+html[data-theme="light"] .today-inline-warning {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="red"],
+html[data-theme="light"] .today-risk-item[data-tone="stop"],
+html[data-theme="light"] .today-risk-item[data-tone="warning"] {
+  border-color: color-mix(in srgb, var(--brand-red) 24%, transparent);
+  border-left-color: var(--brand-red);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-red) 8%, transparent), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="amber"],
+html[data-theme="light"] .today-risk-item[data-tone="caution"] {
+  border-color: color-mix(in srgb, var(--progress-gold) 24%, transparent);
+  border-left-color: var(--progress-gold);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--progress-gold) 9%, transparent), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="green"] {
+  border-color: color-mix(in srgb, var(--success-ink) 20%, transparent);
+  border-left-color: var(--success-ink);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--success-ink) 8%, transparent), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-risk-item[data-tone="info"] {
+  border-color: rgba(73, 105, 141, 0.18);
+  border-left-color: #49698d;
+  background: linear-gradient(135deg, rgba(73, 105, 141, 0.07), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-segment,
+html[data-theme="light"] .today-risk-more {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme="light"] .today-segment:hover,
+html[data-theme="light"] .today-risk-more:hover,
+html[data-theme="light"] .today-risk-more:focus-visible {
+  border-color: rgba(146, 43, 45, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+html[data-theme="light"] .today-segment-active {
+  border-color: rgba(146, 43, 45, 0.22);
+  background: rgba(146, 43, 45, 0.08);
+}
+
+html[data-theme="light"] .today-session-summary > div,
+html[data-theme="light"] .today-injury-add {
+  border-color: rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .today-inline-error {
+  color: var(--danger-ink);
+}
+
+html[data-theme="light"] .effort-slider-input {
+  background: linear-gradient(
+    to right,
+    var(--brand-red) 0%,
+    var(--brand-red) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) 100%
+  );
+}
+
+html[data-theme="light"] .effort-slider[data-empty="true"] .effort-slider-input {
+  background: linear-gradient(
+    to right,
+    rgba(146, 43, 45, 0.3) 0%,
+    rgba(146, 43, 45, 0.3) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) 100%
+  );
+}
+
+html[data-theme="light"] .effort-slider-input::-webkit-slider-thumb {
+  border-color: var(--brand-red);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 60, 52, 0.16);
+}
+
+html[data-theme="light"] .face-scale-face,
+html[data-theme="light"] .level-slider {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme="light"] .effort-slider-input::-moz-range-thumb {
+  border-color: var(--brand-red);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 60, 52, 0.16);
+}
+
+html[data-theme="light"] .face-scale-face[data-selected="true"] {
+  border-color: rgba(146, 43, 45, 0.28);
+  background: rgba(146, 43, 45, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(146, 43, 45, 0.1);
+}
+
 .nutrition-page-grid,
 .nutrition-admin-split {
   display: grid;
@@ -11454,9 +13000,9 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     bottom: var(--mobile-tab-bar-clearance);
   }
 
-  /* Add bottom padding to main content so the tab bar doesn't cover it */
-  html[data-mobile-tab-bar="active"] .app-main,
-  html[data-mobile-tab-bar="stacked"] .app-main {
+  /* Add bottom padding to app content so the tab bar doesn't cover the footer */
+  html[data-mobile-tab-bar="active"] .app-content,
+  html[data-mobile-tab-bar="stacked"] .app-content {
     padding-bottom: calc(36px + var(--mobile-tab-bar-clearance));
   }
 }
@@ -12445,6 +13991,12 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
+.sp-header-meta {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+}
 .sp-header-tags,
 .sp-block-stats,
 .sp-session-meta {
@@ -12471,7 +14023,25 @@ html[data-theme="light"] .loading-operational-item {
   border-color: var(--border-active);
   color: var(--brand-red);
 }
+/* Completed work reads as a calm success, never the brand red (which is kept
+   for current action and risk only). */
+.sp-tag.sp-done {
+  background: var(--success-soft);
+  border-color: rgba(39, 174, 96, 0.4);
+  color: var(--success-ink);
+}
+/* Reserve red for risk and the current marker. Section eyebrows are structural
+   labels, so .sp-eyebrow is muted by default (above); only the safety/red-flag
+   eyebrow turns red, scoped to its card so the colour matches the meaning. */
+.sp-redflags .sp-eyebrow {
+  color: var(--brand-red);
+}
 .sp-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sp-week-group {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -12485,16 +14055,42 @@ html[data-theme="light"] .loading-operational-item {
 .sp-week-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   padding: 16px 18px;
   cursor: pointer;
   list-style: none;
+  transition: background 0.15s ease;
 }
 .sp-week-summary::-webkit-details-marker {
   display: none;
 }
+.sp-week-summary:hover {
+  background: var(--bg-surface-alt);
+}
+/* Expand affordance: weeks are collapsible <details>, so give the summary a
+   chevron that rotates open/closed — previously there was no visual hint at
+   all that a week could be expanded. */
+.sp-week-summary::after {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: -3px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease, border-color 0.15s ease;
+}
+.sp-week[open] > .sp-week-summary::after {
+  transform: rotate(-135deg);
+  margin-top: 1px;
+}
+.sp-week-summary:hover::after {
+  border-color: var(--text-primary);
+}
 .sp-week-title {
+  margin-right: auto;
   font-family: var(--font-display);
   font-size: 1.02rem;
   color: var(--text-primary);
@@ -12531,6 +14127,9 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-muted);
   font-size: 0.82rem;
 }
+.sp-session-day-labels {
+  margin-bottom: 6px;
+}
 .sp-today {
   background: var(--bg-support);
   border-left: 3px solid var(--brand-red);
@@ -12565,6 +14164,28 @@ html[data-theme="light"] .loading-operational-item {
   border-radius: var(--radius-support);
   padding: 14px;
 }
+.legacy-plan-card-stack,
+.legacy-plan-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legacy-plan-card {
+  border-left: 3px solid var(--brand-red);
+}
+
+.legacy-plan-lines {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legacy-plan-lines li {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
 .sp-session-head {
   display: flex;
   flex-wrap: wrap;
@@ -12576,6 +14197,14 @@ html[data-theme="light"] .loading-operational-item {
   margin: 0;
   font-size: 1rem;
   color: var(--text-primary);
+}
+/* Coach-led / sparring / technical days have no app blocks but still render as
+   their own card. A subtle left accent distinguishes them from full S&C
+   sessions; a genuine rest day stays unaccented. */
+.sp-day-card-coach_led,
+.sp-day-card-sparring,
+.sp-day-card-technical {
+  border-left: 3px solid var(--brand-red);
 }
 .sp-session-objective {
   margin: 4px 0 0;
@@ -12591,6 +14220,7 @@ html[data-theme="light"] .loading-operational-item {
 .sp-mindset-list,
 .sp-kv-list,
 .sp-cues,
+.sp-rehab-list,
 .sp-redflag-list {
   list-style: none;
   margin: 0;
@@ -12612,7 +14242,7 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 0.68rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .sp-block {
   background: var(--bg-stat);
@@ -12642,6 +14272,33 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-secondary);
   font-size: 0.85rem;
 }
+.sp-rehab-summary {
+  margin: 10px 0;
+  padding: 10px 12px;
+  background: var(--bg-support);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--brand-red);
+  border-radius: var(--radius-stat);
+}
+.sp-rehab-list {
+  gap: 8px;
+}
+.sp-rehab-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+}
+.sp-rehab-title {
+  font-weight: 600;
+}
+.sp-rehab-metric {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
 .sp-cues {
   margin-top: 8px;
 }
@@ -12663,25 +14320,74 @@ html[data-theme="light"] .loading-operational-item {
   border-radius: var(--radius-card);
   padding: 16px;
 }
+/* Red flags are the safety-critical "stop & report" rules — lift them out of
+   the uniform card treatment with a red left accent and a faint red wash so
+   they read as a warning, not just another section. */
 .sp-redflags {
+  background: var(--bg-panel);
   border-color: var(--border-active);
+  border-left: 3px solid var(--brand-red);
+  background: linear-gradient(
+    90deg,
+    var(--brand-red-soft) 0%,
+    var(--bg-surface) 40%
+  );
+}
+.sp-redflags-head {
+  margin-bottom: 12px;
+}
+.sp-redflags-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+.sp-note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sp-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0 8px 10px;
+  border-left: 3px solid var(--border-subtle);
+}
+/* Weight-cut and injury notes are the non-negotiables — accent them. */
+.sp-note-weight_cut,
+.sp-note-injury {
+  border-left-color: var(--brand-red);
+}
+.sp-note-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.sp-note-text {
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 .sp-redflag {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 12px;
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
 }
 .sp-redflag:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .sp-redflag-text {
   color: var(--text-primary);
   font-size: 0.9rem;
-}
-.sp-raw {
-  margin-top: 8px;
+  line-height: 1.5;
 }
 @media (min-width: 720px) {
   .sp-block-stats {
@@ -12731,36 +14437,92 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 .sp-collapse-summary::after {
-  content: "+";
-  color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1;
+  content: none;
 }
 
 .sp-collapse[open] > .sp-collapse-summary::after {
-  content: "-";
+  content: none;
 }
 
 .sp-collapse-body {
   padding: 0 14px 14px;
 }
-
-.sp-more-toggle {
-  align-self: flex-start;
-  margin-top: 6px;
-  padding: 2px 0;
-  background: none;
-  border: none;
+.sp-collapse-action {
+  flex: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 4px 9px;
   color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Active notes & Safety priority are collapsible cards. Two-class selectors keep
+   their accents (the red safety gradient/border) winning over the plain
+   .sp-collapse surface, which is defined later in the file. */
+.sp-collapse.sp-redflags {
+  border-left: 3px solid var(--brand-red);
+  background: linear-gradient(
+    90deg,
+    var(--brand-red-soft) 0%,
+    var(--bg-surface) 40%
+  );
+}
+.sp-redflags-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* The safety eyebrow keeps its accent tone inside the summary. */
+.sp-collapse.sp-redflags .sp-eyebrow {
+  margin: 0;
+}
+
+.sp-more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: var(--bg-support);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .sp-more-toggle:hover {
   color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+/* Chevron reflects open/closed state (button carries aria-expanded). */
+.sp-more-toggle::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-top: -2px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+.sp-more-toggle[aria-expanded="true"]::after {
+  transform: rotate(-135deg);
+  margin-top: 2px;
+}
+
+.sp-session .sp-blocks {
+  margin-top: 10px;
 }
 
 .sp-redflag-head {
@@ -12780,6 +14542,58 @@ html[data-theme="light"] .loading-operational-item {
 
 .sp-redflag-badge {
   flex: none;
+  background: var(--danger-soft);
+  border-color: var(--border-active);
+  color: var(--danger-ink);
+}
+
+.sp-phase-support {
+  margin-top: -2px;
+}
+
+.sp-phase-support-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.sp-support-card {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+
+.sp-support-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+@media (min-width: 820px) {
+  .sp-phase-support-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Severity badges carry meaning by colour — a "red"/"amber" label rendered as
+   a neutral grey pill wastes the signal. Red gets the full brand treatment;
+   amber/green tint the fill + border while keeping text high-contrast on both
+   the dark and light themes. */
+.sp-redflag-badge.sp-sev-red {
+  background: var(--brand-red-soft);
+  border-color: var(--border-active);
+  color: var(--brand-red);
+}
+.sp-redflag-badge.sp-sev-amber {
+  background: rgba(214, 138, 43, 0.18);
+  border-color: rgba(214, 138, 43, 0.5);
+  color: var(--text-secondary);
+}
+.sp-redflag-badge.sp-sev-green {
+  background: rgba(46, 143, 80, 0.16);
+  border-color: rgba(46, 143, 80, 0.5);
+  color: var(--text-secondary);
 }
 
 @media (max-width: 960px) {
@@ -12789,5 +14603,297 @@ html[data-theme="light"] .loading-operational-item {
 
   .sp-header {
     padding-top: 4px;
+  }
+
+  .sp-collapse-summary,
+  .sp-support-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sp-collapse-action {
+    white-space: normal;
+  }
+}
+
+/* ── Camp map (Plan detail) ──────────────────────────────────────────────
+   Layered on top of the .sp-* structured-plan styles. Mobile-first; the brand
+   red is reserved for the current marker, risk, and primary actions. */
+.cm-root {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cm-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cm-status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.cm-active-badge {
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.cm-archived-banner {
+  color: var(--text-secondary);
+}
+
+/* Readiness / risk strip */
+/* Week strip */
+.cm-week-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cm-week-pill {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  flex: 0 0 auto;
+  min-width: 92px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: var(--radius-stat);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  scroll-snap-align: start;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.cm-week-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.cm-week-pill-index {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cm-week-pill-phase {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.cm-week-pill-completion {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cm-week-pill-now {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-red-soft);
+  color: #ffd5db;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Selected (the week you're viewing) gets a neutral strong outline; the brand
+   red is held back for the current "now" week so the two states stay distinct
+   and red never floods the strip. */
+.cm-week-pill-selected {
+  border-color: var(--border-strong);
+  background: var(--bg-surface-alt);
+}
+
+.cm-week-pill-current {
+  border-color: var(--border-active);
+  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.5);
+}
+
+/* Selected-week overview */
+.cm-week-overview-head {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.cm-week-overview-stats {
+  margin-top: 4px;
+}
+
+/* Day cards */
+.cm-days {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cm-day-summary {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cm-day-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cm-day-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.cm-day-context {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--brand-red);
+  border-radius: var(--radius-stat);
+  background: var(--bg-support);
+}
+
+.cm-light-technical-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cm-light-technical .sp-today-headline {
+  margin: 0;
+}
+
+/* The current day is the athlete's anchor in the week — give it the red border
+   plus a faint wash and left accent on its header so it reads at a glance even
+   while collapsed, without tinting the whole card. */
+.cm-day-current {
+  border-color: var(--border-active);
+}
+
+.cm-day-current > .cm-day-summary {
+  box-shadow: inset 3px 0 0 var(--brand-red);
+  background: var(--brand-red-soft);
+}
+
+/* Support + raw fallback */
+.cm-support {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cm-raw-fallback {
+  margin-top: 4px;
+}
+
+.cm-raw-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 720px) {
+  .cm-week-pill {
+    min-width: 84px;
+  }
+}
+
+/* ── Safety notes (medical / injury / weight-cut boundaries) ───────────── */
+.safety-note {
+  display: block;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--progress-gold);
+  border-radius: var(--radius-support);
+  background: var(--progress-gold-soft);
+}
+
+.safety-note-warning {
+  border-left-color: var(--danger-ink);
+  background: var(--danger-soft);
+}
+
+.safety-note-body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.safety-note-redflags {
+  margin-top: var(--space-1);
+}
+
+.safety-note-redflags > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.safety-note-redflags ul {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.safety-note-redflag-action {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--danger-ink);
+}
+
+.app-safety-footer {
+  margin: var(--space-5) auto 0;
+  max-width: var(--content-width);
+  padding: var(--space-3) var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.app-safety-footer-tight {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .app-safety-footer-wide {
+    display: none;
+  }
+
+  .app-safety-footer-tight {
+    display: inline;
   }
 }

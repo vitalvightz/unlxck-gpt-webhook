@@ -1,4 +1,4 @@
-# UNLXCK Fight Camp Builder
+## UNLXCK Fight Camp Builder
 
 Athlete-first fight camp planning. Backend in Python (FastAPI), frontend in Next.js. Deployed on Render + Vercel.
 
@@ -23,7 +23,15 @@ Plan generation runs in two stages:
 The Python planner (`fightcamp/`) reads the athlete's intake profile and builds a full draft plan. It scores exercises and conditioning drills by weakness tags, goal tags, style tags, phase, and equipment availability. The injury guard removes anything that violates active restrictions and selects safe replacements. Output includes the draft plan text, candidate pools, coach review notes, and the Stage 2 handoff package.
 
 **Stage 2 — AI finalization**
-The handoff package is sent to OpenAI. Stage 2 currently makes one automated finalizer call. The validator then reviews that output. If validation fails, the plan is marked `review_required` and the validator report plus repair guidance are saved for manual review. Automatic retry is currently disabled unless future code changes explicitly enable it.
+The handoff package is sent to OpenAI. Stage 2 currently makes one automated finalizer call. The validator then reviews that output. If validation fails, the **plan** is marked `held_for_review` (its generation **job** surfaces as `review_required`) and the validator report plus repair guidance are saved for manual review. Automatic retry is currently disabled unless future code changes explicitly enable it.
+
+> Plan status and generation-job status are **separate** vocabularies that must
+> not be used interchangeably. `held_for_review` is a *plan* status; the worker
+> reports it as the *job* status `review_required` via
+> `job_status_for_plan_status`. The single source of truth for every status
+> string, transition, and the plan→job mapping is
+> [`docs/state_machine.md`](docs/state_machine.md) (executable contract in
+> `api/state_machine.py`).
 
 Generated plans are saved and displayed in-app as structured text, HTML, and JSON artifacts. New plans are not exported as PDFs, and no PDF renderer or system binary is required to run the app.
 
@@ -139,19 +147,35 @@ OPENAI_API_KEY=
 APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=5
 ```
 
-`UNLXCK_ADMIN_EMAILS` is the **bootstrap allowlist** for admin roles, not the
-runtime source of truth. When a profile is first created, an email in this list
-seeds the profile with `role = admin`; thereafter the stored `profiles.role`
-column is authoritative and is what every admin-gated route checks. This means:
+Admin access uses a **dual gate**: a request is treated as admin only when
+**both** conditions hold —
 
-- Adding an email here grants admin only on first profile creation. To promote
-  an existing user, update their `profiles.role` in the database.
-- Removing an email here does **not** demote an existing admin. To revoke
-  access, set that user's `profiles.role` back to `athlete` in the database.
+1. the stored `profiles.role` is `admin`, **and**
+2. the user's email is present in `UNLXCK_ADMIN_EMAILS`.
 
-This is enforced by `tests/test_api_admin_flows.py`
-(`test_admin_routes_use_stored_profile_role_not_env_allowlist`). Use a
-comma-separated list:
+Neither condition alone is sufficient (enforced in `require_admin` /
+`is_effective_admin_profile` in `api/store.py` and `api/app.py`). On first
+profile creation an allowlisted email also seeds `profiles.role = admin`, but
+that seed is only a convenience — it is not what authorizes a request. This
+means:
+
+- **Adding** an email to the env var does **not** promote an existing user
+  unless their `profiles.role` is also `admin`.
+- **Setting** `profiles.role = admin` does **not** grant access unless the
+  email is also allowlisted in `UNLXCK_ADMIN_EMAILS`.
+- **Removing** an email from the env var **immediately blocks** runtime admin
+  access (after the backend restarts with the new value), even if the database
+  role is still `admin`.
+- For a **permanent** revocation, also demote the role in the database via
+  `tools/manage_admin.py revoke ...` (see `docs/admin-role-management.md`).
+  Removing the email is the fast kill-switch; the DB demotion is the durable
+  cleanup.
+
+This matrix is enforced by `tests/test_api_admin_flows.py` (see
+`test_admin_endpoints_require_admin_role`,
+`test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete`, and
+`test_admin_routes_deny_stored_admin_role_when_email_removed_from_allowlist`).
+Use a comma-separated list:
 `UNLXCK_ADMIN_EMAILS=email1@example.com,email2@example.com`.
 
 ### Frontend

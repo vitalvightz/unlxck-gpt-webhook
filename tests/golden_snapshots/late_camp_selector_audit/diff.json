@@ -2,16 +2,14 @@
   "control_d28": {
     "strength": {
       "before_winners": [
-        "Band-Resisted Push Press",
-        "Medicine-Ball Chest Toss",
-        "Anti-Rotation Med Ball Slam",
-        "Band Face Pull"
+        "Single-Leg Balance (Eyes Closed)",
+        "Deadbug (Band-Resisted)",
+        "Wall ISO Deadbug"
       ],
       "after_winners": [
-        "Band-Resisted Push Press",
-        "Medicine-Ball Chest Toss",
-        "Anti-Rotation Med Ball Slam",
-        "Band Face Pull"
+        "Single-Leg Balance (Eyes Closed)",
+        "Deadbug (Band-Resisted)",
+        "Wall ISO Deadbug"
       ],
       "added_winners": [],
       "removed_winners": [],
@@ -21,13 +19,11 @@
     "conditioning": {
       "before_winners": [
         "Easy Bike",
-        "Shadowboxing Intervals",
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "after_winners": [
         "Easy Bike",
-        "Shadowboxing Intervals",
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "added_winners": [],
       "removed_winners": [],
@@ -47,19 +43,39 @@
       ],
       "after_winners": [
         "Band-Resisted Jab-Cross Primer",
+        "Band Row Speed Focus",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Isometric Mid-Thigh Pull",
-        "Overcoming Split-Squat Isometric",
-        "Pivot-and-Strike (Rotation Focus)"
+        "Seated Medicine-Ball Punch Throw",
+        "Mobility Reset Flow",
+        "Dead-bug breathing",
+        "Eye-head dissociation drill",
+        "Four-way manual neck isometric",
+        "Lateral step-and-stick boxer reset",
+        "Lead-foot pivot prep",
+        "Lead-leg single-leg stance with guard",
+        "Line step-and-stick forward/back",
+        "Open-book reset",
+        "90/90 hip switches",
+        "Adductor rock-back",
+        "Boxer stance weight-shift hold"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
+        "Band Row Speed Focus",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Isometric Mid-Thigh Pull",
-        "Overcoming Split-Squat Isometric",
-        "Pivot-and-Strike (Rotation Focus)"
+        "Seated Medicine-Ball Punch Throw",
+        "Mobility Reset Flow",
+        "Dead-bug breathing",
+        "Eye-head dissociation drill",
+        "Four-way manual neck isometric",
+        "Lateral step-and-stick boxer reset",
+        "Lead-foot pivot prep",
+        "Lead-leg single-leg stance with guard",
+        "Line step-and-stick forward/back",
+        "Open-book reset",
+        "90/90 hip switches",
+        "Adductor rock-back",
+        "Boxer stance weight-shift hold"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -68,7 +84,57 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
-        "Trap Bar Jump Squat"
+        "3-Minute Heavy Bag Interval",
+        "Alternating Skater Hops",
+        "Anti-Rotation Med Ball Slam",
+        "Band-Resisted Push Press",
+        "Band-Resisted Reaction Hop",
+        "Banded Row (Speed Focus)",
+        "Burpee-to-Punch (Tabata)",
+        "Clap Push-Up",
+        "Cluster Set Trap Bar Deadlift",
+        "Copenhagen Side Plank",
+        "Cossack Squat (Dynamic)",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Cross-Step Lunge",
+        "Drop-Step Lateral Bound",
+        "Dynamic Plank-to-Punch",
+        "Explosive Push-Up (Clap-to-Tap)",
+        "Ground-and-Pound Bag Work",
+        "Isometric Mid-Thigh Pull",
+        "Judo Throw Simulation (Band-Resisted)",
+        "Jump Lunge (Alternating)",
+        "Jump-in-Place (Max Frequency)",
+        "Lateral Bound-to-Slip",
+        "Lateral Lunge (Plyometric)",
+        "Lateral Med Ball Slam",
+        "Med Ball Scoop Toss",
+        "Med-Ball Rotational Slam",
+        "Medicine Ball Hook Throw",
+        "Medicine-Ball Chest Toss",
+        "Overcoming Split-Squat Isometric",
+        "Overhead Slam (Rotational)",
+        "Pallof Press",
+        "Pivot-and-Strike (Rotation Focus)",
+        "Plyometric Shadow Boxing",
+        "Punch-Specific Max Isometric Hold",
+        "Russian Twist (Weighted)",
+        "Seated Medicine Ball Rotation",
+        "Seated Russian Twist (Band-Resisted)",
+        "Single-Leg 45\u00b0 Bound",
+        "Single-Leg Forward Hops",
+        "Single-Leg Medicine Ball Chest Push Jump",
+        "Single-Leg Reactive Shuffle",
+        "Single-Leg Rotational Hop to Balance",
+        "Slow-Lowered Pull-Up",
+        "Staggered-Stance Reactive Jumps",
+        "Tempo Chin-Up (5-0-1)",
+        "Towel Pull-Up",
+        "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
+        "Trap Bar Jump (Light)",
+        "Trap Bar Jump Squat",
+        "Weighted Hanging Leg Raise"
       ],
       "no_longer_blocked": []
     },
@@ -79,14 +145,42 @@
         "Explosive Boxing Burst Intervals"
       ],
       "after_winners": [
+        "Easy Assault Bike",
+        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
+        "Band-Resisted Straight Punch Release"
+      ],
+      "added_winners": [
+        "Easy Assault Bike",
+        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
+        "Band-Resisted Straight Punch Release"
+      ],
+      "removed_winners": [
         "Easy Bike",
         "Shadowboxing Intervals",
         "Explosive Boxing Burst Intervals"
       ],
-      "added_winners": [],
-      "removed_winners": [],
       "newly_blocked": [
-        "Mobility Reset: Breathing + T-Spine + Ankle Flow"
+        "Agility Ladder (Recovery)",
+        "Assault Bike Steady State - Counter Striker",
+        "Breath Control Drills",
+        "Cooldown Flow (Striking + Mobility)",
+        "Counter Striker Check-Hop",
+        "Counter Striker Pull-Jump",
+        "Counter Striker Roll-Jump",
+        "Counter Striker Slip-Jump",
+        "Counter-Striker Snap Hops",
+        "Easy Bike",
+        "Explosive Boxing Burst Intervals",
+        "Foam Rolling Mobility Circuit",
+        "Mini Hurdle Quick Steps",
+        "Plank Hold - Counter Striker",
+        "Reactive Shuffle Repeats",
+        "Recovery Cycling (Nasal Breathing)",
+        "Rogue Echo Bike Recovery Spin",
+        "Shadowboxing (Light Pace)",
+        "Speed Bag Precision Drill",
+        "Striking Combos @ 20% Effort",
+        "Yoga Flow (Dynamic)"
       ],
       "no_longer_blocked": []
     },
@@ -102,20 +196,40 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Isometric Mid-Thigh Pull",
-        "Overcoming Split-Squat Isometric",
-        "Pivot-and-Strike (Rotation Focus)"
+        "Band-Resisted Jab-Cross Primer",
+        "Band Row Speed Focus",
+        "Seated Medicine-Ball Punch Throw",
+        "Mobility Reset Flow",
+        "Dead-bug breathing",
+        "Lateral step-and-stick boxer reset",
+        "Lead-foot pivot prep",
+        "Lead-leg single-leg stance with guard",
+        "Line step-and-stick forward/back",
+        "Open-book reset",
+        "Pivot-and-freeze lead foot",
+        "Pivot-and-freeze rear foot",
+        "90/90 hip switches",
+        "Adductor rock-back",
+        "Boxer stance weight-shift hold"
       ],
       "added_winners": [
-        "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Isometric Mid-Thigh Pull",
-        "Overcoming Split-Squat Isometric",
-        "Pivot-and-Strike (Rotation Focus)"
+        "Band-Resisted Jab-Cross Primer",
+        "Band Row Speed Focus",
+        "Seated Medicine-Ball Punch Throw",
+        "Mobility Reset Flow",
+        "Dead-bug breathing",
+        "Lateral step-and-stick boxer reset",
+        "Lead-foot pivot prep",
+        "Lead-leg single-leg stance with guard",
+        "Line step-and-stick forward/back",
+        "Open-book reset",
+        "Pivot-and-freeze lead foot",
+        "Pivot-and-freeze rear foot",
+        "90/90 hip switches",
+        "Adductor rock-back",
+        "Boxer stance weight-shift hold"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -124,7 +238,62 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
-        "Trap Bar Jump Squat"
+        "3-Minute Heavy Bag Interval",
+        "Alternating Skater Hops",
+        "Anti-Rotation Med Ball Slam",
+        "Band-Resisted Push Press",
+        "Band-Resisted Reaction Hop",
+        "Banded Row (Speed Focus)",
+        "Burpee-to-Punch (Tabata)",
+        "Clap Push-Up",
+        "Cluster Set Trap Bar Deadlift",
+        "Copenhagen Side Plank",
+        "Cossack Squat (Dynamic)",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Cross-Step Lunge",
+        "Drop-Step Lateral Bound",
+        "Dynamic Plank-to-Punch",
+        "Explosive Push-Up (Clap-to-Tap)",
+        "Eye-head dissociation drill",
+        "Four-way manual neck isometric",
+        "Ground-and-Pound Bag Work",
+        "Isometric Mid-Thigh Pull",
+        "Judo Throw Simulation (Band-Resisted)",
+        "Jump Lunge (Alternating)",
+        "Jump-in-Place (Max Frequency)",
+        "Lateral Bound-to-Slip",
+        "Lateral Lunge (Plyometric)",
+        "Lateral Med Ball Slam",
+        "Med Ball Scoop Toss",
+        "Med-Ball Rotational Slam",
+        "Medicine Ball Hook Throw",
+        "Medicine-Ball Chest Toss",
+        "Overcoming Split-Squat Isometric",
+        "Overhead Slam (Rotational)",
+        "Pallof Press",
+        "Pivot-and-Strike (Rotation Focus)",
+        "Plyometric Shadow Boxing",
+        "Punch-Specific Max Isometric Hold",
+        "Russian Twist (Weighted)",
+        "Seated Medicine Ball Rotation",
+        "Seated Russian Twist (Band-Resisted)",
+        "Single-Leg 45\u00b0 Bound",
+        "Single-Leg Forward Hops",
+        "Single-Leg Medicine Ball Chest Push Jump",
+        "Single-Leg Reactive Shuffle",
+        "Single-Leg Rotational Hop to Balance",
+        "Slow-Lowered Pull-Up",
+        "Staggered-Stance Reactive Jumps",
+        "Standing hip CAR lite",
+        "Supported hip airplane micro-range",
+        "Tempo Chin-Up (5-0-1)",
+        "Towel Pull-Up",
+        "Towel-assisted lateral neck isometric",
+        "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
+        "Trap Bar Jump (Light)",
+        "Trap Bar Jump Squat",
+        "Weighted Hanging Leg Raise"
       ],
       "no_longer_blocked": []
     },
@@ -136,30 +305,29 @@
       ],
       "after_winners": [
         "Easy Bike",
-        "Ankle Snap Bounce"
+        "Reactive Shuffle Repeats"
       ],
       "added_winners": [
-        "Ankle Snap Bounce"
+        "Reactive Shuffle Repeats"
       ],
       "removed_winners": [
         "Shadowboxing Intervals",
         "Explosive Boxing Burst Intervals"
       ],
       "newly_blocked": [
-        "Shadowboxing Intervals"
+        "Assault Bike Steady State - Counter Striker",
+        "Counter Striker Check-Hop",
+        "Counter Striker Pull-Jump",
+        "Counter Striker Roll-Jump",
+        "Counter Striker Slip-Jump",
+        "Counter-Striker Snap Hops",
+        "Mini Hurdle Quick Steps",
+        "Plank Hold - Counter Striker",
+        "Speed Bag Precision Drill"
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [
-      {
-        "selector": "conditioning",
-        "name": "Ankle Snap Bounce",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "plyometric"
-        ]
-      }
-    ],
+    "ambiguous_tag_gaps_added": [],
     "ambiguous_tag_gaps_removed": []
   },
   "d7": {
@@ -171,16 +339,20 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Staggered-Stance Medicine-Ball Punch Throw",
-        "Overcoming Split-Squat Isometric"
+        "Band Row Speed Focus",
+        "Technical Shadowboxing Tempo",
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
+        "Controlled Bird-Dog"
       ],
       "added_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Staggered-Stance Medicine-Ball Punch Throw",
-        "Overcoming Split-Squat Isometric"
+        "Band Row Speed Focus",
+        "Technical Shadowboxing Tempo",
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
+        "Controlled Bird-Dog"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -189,10 +361,27 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
-        "Banded Hip Flexor Stretch",
-        "Banded Lateral Walk",
-        "Cluster Set Trap Bar Deadlift",
-        "Trap Bar Jump (Light)"
+        "Adductor rock-back",
+        "Band-Resisted Jab-Cross Primer",
+        "Band-Resisted Punch",
+        "Band-Resisted Straight Punch",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Deadbug (Band-Resisted)",
+        "Eye-head dissociation drill",
+        "Four-way manual neck isometric",
+        "Hollow-Body Hold",
+        "Isometric Mid-Thigh Pull",
+        "Overcoming Split-Squat Isometric",
+        "Punch-Specific Max Isometric Hold",
+        "Seated Medicine-Ball Punch Throw",
+        "Single-Leg Balance (Eyes Closed)",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Standing hip CAR lite",
+        "Supported hip airplane micro-range",
+        "Towel-assisted lateral neck isometric",
+        "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
+        "Wall ISO Deadbug"
       ],
       "no_longer_blocked": []
     },
@@ -204,24 +393,66 @@
       ],
       "after_winners": [
         "Easy Bike",
+        "Reactive Shuffle Repeats"
+      ],
+      "added_winners": [
+        "Reactive Shuffle Repeats"
+      ],
+      "removed_winners": [
+        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
         "Ankle Snap Bounce"
       ],
-      "added_winners": [],
-      "removed_winners": [
-        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
-      ],
       "newly_blocked": [
-        "Shadowboxing Intervals",
-        "Speed Bag Precision Drill"
+        "Agility Ladder (Recovery)",
+        "Assault Bike Rhythm Primer",
+        "Assault Bike Steady State - Counter Striker",
+        "Band-Resisted Straight Punch Release",
+        "Band-Resisted Vertical Jump",
+        "Check-Hook Pivot Out Shadow Drill",
+        "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
+        "Counter Striker Check-Hop",
+        "Counter Striker Pull-Jump",
+        "Counter Striker Roll-Jump",
+        "Counter Striker Slip-Jump",
+        "Counter-Striker Snap Hops",
+        "Defensive Rhythm Flow",
+        "Easy Continuous Swimming",
+        "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
+        "Low Box Jump (Fast Reset)",
+        "Med Ball Drop Catch to Jump",
+        "Mini Box Depth Drop",
+        "Mini Hurdle Quick Steps",
+        "Mobility Reset: Breathing + T-Spine + Ankle Flow",
+        "Nasal Walk with Boxing Posture",
+        "Overhead Med Ball Slam (Snappy)",
+        "Plank Hold - Counter Striker",
+        "Plyo Push-Up on Knees",
+        "Pogo Jump Series (Mini Bounce)",
+        "Pressure Step-Cut Reset",
+        "Quick Lateral Hop Tap",
+        "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
+        "Rogue Echo Bike Recovery Spin",
+        "Shadowboxing (Light Pace)",
+        "Speed Bag Precision Drill",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
+        "Striking Combos @ 20% Effort",
+        "Tempo Shadowboxing",
+        "Yoga Flow (Dynamic)"
       ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
       {
         "selector": "conditioning",
-        "name": "Ankle Snap Bounce",
+        "name": "Reactive Med Ball Chest Pass",
         "issue": "late_safe_intent_not_explicit",
         "signals": [
+          "mech_ballistic",
+          "mech_reactive",
           "plyometric"
         ]
       }
@@ -237,16 +468,20 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Staggered-Stance Medicine-Ball Punch Throw",
-        "Isometric Mid-Thigh Pull",
-        "Counter-Striker Split-Line Punch Isometric Hold"
+        "Band Row Speed Focus",
+        "Technical Shadowboxing Tempo",
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
+        "Controlled Bird-Dog"
       ],
       "added_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Staggered-Stance Medicine-Ball Punch Throw",
-        "Isometric Mid-Thigh Pull",
-        "Counter-Striker Split-Line Punch Isometric Hold"
+        "Band Row Speed Focus",
+        "Technical Shadowboxing Tempo",
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
+        "Controlled Bird-Dog"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -255,13 +490,27 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
-        "Banded Hip Flexor Stretch",
-        "Banded Lateral Walk",
-        "Cluster Set Trap Bar Deadlift",
+        "Adductor rock-back",
+        "Band-Resisted Jab-Cross Primer",
+        "Band-Resisted Punch",
+        "Band-Resisted Straight Punch",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Deadbug (Band-Resisted)",
+        "Eye-head dissociation drill",
+        "Four-way manual neck isometric",
+        "Hollow-Body Hold",
+        "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
         "Punch-Specific Max Isometric Hold",
         "Seated Medicine-Ball Punch Throw",
-        "Trap Bar Jump (Light)"
+        "Single-Leg Balance (Eyes Closed)",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Standing hip CAR lite",
+        "Supported hip airplane micro-range",
+        "Towel-assisted lateral neck isometric",
+        "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
+        "Wall ISO Deadbug"
       ],
       "no_longer_blocked": []
     },
@@ -273,24 +522,66 @@
       ],
       "after_winners": [
         "Easy Bike",
+        "Reactive Shuffle Repeats"
+      ],
+      "added_winners": [
+        "Reactive Shuffle Repeats"
+      ],
+      "removed_winners": [
+        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
         "Ankle Snap Bounce"
       ],
-      "added_winners": [],
-      "removed_winners": [
-        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
-      ],
       "newly_blocked": [
-        "Shadowboxing Intervals",
-        "Speed Bag Precision Drill"
+        "Agility Ladder (Recovery)",
+        "Assault Bike Rhythm Primer",
+        "Assault Bike Steady State - Counter Striker",
+        "Band-Resisted Straight Punch Release",
+        "Band-Resisted Vertical Jump",
+        "Check-Hook Pivot Out Shadow Drill",
+        "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
+        "Counter Striker Check-Hop",
+        "Counter Striker Pull-Jump",
+        "Counter Striker Roll-Jump",
+        "Counter Striker Slip-Jump",
+        "Counter-Striker Snap Hops",
+        "Defensive Rhythm Flow",
+        "Easy Continuous Swimming",
+        "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
+        "Low Box Jump (Fast Reset)",
+        "Med Ball Drop Catch to Jump",
+        "Mini Box Depth Drop",
+        "Mini Hurdle Quick Steps",
+        "Mobility Reset: Breathing + T-Spine + Ankle Flow",
+        "Nasal Walk with Boxing Posture",
+        "Overhead Med Ball Slam (Snappy)",
+        "Plank Hold - Counter Striker",
+        "Plyo Push-Up on Knees",
+        "Pogo Jump Series (Mini Bounce)",
+        "Pressure Step-Cut Reset",
+        "Quick Lateral Hop Tap",
+        "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
+        "Rogue Echo Bike Recovery Spin",
+        "Shadowboxing (Light Pace)",
+        "Speed Bag Precision Drill",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
+        "Striking Combos @ 20% Effort",
+        "Tempo Shadowboxing",
+        "Yoga Flow (Dynamic)"
       ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
       {
         "selector": "conditioning",
-        "name": "Ankle Snap Bounce",
+        "name": "Reactive Med Ball Chest Pass",
         "issue": "late_safe_intent_not_explicit",
         "signals": [
+          "mech_ballistic",
+          "mech_reactive",
           "plyometric"
         ]
       }
@@ -306,16 +597,20 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Overcoming Split-Squat Isometric"
+        "Band Row Speed Focus",
+        "Technical Shadowboxing Tempo",
+        "Light Heavy-Bag Technical Tempo",
+        "Controlled Bird-Dog",
+        "Diaphragmatic Breathing Drills"
       ],
       "added_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Overcoming Split-Squat Isometric"
+        "Band Row Speed Focus",
+        "Technical Shadowboxing Tempo",
+        "Light Heavy-Bag Technical Tempo",
+        "Controlled Bird-Dog",
+        "Diaphragmatic Breathing Drills"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -324,13 +619,34 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
+        "90/90 hip switches",
+        "Adductor rock-back",
+        "Band-Resisted Jab-Cross Primer",
         "Band-Resisted Punch",
         "Band-Resisted Straight Punch",
-        "Banded Hip Flexor Stretch",
-        "Banded Lateral Walk",
-        "Cluster Set Trap Bar Deadlift",
+        "Chin tuck nod",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Deadbug (Band-Resisted)",
+        "Eye-head dissociation drill",
+        "Four-way manual neck isometric",
+        "Hollow-Body Hold",
         "Isometric Mid-Thigh Pull",
-        "Trap Bar Jump (Light)"
+        "Lateral step-and-stick boxer reset",
+        "Line step-and-stick forward/back",
+        "Overcoming Split-Squat Isometric",
+        "Pivot-and-freeze rear foot",
+        "Punch-Specific Max Isometric Hold",
+        "Quadruped thread-the-needle",
+        "Seated Medicine-Ball Punch Throw",
+        "Single-Leg Balance (Eyes Closed)",
+        "Small-range cervical CARs",
+        "Standing hip CAR lite",
+        "Supported hip airplane micro-range",
+        "Towel-assisted lateral neck isometric",
+        "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
+        "Wall ISO Deadbug",
+        "Wall scap push-up plus"
       ],
       "no_longer_blocked": []
     },
@@ -340,27 +656,70 @@
         "Ankle Snap Bounce"
       ],
       "after_winners": [
+        "Easy Assault Bike",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "added_winners": [
+        "Easy Assault Bike",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "removed_winners": [
         "Easy Bike",
         "Ankle Snap Bounce"
       ],
-      "added_winners": [],
-      "removed_winners": [],
       "newly_blocked": [
-        "Shadowboxing Intervals",
-        "Speed Bag Precision Drill"
+        "Agility Ladder (Recovery)",
+        "Assault Bike Rhythm Primer",
+        "Assault Bike Steady State - Counter Striker",
+        "Band-Resisted Straight Punch Release",
+        "Band-Resisted Vertical Jump",
+        "Check-Hook Pivot Out Shadow Drill",
+        "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
+        "Counter Striker Check-Hop",
+        "Counter Striker Pull-Jump",
+        "Counter Striker Roll-Jump",
+        "Counter Striker Slip-Jump",
+        "Counter-Striker Snap Hops",
+        "Defensive Rhythm Flow",
+        "Easy Bike",
+        "Easy Continuous Swimming",
+        "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
+        "Low Box Jump (Fast Reset)",
+        "Med Ball Drop Catch to Jump",
+        "Mini Box Depth Drop",
+        "Mini Hurdle Quick Steps",
+        "Mobility Reset: Breathing + T-Spine + Ankle Flow",
+        "Nasal Walk with Boxing Posture",
+        "Overhead Med Ball Slam (Snappy)",
+        "Plank Hold - Counter Striker",
+        "Plyo Push-Up on Knees",
+        "Pogo Jump Series (Mini Bounce)",
+        "Pressure Step-Cut Reset",
+        "Quick Lateral Hop Tap",
+        "Reactive Med Ball Chest Pass",
+        "Reactive Shuffle Repeats",
+        "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
+        "Rogue Echo Bike Recovery Spin",
+        "Seated Med Ball Chest Pop",
+        "Shadowboxing (Light Pace)",
+        "Single-Leg Med Ball Toss Jump",
+        "Snapdown to Quick Hop",
+        "Speed Bag Precision Drill",
+        "Split Stance Hop Switch",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
+        "Striking Combos @ 20% Effort",
+        "Tempo Shadowboxing",
+        "Tuck Jump (Submax)",
+        "Wall Reactive Jump (Cue Start)",
+        "Yoga Flow (Dynamic)"
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [
-      {
-        "selector": "conditioning",
-        "name": "Ankle Snap Bounce",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "plyometric"
-        ]
-      }
-    ],
+    "ambiguous_tag_gaps_added": [],
     "ambiguous_tag_gaps_removed": []
   },
   "d1": {
@@ -372,16 +731,20 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Towel/Gi Row Isometric Hold",
-        "Hollow-Body Hold"
+        "Boxer stance weight-shift hold",
+        "Lead-foot pivot prep",
+        "Pivot-and-freeze lead foot",
+        "Serratus wall slide",
+        "Short-foot hold with nasal breathing",
+        "Standing scapular CARs"
       ],
       "added_winners": [
-        "Band-Resisted Jab-Cross Primer",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Towel/Gi Row Isometric Hold",
-        "Hollow-Body Hold"
+        "Boxer stance weight-shift hold",
+        "Lead-foot pivot prep",
+        "Pivot-and-freeze lead foot",
+        "Serratus wall slide",
+        "Short-foot hold with nasal breathing",
+        "Standing scapular CARs"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -390,20 +753,54 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
-        "Anti-Rotation Med Ball Slam",
+        "90/90 hip switches",
+        "Adductor rock-back",
+        "Band Face Pull",
+        "Band Row Speed Focus",
+        "Band face pull light",
+        "Band pull-apart low volume",
+        "Band-Resisted Jab-Cross Primer",
         "Band-Resisted Punch",
-        "Band-Resisted Push Press",
         "Band-Resisted Straight Punch",
         "Banded Hip Flexor Stretch",
         "Banded Lateral Walk",
-        "Cluster Set Trap Bar Deadlift",
+        "Chin tuck nod",
+        "Controlled Bird-Dog",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Dead-bug breathing",
+        "Deadbug (Band-Resisted)",
+        "Diaphragmatic Breathing Drills",
+        "Eye-head dissociation drill",
+        "Four-way manual neck isometric",
+        "Hollow-Body Hold",
         "Isometric Mid-Thigh Pull",
-        "Med Ball Scoop Toss",
-        "Medicine-Ball Chest Toss",
+        "Lateral step-and-stick boxer reset",
+        "Lead-leg single-leg stance with guard",
+        "Light Heavy-Bag Technical Tempo",
+        "Line step-and-stick forward/back",
+        "Mobility Reset Flow",
+        "Open-book reset",
         "Overcoming Split-Squat Isometric",
+        "Pivot-and-freeze rear foot",
+        "Punch-Specific Max Isometric Hold",
+        "Quadruped thread-the-needle",
+        "Rear-leg single-leg stance with guard",
+        "Scapular Pull-Up Hold",
         "Seated Medicine-Ball Punch Throw",
+        "Single-Leg Balance (Eyes Closed)",
+        "Small-range cervical CARs",
+        "Split-stance ankle rocker",
+        "Split-stance hip lock hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Trap Bar Jump (Light)"
+        "Standing hip CAR lite",
+        "Supported hip airplane micro-range",
+        "Technical Shadowboxing Tempo",
+        "Towel-assisted lateral neck isometric",
+        "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
+        "Wall ISO Deadbug",
+        "Wall angel partial range",
+        "Wall scap push-up plus"
       ],
       "no_longer_blocked": []
     },
@@ -413,27 +810,72 @@
         "Ankle Snap Bounce"
       ],
       "after_winners": [
+        "Final Readiness Cue Reset"
+      ],
+      "added_winners": [
+        "Final Readiness Cue Reset"
+      ],
+      "removed_winners": [
         "Easy Bike",
         "Ankle Snap Bounce"
       ],
-      "added_winners": [],
-      "removed_winners": [],
       "newly_blocked": [
-        "Shadowboxing Intervals",
-        "Speed Bag Precision Drill"
+        "Agility Ladder (Recovery)",
+        "Assault Bike Rhythm Primer",
+        "Assault Bike Steady State - Counter Striker",
+        "Band-Resisted Straight Punch Release",
+        "Band-Resisted Vertical Jump",
+        "Breath Control Drills",
+        "Check-Hook Pivot Out Shadow Drill",
+        "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
+        "Counter Striker Check-Hop",
+        "Counter Striker Pull-Jump",
+        "Counter Striker Roll-Jump",
+        "Counter Striker Slip-Jump",
+        "Counter-Striker Snap Hops",
+        "Defensive Rhythm Flow",
+        "Easy Assault Bike",
+        "Easy Bike",
+        "Easy Continuous Swimming",
+        "Explosive Boxing Burst Intervals",
+        "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
+        "Low Box Jump (Fast Reset)",
+        "Med Ball Drop Catch to Jump",
+        "Mini Box Depth Drop",
+        "Mini Hurdle Quick Steps",
+        "Mobility Reset: Breathing + T-Spine + Ankle Flow",
+        "Nasal Walk with Boxing Posture",
+        "Overhead Med Ball Slam (Snappy)",
+        "Plank Hold - Counter Striker",
+        "Plyo Push-Up on Knees",
+        "Pogo Jump Series (Mini Bounce)",
+        "Pressure Step-Cut Reset",
+        "Quick Lateral Hop Tap",
+        "Reactive Med Ball Chest Pass",
+        "Reactive Shuffle Repeats",
+        "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
+        "Rogue Echo Bike Recovery Spin",
+        "Seated Med Ball Chest Pop",
+        "Shadowboxing (Light Pace)",
+        "Shadowboxing Technical Rhythm",
+        "Single-Leg Med Ball Toss Jump",
+        "Snapdown to Quick Hop",
+        "Speed Bag Precision Drill",
+        "Split Stance Hop Switch",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
+        "Striking Combos @ 20% Effort",
+        "Tempo Shadowboxing",
+        "Tuck Jump (Submax)",
+        "Wall Reactive Jump (Cue Start)",
+        "Yoga Flow (Dynamic)"
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [
-      {
-        "selector": "conditioning",
-        "name": "Ankle Snap Bounce",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "plyometric"
-        ]
-      }
-    ],
+    "ambiguous_tag_gaps_added": [],
     "ambiguous_tag_gaps_removed": []
   }
 }

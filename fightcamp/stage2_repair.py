@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .normalization import clean_list
+from .stage2_policy import prompt_safe_validator_report
 
 import json
 
@@ -11,7 +12,7 @@ Repair the previous final plan so it becomes restriction-compliant, phase-consis
 
 REPAIR RULES:
 1. Treat restrictions as hard constraints. Remove or replace violating items; do not soften them into compliance.
-2. Fix validator errors first, then warnings.
+2. Fix hard blocker findings first.
 3. Preserve compliant parts of the previous final plan when they still fit the planning brief.
 4. Use candidate pools and same-role alternates from the planning brief before inventing anything new.
 5. If a phase-critical element is missing, reintroduce it with a conservative, compliant option that matches the phase strategy.
@@ -59,7 +60,6 @@ Return only the revised athlete-facing final plan."""
 def _json_block_pretty(value: dict | list) -> str:
     """JSON block with indentation — used in repair prompts for human readability."""
     return "```json\n" + json.dumps(value, indent=2) + "\n```"
-
 
 
 def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
@@ -372,6 +372,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
 
 
 def build_stage2_repair_prompt(*, planning_brief: dict, failed_plan_text: str, validator_report: dict) -> str:
+    validator_report = prompt_safe_validator_report(validator_report)
     revision_priorities = _build_revision_priorities(validator_report)
     sections = [
         REPAIR_PROMPT_TEMPLATE.strip(),

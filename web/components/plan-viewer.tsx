@@ -4,20 +4,28 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
-import { WeeklySparringView } from "@/components/weekly-sparring-view";
 import {
+  adminArchivePlan,
+  adminPermanentlyDeletePlan,
   approveAndResumeGeneration,
   approvePlanForRelease,
   archivePlan,
-  deletePlan,
+  getActivePlan,
   getPlan,
+  getToday,
   isRetryableApiFailure,
-  permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
+  setActivePlan,
   submitManualStage2,
 } from "@/lib/api";
+import {
+  ACTIVE_PLAN_OVERLAP_MESSAGE,
+  type ActivePlanOverlapAction,
+  canSetActivePlan,
+  isActivePlanOverlapError,
+  isArchivedPlan,
+} from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
@@ -25,9 +33,11 @@ import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { canUseAdminPlanControls, isAdminRole } from "@/lib/plan-admin-controls";
+import { STAGE2_HARD_BLOCKER_CODE_SET } from "@/lib/stage2-policy";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
+import { formatPlanStatus } from "@/lib/plan-format";
 import {
   buildBlockedInjuryContextSummary,
   buildBlockedWhy,
@@ -40,6 +50,15 @@ const TRIAGE_RESUME_FETCH_ATTEMPTS = 5;
 const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
 const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
+const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
+// Background structuring can take up to ~2 minutes for a full camp. We never make
+// the athlete wait for it: the template card (parsed from plan_text) is shown
+// immediately, and we poll quietly in the background to swap in the richer
+// structured card the moment it lands. The poll window covers the backend Stage 2
+// conversion timeout (UNLXCK_STAGE2_TIMEOUT_SECONDS, default 210s) plus a small
+// buffer; once it elapses we simply stop polling and the template card stays.
+const STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS = 220_000;
+const STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS = 5 * 60_000;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
 
@@ -54,6 +73,89 @@ export function isPlanReleasedToAthlete(
 ): boolean {
   const status = (plan.status || "").trim().toLowerCase();
   return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
+}
+
+/**
+ * Decide whether a freshly published plan is still expecting its richer
+ * structured card to land in the background. When true, the athlete is shown the
+ * template card (parsed from plan_text) right away while we poll quietly and swap
+ * in the structured card once it arrives — there is no waiting screen and no
+ * "fallback" notice. We only await an upgrade for plans that can still produce
+ * one. We never await for:
+ *  - legacy/old plans (created outside the recent-plan window), which may simply
+ *    never have a structured_plan,
+ *  - plans without an access token (we cannot poll for the structured card),
+ *  - triage-blocked plans,
+ *  - plans whose background poll window has already elapsed,
+ *  - plans that already have a structured_plan.
+ */
+export function shouldAwaitStructuredPlanUpgrade(params: {
+  hasPublishedPlan: boolean;
+  hasStructuredPlan: boolean;
+  pollWindowExpired: boolean;
+  hasAccessToken: boolean;
+  isRecentPlan: boolean;
+  isTriageBlocked?: boolean;
+}): boolean {
+  return (
+    params.hasPublishedPlan &&
+    !params.hasStructuredPlan &&
+    !params.pollWindowExpired &&
+    params.hasAccessToken &&
+    params.isRecentPlan &&
+    params.isTriageBlocked !== true
+  );
+}
+
+/**
+ * A plan is "recent" if it was created within the recent-plan window. Used to
+ * avoid holding the structured-card finalising state for legacy plans that were
+ * created long before structured plans existed (or never produced one).
+ */
+export function isRecentlyCreatedPlan(
+  plan: Pick<PlanDetail, "created_at">,
+  now: number = Date.now(),
+): boolean {
+  const createdAt = Date.parse(plan.created_at || "");
+  if (Number.isNaN(createdAt)) {
+    return false;
+  }
+  return now - createdAt <= STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS;
+}
+
+/**
+ * Whether the background upgrade poll should run for this plan.
+ *
+ * Unlike the visible "enhancing" hint (shouldAwaitStructuredPlanUpgrade), this is
+ * deliberately NOT gated on plan recency. A published plan that is still missing
+ * its structured card should keep trying to pick one up whenever its view is
+ * open — including an older plan whose card was only built later (e.g. after a
+ * held blocker cleared or a backfill ran), which the 5-minute recency gate would
+ * otherwise leave stuck on the template card until a manual reload. The
+ * mount-scoped poll window (pollWindowExpired) still bounds the cost so we never
+ * poll a legacy cardless plan forever, and the swap happens silently for
+ * non-recent plans (no misleading hint).
+ */
+export function shouldPollForStructuredPlanUpgrade(params: {
+  hasPublishedPlan: boolean;
+  hasStructuredPlan: boolean;
+  pollWindowExpired: boolean;
+  hasAccessToken: boolean;
+  isTriageBlocked?: boolean;
+}): boolean {
+  return (
+    params.hasPublishedPlan &&
+    !params.hasStructuredPlan &&
+    !params.pollWindowExpired &&
+    params.hasAccessToken &&
+    params.isTriageBlocked !== true
+  );
+}
+
+function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
+  return shouldRenderStructuredPlan(plan.outputs)
+    ? "Plan approved and released to the athlete view."
+    : "Plan approved and released. The athlete sees their plan now; the full card view follows automatically once it finishes building.";
 }
 
 /**
@@ -127,15 +229,7 @@ const FRACTURE_CATEGORY_SET = new Set([
 
 type RiskBandTone = "green" | "amber" | "red" | "black";
 
-const BLOCKING_WARNING_CODES = new Set([
-  "missing_required_element",
-  "phase_section_missing",
-  "equipment_incongruent_selection",
-  "unresolved_access_fallback",
-  "missing_week_session_role",
-  "late_camp_session_incomplete",
-  "high_pressure_weight_cut_underaddressed",
-]);
+const BLOCKING_WARNING_CODES = STAGE2_HARD_BLOCKER_CODE_SET;
 const NON_PUBLISHABLE_STAGE2_STATUSES = new Set([
   "triage_blocked",
   "triage_resume_approved",
@@ -147,6 +241,43 @@ const TRIAGE_BLOCKED_STUB_MARKERS = [
   "Normal fight-camp planning is intentionally suspended",
   "Clinician clearance is required",
 ];
+
+/** One labelled line inside a session block ("Purpose", "Progress", …). */
+export type PlanTextDetail = { label: string | null; text: string };
+
+/** A single exercise/prescription inside a session card. */
+export type PlanTextBlock = {
+  name: string;
+  dose: string | null;
+  details: PlanTextDetail[];
+  /** Block-group label (Rehab, Mobility, Activation…) shown as a tag, mirroring the structured card. */
+  tag: string | null;
+};
+
+/** A dated training day rendered as a session card. */
+export type PlanTextSession = {
+  kind: "session";
+  countdown: string | null;
+  weekday: string | null;
+  title: string;
+  objective: string | null;
+  coachNote: string | null;
+  blocks: PlanTextBlock[];
+  notes: string[];
+};
+
+/** Lead/Final notes, rendered as a context card. */
+export type PlanTextNotes = { kind: "notes"; title: string; lines: string[] };
+
+/** A phase/week header that owns the session cards rendered beneath it. */
+export type PlanTextWeek = {
+  kind: "week";
+  title: string;
+  phase: string | null;
+  sessions: PlanTextSession[];
+};
+
+export type PlanTextGroup = PlanTextNotes | PlanTextWeek | PlanTextSession;
 
 const ISSUE_TITLES: Record<string, string> = {
   restriction_violation: "Restriction violation",
@@ -207,6 +338,655 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "athlete-plan";
   return `${base}-${suffix}.txt`;
+}
+
+// Leading list/bullet markers stripped off a line before it is parsed. Includes
+// the unicode bullets the rehab renderer emits ("• [Drill] — [Dose]", see
+// fightcamp/stage2_payload.py) so the glyph never leaks into an exercise title.
+const LEADING_BULLET_RE = /^[-*•‣▪◦·]\s+/;
+
+function stripPlanMarkup(value: string): string {
+  return value
+    .replace(/^#{1,6}\s+/, "")
+    .replace(LEADING_BULLET_RE, "")
+    .replace(/^\d+\.\s+/, "")
+    .replace(/\*\*/g, "")
+    .trim();
+}
+
+function normalizePlanTextForCards(rawText: string): string {
+  return rawText
+    .replace(/\r\n/g, "\n")
+    .replace(/(^|\n)(Lead notes|Active notes)\s+[-–—]?\s*/gi, "$1$2\n")
+    .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION)\s*[—–\-:]\s*Week\b)/gi, "\n")
+    .replace(/\s+(?=D-\d+\s*\([^)]+\)\s*[—–\-:]\s*\S)/g, "\n")
+    .replace(
+      /\s+(?=(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b[^()]*\(\s*D-\d+\s*\)\s*[—–\-:]\s*\S)/gi,
+      "\n",
+    )
+    .replace(/\s+(?=(?:Final notes|End of plan notes)\b)/gi, "\n")
+    .replace(/(^|\n)(Final notes|End of plan notes)\s+[-–—]?\s*/gi, "$1$2\n");
+}
+
+// Labelled sub-lines that fall *inside* a session block. The plan text packs a
+// lot of structure behind these prefixes ("Purpose: …", "Progress/regress: …",
+// "Stop rule: …"), so we surface each as its own kicker+text line instead of
+// flattening them into one wall of prose. Longest variants must come first so
+// "Progress/regress/stop" wins over "Progress".
+const SESSION_DETAIL_LABELS: { match: RegExp; label: string }[] = [
+  { match: /^purpose$/i, label: "Purpose" },
+  { match: /^why today$/i, label: "Why" },
+  { match: /^why$/i, label: "Why" },
+  { match: /^progress\/regress\/stop$/i, label: "Progress" },
+  { match: /^progress\/regress$/i, label: "Progress" },
+  { match: /^progression$/i, label: "Progress" },
+  { match: /^progress$/i, label: "Progress" },
+  { match: /^regress$/i, label: "Regress" },
+  { match: /^stop rule$/i, label: "Stop" },
+  { match: /^stop$/i, label: "Stop" },
+  { match: /^easier$/i, label: "Easier" },
+  { match: /^swaps?$/i, label: "Swaps" },
+  { match: /^rest$/i, label: "Rest" },
+  { match: /^note$/i, label: "Note" },
+];
+
+const SESSION_LABEL_SPLIT_RE =
+  /\b(Purpose|Why today|Why|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:/gi;
+
+function normalizeSessionLabel(raw: string): string {
+  const trimmed = raw.trim();
+  for (const { match, label } of SESSION_DETAIL_LABELS) {
+    if (match.test(trimmed)) {
+      return label;
+    }
+  }
+  return titleizeToken(trimmed);
+}
+
+/**
+ * Split a body line into its labelled segments. "Purpose: raise the base.
+ * Progress/regress: add 5 min. Stop rule: stop if dizzy." becomes three
+ * labelled details; an unlabelled line returns a single `label: null` segment.
+ */
+export function splitLabeledSegments(text: string): PlanTextDetail[] {
+  const clean = text.trim();
+  if (!clean) {
+    return [];
+  }
+  const matches = [...clean.matchAll(SESSION_LABEL_SPLIT_RE)];
+  if (!matches.length) {
+    return [{ label: null, text: clean }];
+  }
+  const segments: PlanTextDetail[] = [];
+  const lead = clean.slice(0, matches[0].index ?? 0).trim();
+  if (lead) {
+    segments.push({ label: null, text: lead });
+  }
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i];
+    const start = (match.index ?? 0) + match[0].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index ?? clean.length : clean.length;
+    const body = clean
+      .slice(start, end)
+      .trim()
+      .replace(/^[-–—]\s*/, "");
+    if (body) {
+      segments.push({ label: normalizeSessionLabel(match[1]), text: body });
+    }
+  }
+  return segments.length ? segments : [{ label: null, text: clean }];
+}
+
+type PlanTextHeading =
+  | { kind: "notes"; title: string; remainder: string | null }
+  | { kind: "week"; title: string; phase: string | null }
+  | { kind: "session"; countdown: string; weekday: string | null; title: string; remainder: string | null };
+
+// Deterministic plan_text contract (mirrors fightcamp/weekly_plan_render.py +
+// the stage2 validator's countdown-header rule). Phase labels are the canonical
+// camp phases; the header separator is em-dash, en-dash, hyphen, or colon.
+const PHASE_TOKEN = "GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION";
+const WEEKDAY_TOKEN =
+  "mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?";
+const HEADER_SEP = "[—–\\-:]";
+const PHASE_FIRST_WEEK_RE = new RegExp(`^(${PHASE_TOKEN})\\s*${HEADER_SEP}\\s*(Week\\s+\\d+.*)$`, "i");
+const BARE_WEEK_RE = /^Week\s+\d+\b/i;
+const PHASE_ANYWHERE_RE = new RegExp(`\\b(${PHASE_TOKEN})\\b`, "i");
+// "D-33 (Wednesday) — Aerobic support" (final/validated countdown-first form).
+const SESSION_COUNTDOWN_FIRST_RE = new RegExp(
+  `^D-(\\d+)\\s*\\(([^)]+)\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  "i",
+);
+// "Wednesday (D-33) — Aerobic support" (Stage 1 deterministic weekday-first form).
+const SESSION_WEEKDAY_FIRST_RE = new RegExp(
+  `^(${WEEKDAY_TOKEN})[^()]*\\(\\s*D-(\\d+)\\s*\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  "i",
+);
+// Plan-level context sections that live outside any week. Only the always-on
+// note labels live here (recognised with or without a leading "#"); generic
+// markdown sections like "## Nutrition" are handled by the markdown-header
+// branch so a session body line such as "Recovery: light spin" is never
+// mistaken for a new section.
+const NOTE_SECTION_RE =
+  /^(Lead notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
+
+function normalizePhaseToken(value: string): string {
+  return value.replace(/_/g, " ").toUpperCase();
+}
+
+// On a run-on plan_text line the session metadata (the "Why:" objective, a
+// labelled note, or a coach-led freshness note) can sit inline after the
+// heading. Split it off the title so it is parsed as body instead of being
+// buried in (or lost from) the title. Markers require a colon or a distinctive
+// coach phrase, so ordinary title words ("Stop-and-go", a leading "Coach-led
+// boxing session") are never split.
+const SESSION_TITLE_BODY_MARKER =
+  /\s(?=(?:Why|Purpose|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:|No app S|Coach owns this session|Train with your coach)/i;
+
+function splitSessionTitle(title: string): { title: string; remainder: string | null } {
+  const markerIndex = title.search(SESSION_TITLE_BODY_MARKER);
+  if (markerIndex > -1) {
+    return { title: title.slice(0, markerIndex).trim(), remainder: title.slice(markerIndex).trim() || null };
+  }
+  return { title, remainder: null };
+}
+
+function classifyPlanTextHeading(line: string): PlanTextHeading | null {
+  const isMarkdownHeader = /^\s*#{1,6}\s+/.test(line);
+  const clean = stripPlanMarkup(line);
+  if (!clean || /^#+$/.test(clean)) {
+    return null;
+  }
+
+  const noteMatch = clean.match(NOTE_SECTION_RE);
+  if (noteMatch) {
+    return { kind: "notes", title: titleizeToken(noteMatch[1].trim()), remainder: noteMatch[2]?.trim() || null };
+  }
+
+  // Phase-prefixed week ("GPP — Week 1 (D-33 to D-27) — Build base"), or a bare
+  // "Week N — …" header that may carry its phase token mid-line. Phase renders
+  // as a tag, the rest as the title.
+  const phaseWeek = clean.match(PHASE_FIRST_WEEK_RE);
+  if (phaseWeek) {
+    return { kind: "week", title: phaseWeek[2].trim(), phase: normalizePhaseToken(phaseWeek[1]) };
+  }
+  if (BARE_WEEK_RE.test(clean)) {
+    const phase = clean.match(PHASE_ANYWHERE_RE);
+    return { kind: "week", title: clean, phase: phase ? normalizePhaseToken(phase[1]) : null };
+  }
+
+  const session = clean.match(SESSION_COUNTDOWN_FIRST_RE);
+  if (session) {
+    const split = splitSessionTitle(session[3].trim());
+    return {
+      kind: "session",
+      countdown: `D-${session[1]}`,
+      weekday: session[2].trim() || null,
+      title: split.title,
+      remainder: split.remainder,
+    };
+  }
+  const weekdaySession = clean.match(SESSION_WEEKDAY_FIRST_RE);
+  if (weekdaySession) {
+    const split = splitSessionTitle(weekdaySession[3].trim());
+    return {
+      kind: "session",
+      countdown: `D-${weekdaySession[2]}`,
+      weekday: titleizeToken(weekdaySession[1].trim()),
+      title: split.title,
+      remainder: split.remainder,
+    };
+  }
+
+  // Any other markdown header (## Nutrition, ## Progression, …) opens its own
+  // context card rather than being swallowed into the previous session.
+  if (isMarkdownHeader) {
+    return { kind: "notes", title: clean, remainder: null };
+  }
+
+  return null;
+}
+
+const COACH_LED_RE = /no app s\s?&?\s?c|coach owns this session|train with your coach/i;
+
+// Standalone session sub-headings the rehab/accessory renderer emits before a
+// group of bulleted items (RULE 12 and its suppressed-heading alternatives in
+// fightcamp/stage2_payload.py). On their own line these are a block-group label,
+// not an exercise, so we surface them as a tag on the grouped blocks — mirroring
+// the structured card's block_type chip — instead of leaking the bare word
+// (e.g. "Rehab") as a stray note on the previous block.
+const BLOCK_GROUP_LABELS = [
+  "Rehab",
+  "Prehab",
+  "Activation",
+  "Movement prep",
+  "Mobility",
+  "Warm-up",
+  "Warmup",
+  "Cool-down",
+  "Cooldown",
+  "Reset",
+  "Recovery",
+  "Strength",
+  "Power",
+  "Conditioning",
+  "Skill",
+  "Accessory",
+] as const;
+const BLOCK_GROUP_LABEL_RE = new RegExp(`^(?:${BLOCK_GROUP_LABELS.join("|")})\\s*:?\\s*$`, "i");
+
+/** A line that is *only* a block-group label → its canonical tag, else null. */
+function matchBlockGroupLabel(line: string): string | null {
+  const clean = stripPlanMarkup(line);
+  if (!BLOCK_GROUP_LABEL_RE.test(clean)) {
+    return null;
+  }
+  return titleizeToken(clean.replace(/:\s*$/, ""));
+}
+
+/**
+ * Parse athlete plan_text into structured groups (context notes, week sections,
+ * and the session cards beneath them). This is the fallback used when no
+ * machine-readable structured_plan is present, so it re-derives the same card
+ * shape the structured renderer shows — weeks, dated sessions, the session
+ * objective, and each exercise with its Purpose / Progress / Stop detail —
+ * instead of dumping every line into one undifferentiated block.
+ */
+export function parsePlanText(rawText: string): PlanTextGroup[] {
+  const lines = normalizePlanTextForCards(rawText).split("\n");
+  const groups: PlanTextGroup[] = [];
+  let currentWeek: PlanTextWeek | null = null;
+  let currentSession: PlanTextSession | null = null;
+  let currentNotes: PlanTextNotes | null = null;
+  // The block-group label (Rehab, Mobility…) currently in effect within a
+  // session, applied as a tag to the blocks beneath it until the next group
+  // header or the next session.
+  let currentBlockTag: string | null = null;
+
+  const pushSession = (session: PlanTextSession) => {
+    if (currentWeek) {
+      currentWeek.sessions.push(session);
+    } else {
+      groups.push(session);
+    }
+  };
+
+  const addBodyLine = (line: string) => {
+    if (!currentSession) {
+      return;
+    }
+    const session = currentSession;
+    const listItem = line.match(/^([-*•‣▪◦·]|\d+\.)\s+(.+)$/);
+    const wasListItem = Boolean(listItem);
+    const content = stripPlanMarkup(listItem ? listItem[2] : line);
+    if (!content) {
+      return;
+    }
+    if (COACH_LED_RE.test(content) && !content.includes(" — ")) {
+      session.coachNote = content;
+      return;
+    }
+    for (const segment of splitLabeledSegments(content)) {
+      const block = session.blocks[session.blocks.length - 1];
+      if (segment.label === "Why" && !block && !session.objective) {
+        session.objective = segment.text;
+        continue;
+      }
+      if (segment.label) {
+        if (block) {
+          block.details.push(segment);
+        } else {
+          session.notes.push(`${segment.label}: ${segment.text}`);
+        }
+        continue;
+      }
+      // Unlabelled: an exercise heading (Name — dose), or a bulleted exercise,
+      // otherwise loose detail attached to the current block / session. The
+      // matched separator is always exactly " - " / " — " (3 chars).
+      const dashIndex = segment.text.search(/\s[-–—]\s/);
+      if (dashIndex > -1) {
+        session.blocks.push({
+          name: segment.text.slice(0, dashIndex).trim(),
+          dose: segment.text.slice(dashIndex + 3).trim() || null,
+          details: [],
+          tag: currentBlockTag,
+        });
+      } else if (wasListItem) {
+        // A bulleted line is its own exercise heading (e.g. a rehab drill whose
+        // dose sits on the next line), so it always opens a new block rather than
+        // folding into the previous one.
+        session.blocks.push({ name: segment.text, dose: null, details: [], tag: currentBlockTag });
+      } else if (block) {
+        block.details.push({ label: null, text: segment.text });
+      } else {
+        session.notes.push(segment.text);
+      }
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || /^#+$/.test(line)) {
+      continue;
+    }
+
+    const heading = classifyPlanTextHeading(line);
+    if (heading?.kind === "notes") {
+      currentSession = null;
+      currentWeek = null;
+      currentNotes = { kind: "notes", title: heading.title, lines: [] };
+      groups.push(currentNotes);
+      if (heading.remainder) {
+        currentNotes.lines.push(stripPlanMarkup(heading.remainder));
+      }
+      continue;
+    }
+    if (heading?.kind === "week") {
+      currentSession = null;
+      currentNotes = null;
+      currentWeek = { kind: "week", title: heading.title, phase: heading.phase, sessions: [] };
+      groups.push(currentWeek);
+      continue;
+    }
+    if (heading?.kind === "session") {
+      currentNotes = null;
+      currentBlockTag = null;
+      currentSession = {
+        kind: "session",
+        countdown: heading.countdown,
+        weekday: heading.weekday,
+        title: heading.title,
+        objective: null,
+        coachNote: null,
+        blocks: [],
+        notes: [],
+      };
+      pushSession(currentSession);
+      // Inline metadata split off a run-on heading line is parsed as body.
+      if (heading.remainder) {
+        addBodyLine(heading.remainder);
+      }
+      continue;
+    }
+
+    if (currentSession) {
+      // A standalone block-group header (e.g. "Rehab") tags the blocks beneath
+      // it rather than rendering as a loose note.
+      const blockGroup = matchBlockGroupLabel(line);
+      if (blockGroup) {
+        currentBlockTag = blockGroup;
+        continue;
+      }
+      addBodyLine(line);
+      continue;
+    }
+    if (currentNotes) {
+      const content = stripPlanMarkup(line.replace(/^([-*]|\d+\.)\s+/, ""));
+      if (content) {
+        currentNotes.lines.push(content);
+      }
+      continue;
+    }
+
+    // Loose preamble before any heading: keep it in an intro notes card.
+    const content = stripPlanMarkup(line.replace(/^([-*]|\d+\.)\s+/, ""));
+    if (content) {
+      currentNotes = { kind: "notes", title: "Plan", lines: [content] };
+      groups.push(currentNotes);
+    }
+  }
+
+  return groups;
+}
+
+function PlanTextNotesCard({ notes }: { notes: PlanTextNotes }) {
+  return (
+    <section className="sp-card sp-active-notes legacy-plan-notes">
+      <p className="sp-eyebrow">{notes.title}</p>
+      {notes.lines.map((line, index) => (
+        <p key={`${notes.title}-${index}`} className="sp-block-purpose">
+          {line}
+        </p>
+      ))}
+    </section>
+  );
+}
+
+function PlanTextBlockCard({ block }: { block: PlanTextBlock }) {
+  return (
+    <div className="sp-block">
+      <div className="sp-block-head">
+        <span className="sp-block-title">{block.name}</span>
+        {block.tag ? <span className="sp-tag">{block.tag}</span> : null}
+      </div>
+      {block.dose ? (
+        <div className="sp-block-stats">
+          <span className="sp-stat">
+            <span className="sp-stat-label">Dose</span>
+            {block.dose}
+          </span>
+        </div>
+      ) : null}
+      {block.details.map((detail, index) =>
+        detail.label ? (
+          <p key={`${block.name}-${index}`} className="sp-block-aside">
+            <span className="sp-stat-label">{detail.label}</span>
+            {detail.text}
+          </p>
+        ) : (
+          <p key={`${block.name}-${index}`} className="sp-block-purpose">
+            {detail.text}
+          </p>
+        ),
+      )}
+    </div>
+  );
+}
+
+function PlanTextSessionCard({ session }: { session: PlanTextSession }) {
+  return (
+    <article className="sp-session legacy-plan-card">
+      <header className="sp-session-head">
+        <div>
+          {session.countdown || session.weekday ? (
+            <div className="sp-day-labels sp-session-day-labels">
+              {session.countdown ? (
+                <span className="sp-countdown sp-accent">{session.countdown}</span>
+              ) : null}
+              {session.weekday ? <span className="sp-day-date">{session.weekday}</span> : null}
+            </div>
+          ) : null}
+          <h4 className="sp-session-title">{session.title}</h4>
+          {session.objective ? <p className="sp-session-objective">{session.objective}</p> : null}
+        </div>
+      </header>
+      {session.coachNote ? <p className="sp-today-note">{session.coachNote}</p> : null}
+      {session.blocks.length ? (
+        <div className="sp-blocks">
+          {session.blocks.map((block, index) => (
+            <PlanTextBlockCard key={`${block.name}-${index}`} block={block} />
+          ))}
+        </div>
+      ) : null}
+      {session.notes.map((note, index) => (
+        <p key={`note-${index}`} className="sp-block-purpose">
+          {note}
+        </p>
+      ))}
+    </article>
+  );
+}
+
+function PlanTextWeekSection({ week, defaultOpen }: { week: PlanTextWeek; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <details className="sp-week" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className="sp-week-summary">
+        <span className="sp-week-title">{week.title}</span>
+        {week.phase ? <span className="sp-tag sp-accent">{week.phase}</span> : null}
+      </summary>
+      <div className="sp-week-body">
+        {week.sessions.length ? (
+          week.sessions.map((session, index) => (
+            <PlanTextSessionCard key={`${session.countdown}-${index}`} session={session} />
+          ))
+        ) : (
+          <p className="sp-muted">No sessions scheduled.</p>
+        )}
+      </div>
+    </details>
+  );
+}
+
+function PlanTextCards({ text }: { text: string }) {
+  const groups = parsePlanText(text);
+
+  if (!groups.length) {
+    return (
+      <section className="sp-root legacy-plan-root">
+        <article className="sp-session legacy-plan-card">
+          <header className="sp-session-head">
+            <div>
+              <p className="sp-eyebrow">Saved plan</p>
+              <h4 className="sp-session-title">No plan cards available</h4>
+            </div>
+          </header>
+          <p className="sp-session-objective">This saved plan does not contain athlete-facing plan content.</p>
+        </article>
+      </section>
+    );
+  }
+
+  const firstWeekIndex = groups.findIndex((group) => group.kind === "week");
+  return (
+    <section className="sp-root legacy-plan-root" aria-label="Saved plan cards">
+      <header className="sp-header legacy-plan-header">
+        <p className="sp-eyebrow">Saved plan</p>
+        <h3 className="sp-title">Training plan</h3>
+      </header>
+      <div className="legacy-plan-card-stack">
+        {groups.map((group, index) => {
+          if (group.kind === "notes") {
+            return <PlanTextNotesCard key={`notes-${index}`} notes={group} />;
+          }
+          if (group.kind === "week") {
+            return (
+              <PlanTextWeekSection
+                key={`week-${index}`}
+                week={group}
+                defaultOpen={index === firstWeekIndex}
+              />
+            );
+          }
+          return <PlanTextSessionCard key={`session-${index}`} session={group} />;
+        })}
+      </div>
+    </section>
+  );
+}
+
+// Shown above the template card while the richer structured card is still being
+// built in the background. It is intentionally a light, positive hint — the plan
+// is already usable below, and the view upgrades itself the moment the card
+// lands. This is NOT a fallback/error state, so it never blocks or replaces the
+// plan content.
+function StructuredPlanUpgradingNotice() {
+  return (
+    <div className="quick-build-refine-banner" role="status" aria-live="polite">
+      <div className="quick-build-refine-banner__body">
+        <p className="quick-build-refine-banner__kicker">
+          Enhancing your plan view
+          <span className="loading-title-dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </p>
+        <h2 className="quick-build-refine-banner__title">Your plan is ready below</h2>
+        <p className="quick-build-refine-banner__copy">
+          We&apos;re building the full structured card in the background. Your plan is shown below
+          now and this view will upgrade to the richer card automatically — no need to wait or
+          refresh.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export type StructuredCardDebug = { status: string; errors: string[] };
+
+/**
+ * The structured-card conversion outcome recorded on the plan's validator report
+ * ({status, errors}; see api/stage2_automation._record_structured_outcome).
+ *
+ * Returned for ANY recorded status because the only place this is shown is over
+ * the plan_text fallback (card not rendering), where each status is diagnostic:
+ *  - `invalid_fallback_used` → the converted card was rejected (faithfulness /
+ *    schema drift) so no card was persisted,
+ *  - `valid` / `repair_attempted_valid` → a card WAS built and validated but is
+ *    not the one showing, i.e. it was lost on a later write or no longer decodes
+ *    at read time (the "card built then lost" signal),
+ *  - `not_attempted` → structured generation never ran for this plan.
+ * Returns null only when there is no recorded outcome at all.
+ */
+export function readStructuredCardDebug(
+  plan: Pick<PlanDetail, "admin_outputs">,
+): StructuredCardDebug | null {
+  const report = plan.admin_outputs?.stage2_validator_report;
+  const debug =
+    report && typeof report === "object"
+      ? (report as Record<string, unknown>).structured_plan
+      : null;
+  if (!debug || typeof debug !== "object") {
+    return null;
+  }
+  const record = debug as Record<string, unknown>;
+  const status = typeof record.status === "string" ? record.status.trim() : "";
+  if (!status) {
+    return null;
+  }
+  // Coerce defensively: a null/undefined entry must not surface as the literal
+  // strings "null"/"undefined", and whitespace-only reasons are dropped.
+  const errors = Array.isArray(record.errors)
+    ? record.errors.map((entry) => (entry != null ? String(entry).trim() : "")).filter(Boolean)
+    : [];
+  return { status, errors };
+}
+
+/**
+ * Admin-only explainer shown over the plan_text fallback so the reason a
+ * structured card is missing is visible instead of the card silently
+ * disappearing. Messaging differs by recorded status: a rejected conversion
+ * lists the drift reasons; a `valid` status here means the card was built but
+ * lost (the athlete is still on the fallback).
+ */
+function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
+  const wasBuilt = debug.status === "valid" || debug.status === "repair_attempted_valid";
+  const notAttempted = debug.status === "not_attempted";
+  const heading = wasBuilt ? "Structured card built but not shown" : "Structured card not built";
+  const copy = wasBuilt
+    ? "A structured card was built and validated for this plan, but it is not the card showing — it was most likely overwritten on a later write or no longer decodes at read time, so the athlete is on the text fallback."
+    : notAttempted
+      ? "Structured generation never ran for this plan, so the athlete is on the text fallback."
+      : "The athlete is seeing the text fallback because the converted structured card was rejected, so no card was saved. Approving the plan does not rebuild it; the reasons below show how the card drifted from the saved plan text.";
+  return (
+    <section className="support-panel" role="status">
+      <div className="form-section-header">
+        <p className="kicker">Admin diagnostic</p>
+        <h3>
+          {heading} — {humanizeStatus(debug.status)}
+        </h3>
+      </div>
+      <p className="muted">{copy}</p>
+      {debug.errors.length ? (
+        <ul className="summary-list">
+          {debug.errors.map((reason, index) => (
+            <li key={`${reason}-${index}`}>{reason}</li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
 }
 
 function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
@@ -546,13 +1326,11 @@ function BlockedPlanDecisionCard({
 
 function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
   // Surfaced only for advisories carrying a real injury-risk band (see
-  // selectInjuryRiskAdvisory). The directive leads; the verbose, sometimes
-  // boilerplate reasoning is tucked behind a "Why" toggle.
-  const [showWhy, setShowWhy] = useState(false);
+  // selectInjuryRiskAdvisory). The directive leads; generated rationale is
+  // intentionally omitted because it is too noisy for the athlete view.
   const directive = (advisory.replacement || advisory.suggestion || "").trim();
   const daysLabel = (advisory.days || []).join(", ").trim();
   const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
-  const reason = (advisory.reason || "").trim();
   const explanation = advisory.risk_band ? explainRiskBand(advisory.risk_band) : null;
 
   return (
@@ -576,19 +1354,6 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
         ) : null}
       </div>
       {directive ? <p className="sparring-advisory-suggestion">{directive}</p> : null}
-      {reason ? (
-        <>
-          <button
-            type="button"
-            className="sparring-advisory-why-toggle"
-            aria-expanded={showWhy}
-            onClick={() => setShowWhy((prev) => !prev)}
-          >
-            {showWhy ? "Hide why" : "Why this flag"}
-          </button>
-          {showWhy ? <p className="muted sparring-advisory-reason">{reason}</p> : null}
-        </>
-      ) : null}
       <p className="muted sparring-advisory-disclaimer">{advisory.disclaimer}</p>
     </section>
   );
@@ -664,21 +1429,18 @@ function buildReviewIssue(issue: ValidatorIssue, severity: "error" | "warning"):
 function resolveWarningBuckets(report: Record<string, unknown> | null | undefined) {
   const warnings = safeIssueList(report?.warnings);
   const explicitBlockingWarnings = safeIssueList(report?.blocking_warnings);
-  const explicitReviewFlags = safeIssueList(report?.review_flags);
 
-  if (explicitBlockingWarnings.length || explicitReviewFlags.length) {
+  if (explicitBlockingWarnings.length) {
     return {
-      blockingWarnings: explicitBlockingWarnings,
-      reviewFlags: explicitReviewFlags,
+      blockingWarnings: explicitBlockingWarnings.filter((issue) =>
+        BLOCKING_WARNING_CODES.has(String(issue.code || "")),
+      ),
     };
   }
 
   return {
     blockingWarnings: warnings.filter((issue) =>
       BLOCKING_WARNING_CODES.has(String(issue.code || "")),
-    ),
-    reviewFlags: warnings.filter(
-      (issue) => !BLOCKING_WARNING_CODES.has(String(issue.code || "")),
     ),
   };
 }
@@ -728,21 +1490,10 @@ export function buildReviewSummary(
 ) {
   const normalizedStage2Status = String(stage2Status || "").trim().toLowerCase();
   const errors = safeIssueList(report?.errors).map((issue) => buildReviewIssue(issue, "error"));
-  const { blockingWarnings, reviewFlags } = resolveWarningBuckets(report);
+  const { blockingWarnings } = resolveWarningBuckets(report);
   const blocking = blockingWarnings.map((issue) => buildReviewIssue(issue, "warning"));
-  const reviewFlagsMapped = reviewFlags.map((issue) => buildReviewIssue(issue, "warning"));
-  const blockingCount =
-    typeof report?.blocking_warning_count === "number"
-      ? report.blocking_warning_count
-      : blocking.length;
-  const reviewFlagCount =
-    typeof report?.review_flag_count === "number"
-      ? report.review_flag_count
-      : reviewFlagsMapped.length;
-  const isPublishableFromReport =
-    typeof report?.is_publishable === "boolean"
-      ? report.is_publishable
-      : errors.length === 0 && blocking.length === 0;
+  const blockingCount = blocking.length;
+  const isPublishableFromReport = errors.length === 0 && blocking.length === 0;
   const isExplicitlyNonPublishableStatus = NON_PUBLISHABLE_STAGE2_STATUSES.has(normalizedStage2Status);
   const isBlockedTriageStub = Boolean(options?.hasBlockedTriageStubText);
   const isPublishable =
@@ -751,26 +1502,42 @@ export function buildReviewSummary(
   const summary = {
     errors,
     blocking,
-    reviewFlags: reviewFlagsMapped,
     blockingCount,
-    reviewFlagCount,
     isPublishable,
   };
 
-  if (errors.length + blocking.length + reviewFlagsMapped.length === 0) {
+  if (isPublishable) {
+    return {
+      ...summary,
+      hasIssues: false,
+      headline: "This plan is ready to release.",
+      guidance: "No hard blockers remain. Approval is now just a release decision.",
+    };
+  }
+
+  if (errors.length + blocking.length === 0) {
+    if (isBlockedTriageStub && normalizedStage2Status !== "triage_resume_approved") {
+      return {
+        ...summary,
+        hasIssues: true,
+        headline: "Triage placeholder text is currently holding this Stage 2 plan.",
+        guidance: "This plan still contains triage placeholder text and cannot be released to the athlete.",
+      };
+    }
+
     return {
       ...summary,
       hasIssues: false,
       headline:
         normalizedStage2Status === "triage_resume_approved"
           ? "Resume approved — regeneration pending. A regenerated final result is required before release."
-          : stage2Status === "stage2_failed"
+          : normalizedStage2Status === "stage2_failed"
           ? "Stage 2 held this plan, but no detailed validator reasons were saved in the report."
           : "No validator issues were saved for this plan.",
       guidance:
         normalizedStage2Status === "triage_resume_approved"
           ? "Keep this plan blocked until Stage 2 regeneration completes and a real final result replaces the triage stub."
-          : stage2Status === "stage2_failed"
+          : normalizedStage2Status === "stage2_failed"
           ? "Open the latest model output and retry prompt below to see what still needs work."
           : "This usually means the plan is held for workflow reasons rather than a specific validator issue.",
     };
@@ -779,22 +1546,7 @@ export function buildReviewSummary(
   const summaryParts = [
     errors.length ? pluralize(errors.length, "blocking error") : null,
     blockingCount ? pluralize(blockingCount, "blocking issue") : null,
-    reviewFlagCount ? pluralize(reviewFlagCount, "review flag") : null,
   ].filter((part): part is string => Boolean(part));
-
-  if (isPublishable) {
-    const hasReviewFlags = reviewFlagsMapped.length > 0;
-    return {
-      ...summary,
-      hasIssues: true,
-      headline: hasReviewFlags
-        ? `This plan is publishable. Only non-blocking review flags remain (${summaryParts.join(", ")}).`
-        : "This plan is publishable and clear to release.",
-      guidance: hasReviewFlags
-        ? "You can release this plan now. The remaining flags are cleanup notes, not hold reasons."
-        : "No blockers remain. Approval is now just a release decision.",
-    };
-  }
 
   return {
     ...summary,
@@ -804,7 +1556,7 @@ export function buildReviewSummary(
       isBlockedTriageStub
         ? "This plan still contains triage placeholder text and cannot be released to the athlete."
         : errors.length > 0
-        ? "Fix the blocking issues first. Review flags are secondary until the blockers are gone."
+        ? "Fix the hard blockers first."
         : "These blockers were found on the latest validation pass. You can retry or approve anyway to release.",
   };
 }
@@ -947,14 +1699,15 @@ export function PlanViewer({
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const isViewerAdmin = isAdminRole(viewerRole);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
+  const archivedPreview = isArchivedPlan(plan.status);
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
   const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
-  const technicalStyles =
-    getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
+  const hasStructuredAthletePlan =
+    shouldRenderStructuredPlan(plan.outputs) && Boolean(plan.outputs.structured_plan);
 
   const injuryTriage = readInjuryTriage(plan);
   const rawTriageMode = readRawTriageMode(plan);
@@ -973,7 +1726,7 @@ export function PlanViewer({
 
   const statusLabel = isTriageBlocked
     ? blockedTitle
-    : titleizeToken(plan.status || "generated");
+    : formatPlanStatus(plan.status || "generated");
 
   const stage2Status = isTriageBlocked
     ? "Stage 2 skipped intentionally"
@@ -1086,11 +1839,24 @@ export function PlanViewer({
   const [archivePending, setArchivePending] = useState(false);
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  // When THIS plan is the athlete's active plan and today's session is already
+  // logged, the command view advances `next_session` to the next scheduled day.
+  // We mirror that here so the camp map highlights the next session instead of
+  // keeping the finished day under the "Today" badge (matching Overview/Today).
+  const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
+  const [setActivePending, setSetActivePending] = useState(false);
+  const [setActiveError, setSetActiveError] = useState<string | null>(null);
+  const [showActiveConflict, setShowActiveConflict] = useState(false);
   const [planActionPending, setPlanActionPending] = useState<
     "rename" | "archive" | "permanent-delete" | null
   >(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
+  // Plans whose background structured-card poll window has elapsed. We stop
+  // polling for these and drop the "enhancing" hint; the template card stays as
+  // the final view (no fallback/error notice).
+  const [pollExpiredPlans, setPollExpiredPlans] = useState<Record<string, boolean>>({});
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1149,10 +1915,86 @@ export function PlanViewer({
       router.refresh();
     },
   });
+  const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
+  const isRecentPlan = isRecentlyCreatedPlan(plan);
+  // True while the template card is up and we're still polling for the richer
+  // structured card to land. Drives the lightweight "enhancing" hint and the
+  // background poll; never holds back the plan content.
+  const isAwaitingStructuredUpgrade = shouldAwaitStructuredPlanUpgrade({
+    hasPublishedPlan,
+    hasStructuredPlan: hasStructuredAthletePlan,
+    pollWindowExpired: structuredPlanPollExpired,
+    hasAccessToken: Boolean(accessToken),
+    isRecentPlan,
+    isTriageBlocked,
+  });
+  // Admin-only: why this published plan is still on the plan_text fallback. Only
+  // shown once we are no longer expecting a live upgrade, so a card that is still
+  // building does not flash a stale rejection reason.
+  const structuredCardDebug = isAwaitingStructuredUpgrade ? null : readStructuredCardDebug(plan);
 
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
   }, [plan.plan_id, plan.admin_outputs?.final_plan_text]);
+
+  // Resolve which plan is the athlete's active one so this page can show the
+  // ACTIVE badge / Set active control without duplicating Today's job. A missing
+  // active plan is a normal state (no plan set yet), so failures stay silent.
+  useEffect(() => {
+    if (!accessToken || !canManagePlan) {
+      return;
+    }
+    let cancelled = false;
+    getActivePlan(accessToken)
+      .then((active) => {
+        if (!cancelled) {
+          setActivePlanId(active?.plan_id ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActivePlanId(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, canManagePlan, plan.plan_id]);
+
+  // Resolve the next-session focus for the camp map. The command view is the
+  // viewer's own (server-scoped to their athlete id), so we only apply it when it
+  // is reporting on THIS plan as the active one — admins viewing another athlete's
+  // plan get no override and the calendar "Today" highlight as before.
+  useEffect(() => {
+    if (!accessToken || !canManagePlan) {
+      return;
+    }
+    let cancelled = false;
+    getToday(accessToken)
+      .then((state) => {
+        if (cancelled) {
+          return;
+        }
+        const next = state.today?.next_session;
+        const isThisActivePlan = state.active_plan?.id === plan.plan_id;
+        const iso =
+          isThisActivePlan && next?.session_relation === "next"
+            ? (next.calendar_date || "").slice(0, 10)
+            : "";
+        // Parse at local noon to dodge any timezone date-shift; an unusable date
+        // (undated plans) leaves the calendar "Today" highlight untouched.
+        const parsed = iso ? new Date(`${iso}T12:00:00`) : null;
+        setNextSessionFocusDate(parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNextSessionFocusDate(undefined);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, canManagePlan, plan.plan_id]);
 
   useEffect(() => {
     setOpenAdminSection(
@@ -1165,6 +2007,71 @@ export function PlanViewer({
             : "draft",
     );
   }, [plan.plan_id, handoffText, retryText, plan.admin_outputs?.final_plan_text]);
+
+  // Background upgrade poll: the template card is already on screen, so this just
+  // watches for the richer structured card to finish building server-side and
+  // swaps it in. It never blocks the view; when the poll window elapses we simply
+  // stop and leave the template card in place. Runs for any open published plan
+  // still missing its card (not only recent ones) so an older plan whose card
+  // lands later upgrades without a manual reload; the window below bounds the cost.
+  useEffect(() => {
+    if (
+      !shouldPollForStructuredPlanUpgrade({
+        hasPublishedPlan,
+        hasStructuredPlan: hasStructuredAthletePlan,
+        pollWindowExpired: structuredPlanPollExpired,
+        hasAccessToken: Boolean(accessToken),
+        isTriageBlocked,
+      })
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const pollForStructuredPlan = async () => {
+      if (!accessToken) {
+        return;
+      }
+      try {
+        const refreshedPlan = await getPlan(accessToken, plan.plan_id);
+        // Only swap the view once the actual structured card exists — mirror the
+        // exact gate the renderer uses (hasStructuredAthletePlan) so we never call
+        // onPlanUpdated for a refresh that would still fall back to plan_text.
+        if (
+          !cancelled &&
+          shouldRenderStructuredPlan(refreshedPlan.outputs) &&
+          Boolean(refreshedPlan.outputs.structured_plan)
+        ) {
+          onPlanUpdated?.(refreshedPlan);
+        }
+      } catch {
+        // Transient fetch failure — the template card stays up and the next tick
+        // retries until the structured card lands or the poll window elapses.
+      }
+    };
+
+    const intervalId = window.setInterval(pollForStructuredPlan, STRUCTURED_PLAN_POLL_INTERVAL_MS);
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled) {
+        setPollExpiredPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
+      }
+    }, STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    accessToken,
+    hasPublishedPlan,
+    hasStructuredAthletePlan,
+    isTriageBlocked,
+    onPlanUpdated,
+    plan.plan_id,
+    structuredPlanPollExpired,
+  ]);
 
   async function handleManualStage2Submit() {
     if (!accessToken) {
@@ -1224,7 +2131,7 @@ export function PlanViewer({
     try {
       const updatedPlan = await approvePlanForRelease(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
-      setApproveMessage("Plan approved and released to the athlete view.");
+      setApproveMessage(getApprovalSuccessMessage(updatedPlan));
     } catch (error) {
       // Approval persists server-side before any slow post-processing, so a
       // network/timeout failure is often a false negative: the plan may already
@@ -1235,7 +2142,7 @@ export function PlanViewer({
       });
       if (recoveredPlan) {
         onPlanUpdated?.(recoveredPlan);
-        setApproveMessage("Plan approved and released to the athlete view.");
+        setApproveMessage(getApprovalSuccessMessage(recoveredPlan));
         return;
       }
       setApproveError(
@@ -1313,6 +2220,37 @@ export function PlanViewer({
     }
   }
 
+  async function handleSetActive(overlapAction?: ActivePlanOverlapAction) {
+    if (!accessToken) {
+      setSetActiveError("Session expired. Sign in again.");
+      return;
+    }
+    if (!canSetActivePlan(plan.status)) {
+      setSetActiveError("This plan cannot be set active from its current state.");
+      return;
+    }
+    setSetActivePending(true);
+    setSetActiveError(null);
+    try {
+      const active = await setActivePlan(accessToken, plan.plan_id, { overlapAction });
+      setActivePlanId(active.plan_id);
+      setShowActiveConflict(false);
+    } catch (error) {
+      if (!overlapAction && isActivePlanOverlapError(error)) {
+        setShowActiveConflict(true);
+        return;
+      }
+      setSetActiveError(error instanceof Error ? error.message : "Unable to set this plan active.");
+    } finally {
+      setSetActivePending(false);
+    }
+  }
+
+  function handleStartAfterCurrentPlan() {
+    setShowActiveConflict(false);
+    router.push("/onboarding");
+  }
+
   async function handleArchivePlan() {
     if (!accessToken) {
       setArchiveError("Admin session missing. Please sign in again.");
@@ -1329,7 +2267,7 @@ export function PlanViewer({
     setArchiveMessage(null);
 
     try {
-      const updatedPlan = await archivePlan(accessToken, plan.plan_id);
+      const updatedPlan = await adminArchivePlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
       setArchiveMessage("Plan archived.");
     } catch (error) {
@@ -1398,7 +2336,7 @@ export function PlanViewer({
     setPlanActionMessage(null);
 
     try {
-      await deletePlan(accessToken, plan.plan_id);
+      await archivePlan(accessToken, plan.plan_id);
       clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push(viewerRole === "admin" ? "/admin" : "/plans");
@@ -1427,20 +2365,33 @@ export function PlanViewer({
     }
 
     const planName = plan.plan_name?.trim() ?? "";
-    if (!planName) {
-      setPlanActionError("This plan has no name. Rename it before permanent deletion.");
-      return;
-    }
+    const isArchived = (plan.status || "").trim().toLowerCase() === "archived";
 
-    const typed = window.prompt(
-      `Permanent delete cannot be undone.\n\nType the plan name to confirm:\n${planName}`,
-    );
-    if (typed == null) {
-      return;
-    }
-    if (typed.trim() !== planName) {
-      setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
-      return;
+    // Archived plans are already retired, so skip the type-the-name confirmation
+    // and use a single confirm. Live plans still require typing the name.
+    if (isArchived) {
+      const confirmed = window.confirm(
+        `Permanently delete "${getPlanDisplayName(plan)}"? This cannot be undone.`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    } else {
+      if (!planName) {
+        setPlanActionError("This plan has no name. Rename it before permanent deletion.");
+        return;
+      }
+
+      const typed = window.prompt(
+        `Permanent delete cannot be undone.\n\nType the plan name to confirm:\n${planName}`,
+      );
+      if (typed == null) {
+        return;
+      }
+      if (typed.trim() !== planName) {
+        setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
+        return;
+      }
     }
 
     setPlanActionPending("permanent-delete");
@@ -1448,7 +2399,7 @@ export function PlanViewer({
     setPlanActionMessage(null);
 
     try {
-      await permanentlyDeletePlan(accessToken, plan.plan_id, planName);
+      await adminPermanentlyDeletePlan(accessToken, plan.plan_id, isArchived ? undefined : planName);
       clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push("/admin");
@@ -1546,7 +2497,12 @@ export function PlanViewer({
           </div>
           <div className="status-card">
             <p className="status-label">Status</p>
-            <h2 className="plan-summary-title">{statusLabel}</h2>
+            <h2 className="plan-summary-title">
+              {statusLabel}
+              {activePlanId === plan.plan_id ? (
+                <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
+              ) : null}
+            </h2>
             <p className="muted">
               {isTriageBlocked
                 ? "Stage 2 was skipped intentionally."
@@ -1555,11 +2511,37 @@ export function PlanViewer({
           </div>
         </div>
 
+        {archivedPreview ? (
+          <div className="quick-build-refine-banner cm-archived-banner" role="status">
+            This plan is archived history. Preview only; it does not affect Today, calendar, streaks, or notifications.
+          </div>
+        ) : null}
+
         <div className="plan-summary-actions">
           <Link href="/plans" className="ghost-button">
             Back to plans
           </Link>
-          {canManagePlan ? (
+          {canManagePlan && activePlanId === plan.plan_id ? (
+            <Link href="/today" className="cta">
+              Open Today
+            </Link>
+          ) : null}
+          {canManagePlan && activePlanId !== plan.plan_id && canSetActivePlan(plan.status) ? (
+            <button
+              type="button"
+              className="cta"
+              onClick={() => void handleSetActive()}
+              disabled={setActivePending}
+            >
+              {setActivePending ? "Setting active..." : "Set active"}
+            </button>
+          ) : null}
+          {archivedPreview && viewerRole === "athlete" ? (
+            <Link href="/onboarding" className="ghost-button">
+              Create New Plan
+            </Link>
+          ) : null}
+          {canManagePlan && !archivedPreview ? (
             <>
               <button
                 type="button"
@@ -1597,32 +2579,55 @@ export function PlanViewer({
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        {showActiveConflict ? (
+          <div className="support-panel support-panel-alert">
+            <div className="form-section-header">
+              <p className="kicker">Active plan conflict</p>
+              <h3>Choose how to activate this plan</h3>
+            </div>
+            <p className="muted">{ACTIVE_PLAN_OVERLAP_MESSAGE}</p>
+            <div className="plan-summary-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void handleSetActive("replace")}
+                disabled={setActivePending}
+              >
+                Replace current plan
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void handleSetActive("pause")}
+                disabled={setActivePending}
+              >
+                Pause current plan
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={handleStartAfterCurrentPlan}
+                disabled={setActivePending}
+              >
+                Start after current plan ends
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setShowActiveConflict(false)}
+                disabled={setActivePending}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>
 
-      <div className="plan-detail-layout">
-        <aside className="plan-summary-stack">
-          <section className="plan-summary-card">
-            <div className="plan-summary-header">
-              <p className="kicker">Summary</p>
-              <h2 className="plan-summary-title">Camp context</h2>
-            </div>
-            <div className="plan-meta-grid">
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Fight date</p>
-                <p className="plan-meta-value">{plan.fight_date || "Not provided"}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Technical Style</p>
-                <p className="plan-meta-value">{technicalStyles}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Created</p>
-                <p className="plan-meta-value">{new Date(plan.created_at).toLocaleDateString()}</p>
-              </article>
-            </div>
-          </section>
-
-          {canUseAdminOutputs ? (
+      <div className={`plan-detail-layout${canUseAdminOutputs ? "" : " plan-detail-layout-single"}`}>
+        {canUseAdminOutputs ? (
+          <aside className="plan-summary-stack">
             <section className="plan-summary-card">
               <div className="plan-summary-header">
                 <p className="kicker">Stage 2</p>
@@ -1647,7 +2652,7 @@ export function PlanViewer({
                       : isProtectedTriageResumePending
                         ? "Blocked / resume pending"
                       : stage2ReviewSummary.isPublishable
-                        ? "Publishable"
+                        ? "Ready"
                         : "Held"}
                   </p>
                 </article>
@@ -1657,12 +2662,6 @@ export function PlanViewer({
                     {isTriageBlocked
                       ? "—"
                       : stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount}
-                  </p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Review flags</p>
-                  <p className="plan-meta-value">
-                    {isTriageBlocked ? "—" : stage2ReviewSummary.reviewFlagCount}
                   </p>
                 </article>
               </div>
@@ -1689,43 +2688,48 @@ export function PlanViewer({
                 </>
               ) : null}
             </section>
-          ) : null}
-        </aside>
+          </aside>
+        ) : null}
 
         <section className="plan-text-panel">
-          <div className="plan-header-row">
-            <div>
-              <p className="kicker">Athlete Plan</p>
-              <h2>
+          {/* The validation status/badge is operational metadata. Athletes go
+              straight into the camp map (which carries its own header); admins
+              and any not-yet-published/triage state still see the status. */}
+          {canUseAdminOutputs || !hasPublishedPlan || isTriageBlocked ? (
+            <div className="plan-header-row">
+              <div>
+                <p className="kicker">{canUseAdminOutputs ? "Athlete Plan" : "Your plan"}</p>
+                <h2>
+                  {isTriageBlocked
+                    ? blockedTitle
+                    : plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                      ? "Resume approved — regeneration pending"
+                    : hasPublishedPlan
+                      ? "Validated final plan"
+                      : "Pending finalization"}
+                </h2>
+              </div>
+              <span
+                className={`badge ${
+                  isTriageBlocked
+                    ? injuryTriage?.mode === "medical_hold"
+                      ? "issue-badge-error"
+                      : ""
+                    : hasPublishedPlan
+                      ? "status-badge-success"
+                      : "status-badge-neutral"
+                }`}
+              >
                 {isTriageBlocked
                   ? blockedTitle
                   : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                    ? "Resume approved — regeneration pending"
+                    ? "Resume pending"
                   : hasPublishedPlan
-                    ? "Validated final plan"
-                    : "Pending finalization"}
-              </h2>
+                    ? "Validated"
+                    : "Review required"}
+              </span>
             </div>
-            <span
-              className={`badge ${
-                isTriageBlocked
-                  ? injuryTriage?.mode === "medical_hold"
-                    ? "issue-badge-error"
-                    : ""
-                  : hasPublishedPlan
-                    ? "status-badge-success"
-                    : "status-badge-neutral"
-              }`}
-            >
-              {isTriageBlocked
-                ? blockedTitle
-                : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                  ? "Resume pending"
-                : hasPublishedPlan
-                  ? "Validated"
-                  : "Review required"}
-            </span>
-          </div>
+          ) : null}
 
           {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
 
@@ -1760,15 +2764,22 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              <WeeklySparringView planId={plan.plan_id} />
-              {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
+              {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
-                  rawFallback={athletePlanText}
-                  showRawFallback={canUseAdminOutputs}
+                  focusDay={nextSessionFocusDate}
+                  currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
+                  createdAt={plan.created_at}
+                  planStatus={plan.status}
                 />
               ) : (
-                <pre className="plan-text-block">{athletePlanText}</pre>
+                <>
+                  {isAwaitingStructuredUpgrade ? <StructuredPlanUpgradingNotice /> : null}
+                  {canUseAdminOutputs && structuredCardDebug ? (
+                    <StructuredCardDiagnostic debug={structuredCardDebug} />
+                  ) : null}
+                  <PlanTextCards text={athletePlanText} />
+                </>
               )}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}
@@ -1812,7 +2823,7 @@ export function PlanViewer({
                       <p className="muted">
                         {stage2RetryJustCompleted === "passed"
                           ? "The submitted plan passed validation and has been published to the athlete view."
-                          : "The submitted plan was validated. Blocking issues and review flags below reflect this latest attempt."}
+                          : "The submitted plan was validated. Hard blockers below reflect this latest attempt."}
                       </p>
                     </section>
                   ) : null}
@@ -1845,13 +2856,10 @@ export function PlanViewer({
                             : "issue-badge-error"
                         }`}
                       >
-                        {stage2ReviewSummary.isPublishable ? "Publishable" : "Held"}
+                        {stage2ReviewSummary.isPublishable ? "Ready" : "Held"}
                       </span>
                       <span className="badge issue-badge-error">
                         {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount} blockers
-                      </span>
-                      <span className="badge issue-badge-warning">
-                        {stage2ReviewSummary.reviewFlagCount} review flags
                       </span>
                     </div>
 
@@ -1912,33 +2920,6 @@ export function PlanViewer({
                           </section>
                         ) : null}
 
-                        {stage2ReviewSummary.reviewFlags.length ? (
-                          <section className="review-issue-group">
-                            <div className="review-issue-group-header">
-                              <p className="review-issue-group-title">Review flags</p>
-                              <span className="badge issue-badge-warning">
-                                {stage2ReviewSummary.reviewFlags.length}
-                              </span>
-                            </div>
-                            <div className="review-issue-list">
-                              {stage2ReviewSummary.reviewFlags.map((issue, index) => (
-                                <article key={`${issue.code}-${index}`} className="review-issue-item">
-                                  <div className="review-issue-title-row">
-                                    <p className="review-issue-title">{issue.title}</p>
-                                    <span className="badge issue-badge-warning">Flag</span>
-                                  </div>
-                                  <p className="review-issue-message">{issue.message}</p>
-                                  {issue.context ? (
-                                    <p className="review-issue-context">{issue.context}</p>
-                                  ) : null}
-                                  {issue.snippet ? (
-                                    <p className="review-issue-snippet">Line: {issue.snippet}</p>
-                                  ) : null}
-                                </article>
-                              ))}
-                            </div>
-                          </section>
-                        ) : null}
                       </div>
                     ) : null}
                   </section>

@@ -28,6 +28,7 @@ from .stage2_planning_brief import (
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
+from .role_labels import stamp_weekly_role_map_labels
 
 
 def _rotate_weekdays_from_plan_start(weekdays: list[str], plan_creation_weekday: Any) -> list[str]:
@@ -515,24 +516,20 @@ def _low_aerobic_support_cap_for_week(
         & {"severe_injury", "red_flag_injury", "medical_hold"}
     )
 
-    hard_count = effective_hard_day_count(hard_sparring_plan or [])
-
     if bucket in {"none", "low"}:
         if is_fight_week:
             return 0 if (high_fatigue or red_flag) else 1
         if phase == "TAPER":
             return 1
-        return 2
+        return 1
 
     if bucket == "moderate":
         if is_fight_week:
             return 0 if (high_fatigue or red_flag) else 1
         if phase == "TAPER":
             return 1
-        # GPP / SPP — drop to 1 if high fatigue or large hard-sparring load.
-        if high_fatigue or hard_count >= 3:
-            return 1
-        return 2
+        # GPP / SPP: keep gas-tank support to one easy touch.
+        return 1
 
     # high / critical / extreme: never reopen volume on high fatigue or red flag.
     if high_fatigue or red_flag:
@@ -1944,12 +1941,14 @@ def _non_spar_role_priority_rank(
         # With demote_glycolytic: fight_pace demoted to first-cut (rank 1), recovery promoted to rank 2
         if role_key == "neural_plus_strength_day":
             return 4
+        if role_key == "fight_pace_repeatability_day" or (category == "conditioning" and preferred_system == "glycolytic"):
+            return 1 if demote_glycolytic else 4
+        if category == "conditioning" and preferred_system == "alactic":
+            return 3
         if role_key == "repeatability_support_day" or (category == "conditioning" and preferred_system == "aerobic"):
-            if category == "conditioning" and preserve_low_noise and _is_low_noise_conditioning_role(role, athlete_model):
+            if demote_glycolytic and category == "conditioning" and preserve_low_noise and _is_low_noise_conditioning_role(role, athlete_model):
                 return 4
             return 3
-        if role_key == "fight_pace_repeatability_day" or (category == "conditioning" and preferred_system == "glycolytic"):
-            return 1 if demote_glycolytic else 2
         if category == "recovery":
             return 2 if demote_glycolytic else 1
         if category == "strength":
@@ -2307,8 +2306,15 @@ def _build_weekly_role_map(
         span = max(0, int(progression_weeks[idx].get("span_days") or 0))
         week_span_days[idx] = span
         running_days += span
-        projected_days_until_fight_start[idx] = running_days
-        projected_days_until_fight_end[idx] = max(0, running_days - span + 1) if span > 0 else 0
+        # Anchor the camp so its final week ends ON the fight day (D-0), not the
+        # day before it. ``running_days`` counts days from this week's start up to
+        # and including the fight; the latest (smallest-d_day) day of the week is
+        # therefore ``running_days - span`` and the earliest is ``running_days - 1``.
+        # The previous ``+1`` offset ended the camp at D-1, which pushed the fight
+        # weekday to D-7 in the final week and left no D-0 calendar day for the
+        # fight-day override to clamp.
+        projected_days_until_fight_start[idx] = max(0, running_days - 1)
+        projected_days_until_fight_end[idx] = max(0, running_days - span) if span > 0 else 0
         fight_weekday = compute_fight_weekday(athlete_model)
 
     for week_idx, week_entry in enumerate(progression_weeks):
@@ -2663,4 +2669,8 @@ def _build_weekly_role_map(
         "fight_week_override": fight_week_override or {"active": False},
         "weeks": weeks,
     }
-    return apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+    weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+    # Stamp deterministic athlete-facing labels so Stage 1 owns the session
+    # titles instead of leaving them for the Stage 2 LLM to invent. Run last so
+    # roles injected by the fight-day override are labelled too.
+    return stamp_weekly_role_map_labels(weekly_role_map)

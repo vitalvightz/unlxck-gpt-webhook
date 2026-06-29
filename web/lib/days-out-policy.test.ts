@@ -5,6 +5,7 @@ import {
   buildDaysOutContext,
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
+  HARD_SPARRING_STRENGTH_BLOCK_REASON,
 } from "./days-out-policy.ts";
 
 const KEY_GOALS = ["power", "strength", "conditioning", "speed", "skill_refinement", "mobility", "recovery", "weight_cut"] as const;
@@ -61,4 +62,79 @@ test("uses specific days-out disabled reasons before focus-cap reasons", () => {
     getPerformanceFocusOptionAvailability(ctx, "weak_areas", "gas_tank").reason,
     "Too late to build gas tank safely.",
   );
+});
+
+test("keeps strength available at D-14 without hard sparring", () => {
+  const ctx = buildDaysOutContext(14, { hasHardSparring: false });
+
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "strength").available, true);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength").available, true);
+});
+
+test("blocks strength at D-13 without hard sparring", () => {
+  const ctx = buildDaysOutContext(13, { hasHardSparring: false });
+
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "strength").available, false);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength").available, false);
+});
+
+test("keeps strength available at D-21 with hard sparring", () => {
+  const ctx = buildDaysOutContext(21, { hasHardSparring: true });
+
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "strength").available, true);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength").available, true);
+});
+
+test("keeps strength available without a fight date when hard sparring is selected", () => {
+  const ctx = buildDaysOutContext(null, { hasHardSparring: true });
+
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "strength").available, true);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength").available, true);
+});
+
+test("blocks strength at D-20 with hard sparring and uses the hard-sparring reason", () => {
+  const ctx = buildDaysOutContext(20, { hasHardSparring: true });
+
+  assert.deepEqual(getPerformanceFocusOptionAvailability(ctx, "key_goals", "strength"), {
+    available: false,
+    reason: HARD_SPARRING_STRENGTH_BLOCK_REASON,
+  });
+  assert.deepEqual(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength"), {
+    available: false,
+    reason: HARD_SPARRING_STRENGTH_BLOCK_REASON,
+  });
+});
+
+test("blocks strength at D-18 with hard sparring", () => {
+  const ctx = buildDaysOutContext(18, { hasHardSparring: true });
+
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "strength").available, false);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength").available, false);
+});
+
+test("adding hard sparring at D-20 removes existing strength selections", () => {
+  const ctx = buildDaysOutContext(20, { hasHardSparring: true });
+
+  assert.deepEqual(
+    filterAvailablePerformanceFocusValues(ctx, "key_goals", ["strength", "mobility"]),
+    ["mobility"],
+  );
+  assert.deepEqual(
+    filterAvailablePerformanceFocusValues(ctx, "weak_areas", ["strength", "mobility"]),
+    ["mobility"],
+  );
+});
+
+test("removing hard sparring does not auto-readd strength", () => {
+  const ctx = buildDaysOutContext(20, { hasHardSparring: false });
+
+  assert.deepEqual(filterAvailablePerformanceFocusValues(ctx, "key_goals", ["mobility"]), ["mobility"]);
+  assert.deepEqual(filterAvailablePerformanceFocusValues(ctx, "weak_areas", ["mobility"]), ["mobility"]);
+});
+
+test("hard sparring strength rule does not change existing non-strength days-out rules", () => {
+  const ctx = buildDaysOutContext(20, { hasHardSparring: true });
+
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "conditioning").available, true);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "gas_tank").available, true);
 });

@@ -121,6 +121,11 @@ class TrainingContext:
     athlete_timezone: str = ""
     next_fight_date: str = ""
     injuries_raw_text: str = ""
+    # The athlete's verbatim mental/mindset note from Stage 1, preserved
+    # alongside the classified ``mental_block`` buckets so Stage 2 can
+    # personalise the mindset_anchor from the athlete's own words (mirrors
+    # ``injuries_raw_text``).
+    mental_block_raw: str = ""
     parsed_injuries: list[dict[str, Any]] = field(default_factory=list)
     guided_injury: dict[str, Any] | None = None
     guided_injuries: list[dict[str, Any]] = field(default_factory=list)
@@ -132,7 +137,7 @@ class TrainingContext:
 
 def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
     """Return weekly session counts based on frequency and phase."""
-    freq = max(1, min(int(training_frequency), 6))
+    freq = max(1, min(int(training_frequency) + 1, 6))
     phase = phase.upper()
 
     plan = {
@@ -154,17 +159,17 @@ def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
         4: {
             "GPP": {"strength": 2, "conditioning": 1, "recovery": 1},
             "SPP": {"strength": 1, "conditioning": 2, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 2},
+            "TAPER": {"strength": 1, "conditioning": 2, "recovery": 1},
         },
         5: {
             "GPP": {"strength": 2, "conditioning": 2, "recovery": 1},
             "SPP": {"strength": 2, "conditioning": 2, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 3},
+            "TAPER": {"strength": 1, "conditioning": 3, "recovery": 1},
         },
         6: {
             "GPP": {"strength": 2, "conditioning": 3, "recovery": 1},
             "SPP": {"strength": 2, "conditioning": 3, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 4},
+            "TAPER": {"strength": 1, "conditioning": 4, "recovery": 1},
         },
     }
 

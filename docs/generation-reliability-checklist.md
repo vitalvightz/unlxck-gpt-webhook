@@ -13,30 +13,51 @@ Before merging generation-related changes, verify all of these are green:
 - Confirm retry cannot create duplicate active jobs for the same athlete.
 - Confirm localStorage pending state cannot override backend active-job truth.
 
-## Current stale-recovery ownership (transitional)
+## Stale-recovery ownership (read/write separation)
 
-Generation stale recovery is currently **intentional self-healing on read paths** in addition to worker/claim flows.
-This is a known transition state and must be treated as part of the backend state machine until explicit reconciler-only ownership lands.
+Generation stale recovery lives **only on explicit write/control paths**. Read
+methods are pure: they never requeue, fail, or otherwise mutate job state, so
+polling and status checks cannot change the backend.
 
-### Read methods that currently mutate
+### Pure read methods (never mutate)
 
-- `SupabaseAppStore.get_generation_job(...)`
-  - May requeue `job_loaded_stalled` running jobs.
-  - May fail `stage1_planner_stalled` running jobs.
-- `SupabaseAppStore.get_active_generation_job_for_athlete(...)`
-  - May reset/requeue `startup_stale` running jobs to `queued`.
-  - May requeue or fail `job_loaded_stalled` running jobs (attempt-gated).
-  - May fail `stage1_planner_stalled` running jobs.
-  - May fail `mid_pipeline_stale` running jobs.
+- `SupabaseAppStore.get_generation_job(...)` — plain lookup, used by
+  `GET /api/generation-jobs/{job_id}`.
+- `SupabaseAppStore.get_visible_active_generation_job_for_athlete(...)` — latest
+  queued/running job for polling, used by `GET /api/generation-jobs/active`.
+- `SupabaseAppStore.get_latest_generation_job_for_athlete(...)`.
 
-### API implications
+### Explicit recovery / reconciliation methods (mutate by design)
 
-- `GET /api/generation-jobs/{job_id}` and `GET /api/generation-jobs/active` can currently trigger stale-job repair side effects via store reads.
-- This is kept intentionally for reliability safety right now (to avoid endless-running stale jobs), but it means polling can mutate state.
+- `SupabaseAppStore.recover_generation_job_if_stale(job)` — single-job recovery.
+  Requeues `job_loaded_stalled` and fails/recovers `stage1_planner_stalled`
+  running jobs, returning the refreshed row. No-op for non-running jobs.
+- `SupabaseAppStore.reconcile_active_generation_job_for_athlete(athlete_id, ...)`
+  — per-athlete reconciliation. Resets `startup_stale` to `queued`, requeues or
+  fails `job_loaded_stalled` (attempt-gated), and fails/recovers
+  `stage1_planner_stalled` / `mid_pipeline_stale` running jobs.
+- `SupabaseAppStore.claim_generation_job_start(...)` /
+  `claim_generation_job(...)` — worker claim loop recovery at startup/claim.
 
-### Guardrails for future refactor
+### Where reconciliation runs
 
-When refactoring to strict read/write separation:
-- Keep stale safety behaviour unchanged.
-- Move stale mutation to explicit recovery/reconciler paths.
-- Keep tests that prove both stale safety and endpoint behaviour.
+- **Job creation:** `create_or_get_generation_job(...)` and
+  `create_or_get_generation_job_with_daily_limit(...)` call
+  `reconcile_active_generation_job_for_athlete(...)` before deciding whether a
+  request is in flight, so a crashed worker's stale `running` row cannot block
+  new generation forever.
+- **Retry generation:** the retry service routes through the same
+  `create_or_get_generation_job*` write paths.
+- **Worker startup / claim loop:** `claim_generation_job_start` /
+  `claim_generation_job` recover startup-stale rows as they are claimed.
+
+### Invariants to keep green
+
+- `GET /api/generation-jobs/{job_id}` and `GET /api/generation-jobs/active` are
+  side-effect free, even for stale running jobs (proved by
+  `test_get_active_endpoint_does_not_mutate_stale_running_job` and
+  `test_get_job_by_id_endpoint_does_not_mutate_stale_running_job`).
+- Stale running jobs are still recovered through the explicit paths above and
+  cannot remain active forever
+  (`test_reconcile_active_generation_job_mutates_stale_running_job`).
+- Retry must not create duplicate active jobs for the same athlete.

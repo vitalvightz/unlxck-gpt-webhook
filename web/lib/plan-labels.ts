@@ -5,12 +5,17 @@ const LABEL_OVERRIDES: Record<string, string> = {
   unavailable: "Unavailable",
   stop_and_report: "Stop and report",
 
-  publishable_with_flags: "Ready with notes",
+  generated: "Processing",
+  publishable_with_flags: "Ready — review notes included",
   ready: "Ready",
+  review_required: "Awaiting review",
+  held_for_review: "Awaiting review",
+  triage_blocked: "Paused for safety review",
+  archived: "Archived",
 
   gpp: "General prep",
   spp: "Specific prep",
-  taper: "Fight week taper",
+  taper: "Taper",
   fight_week: "Fight week",
   reintegration: "Reintegration",
 
@@ -78,4 +83,17 @@ export function isRawEnumLabel(value: unknown): boolean {
     return false;
   }
   return /^[a-z0-9]+(_[a-z0-9]+)*$/i.test(trimmed);
+}
+
+/**
+ * Humanize a value only when it looks like a raw backend enum (a single
+ * snake/kebab token). Already-human strings like "High pain" are returned
+ * untouched so we never re-titlecase prose. Safe to apply defensively at render
+ * sites where a field might be either human copy or a leaked enum.
+ */
+export function humanizeIfRawEnum(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return isRawEnumLabel(value) ? formatPlanLabel(value) : value;
 }

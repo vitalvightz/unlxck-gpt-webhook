@@ -172,10 +172,141 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     return {key: role.get(key) for key in keep if role.get(key) not in (None, "", [])}
 
 
-def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
+def _as_list(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    return [value]
+
+
+def _int_value(value: Any, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _planned_weekly_count(week: dict[str, Any], athlete_model: dict[str, Any]) -> int:
+    for key in ("weekly_training_frequency", "training_frequency", "weekly_sessions"):
+        if key in athlete_model:
+            count = _int_value(athlete_model.get(key), -1)
+            if count >= 0:
+                return count
+    declared_training_days = _as_list(week.get("declared_training_days"))
+    if declared_training_days:
+        return len(declared_training_days)
+    counts = week.get("session_counts")
+    if isinstance(counts, dict):
+        return sum(_int_value(counts.get(key), 0) for key in ("strength", "conditioning", "recovery", "technical"))
+    return 0
+
+
+def _is_coach_owned_role(role: dict[str, Any]) -> bool:
+    role_key = str(role.get("role_key") or "").strip().lower()
+    category = str(role.get("category") or "").strip().lower()
+    return bool(role.get("coach_owned")) or category == "sparring" or role_key == "hard_sparring_day"
+
+
+def _collect_reason_codes(week: dict[str, Any]) -> set[str]:
+    codes: set[str] = set()
+    for collection_key in ("session_roles", "suppressed_roles", "hard_sparring_plan"):
+        for entry in _as_list(week.get(collection_key)):
+            if not isinstance(entry, dict):
+                continue
+            for code_key in ("reason_codes", "hard_sparring_reason_codes", "compression_reason_codes"):
+                codes.update(str(code).strip() for code in _as_list(entry.get(code_key)) if str(code).strip())
+    compression = week.get("intentional_compression")
+    if isinstance(compression, dict):
+        codes.update(str(code).strip() for code in _as_list(compression.get("reason_codes")) if str(code).strip())
+        reason = str(compression.get("reason") or "").strip()
+        if reason:
+            codes.add(reason)
+    fight_day_override = week.get("fight_day_override")
+    if isinstance(fight_day_override, dict) and fight_day_override.get("active"):
+        codes.add("fight_day_override")
+    return codes
+
+
+def _has_active_weight_cut(athlete_model: dict[str, Any]) -> bool:
+    if athlete_model.get("weight_cut_risk"):
+        return True
+    if str(athlete_model.get("cut_severity_bucket") or "").strip().lower() not in {"", "none", "low"}:
+        return True
+    try:
+        return float(athlete_model.get("weight_cut_pct") or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _has_active_injury(athlete_model: dict[str, Any]) -> bool:
+    return bool(
+        athlete_model.get("has_active_injury")
+        or _as_list(athlete_model.get("parsed_injuries"))
+        or _as_list(athlete_model.get("injury_restrictions"))
+        or str(athlete_model.get("injuries_raw_text") or "").strip()
+    )
+
+
+def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) -> dict[str, Any]:
+    roles = [role for role in _as_list(week.get("session_roles")) if isinstance(role, dict)]
+    coach_owned_count = sum(1 for role in roles if _is_coach_owned_role(role))
+    app_owned_count = max(0, len(roles) - coach_owned_count)
+    planned_count = _planned_weekly_count(week, athlete_model)
+    rendered_total = len(roles)
+    reduced = planned_count > 0 and rendered_total < planned_count
+    reason_codes = _collect_reason_codes(week)
+    compression = week.get("intentional_compression")
+
+    reasons: list[str] = []
+    if str(week.get("phase") or "").strip().upper() == "TAPER":
+        reasons.append("taper")
+    if _has_active_weight_cut(athlete_model) or reason_codes & {"active_weight_cut", "high_pressure_weight_cut", "weight_cut_moderate_trim_stress", "weight_cut_high_suppress_hard_work"}:
+        reasons.append("weight_cut")
+    if "d17_hard_sparring_ban" in reason_codes:
+        reasons.append("d17_technical_only_rule")
+    if _has_active_injury(athlete_model) or "injury_management" in reason_codes:
+        reasons.append("injury_management")
+    if coach_owned_count or week.get("hard_sparring_plan") or week.get("effective_hard_sparring_days"):
+        reasons.append("coach_led_contact_load")
+    if "fight_week_override" in reason_codes:
+        reasons.append("fight_week_override")
+    if isinstance(compression, dict) and compression.get("active"):
+        reasons.append("intentional_compression")
+
+    reason_labels = {
+        "taper": "Taper trims volume while preserving sharpness.",
+        "weight_cut": "Target-weight pressure tightens recovery tolerance.",
+        "d17_technical_only_rule": "D-17+ hard-contact rule moves contact work to technical-only.",
+        "injury_management": "Injury management removes or compresses risky standalone work.",
+        "coach_led_contact_load": "Coach-led contact work owns part of the weekly load.",
+        "fight_week_override": "Fight-week override caps app-owned work.",
+        "intentional_compression": "Planner marked this as intentional compression.",
+    }
+
+    summary = {
+        "planned_weekly_count": planned_count,
+        "rendered_total_count": rendered_total,
+        "rendered_app_owned_count": app_owned_count,
+        "coach_owned_count": coach_owned_count,
+        "reduced_from_planned": reduced,
+        "reduction_reasons": [reason_labels[reason] for reason in dict.fromkeys(reasons)] if reduced else [],
+        "reason_codes": sorted(reason_codes),
+    }
+    return {key: value for key, value in summary.items() if value not in (None, "", [])}
+
+
+def _compact_weekly_role_map(weekly_role_map: Any, athlete_model: dict[str, Any] | None = None) -> dict[str, Any]:
     if not isinstance(weekly_role_map, dict):
         return {}
 
+    athlete_model = athlete_model or {}
     compact_weeks: list[dict[str, Any]] = []
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
@@ -216,6 +347,7 @@ def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
                     "final_week_sparring_cap": week.get("final_week_sparring_cap"),
                     "coach_note_flags": week.get("coach_note_flags"),
                     "intentional_compression": week.get("intentional_compression"),
+                    "session_count_summary": _session_count_summary(week, athlete_model),
                 }.items()
                 if value not in (None, "", [])
             }
@@ -381,14 +513,24 @@ def build_stage2_finalizer_packet(
             "Do not infer D-days from weekday order.",
             "Do not invent D-days from the fight date manually.",
             "Only render session_roles whose scheduled_day_hint exists in that week's calendar_days.",
+            "Use session_count_summary to explain reduced weeks; do not restore suppressed roles to match the athlete's planned weekly frequency.",
+            "Stage 1 draft exercise text is candidate material only. Final exercise rendering must obey weekly_role_map role, count, day ownership, restrictions, and taper rules first.",
+            "If selected_plan.session_sequence is present, render every entry in selected_plan.session_sequence as its own athlete-facing countdown card.",
+            "Each selected_plan.session_sequence entry with scheduled_countdown_label/countdown_display_label must appear as a visible D-X header in the final output.",
+            "Do not omit selected support, recovery, freshness, mobility, reset, or technical roles because they are low stress or short duration.",
+            "Do not collapse a selected countdown session into Lead notes, another day, movement prep, mobility finisher, rationale, or a generic note. It must keep its own D-X card.",
+            "If selected_plan.session_sequence contains D-3 fight_week_freshness_day, render a D-3 freshness/reset card even when it is support-class and low RPE.",
+            "Render selected countdown cards in descending countdown order, then append D-0 last.",
             "If a calendar day has is_fight_day=true, render fight_day_protocol only.",
             "If a calendar day has is_after_fight_day=true, render no app-led training.",
             "If a weekday is not present in calendar_days, do not render it.",
             "Do not render any session after D-0 unless a post-fight recovery mode is explicitly active.",
             "D-0 always renders as fight-day protocol only.",
+            "If late_fight_plan_spec is present, append a terminal D-0 fight-day protocol block after the final active countdown day. D-0 is not an app training session, does not count toward max_active_roles, and must be the final athlete-facing block.",
+            "Do not append Coach note, Final coach notes, summary, nutrition, recovery, or any footer after D-0. Put summary notes in Lead notes before the first week or omit them.",
             f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",
             "Coach-owned days override app S&C unless coach-led work is light or cancelled.",
-            "For late_fight_plan_spec.allowed_exercises_by_day, each countdown day may render only those listed exercise names plus generic breathing, mobility/reset, shadowboxing/technical cues, coach-led session labels, and rehab/prehab band resets.",
+            "For late_fight_plan_spec.allowed_exercises_by_day, each countdown day may render only those listed exercise names plus generic breathing, mobility/reset, shadowboxing/technical cues, coach-led session labels, and rehab/prehab band resets except on D-1, where all band work is blocked.",
             "Preserve the priority hierarchy from priority_focus. Do not treat all goals and weak areas equally. Primary goal and primary weak area shape emphasis; secondary selections support without taking over.",
             "If priority_focus.goal_weakness_collisions is non-empty, treat overlap as valid athlete intent. Do not remove it or overcorrect it. Use priority_focus.collision_detail when present to clarify the limiter.",
             "If priority_focus.collision_details contains multiple entries, preserve each clarification. Do not collapse all overlaps into the first detail. Use each detail to sharpen the relevant training emphasis.",
@@ -411,7 +553,7 @@ def build_stage2_finalizer_packet(
         "selected_plan": {
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
-            "weekly_role_map": _compact_weekly_role_map(weekly_role_map),
+            "weekly_role_map": _compact_weekly_role_map(weekly_role_map, athlete_model),
             "calendar_authority": _compact_calendar_authority(weekly_role_map),
             "late_fight_plan_spec": late_fight_plan_spec,
             "open_plan_spec": open_plan_spec,

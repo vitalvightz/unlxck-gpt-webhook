@@ -138,6 +138,23 @@ def test_mindset_plan_carries_phase_cues():
     assert set(plan["by_phase"]) == {"GPP", "SPP", "TAPER"}
 
 
+def test_mindset_plan_carries_verbatim_athlete_note():
+    plan = compute_mindset_plan(
+        {
+            "mental_block": ["confidence"],
+            "mental_block_raw": "  I freeze up when I get caught early  ",
+        }
+    )
+    # The athlete's own words are preserved (trimmed) so Stage 2 can personalise
+    # the mindset_anchor instead of emitting only the generic phase cue.
+    assert plan["athlete_note"] == "I freeze up when I get caught early"
+
+
+def test_mindset_plan_athlete_note_defaults_to_empty():
+    plan = compute_mindset_plan({"mental_block": ["confidence"]})
+    assert plan["athlete_note"] == ""
+
+
 def test_build_computed_support_only_includes_active_phases():
     support = build_computed_support(
         flags={"weight": 75, "mental_block": []}, phases=["GPP", "GPP"]

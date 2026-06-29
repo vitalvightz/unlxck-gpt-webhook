@@ -4,7 +4,8 @@
     "category": "lower_body",
     "phases": [
       "GPP",
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "hinge",
@@ -14,9 +15,16 @@
       "compound",
       "mech_trunk_stability",
       "mech_grip_support",
-      "mech_lower_hip_hinge"
+      "mech_lower_hip_hinge",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "familiarity_required"
     ],
     "equipment": "trap_bar",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14"
+    ],
     "movement_cost": "moderate",
     "impact_cost": "low",
     "eccentric_cost": "moderate",
@@ -34,7 +42,8 @@
     "cut_buckets_allowed": [
       "none",
       "low"
-    ]
+    ],
+    "notes": "2-3 sets x 2-3 reps @ RPE 6-7 only. No grinders. No soreness target."
   },
   {
     "name": "Back Squat",
@@ -198,7 +207,6 @@
       "rotational",
       "rate_of_force",
       "mech_cns_high",
-      "mech_upper_press",
       "mech_trunk_rotation",
       "mech_ballistic",
       "mech_trunk_stability"
@@ -214,8 +222,7 @@
       "mech_ballistic",
       "mech_cns_high",
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,
@@ -1034,8 +1041,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ]
   },
   {
@@ -1728,7 +1734,8 @@
     "name": "Bent-Over Row",
     "category": "upper_body",
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "pull",
@@ -1737,9 +1744,18 @@
       "pull",
       "posterior_chain",
       "mech_grip_support",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric"
     ],
     "equipment": "barbell",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -2022,8 +2038,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ]
   },
   {
@@ -2222,8 +2237,7 @@
     "tags": [
       "core",
       "anti_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "equipment": "cable",
     "movement_cost": "low",
@@ -2233,8 +2247,7 @@
     "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,
@@ -2260,7 +2273,6 @@
       "core",
       "anti_rotation",
       "mech_trunk_stability",
-      "mech_upper_press",
       "mech_trunk_rotation"
     ],
     "equipment": "cable",
@@ -2272,8 +2284,7 @@
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": false,
@@ -3206,9 +3217,15 @@
       "explosive",
       "core",
       "mech_ballistic",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "maximal_strength_maintenance",
+      "familiarity_required"
     ],
     "equipment": "sandbag",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14"
+    ],
     "movement_cost": "moderate",
     "impact_cost": "low",
     "eccentric_cost": "moderate",
@@ -3224,8 +3241,7 @@
     "cns_freshness": false,
     "cut_buckets_allowed": [
       "none",
-      "low",
-      "moderate"
+      "low"
     ]
   },
   {
@@ -3881,7 +3897,8 @@
       "rehab_friendly",
       "low_impact",
       "low_eccentric",
-      "cns_freshness"
+      "cns_freshness",
+      "mobility"
     ],
     "equipment": "bands",
     "movement_cost": "low",
@@ -3907,8 +3924,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ]
   },
   {
@@ -3922,7 +3938,8 @@
     "type": "unilateral",
     "tags": [
       "quad_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "bench",
     "movement_cost": "low",
@@ -4019,7 +4036,8 @@
     "type": "unilateral",
     "tags": [
       "hip_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "bands",
     "movement_cost": "low",
@@ -4049,7 +4067,8 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "wall",
     "movement_cost": "low",
@@ -4080,7 +4099,8 @@
     "tags": [
       "core",
       "rehab_friendly",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mobility"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
@@ -4112,7 +4132,8 @@
     "type": "unilateral",
     "tags": [
       "hip_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
@@ -4147,7 +4168,8 @@
       "mech_trunk_stability",
       "low_impact",
       "low_eccentric",
-      "cns_freshness"
+      "cns_freshness",
+      "mobility"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
@@ -4409,6 +4431,8 @@
     "type": "unilateral",
     "tags": [
       "balance",
+      "speed",
+      "footwork",
       "endurance",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
@@ -5295,6 +5319,8 @@
     "movement": "sprint",
     "type": "bilateral",
     "tags": [
+      "speed",
+      "acceleration",
       "explosive",
       "high_cns",
       "mech_cns_high",
@@ -6466,6 +6492,7 @@
     "type": "unilateral",
     "tags": [
       "balance",
+      "reactive",
       "rehab_friendly",
       "cns_freshness",
       "mech_trunk_stability"
@@ -8067,10 +8094,11 @@
     ]
   },
   {
-    "name": "Sled Push Isometric (130% max push @ start position)",
+    "name": "Sled Push Isometric Hold",
     "category": "lower_body",
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "isometric",
@@ -8081,15 +8109,24 @@
       "work_capacity",
       "mech_systemic_fatigue",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge"
+      "mech_lower_hip_hinge",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric"
     ],
     "equipment": "sled",
-    "movement_cost": "high",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
+    "movement_cost": "moderate",
     "impact_cost": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
     "cns_load": "moderate",
-    "soreness_risk": "moderate",
+    "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
@@ -9036,7 +9073,8 @@
     "name": "Pallof Press Iso (Against Resistance)",
     "category": "core",
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "isometric",
@@ -9048,9 +9086,18 @@
       "mech_trunk_stability",
       "rotational",
       "mech_trunk_rotation",
-      "mech_upper_press"
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
-    "equipment": "cable_machine",
+    "equipment": "cable",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -9059,8 +9106,7 @@
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,
@@ -9088,8 +9134,7 @@
       "rotational",
       "mech_trunk_stability",
       "stability",
-      "mech_trunk_rotation",
-      "mech_upper_press"
+      "mech_trunk_rotation"
     ],
     "equipment": "cable_machine",
     "movement_cost": "low",
@@ -9100,8 +9145,7 @@
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,
@@ -10466,7 +10510,8 @@
     "name": "Suitcase Carry Holds",
     "category": "core",
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "isometric",
@@ -10478,9 +10523,71 @@
       "stability",
       "mech_grip_support",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_upper_carry",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
     "equipment": "dumbbells",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
+  },
+  {
+    "name": "Kettlebell Suitcase Carry Hold",
+    "category": "core",
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "isometric",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "grip",
+      "core",
+      "anti_rotation",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
+    "equipment": "kettlebell",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -10790,6 +10897,9 @@
       "d13_to_d8"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical",
       "extreme"
@@ -10956,6 +11066,9 @@
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical"
     ],
@@ -11037,6 +11150,9 @@
       "d6_to_d5"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical",
       "extreme"
@@ -11494,6 +11610,9 @@
       "d13_to_d8"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical"
     ],
@@ -11700,8 +11819,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -12045,7 +12163,8 @@
       "low_soreness",
       "taper_micro_support",
       "no_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12110,7 +12229,8 @@
       "d1_ok",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12173,10 +12293,12 @@
     "tags": [
       "pivot_readiness",
       "boxer_footwork",
+      "footwork",
       "boxer_stance",
       "d1_if_familiar",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12238,10 +12360,12 @@
     "type": "bilateral",
     "tags": [
       "boxer_stance",
+      "footwork",
       "d1_ok",
       "balance_static",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12307,7 +12431,8 @@
       "d1_ok",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12370,9 +12495,11 @@
     "tags": [
       "hip_lock",
       "boxer_stance",
+      "footwork",
       "d1_if_familiar",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12436,7 +12563,8 @@
       "wall_supported",
       "d1_ok",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12500,7 +12628,8 @@
       "scap_control",
       "d1_ok",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12565,7 +12694,8 @@
       "wall_supported",
       "d1_ok",
       "shoulder_readiness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12628,10 +12758,10 @@
     "tags": [
       "scap_retraction",
       "light_band",
-      "d1_ok",
       "shoulder_readiness",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12643,8 +12773,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -12694,10 +12823,12 @@
     "tags": [
       "ankle_mobility",
       "boxer_stance",
+      "footwork",
       "low_soreness",
       "taper_micro_support",
       "no_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12763,7 +12894,8 @@
       "no_high_cut",
       "no_d4_to_d1",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12824,7 +12956,8 @@
       "no_d1",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12888,7 +13021,8 @@
       "no_d1",
       "low_soreness",
       "taper_micro_support",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -12952,7 +13086,8 @@
       "familiarity_preferred",
       "no_d4_to_d1",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13012,7 +13147,8 @@
       "hip_control",
       "familiarity_required",
       "no_d4_to_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13074,7 +13210,8 @@
       "balance_challenge",
       "familiarity_required",
       "no_d7_to_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13134,7 +13271,8 @@
       "t_spine_rotation",
       "no_d1",
       "low_soreness",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13196,7 +13334,8 @@
     "tags": [
       "t_spine_rotation",
       "no_d4_to_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13257,7 +13396,8 @@
     "tags": [
       "t_spine_rotation",
       "no_d1",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13322,7 +13462,8 @@
       "anti_extension",
       "low_soreness",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13386,7 +13527,8 @@
       "light_band",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bands"
@@ -13449,8 +13591,10 @@
       "no_d4_to_d1",
       "no_high_cut",
       "boxer_footwork",
+      "footwork",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13513,8 +13657,10 @@
       "lateral_reset",
       "no_d4_to_d1",
       "boxer_footwork",
+      "footwork",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13574,11 +13720,13 @@
     "type": "bilateral",
     "tags": [
       "single_leg",
+      "footwork",
       "no_high_cut",
       "no_d1",
       "balance_static",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13639,11 +13787,13 @@
     "type": "bilateral",
     "tags": [
       "single_leg",
+      "footwork",
       "no_high_cut",
       "no_d1",
       "balance_static",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13705,10 +13855,12 @@
     "tags": [
       "pivot_readiness",
       "boxer_stance",
+      "footwork",
       "d1_if_familiar",
       "no_high_cut",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13770,10 +13922,12 @@
     "type": "bilateral",
     "tags": [
       "pivot_readiness",
+      "footwork",
       "no_d4_to_d1",
       "no_high_cut",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13836,7 +13990,8 @@
       "light_band",
       "no_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bands"
@@ -13899,7 +14054,8 @@
       "shoulder_mobility",
       "no_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -13962,7 +14118,8 @@
       "serratus",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14025,7 +14182,8 @@
       "daily_rehab_only",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14088,7 +14246,8 @@
       "daily_rehab_only",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14151,7 +14310,8 @@
       "familiarity_required",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14212,7 +14372,8 @@
       "familiarity_required",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"
@@ -14273,7 +14434,8 @@
       "familiarity_required",
       "no_d4_to_d1",
       "rehab_friendly",
-      "taper_micro_support"
+      "taper_micro_support",
+      "mobility"
     ],
     "equipment": [
       "bodyweight"

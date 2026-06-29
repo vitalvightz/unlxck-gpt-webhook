@@ -7,19 +7,31 @@ from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
+from fightcamp.stage2_policy import (
+    apply_publish_blocking_review_gate,
+    is_card_rescuable_soft_code,
+    is_hard_stage2_blocker,
+    publish_blocking_review_findings,
+)
 
+from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_generation import (
     StructuredPlanOutcome,
     build_structured_plan_outcome,
     build_structured_plan_prompt,
+    has_clean_structured_card,
     parse_structured_json,
     should_attempt_structured_plan,
 )
+from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
+# Plan statuses this module writes. NOTE: a failed Stage 2 validation produces
+# the plan status `held_for_review`, NOT `review_required`. The plan-level
+# `review_required` status is produced by admin actions elsewhere, never here.
+# The worker maps `held_for_review` to the *job* status `review_required` via
+# api/state_machine.job_status_for_plan_status. See docs/state_machine.md.
 _APP_STATUS_READY = "ready"
-_APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
-_APP_STATUS_REVIEW_REQUIRED = "review_required"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
 
@@ -27,6 +39,77 @@ logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
+
+
+def _stage2_report_blocks_release(validator_report: Any) -> bool:
+    """Whether the validator report contains issues that must hold release."""
+
+    if not isinstance(validator_report, dict):
+        return True
+
+    errors = validator_report.get("errors") or []
+    blocking_warnings = validator_report.get("blocking_warnings") or []
+    warnings = validator_report.get("warnings") or []
+    if (
+        not isinstance(errors, list)
+        or not isinstance(blocking_warnings, list)
+        or not isinstance(warnings, list)
+    ):
+        return True
+
+    if errors:
+        return True
+    if publish_blocking_review_findings(validator_report):
+        return True
+    if any(
+        isinstance(warning, dict)
+        and is_hard_stage2_blocker(str(warning.get("code") or ""))
+        for warning in [*blocking_warnings, *(warnings if isinstance(warnings, list) else [])]
+    ):
+        return True
+    return False
+
+
+def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
+    """Whether a would-be hold could be rescued by a clean structured card.
+
+    A hold is rescuable only when it is driven entirely by card-recoverable
+    render/format findings. The check is intentionally defensive about a
+    malformed report - anything it cannot positively confirm is non-rescuable,
+    so an odd shape never accidentally publishes a held plan. It returns True
+    only when ALL of the following hold:
+
+    * ``validator_report`` is a dict;
+    * ``errors`` and ``blocking_warnings`` are lists;
+    * every error/blocking warning is a dict carrying a non-empty string
+      ``code``; and
+    * every code is a known card-rescuable code, not safety/output-integrity or
+      publish-blocking coaching quality.
+    """
+
+    if not isinstance(validator_report, dict):
+        return False
+    if publish_blocking_review_findings(validator_report):
+        return False
+    errors = validator_report.get("errors")
+    blocking_warnings = validator_report.get("blocking_warnings") or []
+    if not isinstance(errors, list) or not isinstance(blocking_warnings, list):
+        return False
+    findings = [*errors, *blocking_warnings]
+    if not findings:
+        return False
+    for finding in findings:
+        if not isinstance(finding, dict):
+            return False
+        code = finding.get("code")
+        if not isinstance(code, str) or not code.strip():
+            return False
+        normalized_code = code.strip()
+        if is_hard_stage2_blocker(normalized_code):
+            return False
+        if not is_card_rescuable_soft_code(normalized_code):
+            return False
+    return True
 
 
 class Stage2AutomationError(RuntimeError):
@@ -254,19 +337,35 @@ def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
 def _structured_plan_enabled() -> bool:
     """Whether Stage 2 should also attempt structured-plan generation.
 
-    Off by default: structured generation is a second model call, so it is
-    opt-in (set ``UNLXCK_STAGE2_STRUCTURED_PLAN=1``) to preserve the single-call
-    Stage 2 cost profile until the structured renderer is rolled out. When off,
-    the structured outcome is recorded as ``not_attempted`` and the raw
-    ``plan_text`` flow is unaffected.
+    On by default: the structured card is the athlete-facing plan view, so the
+    second conversion call is part of the standard Stage 2 flow. Set
+    ``UNLXCK_STAGE2_STRUCTURED_PLAN`` to a falsey value (``0``/``false``/``no``/
+    ``off``/empty) to disable it; the structured outcome is then recorded as
+    ``not_attempted`` and the raw ``plan_text`` flow is the fallback.
     """
 
-    return os.getenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_PLAN")
+    if raw is None:
+        return True  # unset → default on
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _structured_repair_enabled() -> bool:
+    """Whether a failed first structured pass gets one repair retry.
+
+    On by default. The repair retry is the second sequential model call and so is
+    the main lever on worst-case structured-card latency. The
+    ``[stage2] structured_repair`` telemetry logged in
+    :meth:`_generate_structured_outcome` records how often it actually rescues a
+    card; if the data shows it rarely helps, set
+    ``UNLXCK_STAGE2_STRUCTURED_REPAIR`` to a falsey value to drop it (halving the
+    worst case) without a code change. The first-pass outcome then stands as-is.
+    """
+
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_REPAIR")
+    if raw is None:
+        return True  # unset → default on
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _record_structured_outcome(
@@ -481,6 +580,10 @@ def _review_required_result(
     attempt_count: int,
     stage2_cost: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # NOTE: despite the name, this sets the PLAN status to `held_for_review`
+    # (which the worker reports as the JOB status `review_required`). The name
+    # refers to that downstream job status, not the plan status. See
+    # docs/state_machine.md > "Stage 2 outcomes".
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text, stage2_cost=stage2_cost),
         "status": _APP_STATUS_HELD_FOR_REVIEW,
@@ -636,17 +739,42 @@ class OpenAIStage2Automator:
             planning_brief=package["planning_brief"],
             final_plan_text=first_pass_text,
         )
+        first_review = {
+            **first_review,
+            "validator_report": apply_publish_blocking_review_gate(
+                first_review["validator_report"]
+            ),
+        }
+        publish_blocking_findings = publish_blocking_review_findings(
+            first_review["validator_report"]
+        )
         logger.info(
-            "[stage2] first_pass review status=%s needs_retry=%s",
+            "[stage2] first_pass review status=%s needs_retry=%s publish_blockers=%s",
             first_review["status"],
             first_review["needs_retry"],
+            len(publish_blocking_findings),
         )
 
-        if first_review["status"] == "PASS":
-            app_status = (
-                _APP_STATUS_PUBLISHABLE_WITH_FLAGS
-                if int(first_review["validator_report"].get("review_flag_count") or 0) > 0
-                else _APP_STATUS_READY
+        # A card-rescuable hold is tentatively published so the structured-card
+        # attempt below can run and vouch for it. Coaching-content gaps are not
+        # eligible for this path. If no clean card materialises, the card-first
+        # gate further down reverts it to a hold. Only gated when structured
+        # plans are enabled - otherwise no card can ever rescue it and the
+        # tentative publish would just flap back to a hold.
+        if first_review["status"] == "PASS" and not publish_blocking_findings:
+            result = _approved_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                final_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                attempt_count=1,
+                stage2_status=_STAGE2_PASS,
+                app_status=_APP_STATUS_READY,
+                stage2_cost=first_pass_cost,
+            )
+        elif not _stage2_report_blocks_release(first_review["validator_report"]):
+            logger.info(
+                "[stage2] first_pass marked non-pass but no release blockers were found; releasing raw plan"
             )
             result = _approved_result(
                 stage1_result,
@@ -655,11 +783,36 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
-                app_status=app_status,
+                app_status=_APP_STATUS_READY,
+                stage2_cost=first_pass_cost,
+            )
+        elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
+            first_review["validator_report"]
+        ):
+            logger.info(
+                "[stage2] soft hold eligible for structured-card rescue; attempting card before holding"
+            )
+            result = _approved_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                final_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                attempt_count=1,
+                stage2_status=_STAGE2_PASS,
+                app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
         else:
-            logger.warning("[stage2] review required after first_pass: automatic retry disabled")
+            if publish_blocking_findings:
+                logger.warning(
+                    "[stage2] review required after first_pass: publish-blocking quality findings=%s",
+                    ",".join(
+                        str(finding.get("code") or "")
+                        for finding in publish_blocking_findings
+                    ),
+                )
+            else:
+                logger.warning("[stage2] review required after first_pass: automatic retry disabled")
             result = _review_required_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
@@ -672,7 +825,7 @@ class OpenAIStage2Automator:
 
         # Structured-plan conversion is triggered by the canonical state-machine
         # predicate (athlete-displayable plans only), not a hardcoded Stage 2
-        # status. A PASS yields ready/publishable_with_flags (attempted); a
+        # status. A PASS yields ready (attempted); a
         # review-required hold is not displayable (skipped). Any failure degrades
         # to the plan_text fallback and is recorded for admin debug.
         result, structured_costs = await attempt_structured_plan_for_result(
@@ -682,6 +835,35 @@ class OpenAIStage2Automator:
             source=source,
             log_context=log_context,
         )
+
+        # Structured-card conversion is best-effort. It may hold a plan that
+        # still has release blockers, but a clean validator report falls back to
+        # the raw Stage 2 plan instead of creating admin review work.
+        if (
+            _structured_plan_enabled()
+            and is_athlete_displayable_plan_status(result.get("status"))
+            and not has_clean_structured_card(result)
+            and _stage2_report_blocks_release(result.get("stage2_validator_report"))
+        ):
+            logger.warning(
+                "[stage2] no clean structured card and release blockers remain; holding for review"
+            )
+            report = result.get("stage2_validator_report")
+            structured_debug = report.get("structured_plan") if isinstance(report, dict) else None
+            result = _review_required_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                latest_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                retry_text="",
+                attempt_count=1,
+                stage2_cost=first_pass_cost,
+            )
+            if structured_debug is not None:
+                report = result.get("stage2_validator_report")
+                if isinstance(report, dict):
+                    report["structured_plan"] = structured_debug
+
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.
         result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *structured_costs)
@@ -724,6 +906,24 @@ class OpenAIStage2Automator:
                 ),
                 costs,
             )
+
+    @staticmethod
+    def _reconcile_coach_led(outcome: StructuredPlanOutcome, planning_brief: Any) -> StructuredPlanOutcome:
+        """Guarantee declared sparring/coach-led days render as cards.
+
+        The converted card derives a day's coach-led status from the LLM headline
+        alone, so a dropped or mislabelled day silently becomes "Rest day.". The
+        deterministic role map already knows every sparring day, so stamp/insert
+        those cards from it. No-op unless the outcome actually carries a plan.
+        """
+        if outcome.structured_plan is None:
+            return outcome
+        notes = reconcile_coach_led_sparring_days(outcome.structured_plan, planning_brief)
+        if notes:
+            outcome.warnings = list(outcome.warnings) + [
+                f"coach_led_reconcile: {note}" for note in notes
+            ]
+        return outcome
 
     async def _generate_structured_outcome(
         self,
@@ -772,7 +972,17 @@ class OpenAIStage2Automator:
             first_json, raw_markdown=final_plan_text, computed_support=computed_support
         )
         if first_outcome.status == "valid":
-            return first_outcome, costs
+            return self._reconcile_coach_led(first_outcome, planning_brief), costs
+
+        # The repair retry is the second sequential model call (the dominant cost
+        # on worst-case latency). It is gated so it can be dropped via env once
+        # telemetry shows how rarely it rescues a card.
+        if not _structured_repair_enabled():
+            logger.info(
+                "[stage2] structured_repair skipped (disabled) first_status=%s",
+                first_outcome.status,
+            )
+            return self._reconcile_coach_led(first_outcome, planning_brief), costs
 
         # Single repair retry: re-prompt with the validation errors and the
         # broken JSON, then let build_structured_plan_outcome score the result.
@@ -791,15 +1001,22 @@ class OpenAIStage2Automator:
         )
         costs.append(repair_cost)
         repaired_json = parse_structured_json(repaired_text)
-        return (
-            build_structured_plan_outcome(
-                first_json,
-                raw_markdown=final_plan_text,
-                repair_fn=lambda _data, _errors: repaired_json,
-                computed_support=computed_support,
-            ),
-            costs,
+        repaired_outcome = build_structured_plan_outcome(
+            first_json,
+            raw_markdown=final_plan_text,
+            repair_fn=lambda _data, _errors: repaired_json,
+            computed_support=computed_support,
         )
+        # Telemetry for the repair lever: did the second call actually rescue a
+        # card the first pass could not produce? Aggregated over time this tells
+        # us whether the retry is worth its latency (see _structured_repair_enabled).
+        logger.info(
+            "[stage2] structured_repair first_status=%s repaired_status=%s rescued=%s",
+            first_outcome.status,
+            repaired_outcome.status,
+            repaired_outcome.status in {"valid", "repair_attempted_valid"},
+        )
+        return self._reconcile_coach_led(repaired_outcome, planning_brief), costs
 
 
 def build_default_stage2_automator() -> Stage2Automator:

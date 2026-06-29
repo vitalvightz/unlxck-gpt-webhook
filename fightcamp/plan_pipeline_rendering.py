@@ -19,6 +19,7 @@ from .plan_pipeline_runtime import (
     RenderedPlanBundle,
     _apply_muay_thai_filters,
 )
+from .lead_summary import render_lead_summary
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
 from .stage2_payload import (
     build_computed_support,
@@ -26,6 +27,19 @@ from .stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
+
+
+def _insert_lead_summary(plan_text: str, lead_summary: str) -> str:
+    """Insert the lead summary immediately after the plan title.
+
+    The validator only scans the first plan lines for injury / weight-cut
+    context, so the summary must sit at the very top (right after the title),
+    before any training detail.
+    """
+    parts = plan_text.split("\n", 1)
+    title = parts[0]
+    rest = parts[1].lstrip("\n") if len(parts) > 1 else ""
+    return f"{title}\n\n{lead_summary}\n\n{rest}".rstrip()
 
 
 def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
@@ -401,6 +415,14 @@ def build_stage2_outputs(
     blocks: PlanBlocksBundle,
     rendered: RenderedPlanBundle,
 ) -> tuple[dict, dict, str]:
+    stage1_selection_summary = {
+        "strength_names": blocks.strength_names,
+        "conditioning_names": blocks.conditioning_names,
+        "strength_reason_log": blocks.strength_reason_log,
+        "conditioning_reason_log": blocks.conditioning_reason_log,
+        "current_phase": blocks.current_phase,
+    }
+
     stage2_payload = build_stage2_payload(
         training_context=context.training_context,
         mapped_format=context.mapped_format,
@@ -414,6 +436,9 @@ def build_stage2_outputs(
         conditioning_blocks=blocks.conditioning_blocks,
         rehab_blocks=blocks.rehab_blocks,
     )
+
+    if isinstance(stage2_payload, dict):
+        stage2_payload["stage1_selection_summary"] = stage1_selection_summary
     active_phases = [phase for phase in PHASES if context.phase_active(phase)]
     computed_support = build_computed_support(
         flags=context.training_context.to_flags(),
@@ -429,6 +454,16 @@ def build_stage2_outputs(
         plan_input=context.plan_input,
         computed_support=computed_support,
     )
+
+    if isinstance(planning_brief, dict):
+        planning_brief["stage1_selection_summary"] = stage1_selection_summary
+    # Deterministic injury / weight-cut lead summary. The validator scans the
+    # first plan lines for this context, so render it right after the title.
+    lead_summary = render_lead_summary(planning_brief)
+    if lead_summary:
+        rendered.fight_plan_text = _insert_lead_summary(
+            rendered.fight_plan_text, lead_summary
+        )
     stage2_handoff_text = build_stage2_handoff_text(
         stage2_payload=stage2_payload,
         plan_text=rendered.fight_plan_text,

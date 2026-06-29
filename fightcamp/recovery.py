@@ -62,8 +62,11 @@ def _is_high_pressure_weight_cut(training_context: dict) -> bool:
         return True
     fatigue = str(training_context.get("fatigue", "")).strip().lower()
     days_until_fight = training_context.get("days_until_fight")
+    # A low-fatigue, non-aggressive active cut only counts as high-pressure inside
+    # the final two weeks (<=14). Aggressive cuts (>=5%) and moderate+ fatigue stay
+    # high-pressure at any distance via the clauses above. (Was <=28.)
     return fatigue in {"moderate", "high"} or (
-        isinstance(days_until_fight, int) and days_until_fight <= 28
+        isinstance(days_until_fight, int) and days_until_fight <= 14
     )
 
 
@@ -227,7 +230,7 @@ def generate_recovery_block(training_context: dict) -> str:
     elif phase == "GPP":
         recovery_block.append("\n**GPP Recovery Focus:**")
         recovery_block += [
-            "- Focus on tissue prep, joint mobility",
+            "- Prepare tissue and restore joint mobility",
             "- Reset sleep routine",
         ]
 

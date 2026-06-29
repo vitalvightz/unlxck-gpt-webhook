@@ -353,16 +353,20 @@ def compute_mindset_plan(flags: dict) -> dict:
 
     Returns the classified mental blocks and the per-phase mental cues so the
     Stage 1 → structured_plan conversion can carry mental coaching at both the
-    day and session level without re-deriving it from prose. All mindset
-    content is athlete-safe.
+    day and session level without re-deriving it from prose. The athlete's
+    verbatim note (``athlete_note``) is carried alongside the classification so
+    Stage 2 can personalise the mindset_anchor from the athlete's own words.
+    All mindset content is athlete-safe.
     """
     blocks = _normalize_blocks(flags.get("mental_block"))
     by_phase = {
         phase: get_mindset_by_phase(phase, flags) for phase in ("GPP", "SPP", "TAPER")
     }
+    athlete_note = (flags.get("mental_block_raw") or "").strip()
     return {
         "primary_blocks": blocks,
         "phase_cues": get_phase_mindset_cues(blocks),
         "by_phase": by_phase,
+        "athlete_note": athlete_note,
     }
 

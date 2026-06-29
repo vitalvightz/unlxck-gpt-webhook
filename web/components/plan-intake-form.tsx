@@ -9,6 +9,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
+import { formatAppDate } from "@/lib/date-format";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   detectDeviceTimeZone,
@@ -17,6 +18,7 @@ import {
   getOptionLabels,
   isValidRecordFormat,
   KEY_GOAL_OPTIONS,
+  cycleGuidedInjurySeverity,
   normalizeGuidedInjurySeverity,
   PROFESSIONAL_STATUS_OPTIONS,
   retainKnownOptionValues,
@@ -39,7 +41,12 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
-import { applyNoScheduledFightSnapshot, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { SafetyNote } from "@/components/safety-note";
+import { WhyTooltip } from "@/components/why-tooltip";
+import { INJURY_INTAKE_SAFETY } from "@/lib/safety-copy";
+import { LevelSlider, type LevelValue } from "@/components/rating-controls";
+import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import { FOCUS_CAP_DISABLED_REASON, getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
@@ -54,6 +61,7 @@ import {
   computeDaysUntilFight,
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
+  HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE,
   shouldHideField,
   shouldDisableField,
   shouldDeEmphasizeField,
@@ -97,11 +105,6 @@ function resolveFieldStep(fieldId: string): number | undefined {
 const SEX_OPTIONS: IntakeOption[] = [
   { label: "Male", value: "male" },
   { label: "Female", value: "female" },
-];
-const FATIGUE_LEVEL_OPTIONS = [
-  { label: "Low", value: "low" },
-  { label: "Moderate", value: "moderate" },
-  { label: "High", value: "high" },
 ];
 
 type PriorityOverlap = {
@@ -282,6 +285,13 @@ function formatValue(value: string | number | null | undefined): string {
     return "Not provided";
   }
   return String(value);
+}
+
+function formatFightDateValue(value: string | null | undefined): string {
+  if (value === null || value === undefined || value === "") {
+    return "Not provided";
+  }
+  return formatAppDate(value);
 }
 
 function hasValue(value: string | number | null | undefined): boolean {
@@ -703,11 +713,15 @@ function CheckboxGroup({
               <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
-                {daysOutDisabledReason ? <span className="checkbox-card-tag">{daysOutDisabledReason}</span> : null}
-                {!daysOutDisabledReason && capDisabled ? (
-                  <span className="checkbox-card-tag">{capDisabledReason || "Focus cap reached."}</span>
-                ) : null}
               </span>
+              {labelTitle ? (
+                <WhyTooltip
+                  title="Unavailable"
+                  body={labelTitle}
+                  triggerLabel="?"
+                  ariaLabel={`Why ${option.label} is unavailable`}
+                />
+              ) : null}
             </label>
           );
         })}
@@ -834,6 +848,21 @@ function syncDeviceFields(current: PlanRequest): PlanRequest {
   };
 }
 
+const WEEKDAY_FROM_ISO_DATE = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function getWeekdayFromIsoDate(dateValue: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, monthIndex, day));
+
+  if (Number.isNaN(parsed.getTime())) return null;
+  return WEEKDAY_FROM_ISO_DATE[parsed.getUTCDay()] ?? null;
+}
+
 type TrainingGateAction = "save_draft" | "next" | "step_select" | "generate";
 
 type TrainingGateDecision =
@@ -867,11 +896,44 @@ export function PlanIntakeForm() {
   const [validationFocusRequest, setValidationFocusRequest] = useState<{ fieldId: string; nonce: number } | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
   const issueRedirectConsumedRef = useRef(false);
+  const pendingRemovalRef = useRef<HTMLDivElement | null>(null);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
-  // ── Days-out policy: compute field visibility/disablement ───────────
+    // ── Days-out policy: compute field visibility/disablement ───────────
   const daysUntilFight = computeDaysUntilFight(form.fight_date);
-  const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight);
+  const hasHardSparring = form.hard_sparring_days.length > 0;
+  const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight, { hasHardSparring });
+  const fightDateWeekday = noScheduledFight ? null : getWeekdayFromIsoDate(form.fight_date);
+
+  useEffect(() => {
+    if (!fightDateWeekday) {
+      return;
+    }
+
+    const lockedDay = fightDateWeekday.trim().toLowerCase();
+
+    setForm((current) => {
+      const hardSparringDays = current.hard_sparring_days.filter(
+        (day) => day.trim().toLowerCase() !== lockedDay,
+      );
+      const supportWorkDays = current.support_work_days.filter(
+        (day) => day.trim().toLowerCase() !== lockedDay,
+      );
+
+      if (
+        hardSparringDays.length === current.hard_sparring_days.length &&
+        supportWorkDays.length === current.support_work_days.length
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        hard_sparring_days: hardSparringDays,
+        support_work_days: supportWorkDays,
+      };
+    });
+  }, [fightDateWeekday]);
 
   useEffect(() => {
     if (!me || hydrated) {
@@ -915,6 +977,21 @@ export function PlanIntakeForm() {
     // scroll-to-top whenever a validation focus completes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
+
+  useEffect(() => {
+    // When a removal is requested the confirm panel mounts above the map, which
+    // can be off-screen on mobile. Bring it into view so the athlete sees the
+    // confirm action instead of just the card's × turning red.
+    if (pendingInjuryRemovalIndex === null) {
+      return;
+    }
+    const node = pendingRemovalRef.current;
+    if (!node) {
+      return;
+    }
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+  }, [pendingInjuryRemovalIndex]);
 
   useEffect(() => {
     if (!invalidFieldId) {
@@ -1059,21 +1136,41 @@ export function PlanIntakeForm() {
       return;
     }
 
-    const currentDaysOutCtx = buildDaysOutContext(daysUntilFight);
+    const currentDaysOutCtx = buildDaysOutContext(daysUntilFight, { hasHardSparring });
     const nextKeyGoals = filterAvailablePerformanceFocusValues(currentDaysOutCtx, "key_goals", form.key_goals);
     const nextWeakAreas = filterAvailablePerformanceFocusValues(currentDaysOutCtx, "weak_areas", form.weak_areas);
     if (nextKeyGoals.length === form.key_goals.length && nextWeakAreas.length === form.weak_areas.length) {
       return;
     }
 
-    setForm((current) => ({
-      ...current,
-      key_goals: filterAvailablePerformanceFocusValues(currentDaysOutCtx, "key_goals", current.key_goals),
-      weak_areas: filterAvailablePerformanceFocusValues(currentDaysOutCtx, "weak_areas", current.weak_areas),
-    }));
-    setMessage("Some picks were removed because they are not available this close to fight day.");
+    const removedStrengthForHardSparring =
+      currentDaysOutCtx.hasHardSparring &&
+      currentDaysOutCtx.daysOut !== null &&
+      currentDaysOutCtx.daysOut <= 20 &&
+      (form.key_goals.includes("strength") || form.weak_areas.includes("strength"));
+
+    setForm((current) => {
+      const nextDaysOutCtx = buildDaysOutContext(daysUntilFight, {
+        hasHardSparring: current.hard_sparring_days.length > 0,
+      });
+      const filteredKeyGoals = filterAvailablePerformanceFocusValues(nextDaysOutCtx, "key_goals", current.key_goals);
+      const filteredWeakAreas = filterAvailablePerformanceFocusValues(nextDaysOutCtx, "weak_areas", current.weak_areas);
+
+      return {
+        ...current,
+        key_goals: filteredKeyGoals,
+        primary_goal: current.primary_goal && !filteredKeyGoals.includes(current.primary_goal) ? "" : current.primary_goal,
+        weak_areas: filteredWeakAreas,
+        primary_weak_area: current.primary_weak_area && !filteredWeakAreas.includes(current.primary_weak_area) ? "" : current.primary_weak_area,
+      };
+    });
+    setMessage(
+      removedStrengthForHardSparring
+        ? HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE
+        : "Some picks were removed because they are not available this close to fight day.",
+    );
     setError(null);
-  }, [daysUntilFight, form.key_goals, form.weak_areas, hydrated]);
+  }, [daysUntilFight, form.key_goals, form.weak_areas, hasHardSparring, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1179,7 +1276,7 @@ export function PlanIntakeForm() {
         ...nextGuidedInjuryFields,
       }),
     };
-    return syncDeviceFields(applyNoScheduledFightSnapshot(withGuidedAndCollision, noScheduledFight));
+    return canonicalizePerformanceFocus(syncDeviceFields(applyNoScheduledFightSnapshot(withGuidedAndCollision, noScheduledFight)));
   }
 
   function syncGuidedInjuryFields(nextGuidedInjuries: GuidedInjuryState[], nextNoRestrictions: boolean) {
@@ -1273,29 +1370,60 @@ export function PlanIntakeForm() {
     setActiveGuidedInjuryIndex(null);
   }
 
-  function handleBodyMapZoneSelect(label: string) {
-    const existingIndex = guidedInjuries.findIndex((injury) => injury.area.toLowerCase() === label.toLowerCase());
+  function handleBodyMapZoneSelect(zoneKey: string, label: string) {
+    // Match by the stable zone key first; fall back to a legacy injury whose
+    // typed area still equals the zone label and has no zone key yet.
+    const existingIndex = guidedInjuries.findIndex(
+      (injury) =>
+        (injury.zone && injury.zone === zoneKey) ||
+        (!injury.zone && injury.area.trim().toLowerCase() === label.toLowerCase()),
+    );
     if (existingIndex >= 0) {
+      // The zone is already marked — cycle its severity (low → moderate → high)
+      // so the legend is usable straight from the map, never removing it or
+      // creating a duplicate. Backfill the zone key on legacy matches so the
+      // zone stays lit even after the athlete rewrites the free-text area.
       const existing = guidedInjuries[existingIndex];
-      if (hasGuidedInjuryContent({ ...existing, area: "" })) {
-        // Has filled-in detail beyond just the area — confirm before removing.
-        setPendingInjuryRemovalIndex(existingIndex);
-        return;
-      }
-      handleRemoveGuidedInjury(existingIndex);
+      const nextGuidedInjuries = [...guidedInjuries];
+      nextGuidedInjuries[existingIndex] = coerceGuidedInjuryEditState({
+        ...existing,
+        severity: cycleGuidedInjurySeverity(existing.severity),
+        zone: existing.zone || zoneKey,
+      });
+      syncGuidedInjuryFields(nextGuidedInjuries, false);
+      // Surface the affected card so its severity chips track the change.
+      setActiveGuidedInjuryIndex(existingIndex);
       return;
     }
 
-    const emptyIndex = guidedInjuries.findIndex((injury) => !injury.area.trim());
+    const emptyIndex = guidedInjuries.findIndex((injury) => !injury.area.trim() && !injury.zone);
     if (emptyIndex >= 0) {
-      updateGuidedInjury(emptyIndex, "area", label);
+      const nextGuidedInjuries = [...guidedInjuries];
+      nextGuidedInjuries[emptyIndex] = coerceGuidedInjuryEditState({
+        ...nextGuidedInjuries[emptyIndex],
+        area: label,
+        zone: zoneKey,
+      });
+      syncGuidedInjuryFields(nextGuidedInjuries, false);
       setActiveGuidedInjuryIndex(emptyIndex);
       return;
     }
 
-    const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY, area: label }];
+    const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY, area: label, zone: zoneKey }];
     syncGuidedInjuryFields(nextGuidedInjuries, false);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
+  }
+
+  // Removal now only happens from a card's × button. Guard it with the existing
+  // confirm panel when the injury carries detail beyond its area/zone, so a
+  // single tap can't silently discard filled-in safety answers.
+  function handleRequestRemoveGuidedInjury(index: number) {
+    const injury = guidedInjuries[index];
+    if (injury && hasGuidedInjuryContent({ ...injury, area: "", zone: "" })) {
+      setPendingInjuryRemovalIndex(index);
+      return;
+    }
+    handleRemoveGuidedInjury(index);
   }
 
   function handleConfirmRemovePendingInjury() {
@@ -1344,7 +1472,9 @@ export function PlanIntakeForm() {
         ? getPerformanceFocusCap(current.fight_date, { timeZone: current.athlete.athlete_timezone })
         : null;
       const totalSelectedPerformanceFocus = current.key_goals.length + current.weak_areas.length;
-      const currentDaysOutCtx = buildDaysOutContext(computeDaysUntilFight(current.fight_date));
+      const currentDaysOutCtx = buildDaysOutContext(computeDaysUntilFight(current.fight_date), {
+        hasHardSparring: current.hard_sparring_days.length > 0,
+      });
 
       if (
         performanceFocusGroup
@@ -1653,11 +1783,11 @@ export function PlanIntakeForm() {
     return true;
   }
 
-  async function persistDraft(step = currentStep) {
+  async function persistDraft(step = currentStep, snapshot?: PlanRequest) {
     if (!session?.access_token) {
       return;
     }
-    const nextForm = buildFormSnapshot();
+    const nextForm = snapshot ?? buildFormSnapshot();
     setForm(nextForm);
     setSaveStatus("saving");
     try {
@@ -1667,7 +1797,7 @@ export function PlanIntakeForm() {
         current_step: step,
         no_scheduled_fight: noScheduledFight,
       };
-      await saveOnboardingDraft(session.access_token, {
+      const updatedMe = await saveOnboardingDraft(session.access_token, {
         full_name: nextForm.athlete.full_name,
         technical_style: nextForm.athlete.technical_style,
         tactical_style: nextForm.athlete.tactical_style,
@@ -1677,15 +1807,8 @@ export function PlanIntakeForm() {
         athlete_timezone: nextForm.athlete.athlete_timezone,
         onboarding_draft: nextDraft,
       });
-      if (me) {
-        replaceMe({
-          ...me,
-          profile: {
-            ...me.profile,
-            onboarding_draft: nextDraft,
-          },
-        });
-      }
+      
+      replaceMe(updatedMe);
       lastSavedSnapshotRef.current = JSON.stringify(nextForm);
       setSaveStatus("saved");
       setLastSavedAt(Date.now());
@@ -1800,8 +1923,16 @@ export function PlanIntakeForm() {
       if (!validateForGeneration(nextForm)) {
         return;
       }
+      if (!session?.access_token) {
+        setError("You must be signed in to generate a plan.");
+        return;
+      }
       try {
-        await persistDraft(steps.length - 1);
+        await persistDraft(steps.length - 1, nextForm);
+        if (!writePendingGenerationPayload(nextForm, "self_serve")) {
+          setError("Unable to prepare the generation payload. Reload and try again.");
+          return;
+        }
         markGenerationIntent();
         router.push("/generate");
       } catch (draftError) {
@@ -1916,13 +2047,13 @@ export function PlanIntakeForm() {
   const mindsetChallengesText = (form.mindset_challenges || "").trim();
   const notesText = (form.notes || "").trim();
   const sparringCollisionRisk = formatSparringCollisionRisk({
-    fatigueLevel: form.fatigue_level || "moderate",
+    fatigueLevel: form.fatigue_level || "low",
     injuries: form.injuries || "",
     sessionsPerWeek: form.weekly_training_frequency,
     technicalStyle: form.athlete.technical_style[0] ?? "",
     hardSparringDays: selectedHardSparringLabels,
   });
-  const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
+  const highFatigueFlag = (form.fatigue_level || "low") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
   const restrictionSummary = formatRestrictionSummary(form.injuries);
@@ -1943,10 +2074,10 @@ export function PlanIntakeForm() {
     { label: "Record", value: formatValue(form.athlete.record) },
   ];
   const campSetupReviewItems = [
-    { label: "Fight date", value: formatValue(form.fight_date) },
+    { label: "Fight date", value: formatFightDateValue(form.fight_date) },
     { label: "Rounds", value: formatValue(form.rounds_format) },
     { label: "Planned sessions per week", value: formatValue(form.weekly_training_frequency) },
-    { label: "Fatigue level", value: formatValue(form.fatigue_level || "moderate") },
+    { label: "Fatigue level", value: formatValue(form.fatigue_level || "low") },
   ];
   const trainingReviewItems = [
     { label: "Training availability", value: selectedTrainingAvailability },
@@ -2514,19 +2645,18 @@ export function PlanIntakeForm() {
               </article>
 
               <OptionalDetails
-                title="Adjust fatigue level"
-                hint="Defaults to Moderate. Open if you're noticeably fresh or run down right now."
+                title="Fatigue"
+                hint="Defaults to Low. Change it only if you feel tired today."
               >
                 <div className="field">
                   <label htmlFor="fatigueLevel">Fatigue level</label>
-                  <CustomSelect
+                  <LevelSlider
                     id="fatigueLevel"
-                    value={form.fatigue_level ?? "moderate"}
-                    options={FATIGUE_LEVEL_OPTIONS}
-                    placeholder="Select fatigue level"
+                    ariaLabel="Fatigue level"
+                    value={(form.fatigue_level ?? "low") as LevelValue}
                     onChange={(value) => updateField("fatigue_level", value)}
                   />
-                  <p className="muted">Low = fresh, Moderate = carrying normal fatigue, High = noticeably run down.</p>
+                  <p className="muted">Low = fresh. Moderate = tired. High = very run down.</p>
                 </div>
               </OptionalDetails>
             </div>
@@ -2538,10 +2668,10 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">Current camp setup</h2>
                 </div>
                 <ul className="summary-list">
-                  <li>Fight date: {formatValue(form.fight_date)}</li>
+                  <li>Fight date: {formatFightDateValue(form.fight_date)}</li>
                   <li>Rounds: {formatValue(form.rounds_format)}</li>
                   <li>Planned sessions per week: {formatValue(form.weekly_training_frequency)}</li>
-                  <li>Fatigue level: {formatValue(form.fatigue_level || "moderate")}</li>
+                  <li>Fatigue level: {formatValue(form.fatigue_level || "low")}</li>
                 </ul>
               </div>
               <div className="support-panel">
@@ -2598,11 +2728,10 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Combat load</p>
-                  <h2 className="form-section-title">Sparring and Light Combat day tags</h2>
+                  <h2 className="form-section-title">Combat load tags</h2>
                 </div>
                 <p className="muted">
-                  These selections do not add extra sessions. They just show which available days are hard-contact days versus
-                  Light Combat work inside the same weekly total.
+                  These selections do not add extra sessions. They mark which available days carry hard contact versus lighter technical combat work inside the same weekly total.
                 </p>
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
@@ -2619,13 +2748,15 @@ export function PlanIntakeForm() {
                   getOptionDisabledReason={(option, checked) =>
                     checked
                       ? null
-                      : !form.training_availability.includes(option.value)
-                        ? "Add to availability first"
-                        : form.support_work_days.includes(option.value)
-                          ? "Already tagged as Light Combat"
-                          : form.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP
-                            ? `Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`
-                            : null
+                      : fightDateWeekday === option.value
+                        ? "Fight day is locked"
+                        : !form.training_availability.includes(option.value)
+                          ? "Add to availability first"
+                          : form.support_work_days.includes(option.value)
+                            ? "Already tagged as Light Combat"
+                            : form.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP
+                              ? `Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`
+                              : null
                   }
                 />
                 <div className="field">
@@ -2671,7 +2802,7 @@ export function PlanIntakeForm() {
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Light Combat days"
+                  label="Light / technical combat days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.support_work_days}
                   onToggle={(value) => toggleFieldValue("support_work_days", value)}
@@ -2679,19 +2810,22 @@ export function PlanIntakeForm() {
                   getOptionDisabledReason={(option, checked) =>
                     checked
                       ? null
-                      : !form.training_availability.includes(option.value)
-                        ? "Add to availability first"
-                        : form.hard_sparring_days.includes(option.value)
-                          ? "Already tagged as hard sparring"
-                          : null
+                      : fightDateWeekday === option.value
+                        ? "Fight day is locked"
+                        : !form.training_availability.includes(option.value)
+                          ? "Add to availability first"
+                          : form.hard_sparring_days.includes(option.value)
+                            ? "Already tagged as hard sparring"
+                            : null
                   }
                 />
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
-                      "Select days available for lighter work, recovery, technical practice, or S&C. Do not include hard sparring days here."}
+                      "Select days that can carry light technical combat: pads, drills, shadowboxing, movement, or non-hard contact. The app may still place low-noise support work here if it fits. Do not include hard sparring or fight day."
+                    }
                   </p>
-                  <p className="muted">Available Light Combat tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
+                  <p className="muted">Available light / technical tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
                 </div>
                 </>
                 )}
@@ -2774,18 +2908,18 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
-                <label className={`inline-warning-ack inline-warning-ack-compact ${noRestrictions ? "inline-warning-ack-checked" : ""}`.trim()}>
-                  <input
-                    type="checkbox"
-                    checked={noRestrictions}
-                    onChange={(event) => handleNoRestrictionsChange(event.target.checked)}
-                  />
-                  <span className="inline-warning-ack-stack">
-                    <span className="inline-warning-ack-copy">No current injuries or restrictions</span>
-                    <span className="muted">Leave this checked when the athlete has nothing the planner needs to work around.</span>
-                  </span>
-                </label>
-                {!noRestrictions ? (
+                <SafetyNote showRedFlags>{INJURY_INTAKE_SAFETY}</SafetyNote>
+                {noRestrictions ? (
+                  // Empty state — a single inline CTA reveals the body map and a
+                  // first card, instead of asking the athlete to untick a box first.
+                  <div className="support-panel gi-empty-state compact-gap">
+                    <p className="kicker">Anything to train around?</p>
+                    <p className="muted">Add any injuries, pain, or movement limits the planner should respect. Leave this empty if there&apos;s nothing to work around.</p>
+                    <button type="button" className="injury-card-add-btn" onClick={() => handleNoRestrictionsChange(false)}>
+                      <span aria-hidden="true">+</span> Add an injury or restriction
+                    </button>
+                  </div>
+                ) : (
                   <>
                     {showClearInjuriesConfirm ? (
                       <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
@@ -2798,14 +2932,12 @@ export function PlanIntakeForm() {
                       </div>
                     ) : null}
                     {pendingInjuryRemovalIndex !== null ? (
-                      <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
-                        <p className="gi-clear-confirm-title">
-                          Remove {guidedInjuries[pendingInjuryRemovalIndex]?.area || "this injury"}?
-                        </p>
+                      <div ref={pendingRemovalRef} className="gi-clear-confirm-panel gi-remove-confirm-panel" role="alertdialog" aria-live="polite">
+                        <p className="gi-clear-confirm-title">Remove injury?</p>
                         <p className="muted">This injury has details filled in. Removing will delete them.</p>
                         <div className="gi-clear-confirm-actions">
                           <button type="button" className="secondary-button" onClick={handleCancelRemovePendingInjury}>Keep injury</button>
-                          <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>Remove anyway</button>
+                          <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>Remove injury</button>
                         </div>
                       </div>
                     ) : null}
@@ -2814,8 +2946,9 @@ export function PlanIntakeForm() {
                         <BodyMap
                           side={bodyMapSide}
                           selections={guidedInjuries
-                            .filter((injury) => injury.area.trim())
+                            .filter((injury) => injury.area.trim() || injury.zone)
                             .map((injury) => ({
+                              zone: injury.zone || undefined,
                               label: injury.area,
                               severity: normalizeGuidedInjurySeverity(injury.severity) || undefined,
                             }))}
@@ -2849,7 +2982,7 @@ export function PlanIntakeForm() {
                                     }
                                   }}
                                   onUpdate={(key, value) => updateGuidedInjury(index, key, value)}
-                                  onRemove={() => handleRemoveGuidedInjury(index)}
+                                  onRemove={() => handleRequestRemoveGuidedInjury(index)}
                                 />
                                 {isInvalidCard && error ? (
                                   <p id={`${cardId}-error`} className="error-text" role="alert">{error}</p>
@@ -2866,13 +2999,10 @@ export function PlanIntakeForm() {
                         </div>
                       </div>
                     </div>
+                    <button type="button" className="gi-notes-toggle gi-no-restrictions-btn" onClick={() => handleNoRestrictionsChange(true)}>
+                      No current injuries or restrictions
+                    </button>
                   </>
-                ) : (
-                  <div className="support-panel gi-empty-state compact-gap">
-                    <p className="kicker">No current injuries selected</p>
-                    <p className="muted">The planner will not add injury restrictions unless you add one.</p>
-                    <button type="button" className="injury-card-add-btn" onClick={() => handleNoRestrictionsChange(false)}>Add injury or restriction</button>
-                  </div>
                 )}
               </article>
             </div>

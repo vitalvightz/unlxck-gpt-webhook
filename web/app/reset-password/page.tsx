@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
     try {
       client = getSupabaseBrowserClient();
     } catch {
-      setError("Supabase is not configured.");
+      setError("We're having trouble connecting. Please try again in a minute.");
       return;
     }
 
@@ -86,8 +86,8 @@ export default function ResetPasswordPage() {
       let client;
       try {
         client = getSupabaseBrowserClient();
-      } catch (clientError) {
-        setError(clientError instanceof Error ? clientError.message : "Supabase is not configured.");
+      } catch {
+        setError("We're having trouble connecting. Please try again in a minute.");
         return;
       }
 

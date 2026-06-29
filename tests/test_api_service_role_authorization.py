@@ -51,6 +51,65 @@ def test_athlete_cannot_access_admin_endpoints_regression():
     _assert_denied(client.get("/api/admin/athletes", headers={"Authorization": "Bearer athlete-token"}))
 
 
+def _admin_routes(app) -> list[tuple[str, str]]:
+    """Every (method, path) under /api/admin exposed by the app.
+
+    Introspecting the live router (rather than hardcoding a list) makes this a
+    true matrix guard: any admin route added later that forgets
+    ``Depends(require_admin)`` is exercised automatically and will fail here.
+    """
+    routes: list[tuple[str, str]] = []
+    for route in app.routes:
+        path = getattr(route, "path", "")
+        methods = getattr(route, "methods", None)
+        if not path.startswith("/api/admin") or not methods:
+            continue
+        for method in methods:
+            if method in {"HEAD", "OPTIONS"}:
+                continue
+            routes.append((method, path))
+    return routes
+
+
+def _concrete_path(path: str) -> str:
+    # Substitute path params with placeholders. require_admin runs during
+    # dependency resolution, before the handler validates the value, so the
+    # placeholder never needs to resolve to a real row to trigger the 403.
+    parts = []
+    for segment in path.split("/"):
+        if segment.startswith("{") and segment.endswith("}"):
+            parts.append("00000000-0000-0000-0000-000000000000")
+        else:
+            parts.append(segment)
+    return "/".join(parts)
+
+
+def test_every_admin_route_denies_a_plain_athlete():
+    """Comprehensive matrix: a non-admin athlete is rejected on EVERY admin
+    route, not just the hand-picked few. Guards against a new admin endpoint
+    silently shipping without ``require_admin``."""
+    client, store, _ = _build_client()
+    _create_two_athletes(client, store)
+
+    admin_routes = _admin_routes(client.app)
+    # Sanity: the app actually exposes a meaningful admin surface; otherwise a
+    # routing regression could make this test vacuously pass.
+    assert len(admin_routes) >= 15
+
+    headers = {"Authorization": "Bearer athlete-token"}
+    failures: list[str] = []
+    for method, path in admin_routes:
+        url = _concrete_path(path)
+        response = client.request(method, url, headers=headers, json={})
+        # require_admin denies with 403. We must never see a success (2xx) or a
+        # validation error (422) that would imply the guard was bypassed and the
+        # request reached body/handler processing.
+        if response.status_code != 403:
+            failures.append(f"{method} {path} -> {response.status_code}")
+
+    assert not failures, "admin routes reachable by a plain athlete: " + "; ".join(failures)
+
+
 def test_athlete_cannot_update_other_athlete_nutrition_through_indirect_admin_id():
     client, store, _ = _build_client()
     _create_two_athletes(client, store)
@@ -83,7 +142,12 @@ def test_nutrition_update_remains_scoped_to_current_profile():
     )
 
     assert response.status_code == 200
-    # Verify the update was applied to the correct profile
-    assert store.profiles["athlete-1"]["nutrition_profile"] == workspace["nutrition_profile"]
+    # Verify the update was applied to the correct profile. Persistence strips
+    # None-valued keys via model_dump(exclude_none=True) (matching the real
+    # store), so the round-trip is semantically lossless rather than byte-equal.
+    expected_profile = {
+        key: value for key, value in workspace["nutrition_profile"].items() if value is not None
+    }
+    assert store.profiles["athlete-1"]["nutrition_profile"] == expected_profile
     # Verify it did not leak to the other profile
     assert store.profiles["athlete-2"] == profile_b_before

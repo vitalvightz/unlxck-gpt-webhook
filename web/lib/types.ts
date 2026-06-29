@@ -42,6 +42,10 @@ export type AthleteProfileInput = {
 
 export type GuidedInjuryInput = {
   area?: string;
+  // Stable body-map zone key (e.g. "l_shoulder") when the area was picked from
+  // the map. Lets the map stay lit even after the athlete edits the free-text
+  // area, and prevents duplicate cards when the same zone is tapped again.
+  zone?: string;
   severity?: string;
   trend?: string;
   avoid?: string;
@@ -273,6 +277,7 @@ export type PlanSummary = {
   created_at: string;
   status: string;
   pdf_url?: string | null;
+  review_reason?: string | null;
 };
 
 export type PlanOutputs = {
@@ -474,12 +479,37 @@ export type StructuredEventContext = {
   ruleset?: string | null;
 };
 
+// A short, plan-level "active note" / non-negotiable reminder (weight cut,
+// injury, nutrition, general). Surfaced as a standalone Active Notes card so
+// header/footer plan context is not lost in the structured view.
+export type StructuredPlanNote = {
+  category?: string | null;
+  label?: string | null;
+  text?: string | null;
+};
+
+// An optional, plan-level readiness summary. `focus` / `injury_watch` /
+// `weekly_load` feed the plan page's lighter camp-readiness strip (see
+// getReadinessStrip); when absent the strip derives them from the current day /
+// week. `today_call` is reserved for the Today surface — the exact "train /
+// modify / pull back" decision belongs there and is intentionally NOT rendered
+// on the plan page. Every field is nullable. Purely additive — generation does
+// not emit it yet.
+export type StructuredReadinessSnapshot = {
+  today_call?: string | null;
+  focus?: string | null;
+  injury_watch?: string | null;
+  weekly_load?: string | null;
+};
+
 export type StructuredPlan = {
   schema_version?: string | null;
   plan_metadata?: StructuredPlanMetadata | null;
   athlete_context?: StructuredAthleteContext | null;
   event_context?: StructuredEventContext | null;
+  readiness_snapshot?: StructuredReadinessSnapshot | null;
   red_flag_rules?: StructuredRedFlagRule[] | null;
+  plan_notes?: StructuredPlanNote[] | null;
   weeks?: StructuredWeek[] | null;
   nutrition?: StructuredNutrition | null;
   deterministic_support?: DeterministicSupport | null;
@@ -841,4 +871,141 @@ export type AdminAthleteDailyStatus = {
   recent_session_logs: SessionLogRecord[];
   recent_adaptation_notes: AdaptationNoteRecord[];
   pending_review_count: number;
+};
+
+// ---------------------------------------------------------------------------
+// Block 4 Today command view. This mirrors the normalized backend read model
+// from /api/today; the UI must not parse raw structured_plan for this screen.
+// ---------------------------------------------------------------------------
+
+export type TodayRecommendationState =
+  | "not_checked_in"
+  | "train_as_planned"
+  | "modify"
+  | "pull_back";
+
+export type TodayCompletionStatus = "not_started" | "started" | "done" | "modified" | "skipped";
+
+export type TodayCheckinSleep = "poor" | "okay" | "good";
+export type TodayCheckinBody = "flat" | "normal" | "sharp";
+export type TodayCheckinPain = "none" | "manageable" | "high";
+export type TodayCheckinPhase = "GPP" | "SPP" | "TAPER" | "REINTEGRATION";
+export type TodayActiveInjury = "none" | "stable" | "worse";
+export type TodayPreviousSession = "none" | "normal" | "very_hard";
+
+export type TodayActivePlan = {
+  id?: string;
+  name?: string;
+  status?: string;
+  phase?: string;
+  fight_date?: string;
+  camp_type?: string;
+};
+
+export type TodaySession = {
+  session_id?: string;
+  session_relation?: "today" | "next" | string;
+  title?: string;
+  label?: string;
+  weekday?: string;
+  weekday_with_label?: string;
+  calendar_date?: string | null;
+  d_day?: number | null;
+  day_label?: string;
+  status?: string;
+  reason?: string;
+  coach_note?: string;
+  effective_load?: string;
+  primary_focus?: string;
+  emphasis?: string;
+  estimated_duration?: string | number | null;
+  duration_minutes?: number | null;
+  planned_duration?: { value?: number | null; unit?: string | null; display?: string | null } | null;
+};
+
+export type TodayCommandView = {
+  active_plan: TodayActivePlan;
+  today: {
+    training_day: string;
+    recommendation_state: TodayRecommendationState;
+    recommendation_reason?: string | null;
+    warnings?: string[];
+    next_session: TodaySession;
+    session_scope: "today" | "next" | "none";
+    session_label: string;
+    completion_status: TodayCompletionStatus;
+  };
+  risk_watch: Array<{
+    category: string;
+    priority: number;
+    icon: string;
+    label: string;
+    text: string;
+    tone: string;
+  }>;
+  open_injuries: InjuryFlagRecord[];
+  week_summary: Record<string, unknown>;
+  quick_actions: Array<{
+    id: string;
+    label: string;
+    route: string;
+  }>;
+};
+
+export type TodayCheckinRequest = {
+  plan_id: string;
+  sleep: TodayCheckinSleep;
+  body: TodayCheckinBody;
+  pain: TodayCheckinPain;
+  phase: TodayCheckinPhase;
+  active_injury?: TodayActiveInjury;
+  previous_session?: TodayPreviousSession;
+  sharp_pain?: boolean;
+  instability?: boolean;
+  swelling?: boolean;
+  neurological_symptoms?: boolean;
+  illness_symptoms?: boolean;
+  cannot_warm_into_movement?: boolean;
+  worse_next_day_pain?: boolean;
+};
+
+export type TodayCheckinResponse = {
+  training_day: string;
+  recommendation_state: TodayRecommendationState;
+  recommendation_reason: string;
+  triggers: string[];
+  warnings?: string[];
+};
+
+export type TodaySessionCompletionRequest = {
+  plan_id: string;
+  session_id: string;
+  status: TodayCompletionStatus;
+  session_rpe?: number | null;
+  pain_after?: number | null;
+  modification_reason?: string;
+  notes?: string;
+};
+
+export type TodaySessionCompletionResponse = {
+  completion_status: TodayCompletionStatus;
+  landing_session_state: "none" | "resume" | "completed";
+};
+
+export type TodayInjuryCheckinStatus = "ongoing" | "improving" | "worse" | "resolved";
+
+export type TodayInjuryDeclaration = {
+  flag_id?: string | null;
+  body_area?: string;
+  description?: string;
+  severity?: InjuryFlagSeverity;
+  status?: TodayInjuryCheckinStatus;
+};
+
+export type TodayInjuryCheckinRequest = {
+  injuries: TodayInjuryDeclaration[];
+};
+
+export type TodayInjuryCheckinResponse = {
+  open_injuries: InjuryFlagRecord[];
 };
