@@ -694,7 +694,7 @@ def is_late_fight_metadata_safe(
 
     style_quarantine_codes = (
         style_conditioning_quarantine_reason_codes(item, source=source)
-        if _source_filename(source) in {"style_conditioning_bank", "style_conditioning_bank.json"}
+        if is_style_conditioning_source(source)
         else []
     )
     if style_quarantine_codes:
