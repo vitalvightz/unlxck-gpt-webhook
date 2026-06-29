@@ -291,6 +291,8 @@ def _high_intensity_late_safe(entry: dict, tags: list[str]) -> bool:
     system = str(entry.get("system") or "").strip().lower()
     if SYSTEM_ALIASES.get(system, system) == "glycolytic":
         return True
+    if str(entry.get("intensity") or "").strip().lower() in HIGH_LEVELS:
+        return True
     for field in (*CONDITIONING_COST_FIELDS, *EXERCISE_COST_FIELDS):
         if str(entry.get(field) or "").strip().lower() in HIGH_LEVELS:
             return True
