@@ -257,7 +257,26 @@ def _has_d1_risky_modality(entry: dict[str, Any]) -> bool:
     return any(term in text for term in ("band", "ballistic", "isometric", "med ball", "medicine ball", "loaded"))
 
 
+def _resolved_system(system_raw: Any) -> str:
+    from .bank_schema import SYSTEM_ALIASES
+
+    raw = str(system_raw or "").strip().lower()
+    resolved = SYSTEM_ALIASES.get(raw, raw)
+    return resolved.replace("-", "_").replace(" ", "_")
+
+
 def _dose_risk_reason_codes(entry: dict[str, Any], reason_codes: list[str]) -> set[str]:
+    reason_set = set(reason_codes)
+    dose_reasons = set(reason_set & HIGH_DOSE_REASONS)
+    phases = _phase_set(entry)
+    system = _resolved_system(entry.get("system"))
+    if "high_lactate_load" in dose_reasons and "high_rpe" not in reason_set and "high_intensity" not in reason_set:
+        if "SPP" in phases and system in {"glycolytic", "alactic"}:
+            dose_reasons.remove("high_lactate_load")
+    if "high_movement_cost" in dose_reasons and "high_rpe" not in reason_set and "high_intensity" not in reason_set:
+        if "SPP" in phases and system in {"glycolytic", "alactic"}:
+            dose_reasons.remove("high_movement_cost")
+    return dose_reasons
     reason_set = set(reason_codes)
     dose_reasons = set(reason_set & HIGH_DOSE_REASONS)
     phases = _phase_set(entry)
