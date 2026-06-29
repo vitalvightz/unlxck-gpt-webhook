@@ -218,7 +218,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
         add_unique(
             speed_bucket,
-            "speed / footwork sharpness",
+            "speed / reaction sharpness",
             "speed_footwork_sharpness",
             "Use one short full-rest alactic speed dose that also reinforces footwork quality.",
         )
