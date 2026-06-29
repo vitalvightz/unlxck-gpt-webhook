@@ -390,9 +390,13 @@ class TestLateFightPermissionsAndRendering:
         assert "strength block" in [term.lower() for term in rules["forbidden_terms"]]
 
     def test_final_week_rendering_rules_cap_primer_intensity(self):
+        d7_rules = _late_fight_rendering_rules(7)
         d6_rules = _late_fight_rendering_rules(6)
         d1_rules = _late_fight_rendering_rules(1)
 
+        assert any("RPE 6-7" in rule and "3-4 x 6 sec" in rule for rule in d7_rules["rules"])
+        assert "all-out bursts" in d7_rules["forbidden_terms"]
+        assert "RPE 8" in d7_rules["forbidden_terms"]
         assert any("RPE 6-7" in rule and "3-4 x 6 sec" in rule for rule in d6_rules["rules"])
         assert "all-out bursts" in d6_rules["forbidden_terms"]
         assert any("RPE 3-5" in rule for rule in d1_rules["rules"])

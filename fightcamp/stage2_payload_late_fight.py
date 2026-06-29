@@ -2034,10 +2034,11 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "compressed_week",
             "rules": [
                 "Sharpness-week framing. D-N first, weekday second.",
+                "D-7 primers must stay submaximal: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 6 sec, full rest.",
                 "5 blocks per session max. No effective hard sparring — all declared hard sparring converts to technical/rhythm only.",
             ],
             "preferred_terms": ["sharpness week", "power touch", "neural touch", "technical rhythm", "freshness session", "mobility / reset"],
-            "forbidden_terms": ["primary strength", "secondary strength", "anchor day", "conditioning block", "development block"],
+            "forbidden_terms": ["primary strength", "secondary strength", "anchor day", "conditioning block", "development block", "all-out bursts", "RPE 8"],
         }
     if mode == "late_fight_transition_payload":
         return {
