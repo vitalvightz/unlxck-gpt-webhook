@@ -389,6 +389,15 @@ class TestLateFightPermissionsAndRendering:
         assert "freshness session" in [term.lower() for term in rules["preferred_terms"]]
         assert "strength block" in [term.lower() for term in rules["forbidden_terms"]]
 
+    def test_final_week_rendering_rules_cap_primer_intensity(self):
+        d6_rules = _late_fight_rendering_rules(6)
+        d1_rules = _late_fight_rendering_rules(1)
+
+        assert any("RPE 6-7" in rule and "3-4 x 6 sec" in rule for rule in d6_rules["rules"])
+        assert "all-out bursts" in d6_rules["forbidden_terms"]
+        assert any("RPE 3-5" in rule for rule in d1_rules["rules"])
+        assert "RPE 6-7" in d1_rules["forbidden_terms"]
+
     def test_d10_taper_micro_support_policy_stays_optional_and_off_the_role_map(self):
         spec = _build_late_fight_plan_spec(10, _athlete(10))
         policy = spec["taper_micro_support_policy"]
@@ -1039,6 +1048,15 @@ class TestHandoffText:
         text = self._build_handoff_with_brief(5)
         assert "taper_micro_support" in text
         assert "optional add-on" in text
+
+    def test_late_fight_handoff_carries_final_week_primer_caps(self):
+        d6_text = self._build_handoff(6)
+        d1_text = self._build_handoff(1)
+
+        assert "RPE 6-7, 3-4 x 6 sec" in d6_text
+        assert "No all-out language" in d6_text
+        assert "RPE 3-5" in d1_text
+        assert "no RPE 6-7" in d1_text
 
     def test_handoff_injury_context_section_is_visible_and_structured(self):
         payload = _build_stage2(14)

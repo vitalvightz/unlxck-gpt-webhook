@@ -544,6 +544,16 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     assert "Band-Resisted Sprint Starts (ATP-PCr)" not in plan_text
 
 
+def test_final_week_taper_caps_keep_primers_submaximal():
+    d6 = conditioning._late_fight_dosage_caps(6)
+    d1 = conditioning._late_fight_dosage_caps(1)
+
+    assert "RPE 8" not in d6
+    assert "RPE 8" not in d1
+    assert "3-4 bursts max (6 sec @ RPE 6-7" in d6
+    assert "RPE 3-5" in d1
+
+
 def test_equipment_aliases_normalize_machine_variants():
     normalized = normalize_equipment_list(
         ["Air Bike", "Echo Bike", "Rowing Machine", "SkiErg", "concept2 rower"]
