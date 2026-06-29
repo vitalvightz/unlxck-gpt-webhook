@@ -226,21 +226,37 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         weakness_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
         or goal_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
     )
-
-    if speed_signal:
-        add_unique(
-            primary,
-            "speed / reaction sharpness",
-            "speed_reaction_sharpness",
-            "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
-        )
-
     footwork_signal = bool(
         weakness_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
         or goal_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
     )
+    technical_sharpness_signal = (
+        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
+        or goal_tokens & {"skill_refinement", "striking"}
+    )
 
-    if footwork_signal:
+    if speed_signal and footwork_signal:
+        add_unique(
+            primary,
+            "speed / footwork sharpness",
+            "speed_footwork_sharpness",
+            "Use one short full-rest alactic speed dose that also reinforces footwork quality.",
+        )
+    elif speed_signal:
+        add_unique(
+            primary,
+            "speed / footwork sharpness",
+            "speed_reaction_sharpness",
+            "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
+        )
+    elif footwork_signal and technical_sharpness_signal:
+        add_unique(
+            primary,
+            "footwork / technical sharpness",
+            "footwork_technical_sharpness",
+            "Collapse footwork, timing, boxing quality, and skill refinement into one practical fight-week target.",
+        )
+    elif footwork_signal:
         add_unique(
             primary,
             "footwork / ring-movement quality",
@@ -248,12 +264,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
             "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
         )
 
-    technical_sharpness_signal = (
-        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
-        or goal_tokens & {"skill_refinement", "striking"}
-    )
-
-    if technical_sharpness_signal:
+    if technical_sharpness_signal and not footwork_signal:
         add_unique(
             primary,
             "technical sharpness",

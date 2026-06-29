@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from api.models import (
     MeResponse,
     OnboardingDraftSaveRequest,
+    OnboardingDraftSaveResponse,
     ProfileRecord,
     ProfileUpdateRequest,
     UsernameChangeRequest,
@@ -41,19 +42,17 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         updated = _map_profile_row(store.change_username(profile.athlete_id, update.username))
         return _build_me_response(updated, store)
 
-    @router.patch("/api/onboarding/draft", response_model=MeResponse)
+    @router.patch("/api/onboarding/draft", response_model=OnboardingDraftSaveResponse)
     def save_onboarding_draft(
         update: OnboardingDraftSaveRequest,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
-    ) -> MeResponse:
+    ) -> OnboardingDraftSaveResponse:
         update_data = update.model_dump(exclude_unset=True)
-        updated = _map_profile_row(
-            store.update_profile(
-                profile.athlete_id,
-                ProfileUpdateRequest(**update_data),
-            )
+        updated = store.update_profile(
+            profile.athlete_id,
+            ProfileUpdateRequest(**update_data),
         )
-        return _build_me_response(updated, store)
+        return OnboardingDraftSaveResponse(updated_at=str(updated.get("updated_at") or ""))
     
     return router

@@ -502,6 +502,10 @@ def _line_matches_requirement(line: str, requirement: str, candidate_names: list
 
 
 def _find_missing_phase_sections(planning_brief: dict, phase_sections: dict[str, list[str]]) -> list[dict]:
+    late_fight_spec = _late_fight_plan_spec(planning_brief)
+    if late_fight_spec and late_fight_spec.get("payload_mode") not in {"", "camp_payload"}:
+        return []
+
     expected_phases = [phase for phase, strategy in (planning_brief.get("phase_strategy") or {}).items() if clean_list(strategy.get("must_keep", []))]
     if len(expected_phases) <= 1:
         return []
@@ -520,6 +524,10 @@ def _find_missing_phase_sections(planning_brief: dict, phase_sections: dict[str,
 
 
 def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> list[dict]:
+    late_fight_spec = _late_fight_plan_spec(planning_brief)
+    if late_fight_spec and late_fight_spec.get("payload_mode") not in {"", "camp_payload"}:
+        return []
+
     missing: list[dict] = []
     phase_sections = _phase_sections(plan_text)
     all_plan_lines = _extract_plan_lines(plan_text)

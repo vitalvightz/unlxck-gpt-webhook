@@ -79,6 +79,8 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         is_admin = is_effective_admin_profile(profile, store)
+        if not is_admin and _is_archived_plan(plan_row):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_plan_detail(
             plan_row,
             include_admin=is_admin,
