@@ -179,6 +179,91 @@ test("selectors return safe empties on missing/partial fields", () => {
   assert.equal(week.length, 0); // wrong-shaped input -> empty, no crash
 });
 
+test("getWeeks leaves a single-calendar-week plan untouched", () => {
+  // Mon–Fri all in the same calendar week -> one week, unchanged.
+  const plan = {
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        days: [
+          { date: "2026-06-29", countdown_label: "D-19" }, // Mon
+          { date: "2026-07-01", countdown_label: "D-17" }, // Wed
+          { date: "2026-07-03", countdown_label: "D-15" }, // Fri
+        ],
+      },
+    ],
+  } as never;
+  const weeks = getWeeks(plan);
+  assert.equal(weeks.length, 1);
+  assert.equal(weeks[0].week_id, "wk-1");
+});
+
+test("getWeeks does not split a <=7-day week that merely crosses a Monday", () => {
+  // Sat 2026-07-04 .. Tue 2026-07-07 crosses a Monday but spans only 3 days, so a
+  // normally-structured short week stays intact.
+  const plan = {
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        days: [
+          { date: "2026-07-04", countdown_label: "D-14" }, // Sat (cw1)
+          { date: "2026-07-07", countdown_label: "D-11" }, // Tue (cw2)
+        ],
+      },
+    ],
+  } as never;
+  assert.equal(getWeeks(plan).length, 1);
+});
+
+test("getWeeks splits a multi-calendar-week late-fight block into weeks", () => {
+  // One week object spanning three calendar weeks (the late-fight bridge bug):
+  // D-18 Tue 2026-06-30 ... D-5 Mon 2026-07-13 must render as W1/W2/W3.
+  const plan = {
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        week_goal: "Maintain freshness",
+        start_date: "2026-06-30",
+        end_date: "2026-07-13",
+        countdown_start: "D-18",
+        countdown_end: "D-5",
+        days: [
+          { date: "2026-06-30", countdown_label: "D-18" }, // cw1 Tue
+          { date: "2026-07-01", countdown_label: "D-17" }, // cw1 Wed
+          { date: "2026-07-04", countdown_label: "D-14" }, // cw1 Sat
+          { date: "2026-07-07", countdown_label: "D-11" }, // cw2 Tue
+          { date: "2026-07-09", countdown_label: "D-9" }, // cw2 Thu
+          { date: "2026-07-13", countdown_label: "D-5" }, // cw3 Mon
+        ],
+      },
+    ],
+  } as never;
+
+  const weeks = getWeeks(plan);
+  assert.equal(weeks.length, 3);
+  assert.deepEqual(
+    weeks.map((week) => week.week_index),
+    [1, 2, 3],
+  );
+  // Each sub-week carries only its own days and a recomputed range.
+  assert.equal(getDays(weeks[0]).length, 3);
+  assert.equal(weeks[0].start_date, "2026-06-30");
+  assert.equal(weeks[0].end_date, "2026-07-04");
+  assert.equal(weeks[0].countdown_start, "D-18");
+  assert.equal(weeks[0].countdown_end, "D-14");
+  assert.equal(getDays(weeks[1]).length, 2);
+  assert.equal(weeks[1].countdown_start, "D-11");
+  assert.equal(getDays(weeks[2]).length, 1);
+  assert.equal(weeks[2].countdown_end, "D-5");
+  // Metadata is inherited; ids stay unique.
+  assert.equal(weeks[0].phase_label, "SPP");
+  assert.equal(new Set(weeks.map((week) => week.week_id)).size, 3);
+});
+
 // --- plan-level active notes ------------------------------------------------
 
 test("getPlanNotes keeps notes with text, drops empties, lowercases category", () => {
