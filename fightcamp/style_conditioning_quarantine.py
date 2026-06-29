@@ -342,8 +342,10 @@ def style_conditioning_quarantine_reason_codes(
         add("explicit_late_fight_quarantine")
     if entry.get("manual_review_required") is True:
         add("manual_review_required")
-    for code in entry.get("quarantine_reason_codes") or []:
-        cleaned = str(code).strip().lower().replace(" ", "_")
+    raw_q_codes = entry.get('quarantine_reason_codes')
+    q_codes_list = raw_q_codes if isinstance(raw_q_codes, (list, tuple, set)) else []
+    for code in q_codes_list:
+        cleaned = str(code).strip().lower().replace(' ', '_')
         if cleaned:
             add(cleaned)
 
