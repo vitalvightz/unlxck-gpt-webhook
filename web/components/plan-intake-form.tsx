@@ -704,18 +704,16 @@ function CheckboxGroup({
           const disabled = disableAll || Boolean(daysOutDisabledReason) || capDisabled;
           const labelTitle = daysOutDisabledReason ?? (capDisabled ? capDisabledReason ?? "Focus cap reached." : undefined);
           return (
-            <div
+            <label
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-disabled={disabled}
               title={labelTitle}
             >
-              <label className="checkbox-card-label">
-                <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
-                <span className="checkbox-card-copy">
-                  <span className="checkbox-card-title">{option.label}</span>
-                </span>
-              </label>
+              <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
+              <span className="checkbox-card-copy">
+                <span className="checkbox-card-title">{option.label}</span>
+              </span>
               {labelTitle ? (
                 <WhyTooltip
                   title="Unavailable"
@@ -724,7 +722,7 @@ function CheckboxGroup({
                   ariaLabel={`Why ${option.label} is unavailable`}
                 />
               ) : null}
-            </div>
+            </label>
           );
         })}
       </div>

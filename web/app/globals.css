@@ -2736,14 +2736,6 @@ select:focus-visible {
   flex-shrink: 0;
 }
 
-.checkbox-card-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  cursor: inherit;
-}
-
 .checkbox-card-disabled input {
   cursor: not-allowed;
 }
