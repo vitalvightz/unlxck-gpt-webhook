@@ -154,8 +154,124 @@ export function formatEffort(block: StructuredBlock | null | undefined): string 
 
 // --- safe structural selectors (never throw on partial data) ----------------
 
+/** Local ISO date (YYYY-MM-DD) for the Monday of the week containing `dateStr`. */
+function calendarWeekMonday(dateStr: string | null): string | null {
+  if (!dateStr) {
+    return null;
+  }
+  const parsed = new Date(`${dateStr.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  // getDay(): 0=Sun..6=Sat -> offset back to Monday (0=Mon..6=Sun).
+  const offsetToMonday = (parsed.getDay() + 6) % 7;
+  parsed.setDate(parsed.getDate() - offsetToMonday);
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1).padStart(2, "0");
+  const d = String(parsed.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Whole days between two local ISO date strings, or null if either is unusable. */
+function daySpan(startIso: string, endIso: string): number | null {
+  const start = new Date(`${startIso}T00:00:00`);
+  const end = new Date(`${endIso}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return null;
+  }
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000);
+}
+
+/**
+ * Split one plan week into per-calendar-week (Mon–Sun) display weeks.
+ *
+ * Normal camp weeks already fit inside a single calendar week, so they pass
+ * through unchanged. A late-fight / bridge plan, however, ships its whole
+ * countdown as ONE week object spanning two or three calendar weeks — which the
+ * UI would otherwise render as a single "Week 1" listing every day. Splitting it
+ * on Monday boundaries restores the week-by-week view. Each sub-week inherits the
+ * source week's metadata but gets its own day list and recomputed date/countdown
+ * range. Days without a parseable date stay with the preceding sub-week.
+ *
+ * Guarded to only ever touch a genuinely long block: a week whose dated days
+ * span 7 days or fewer is returned untouched even if it happens to cross a
+ * Monday, so a normally-structured camp week is never re-cut.
+ */
+function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
+  const days = getDays(week);
+  const datedSorted = days
+    .map((day) => cleanText(day.date))
+    .filter((value): value is string => value !== null)
+    .sort();
+  if (datedSorted.length > 0) {
+    const span = daySpan(datedSorted[0], datedSorted[datedSorted.length - 1]);
+    if (span === null || span <= 7) {
+      return [week];
+    }
+  }
+
+  const groups: { monday: string; days: StructuredDay[] }[] = [];
+  const leadingUndated: StructuredDay[] = [];
+
+  for (const day of days) {
+    const monday = calendarWeekMonday(cleanText(day.date));
+    if (monday === null) {
+      if (groups.length > 0) {
+        groups[groups.length - 1].days.push(day);
+      } else {
+        leadingUndated.push(day);
+      }
+      continue;
+    }
+    const existing = groups.find((group) => group.monday === monday);
+    if (existing) {
+      existing.days.push(day);
+    } else {
+      groups.push({ monday, days: [day] });
+    }
+  }
+
+  // One calendar week (or no dates to split on) -> leave the week untouched.
+  if (groups.length <= 1) {
+    return [week];
+  }
+
+  groups.sort((a, b) => (a.monday < b.monday ? -1 : a.monday > b.monday ? 1 : 0));
+  if (leadingUndated.length > 0) {
+    groups[0].days = [...leadingUndated, ...groups[0].days];
+  }
+
+  return groups.map((group, index) => {
+    const dates = group.days
+      .map((day) => cleanText(day.date))
+      .filter((value): value is string => value !== null)
+      .sort();
+    const labels = group.days
+      .map((day) => cleanText(day.countdown_label))
+      .filter((value): value is string => value !== null);
+    return {
+      ...week,
+      week_id: `${cleanText(week.week_id) || "week"}-cw${index + 1}`,
+      days: group.days,
+      start_date: dates[0] ?? week.start_date,
+      end_date: dates[dates.length - 1] ?? week.end_date,
+      // Days run furthest-from-fight first, so the first/last labels bound the range.
+      countdown_start: labels[0] ?? week.countdown_start,
+      countdown_end: labels[labels.length - 1] ?? week.countdown_end,
+    };
+  });
+}
+
 export function getWeeks(plan: StructuredPlan | null | undefined): StructuredWeek[] {
-  return safeArray(plan?.weeks).filter(isObject);
+  const raw = safeArray(plan?.weeks).filter(isObject);
+  const split = raw.flatMap(splitWeekByCalendarWeek);
+  // No week spanned multiple calendar weeks -> identity (zero change for normal
+  // camps). Only when a split happened do we renumber week_index so the strip
+  // reads Week 1, 2, 3… in order.
+  if (split.length === raw.length) {
+    return raw;
+  }
+  return split.map((week, index) => ({ ...week, week_index: index + 1 }));
 }
 
 export function getDays(week: StructuredWeek | null | undefined): StructuredDay[] {
