@@ -1498,7 +1498,7 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   emit the app S&C work as normal entries in "sessions" (with its blocks), AND
   set today_card.coach_led_contact to the coach-owned label (e.g. "Coach-led
   boxing — technical only"). Put the coach-owned label in coach_led_contact, NOT
-  in headline, so the app session keeps its own title; the renderer shows the
+  in headline (set headline to a generic title like "Training Day" or the app session's title instead, as headline is still required), so the app session keeps its own title; the renderer shows the
   coach-owned contact as a context line above the app session. The "no app S&C
   today" wording only applies when there is genuinely no app work — if an app
   session is listed for the day, keep it.
