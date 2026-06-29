@@ -689,7 +689,11 @@ def is_late_fight_metadata_safe(
     if "missing_late_windows" in unsafe_metadata:
         _append_code(block_codes, "late_block_missing_late_windows")
 
-    style_quarantine_codes = style_conditioning_quarantine_reason_codes(item, source=source)
+    style_quarantine_codes = (
+        style_conditioning_quarantine_reason_codes(item, source=source)
+        if _source_filename(source) in {"style_conditioning_bank", "style_conditioning_bank.json"}
+        else []
+    )
     if style_quarantine_codes:
         _append_code(block_codes, "late_block_style_conditioning_quarantine")
         for code in style_quarantine_codes:
