@@ -1050,9 +1050,12 @@ class TestHandoffText:
         assert "optional add-on" in text
 
     def test_late_fight_handoff_carries_final_week_primer_caps(self):
+        d7_text = self._build_handoff(7)
         d6_text = self._build_handoff(6)
         d1_text = self._build_handoff(1)
 
+        assert "use selected drill RPE when present" in d7_text
+        assert "RPE 6-7, 3-4 x 6 sec" in d7_text
         assert "RPE 6-7, 3-4 x 6 sec" in d6_text
         assert "No all-out language" in d6_text
         assert "RPE 3-5" in d1_text
