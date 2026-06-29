@@ -21,7 +21,7 @@ STYLE_CONDITIONING_REPORT_FIELDS = (
     "recommended_action",
 )
 
-HIGH_INTENSITY_VALUES = {"high", "very_high", "very high", "max", "maximum"}
+HIGH_INTENSITY_VALUES = {"high", "very_high", "max", "maximum"}
 LATE_DOSE_FIELDS = (
     "duration",
     "timing",
