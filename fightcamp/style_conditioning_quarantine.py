@@ -345,6 +345,35 @@ def _late_fight_action(
         return "late_support_candidate"
     if _has_technical_focus(entry) and _has_clear_low_risk_dose(entry, max_rpe=5):
         return "late_technical_candidate"
+    if _has_clear_low_risk_dose(entry, max_rpe=6) and _resolved_system(entry.get("system")) != "glycolytic":
+        return "late_conditioning_candidate"
+    return "late_blocked"
+    entry: dict[str, Any],
+    reason_codes: list[str],
+    *,
+    overstyled_name: bool,
+    aggressive_notes: bool,
+    destructive_wording: bool,
+) -> str:
+    reason_set = set(reason_codes)
+    hard_blocks = reason_set & {
+        "explicit_late_fight_quarantine",
+        "manual_review_required",
+        "high_rpe",
+        "high_intensity",
+        "high_lactate_load",
+        "high_movement_cost",
+        "high_impact_cost",
+        "missing_dose_metadata",
+    }
+    if hard_blocks or overstyled_name or aggressive_notes or destructive_wording:
+        return "late_blocked"
+    if "missing_late_windows" in reason_set:
+        return "not_late_eligible"
+    if _has_support_focus(entry) and _has_clear_low_risk_dose(entry, max_rpe=4) and not _has_d1_risky_modality(entry):
+        return "late_support_candidate"
+    if _has_technical_focus(entry) and _has_clear_low_risk_dose(entry, max_rpe=5):
+        return "late_technical_candidate"
     if _has_clear_low_risk_dose(entry, max_rpe=6) and _normalized_value(entry.get("system")) != "glycolytic":
         return "late_conditioning_candidate"
     return "late_blocked"
