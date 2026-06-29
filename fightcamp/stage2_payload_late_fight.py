@@ -1392,7 +1392,6 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                         "sprint start",
                     ],
                     "preferred_drills": [
-                        "Staggered-Stance Medicine-Ball Punch Throw",
                         "Explosive Boxing Burst Intervals",
                         "Reactive Shuffle Repeats",
                         "Mobility Reset Flow",

@@ -10,6 +10,258 @@ from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
 
+def _generic_conditioning_bank(phases: list[str] | None = None) -> list[dict]:
+    phases = phases or ["GPP", "SPP", "TAPER"]
+    return [
+        {
+            "name": "Generic Boxing Tempo",
+            "placement": "conditioning",
+            "system": "aerobic",
+            "phases": phases,
+            "tags": ["boxing", "conditioning", "aerobic"],
+            "timing": "12 min steady",
+            "rest": "",
+            "load": "moderate",
+        },
+        {
+            "name": "Generic Boxing Intervals",
+            "placement": "conditioning",
+            "system": "glycolytic",
+            "phases": phases,
+            "tags": ["boxing", "conditioning", "glycolytic"],
+            "timing": "4 x 60s",
+            "rest": "60s",
+            "load": "hard",
+        },
+        {
+            "name": "Generic Boxing Acceleration",
+            "placement": "conditioning",
+            "system": "alactic",
+            "phases": phases,
+            "tags": ["boxing", "alactic", "speed"],
+            "work_sec": 6,
+            "rest_sec": 90,
+            "rounds": 4,
+            "timing": "4 x 6s",
+            "rest": "90s",
+            "load": "fast",
+        },
+    ]
+
+
+def _style_visibility_flags(phase: str, *, sport: str = "boxing", technical: list[str] | None = None) -> dict:
+    return {
+        "phase": phase,
+        "sport": sport,
+        "style_technical": technical or [sport],
+        "style_tactical": ["Counter Striker"],
+        "key_goals": ["conditioning"],
+        "weaknesses": ["gas_tank"],
+        "fatigue": "low",
+        "equipment": ["bodyweight"],
+        "training_frequency": 3,
+        "days_available": 3,
+        "days_until_fight": 35,
+        "time_to_fight_days": 35,
+        "injuries": [],
+        "restrictions": [],
+    }
+
+
+def _patch_conditioning_visibility_banks(
+    monkeypatch,
+    *,
+    style_bank: list[dict],
+    total_drills: int = 2,
+    base_phases: list[str] | None = None,
+) -> None:
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: _generic_conditioning_bank(base_phases))
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: style_bank)
+    monkeypatch.setattr(conditioning, "get_coordination_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "select_coordination_drill", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(conditioning, "_load_bank", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(conditioning, "allocate_sessions", lambda *_args, **_kwargs: {"conditioning": 1})
+    monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": total_drills})
+
+
+def test_gpp_valid_style_conditioning_candidate_surfaces_when_conditioning_selected(monkeypatch):
+    style_drill = {
+        "name": "Counter Reactive Footwork",
+        "placement": "conditioning",
+        "system": "aerobic",
+        "phases": ["GPP"],
+        "tags": ["reactive", "footwork"],
+        "timing": "10 min technical tempo",
+        "rest": "",
+        "load": "moderate",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[style_drill])
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("GPP")
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "Counter Reactive Footwork" in selected_names
+    assert diagnostics["style_target"] >= 1
+    assert diagnostics["entries_selected"] == 1
+    assert diagnostics["final_selected_style_conditioning_names"] == ["Counter Reactive Footwork"]
+
+
+def test_spp_style_conditioning_is_picked_before_generic_system_fallback(monkeypatch):
+    style_drill = {
+        "name": "Counter Reactive Intervals",
+        "placement": "conditioning",
+        "system": "glycolytic",
+        "phases": ["SPP"],
+        "tags": ["reactive", "timing"],
+        "timing": "4 x 45s",
+        "rest": "75s",
+        "load": "hard",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[style_drill])
+
+    _text, selected_names, _why, grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("SPP")
+    )
+
+    assert selected_names[0] == "Counter Reactive Intervals"
+    assert grouped["glycolytic"][0]["name"] == "Counter Reactive Intervals"
+    assert reservoir["__style_conditioning__"]["style_remaining_before_selection"] >= 1
+
+
+def test_style_conditioning_expanded_style_tag_match_does_not_need_raw_tactical_token(monkeypatch):
+    style_drill = {
+        "name": "Expanded Reactive Match",
+        "placement": "conditioning",
+        "system": "glycolytic",
+        "phases": ["SPP"],
+        "tags": ["reactive"],
+        "timing": "4 x 40s",
+        "rest": "80s",
+        "load": "hard",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[style_drill])
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("SPP", sport="mma", technical=["mma"])
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "Expanded Reactive Match" in selected_names
+    assert "reactive" in diagnostics["target_style_tags"]
+    assert diagnostics["entries_passing_target_style_match"] == 1
+
+
+def test_boxing_still_blocks_mma_grappling_and_kick_style_conditioning(monkeypatch):
+    banned_drill = {
+        "name": "MMA Sprawl Kick Chain",
+        "placement": "conditioning",
+        "system": "glycolytic",
+        "phases": ["SPP"],
+        "tags": ["reactive", "mma", "grappling", "kick"],
+        "timing": "4 x 45s",
+        "rest": "75s",
+        "load": "hard",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[banned_drill])
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("SPP")
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "MMA Sprawl Kick Chain" not in selected_names
+    assert diagnostics["entries_blocked_by_sport_language_ban"] == 1
+    assert diagnostics["entries_selected"] == 0
+
+
+def test_alactic_style_conditioning_without_rest_structure_is_rejected(monkeypatch):
+    invalid_alactic = {
+        "name": "Bad Counter Burst",
+        "placement": "conditioning",
+        "system": "alactic",
+        "phases": ["SPP"],
+        "tags": ["reactive", "speed"],
+        "work_sec": 12,
+        "rest_sec": 20,
+        "rounds": 6,
+        "timing": "6 x 12s",
+        "rest": "20s",
+        "load": "fast",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[invalid_alactic])
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("SPP")
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "Bad Counter Burst" not in selected_names
+    assert diagnostics["entries_blocked_by_alactic_structure"] == 1
+    assert diagnostics["entries_scored"] == 0
+
+
+def test_style_conditioning_diagnostics_explain_no_contribution(monkeypatch):
+    equipment_blocked = {
+        "name": "Sled Counter Pressure",
+        "placement": "conditioning",
+        "system": "glycolytic",
+        "phases": ["SPP"],
+        "tags": ["reactive", "pressure"],
+        "equipment": ["sled"],
+        "timing": "5 x 30s",
+        "rest": "90s",
+        "load": "hard",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[equipment_blocked])
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("SPP")
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "Sled Counter Pressure" not in selected_names
+    assert diagnostics["total_style_bank_entries_loaded"] == 1
+    assert diagnostics["entries_passing_phase"] == 1
+    assert diagnostics["entries_passing_target_style_match"] == 1
+    assert diagnostics["entries_blocked_by_equipment"] == 1
+    assert diagnostics["entries_selected"] == 0
+    assert diagnostics["final_selected_style_conditioning_names"] == []
+
+
+def test_taper_does_not_pull_from_style_conditioning_bank(monkeypatch):
+    taper_style = {
+        "name": "Dirty Taper Style Conditioning",
+        "placement": "conditioning",
+        "system": "glycolytic",
+        "phases": ["TAPER"],
+        "tags": ["reactive", "boxing", "conditioning"],
+        "timing": "5 x 60s",
+        "rest": "45s",
+        "load": "hard",
+    }
+    _patch_conditioning_visibility_banks(
+        monkeypatch,
+        style_bank=[taper_style],
+        total_drills=2,
+        base_phases=["TAPER"],
+    )
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        {
+            **_style_visibility_flags("TAPER"),
+            "days_until_fight": 14,
+            "time_to_fight_days": 14,
+        }
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "Dirty Taper Style Conditioning" not in selected_names
+    assert diagnostics["style_target"] == 0
+    assert diagnostics["style_remaining_before_selection"] == 0
+    assert diagnostics["entries_selected"] == 0
+
 
 
 def test_late_window_blocks_non_taper_phased_conditioning_even_if_otherwise_valid():
