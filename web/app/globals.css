@@ -14786,6 +14786,12 @@ html[data-theme="light"] .loading-operational-item {
   margin: 0;
 }
 
+/* When a coach-owned contact block stacks under another context block (e.g. a
+   light-technical tag), keep a small gap so the two read as distinct lines. */
+.cm-light-technical + .cm-light-technical {
+  margin-top: 8px;
+}
+
 /* The current day is the athlete's anchor in the week — give it the red border
    plus a faint wash and left accent on its header so it reads at a glance even
    while collapsed, without tinting the whole card. */

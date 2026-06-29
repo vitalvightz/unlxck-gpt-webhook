@@ -3611,12 +3611,18 @@ def _append_declared_hard_spar_context(
                 "preferred_pool": "declared_hard_sparring_days",
                 "selection_rule": (
                     "Coach-owned boxing day downgraded to technical/rhythm only "
-                    "under the D-17 hard-sparring ban; never render as an app session."
+                    "under the D-17 hard-sparring ban; render it as a coach-owned "
+                    "label, never as an app S&C session. It must stay visible even "
+                    "when an app session is also scheduled that day — the two "
+                    "coexist on the same day, the contact does not replace the app "
+                    "session and the app session does not hide the contact."
                 ),
                 "anchor": _role_anchor("hard_sparring_day"),
                 "placement_rule": (
                     "Keep this declared boxing day fixed on the athlete's stated weekday. "
-                    "Render with the coach-owned label and never as an app insert."
+                    "Always surface the coach-owned label on that day; if an app session "
+                    "lands on the same day, show both — the coach-owned contact line and "
+                    "the app session sit together in that day, never one instead of the other."
                 ),
                 "cost_class": _late_fight_cost_class("hard_sparring_day"),
                 "stress_class": _late_fight_stress_class("hard_sparring_day"),

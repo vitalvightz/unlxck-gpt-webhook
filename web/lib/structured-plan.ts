@@ -706,22 +706,30 @@ const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
  * "Rest day.". A headline-less rest/recovery day (or an otherwise empty day)
  * is the only case that renders as a rest day.
  */
+/** The day kind for a coach-led/contact headline (scheduled when none matches). */
+function coachLedKindFromHeadline(headline: string): SessionlessDayKind {
+  if (LIGHT_COMBAT_RE.test(headline)) {
+    return "light_combat";
+  }
+  if (TECHNICAL_RE.test(headline)) {
+    return "technical";
+  }
+  if (SPARRING_RE.test(headline)) {
+    return "sparring";
+  }
+  if (COACH_LED_RE.test(headline)) {
+    return "coach_led";
+  }
+  return "scheduled";
+}
+
 export function classifySessionlessDay(
   day: StructuredDay | null | undefined,
 ): SessionlessDayView {
   const headline = cleanText(day?.today_card?.headline);
 
   if (headline) {
-    let kind: SessionlessDayKind = "scheduled";
-    if (LIGHT_COMBAT_RE.test(headline)) {
-      kind = "light_combat";
-    } else if (TECHNICAL_RE.test(headline)) {
-      kind = "technical";
-    } else if (SPARRING_RE.test(headline)) {
-      kind = "sparring";
-    } else if (COACH_LED_RE.test(headline)) {
-      kind = "coach_led";
-    }
+    const kind = coachLedKindFromHeadline(headline);
     return {
       kind,
       title: headline,
@@ -737,4 +745,29 @@ export function classifySessionlessDay(
   // is instructed to always headline a coach-led/sparring/technical day, so a
   // headline-less session-less day is treated as genuine rest.
   return { kind: "rest", title: "Rest day", tag: null, coachLed: false };
+}
+
+export type CoachLedContactView = {
+  kind: SessionlessDayKind;
+  title: string;
+  tag: string | null;
+};
+
+/**
+ * Coach-owned contact (declared / downgraded sparring) that coexists with a
+ * day's app sessions, or null when none is set. Driven by the deterministic
+ * ``today_card.coach_led_contact`` field rather than the day headline (which a
+ * session day uses for its own session title), so surfacing the contact never
+ * clobbers the app session. The renderer shows it as a context block above the
+ * session cards.
+ */
+export function getCoachLedContactView(
+  day: StructuredDay | null | undefined,
+): CoachLedContactView | null {
+  const headline = cleanText(day?.today_card?.coach_led_contact);
+  if (!headline) {
+    return null;
+  }
+  const kind = coachLedKindFromHeadline(headline);
+  return { kind, title: headline, tag: SESSIONLESS_DAY_TAGS[kind] };
 }

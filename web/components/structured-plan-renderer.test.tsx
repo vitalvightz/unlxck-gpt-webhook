@@ -366,6 +366,45 @@ test("renders light technical context alongside app sessions in the same day car
   assert.ok(html.indexOf("Light technical combat") < html.indexOf("Lower strength"));
 });
 
+test("surfaces coach-led contact alongside app sessions in the same day card", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "TAPER",
+        days: [
+          {
+            date: "2026-06-16",
+            countdown_label: "D-12",
+            day_type: "moderate",
+            today_card: {
+              headline: "Tactical Cue Card",
+              coach_led_contact: "Coach-led boxing — technical only",
+            },
+            sessions: [
+              { session_id: "s1", session_type: "skill", title: "Tactical Cue Card", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  // Both the coach-owned contact and the app session render in the one day card,
+  // with the contact surfaced above the app work.
+  assert.equal(html.includes("Coach-led boxing — technical only"), true);
+  assert.equal(html.includes("Tactical Cue Card"), true);
+  assert.equal(html.includes("Coach-owned contact today"), true);
+  assert.ok(
+    html.indexOf("Coach-led boxing — technical only") < html.indexOf(">Tactical Cue Card<"),
+  );
+});
+
 test("marks the current day and surfaces the camp status + week focus", () => {
   const plan = {
     schema_version: "1.0",

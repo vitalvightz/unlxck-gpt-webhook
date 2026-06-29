@@ -193,16 +193,46 @@ def test_inserts_dropped_sparring_day_into_covering_week():
     assert any("inserted" in note for note in notes)
 
 
-def test_never_overwrites_a_day_with_real_app_sessions():
-    # A declared sparring day the converter gave actual S&C work already renders
-    # as a session card — leave its headline and sessions untouched.
+def test_surfaces_coach_led_contact_alongside_real_app_sessions():
+    # A declared sparring day the converter also gave app work must keep its
+    # session card AND surface the coach-owned contact so the sparring day still
+    # shows — the two coexist on the same day.
     real_session = [{"title": "Lower strength", "blocks": []}]
     plan = _structured_plan([_day("D-31", headline="Lower strength", sessions=real_session)])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
     day = plan["weeks"][0]["days"][0]
+    # The app session headline and blocks are left untouched...
     assert day["today_card"]["headline"] == "Lower strength"
     assert day["sessions"] == real_session
+    # ...but the coach-owned contact is surfaced on its own field for the renderer.
+    assert day["today_card"]["coach_led_contact"] == "Coach-led sparring"
+    assert any("surfaced coach-led contact" in note for note in notes)
+
+
+def test_does_not_double_surface_coach_led_contact():
+    # An already-set coach_led_contact (e.g. a re-run) is left as-is.
+    real_session = [{"title": "Lower strength", "blocks": []}]
+    day = _day("D-31", headline="Lower strength", sessions=real_session)
+    day["today_card"]["coach_led_contact"] = "Coach-led sparring"
+    plan = _structured_plan([day])
+    notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
+
+    assert plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Coach-led sparring"
+    assert notes == []
+
+
+def test_skips_coach_led_contact_when_app_headline_already_coach_led():
+    # If the converter already labelled the session day coach-led, don't duplicate
+    # the signal on the contact field.
+    real_session = [{"title": "Coach-led boxing", "blocks": []}]
+    plan = _structured_plan(
+        [_day("D-31", headline="Coach-led boxing session", sessions=real_session)]
+    )
+    notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
+
+    day = plan["weeks"][0]["days"][0]
+    assert "coach_led_contact" not in day["today_card"]
     assert notes == []
 
 
@@ -248,11 +278,13 @@ def test_noop_on_malformed_inputs():
 
 
 def test_does_not_double_insert_when_day_present_with_sessions():
-    # Present (with sessions) means "do not insert" even though we won't stamp it.
+    # Present (with sessions) means "do not insert a second card" — the contact is
+    # surfaced on the existing day's coach_led_contact field instead.
     real_session = [{"title": "Lower strength", "blocks": []}]
     plan = _structured_plan([_day("D-31", headline="Lower strength", sessions=real_session)])
     reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
     assert len(plan["weeks"][0]["days"]) == 1
+    assert plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Coach-led sparring"
 
 
 def test_inserts_dropped_boundary_sparring_day():
