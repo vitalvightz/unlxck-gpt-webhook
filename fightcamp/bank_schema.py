@@ -274,7 +274,7 @@ def _late_window_for(value: Any) -> str | None:
         return D6_TO_D5
     if 2 <= days <= 4:
         return D4_TO_D2
-    if 0 <= days <= 1:
+    if days == 1:
         return D1
     return None
 
