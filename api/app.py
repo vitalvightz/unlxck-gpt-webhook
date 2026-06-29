@@ -712,8 +712,6 @@ def create_app(
         is_admin = is_effective_admin_profile(profile, store)
         if not is_admin and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if not is_admin and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 
     @app.get("/", include_in_schema=False)

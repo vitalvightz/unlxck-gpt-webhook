@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 
-from api.services.active_plan import resolve_active_plan, set_active_plan
+from api.services.active_plan import ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE, resolve_active_plan, set_active_plan
 from api.services.today_service import build_today_command_view
 
 
@@ -24,6 +24,13 @@ class Store:
         self.set_to = plan_id
         self.active = plan_id
 
+    def archive_plan_for_athlete(self, plan_id, athlete_id):
+        row = self.get_plan_for_athlete(plan_id, athlete_id)
+        if row is None:
+            raise AssertionError("plan not found")
+        row["status"] = "archived"
+        return row
+
     def get_today_checkin(self, athlete_id, plan_id, training_day):
         return None
 
@@ -33,6 +40,29 @@ class Store:
 
 def plan(id, status="ready", created_at="2026-01-01T00:00:00Z", athlete_id="ath"):
     return {"id": id, "status": status, "created_at": created_at, "athlete_id": athlete_id}
+
+
+def ranged_plan(
+    id,
+    *,
+    start="2026-06-12",
+    end="2026-07-12",
+    status="ready",
+    created_at="2026-01-01T00:00:00Z",
+    athlete_id="ath",
+):
+    return {
+        **plan(id, status=status, created_at=created_at, athlete_id=athlete_id),
+        "structured_plan": {
+            "weeks": [
+                {
+                    "start_date": start,
+                    "end_date": end,
+                    "days": [{"date": start}, {"date": end}],
+                }
+            ]
+        },
+    }
 
 
 def test_no_plans_no_active_plan():
@@ -75,6 +105,75 @@ def test_overlapping_dates_do_not_block_selection():
         {**plan("p2", created_at="2026-02-01"), "fight_date": "2026-07-01"},
     ])
     assert resolve_active_plan(store, "ath").plan_id == "p2"
+
+
+def test_set_active_blocks_overlapping_current_active_plan_without_choice():
+    store = Store(
+        [
+            ranged_plan("active", start="2026-06-12", end="2026-07-12"),
+            ranged_plan("draft", start="2026-06-20", end="2026-07-20"),
+        ],
+        active="active",
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        set_active_plan(store, "ath", "draft")
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE
+    assert store.active == "active"
+
+
+def test_set_active_allows_non_overlapping_plan():
+    store = Store(
+        [
+            ranged_plan("active", start="2026-06-12", end="2026-07-12"),
+            ranged_plan("next", start="2026-07-13", end="2026-08-13"),
+        ],
+        active="active",
+    )
+
+    assert set_active_plan(store, "ath", "next")["id"] == "next"
+    assert store.active == "next"
+
+
+def test_set_active_pause_choice_switches_active_pointer_without_archiving_current_plan():
+    current = ranged_plan("active", start="2026-06-12", end="2026-07-12")
+    store = Store(
+        [
+            current,
+            ranged_plan("draft", start="2026-06-20", end="2026-07-20"),
+        ],
+        active="active",
+    )
+
+    assert set_active_plan(store, "ath", "draft", overlap_action="pause")["id"] == "draft"
+    assert store.active == "draft"
+    assert current["status"] == "ready"
+
+
+def test_set_active_replace_choice_archives_current_plan_before_switching():
+    current = ranged_plan("active", start="2026-06-12", end="2026-07-12")
+    store = Store(
+        [
+            current,
+            ranged_plan("draft", start="2026-06-20", end="2026-07-20"),
+        ],
+        active="active",
+    )
+
+    assert set_active_plan(store, "ath", "draft", overlap_action="replace")["id"] == "draft"
+    assert store.active == "draft"
+    assert current["status"] == "archived"
+
+
+def test_set_active_rejects_unknown_overlap_action():
+    store = Store([ranged_plan("p1")])
+
+    with pytest.raises(HTTPException) as exc:
+        set_active_plan(store, "ath", "p1", overlap_action="start_after_current")
+
+    assert exc.value.status_code == 422
 
 
 def test_set_active_rejects_non_owned_plan():

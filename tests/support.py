@@ -106,6 +106,7 @@ class FakeStore:
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}
         self.plans: dict[str, dict] = {}
+        self.active_plan_ids: dict[str, str] = {}
         self.generation_jobs: dict[str, dict] = {}
         self.daily_checkins: dict[str, list[dict]] = {}
         self.session_logs: dict[str, list[dict]] = {}
@@ -363,6 +364,12 @@ class FakeStore:
     def get_latest_plan(self, athlete_id: str) -> dict | None:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
+
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        return self.active_plan_ids.get(athlete_id)
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        self.active_plan_ids[athlete_id] = plan_id
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict:
         row = self.plans.get(plan_id)

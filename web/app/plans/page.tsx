@@ -24,6 +24,13 @@ import {
   getPlanDisplayName,
   getPlanStyleSummary,
 } from "@/lib/plan-format";
+import {
+  ACTIVE_PLAN_OVERLAP_MESSAGE,
+  type ActivePlanOverlapAction,
+  canSetActivePlan,
+  isActivePlanOverlapError,
+  isArchivedPlan,
+} from "@/lib/plan-active";
 import { getPlanReviewReason, isHeldForAdminReviewPlan } from "@/lib/plan-review";
 import type { MeResponse, PlanRequest, PlanSummary, ProfileRecord } from "@/lib/types";
 
@@ -37,12 +44,11 @@ function getRenameDraftValue(plan: PlanSummary): string {
 }
 
 function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
-  return plans.filter((plan) => plan.status?.trim().toLowerCase() === "archived");
+  return plans.filter((plan) => isArchivedPlan(plan.status));
 }
 
 function canSetActive(plan: PlanSummary): boolean {
-  const status = plan.status?.trim().toLowerCase();
-  return status === "ready" || status === "publishable_with_flags";
+  return canSetActivePlan(plan.status);
 }
 
 function isActivePlan(plan: PlanSummary, activePlanId: string | null): boolean {
@@ -231,6 +237,7 @@ function PlanCard({
   const renameInputId = `rename-plan-${plan.plan_id}`;
   const active = isActivePlan(plan, activePlanId);
   const eligibleForActive = canSetActive(plan);
+  const archived = isArchivedPlan(plan.status);
   const reviewReason = getPlanReviewReason(plan);
 
   useEffect(() => {
@@ -440,19 +447,28 @@ function PlanCard({
           {!active && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-              Review
+              {archived ? "Preview" : "Review"}
             </Link>
-            {!active && eligibleForActive ? (
+            {archived ? (
+              <Link href="/onboarding" className="ghost-button">
+                Duplicate as New Plan
+              </Link>
+            ) : null}
+            {!archived && !active && eligibleForActive ? (
               <button type="button" className="secondary-button" onClick={() => void onSetActive(plan)} disabled={isActionPending || isRenaming}>
                 {isSettingActive ? "Setting..." : "Set active"}
               </button>
             ) : null}
-            <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-              {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
-            </button>
-            <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-              {pendingAction === "delete" ? "Archiving..." : "Archive"}
-            </button>
+            {!archived ? (
+              <>
+                <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
+                  {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+                </button>
+                <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+                  {pendingAction === "delete" ? "Archiving..." : "Archive"}
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
         {message || (error && !isDeleteConfirmOpen) ? (
@@ -464,6 +480,62 @@ function PlanCard({
       </article>
       {deleteConfirmationModal}
     </>
+  );
+}
+
+function PlanActivationConflictDialog({
+  plan,
+  isPending,
+  onConfirm,
+  onStartAfter,
+  onCancel,
+}: {
+  plan: PlanSummary;
+  isPending: boolean;
+  onConfirm: (action: ActivePlanOverlapAction) => Promise<void>;
+  onStartAfter: () => void;
+  onCancel: () => void;
+}) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div className="plan-dialog-backdrop" role="presentation" onClick={onCancel}>
+      <div
+        className="plan-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`activate-conflict-title-${plan.plan_id}`}
+        aria-describedby={`activate-conflict-body-${plan.plan_id}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="plan-dialog-header">
+          <p className="kicker">Active plan conflict</p>
+          <h2 id={`activate-conflict-title-${plan.plan_id}`} className="plan-dialog-title">
+            {getPlanDisplayName(plan)}
+          </h2>
+        </div>
+        <p id={`activate-conflict-body-${plan.plan_id}`} className="muted">
+          {ACTIVE_PLAN_OVERLAP_MESSAGE}
+        </p>
+        <div className="plan-dialog-actions">
+          <button type="button" className="secondary-button" onClick={() => void onConfirm("replace")} disabled={isPending}>
+            Replace current plan
+          </button>
+          <button type="button" className="secondary-button" onClick={() => void onConfirm("pause")} disabled={isPending}>
+            Pause current plan
+          </button>
+          <button type="button" className="ghost-button" onClick={onStartAfter} disabled={isPending}>
+            Start after current plan ends
+          </button>
+          <button type="button" className="ghost-button" onClick={onCancel} disabled={isPending}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -859,6 +931,7 @@ export default function PlansPage() {
   const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [isSettingActivePlanId, setIsSettingActivePlanId] = useState<string | null>(null);
+  const [overlapConflictPlan, setOverlapConflictPlan] = useState<PlanSummary | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const latestTokenRef = useRef(session?.access_token);
 
@@ -876,7 +949,7 @@ export default function PlansPage() {
   const intakeSource = getIntakeSource(me);
   const heldForReviewPlans = visiblePlans.filter(isHeldForAdminReviewPlan);
   const archivedPlans = getArchivedPlans(visiblePlans);
-  const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && plan.status?.trim().toLowerCase() !== "archived");
+  const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && !isArchivedPlan(plan.status));
   const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
   const hasPlans = visiblePlans.length > 0;
 
@@ -944,23 +1017,46 @@ export default function PlansPage() {
     router.refresh();
   }
 
-  async function handleSetActive(plan: PlanSummary): Promise<void> {
+  async function activatePlan(plan: PlanSummary, overlapAction?: ActivePlanOverlapAction): Promise<void> {
     const token = session?.access_token;
     if (!token || !canSetActive(plan)) {
       return;
     }
     setIsSettingActivePlanId(plan.plan_id);
     try {
-      const active = await setActivePlan(token, plan.plan_id);
+      const active = await setActivePlan(token, plan.plan_id, { overlapAction });
       setActivePlanId(active.plan_id);
+      setOverlapConflictPlan(null);
       showToast("Active plan updated.", { tone: "success" });
+      await loadPlans();
       router.refresh();
     } catch (activeError) {
+      if (!overlapAction && isActivePlanOverlapError(activeError)) {
+        setOverlapConflictPlan(plan);
+        return;
+      }
       const message = activeError instanceof Error ? activeError.message : "Unable to set active plan.";
       showToast(message, { tone: "error" });
     } finally {
       setIsSettingActivePlanId(null);
     }
+  }
+
+  async function handleSetActive(plan: PlanSummary): Promise<void> {
+    await activatePlan(plan);
+  }
+
+  async function handleOverlapConfirm(action: ActivePlanOverlapAction): Promise<void> {
+    if (!overlapConflictPlan) {
+      return;
+    }
+    await activatePlan(overlapConflictPlan, action);
+  }
+
+  function handleStartAfterCurrentPlan() {
+    setOverlapConflictPlan(null);
+    showToast("Choose a new start date before generating the next version.", { tone: "success" });
+    router.push("/onboarding");
   }
 
   const isPlanListLoading = isLoading;
@@ -1090,6 +1186,15 @@ export default function PlansPage() {
               </div>
             ) : null}
           </div>
+        ) : null}
+        {overlapConflictPlan ? (
+          <PlanActivationConflictDialog
+            plan={overlapConflictPlan}
+            isPending={isSettingActivePlanId === overlapConflictPlan.plan_id}
+            onConfirm={handleOverlapConfirm}
+            onStartAfter={handleStartAfterCurrentPlan}
+            onCancel={() => setOverlapConflictPlan(null)}
+          />
         ) : null}
       </section>
     </RequireAuth>

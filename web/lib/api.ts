@@ -35,6 +35,7 @@ import type {
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
 } from "@/lib/types";
+import type { ActivePlanOverlapAction } from "@/lib/plan-active";
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
@@ -588,9 +589,18 @@ export function getActivePlan(token: string): Promise<PlanSummary> {
   return withTransientRetries(() => readJson<PlanSummary>("/api/plans/active", { token }));
 }
 
-export function setActivePlan(token: string, planId: string): Promise<PlanSummary> {
+export function setActivePlan(
+  token: string,
+  planId: string,
+  options?: { overlapAction?: ActivePlanOverlapAction },
+): Promise<PlanSummary> {
+  const overlapAction = options?.overlapAction;
   return withTransientRetries(() =>
-    readJson<PlanSummary>(`/api/plans/${encodeURIComponent(planId)}/set-active`, { method: "POST", token }),
+    readJson<PlanSummary>(`/api/plans/${encodeURIComponent(planId)}/set-active`, {
+      method: "POST",
+      token,
+      body: overlapAction ? JSON.stringify({ overlap_action: overlapAction }) : undefined,
+    }),
   );
 }
 
