@@ -311,7 +311,7 @@ def _system_state(item: dict) -> dict[str, Any]:
 
 def _equipment_tokens(item: dict) -> set[str]:
     values: list[Any] = []
-    for field in ("equipment", "equipment_required", "equipment_needed"):
+    for field in ("equipment", "required_equipment", "equipment_required", "equipment_needed"):
         value = item.get(field)
         if isinstance(value, (list, tuple, set)):
             values.extend(value)
