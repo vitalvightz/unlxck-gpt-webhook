@@ -2605,10 +2605,10 @@ export function PlanViewer({
               <h3>Choose how to activate this plan</h3>
             </div>
             <p className="muted">{ACTIVE_PLAN_OVERLAP_MESSAGE}</p>
-            <div className="plan-summary-actions">
+            <div className="plan-summary-actions active-conflict-actions">
               <button
                 type="button"
-                className="secondary-button"
+                className="secondary-button active-conflict-button active-conflict-button-primary"
                 onClick={() => void handleSetActive("replace")}
                 disabled={setActivePending}
               >
@@ -2616,7 +2616,7 @@ export function PlanViewer({
               </button>
               <button
                 type="button"
-                className="secondary-button"
+                className="secondary-button active-conflict-button"
                 onClick={() => void handleSetActive("pause")}
                 disabled={setActivePending}
               >
@@ -2624,7 +2624,7 @@ export function PlanViewer({
               </button>
               <button
                 type="button"
-                className="ghost-button"
+                className="ghost-button active-conflict-button active-conflict-button-wide"
                 onClick={handleStartAfterCurrentPlan}
                 disabled={setActivePending}
               >
@@ -2632,7 +2632,7 @@ export function PlanViewer({
               </button>
               <button
                 type="button"
-                className="ghost-button"
+                className="ghost-button active-conflict-button active-conflict-button-cancel"
                 onClick={() => setShowActiveConflict(false)}
                 disabled={setActivePending}
               >

@@ -519,17 +519,37 @@ function PlanActivationConflictDialog({
         <p id={`activate-conflict-body-${plan.plan_id}`} className="muted">
           {ACTIVE_PLAN_OVERLAP_MESSAGE}
         </p>
-        <div className="plan-dialog-actions">
-          <button type="button" className="secondary-button" onClick={() => void onConfirm("replace")} disabled={isPending}>
+        <div className="plan-dialog-actions active-conflict-actions">
+          <button
+            type="button"
+            className="secondary-button active-conflict-button active-conflict-button-primary"
+            onClick={() => void onConfirm("replace")}
+            disabled={isPending}
+          >
             Replace current plan
           </button>
-          <button type="button" className="secondary-button" onClick={() => void onConfirm("pause")} disabled={isPending}>
+          <button
+            type="button"
+            className="secondary-button active-conflict-button"
+            onClick={() => void onConfirm("pause")}
+            disabled={isPending}
+          >
             Pause current plan
           </button>
-          <button type="button" className="ghost-button" onClick={onStartAfter} disabled={isPending}>
+          <button
+            type="button"
+            className="ghost-button active-conflict-button active-conflict-button-wide"
+            onClick={onStartAfter}
+            disabled={isPending}
+          >
             Start after current plan ends
           </button>
-          <button type="button" className="ghost-button" onClick={onCancel} disabled={isPending}>
+          <button
+            type="button"
+            className="ghost-button active-conflict-button active-conflict-button-cancel"
+            onClick={onCancel}
+            disabled={isPending}
+          >
             Cancel
           </button>
         </div>
