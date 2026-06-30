@@ -433,6 +433,43 @@ def test_aerobic_maintenance_not_offered_on_hard_sparring_day():
     assert not (allowed & LOW_COST_AEROBIC_INSERTS)
 
 
+def test_moderate_plus_injury_blocks_all_aerobic_maintenance():
+    # An acute/fracture state is moderate_plus: the injury guard restricts inserts
+    # to recovery + mobility, and aerobic maintenance must not punch through it.
+    athlete = _athlete(
+        key_goals=["conditioning"],
+        weaknesses=["gas_tank"],
+        fatigue="low",
+        fatigue_level="low",
+        parsed_injuries=[{"area": "ankle", "severity": "acute", "trend": "worsening"}],
+        injuries=["acute ankle fracture"],
+    )
+    allowed = _allowed_inserts(athlete, 12)
+    assert not (allowed & LOW_COST_AEROBIC_INSERTS)
+
+    # Forcing the conditioning guarantee must not resurrect aerobic work; it falls
+    # back to a safe recovery/mobility insert instead of returning nothing.
+    insert = select_gap_fill_insert(athlete, 12, force_conditioning=True)
+    assert insert is not None
+    assert insert["role_key"] not in LOW_COST_AEROBIC_INSERTS
+
+
+def test_force_conditioning_falls_back_when_aerobic_disallowed():
+    athlete = _athlete(key_goals=["conditioning"], weaknesses=["gas_tank"])
+
+    # Day before the fight: aerobic maintenance is disallowed, but the slot still
+    # gets a normal zero/recovery filler instead of being dropped.
+    d1 = select_gap_fill_insert(athlete, 1, force_conditioning=True)
+    assert d1 is not None
+    assert d1["role_key"] not in LOW_COST_AEROBIC_INSERTS
+    assert d1["role_key"] in ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS
+
+    # Hard-sparring day: same fallback, no empty gap.
+    hard = select_gap_fill_insert(athlete, 10, on_hard_sparring_day=True, force_conditioning=True)
+    assert hard is not None
+    assert hard["role_key"] not in LOW_COST_AEROBIC_INSERTS
+
+
 # --- Guard rails: aerobic maintenance is a filler, never counted as a session ---
 # The app moves/drops "meaningful stressor" cards to avoid two real sessions in
 # one day. The aerobic-maintenance inserts are physical, so these tests lock in

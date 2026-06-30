@@ -328,17 +328,22 @@ def _safe_conditioning_maintenance_inserts(
     if not _has_conditioning_goal(athlete_model):
         return set()
 
-    # Zero/low-impact aerobic rhythm is always safe to keep the goal visible.
-    safe = set(_ZERO_IMPACT_AEROBIC_INSERTS)
+    # Honour the injury guard: acute/concussion/fracture/medical-hold states
+    # (moderate_plus) get only the existing recovery + mobility support and must
+    # never be prescribed RPE 3-4 aerobic maintenance.
+    if injury_state == "moderate_plus":
+        return set()
 
-    lower_leg_risk = _has_lower_leg_load_risk(athlete_model) or injury_state == "moderate_plus"
+    # Zero/low-impact aerobic rhythm is always safe to keep the goal visible.
+    # Footwork rhythm is low-impact movement economy and stays safe for the
+    # remaining none / mild_stable states.
+    safe = set(_ZERO_IMPACT_AEROBIC_INSERTS)
+    safe.add("aerobic_footwork_rhythm")
+
+    lower_leg_risk = _has_lower_leg_load_risk(athlete_model)
     high_fatigue = _has_high_fatigue(athlete_model)
     active_cut = _has_active_weight_cut(athlete_model)
     fatigue_low = normalize_fatigue_level(athlete_model) == "low"
-
-    # Footwork rhythm is low-impact movement economy; safe unless injury is serious.
-    if injury_state != "moderate_plus":
-        safe.add("aerobic_footwork_rhythm")
 
     # Impact work only when lower legs are healthy and fatigue is not high.
     if not lower_leg_risk and not high_fatigue:
@@ -754,7 +759,11 @@ def _select_role_key(
     if force_tactical:
         candidates &= TACTICAL_INSERTS
     elif force_conditioning:
-        candidates &= LOW_COST_AEROBIC_INSERTS
+        aerobic = candidates & LOW_COST_AEROBIC_INSERTS
+        if aerobic:
+            candidates = aerobic
+        # else: no safe aerobic insert for this slot -> fall back to normal
+        # selection so the gap still gets a tactical/recovery filler.
     candidates = {
         role_key
         for role_key in candidates
@@ -997,16 +1006,32 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS for role in ordered
     )
     conditioning_required = _has_conditioning_goal(athlete_model)
+    injury_state = classify_injury_state(athlete_model)
 
     for target_offset, gap_span in candidate_offsets:
+        if target_offset <= 0 or target_offset in existing_offsets:
+            continue
+        weekday = countdown_map.get(f"D-{target_offset}")
+        on_hard_sparring_day = bool(weekday and weekday in hard_sparring_days)
         force_tactical = tactical_required and not tactical_present
         # Once tactical support is secured, guarantee at least one low-risk
         # aerobic-maintenance slot when a conditioning / gas-tank goal is selected,
-        # so the goal stays visible instead of being dropped for pure filler.
+        # so the goal stays visible instead of being dropped for pure filler. Only
+        # force it on a slot that can actually take a safe aerobic insert (offset,
+        # hard-sparring and injury safe); otherwise fall through to normal
+        # selection so the gap still gets a tactical/recovery filler.
         force_conditioning = (
             not force_tactical
             and conditioning_required
             and not conditioning_present
+            and bool(
+                _safe_conditioning_maintenance_inserts(
+                    athlete_model,
+                    target_offset,
+                    injury_state,
+                    on_hard_sparring_day=on_hard_sparring_day,
+                )
+            )
         )
         if (
             len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0
@@ -1014,10 +1039,6 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             and not force_conditioning
         ):
             break
-        if target_offset <= 0 or target_offset in existing_offsets:
-            continue
-        weekday = countdown_map.get(f"D-{target_offset}")
-        on_hard_sparring_day = bool(weekday and weekday in hard_sparring_days)
         insert = select_gap_fill_insert(
             athlete_model,
             target_offset,
