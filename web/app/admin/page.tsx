@@ -616,10 +616,10 @@ export default function AdminPage() {
               <p className="muted">
                 {isJobsLoading
                   ? "Checking reviews."
-                  : reviewPlans.length > 0
-                    ? `${reviewPlans.length} held for decision.`
-                    : searchNeedle
-                      ? "Matches on this page."
+                  : searchNeedle
+                    ? "Matches on this page."
+                    : reviewPlans.length > 0
+                      ? `${reviewPlans.length} held for decision.`
                       : "Generations on this page."}
               </p>
             </article>
