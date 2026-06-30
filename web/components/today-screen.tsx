@@ -265,43 +265,6 @@ function NoActivePlanState() {
   );
 }
 
-function TodayReadinessStrip({
-  hasPlan,
-  needsCheckin,
-  openInjuryCount,
-  completionStatus,
-}: {
-  hasPlan: boolean;
-  needsCheckin: boolean;
-  openInjuryCount: number;
-  completionStatus: TodayCompletionStatus;
-}) {
-  const injuryLabel = openInjuryCount
-    ? `${openInjuryCount} active injur${openInjuryCount === 1 ? "y" : "ies"}`
-    : "No active injuries";
-
-  return (
-    <dl className="today-readiness-strip" aria-label="Today command status">
-      <div>
-        <dt>Plan</dt>
-        <dd>{hasPlan ? "Matched" : "Missing"}</dd>
-      </div>
-      <div>
-        <dt>Check-in</dt>
-        <dd>{needsCheckin ? "Due" : "Logged"}</dd>
-      </div>
-      <div data-tone={openInjuryCount ? "risk" : "clear"}>
-        <dt>Injury</dt>
-        <dd>{injuryLabel}</dd>
-      </div>
-      <div>
-        <dt>Session</dt>
-        <dd>{getCompletionLabel(completionStatus)}</dd>
-      </div>
-    </dl>
-  );
-}
-
 function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const overflowId = useId();
@@ -621,7 +584,7 @@ function InjuryCheckinCard({
       {openInjuries.length ? (
         <ul className="today-injury-list">
           {openInjuries.map((injury) => (
-            <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
+            <li key={injury.id} className="today-injury-item">
               <div className="today-injury-meta">
                 <span className="today-injury-name">{getInjuryLabel(injury)}</span>
                 <span className="badge status-badge-neutral">{injury.severity}</span>
@@ -688,13 +651,6 @@ function InjuryCheckinCard({
           onZoneSelect={selectBodyMapZone}
           onSideChange={setBodyMapSide}
         />
-        {newArea.trim() ? (
-          <div className="today-injury-selection" aria-live="polite">
-            <span>Selected</span>
-            <strong>{newArea.trim()}</strong>
-            <small>Tap the same zone to raise severity.</small>
-          </div>
-        ) : null}
         <label className="field" htmlFor="today-injury-area">
           <span>Add injury</span>
           <input
@@ -1203,33 +1159,18 @@ export function TodayScreen() {
   if (isLoading) {
     return <TodayLoadingState />;
   }
+
   if (error) {
-    const isAccessIssue = /unauthorized|forbidden|not authenticated/i.test(error);
     return (
-      <section className="panel today-shell today-error-state">
+      <section className="panel today-shell">
         <div className="today-hero-copy">
-          <p className="kicker">Today command feed</p>
-          <h1>{isAccessIssue ? "Access is locked" : "Today is temporarily unavailable"}</h1>
-          <p className="muted" role="alert">
-            {isAccessIssue
-              ? "Sign in with an active athlete account to unlock Today."
-              : "The live check-in feed did not respond. Your saved plan has not changed."}
-          </p>
-          {process.env.NODE_ENV !== "production" ? (
-            <p className="today-error-detail">Technical detail: {error}</p>
-          ) : null}
+          <p className="kicker">Today</p>
+          <h1>Today did not load</h1>
+          <p className="muted" role="alert">{error}</p>
         </div>
-        <div className="today-action-row today-error-actions">
-          <button type="button" className="cta" onClick={() => void loadToday()}>
-            Retry Today
-          </button>
-          <Link href="/plans" className="secondary-button">
-            Open Plans
-          </Link>
-          <Link href="/" className="ghost-button">
-            Overview
-          </Link>
-        </div>
+        <button type="button" className="secondary-button" onClick={() => void loadToday()}>
+          Retry
+        </button>
       </section>
     );
   }
@@ -1260,12 +1201,6 @@ export function TodayScreen() {
             </Link>
           </div>
         </div>
-        <TodayReadinessStrip
-          hasPlan={hasPlan}
-          needsCheckin={showCheckin}
-          openInjuryCount={state.open_injuries?.length ?? 0}
-          completionStatus={state.today.completion_status}
-        />
         <RiskWatch risks={state.risk_watch} />
       </section>
 
