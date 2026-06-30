@@ -265,6 +265,43 @@ function NoActivePlanState() {
   );
 }
 
+function TodayReadinessStrip({
+  hasPlan,
+  needsCheckin,
+  openInjuryCount,
+  completionStatus,
+}: {
+  hasPlan: boolean;
+  needsCheckin: boolean;
+  openInjuryCount: number;
+  completionStatus: TodayCompletionStatus;
+}) {
+  const injuryLabel = openInjuryCount
+    ? `${openInjuryCount} active injur${openInjuryCount === 1 ? "y" : "ies"}`
+    : "No active injuries";
+
+  return (
+    <dl className="today-readiness-strip" aria-label="Today command status">
+      <div>
+        <dt>Plan</dt>
+        <dd>{hasPlan ? "Matched" : "Missing"}</dd>
+      </div>
+      <div>
+        <dt>Check-in</dt>
+        <dd>{needsCheckin ? "Due" : "Logged"}</dd>
+      </div>
+      <div data-tone={openInjuryCount ? "risk" : "clear"}>
+        <dt>Injury</dt>
+        <dd>{injuryLabel}</dd>
+      </div>
+      <div>
+        <dt>Session</dt>
+        <dd>{getCompletionLabel(completionStatus)}</dd>
+      </div>
+    </dl>
+  );
+}
+
 function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const overflowId = useId();
@@ -584,7 +621,7 @@ function InjuryCheckinCard({
       {openInjuries.length ? (
         <ul className="today-injury-list">
           {openInjuries.map((injury) => (
-            <li key={injury.id} className="today-injury-item">
+            <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
               <div className="today-injury-meta">
                 <span className="today-injury-name">{getInjuryLabel(injury)}</span>
                 <span className="badge status-badge-neutral">{injury.severity}</span>
@@ -651,6 +688,13 @@ function InjuryCheckinCard({
           onZoneSelect={selectBodyMapZone}
           onSideChange={setBodyMapSide}
         />
+        {newArea.trim() ? (
+          <div className="today-injury-selection" aria-live="polite">
+            <span>Selected</span>
+            <strong>{newArea.trim()}</strong>
+            <small>Tap the same zone to raise severity.</small>
+          </div>
+        ) : null}
         <label className="field" htmlFor="today-injury-area">
           <span>Add injury</span>
           <input
@@ -1216,6 +1260,12 @@ export function TodayScreen() {
             </Link>
           </div>
         </div>
+        <TodayReadinessStrip
+          hasPlan={hasPlan}
+          needsCheckin={showCheckin}
+          openInjuryCount={state.open_injuries?.length ?? 0}
+          completionStatus={state.today.completion_status}
+        />
         <RiskWatch risks={state.risk_watch} />
       </section>
 

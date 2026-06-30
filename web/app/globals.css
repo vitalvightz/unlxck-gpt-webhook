@@ -5153,6 +5153,57 @@ button.mobile-step-rail-item {
   align-items: center;
 }
 
+.today-readiness-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin: 2px 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.today-readiness-strip div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 12px;
+  background: rgba(12, 13, 16, 0.72);
+}
+
+.today-readiness-strip dt,
+.today-readiness-strip dd {
+  margin: 0;
+}
+
+.today-readiness-strip dt {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-readiness-strip dd {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-readiness-strip [data-tone="risk"] {
+  box-shadow: inset 3px 0 0 rgba(181, 18, 43, 0.86);
+}
+
+.today-readiness-strip [data-tone="clear"] dd {
+  color: #8fd9a8;
+}
+
 .today-card {
   display: grid;
   gap: 14px;
@@ -5461,12 +5512,27 @@ button.mobile-step-rail-item {
 
 .today-injury-item {
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 3px;
   border-radius: 12px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.025);
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.today-injury-item[data-severity="mild"] {
+  border-left-color: rgba(245, 197, 24, 0.72);
+}
+
+.today-injury-item[data-severity="moderate"] {
+  border-left-color: rgba(231, 96, 38, 0.82);
+}
+
+.today-injury-item[data-severity="severe"] {
+  border-color: rgba(181, 18, 43, 0.34);
+  border-left-color: #e23a4c;
+  background: linear-gradient(135deg, rgba(181, 18, 43, 0.12), rgba(255, 255, 255, 0.025));
 }
 
 .today-injury-meta {
@@ -5553,6 +5619,46 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.today-injury-add .body-map-panel {
+  width: min(100%, 760px);
+  margin-inline: auto;
+}
+
+.today-injury-selection {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid rgba(181, 18, 43, 0.24);
+  border-radius: 12px;
+  background: rgba(181, 18, 43, 0.08);
+}
+
+.today-injury-selection span,
+.today-injury-selection small {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.today-injury-selection strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-injury-selection small {
+  grid-column: 1 / -1;
+  line-height: 1.35;
+  opacity: 0.82;
 }
 
 .today-risk-watch {
@@ -6002,7 +6108,8 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 
   .today-session-summary,
   .today-completion-fields,
-  .today-flag-grid {
+  .today-flag-grid,
+  .today-readiness-strip {
     grid-template-columns: 1fr;
   }
 
@@ -6016,6 +6123,10 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 
   .today-injury-item .today-segment-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .today-readiness-strip dd {
+    white-space: normal;
   }
 
   .today-segment {
@@ -9481,16 +9592,20 @@ html[data-theme="light"] .injury-card-state {
 .body-map-panel {
   padding: 16px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(181, 18, 43, 0.16);
+  background:
+    linear-gradient(180deg, rgba(24, 18, 22, 0.72), rgba(12, 14, 18, 0.72));
   text-align: center;
 }
 
 .body-map-title {
   margin: 0 0 8px;
-  font-size: 0.82rem;
-  font-weight: 600;
   color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .body-map-svg-stack {
@@ -9557,14 +9672,14 @@ html[data-theme="light"] .injury-card-state {
 
 .body-map-zone:hover,
 .body-map-zone-hover {
-  fill: rgba(181, 18, 43, 0.16);
-  stroke: rgba(181, 18, 43, 0.42);
+  fill: rgba(181, 18, 43, 0.2);
+  stroke: rgba(181, 18, 43, 0.58);
   transform: scale(1.02);
 }
 
 .body-map-zone-used {
-  fill: rgba(181, 18, 43, 0.25);
-  stroke: rgba(181, 18, 43, 0.5);
+  fill: rgba(181, 18, 43, 0.3);
+  stroke: rgba(181, 18, 43, 0.65);
   stroke-width: 1.5;
 }
 
