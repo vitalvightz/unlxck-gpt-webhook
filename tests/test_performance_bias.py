@@ -182,10 +182,20 @@ class TestComputeBridgeRulesGuidanceAgrees:
         )
         assert result["max_active_roles"] == 2
 
-    def test_d17_outside_window_stays_two(self):
+    def test_d17_clean_low_fatigue_gets_three(self):
+        # The extra low-risk role now extends across the whole bridge (D-21..D-14),
+        # so the render guidance matches the binding allocation cap at D-17.
         result = compute_bridge_rules(
             days_until_fight=17, sport="boxing", fatigue="low",
             weight_cut_bucket="moderate", injury_mode="full_plan",
+        )
+        assert result["max_active_roles"] == 3
+
+    def test_d14_moderate_fatigue_stays_two(self):
+        # A safety signal anywhere in the bridge still drops the guidance to 2.
+        result = compute_bridge_rules(
+            days_until_fight=14, sport="boxing", fatigue="moderate",
+            weight_cut_bucket="low", injury_mode="full_plan",
         )
         assert result["max_active_roles"] == 2
 

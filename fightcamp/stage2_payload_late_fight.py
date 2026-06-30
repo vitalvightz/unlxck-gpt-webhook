@@ -3,7 +3,7 @@ import logging
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
-from .performance_bias import BRIDGE_EXTRA_EXPOSURE_DAY_RANGE, bridge_low_risk_profile
+from .performance_bias import bridge_low_risk_profile
 
 from itertools import combinations, permutations
 from typing import Any
@@ -758,13 +758,16 @@ def _bridge_target_active_roles(
     if cut in {"high", "critical", "extreme"} or fatigue in {"high", "critical", "extreme"}:
         return 1
 
-    # Unified D-21..D-18 active-role cap (single source of truth with
+    # Unified bridge active-role guidance (kept in step with the binding
     # _bridge_active_role_cap): a low-fatigue athlete on a none/low/moderate cut
-    # keeps one extra low-risk active role. Hard sparring + glycolytic caps are
-    # unchanged, so the extra role is filled by low-risk work only. Closer days
-    # (D-17..D-14) and any high-pressure signal stay at the conservative 2.
-    low, high = BRIDGE_EXTRA_EXPOSURE_DAY_RANGE
-    if isinstance(days, int) and low <= days <= high:
+    # keeps one extra low-risk active role across the whole bridge window
+    # (D-21..D-14), so this render-side guidance matches what the allocator
+    # actually places. Hard sparring + glycolytic caps are unchanged, so the
+    # extra role is filled by low-risk work only. Any high-pressure signal stays
+    # at the conservative 2. (The binding cap additionally gates on
+    # injury/readiness via bridge_low_risk_profile, which this coarse scalar
+    # guidance cannot see; it therefore remains a conservative upper-bound view.)
+    if isinstance(days, int) and 14 <= days <= 21:
         if fatigue in {"none", "low"} and cut in {"none", "low", "moderate"}:
             return 3
         return 2
