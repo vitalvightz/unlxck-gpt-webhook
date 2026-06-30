@@ -598,7 +598,15 @@ export default function AdminPage() {
             </article>
             <article className="status-card admin-summary-card" data-tone={attentionReviews.length > 0 ? "danger" : "neutral"}>
               <p className="status-label">Needs attention</p>
-              <h2 className="plan-summary-title">{isJobsLoading ? "-" : attentionReviews.length}</h2>
+              <h2 className="plan-summary-title">
+                {isJobsLoading
+                  ? "-"
+                  : reviewPlans.length > 0
+                    ? reviewPlans.length
+                    : isDirectoryLoading
+                      ? "-"
+                      : plans.length}
+              </h2>
               <p className="muted">{isJobsLoading ? "Checking reviews." : "Athlete flags open."}</p>
             </article>
             <article className="status-card admin-summary-card" data-tone="neutral">
