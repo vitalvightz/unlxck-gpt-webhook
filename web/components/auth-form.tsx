@@ -266,7 +266,7 @@ export function AuthForm({
       <div className="auth-rail">
         <div className="hero-panel-copy">
           <p className="eyebrow">{mode === "signup" ? "Free beta" : "Athlete access"}</p>
-          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Re-enter the fight camp control room."}</h1>
+          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Unlock the fight camp control room."}</h1>
           <p>
             {mode === "signup"
               ? "Create your account, complete Advanced Intake, and generate a saved fight camp."
