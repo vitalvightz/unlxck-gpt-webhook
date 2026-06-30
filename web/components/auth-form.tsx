@@ -273,7 +273,7 @@ export function AuthForm({
               : "Resume intake, review today, and reopen saved plans from one athlete workspace."}
           </p>
         </div>
-        <div className="auth-rail-command-strip" aria-label="Workspace signals">
+        <div className="auth-rail-command-strip" role="region" aria-label="Workspace signals">
           <span>Today</span>
           <strong>Check-in and plan review</strong>
           <span>History saved</span>
