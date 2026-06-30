@@ -4724,43 +4724,6 @@ button.mobile-step-rail-item {
   align-content: start;
 }
 
-.auth-rail-command-strip {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-height: 46px;
-  padding: 0 14px;
-  border: 1px solid rgba(181, 18, 43, 0.26);
-  border-radius: var(--radius-support);
-  background:
-    linear-gradient(90deg, var(--brand-red-soft), rgba(255, 255, 255, 0.03)),
-    rgba(13, 14, 17, 0.72);
-  box-shadow: var(--shadow-support);
-}
-
-.auth-rail-command-strip span,
-.auth-rail-command-strip strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.auth-rail-command-strip span {
-  color: var(--text-muted);
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.auth-rail-command-strip strong {
-  color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.2;
-}
-
 .auth-card {
   display: grid;
   gap: 16px;
@@ -6846,18 +6809,6 @@ html[data-theme="light"] .today-injury-confirm-cancel {
     padding: 14px 16px calc(14px + var(--safe-area-bottom));
     background: linear-gradient(180deg, rgba(15, 17, 21, 0), rgba(13, 14, 18, 0.94) 30%);
     backdrop-filter: blur(8px);
-  }
-
-  .auth-rail-command-strip {
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: 4px;
-    padding: 12px 14px;
-  }
-
-  .auth-rail-command-strip span,
-  .auth-rail-command-strip strong {
-    white-space: normal;
   }
 
   .support-panel,
