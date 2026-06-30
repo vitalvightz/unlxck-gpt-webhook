@@ -12,6 +12,7 @@ from fightcamp.gap_fill_inserts import (
     select_gap_fill_insert,
 )
 from fightcamp.stage2_payload import _is_meaningful_stressor, build_stage2_payload
+from fightcamp.stage2_payload_late_fight import _late_fight_meaningful_stress_count
 from fightcamp.training_context import TrainingContext
 
 
@@ -430,3 +431,78 @@ def test_aerobic_maintenance_not_offered_on_hard_sparring_day():
         on_hard_sparring_day=True,
     )
     assert not (allowed & LOW_COST_AEROBIC_INSERTS)
+
+
+# --- Guard rails: aerobic maintenance is a filler, never counted as a session ---
+# The app moves/drops "meaningful stressor" cards to avoid two real sessions in
+# one day. The aerobic-maintenance inserts are physical, so these tests lock in
+# that they are still treated as low-cost support fillers (like tactical/breathing
+# inserts) and never trip the per-day session logic. A future refactor that
+# reclassifies them as sessions must fail here.
+
+
+def test_every_aerobic_insert_is_a_non_session_filler():
+    athlete = _athlete(key_goals=["conditioning"], weaknesses=["gas_tank"], fatigue="low", fatigue_level="low")
+    seen = set()
+    for _offset in (12, 10, 6, 4, 9, 3):
+        insert = select_gap_fill_insert(athlete, _offset, force_conditioning=True)
+        if insert is None or insert["role_key"] not in LOW_COST_AEROBIC_INSERTS:
+            continue
+        seen.add(insert["role_key"])
+        assert _is_meaningful_stressor(insert) is False
+        assert insert["stress_class"] == "support"
+        assert insert["cost_class"] == "low"
+        assert insert["governance"]["meaningful_stress"] is False
+        # A single aerobic filler contributes nothing to the late-fight
+        # meaningful-stress budget.
+        assert _late_fight_meaningful_stress_count([insert]) == 0
+    assert seen, "expected at least one aerobic-maintenance insert to be selectable"
+
+
+def test_aerobic_inserts_do_not_increase_meaningful_stress_count():
+    sessions = [
+        _session(18),
+        _session(13, "fight_week_freshness_day"),
+        _session(8, "fight_week_freshness_day"),
+        _session(3, "fight_week_freshness_day"),
+    ]
+    athlete = _athlete(
+        key_goals=["power", "conditioning"],
+        weaknesses=["gas_tank"],
+        weight_cut_risk=True,
+        weight_cut_pct=8.0,
+        readiness_flags=["active_weight_cut", "high_fatigue"],
+        fatigue="high",
+        fatigue_level="high",
+        days_until_fight=18,
+    )
+    meaningful_before = sum(1 for role in sessions if _is_meaningful_stressor(role))
+
+    sequence = apply_gap_fill_inserts(sessions, athlete)
+    meaningful_after = sum(1 for role in sequence if _is_meaningful_stressor(role))
+
+    aerobic = [r for r in _insert_roles(sequence) if r["role_key"] in LOW_COST_AEROBIC_INSERTS]
+    assert aerobic, "aerobic-maintenance insert should be present for this scenario"
+    # Adding the physical aerobic filler must not register as an extra session.
+    assert meaningful_after == meaningful_before
+    assert _late_fight_meaningful_stress_count(sequence) == _late_fight_meaningful_stress_count(sessions)
+
+
+def test_aerobic_insert_never_lands_on_a_hard_sparring_day():
+    hard_days = ["tuesday", "thursday"]
+    athlete = _athlete(
+        key_goals=["conditioning"],
+        weaknesses=["gas_tank"],
+        fatigue="low",
+        fatigue_level="low",
+        days_until_fight=21,
+        hard_sparring_days=hard_days,
+    )
+    sequence = apply_gap_fill_inserts(
+        [_session(21), _session(16), _session(11), _session(6, "fight_week_freshness_day")],
+        athlete,
+    )
+    aerobic = [r for r in _insert_roles(sequence) if r["role_key"] in LOW_COST_AEROBIC_INSERTS]
+    for insert in aerobic:
+        weekday = str(insert.get("scheduled_day_hint") or insert.get("real_weekday") or "").strip().lower()
+        assert weekday not in hard_days
