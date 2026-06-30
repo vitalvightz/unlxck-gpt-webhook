@@ -266,12 +266,17 @@ export function AuthForm({
       <div className="auth-rail">
         <div className="hero-panel-copy">
           <p className="eyebrow">{mode === "signup" ? "Free beta" : "Athlete access"}</p>
-          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Return to your athlete workspace."}</h1>
+          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Re-enter the fight camp control room."}</h1>
           <p>
             {mode === "signup"
               ? "Create your account, complete Advanced Intake, and generate a saved fight camp."
-              : "Resume intake and reopen saved plans from one athlete workspace."}
+              : "Resume intake, review today, and reopen saved plans from one athlete workspace."}
           </p>
+        </div>
+        <div className="auth-rail-command-strip" aria-label="Workspace signals">
+          <span>Today</span>
+          <strong>Check-in and plan review</strong>
+          <span>History saved</span>
         </div>
         <details className="auth-rail-extras">
           <summary>What&apos;s inside the workspace</summary>

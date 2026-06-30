@@ -548,18 +548,28 @@ export default function AdminPage() {
   const triageProfileError = isProfileServiceUnavailableMessage(triageWarning);
   const reviewPlansProfileError = isProfileServiceUnavailableMessage(reviewPlansWarning);
   const attentionProfileError = isProfileServiceUnavailableMessage(attentionWarning);
+  const adminActionCount = triageJobs.length + reviewPlans.length + attentionReviews.length;
+  const adminActionLabel = isJobsLoading
+    ? "Scanning live queues"
+    : adminActionCount > 0
+      ? `${adminActionCount} admin decision${adminActionCount === 1 ? "" : "s"} open`
+      : "Queues clear";
 
   return (
     <RequireAuth adminOnly>
       <section className="panel admin-dashboard-panel">
         <div className="section-heading admin-dashboard-heading">
-          <div>
+          <div className="admin-dashboard-copy">
             <p className="kicker">Admin</p>
-            <h1>Support dashboard</h1>
-            <p className="muted">Review suspended triage generations, open athlete records, and audit recent plan output from one workspace.</p>
+            <h1>Fight camp control room</h1>
+            <p className="muted">Live generation queues, athlete risk signals, and plan-review decisions in one operator view.</p>
+            <div className="admin-priority-rail" aria-label="Admin priority status">
+              <span className="admin-priority-label">{adminActionLabel}</span>
+              <span>{lastCheckedLabel}</span>
+            </div>
           </div>
           <div className="admin-summary-grid" aria-label="Admin dashboard summary">
-            <article className="status-card">
+            <article className="status-card admin-summary-card" data-tone={activeJobs.length > 0 ? "active" : "neutral"}>
               <p className="status-label">Generating now</p>
               <h2 className="plan-summary-title">{isJobsLoading ? "-" : activeJobs.length}</h2>
               <p className="muted">
@@ -568,20 +578,33 @@ export default function AdminPage() {
                   : `${activeAthleteCount} athlete${activeAthleteCount === 1 ? "" : "s"} in progress.`}
               </p>
             </article>
-            <article className="status-card">
+            <article className="status-card admin-summary-card" data-tone={triageJobs.length > 0 ? "danger" : "neutral"}>
               <p className="status-label">Triage queue</p>
               <h2 className="plan-summary-title">{isJobsLoading ? "-" : triageJobs.length}</h2>
               <p className="muted">{isJobsLoading ? "Checking jobs." : `${triageAthleteCount} athlete${triageAthleteCount === 1 ? "" : "s"} waiting.`}</p>
             </article>
-            <article className="status-card">
+            <article className="status-card admin-summary-card" data-tone={attentionReviews.length > 0 ? "danger" : "neutral"}>
+              <p className="status-label">Needs attention</p>
+              <h2 className="plan-summary-title">{isJobsLoading ? "-" : attentionReviews.length}</h2>
+              <p className="muted">{isJobsLoading ? "Checking reviews." : "Athlete flags open."}</p>
+            </article>
+            <article className="status-card admin-summary-card" data-tone="neutral">
               <p className="status-label">Athletes</p>
               <h2 className="plan-summary-title">{isDirectoryLoading ? "-" : athletes.length}</h2>
               <p className="muted">{searchNeedle ? "Matches on this page." : "Accounts on this page."}</p>
             </article>
-            <article className="status-card">
+            <article className="status-card admin-summary-card" data-tone={reviewPlans.length > 0 ? "danger" : "neutral"}>
               <p className="status-label">Plans</p>
               <h2 className="plan-summary-title">{isDirectoryLoading ? "-" : plans.length}</h2>
-              <p className="muted">{searchNeedle ? "Matches on this page." : "Generations on this page."}</p>
+              <p className="muted">
+                {isJobsLoading
+                  ? "Checking reviews."
+                  : reviewPlans.length > 0
+                    ? `${reviewPlans.length} held for decision.`
+                    : searchNeedle
+                      ? "Matches on this page."
+                      : "Generations on this page."}
+              </p>
             </article>
           </div>
         </div>
