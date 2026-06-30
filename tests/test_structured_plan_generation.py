@@ -298,6 +298,16 @@ def test_prompt_carries_schema_and_safety_rules():
         '"weight_cut_warning"',
     ):
         assert skeleton_marker in prompt
+    # Live text-output patterns that must stay explicit in the card converter.
+    for live_marker in (
+        "Power Transfer Touch",
+        "Duration",
+        "Prescription",
+        "Progression/regression/stop",
+        "Tactical Cue",
+        "Optimize for a valid first-pass card",
+    ):
+        assert live_marker in prompt
 
 
 def test_repair_prompt_instructs_shape_only_fix_and_includes_skeleton():
@@ -539,6 +549,27 @@ def test_normalize_keeps_coach_led_contact_alongside_app_session():
     out = _normalize_day(day)
     assert out["today_card"]["coach_led_contact"] == "Coach-led boxing — technical only"
     assert out["sessions"], "app session must not be dropped"
+
+
+def test_normalize_folds_empty_coach_led_session_into_contact_field():
+    # Some first-pass cards emit coach contact as an empty session plus a real app
+    # touch. Normalize that near-miss into the canonical coexisting-day shape.
+    day = _day(
+        "moderate",
+        [
+            _session("sparring", []),
+            _session("skill", [{"block_type": "skill", "display_name": "Tactical Cue Card"}]),
+        ],
+        countdown_label="D-11",
+    )
+    day["sessions"][0]["title"] = "Coach-led boxing - technical only"
+    day["sessions"][1]["title"] = "Tactical Cue Card"
+
+    out = _normalize_day(day)
+
+    assert out["today_card"]["coach_led_contact"] == "Coach-led boxing - technical only"
+    assert [session["title"] for session in out["sessions"]] == ["Tactical Cue Card"]
+    assert out["day_type"] == "moderate"
 
 
 def test_normalize_drops_blank_coach_led_contact():

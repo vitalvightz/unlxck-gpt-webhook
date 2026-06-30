@@ -12,6 +12,7 @@ import {
 } from "@/components/body-map";
 import { Skeleton } from "@/components/skeleton";
 import {
+  DaySessionContext,
   SessionCard as StructuredSessionCard,
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
@@ -890,6 +891,7 @@ function TodaySessionBlocks({
   }
   return (
     <div className="today-blocks">
+      <DaySessionContext day={current.day} />
       {current.sessions.map((session, index) => (
         <StructuredSessionCard
           key={sessionIdentity({
@@ -904,6 +906,7 @@ function TodaySessionBlocks({
           session={session}
           day={index === 0 ? current.day ?? undefined : undefined}
           defaultOpenBlocks
+          showDayContext={false}
         />
       ))}
     </div>
@@ -1060,6 +1063,12 @@ function SessionCard({
             <p className="today-detail-label">Focus</p>
             <p>{getSessionFocus(session)}</p>
           </div>
+          {session.coach_led_contact ? (
+            <div>
+              <p className="today-detail-label">Coach contact</p>
+              <p>{session.coach_led_contact}</p>
+            </div>
+          ) : null}
           {duration ? (
             <div>
               <p className="today-detail-label">Duration</p>
