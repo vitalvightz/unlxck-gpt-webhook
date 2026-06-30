@@ -632,6 +632,72 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
     return out
 
 
+_COACH_LED_CONTACT_RE = re.compile(
+    r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
+    re.I,
+)
+
+
+def _coach_led_contact_label(session: dict[str, Any]) -> str | None:
+    """A contact-only session label, or None when this is real app work."""
+    if _as_list(session.get("blocks")):
+        return None
+    text = " ".join(
+        part
+        for part in (
+            _coerce_str(session.get("title")).strip(),
+            _coerce_str(session.get("objective")).strip(),
+            _coerce_str(session.get("session_type")).strip(),
+        )
+        if part
+    )
+    if not text or not _COACH_LED_CONTACT_RE.search(text):
+        return None
+    return _coerce_str(session.get("title")).strip() or _coerce_str(session.get("objective")).strip() or text
+
+
+def _fold_coach_led_sessions_into_today_card(day: dict[str, Any]) -> None:
+    """Normalize same-day contact + app work into the renderer's canonical shape."""
+    sessions = [session for session in _as_list(day.get("sessions")) if isinstance(session, dict)]
+    if len(sessions) < 2:
+        return
+    app_sessions: list[dict[str, Any]] = []
+    contact_labels: list[str] = []
+    for session in sessions:
+        label = _coach_led_contact_label(session)
+        if label:
+            contact_labels.append(label)
+        else:
+            app_sessions.append(session)
+    if not contact_labels or not app_sessions:
+        return
+    card = day.get("today_card")
+    if not isinstance(card, dict):
+        card = _normalize_today_card(card)
+        day["today_card"] = card
+    if not _coerce_str(card.get("coach_led_contact")).strip():
+        card["coach_led_contact"] = contact_labels[0]
+    day["sessions"] = app_sessions
+
+
+def _coach_led_contact_intensity(day: dict[str, Any]) -> str | None:
+    card = day.get("today_card")
+    if not isinstance(card, dict):
+        return None
+    text = _coerce_str(card.get("coach_led_contact")).strip().lower()
+    if not text:
+        return None
+    if "technical" in text or "no hard" in text:
+        return "moderate"
+    if "reduced" in text or "deload" in text:
+        return "low"
+    if re.search(r"\bspar", text):
+        return "high"
+    if re.search(r"\b(coach|boxing|pad\s?work|pads|mitts?)\b", text):
+        return "moderate"
+    return None
+
+
 def _block_intensity(block: Any) -> str | None:
     """Rate a single block "high" / "moderate" / "low", or ``None`` when silent.
 
@@ -719,6 +785,9 @@ def _classify_day_type(day: dict[str, Any], fallback: str) -> str:
     # falls back to its type (e.g. an empty coach-led sparring day is still
     # "high", never "rest").
     levels = [lvl for lvl in (_session_intensity(s) for s in sessions) if lvl]
+    contact_level = _coach_led_contact_intensity(day)
+    if contact_level:
+        levels.append(contact_level)
     if levels:
         return max(levels, key=_INTENSITY_RANK.__getitem__)
 
@@ -750,6 +819,7 @@ def _normalize_day(value: Any) -> dict[str, Any]:
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
     out["today_card"] = _normalize_today_card(out.get("today_card"))
     out["sessions"] = [_normalize_session(session) for session in _as_dict_list(out.get("sessions"))]
+    _fold_coach_led_sessions_into_today_card(out)
     # Derive the intensity badge from the now-normalized content; the model's own
     # value is only a last-resort fallback (see _classify_day_type).
     out["day_type"] = _classify_day_type(out, _enum(out.get("day_type"), _DAY_TYPE_VALUES, ""))
@@ -1502,6 +1572,25 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   coach-owned contact as a context line above the app session. The "no app S&C
   today" wording only applies when there is genuinely no app work — if an app
   session is listed for the day, keep it.
+- Preserve compact plan-output formats reliably:
+  * A day header like `D-18 (Wednesday) — Power Transfer Touch` starts a day.
+    A following `Why:` line is the session/day objective, not a separate block.
+  * Bulleted prescriptions such as `- Band-Resisted Jab-Cross Primer — 3 x
+    4-6 reps...` are blocks. Carry labelled follow-up lines into that same block:
+    `Purpose`, `Why today`, `Progression/regression/stop`, `Progression`,
+    `Regression`, `Stop`, `Duration`, `Prescription`, `Output`, `Intensity`,
+    and `Coach call`.
+  * Short late-camp support days like `Fight Tactical Watch`, `Tactical Cue
+    Card`, `Breathing Reset`, `Freshness Reset`, and `Final Neural Cue` are real
+    sessions when the plan gives Duration/Prescription/Purpose lines. Do not
+    collapse them into rest days just because they are low-load.
+  * If a coach-only day says `No app S&C today`, keep sessions as []. If it also
+    lists any prescribed app touch on the same D-day, keep the app touch as a
+    session and put the coach-owned contact in today_card.coach_led_contact.
+- Optimize for a valid first-pass card: omit optional fields you cannot fill
+  from the source rather than emitting partial objects that fail schema
+  validation. Preserve every dated day and every listed prescription, but do not
+  invent missing numbers.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"

@@ -587,6 +587,45 @@ test("labeled session-level notes keep their label", () => {
   assert.deepEqual(session.notes, ["Note: keep it light today."]);
 });
 
+test("compact labelled late-camp output parses into clean session blocks", () => {
+  const groups = parsePlanText(
+    [
+      "D-18 (Wednesday) — Power Transfer Touch",
+      "Why: one meaningful strength touch early in the bridge window.",
+      "- Movement prep (4 min): ankle/hip swings, 2 min easy shadow jab-cross with rhythm.",
+      "- Band-Resisted Jab-Cross Primer — 3 x 4-6 reps per side; full recovery 90-120 s; intensity: RPE 6-7.",
+      "Purpose: preserve punch speed and transfer strength with minimal metabolic cost.",
+      "Why today: one meaningful strength touch early in the bridge window.",
+      "Progression/regression/stop: reduce band tension if technique breaks.",
+      "- Reset (2-3 min): slow mobility flow for hips and thoracic rotation.",
+    ].join("\n"),
+  );
+
+  const session = groups[0];
+  assert.ok(session.kind === "session");
+  assert.equal(session.title, "Power Transfer Touch");
+  assert.equal(session.objective, "one meaningful strength touch early in the bridge window.");
+  assert.deepEqual(
+    session.blocks.map((block) => [block.name, block.dose]),
+    [
+      [
+        "Movement prep (4 min)",
+        "ankle/hip swings, 2 min easy shadow jab-cross with rhythm.",
+      ],
+      [
+        "Band-Resisted Jab-Cross Primer",
+        "3 x 4-6 reps per side; full recovery 90-120 s; intensity: RPE 6-7.",
+      ],
+      ["Reset (2-3 min)", "slow mobility flow for hips and thoracic rotation."],
+    ],
+  );
+  assert.deepEqual(session.blocks[1].details, [
+    { label: "Purpose", text: "preserve punch speed and transfer strength with minimal metabolic cost." },
+    { label: "Why", text: "one meaningful strength touch early in the bridge window." },
+    { label: "Progress", text: "reduce band tension if technique breaks." },
+  ]);
+});
+
 test("markdown section headers (## Nutrition) become their own context cards", () => {
   const groups = parsePlanText(["## Nutrition", "Eat to support training.", "## Recovery", "Sleep 8h."].join("\n"));
 

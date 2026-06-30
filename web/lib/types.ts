@@ -922,6 +922,7 @@ export type TodaySession = {
   status?: string;
   reason?: string;
   coach_note?: string;
+  coach_led_contact?: string;
   effective_load?: string;
   primary_focus?: string;
   emphasis?: string;

@@ -189,6 +189,57 @@ def _monday_strength_structured_plan() -> dict:
     }
 
 
+def _combined_contact_and_app_structured_plan() -> dict:
+    return {
+        "weeks": [
+            {
+                "phase_label": "SPP",
+                "days": [
+                    {
+                        "date": "2026-06-18",
+                        "countdown_label": "D-18",
+                        "day_type": "high",
+                        "today_card": {"headline": "Power Transfer Touch"},
+                        "sessions": [
+                            {
+                                "session_id": "2026-06-18-contact",
+                                "session_type": "sparring",
+                                "title": "Coach-led boxing - technical only",
+                                "blocks": [],
+                            },
+                            {
+                                "session_id": "2026-06-18-app",
+                                "session_type": "skill",
+                                "title": "Power Transfer Touch",
+                                "objective": "Preserve punch speed without fatigue.",
+                                "blocks": [
+                                    {
+                                        "block_type": "skill",
+                                        "display_name": "Band-Resisted Jab-Cross Primer",
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "date": "2026-06-25",
+                        "countdown_label": "D-11",
+                        "day_type": "high",
+                        "sessions": [
+                            {
+                                "session_id": "2026-06-25-hard",
+                                "session_type": "sparring",
+                                "title": "Hard sparring",
+                                "blocks": [],
+                            }
+                        ],
+                    },
+                ],
+            }
+        ]
+    }
+
+
 def _out_of_order_countdown_structured_plan() -> dict:
     return {
         "weeks": [
@@ -1221,6 +1272,24 @@ class TestCommandView:
         assert view.today.next_session["session_id"] == "2026-06-22-strength"
         assert view.today.next_session["weekday"] == "Monday"
         assert view.today.next_session["title"] == "Posterior chain strength + control"
+        assert view.today.next_session["title"] != "Hard sparring"
+
+    def test_structured_today_combined_contact_prefers_app_session_summary(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = _combined_contact_and_app_structured_plan()
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+
+        assert view.today.session_scope == "today"
+        assert view.today.next_session["session_relation"] == "today"
+        assert view.today.next_session["session_id"] == "2026-06-18-app"
+        assert view.today.next_session["title"] == "Power Transfer Touch"
+        assert view.today.next_session["coach_led_contact"] == "Coach-led boxing - technical only"
         assert view.today.next_session["title"] != "Hard sparring"
 
     def test_auto_active_summary_row_rehydrates_structured_today_session_and_phase(self):

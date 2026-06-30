@@ -451,6 +451,36 @@ function CoachLedDayContext({
   );
 }
 
+export function DaySessionContext({ day }: { day: StructuredDay }) {
+  const card = day.today_card;
+  const warning = cleanText(card?.primary_warning);
+  const nutrition = cleanText(card?.nutrition_summary);
+  const weightCut = cleanText(card?.weight_cut_warning);
+  const sessionlessDay = classifySessionlessDay(day);
+  const lightTechnicalContext = sessionlessDay.kind === "light_combat";
+  const coachLedContact = getCoachLedContactView(day);
+  const hasDayContext = Boolean(
+    warning || nutrition || weightCut || lightTechnicalContext || coachLedContact,
+  );
+  if (!hasDayContext) {
+    return null;
+  }
+
+  return (
+    <div className="cm-day-context">
+      {lightTechnicalContext ? (
+        <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
+      ) : null}
+      {coachLedContact ? (
+        <CoachLedDayContext title={coachLedContact.title} tag={coachLedContact.tag} />
+      ) : null}
+      {warning ? <p className="sp-warning">{warning}</p> : null}
+      {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
+      {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+    </div>
+  );
+}
+
 /** Short weekday name from an ISO date string ("2026-06-19" -> "Fri"), or null. */
 function weekdayLabel(date: string | null): string | null {
   if (!date) {
@@ -510,19 +540,6 @@ export function CampDayCard({
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
-  const card = day.today_card;
-  const warning = cleanText(card?.primary_warning);
-  const nutrition = cleanText(card?.nutrition_summary);
-  const weightCut = cleanText(card?.weight_cut_warning);
-  const sessionlessDay = classifySessionlessDay(day);
-  const lightTechnicalContext = sessionlessDay.kind === "light_combat";
-  // Coach-owned contact (declared / downgraded sparring) that coexists with the
-  // day's app sessions — surfaced above them so the sparring day never vanishes
-  // behind the low-RPE app work scheduled on the same day.
-  const coachLedContact = getCoachLedContactView(day);
-  const hasDayContext = Boolean(
-    warning || nutrition || weightCut || lightTechnicalContext || coachLedContact,
-  );
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
 
@@ -560,19 +577,7 @@ export function CampDayCard({
       </summary>
 
       <div className="sp-week-body">
-        {sessions.length > 0 && hasDayContext ? (
-          <div className="cm-day-context">
-            {lightTechnicalContext ? (
-              <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
-            ) : null}
-            {coachLedContact ? (
-              <CoachLedDayContext title={coachLedContact.title} tag={coachLedContact.tag} />
-            ) : null}
-            {warning ? <p className="sp-warning">{warning}</p> : null}
-            {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
-            {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-          </div>
-        ) : null}
+        {sessions.length > 0 ? <DaySessionContext day={day} /> : null}
 
         {sessions.length > 0 ? (
           <div className="sp-sessions">

@@ -375,12 +375,23 @@ function normalizePlanTextForCards(rawText: string): string {
 // "Progress/regress/stop" wins over "Progress".
 const SESSION_DETAIL_LABELS: { match: RegExp; label: string }[] = [
   { match: /^purpose$/i, label: "Purpose" },
+  { match: /^purpose\s*&\s*why$/i, label: "Purpose" },
   { match: /^why today$/i, label: "Why" },
   { match: /^why$/i, label: "Why" },
+  { match: /^duration$/i, label: "Duration" },
+  { match: /^prescription$/i, label: "Prescription" },
+  { match: /^output$/i, label: "Output" },
+  { match: /^intensity$/i, label: "Intensity" },
+  { match: /^coach call$/i, label: "Coach call" },
+  { match: /^week note$/i, label: "Week note" },
+  { match: /^final coach call(?:\s*\(one line\))?$/i, label: "Coach call" },
   { match: /^progress\/regress\/stop$/i, label: "Progress" },
+  { match: /^progression\/regression\/stop$/i, label: "Progress" },
   { match: /^progress\/regress$/i, label: "Progress" },
+  { match: /^progression\/regression$/i, label: "Progress" },
   { match: /^progression$/i, label: "Progress" },
   { match: /^progress$/i, label: "Progress" },
+  { match: /^regression$/i, label: "Regress" },
   { match: /^regress$/i, label: "Regress" },
   { match: /^stop rule$/i, label: "Stop" },
   { match: /^stop$/i, label: "Stop" },
@@ -391,7 +402,7 @@ const SESSION_DETAIL_LABELS: { match: RegExp; label: string }[] = [
 ];
 
 const SESSION_LABEL_SPLIT_RE =
-  /\b(Purpose|Why today|Why|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:/gi;
+  /\b(Purpose\s*&\s*why|Purpose|Why today|Why|Duration|Prescription|Output|Intensity|Coach call|Week note|Final coach call(?:\s*\(one line\))?|Progression\/regression\/stop|Progress\/regress\/stop|Progression\/regression|Progress\/regress|Progression|Progress|Regression|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:/gi;
 
 function normalizeSessionLabel(raw: string): string {
   const trimmed = raw.trim();
@@ -644,7 +655,15 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
       // otherwise loose detail attached to the current block / session. The
       // matched separator is always exactly " - " / " — " (3 chars).
       const dashIndex = segment.text.search(/\s[-–—]\s/);
-      if (dashIndex > -1) {
+      const colonBlock = segment.text.match(/^([^:]{2,80}):\s+(.+)$/);
+      if (wasListItem && colonBlock) {
+        session.blocks.push({
+          name: colonBlock[1].trim(),
+          dose: colonBlock[2].trim() || null,
+          details: [],
+          tag: currentBlockTag,
+        });
+      } else if (dashIndex > -1) {
         session.blocks.push({
           name: segment.text.slice(0, dashIndex).trim(),
           dose: segment.text.slice(dashIndex + 3).trim() || null,

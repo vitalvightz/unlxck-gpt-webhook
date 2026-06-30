@@ -444,9 +444,57 @@ def _structured_effective_load(day_type: Any) -> str:
         return "hard"
     if normalized in {"reduced", "low", "recovery"}:
         return "reduced"
-    if normalized in {"rest", "off", "none"}:
+    if normalized in {"rest", "off", "none", "travel"}:
         return "none"
+    if normalized in {"competition"}:
+        return "hard"
     return "technical"
+
+
+_STRUCTURED_TRAINING_HEADLINE_RE = re.compile(
+    r"\b(coach|spar|technical|boxing|pad\s?work|pads|mitts?|skill|primer|"
+    r"strength|conditioning|recovery|mobility|reset|fight\s+day|protocol)\b",
+    re.I,
+)
+_STRUCTURED_COACH_CONTACT_RE = re.compile(
+    r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
+    re.I,
+)
+
+
+def _structured_session_blocks(session: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    return _iter_mapping_items(session.get("blocks"))
+
+
+def _structured_contact_label_from_session(session: Mapping[str, Any]) -> str:
+    text = " ".join(
+        part
+        for part in (
+            _clean_text(session.get("title")),
+            _clean_text(session.get("objective")),
+            _clean_text(session.get("session_type")),
+        )
+        if part
+    )
+    if not text or not _STRUCTURED_COACH_CONTACT_RE.search(text):
+        return ""
+    return _clean_text(session.get("title")) or _clean_text(session.get("objective")) or text
+
+
+def _select_structured_primary_session(sessions: list[Mapping[str, Any]]) -> Mapping[str, Any] | None:
+    """Choose the app-owned session summary when coach contact coexists.
+
+    The structured card can carry a coach-owned contact session and a real app
+    session on the same day. Overview/Today only have one compact session slot,
+    so prefer the first session with executable blocks; the structured blocks UI
+    still renders every session from the full card.
+    """
+    if not sessions:
+        return None
+    with_blocks = [session for session in sessions if _structured_session_blocks(session)]
+    if with_blocks:
+        return with_blocks[0]
+    return sessions[0]
 
 
 def _structured_plan_weeks(plan_row: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -490,14 +538,30 @@ def _structured_session_entry_for_day(
     if not day_date:
         return None
     sessions = _iter_mapping_items(day.get("sessions"))
-    if not sessions:
-        return None
-
-    first_session = sessions[0]
-    if not isinstance(first_session, Mapping):
-        return None
-    session = dict(first_session)
     today_card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
+    coach_led_contact = _clean_text(today_card.get("coach_led_contact"))
+    if not coach_led_contact:
+        for candidate in sessions:
+            if _structured_session_blocks(candidate):
+                continue
+            coach_led_contact = _structured_contact_label_from_session(candidate)
+            if coach_led_contact:
+                break
+
+    first_session = _select_structured_primary_session(sessions)
+    if first_session is not None:
+        session = dict(first_session)
+    else:
+        headline = _clean_text(today_card.get("headline"))
+        if not headline or not _STRUCTURED_TRAINING_HEADLINE_RE.search(headline):
+            return None
+        session = {
+            "session_id": day_date,
+            "session_type": "scheduled_session",
+            "title": headline,
+            "objective": _clean_text(today_card.get("primary_warning")),
+        }
+
     title = (
         _clean_text(session.get("title"))
         or _clean_text(today_card.get("headline"))
@@ -525,6 +589,7 @@ def _structured_session_entry_for_day(
         "phase": _normalized_structured_phase(day.get("phase_label"))
         or _normalized_structured_phase(week.get("phase_label")),
         "session_id": session_id,
+        **({"coach_led_contact": coach_led_contact} if coach_led_contact else {}),
     }
 
 
