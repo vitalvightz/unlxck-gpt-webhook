@@ -28,13 +28,65 @@ PHYSICAL_INSERTS = {
     "walk_flush",
 }
 
+# Genuinely low-risk aerobic-maintenance inserts (RPE 3-4, no soreness target).
+# These keep a selected conditioning / gas-tank goal *visible* late in camp when
+# the higher-cost physical inserts are correctly stripped for freshness. They are
+# bodyweight-only, so they do not depend on bike/rower style equipment, and they
+# are only offered when the athlete actually selected a conditioning signal.
+LOW_COST_AEROBIC_INSERTS = {
+    "aerobic_shadow_flow",
+    "aerobic_walk_flush",
+    "aerobic_footwork_rhythm",
+    "aerobic_skip_flush",
+    "aerobic_jog_flush",
+}
+# Zero/low-impact options that stay safe even with a lower-leg injury or high fatigue.
+_ZERO_IMPACT_AEROBIC_INSERTS = {"aerobic_shadow_flow", "aerobic_walk_flush"}
+# Higher-impact options gated behind healthy lower legs and low fatigue.
+_IMPACT_AEROBIC_INSERTS = {"aerobic_skip_flush", "aerobic_jog_flush"}
+
 GAP_FILL_MIN_DAYS = 3
 TWO_INSERT_GAP_MIN_DAYS = 5
 MAX_INSERTS_TOTAL_D21_TO_D0 = 6
 MAX_PHYSICAL_INSERTS_PER_7_DAY_SEGMENT = 1
+# Day-before-fight slots stay restricted to zero/recovery work regardless of goal.
+MIN_AEROBIC_MAINTENANCE_OFFSET = 2
 
-_ALL_INSERTS = ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS | PHYSICAL_INSERTS
+_ALL_INSERTS = (
+    ZERO_COST_INSERTS
+    | LOW_COST_RECOVERY_INSERTS
+    | PHYSICAL_INSERTS
+    | LOW_COST_AEROBIC_INSERTS
+)
 TACTICAL_INSERTS = {"tactical_watch", "tactical_cue_card", "self_review"}
+CONDITIONING_MAINTENANCE_INSERTS = LOW_COST_AEROBIC_INSERTS
+
+_CONDITIONING_GOAL_MARKERS = (
+    "conditioning",
+    "gas",
+    "aerobic",
+    "endurance",
+    "cardio",
+    "work_capacity",
+    "engine",
+    "stamina",
+)
+_LOWER_LEG_LOAD_MARKERS = (
+    "achilles",
+    "calf",
+    "calves",
+    "shin",
+    "ankle",
+    "foot",
+    "feet",
+    "heel",
+    "plantar",
+    "knee",
+    "lower leg",
+    "hamstring",
+    "tibia",
+    "peroneal",
+)
 
 _INSERT_META = {
     "tactical_watch": {
@@ -140,6 +192,46 @@ _INSERT_META = {
         "repeat_allowed": False,
         "display_text": "Nose-breathing pace only. No sweat target. Finish feeling better than when you started.",
     },
+    "aerobic_shadow_flow": {
+        "label": "Shadowboxing Aerobic Flow",
+        "duration_min": [8, 12],
+        "rpe_max": 4,
+        "insert_category": "conditioning_maintenance",
+        "repeat_allowed": False,
+        "display_text": "3-5 x 2 min easy shadowboxing rounds, 60 sec rest. Smooth boxing rhythm at RPE 3-4. No contact, no power, no impact - keep the gas tank ticking over without costing freshness.",
+    },
+    "aerobic_walk_flush": {
+        "label": "Brisk Walk Flush",
+        "duration_min": [15, 25],
+        "rpe_max": 4,
+        "insert_category": "conditioning_maintenance",
+        "repeat_allowed": False,
+        "display_text": "Brisk or incline walk at a nose-breathing pace, RPE 3-4. Low-impact aerobic maintenance and recovery support - finish fresher than you started.",
+    },
+    "aerobic_footwork_rhythm": {
+        "label": "Footwork Rhythm Flush",
+        "duration_min": [6, 10],
+        "rpe_max": 4,
+        "insert_category": "conditioning_maintenance",
+        "repeat_allowed": False,
+        "display_text": "Light in-out steps, pivots, and stance resets, RPE 3-4. Movement-economy work so you waste less energy in exchanges. No sprinting or sharp cuts.",
+    },
+    "aerobic_skip_flush": {
+        "label": "Light Skipping Flush",
+        "duration_min": [6, 10],
+        "rpe_max": 4,
+        "insert_category": "conditioning_maintenance",
+        "repeat_allowed": False,
+        "display_text": "30-45 sec easy skip / 30-45 sec rest, RPE 3-4. Keeps rhythm, calf stiffness, and breathing control without hard conditioning stress. Skip only while calves and Achilles are healthy.",
+    },
+    "aerobic_jog_flush": {
+        "label": "Easy Jog Flush",
+        "duration_min": [12, 18],
+        "rpe_max": 4,
+        "insert_category": "conditioning_maintenance",
+        "repeat_allowed": False,
+        "display_text": "Easy continuous jog or walk-jog, RPE 3-4. Maintains aerobic rhythm without fatigue. Keep it conversational.",
+    },
 }
 
 
@@ -191,6 +283,74 @@ def _has_power_speed_goal(athlete_model: dict[str, Any]) -> bool:
     return any("power" in value or "speed" in value or "explosive" in value for value in values)
 
 
+def _has_conditioning_goal(athlete_model: dict[str, Any]) -> bool:
+    values = (
+        _normalised_set(athlete_model.get("key_goals", []))
+        | _normalised_set(athlete_model.get("weaknesses", []))
+        | _normalised_set(athlete_model.get("readiness_flags", []))
+    )
+    return any(marker in value for value in values for marker in _CONDITIONING_GOAL_MARKERS)
+
+
+def _has_lower_leg_load_risk(athlete_model: dict[str, Any]) -> bool:
+    text = _flatten_text(
+        [
+            athlete_model.get("parsed_injuries"),
+            athlete_model.get("guided_injury"),
+            athlete_model.get("injury_restrictions"),
+            athlete_model.get("injuries")
+            or athlete_model.get("injury")
+            or athlete_model.get("injury_notes"),
+            athlete_model.get("active_injury"),
+            sorted(_readiness_flags(athlete_model)),
+        ]
+    ).lower().replace("_", " ")
+    return any(marker in text for marker in _LOWER_LEG_LOAD_MARKERS)
+
+
+def _safe_conditioning_maintenance_inserts(
+    athlete_model: dict[str, Any],
+    insert_offset: int,
+    injury_state: str,
+    *,
+    on_hard_sparring_day: bool,
+) -> set[str]:
+    """Context-safe aerobic-maintenance options for a conditioning/gas-tank goal.
+
+    Returns an empty set unless the athlete selected a conditioning signal and the
+    slot is safe to use (not the day before the fight, not a hard-sparring day).
+    Higher-impact options (skip/jog) are withheld when lower legs are loaded,
+    fatigue is high, or a hard weight cut is active, so the slot stays low-risk.
+    """
+
+    if insert_offset < MIN_AEROBIC_MAINTENANCE_OFFSET or on_hard_sparring_day:
+        return set()
+    if not _has_conditioning_goal(athlete_model):
+        return set()
+
+    # Zero/low-impact aerobic rhythm is always safe to keep the goal visible.
+    safe = set(_ZERO_IMPACT_AEROBIC_INSERTS)
+
+    lower_leg_risk = _has_lower_leg_load_risk(athlete_model) or injury_state == "moderate_plus"
+    high_fatigue = _has_high_fatigue(athlete_model)
+    active_cut = _has_active_weight_cut(athlete_model)
+    fatigue_low = normalize_fatigue_level(athlete_model) == "low"
+
+    # Footwork rhythm is low-impact movement economy; safe unless injury is serious.
+    if injury_state != "moderate_plus":
+        safe.add("aerobic_footwork_rhythm")
+
+    # Impact work only when lower legs are healthy and fatigue is not high.
+    if not lower_leg_risk and not high_fatigue:
+        safe.add("aerobic_skip_flush")
+        # Continuous jogging is the highest-cost option: only with genuinely low
+        # fatigue and no active weight cut.
+        if fatigue_low and not active_cut:
+            safe.add("aerobic_jog_flush")
+
+    return safe
+
+
 def _has_footwork_weakness(athlete_model: dict[str, Any]) -> bool:
     values = (
         _normalised_set(athlete_model.get("weaknesses", []))
@@ -238,6 +398,8 @@ def _cost_category(role_key: str) -> str:
         return "zero_cost"
     if role_key in LOW_COST_RECOVERY_INSERTS:
         return "low_cost_recovery"
+    if role_key in LOW_COST_AEROBIC_INSERTS:
+        return "low_cost_aerobic"
     return "physical"
 
 
@@ -328,6 +490,19 @@ def _allowed_inserts(
     if on_hard_sparring_day:
         allowed -= PHYSICAL_INSERTS
         allowed |= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS
+
+    # A selected conditioning / gas-tank goal keeps a low-risk aerobic-maintenance
+    # slot available even when the higher-cost physical inserts are stripped for
+    # freshness, so the goal stays visible instead of vanishing into unrelated
+    # tactical/breathing filler. The aerobic inserts never appear without a
+    # conditioning signal, so the no-goal contracts above are unchanged.
+    allowed -= LOW_COST_AEROBIC_INSERTS
+    allowed |= _safe_conditioning_maintenance_inserts(
+        athlete_model,
+        insert_offset,
+        injury_state,
+        on_hard_sparring_day=on_hard_sparring_day,
+    )
 
     return allowed
 
@@ -529,6 +704,21 @@ def _score_insert_role(
         elif role_key == "footwork_walkthrough":
             score += 4
 
+    if role_key in LOW_COST_AEROBIC_INSERTS:
+        if _has_conditioning_goal(athlete_model):
+            # Preserve the conditioning slot over generic tactical/breathing filler.
+            score += 22
+            if high_fatigue or active_cut:
+                if role_key in _ZERO_IMPACT_AEROBIC_INSERTS:
+                    score += 6
+                elif role_key in _IMPACT_AEROBIC_INSERTS:
+                    score -= 10
+            if role_key == "aerobic_shadow_flow" and _is_fight_sport(athlete_model):
+                score += 3
+        else:
+            # Never surface aerobic maintenance without an explicit conditioning signal.
+            score -= 100
+
     if gap_span is not None and gap_span >= TWO_INSERT_GAP_MIN_DAYS:
         if role_key == "walk_flush":
             score += 8
@@ -558,10 +748,13 @@ def _select_role_key(
     usage_ledger: dict[str, Any] | None = None,
     gap_span: int | None = None,
     force_tactical: bool = False,
+    force_conditioning: bool = False,
 ) -> str | None:
     candidates = set(allowed)
     if force_tactical:
         candidates &= TACTICAL_INSERTS
+    elif force_conditioning:
+        candidates &= LOW_COST_AEROBIC_INSERTS
     candidates = {
         role_key
         for role_key in candidates
@@ -639,6 +832,7 @@ def select_gap_fill_insert(
     usage_ledger: dict[str, Any] | None = None,
     gap_span: int | None = None,
     force_tactical: bool = False,
+    force_conditioning: bool = False,
 ) -> dict[str, Any] | None:
     if insert_offset == 0:
         return None
@@ -658,6 +852,7 @@ def select_gap_fill_insert(
         usage_ledger=usage_ledger,
         gap_span=gap_span,
         force_tactical=force_tactical,
+        force_conditioning=force_conditioning,
     )
     if role_key is None:
         return None
@@ -798,10 +993,26 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     usage_ledger = _usage_ledger_from_sequence(ordered)
     tactical_present = _has_tactical_support(ordered)
     tactical_required = _is_fight_sport(athlete_model) and not tactical_present
+    conditioning_present = any(
+        str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS for role in ordered
+    )
+    conditioning_required = _has_conditioning_goal(athlete_model)
 
     for target_offset, gap_span in candidate_offsets:
         force_tactical = tactical_required and not tactical_present
-        if len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0 and not force_tactical:
+        # Once tactical support is secured, guarantee at least one low-risk
+        # aerobic-maintenance slot when a conditioning / gas-tank goal is selected,
+        # so the goal stays visible instead of being dropped for pure filler.
+        force_conditioning = (
+            not force_tactical
+            and conditioning_required
+            and not conditioning_present
+        )
+        if (
+            len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0
+            and not force_tactical
+            and not force_conditioning
+        ):
             break
         if target_offset <= 0 or target_offset in existing_offsets:
             continue
@@ -814,6 +1025,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             usage_ledger=usage_ledger,
             gap_span=gap_span,
             force_tactical=force_tactical,
+            force_conditioning=force_conditioning,
         )
         if insert is None:
             continue
@@ -840,6 +1052,8 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         _record_insert_usage(usage_ledger, str(insert.get("role_key") or ""), target_offset)
         if insert.get("role_key") in TACTICAL_INSERTS:
             tactical_present = True
+        if insert.get("role_key") in LOW_COST_AEROBIC_INSERTS:
+            conditioning_present = True
         existing_offsets.add(target_offset)
 
     final_sequence = sorted(ordered + inserts, key=lambda role: int(_role_offset(role) or 0), reverse=True)

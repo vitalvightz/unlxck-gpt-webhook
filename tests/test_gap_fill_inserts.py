@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fightcamp import stage2_payload as stage2_payload_module
 from fightcamp.gap_fill_inserts import (
+    LOW_COST_AEROBIC_INSERTS,
     LOW_COST_RECOVERY_INSERTS,
     PHYSICAL_INSERTS,
     TACTICAL_INSERTS,
@@ -324,3 +325,108 @@ def test_apply_gap_fill_inserts_is_wired_into_live_stage2_payload_path(monkeypat
 
     assert called["value"] is True
     assert payload["payload_variant"] == "late_fight_stage2_payload"
+
+
+def test_no_aerobic_maintenance_without_conditioning_goal():
+    allowed = _allowed_inserts(_athlete(key_goals=["power"], weaknesses=["footwork"]), 12)
+    assert not (allowed & LOW_COST_AEROBIC_INSERTS)
+
+    insert = select_gap_fill_insert(_athlete(key_goals=["power"], weaknesses=["footwork"]), 12)
+    assert insert is not None
+    assert insert["role_key"] not in LOW_COST_AEROBIC_INSERTS
+
+
+def test_conditioning_goal_keeps_aerobic_maintenance_under_weight_cut_and_fatigue():
+    # The example symptom: power + gas-tank, active cut, high fatigue, no bike.
+    # Conditioning must remain visible as a low-risk aerobic-maintenance slot
+    # instead of being replaced entirely by tactical/breathing filler.
+    sequence = apply_gap_fill_inserts(
+        [
+            _session(18),
+            _session(13, "fight_week_freshness_day"),
+            _session(8, "fight_week_freshness_day"),
+            _session(3, "fight_week_freshness_day"),
+        ],
+        _athlete(
+            key_goals=["power", "conditioning"],
+            weaknesses=["gas_tank"],
+            weight_cut_risk=True,
+            weight_cut_pct=8.0,
+            readiness_flags=["active_weight_cut", "high_fatigue"],
+            fatigue="high",
+            fatigue_level="high",
+            days_until_fight=18,
+        ),
+    )
+
+    inserts = _insert_roles(sequence)
+    aerobic = [insert for insert in inserts if insert["role_key"] in LOW_COST_AEROBIC_INSERTS]
+    assert aerobic, "conditioning goal should keep at least one aerobic-maintenance slot"
+    # Under active cut + high fatigue only the zero-impact options are safe.
+    assert all(insert["role_key"] in {"aerobic_shadow_flow", "aerobic_walk_flush"} for insert in aerobic)
+    assert all(insert["rpe_max"] <= 4 for insert in aerobic)
+    # The slot stays a non-meaningful support insert (no forced conditioning stress).
+    assert all(insert["stress_class"] == "support" for insert in aerobic)
+    assert all(insert["governance"]["meaningful_stress"] is False for insert in aerobic)
+    # Tactical support is still guaranteed.
+    assert any(insert["role_key"] in TACTICAL_INSERTS for insert in inserts)
+
+
+def test_aerobic_maintenance_does_not_depend_on_bike_equipment():
+    # No bike/rower listed: the aerobic-maintenance fallback is bodyweight only.
+    insert = select_gap_fill_insert(
+        _athlete(key_goals=["conditioning"], weaknesses=["gas_tank"], equipment=["bodyweight"]),
+        12,
+        force_conditioning=True,
+    )
+    assert insert is not None
+    assert insert["role_key"] in LOW_COST_AEROBIC_INSERTS
+
+
+def test_lower_leg_injury_excludes_impact_aerobic_options():
+    allowed = _allowed_inserts(
+        _athlete(
+            key_goals=["conditioning"],
+            weaknesses=["gas_tank"],
+            fatigue="low",
+            fatigue_level="low",
+            parsed_injuries=[{"area": "achilles", "severity": "mild", "trend": "stable"}],
+        ),
+        12,
+    )
+    aerobic = allowed & LOW_COST_AEROBIC_INSERTS
+    assert aerobic, "conditioning goal should still offer a safe aerobic slot"
+    assert "aerobic_skip_flush" not in aerobic
+    assert "aerobic_jog_flush" not in aerobic
+    assert "aerobic_shadow_flow" in aerobic
+
+
+def test_low_fatigue_no_cut_allows_impact_aerobic_options():
+    allowed = _allowed_inserts(
+        _athlete(
+            key_goals=["conditioning"],
+            weaknesses=["gas_tank"],
+            fatigue="low",
+            fatigue_level="low",
+        ),
+        12,
+    )
+    assert {"aerobic_skip_flush", "aerobic_jog_flush"} <= allowed
+
+
+def test_aerobic_maintenance_not_offered_day_before_fight():
+    allowed = _allowed_inserts(
+        _athlete(key_goals=["conditioning"], weaknesses=["gas_tank"]),
+        1,
+    )
+    assert not (allowed & LOW_COST_AEROBIC_INSERTS)
+    assert allowed <= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS
+
+
+def test_aerobic_maintenance_not_offered_on_hard_sparring_day():
+    allowed = _allowed_inserts(
+        _athlete(key_goals=["conditioning"], weaknesses=["gas_tank"]),
+        10,
+        on_hard_sparring_day=True,
+    )
+    assert not (allowed & LOW_COST_AEROBIC_INSERTS)
