@@ -1219,7 +1219,7 @@ export function TodayScreen() {
             <p className="today-error-detail">Technical detail: {error}</p>
           ) : null}
         </div>
-        <div className="today-action-row today-error-actions">
+        <div className="today-action-row">
           <button type="button" className="cta" onClick={() => void loadToday()}>
             Retry Today
           </button>
