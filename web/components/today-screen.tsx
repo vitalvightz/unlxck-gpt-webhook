@@ -1171,19 +1171,9 @@ export function TodayScreen() {
               ? "Sign in with an active athlete account to unlock Today."
               : "The live check-in feed did not respond. Your saved plan has not changed."}
           </p>
-        </div>
-  if (error) {
-    return (
-      <section className="panel today-shell today-error-state">
-        <div className="today-hero-copy">
-          <p className="kicker">Today command feed</p>
-          <h1>Today is temporarily unavailable</h1>
           {process.env.NODE_ENV !== "production" ? (
             <p className="today-error-detail">Technical detail: {error}</p>
           ) : null}
-            The live check-in feed did not respond. Your saved plan has not changed.
-          </p>
-          <p className="today-error-detail">Technical detail: {error}</p>
         </div>
         <div className="today-action-row today-error-actions">
           <button type="button" className="cta" onClick={() => void loadToday()}>
