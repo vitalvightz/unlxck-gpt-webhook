@@ -1162,15 +1162,26 @@ export function TodayScreen() {
 
   if (error) {
     return (
-      <section className="panel today-shell">
+      <section className="panel today-shell today-error-state">
         <div className="today-hero-copy">
-          <p className="kicker">Today</p>
-          <h1>Today did not load</h1>
-          <p className="muted" role="alert">{error}</p>
+          <p className="kicker">Today command feed</p>
+          <h1>Today is temporarily unavailable</h1>
+          <p className="muted" role="alert">
+            The live check-in feed did not respond. Your saved plan has not changed.
+          </p>
+          <p className="today-error-detail">Technical detail: {error}</p>
         </div>
-        <button type="button" className="secondary-button" onClick={() => void loadToday()}>
-          Retry
-        </button>
+        <div className="today-action-row today-error-actions">
+          <button type="button" className="cta" onClick={() => void loadToday()}>
+            Retry Today
+          </button>
+          <Link href="/plans" className="secondary-button">
+            Open Plans
+          </Link>
+          <Link href="/" className="ghost-button">
+            Overview
+          </Link>
+        </div>
       </section>
     );
   }

@@ -921,6 +921,28 @@ function IntakeCard({
   );
 }
 
+function PlansSyncState() {
+  return (
+    <article className="list-card plans-sync-card" aria-busy="true">
+      <div className="plans-dashboard-card-header">
+        <div className="plans-dashboard-card-copy">
+          <p className="kicker">Plan sync</p>
+          <h2>Loading saved fight camps</h2>
+          <p className="muted">
+            Pulling the active camp, plan history, and current intake from the athlete record.
+          </p>
+        </div>
+        <span className="badge status-badge-neutral">Syncing</span>
+      </div>
+      <div className="plans-sync-grid" aria-hidden="true">
+        <div className="plans-sync-line plans-sync-line-short" />
+        <div className="plans-sync-line" />
+        <div className="plans-sync-line plans-sync-line-mid" />
+      </div>
+    </article>
+  );
+}
+
 export default function PlansPage() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -1095,7 +1117,7 @@ export default function PlansPage() {
 
         <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
           {isPlanListLoading ? (
-            <PlansFeaturedSkeleton />
+            <PlansSyncState />
           ) : (
             <LatestPlanCard
               plan={activePlan}
@@ -1110,6 +1132,14 @@ export default function PlansPage() {
 
         {isLoading ? (
           <div className="plans-history-block athlete-motion-slot athlete-motion-main" aria-busy="true">
+            <div className="plans-history-header">
+              <div className="plans-history-header-copy">
+                <p className="kicker">Plan Manager</p>
+                <h2>Syncing plan history</h2>
+                <p className="muted">Saved versions will appear here once the plan feed responds.</p>
+              </div>
+              <span className="badge status-badge-neutral">Loading</span>
+            </div>
             <div className="plan-history-list plans-history-list">
               <PlanHistoryRowSkeleton />
               <PlanHistoryRowSkeleton />
