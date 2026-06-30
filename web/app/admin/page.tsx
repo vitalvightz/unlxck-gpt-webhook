@@ -563,7 +563,7 @@ export default function AdminPage() {
             <p className="kicker">Admin</p>
             <h1>Fight camp control room</h1>
             <p className="muted">Live generation queues, athlete risk signals, and plan-review decisions in one operator view.</p>
-            <div className="admin-priority-rail" aria-label="Admin priority status">
+            <div className="admin-priority-rail" role="region" aria-label="Admin priority status">
               <span className="admin-priority-label">{adminActionLabel}</span>
               <span>{lastCheckedLabel}</span>
             </div>
