@@ -248,7 +248,7 @@ export function BodyMap({
 
   return (
     <div className="body-map-panel" data-active-side={side}>
-      <p className="body-map-title">Tap a zone to add</p>
+      <p className="body-map-title">Add injury area</p>
       <div className="body-map-svg-stack">
         <BodySvg
           side="front"
@@ -288,7 +288,7 @@ export function BodyMap({
       <p className="body-map-hint" aria-live="polite">
         {hoverLabel ||
           (hasAnyMarked
-            ? "Tap a zone to add it. Tap a marked zone to set its severity."
+            ? "Tap another zone, or tap the marked zone again to raise severity."
             : "Tap a zone, or type the area manually in a card.")}
       </p>
       {hasAnyMarked ? (
