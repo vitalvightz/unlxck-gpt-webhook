@@ -119,15 +119,19 @@ class TestBindingActiveRoleCap:
         assert _bridge_active_role_cap(20, _low_risk_model(**overrides)) == 2
 
     @pytest.mark.parametrize("days", [17, 16, 15, 14])
-    def test_d17_to_d14_no_declared_sparring_stays_two(self, days):
-        # No declared hard sparring => no freed slot to reallocate.
+    def test_d17_to_d14_low_risk_keeps_three_for_conditioning_touch(self, days):
+        # The mandatory freshness day counts against the active-role budget, so a
+        # flat cap of 2 in D-17..D-14 is fully consumed by the strength touch +
+        # freshness day, leaving no room for a real conditioning exposure. A
+        # low-risk athlete keeps the extra role here so one alactic conditioning
+        # touch fits. Declared hard sparring is no longer required to earn it.
         model = _low_risk_model(days_until_fight=days, hard_sparring_days=[])
-        assert _bridge_active_role_cap(days, model) == 2
+        assert _bridge_active_role_cap(days, model) == 3
 
     @pytest.mark.parametrize("days", [17, 16, 15, 14])
-    def test_d17_to_d14_with_declared_sparring_reallocates_freed_slot(self, days):
-        # Hard sparring converts to technical from D-17; the freed coach-owned slot
-        # is reallocated to one low-risk app role for a low-risk athlete.
+    def test_d17_to_d14_with_declared_sparring_keeps_three(self, days):
+        # Hard sparring converts to technical from D-17; the low-risk athlete keeps
+        # the extra app role regardless of whether sparring was declared.
         model = _low_risk_model(days_until_fight=days, hard_sparring_days=["monday", "thursday"])
         assert _bridge_active_role_cap(days, model) == 3
 
@@ -212,7 +216,11 @@ class TestEndToEndAllocation:
         assert _late_fight_active_role_count(roles) == 3
 
     @pytest.mark.parametrize("days", [16, 15])
-    def test_d17_to_d14_no_declared_sparring_stays_two(self, days):
+    def test_d17_to_d14_no_declared_sparring_gets_conditioning_touch(self, days):
+        # Low-risk athlete with no declared sparring now gets a third app session
+        # in D-17..D-14: one alactic conditioning touch alongside the strength
+        # touch and freshness day, without raising any safety cap.
         athlete = _boxer("low", days=days, hard_sparring_days=[])
         roles = _late_fight_allocation_plan(days, athlete).get("session_roles", [])
-        assert _late_fight_active_role_count(roles) == 2
+        assert _late_fight_active_role_count(roles) == 3
+        assert any(role.get("role_key") == "alactic_sharpness_day" for role in roles)

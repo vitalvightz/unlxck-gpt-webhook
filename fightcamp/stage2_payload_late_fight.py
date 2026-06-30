@@ -1287,23 +1287,25 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
 
 
 def _bridge_active_role_cap(days_until_fight: Any, athlete_model: dict[str, Any]) -> int | None:
-    """Single source of truth for the binding D-21..D-18 active-role cap.
+    """Single source of truth for the binding D-21..D-14 active-role cap.
 
     The flat late-fight budget caps D-14..D-21 at 2 app-owned active roles. That
     silently overrode the bridge baseline of 3 and shrank plans for clean /
     mildly-managed athletes. This unifies the two: a low-risk athlete (low
     fatigue, at most mild injury, none/low/moderate cut) keeps one extra
-    low-risk active role in the D-21..D-18 window; any safety signal — high
-    fatigue, moderate+ injury, aggressive cut, restricted injury mode — drops
-    them back to the conservative baseline. Hard sparring and glycolytic caps
-    are untouched, so the extra role is filled by low-risk work only.
+    low-risk active role across the whole bridge window (D-21..D-14); any safety
+    signal — high fatigue, moderate+ injury, aggressive cut, restricted injury
+    mode — drops them back to the conservative baseline. Hard sparring and
+    glycolytic caps are untouched, so the extra role is filled by low-risk work
+    only (a non-fatiguing alactic sharpness touch).
 
-    From D-17 the bridge converts all declared hard sparring to technical/rhythm.
-    Coach-owned sparring is excluded from the app's active-role budget, so when it
-    leaves the week the app plan would otherwise shrink. For a low-risk athlete who
-    *declared* hard sparring, reallocate that freed slot: keep the extra low-risk
-    active role through D-17..D-14 too. Athletes who never declared sparring (no
-    freed slot) stay at the conservative baseline.
+    Why the bump now extends through D-17..D-14: the freshness/reset day is
+    mandatory in the bridge and counts against the active-role budget, so a flat
+    cap of 2 there is fully consumed by the strength touch + freshness day,
+    leaving no room for a single real conditioning exposure. Keeping the extra
+    low-risk role makes room for that one alactic touch. (Previously this was
+    only granted in D-21..D-18, or in D-17..D-14 when the athlete had *declared*
+    hard sparring that converted to technical and freed a coach-owned slot.)
     """
     base = _late_fight_max_active_roles(days_until_fight)
     if base is None:
@@ -1311,11 +1313,7 @@ def _bridge_active_role_cap(days_until_fight: Any, athlete_model: dict[str, Any]
     days = _coerce_days(days_until_fight)
     if not (isinstance(days, int) and bridge_low_risk_profile(athlete_model)):
         return base
-    low, high = BRIDGE_EXTRA_EXPOSURE_DAY_RANGE
-    if low <= days <= high:
-        return max(base, 3)
-    declared_hard_sparring = bool(clean_list(athlete_model.get("hard_sparring_days", [])))
-    if 14 <= days < low and declared_hard_sparring:
+    if 14 <= days <= 21:
         return max(base, 3)
     return base
 
@@ -2358,7 +2356,6 @@ def _late_fight_candidate_roles(
     has_downgraded_hard_days = bool(permission_policy.get("downgraded_hard_days", []))
 
     if mode == "bridge_compression_payload":
-        days = _coerce_days(days_until_fight)
         sub_band = bridge_sub_band(days_until_fight)
         candidates.append(
             _late_fight_role_entry(
@@ -2372,6 +2369,7 @@ def _late_fight_candidate_roles(
                 legal_countdown_labels=legal_countdown_labels,
             )
         )
+        glycolytic_touch_added = False
         if sub_band == "d21_to_d19" and not preserved_hard_days and not _suppress_standalone_glycolytic(
             preserved_hard_days, athlete_model
         ):
@@ -2387,25 +2385,29 @@ def _late_fight_candidate_roles(
                     legal_countdown_labels=legal_countdown_labels,
                 )
             )
-        elif (
-            days is not None
-            and days <= 17
-            and has_downgraded_hard_days
+            glycolytic_touch_added = True
+        if (
+            not glycolytic_touch_added
+            and not preserved_hard_days
             and bridge_low_risk_profile(athlete_model)
         ):
-            # From D-17 declared hard sparring is converted to technical, freeing a
-            # coach-owned slot. For a low-risk athlete, reallocate it to one
-            # taper-appropriate alactic sharpness touch (low metabolic fatigue,
-            # freshness-preserving) so the week is not under-dosed once sparring
-            # drops out. Non-glycolytic, so it respects the bridge glycolytic
-            # suppression; the active-role cap (_bridge_active_role_cap) admits it.
+            # Guarantee one real conditioning exercise across the rest of the
+            # bridge (D-18..D-14) for a low-risk athlete. Below D-19 standalone
+            # glycolytic work is correctly forbidden, so this is an alactic
+            # sharpness touch (low metabolic fatigue, non-glycolytic,
+            # freshness-preserving) — the conditioning exposure the lifted
+            # active-role cap (_bridge_active_role_cap) makes room for alongside
+            # the strength touch + mandatory freshness day. This also covers the
+            # freed coach-owned slot when declared hard sparring converts to
+            # technical from D-17. Hard sparring / glycolytic / freshness safety
+            # caps are untouched.
             candidates.append(
                 _late_fight_role_entry(
                     category="conditioning",
                     role_key="alactic_sharpness_day",
                     preferred_pool="conditioning_slots",
                     preferred_system="alactic",
-                    selection_rule="One short alactic sharpness touch only, replacing the removed hard sparring stimulus. Keep it crisp and non-fatiguing.",
+                    selection_rule="One short alactic sharpness touch only. Keep it crisp and non-fatiguing.",
                     placement_rule="Keep this brief and very low volume; never describe it as a conditioning build and never place it on the freshness day.",
                     selection_priority=96,
                     legal_countdown_labels=legal_countdown_labels,
