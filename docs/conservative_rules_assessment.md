@@ -176,21 +176,26 @@ cap" above.
 
 ## Third review pass — implemented
 
-### D-17 freed-slot reallocation (cause #4 extension)
+### D-18..D-14 guaranteed conditioning touch (cause #4 extension)
 
-From D-17 the bridge converts all declared hard sparring to technical/rhythm, freeing
-a coach-owned slot that the app budget excludes. For a **low-risk** athlete who
-declared hard sparring, `_bridge_active_role_cap` now keeps the active-role cap at 3
-through D-17..D-14, and `_late_fight_candidate_roles` adds **one `alactic_sharpness_day`**
-(alactic = low metabolic fatigue, freshness-preserving) so the week is not under-dosed
-once sparring drops out. Non-glycolytic, so it respects the bridge glycolytic
-suppression. Athletes who never declared sparring (no freed slot) or who carry any
-safety signal stay at the conservative 2.
+The freshness/reset day is mandatory in the bridge and counts against the active-role
+budget, so a flat cap of 2 in D-17..D-14 is fully consumed by the strength touch +
+freshness day — leaving no room for a single real conditioning exposure. For a
+**low-risk** athlete, `_bridge_active_role_cap` now keeps the active-role cap at 3
+across the **whole** bridge window (D-21..D-14), and `_late_fight_candidate_roles` adds
+**one `alactic_sharpness_day`** (alactic = low metabolic fatigue, freshness-preserving)
+on every bridge day that does not already carry the D-21..D-19 glycolytic touch. This
+guarantees one real conditioning exercise alongside the strength touch and freshness
+day throughout the window — previously D-18..D-14 came back strength + freshness only.
+Non-glycolytic, so it respects the bridge glycolytic suppression. This also subsumes the
+earlier freed-slot rule (declared hard sparring converting to technical from D-17).
+Athletes who carry any safety signal stay at the conservative 2, and the hard-sparring,
+glycolytic and freshness safety caps are all untouched.
 
 - Code: `stage2_payload_late_fight.py:_bridge_active_role_cap`,
   `_late_fight_candidate_roles` (bridge block), bridge `allowed_role_keys`.
-- Tests: `tests/test_performance_bias.py` (D-17..D-14 with/without declared sparring,
-  end-to-end app-owned count).
+- Tests: `tests/test_performance_bias.py` (D-17..D-14 low-risk keeps three with/without
+  declared sparring, end-to-end app-owned count + alactic touch present).
 
 ### High-pressure cut sensitivity (cause #1)
 
