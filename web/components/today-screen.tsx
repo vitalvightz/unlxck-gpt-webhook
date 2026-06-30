@@ -1166,7 +1166,9 @@ export function TodayScreen() {
         <div className="today-hero-copy">
           <p className="kicker">Today command feed</p>
           <h1>Today is temporarily unavailable</h1>
-          <p className="muted" role="alert">
+          {process.env.NODE_ENV !== "production" ? (
+            <p className="today-error-detail">Technical detail: {error}</p>
+          ) : null}
             The live check-in feed did not respond. Your saved plan has not changed.
           </p>
           <p className="today-error-detail">Technical detail: {error}</p>
