@@ -81,6 +81,9 @@ class TestSpecUnitCases:
         # D-17 inside the bridge window always zeros hard sparring regardless
         # of other inputs. Moderate cut still blocks hard sparring but the
         # full plan remains allowed (technical / rhythm / strength touch).
+        # Low-fatigue + none/low/moderate cut keeps the extra low-risk active
+        # role across the whole bridge (filled by a non-fatiguing alactic touch),
+        # so the active-role guidance is 3 while glycolytic / hard-spar stay 0.
         result = compute_bridge_rules(
             days_until_fight=17,
             sport="boxing",
@@ -89,7 +92,7 @@ class TestSpecUnitCases:
             injury_mode="full_plan",
             hard_sparring_days_declared=0,
         )
-        assert result["max_active_roles"] == 2
+        assert result["max_active_roles"] == 3
         assert result["max_meaningful_stress_exposures"] == 2
         assert result["glycolytic_touch_max"] == 0
         assert result["strength_touch_max"] == 1
