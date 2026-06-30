@@ -1159,7 +1159,19 @@ export function TodayScreen() {
   if (isLoading) {
     return <TodayLoadingState />;
   }
-
+  if (error) {
+    const isAccessIssue = /unauthorized|forbidden|not authenticated/i.test(error);
+    return (
+      <section className="panel today-shell today-error-state">
+        <div className="today-hero-copy">
+          <p className="kicker">Today command feed</p>
+          <h1>{isAccessIssue ? "Access is locked" : "Today is temporarily unavailable"}</h1>
+          <p className="muted" role="alert">
+            {isAccessIssue
+              ? "Sign in with an active athlete account to unlock Today."
+              : "The live check-in feed did not respond. Your saved plan has not changed."}
+          </p>
+        </div>
   if (error) {
     return (
       <section className="panel today-shell today-error-state">
