@@ -12945,6 +12945,42 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   gap: 10px;
 }
 
+.active-conflict-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+
+.active-conflict-button {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+}
+
+.active-conflict-button-primary {
+  border-color: rgba(181, 18, 43, 0.48);
+  background: rgba(181, 18, 43, 0.18);
+}
+
+.active-conflict-button-primary:hover {
+  border-color: rgba(255, 88, 115, 0.72);
+  background: rgba(181, 18, 43, 0.26);
+}
+
+.active-conflict-button-wide,
+.active-conflict-button-cancel {
+  grid-column: 1 / -1;
+}
+
+.active-conflict-button-cancel {
+  min-height: 44px;
+  color: var(--text-secondary);
+}
+
 html[data-app-surface="workspace"][data-theme="dark"] body {
   background:
     radial-gradient(circle at top left, rgba(181, 18, 43, 0.08), transparent 22%),
@@ -13144,6 +13180,10 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   .plan-dialog-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .active-conflict-actions {
+    grid-template-columns: 1fr;
   }
 
   .plan-dialog-backdrop {
