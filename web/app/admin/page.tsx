@@ -545,7 +545,14 @@ export default function AdminPage() {
   const reviewPlansDisplayWarning = nonProfileSectionError(reviewPlansWarning);
   const attentionDisplayWarning = nonProfileSectionError(attentionWarning);
   const activeProfileError = isProfileServiceUnavailableMessage(activeWarning);
-  const triageProfileError = isProfileServiceUnavailableMessage(triageWarning);
+  const hasQueueWarning = Boolean(triageWarning || reviewPlansWarning || attentionWarning);
+  const adminActionLabel = isJobsLoading
+    ? "Scanning live queues"
+    : hasQueueWarning
+      ? "Queue status unavailable"
+      : adminActionCount > 0
+        ? `${adminActionCount} admin decision${adminActionCount === 1 ? "" : "s"} open`
+        : "Queues clear";
   const reviewPlansProfileError = isProfileServiceUnavailableMessage(reviewPlansWarning);
   const attentionProfileError = isProfileServiceUnavailableMessage(attentionWarning);
   const adminActionCount = triageJobs.length + reviewPlans.length + attentionReviews.length;
