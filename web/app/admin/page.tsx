@@ -549,7 +549,7 @@ export default function AdminPage() {
   const reviewPlansProfileError = isProfileServiceUnavailableMessage(reviewPlansWarning);
   const attentionProfileError = isProfileServiceUnavailableMessage(attentionWarning);
   const adminActionCount = triageJobs.length + reviewPlans.length + attentionReviews.length;
-  const adminActionLabel = isJobsLoading
+            <h1>{hasAccess ? "Fight camp control room" : "Admin access is locked"}</h1>
     ? "Scanning live queues"
     : adminActionCount > 0
       ? `${adminActionCount} admin decision${adminActionCount === 1 ? "" : "s"} open`
