@@ -588,7 +588,13 @@ export default function AdminPage() {
             <article className="status-card admin-summary-card" data-tone={triageJobs.length > 0 ? "danger" : "neutral"}>
               <p className="status-label">Triage queue</p>
               <h2 className="plan-summary-title">{isJobsLoading ? "-" : triageJobs.length}</h2>
-              <p className="muted">{isJobsLoading ? "Checking jobs." : `${triageAthleteCount} athlete${triageAthleteCount === 1 ? "" : "s"} waiting.`}</p>
+              <p className="muted">
+                {isJobsLoading
+                  ? "Checking reviews."
+                  : attentionReviews.length > 0
+                    ? "Athlete flags open."
+                    : "No flags open."}
+              </p>
             </article>
             <article className="status-card admin-summary-card" data-tone={attentionReviews.length > 0 ? "danger" : "neutral"}>
               <p className="status-label">Needs attention</p>
