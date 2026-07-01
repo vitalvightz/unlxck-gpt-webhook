@@ -239,6 +239,45 @@ _NEGATED_STRUCTURAL_BREAK_RE = re.compile(
 )
 
 
+# Calm, coach-facing note for a minor surface injury that trains through. This is
+# deliberately NOT medical-panic language: it treats the athlete as fit to train
+# and only asks for basic wound hygiene. It is surfaced ONCE as a global note, not
+# repeated per session (see surface_minor_train_through below).
+SURFACE_MINOR_TRAIN_THROUGH_NOTE = (
+    "Minor surface injury: keep it covered and clean, avoid direct friction on the "
+    "area, and stop if it opens, bleeds, or becomes infected. Train normally otherwise."
+)
+
+# Surface-injury types that are treated as train-through skin damage when no
+# danger signal is present. Grazes/abrasions/scrapes/blisters and mild
+# bruises/contusions are skin-level and should not restrict combat training.
+# ``cut``/``laceration`` are intentionally excluded — they carry stitch/deep-wound
+# risk and are gated elsewhere unless clearly minor.
+_MINOR_SURFACE_TRAIN_THROUGH_TYPES = {
+    "graze",
+    "abrasion",
+    "scrape",
+    "blister",
+    "bruise",
+    "contusion",
+}
+
+# Structured surface routing signals that veto minor train-through: each routes to
+# review / medical hold via its own gate. Kept in sync with the surface danger
+# gates in ``_apply_surface_injury_signals`` and the surface review gate below.
+_SURFACE_DANGER_ROUTING_SIGNALS = {
+    "structured:open_wound",
+    "structured:needs_stitches",
+    "structured:eye_area_wound",
+    "structured:sensitive_area_wound",
+    "structured:bruise_danger_area",
+    "structured:bruise_worsening",
+    "structured:infection_signs",
+    "structured:systemic_infection",
+    "structured:uncontrolled_bleeding",
+}
+
+
 @dataclass(frozen=True)
 class InjuryTriageResult:
     mode: str
@@ -250,6 +289,8 @@ class InjuryTriageResult:
     should_block_stage2: bool = False
     urgent_flags: list[str] = field(default_factory=list)
     sparring_risk_band: str = "green"
+    surface_minor_train_through: bool = False
+    global_notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -520,6 +561,8 @@ def _build_result(
     routing_reasons: set[str],
     urgent_flags: set[str],
     sparring_risk_band: str,
+    surface_minor_train_through: bool = False,
+    global_notes: list[str] | None = None,
 ) -> InjuryTriageResult:
     return InjuryTriageResult(
         mode=mode,
@@ -531,6 +574,8 @@ def _build_result(
         should_block_stage2=should_block_stage2,
         urgent_flags=sorted(urgent_flags),
         sparring_risk_band=sparring_risk_band,
+        surface_minor_train_through=surface_minor_train_through,
+        global_notes=list(global_notes or []),
     )
 
 
@@ -1387,6 +1432,49 @@ def _apply_surface_injury_signals(
             routing_reasons.add("structured:bruise_worsening")
 
 
+def _minor_surface_train_through(
+    *,
+    plan_input: PlanInput,
+    routing_reasons: set[str],
+    red_flags: set[str],
+    matched_categories: set[str],
+    urgent_flags: set[str],
+) -> bool:
+    """Whether the payload is a minor, skin-level surface injury that should train
+    through with only a calm global note.
+
+    Requires an actual minor surface type (graze/abrasion/scrape/blister/mild
+    bruise/minor contusion) and the absence of any surface danger signal, red flag,
+    urgent flag, or high-risk category. This is the ``surface_minor_train_through``
+    concept: it never relaxes a real safety gate — it is only evaluated on the
+    full-plan path, so every danger gate has already passed by the time it runs.
+    """
+    if red_flags or urgent_flags or matched_categories:
+        return False
+    if routing_reasons & _SURFACE_DANGER_ROUTING_SIGNALS:
+        return False
+
+    def _is_minor(value: Any) -> bool:
+        return _normalized_text(value) in _MINOR_SURFACE_TRAIN_THROUGH_TYPES
+
+    for guided in _effective_guided_injuries(plan_input):
+        if _normalized_text(guided.injury_type) == "surface_injury" and _is_minor(
+            guided.surface_type
+        ):
+            return True
+
+    for item in plan_input.parsed_injuries or []:
+        if not isinstance(item, dict):
+            continue
+        if any(
+            _is_minor(item.get(key))
+            for key in ("guided_surface_type", "injury_type", "rehab_type")
+        ):
+            return True
+
+    return False
+
+
 def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     features = build_triage_features(
         injuries=plan_input.injuries,
@@ -1748,6 +1836,18 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             sparring_risk_band=highest_band,
         )
 
+    surface_minor_train_through = _minor_surface_train_through(
+        plan_input=plan_input,
+        routing_reasons=routing_reasons,
+        red_flags=red_flags,
+        matched_categories=matched_categories,
+        urgent_flags=urgent_flags,
+    )
+    global_notes: list[str] = []
+    if surface_minor_train_through:
+        routing_reasons.add("surface_minor_train_through")
+        global_notes.append(SURFACE_MINOR_TRAIN_THROUGH_NOTE)
+
     return _build_result(
         mode=FULL_PLAN,
         reasons=["No pre-planning medical hold signals detected."],
@@ -1758,6 +1858,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons=routing_reasons,
         urgent_flags=urgent_flags,
         sparring_risk_band=highest_band,
+        surface_minor_train_through=surface_minor_train_through,
+        global_notes=global_notes,
     )
 
 

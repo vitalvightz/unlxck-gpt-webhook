@@ -12,6 +12,7 @@ from fightcamp.injury_triage import (
     MEDICAL_HOLD,
     NEEDS_REVIEW,
     RESTRICTED_REHAB_ONLY,
+    SURFACE_MINOR_TRAIN_THROUGH_NOTE,
     triage_injuries,
 )
 from fightcamp.input_parsing import PlanInput
@@ -319,6 +320,190 @@ class TestSurfaceBruise:
         }))
         triage = triage_injuries(parsed)
         assert triage.mode != FULL_PLAN
+
+
+# ── Minor surface injuries train through (PR 2) ───────────────────────
+#
+# Grazes, scrapes, abrasions, and mild bruises are skin-level damage. In a combat
+# sport they must NOT restrict normal training unless a real danger signal is
+# present. These tests pin the train-through behaviour and the calm, coach-facing
+# global note, while the danger-signal tests below prove the safety gates survive.
+
+
+class TestSurfaceMinorTrainThrough:
+    def test_lower_back_graze_returns_full_plan(self):
+        # (A) A minor lower-back graze trains through: full plan, no block, no
+        # review, no restriction, no broad exclusion.
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "lower back",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "graze",
+            "infection_signs": [],
+            "open_wound": "no",
+            "bleeding_status": "none",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode == FULL_PLAN
+        assert triage.should_block_stage2 is False
+        assert triage.clinician_clearance_required is False
+        assert triage.matched_high_risk_categories == []
+        assert triage.red_flags == []
+        assert triage.surface_minor_train_through is True
+        # No hard restriction was synthesised from the surface injury's guidance.
+        assert parsed.restrictions == []
+
+    def test_lower_back_graze_emits_calm_global_note(self):
+        # (A) The only guidance is a single calm global note — no per-session
+        # wound-care panic, no medical-clearance language.
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "lower back",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "graze",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.global_notes == [SURFACE_MINOR_TRAIN_THROUGH_NOTE]
+        note = triage.global_notes[0].lower()
+        # Coach language, not medical panic.
+        assert "medical" not in note
+        assert "clearance" not in note
+        assert "restricted" not in note
+        assert "seek" not in note
+
+    def test_shin_scrape_trains_through(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "right shin",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "scrape",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode == FULL_PLAN
+        assert triage.surface_minor_train_through is True
+
+    def test_minor_bruise_stable_trains_through_with_calm_note(self):
+        # (C) A stable minor bruise trains through with only the calm global note —
+        # no conditioning/strength suppression, no block.
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "left quad",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "bruise",
+            "impact_related": "yes",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode == FULL_PLAN
+        assert triage.should_block_stage2 is False
+        assert triage.surface_minor_train_through is True
+        assert triage.global_notes == [SURFACE_MINOR_TRAIN_THROUGH_NOTE]
+
+    def test_train_through_note_is_not_repeated(self):
+        # (E) Regression: the calm note is surfaced exactly once as a global note,
+        # never duplicated as if it must be repeated per session.
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "lower back",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "abrasion",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.global_notes.count(SURFACE_MINOR_TRAIN_THROUGH_NOTE) == 1
+
+
+class TestSurfaceDangerSignalsStillBlock:
+    # (D) Real danger signals keep their block/review routing — train-through must
+    # never leak past a genuine safety gate.
+
+    def test_uncontrolled_bleeding_blocks(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "forearm",
+            "severity": "moderate",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "abrasion",
+            "bleeding_status": "wont_stop",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode != FULL_PLAN
+        assert triage.should_block_stage2 is True
+        assert triage.surface_minor_train_through is False
+        assert "uncontrolled_bleeding" in triage.red_flags
+
+    def test_infection_signs_block(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "left elbow",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "abrasion",
+            "infection_signs": ["pus", "spreading"],
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode != FULL_PLAN
+        assert triage.surface_minor_train_through is False
+        assert "infection_signs" in triage.red_flags
+
+    def test_needs_stitches_needs_review(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "left shin",
+            "severity": "moderate",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "cut",
+            "notes": "deep gash, needs stitches",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode == NEEDS_REVIEW
+        assert triage.surface_minor_train_through is False
+        assert "needs_stitches" in triage.red_flags
+
+    def test_eye_wound_needs_review(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "left eyebrow",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "cut",
+            "sensitive_area": "eye",
+            "open_wound": "no",
+            "bleeding_status": "none",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode == NEEDS_REVIEW
+        assert triage.surface_minor_train_through is False
+        assert "eye_area_wound" in triage.red_flags
+
+    def test_worsening_bruise_needs_review(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "thigh",
+            "severity": "moderate",
+            "trend": "worsening",
+            "injury_type": "surface_injury",
+            "surface_type": "bruise",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode != FULL_PLAN
+        assert triage.surface_minor_train_through is False
+
+    def test_rib_impact_bruise_with_breathing_blocks(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "left rib",
+            "severity": "moderate",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "bruise",
+            "impact_related": "yes",
+            "notes": "pain breathing after impact",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode != FULL_PLAN
+        assert triage.surface_minor_train_through is False
 
 
 # ── Regression tests ──────────────────────────────────────────────────
