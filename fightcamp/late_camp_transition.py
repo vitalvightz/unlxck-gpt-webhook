@@ -214,7 +214,8 @@ def _text_has_safety_marker(text: str) -> bool:
 
 
 def _week_is_compressed(week: dict[str, Any], athlete_model: dict[str, Any]) -> bool:
-    if week.get("intentional_compression"):
+    ic = week.get("intentional_compression")
+    if ic and (ic.get("active") if isinstance(ic, dict) else ic):
         return True
     flags_text = " ".join(str(flag) for flag in clean_list(week.get("coach_note_flags")))
     if "compress" in flags_text.lower():
