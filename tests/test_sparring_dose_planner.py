@@ -682,9 +682,11 @@ def test_bridge_d17_clean_boxer_zeros_hard_sparring():
     assert len(effective) == 0
 
 
-def test_bridge_d20_moderate_cut_contact_sport_zeros_hard_sparring():
-    # D-20 boxer with a real cut (~5%) falls into moderate bucket within the
-    # bridge window — moderate cut on a contact sport must zero hard sparring.
+def test_bridge_d20_moderate_cut_contact_sport_keeps_one_hard_spar():
+    # D-20 boxer with a real cut (~5%) falls into the moderate bucket within the
+    # bridge window. A moderate cut is note-only: it must NOT zero hard sparring
+    # on a contact sport — the clean-athlete cap_one behaviour stands, so one
+    # hard sparring exposure survives just like a clean D-20 boxer.
     plan = compute_hard_sparring_plan(
         week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
         athlete_snapshot=_athlete(
@@ -696,7 +698,7 @@ def test_bridge_d20_moderate_cut_contact_sport_zeros_hard_sparring():
         ),
     )
     effective = [e for e in plan if e["status"] == "hard_as_planned"]
-    assert len(effective) == 0
+    assert len(effective) == 1
 
 
 def test_bridge_d16_downgrades_all_declared_hard_days():

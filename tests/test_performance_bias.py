@@ -155,11 +155,13 @@ class TestComputeBridgeRulesGuidanceAgrees:
             weight_cut_bucket="moderate", injury_mode="full_plan",
         )
         assert result["max_active_roles"] == 3
-        # Safety caps untouched — this is the load-shape lever only.
-        assert result["hard_sparring_cap"] == 0
-        assert result["glycolytic_touch_max"] == 0
-        # Moderate cut still trims one meaningful stress exposure.
-        assert result["max_meaningful_stress_exposures"] == 2
+        # A moderate cut is note-only: it does not restrict hard work, so the
+        # baseline bridge allowances stand.
+        assert result["hard_sparring_cap"] == 1
+        assert result["glycolytic_touch_max"] == 1
+        # Moderate cut no longer trims meaningful stress exposure.
+        assert result["max_meaningful_stress_exposures"] == 3
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
     def test_clean_low_fatigue_gets_three(self):
         result = compute_bridge_rules(

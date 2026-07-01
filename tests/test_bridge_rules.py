@@ -79,11 +79,12 @@ class TestSpecUnitCases:
 
     def test_bridge_boxer_with_moderate_cut_at_d17(self):
         # D-17 inside the bridge window always zeros hard sparring regardless
-        # of other inputs. Moderate cut still blocks hard sparring but the
-        # full plan remains allowed (technical / rhythm / strength touch).
-        # Low-fatigue + none/low/moderate cut keeps the extra low-risk active
-        # role across the whole bridge (filled by a non-fatiguing alactic touch),
-        # so the active-role guidance is 3 while glycolytic / hard-spar stay 0.
+        # of other inputs (the D-window rule, not the cut). A moderate cut is
+        # note-only: it does NOT trim meaningful stress, so the baseline bridge
+        # exposure of 3 is preserved. Low-fatigue + none/low/moderate cut keeps
+        # the extra low-risk active role across the whole bridge, so the
+        # active-role guidance is 3 while glycolytic / hard-spar stay 0 by the
+        # D-window baseline.
         result = compute_bridge_rules(
             days_until_fight=17,
             sport="boxing",
@@ -93,19 +94,20 @@ class TestSpecUnitCases:
             hard_sparring_days_declared=0,
         )
         assert result["max_active_roles"] == 3
-        assert result["max_meaningful_stress_exposures"] == 2
+        assert result["max_meaningful_stress_exposures"] == 3
         assert result["glycolytic_touch_max"] == 0
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
         assert result["hard_sparring_cap"] == 0
         assert result["block_full_plan"] is False
-        assert result["double_stress_day_allowed"] is False
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
+        assert "weight_cut_moderate_trim_stress" not in result["reason_codes"]
 
     def test_bridge_d20_boxer_with_moderate_cut(self):
-        # D-20 is inside D-21..D-18 sub-slice where the clean default is
-        # cap=1, but moderate cut on a contact sport must zero hard sparring
-        # and suppress optional glycolytic density — WITHOUT blocking the
-        # full plan.
+        # D-20 is inside the D-21..D-18 sub-slice where the clean default is
+        # cap=1 with one optional glycolytic touch. A moderate cut is note-only
+        # and must NOT zero hard sparring or glycolytic density — the baseline
+        # allowances stand, with only a calm hydration/fuelling note added.
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
@@ -114,11 +116,16 @@ class TestSpecUnitCases:
             injury_mode="full_plan",
             hard_sparring_days_declared=0,
         )
-        assert result["hard_sparring_cap"] == 0
-        assert result["glycolytic_touch_max"] == 0
+        assert result["hard_sparring_cap"] == 1
+        assert result["glycolytic_touch_max"] == 1
         assert result["block_full_plan"] is False
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
+        assert (
+            "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
+            not in result["reason_codes"]
+        )
 
     def test_bridge_d16_high_cut_forces_one_active_role(self):
         result = compute_bridge_rules(
@@ -345,8 +352,9 @@ class TestModifierOrdering:
             fatigue="moderate",
             weight_cut_bucket="moderate",
         )
-        # Each knocks off one stress exposure but not below zero.
-        assert result["max_meaningful_stress_exposures"] == 1
+        # Only moderate fatigue trims one stress exposure (3 -> 2). A moderate
+        # cut is note-only and no longer stacks a second reduction.
+        assert result["max_meaningful_stress_exposures"] == 2
         assert result["double_stress_day_allowed"] is False
 
     def test_sport_style_never_raises_caps_beyond_baseline(self):
@@ -562,9 +570,10 @@ class TestBridgeCapTransitions:
 
 
 class TestBridgeModerateCutContactSports:
-    """Moderate cut zeros hard spar and optional density for contact sports."""
+    """A moderate cut is note-only: it must NOT zero hard spar or optional
+    density for contact sports. Only high+ cuts restrict hard work."""
 
-    def test_moderate_cut_boxing_zeros_hard_sparring(self):
+    def test_moderate_cut_boxing_keeps_hard_sparring(self):
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
@@ -572,12 +581,17 @@ class TestBridgeModerateCutContactSports:
             fatigue="low",
             injury_mode="full_plan",
         )
-        assert result["hard_sparring_cap"] == 0
-        assert result["glycolytic_touch_max"] == 0
+        assert result["hard_sparring_cap"] == 1
+        assert result["glycolytic_touch_max"] == 1
         assert result["block_full_plan"] is False
-        assert "weight_cut_moderate_bridge_contact_sport_zero_hard_spar" in result["reason_codes"]
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
+        assert (
+            "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
+            not in result["reason_codes"]
+        )
+        assert "weight_cut_moderate_trim_stress" not in result["reason_codes"]
 
-    def test_moderate_cut_mma_zeros_hard_sparring(self):
+    def test_moderate_cut_mma_keeps_hard_sparring(self):
         result = compute_bridge_rules(
             days_until_fight=19,
             sport="mma",
@@ -585,11 +599,12 @@ class TestBridgeModerateCutContactSports:
             fatigue="low",
             injury_mode="full_plan",
         )
-        assert result["hard_sparring_cap"] == 0
-        assert result["glycolytic_touch_max"] == 0
+        assert result["hard_sparring_cap"] == 1
+        assert result["glycolytic_touch_max"] == 1
         assert result["block_full_plan"] is False
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
-    def test_moderate_cut_grappler_zeros_hard_sparring(self):
+    def test_moderate_cut_grappler_keeps_hard_sparring(self):
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="wrestling",
@@ -597,10 +612,13 @@ class TestBridgeModerateCutContactSports:
             fatigue="low",
             injury_mode="full_plan",
         )
-        assert result["hard_sparring_cap"] == 0
+        assert result["hard_sparring_cap"] == 1
         assert result["block_full_plan"] is False
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
-    def test_moderate_cut_grappler_style_zeros_hard_sparring(self):
+    def test_moderate_cut_grappler_style_keeps_hard_sparring(self):
+        # Grappler style still reallocates striking hard contact, but the
+        # moderate cut itself no longer zeros the hard sparring cap.
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="mma",
@@ -609,11 +627,13 @@ class TestBridgeModerateCutContactSports:
             fatigue="low",
             injury_mode="full_plan",
         )
-        assert result["hard_sparring_cap"] == 0
+        assert result["hard_sparring_cap"] == 1
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
 
 class TestBridgeGlycolyticRules:
-    """D-21..D-19 may allow one short glycolytic touch; moderate cut suppresses."""
+    """D-21..D-19 may allow one short glycolytic touch; a moderate cut is
+    note-only and keeps it, only high+ cuts suppress it."""
 
     def test_d20_clean_allows_one_glycolytic_touch(self):
         result = compute_bridge_rules(
@@ -635,7 +655,7 @@ class TestBridgeGlycolyticRules:
         )
         assert result["glycolytic_touch_max"] == 0
 
-    def test_moderate_cut_suppresses_glycolytic_in_d21_to_d19(self):
+    def test_moderate_cut_keeps_glycolytic_in_d21_to_d19(self):
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
@@ -643,7 +663,9 @@ class TestBridgeGlycolyticRules:
             weight_cut_bucket="moderate",
             injury_mode="full_plan",
         )
-        assert result["glycolytic_touch_max"] == 0
+        # Note-only moderate cut keeps the baseline glycolytic touch.
+        assert result["glycolytic_touch_max"] == 1
+        assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
 
 class TestBridgeStyleCannotRaiseCaps:
