@@ -5518,6 +5518,17 @@ button.mobile-step-rail-item {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.today-injury-status-note {
+  margin: -2px 0 0;
+  color: var(--brand-red);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
 .today-injury-confirm {
   display: flex;
   flex-wrap: wrap;
@@ -5612,6 +5623,12 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 }
 
 .today-injury-map-control label {
+  align-self: flex-end;
+  width: min(100%, 220px);
+  gap: 8px;
+}
+
+.today-injury-map-control span {
   color: var(--text-muted);
   font-family: var(--font-mono), monospace;
   font-size: 11px;
@@ -6131,6 +6148,10 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 
   .today-injury-add-title {
     margin-bottom: 0;
+  }
+
+    align-self: stretch;
+    width: 100%;
   }
 
   .today-readiness-strip dd {

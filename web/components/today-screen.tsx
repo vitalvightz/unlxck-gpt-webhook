@@ -640,6 +640,7 @@ function InjuryCheckinCard({
         <ul className="today-injury-list">
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
+            const selectedAction = INJURY_STATUS_ACTIONS.find((action) => action.value === selectedStatus);
             const isPending = pendingFlagId === injury.id;
 
             return (
@@ -653,6 +654,9 @@ function InjuryCheckinCard({
                   {INJURY_STATUS_ACTIONS.map((action) => {
                     const activeStatus = confirmingClearId === injury.id ? "resolved" : selectedStatus;
                     const isSelected = action.value === activeStatus;
+                    const isSelected =
+                      action.value === selectedStatus ||
+                      (action.value === "resolved" && confirmingClearId === injury.id);
 
                     return (
                       <button

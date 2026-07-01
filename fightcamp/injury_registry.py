@@ -46,6 +46,56 @@ SURFACE_MINOR_TRAIN_THROUGH_NOTE = (
     "area, and stop if it opens, bleeds, or becomes infected. Train normally otherwise."
 )
 
+# Flag markers that pull a surface injury back onto the existing danger gates
+# (infection, uncontrolled bleeding, needs-review, worsening, clinical clearance,
+# any red flag). If a parsed surface injury carries one of these, it is NOT a
+# train-through skin constraint and must keep its normal urgent/red-flag routing.
+_SURFACE_TRAIN_THROUGH_RED_FLAG_MARKERS = (
+    "red_flag",
+    "urgent",
+    "review",
+    "clearance",
+    "infection",
+    "infected",
+    "suspected",
+    "bleed",
+    "stitch",
+    "worsen",
+)
+
+
+def is_stable_train_through_surface_injury(injury: dict | None) -> bool:
+    """True for a stable, non-severe surface (skin) injury that should train through.
+
+    A graze/abrasion/blister that is not high severity and carries no red-flag
+    signal is a skin/friction *hygiene* constraint — not injured tissue. Such an
+    injury must not drive rehab drills, anatomical exercise/region blocking, or
+    hard-work suppression; it surfaces only as a single hygiene/friction note.
+
+    Returns False (so existing danger gates stay unchanged) for anything that is
+    not a minor surface type — including cut/laceration (deep-wound/stitch risk)
+    and infection — any high/severe surface injury, or an injury carrying a
+    red-flag / needs-review / clearance / bleeding / worsening flag.
+    """
+    if not isinstance(injury, dict):
+        return False
+    injury_type = _normalize_injury_type(injury.get("injury_type") or injury.get("rehab_type"))
+    if injury_type not in MINOR_SURFACE_TRAIN_THROUGH_TYPES:
+        return False
+    severity = str(injury.get("severity") or "").strip().lower()
+    if severity in {"high", "severe"}:
+        return False
+    flags = injury.get("flags")
+    if isinstance(flags, str):
+        flags = [flags]
+    elif not isinstance(flags, (list, tuple, set)) and flags is not None:
+        return False
+    for flag in flags or []:
+        token = str(flag or "").strip().lower()
+        if token and any(marker in token for marker in _SURFACE_TRAIN_THROUGH_RED_FLAG_MARKERS):
+            return False
+    return True
+
 
 def is_known_injury_type(injury_type: str | None) -> bool:
     return _normalize_injury_type(injury_type) in ALL_INJURY_TYPES
