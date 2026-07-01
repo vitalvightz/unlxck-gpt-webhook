@@ -654,9 +654,6 @@ function InjuryCheckinCard({
                   {INJURY_STATUS_ACTIONS.map((action) => {
                     const activeStatus = confirmingClearId === injury.id ? "resolved" : selectedStatus;
                     const isSelected = action.value === activeStatus;
-                    const isSelected =
-                      action.value === selectedStatus ||
-                      (action.value === "resolved" && confirmingClearId === injury.id);
 
                     return (
                       <button
