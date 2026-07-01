@@ -2241,17 +2241,9 @@ _LATE_FIGHT_PROGRESSION_ADVICE_PHRASES = (
 
 # Negators that, when they immediately precede the progression cue, mean the
 # line is stating *not* to progress (e.g. "do not progress the drill").
-_LATE_FIGHT_PROGRESSION_NEGATORS = (
-    "do not",
-    "don't",
-    "dont",
-    "never",
-    "no ",
-    "not ",
-    "n't ",
-    "avoid",
-    "without",
-    "instead of",
+_LATE_FIGHT_PROGRESSION_NEGATOR_PATTERN = re.compile(
+    r"\b(?:do\s+not|don['’]t|dont|never|no|not|avoid|without|instead\s+of)\b|n['’]t\b",
+    re.IGNORECASE,
 )
 
 
@@ -2264,7 +2256,7 @@ def _late_fight_progression_phrase_match(line: str, phrase: str) -> int | None:
     line_lower = line.lower()
     for match in re.finditer(pattern, line_lower):
         window = line_lower[max(0, match.start() - 24):match.start()]
-        if any(negator in window for negator in _LATE_FIGHT_PROGRESSION_NEGATORS):
+        if _LATE_FIGHT_PROGRESSION_NEGATOR_PATTERN.search(window):
             continue
         return match.start()
     return None
