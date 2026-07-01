@@ -527,6 +527,9 @@ function InjuryCheckinCard({
 }) {
   const { showToast } = useToast();
   const [pendingFlagId, setPendingFlagId] = useState<string | null>(null);
+  const [selectedStatusByFlagId, setSelectedStatusByFlagId] = useState<
+    Partial<Record<string, TodayInjuryCheckinStatus>>
+  >({});
   // Clearing an injury removes it from tracking, so it asks for an explicit
   // confirmation first; this holds the flag id awaiting that "are you sure?".
   const [confirmingClearId, setConfirmingClearId] = useState<string | null>(null);
@@ -534,7 +537,9 @@ function InjuryCheckinCard({
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
   const [newZone, setNewZone] = useState("");
+  const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("shown");
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
+  const bodyMapVisibilityId = useId();
   const newInjurySelections: BodyMapSelection[] = newArea.trim()
     ? [
         {
@@ -555,12 +560,18 @@ function InjuryCheckinCard({
       return;
     }
     setPendingFlagId(flagId);
+    setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
     try {
       await submit([{ flag_id: flagId, status }]);
       showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
         tone: "success",
       });
     } catch (error) {
+      setSelectedStatusByFlagId((current) => {
+        const next = { ...current };
+        delete next[flagId];
+        return next;
+      });
       showToast(error instanceof Error ? error.message : "Injury update failed.", { tone: "error" });
     } finally {
       setPendingFlagId(null);
@@ -621,74 +632,100 @@ function InjuryCheckinCard({
       </div>
       {openInjuries.length ? (
         <ul className="today-injury-list">
-          {openInjuries.map((injury) => (
-            <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
-              <div className="today-injury-meta">
-                <span className="today-injury-name">{getInjuryLabel(injury)}</span>
-                <span className="badge status-badge-neutral">{injury.severity}</span>
-                {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
-              </div>
-              <div className="today-segment-row" role="group" aria-label={`Update ${getInjuryLabel(injury)}`}>
-                {INJURY_STATUS_ACTIONS.map((action) => (
-                  <button
-                    key={action.value}
-                    type="button"
-                    className={`today-segment${
-                      action.value === "resolved" && confirmingClearId === injury.id
-                        ? " today-segment-active"
-                        : ""
-                    }`}
-                    disabled={pendingFlagId === injury.id}
-                    aria-pressed={action.value === "resolved" ? confirmingClearId === injury.id : undefined}
-                    onClick={() => handleInjuryAction(injury.id, action.value)}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-              {confirmingClearId === injury.id ? (
-                <div
-                  className="today-injury-confirm"
-                  role="alertdialog"
-                  aria-label={`Clear ${getInjuryLabel(injury)}?`}
-                >
-                  <span className="today-injury-confirm-text">
-                    Clear this injury? It will be removed from today&apos;s tracking.
-                  </span>
-                  <div className="today-injury-confirm-actions">
-                    <button
-                      type="button"
-                      className="today-injury-confirm-yes"
-                      disabled={pendingFlagId !== null}
-                      onClick={() => void confirmClear(injury.id)}
-                    >
-                      {pendingFlagId === injury.id ? "Clearing..." : "Yes, clear"}
-                    </button>
-                    <button
-                      type="button"
-                      className="today-injury-confirm-cancel"
-                      disabled={pendingFlagId !== null}
-                      onClick={() => setConfirmingClearId(null)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+          {openInjuries.map((injury) => {
+            const selectedStatus = selectedStatusByFlagId[injury.id];
+            const selectedAction = INJURY_STATUS_ACTIONS.find((action) => action.value === selectedStatus);
+            const isPending = pendingFlagId === injury.id;
+
+            return (
+              <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
+                <div className="today-injury-meta">
+                  <span className="today-injury-name">{getInjuryLabel(injury)}</span>
+                  <span className="badge status-badge-neutral">{injury.severity}</span>
+                  {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
-              ) : null}
-            </li>
-          ))}
+                <div className="today-segment-row" role="group" aria-label={`Update ${getInjuryLabel(injury)}`}>
+                  {INJURY_STATUS_ACTIONS.map((action) => {
+                    const isSelected =
+                      action.value === selectedStatus ||
+                      (action.value === "resolved" && confirmingClearId === injury.id);
+
+                    return (
+                      <button
+                        key={action.value}
+                        type="button"
+                        className={`today-segment${isSelected ? " today-segment-active" : ""}`}
+                        disabled={isPending}
+                        aria-pressed={isSelected}
+                        onClick={() => handleInjuryAction(injury.id, action.value)}
+                      >
+                        {action.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedAction ? (
+                  <p className="today-injury-status-note" role="status">
+                    {isPending ? `Saving ${selectedAction.label.toLowerCase()}...` : `${selectedAction.label} selected`}
+                  </p>
+                ) : null}
+                {confirmingClearId === injury.id ? (
+                  <div
+                    className="today-injury-confirm"
+                    role="alertdialog"
+                    aria-label={`Clear ${getInjuryLabel(injury)}?`}
+                  >
+                    <span className="today-injury-confirm-text">
+                      Clear this injury? It will be removed from today&apos;s tracking.
+                    </span>
+                    <div className="today-injury-confirm-actions">
+                      <button
+                        type="button"
+                        className="today-injury-confirm-yes"
+                        disabled={pendingFlagId !== null}
+                        onClick={() => void confirmClear(injury.id)}
+                      >
+                        {pendingFlagId === injury.id ? "Clearing..." : "Yes, clear"}
+                      </button>
+                      <button
+                        type="button"
+                        className="today-injury-confirm-cancel"
+                        disabled={pendingFlagId !== null}
+                        onClick={() => setConfirmingClearId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="muted">No injuries are being tracked. Add one below if something is bothering you.</p>
       )}
 
       <form className="today-injury-add" onSubmit={addInjury}>
-        <BodyMap
-          side={bodyMapSide}
-          selections={newInjurySelections}
-          onZoneSelect={selectBodyMapZone}
-          onSideChange={setBodyMapSide}
-        />
+        <label className="field today-injury-map-control" htmlFor={bodyMapVisibilityId}>
+          <span>Body map</span>
+          <select
+            id={bodyMapVisibilityId}
+            value={bodyMapVisibility}
+            onChange={(event) => setBodyMapVisibility(event.target.value === "hidden" ? "hidden" : "shown")}
+          >
+            <option value="shown">Show map</option>
+            <option value="hidden">Hide map</option>
+          </select>
+        </label>
+        {bodyMapVisibility === "shown" ? (
+          <BodyMap
+            side={bodyMapSide}
+            selections={newInjurySelections}
+            onZoneSelect={selectBodyMapZone}
+            onSideChange={setBodyMapSide}
+          />
+        ) : null}
         {newArea.trim() ? (
           <div className="today-injury-selection" aria-live="polite">
             <span>Selected</span>
