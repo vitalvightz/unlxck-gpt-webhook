@@ -99,13 +99,21 @@ def _floor_role(week):
 # ---------------------------------------------------------------------------
 
 def test_predicate_flags_stable_surface_and_spares_danger_cases():
+    # Every surface/skin type trains through when stable (not high severity, no
+    # red flag) — cut and laceration included: skin is skin, not tissue.
     assert is_stable_train_through_surface_injury(GRAZE) is True
     assert is_stable_train_through_surface_injury(
         {"injury_type": "abrasion", "severity": "low"}
     ) is True
-    # Deep-wound / stitch risk, severity, red flags and real tissue keep their gates.
-    assert not is_stable_train_through_surface_injury({"injury_type": "laceration", "severity": "moderate"})
+    assert is_stable_train_through_surface_injury({"injury_type": "cut", "severity": "low"}) is True
+    assert is_stable_train_through_surface_injury({"injury_type": "laceration", "severity": "moderate"}) is True
+    # Severity, red flags (infection / stitches / bleeding / review) and real
+    # tissue keep their danger gates.
     assert not is_stable_train_through_surface_injury({"injury_type": "graze", "severity": "high"})
+    assert not is_stable_train_through_surface_injury({"injury_type": "laceration", "severity": "high"})
+    assert not is_stable_train_through_surface_injury(
+        {"injury_type": "cut", "severity": "moderate", "flags": ["needs_stitches"]}
+    )
     assert not is_stable_train_through_surface_injury(
         {"injury_type": "graze", "severity": "moderate", "flags": ["suspected_infection"]}
     )
