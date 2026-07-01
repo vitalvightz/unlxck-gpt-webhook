@@ -1696,6 +1696,24 @@ def render_conditioning_block(
             output_lines.append(
                 "**Speed Dose:** 1-2 exposures/week; 4-6 reps x 4-8 sec; full rest 60-120 sec; RPE 7-8; stop before fatigue."
             )
+        # Combat pressure conditioning floor. GPP base work sits at RPE 6-7, but a
+        # safe build week still needs one controlled hard exposure so the fighter
+        # touches discomfort before fight week. When a glycolytic / fight-pace
+        # exposure is actually present this session (never in TAPER), surface the
+        # hard-pressure dose so the plan is not only easy aerobic support.
+        if phase in {"GPP", "SPP"} and "glycolytic" in systems:
+            if phase == "SPP":
+                output_lines.append(
+                    "**Combat Pressure Floor:** 4-6 x 2-3 min fight-pace on / 60 sec off @ RPE 8-9. "
+                    "Repeat high output under fatigue and hold technique while breathing hard — "
+                    "hard enough to breathe, not sloppy. Stop the round when output or technique drops."
+                )
+            else:
+                output_lines.append(
+                    "**Combat Pressure Floor:** one gas-tank / repeatability touch — "
+                    "6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. "
+                    "Stop when output or technique drops."
+                )
         if phase != "TAPER":
             output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
             output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")

@@ -18,6 +18,7 @@ from .sparring_dose_planner import (
 )
 from .stage2_payload_late_fight import (
     _role_anchor,
+    compute_bridge_rules,
 )
 from .stage2_planning_brief import (
     dedupe_preserve_order,
@@ -2289,6 +2290,312 @@ def _apply_legacy_high_fatigue_compression(
     return kept_roles, updated_suppressed
 
 
+# ---------------------------------------------------------------------------
+# Combat pressure conditioning floor
+# ---------------------------------------------------------------------------
+#
+# A proper fight camp needs at least one controlled hard combat-pressure
+# conditioning exposure in safe build weeks. GPP is not just easy aerobic work
+# and SPP is not just technical rhythm — a fighter has to touch discomfort
+# before fight week. The floor GUARANTEES a single controlled hard exposure in
+# safe GPP/SPP weeks, and blocks it whenever a real safety rule says the athlete
+# should stay fresh (taper, D-7/fight week, high fatigue, high+ cut, medical
+# hold, restricted rehab, needs review, active injury, bridge suppression).
+#
+# This is an execution-layer guarantee: it never overrides a baseline
+# suppression. It only fills the gap when the athlete is safe to receive
+# controlled suffering but the deterministic sequence left them with soft work.
+
+_COMBAT_FLOOR_UNSAFE_FATIGUE = {"high", "critical", "extreme", "unsafe"}
+_COMBAT_FLOOR_UNSAFE_CUT = {"high", "critical", "extreme", "unsafe"}
+_COMBAT_FLOOR_BLOCKING_INJURY_MODES = {
+    "medical_hold",
+    "restricted_rehab_only",
+    "needs_review",
+}
+# Conditioning roles that already represent a hard fight-pace / combat-pressure
+# exposure. ``light_fight_pace_touch_day`` is intentionally excluded — it is the
+# taper rhythm touch, not a hard exposure.
+_COMBAT_FLOOR_HARD_PRESSURE_ROLE_KEYS = {
+    "fight_pace_repeatability_day",
+    "main_fight_pace_day",
+    "highest_glycolytic_day",
+    "controlled_repeatability_day",
+}
+
+
+def _week_min_d_day(week_entry: dict, athlete_model: dict) -> int | None:
+    """Smallest (closest-to-fight) D-day covered by the week, if known."""
+    d_days = [
+        int(day.get("d_day"))
+        for day in (week_entry.get("calendar_days") or [])
+        if isinstance(day.get("d_day"), int)
+    ]
+    if d_days:
+        return min(d_days)
+    days = athlete_model.get("days_until_fight")
+    return days if isinstance(days, int) else None
+
+
+def _is_hard_pressure_conditioning_role(role: dict) -> bool:
+    if str(role.get("category") or "") != "conditioning":
+        return False
+    if role.get("gas_tank_recovery_touch") or role.get("allowed_on_recovery_day"):
+        # Recovery-day gas-tank flushes are low-noise, not a hard exposure.
+        return False
+    if str(role.get("preferred_system") or "").strip().lower() == "glycolytic":
+        return True
+    return str(role.get("role_key") or "") in _COMBAT_FLOOR_HARD_PRESSURE_ROLE_KEYS
+
+
+def _bridge_allows_pressure_touch(athlete_model: dict, days: int) -> bool:
+    """Defer to the bridge/late-taper rule set inside the D-21..D-14 window.
+
+    If the baseline bridge rules already allow a single glycolytic touch (and
+    the plan is not blocked) the floor may use a controlled pressure touch. If
+    the bridge suppresses glycolytic work, the floor must not override it.
+    """
+    rules = compute_bridge_rules(
+        days_until_fight=days,
+        sport=athlete_model.get("sport", ""),
+        style=athlete_model.get("style") or athlete_model.get("styles"),
+        fatigue=athlete_model.get("fatigue") or athlete_model.get("fatigue_level") or "low",
+        weight_cut_bucket=_resolved_cut_severity_bucket(athlete_model) or "none",
+        injury_mode=athlete_model.get("injury_mode", "full_plan"),
+        hard_sparring_days_declared=len(clean_list(athlete_model.get("hard_sparring_days", []))),
+    )
+    if rules.get("block_full_plan"):
+        return False
+    return int(rules.get("glycolytic_touch_max") or 0) >= 1
+
+
+def _combat_pressure_floor_blockers(week_entry: dict, athlete_model: dict) -> list[str]:
+    """Return the reason codes that block a hard combat-pressure exposure.
+
+    An empty list means the athlete is safe to receive a controlled hard
+    exposure this week. A moderate weight cut is deliberately NOT a blocker.
+    """
+    phase = str(week_entry.get("phase", "")).upper()
+    if phase not in {"GPP", "SPP"}:
+        return ["floor_only_in_build_phase"]
+
+    reasons: list[str] = []
+    readiness = {
+        str(flag).strip().lower().replace(" ", "_")
+        for flag in clean_list(athlete_model.get("readiness_flags", []))
+    }
+
+    # Medical hold / restricted rehab / needs review — never force hard work.
+    mode = str(athlete_model.get("injury_mode", "")).strip().lower()
+    if mode in _COMBAT_FLOOR_BLOCKING_INJURY_MODES:
+        reasons.append(f"injury_mode_{mode}")
+    if readiness & {"medical_hold", "needs_review", "restricted_rehab", "restricted_rehab_only"}:
+        reasons.append("injury_hold_flag")
+
+    # High / critical / extreme fatigue — protect recovery, not punishment.
+    fatigue = str(athlete_model.get("fatigue") or athlete_model.get("fatigue_level") or "").strip().lower()
+    if fatigue in _COMBAT_FLOOR_UNSAFE_FATIGUE:
+        reasons.append("high_fatigue")
+    if readiness & {"high_fatigue", "critical_fatigue", "extreme_fatigue"}:
+        reasons.append("high_fatigue_flag")
+
+    # High+ weight cut suppresses hard density. Moderate/low/none does NOT.
+    cut_bucket = _resolved_cut_severity_bucket(athlete_model)
+    if cut_bucket in _COMBAT_FLOOR_UNSAFE_CUT:
+        reasons.append(f"weight_cut_{cut_bucket}")
+    if "aggressive_weight_cut" in readiness:
+        reasons.append("aggressive_weight_cut")
+    if athlete_model.get("unsafe_weight_flag"):
+        reasons.append("unsafe_weight_flag")
+
+    # Active injury that blocks hard work.
+    if _active_injury_is_moderate_plus(athlete_model):
+        reasons.append("active_injury_blocks_hard_work")
+
+    # Fight-week / taper freshness flags.
+    if readiness & {"fight_week", "fight_day_protocol"}:
+        reasons.append("fight_week_flag")
+
+    # Countdown proximity: D-7 or closer / late taper block; the bridge window
+    # defers to the baseline glycolytic allowance.
+    min_d = _week_min_d_day(week_entry, athlete_model)
+    if isinstance(min_d, int) and min_d >= 0:
+        if min_d <= 13:
+            reasons.append("late_taper_or_fight_week")
+        elif min_d <= 21 and not _bridge_allows_pressure_touch(athlete_model, min_d):
+            reasons.append("bridge_suppresses_glycolytic")
+
+    return dedupe_preserve_order(reasons)
+
+
+def _combat_pressure_floor_metadata(phase: str) -> dict[str, Any]:
+    """Coach-language dose/purpose/stop-rule for the hard exposure."""
+    if str(phase).upper() == "SPP":
+        return {
+            "combat_pressure_floor": True,
+            "mandatory_hard_conditioning_exposure": True,
+            "prescribed_intensity_rpe": "8-9",
+            "prescribed_dose": "4-6 x 2-3 min fight-pace on / 60 sec off @ RPE 8-9",
+            "floor_purpose": (
+                "Controlled fight-pace pressure exposure: repeat high output under "
+                "fatigue, recover between rounds, tolerate lactate and decision "
+                "pressure, and hold technique while breathing hard."
+            ),
+            "floor_stop_rule": (
+                "Hard enough to breathe, not sloppy — stop the round when output or "
+                "technique clearly drops. This is pressure tolerance, not collapse."
+            ),
+        }
+    return {
+        "combat_pressure_floor": True,
+        "mandatory_hard_conditioning_exposure": True,
+        "prescribed_intensity_rpe": "8",
+        "prescribed_dose": "6-8 x 60 sec hard / 60-90 sec easy @ RPE 8",
+        "floor_purpose": (
+            "Gas tank / repeatability touch: one controlled hard pressure exposure "
+            "to build work capacity and pressure tolerance without sloppy collapse."
+        ),
+        "floor_stop_rule": (
+            "Hard enough to breathe, not sloppy — stop when output or technique "
+            "drops. Controlled discomfort, not punishment."
+        ),
+    }
+
+
+def _stamp_combat_pressure_floor(role: dict, phase: str) -> None:
+    role.update(_combat_pressure_floor_metadata(phase))
+
+
+def _pick_combat_floor_upgrade_target(
+    session_roles: list[dict], must_keep: set[str]
+) -> dict | None:
+    """Choose a developmental conditioning role to make hard.
+
+    The floor never removes a ``must_keep`` system's instance (so a protected
+    aerobic base survives), and it never hijacks a protective slot (recovery-day
+    gas-tank flushes, converted low-load support, rehab-friendly touches). It
+    prefers a spare aerobic slot, then an alactic slot, so a gas-tank / fight
+    pace exposure can be added without dropping the base the plan wants to keep.
+    """
+    aerobic_targets: list[dict] = []
+    alactic_targets: list[dict] = []
+    for role in session_roles:
+        if str(role.get("category") or "") != "conditioning":
+            continue
+        system = str(role.get("preferred_system") or "").strip().lower()
+        role_key = str(role.get("role_key") or "")
+        if role.get("gas_tank_recovery_touch") or role.get("allowed_on_recovery_day"):
+            continue
+        if "converted" in role_key or "recovery" in role_key or "mobility" in role_key:
+            continue
+        if system == "glycolytic":
+            continue
+        # Never convert the last instance of a must-keep system.
+        if system in must_keep:
+            continue
+        if system == "aerobic":
+            aerobic_targets.append(role)
+        elif system == "alactic":
+            alactic_targets.append(role)
+    if aerobic_targets:
+        return aerobic_targets[0]
+    if alactic_targets:
+        return alactic_targets[0]
+    return None
+
+
+def _convert_role_to_combat_pressure(role: dict, phase: str) -> None:
+    new_key = "fight_pace_repeatability_day" if str(phase).upper() == "SPP" else "controlled_repeatability_day"
+    role["role_key"] = new_key
+    role["preferred_system"] = "glycolytic"
+    role["preferred_pool"] = "conditioning_slots"
+    role["preferred_tags"] = dedupe_preserve_order(
+        clean_list(role.get("preferred_tags", [])) + ["glycolytic", "fight_pace", "repeatability", "gas_tank"]
+    )
+    role["selection_rule"] = _role_selection_rule(new_key, "conditioning", "glycolytic")
+    role["upgraded_from_combat_pressure_floor"] = True
+    # Drop the soft aerobic label so the final label stamp resolves the
+    # fight-pace label for the new role_key.
+    role.pop("athlete_facing_label", None)
+    _stamp_combat_pressure_floor(role, phase)
+
+
+def _enforce_combat_pressure_floor(
+    week_entry: dict,
+    session_roles: list[dict],
+    suppressed_roles: list[dict],
+    athlete_model: dict,
+) -> list[dict]:
+    """Guarantee one controlled hard combat-pressure exposure in safe build weeks."""
+    phase = str(week_entry.get("phase", "")).upper()
+    blockers = _combat_pressure_floor_blockers(week_entry, athlete_model)
+    if blockers:
+        week_entry["combat_pressure_floor"] = {"active": False, "reason_codes": blockers}
+        return session_roles
+
+    # Already have a hard exposure? Stamp it so the plan clearly shows the dose,
+    # purpose, and stop rule — do not add a second one (dose stays controlled).
+    existing = next(
+        (role for role in session_roles if _is_hard_pressure_conditioning_role(role)),
+        None,
+    )
+    if existing is not None:
+        _stamp_combat_pressure_floor(existing, phase)
+        week_entry["combat_pressure_floor"] = {
+            "active": True,
+            "source": "existing_role",
+            "role_key": existing.get("role_key"),
+        }
+        return session_roles
+
+    # A glycolytic role that the baseline hard-suppressed must stay suppressed —
+    # the floor never overrides a baseline suppression.
+    if any(
+        str(entry.get("preferred_system") or "").strip().lower() == "glycolytic"
+        or str(entry.get("role_key") or "") in _COMBAT_FLOOR_HARD_PRESSURE_ROLE_KEYS
+        for entry in suppressed_roles
+    ):
+        week_entry["combat_pressure_floor"] = {
+            "active": False,
+            "reason_codes": ["baseline_suppresses_glycolytic"],
+        }
+        return session_roles
+
+    # Keep the exposure separated from stacked collisions: if the week already
+    # carries two or more effective hard-sparring days, skip the *added*
+    # exposure rather than pile a hard session onto a saturated week.
+    effective_hard = clean_list(week_entry.get("effective_hard_sparring_days", []))
+    if len(effective_hard) >= 2:
+        week_entry["combat_pressure_floor"] = {
+            "active": False,
+            "reason_codes": ["collision_saturated_week"],
+        }
+        return session_roles
+
+    resolved_rule_state = dict(week_entry.get("resolved_rule_state", {}))
+    must_keep = {
+        str(token).strip().lower()
+        for token in clean_list(
+            resolved_rule_state.get("must_keep", week_entry.get("must_keep", []))
+        )
+    }
+    target = _pick_combat_floor_upgrade_target(session_roles, must_keep)
+    if target is None:
+        week_entry["combat_pressure_floor"] = {
+            "active": False,
+            "reason_codes": ["no_convertible_slot_without_breaking_must_keep"],
+        }
+        return session_roles
+
+    _convert_role_to_combat_pressure(target, phase)
+    week_entry["combat_pressure_floor"] = {
+        "active": True,
+        "source": "upgraded_conditioning_slot",
+        "role_key": target.get("role_key"),
+    }
+    return session_roles
+
+
 def _build_weekly_role_map(
     athlete_model: dict,
     week_by_week_progression: dict,
@@ -2533,7 +2840,18 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
-        
+
+        # Combat pressure conditioning floor: guarantee one controlled hard
+        # exposure in safe GPP/SPP build weeks. Runs after the soft-work
+        # upgrades so it can see the final conditioning slots, and before the
+        # final lock/resequence so the upgraded role is placed correctly.
+        session_roles = _enforce_combat_pressure_floor(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+        )
+
         session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
             week_entry,
             session_roles,
@@ -2589,6 +2907,7 @@ def _build_weekly_role_map(
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),
                 "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
                 "intentionally_unused_days": list(week_entry.get("intentionally_unused_days") or []),
+                "combat_pressure_floor": dict(week_entry.get("combat_pressure_floor") or {"active": False}),
                 "session_roles": session_roles,
                 "suppressed_roles": suppressed_roles,
             }
