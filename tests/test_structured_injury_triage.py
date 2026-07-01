@@ -416,6 +416,51 @@ class TestSurfaceMinorTrainThrough:
         assert triage.global_notes.count(SURFACE_MINOR_TRAIN_THROUGH_NOTE) == 1
 
 
+class TestSurfaceMinorTrainThroughGating:
+    # Bruises/contusions are soft-tissue, not skin wounds: they train through only
+    # when explicitly classified as a surface/bruise injury AND low severity. These
+    # pin the severity/category gating so a moderate bruise or a bare parsed
+    # soft-tissue contusion is not labelled a minor surface injury.
+
+    def test_moderate_bruise_is_not_train_through(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "left quad",
+            "severity": "moderate",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "bruise",
+            "impact_related": "yes",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.surface_minor_train_through is False
+        assert triage.global_notes == []
+
+    def test_low_bruise_is_train_through(self):
+        parsed = PlanInput.from_payload(_payload_with_guided({
+            "area": "left quad",
+            "severity": "low",
+            "trend": "stable",
+            "injury_type": "surface_injury",
+            "surface_type": "bruise",
+            "impact_related": "yes",
+        }))
+        triage = triage_injuries(parsed)
+        assert triage.mode == FULL_PLAN
+        assert triage.surface_minor_train_through is True
+
+    def test_bare_free_text_contusion_is_not_labelled_surface(self):
+        # A soft-tissue contusion parsed from free text must not be treated as a
+        # minor surface injury (it has no explicit surface classification).
+        data = _base_payload()
+        for field in data["data"]["fields"]:
+            if field.get("label") == "Any injuries or areas you need to work around?":
+                field["value"] = "thigh contusion"
+                break
+        triage = triage_injuries(PlanInput.from_payload(data))
+        assert triage.surface_minor_train_through is False
+        assert triage.global_notes == []
+
+
 class TestSurfaceDangerSignalsStillBlock:
     # (D) Real danger signals keep their block/review routing — train-through must
     # never leak past a genuine safety gate.
