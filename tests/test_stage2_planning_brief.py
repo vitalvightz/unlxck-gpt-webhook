@@ -1358,15 +1358,23 @@ def test_build_planning_brief_adds_weekly_role_map_from_progression():
     assert role_map["model"] == "session_role_overlay.v1"
     assert len(role_map["weeks"]) == 5
     assert len(first_week_roles) == 5
+    # This is a safe GPP build week (moderate fatigue, no cut, no injury, D-33),
+    # so the combat pressure conditioning floor guarantees one controlled hard
+    # exposure. The must_keep aerobic base survives; the non-protected alactic
+    # slot is upgraded into a controlled fight-pace / gas-tank exposure.
     assert [role["role_key"] for role in first_week_roles] == [
         "secondary_strength_day",
         "aerobic_base_day",
         "recovery_reset_day",
         "primary_strength_day",
-        "alactic_support_day",
+        "controlled_repeatability_day",
     ]
     assert first_week_roles[2]["category"] == "recovery"
     assert first_week_roles[3]["anchor"] == "highest_neural_day"
+    floor_role = first_week_roles[4]
+    assert floor_role["combat_pressure_floor"] is True
+    assert floor_role["preferred_system"] == "glycolytic"
+    assert role_map["weeks"][0]["combat_pressure_floor"]["active"] is True
 
 
 def test_weekly_role_map_fight_week_override_only_modifies_relevant_week():
