@@ -162,8 +162,12 @@ def weight_cut_supervision_required(
         pct = float(cut_pct or 0.0)
     except (TypeError, ValueError):
         pct = 0.0
+    try:
+        days = int(float(days_until_fight)) if days_until_fight is not None else None
+    except (TypeError, ValueError):
+        days = None
     if pct >= 6.0:
         return True
     return cut_warnings_escalate(
-        cut_severity_bucket(compute_cut_severity_score(pct, days_until_fight))
+        cut_severity_bucket(compute_cut_severity_score(pct, days))
     )
