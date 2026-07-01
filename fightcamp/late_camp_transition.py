@@ -11,12 +11,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .gap_fill_inserts import (
-    PHYSICAL_INSERTS,
-    apply_gap_fill_inserts,
-)
+from .gap_fill_inserts import apply_gap_fill_inserts
 from .normalization import clean_list, dedupe_preserve_order
-from .stage2_payload_late_fight import _days_out_payload_mode, _late_fight_window
+from .stage2_payload_late_fight import _late_fight_window
 
 
 _WEEKDAY_CANON = {
@@ -72,6 +69,49 @@ _RECOVERY_ROLES = {
 
 _MAX_TRANSITION_INSERTS_TOTAL = 4
 _MAX_TRANSITION_INSERTS_PER_WEEK = 1
+
+_HARD_PRESSURE_METADATA_KEYS = (
+    "combat_pressure_floor",
+    "mandatory_hard_conditioning_exposure",
+    "prescribed_intensity_rpe",
+    "prescribed_dose",
+    "floor_purpose",
+    "floor_stop_rule",
+    "upgraded_from_combat_pressure_floor",
+)
+
+_LATE_INSERT_SAFETY_READINESS_FLAGS = {
+    "active_weight_cut",
+    "aggressive_weight_cut",
+    "critical_fatigue",
+    "extreme_fatigue",
+    "fight_week",
+    "high_fatigue",
+    "injury_management",
+    "medical_hold",
+    "needs_review",
+    "restricted_rehab",
+    "restricted_rehab_only",
+    "unsafe_weight_flag",
+    "weight_cut_active",
+}
+
+_LATE_INSERT_SAFETY_TEXT_MARKERS = (
+    "active cut",
+    "active weight cut",
+    "collision",
+    "compression",
+    "fatigue",
+    "hard spar",
+    "hard_spar",
+    "injury",
+    "medical hold",
+    "needs review",
+    "red flag",
+    "red_flag",
+    "restricted rehab",
+    "weight cut",
+)
 
 
 def _weekday_key(value: Any) -> str:
@@ -129,6 +169,106 @@ def _stamp_role_countdown(role: dict[str, Any], weekday: str, d_day: int) -> Non
 
 def _flatten_text_values(values: list[Any]) -> str:
     return " ".join(str(value).strip().lower().replace("_", " ") for value in values if str(value).strip())
+
+
+def _flatten_safety_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        return " ".join(_flatten_safety_text(item) for item in value.values())
+    if isinstance(value, (list, tuple, set)):
+        return " ".join(_flatten_safety_text(item) for item in value)
+    return str(value).strip().lower().replace("_", " ")
+
+
+def _normalised_flag_set(values: Any) -> set[str]:
+    return {str(value).strip().lower().replace(" ", "_") for value in clean_list(values) if str(value).strip()}
+
+
+def _athlete_has_late_insert_safety_pressure(athlete_model: dict[str, Any]) -> bool:
+    fatigue = str(athlete_model.get("fatigue") or athlete_model.get("fatigue_level") or "").strip().lower()
+    if fatigue in {"moderate", "high", "critical", "extreme", "unsafe"}:
+        return True
+
+    readiness = _normalised_flag_set(athlete_model.get("readiness_flags", []))
+    if readiness & _LATE_INSERT_SAFETY_READINESS_FLAGS:
+        return True
+
+    injury_mode = str(athlete_model.get("injury_mode") or "").strip().lower()
+    if injury_mode and injury_mode not in {"full_plan", "none", "normal"}:
+        return True
+
+    cut_bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
+    if cut_bucket in {"moderate", "high", "critical", "extreme", "unsafe"}:
+        return True
+    if bool(athlete_model.get("weight_cut_risk")):
+        return True
+    try:
+        if float(athlete_model.get("weight_cut_pct") or 0.0) > 0:
+            return True
+    except (TypeError, ValueError):
+        return True
+
+    injury_text = _flatten_safety_text(
+        [
+            athlete_model.get("parsed_injuries"),
+            athlete_model.get("guided_injury"),
+            athlete_model.get("injury_restrictions"),
+            athlete_model.get("injuries") or athlete_model.get("injury") or athlete_model.get("injury_notes"),
+            athlete_model.get("active_injury"),
+        ]
+    )
+    return bool(injury_text.strip()) and injury_text.strip() not in {"none", "no", "false", "0", "n/a", "na"}
+
+
+def _week_has_late_insert_safety_pressure(week: dict[str, Any]) -> bool:
+    compression = week.get("intentional_compression")
+    if isinstance(compression, dict) and compression.get("active"):
+        return True
+    if len(clean_list(week.get("effective_hard_sparring_days", []))) >= 2:
+        return True
+    safety_text = _flatten_safety_text(
+        [
+            week.get("intentional_compression"),
+            week.get("highest_collision_sport_load"),
+            week.get("collision_saturated_week"),
+        ]
+    )
+    return any(marker in safety_text for marker in _LATE_INSERT_SAFETY_TEXT_MARKERS)
+
+
+def _unused_day_entry_is_safety_blocked(day_entry: dict[str, Any]) -> bool:
+    if day_entry.get("low_aerobic_cap_skipped"):
+        return True
+    safety_text = _flatten_safety_text(
+        {
+            "reason": day_entry.get("reason"),
+            "reason_codes": day_entry.get("reason_codes"),
+            "compression_reason_codes": day_entry.get("compression_reason_codes"),
+            "low_aerobic_cap_reason": day_entry.get("low_aerobic_cap_reason"),
+        }
+    )
+    return any(marker in safety_text for marker in _LATE_INSERT_SAFETY_TEXT_MARKERS)
+
+
+def _late_transition_insert_allowed_on_unused_day(
+    week: dict[str, Any],
+    athlete_model: dict[str, Any],
+    weekday: str,
+) -> bool:
+    if _athlete_has_late_insert_safety_pressure(athlete_model):
+        return False
+    if _week_has_late_insert_safety_pressure(week):
+        return False
+
+    matching_unused_days = [
+        item
+        for item in week.get("intentionally_unused_days") or []
+        if isinstance(item, dict) and _weekday_key(item.get("day")) == weekday
+    ]
+    if not matching_unused_days:
+        return True
+    return not any(_unused_day_entry_is_safety_blocked(item) for item in matching_unused_days)
 
 
 def _transition_focus(athlete_model: dict[str, Any]) -> list[str]:
@@ -216,10 +356,27 @@ def _transition_role_key(role: dict[str, Any], d_day: int) -> str | None:
     return None
 
 
+def _has_hard_pressure_metadata(role: dict[str, Any]) -> bool:
+    return any(role.get(key) for key in _HARD_PRESSURE_METADATA_KEYS)
+
+
+def _clear_hard_pressure_metadata(role: dict[str, Any]) -> None:
+    for key in _HARD_PRESSURE_METADATA_KEYS:
+        role.pop(key, None)
+
+
 def _mark_transition_role(role: dict[str, Any], d_day: int, focus: list[str]) -> str | None:
     role_key = str(role.get("role_key") or "").strip()
     if not role_key or role_key == "fight_day_protocol":
         return None
+
+    if _has_hard_pressure_metadata(role) and d_day >= 18:
+        role["late_camp_transition"] = True
+        role["transition_window"] = _late_fight_window(d_day)
+        role["transition_continuity"] = (
+            "Combat-pressure floor preserved in the D-21 to D-18 bridge before the final taper."
+        )
+        return "pressure_floor_preserved"
 
     new_key = _transition_role_key(role, d_day)
     changed = bool(new_key and new_key != role_key)
@@ -239,6 +396,9 @@ def _mark_transition_role(role: dict[str, Any], d_day: int, focus: list[str]) ->
         category = str(role.get("category") or "").strip().lower()
         if category not in {"conditioning", "strength", "recovery"}:
             return None
+
+    if _has_hard_pressure_metadata(role):
+        _clear_hard_pressure_metadata(role)
 
     label, display_text = _role_transition_text(role_key, d_day, focus)
     role["late_camp_transition"] = True
@@ -376,8 +536,9 @@ def _append_gap_transition_inserts(
         declared_days = {_weekday_key(day) for day in clean_list(week.get("declared_training_days"))}
         if declared_days and weekday not in declared_days:
             continue
-        if weekday:
-            _stamp_role_countdown(insert, weekday, d_day)
+        if not _late_transition_insert_allowed_on_unused_day(week, athlete_model, weekday):
+            continue
+        _stamp_role_countdown(insert, weekday, d_day)
         insert["late_camp_transition"] = True
         insert["transition_window"] = _late_fight_window(d_day)
         insert["transition_continuity"] = _continuity_phrase(focus)
@@ -389,8 +550,7 @@ def _append_gap_transition_inserts(
         insert["display_text"] = f"{display}\n{continuity_line}" if display else continuity_line
 
         week.setdefault("session_roles", []).append(insert)
-        if weekday:
-            _remove_intentionally_unused_day(week, weekday)
+        _remove_intentionally_unused_day(week, weekday)
         inserted_so_far.append(insert)
         existing_offsets.add(d_day)
         per_week_count[week_index] = per_week_count.get(week_index, 0) + 1
@@ -513,7 +673,7 @@ def apply_late_camp_transition_overlay(
         "carried_focus": focus if active else [],
         "rules": [
             "Preserve earlier camp qualities; reduce volume and soreness risk.",
-            "Use low-cost inserts only on unused late-camp training days.",
+            "Use low-cost inserts only on unused late-camp training days without safety/compression blockers.",
             "Do not restore development work, hard conditioning build, or extra strength volume.",
         ]
         if active
