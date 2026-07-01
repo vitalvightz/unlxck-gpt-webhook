@@ -29,6 +29,7 @@ from .stage2_planning_brief import (
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
+from .injury_registry import is_stable_train_through_surface_injury
 from .role_labels import stamp_weekly_role_map_labels
 
 
@@ -1815,8 +1816,27 @@ def _cut_severity_compression_points(athlete_model: dict) -> int:
     return 0
 
 
+def _active_injuries_all_stable_surface(athlete_model: dict) -> bool:
+    """True when every parsed active injury is a stable, train-through surface injury.
+
+    A stable surface injury (e.g. a moderate stable graze) is a skin/friction
+    hygiene constraint, not injured tissue, so it must not suppress hard work.
+    Requires at least one parsed injury and that *all* of them qualify — a real
+    injury alongside a graze still counts as an active injury.
+    """
+    parsed = [item for item in (athlete_model.get("parsed_injuries") or []) if isinstance(item, dict)]
+    if not parsed:
+        return False
+    return all(is_stable_train_through_surface_injury(item) for item in parsed)
+
+
 def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
     """True when the athlete has an active injury or restriction at moderate or greater severity."""
+    # A stable, non-severe surface (skin) injury is only a hygiene/friction
+    # constraint — not injured tissue — so it must not suppress hard work the way
+    # a real moderate+ injury does. Surface location is not injured tissue.
+    if _active_injuries_all_stable_surface(athlete_model):
+        return False
     if athlete_model.get("injuries"):
         return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
