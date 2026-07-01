@@ -492,7 +492,7 @@ function normalizePhaseToken(value: string): string {
 // coach phrase, so ordinary title words ("Stop-and-go", a leading "Coach-led
 // boxing session") are never split.
 const SESSION_TITLE_BODY_MARKER =
-  /\s(?=(?:Why|Purpose|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:|No (?:extra|app) S|Coach owns this session|Train with your coach)/i;
+  /\s(?=(?:Why|Purpose|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:|No (?:extra|app) S\s?&?\s?C|Coach owns this session|Train with your coach)/i;
 
 function splitSessionTitle(title: string): { title: string; remainder: string | null } {
   const markerIndex = title.search(SESSION_TITLE_BODY_MARKER);
