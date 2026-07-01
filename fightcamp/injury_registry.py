@@ -85,7 +85,12 @@ def is_stable_train_through_surface_injury(injury: dict | None) -> bool:
     severity = str(injury.get("severity") or "").strip().lower()
     if severity in {"high", "severe"}:
         return False
-    for flag in injury.get("flags") or []:
+    flags = injury.get("flags")
+    if isinstance(flags, str):
+        flags = [flags]
+    elif not isinstance(flags, (list, tuple, set)) and flags is not None:
+        return False
+    for flag in flags or []:
         token = str(flag or "").strip().lower()
         if token and any(marker in token for marker in _SURFACE_TRAIN_THROUGH_RED_FLAG_MARKERS):
             return False
