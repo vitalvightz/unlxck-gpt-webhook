@@ -2713,3 +2713,27 @@ def test_late_fight_regression_only_line_is_not_flagged():
 
     warning_codes = {warning["code"] for warning in report["warnings"]}
     assert "late_fight_progression_suggested" not in warning_codes
+
+
+def test_late_fight_tactical_advance_language_is_not_flagged_as_progression():
+    brief = _late_fight_planning_brief("D-7")
+    brief["late_fight_plan_spec"].update(
+        {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-13",
+            "max_active_roles": 8,
+        }
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-9 (Saturday) — Fight Tactical Watch
+        - Cue: advance to close the distance behind the jab.
+        - Partner advances after each teep.
+        - Progression/regression: regress to shorter clips if focus drifts.
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_progression_suggested" not in warning_codes

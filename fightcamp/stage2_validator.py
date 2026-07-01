@@ -2239,6 +2239,17 @@ _LATE_FIGHT_PROGRESSION_ADVICE_PHRASES = (
     "to load up",
 )
 
+# The lockout only inspects the card's progression/regression annotation line
+# (where this advice lives), not exercise or tactical-cue lines — otherwise
+# movement language like "Partner advances after each teep" or a cue such as
+# "advance to close distance" would false-positive on the "advance" phrases.
+_LATE_FIGHT_PROGRESSION_LINE = re.compile(
+    r"^\s*(?:[-*]\s*)?(?:\*\*)?\s*"
+    r"(?:progress(?:ion)?s?(?:\s*[\/\-]\s*regress(?:ion)?s?)?|regress(?:ion)?s?)"
+    r"\s*[:\-–—]",
+    re.IGNORECASE,
+)
+
 # Negators that, when they immediately precede the progression cue, mean the
 # line is stating *not* to progress (e.g. "do not progress the drill").
 _LATE_FIGHT_PROGRESSION_NEGATOR_PATTERN = re.compile(
@@ -2281,6 +2292,8 @@ def _late_fight_progression_lockout_warnings(
         if not (0 <= day <= 10):
             continue
         for line in lines:
+            if not _LATE_FIGHT_PROGRESSION_LINE.match(line):
+                continue
             matched = next(
                 (
                     phrase
