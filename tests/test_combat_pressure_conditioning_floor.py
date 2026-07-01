@@ -14,6 +14,7 @@ from fightcamp.stage2_role_map import (
     _build_weekly_role_map,
     _combat_pressure_floor_blockers,
     _is_hard_pressure_conditioning_role,
+    _pick_combat_floor_upgrade_target,
 )
 
 
@@ -120,6 +121,35 @@ class TestFloorGate:
     def test_fight_week_flag_blocks(self):
         athlete = _base_athlete(readiness_flags=["fight_week"])
         assert "fight_week_flag" in _combat_pressure_floor_blockers(_far_week(), athlete)
+
+
+class TestUpgradeTargetMustKeep:
+    def _cond(self, role_key, system):
+        return {"category": "conditioning", "role_key": role_key, "preferred_system": system}
+
+    def test_sole_must_keep_instance_is_preserved(self):
+        roles = [self._cond("aerobic_base_day", "aerobic")]
+        assert _pick_combat_floor_upgrade_target(roles, {"aerobic"}) is None
+
+    def test_spare_must_keep_instance_is_convertible(self):
+        # Two aerobic slots + aerobic is must_keep: one may be converted because
+        # a protected aerobic base still remains.
+        roles = [
+            self._cond("aerobic_base_day", "aerobic"),
+            self._cond("aerobic_support_day", "aerobic"),
+        ]
+        target = _pick_combat_floor_upgrade_target(roles, {"aerobic"})
+        assert target is not None
+        assert target["preferred_system"] == "aerobic"
+
+    def test_non_must_keep_alactic_is_convertible_when_aerobic_protected(self):
+        roles = [
+            self._cond("aerobic_base_day", "aerobic"),
+            self._cond("alactic_support_day", "alactic"),
+        ]
+        target = _pick_combat_floor_upgrade_target(roles, {"aerobic"})
+        assert target is not None
+        assert target["preferred_system"] == "alactic"
 
 
 # ---------------------------------------------------------------------------

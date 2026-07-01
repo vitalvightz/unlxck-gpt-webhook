@@ -2471,12 +2471,22 @@ def _pick_combat_floor_upgrade_target(
 ) -> dict | None:
     """Choose a developmental conditioning role to make hard.
 
-    The floor never removes a ``must_keep`` system's instance (so a protected
-    aerobic base survives), and it never hijacks a protective slot (recovery-day
-    gas-tank flushes, converted low-load support, rehab-friendly touches). It
-    prefers a spare aerobic slot, then an alactic slot, so a gas-tank / fight
-    pace exposure can be added without dropping the base the plan wants to keep.
+    The floor never removes a ``must_keep`` system's last instance (so a
+    protected aerobic base survives), and it never hijacks a protective slot
+    (recovery-day gas-tank flushes, converted low-load support, rehab-friendly
+    touches). It prefers a spare aerobic slot, then an alactic slot, so a
+    gas-tank / fight pace exposure can be added without dropping the base the
+    plan wants to keep. When a must-keep system has more than one conditioning
+    slot, a spare slot is still convertible because a protected instance remains.
     """
+    system_counts: dict[str, int] = {}
+    for role in session_roles:
+        if str(role.get("category") or "") != "conditioning":
+            continue
+        system = str(role.get("preferred_system") or "").strip().lower()
+        if system:
+            system_counts[system] = system_counts.get(system, 0) + 1
+
     aerobic_targets: list[dict] = []
     alactic_targets: list[dict] = []
     for role in session_roles:
@@ -2490,8 +2500,9 @@ def _pick_combat_floor_upgrade_target(
             continue
         if system == "glycolytic":
             continue
-        # Never convert the last instance of a must-keep system.
-        if system in must_keep:
+        # Never convert the last instance of a must-keep system, but a spare
+        # slot is fine when a protected instance of that system remains.
+        if system in must_keep and system_counts.get(system, 0) <= 1:
             continue
         if system == "aerobic":
             aerobic_targets.append(role)
