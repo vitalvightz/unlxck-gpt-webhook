@@ -97,6 +97,22 @@ def is_stable_train_through_surface_injury(injury: dict | None) -> bool:
     return True
 
 
+def all_stable_train_through_surface(parsed_injuries) -> bool:
+    """True when there is ≥1 parsed injury and every one is a stable, train-through
+    surface (skin) injury.
+
+    Used by callers that must decide whether the athlete's *entire* injury picture
+    is skin/friction hygiene (no rehab, no load suppression). Requires a non-empty
+    list of dicts; a missing, empty, or malformed list returns False so the caller
+    keeps normal active-injury handling. A real injury alongside a graze fails this
+    check (not every entry qualifies).
+    """
+    items = list(parsed_injuries or [])
+    if not items or not all(isinstance(item, dict) for item in items):
+        return False
+    return all(is_stable_train_through_surface_injury(item) for item in items)
+
+
 def is_known_injury_type(injury_type: str | None) -> bool:
     return _normalize_injury_type(injury_type) in ALL_INJURY_TYPES
 
