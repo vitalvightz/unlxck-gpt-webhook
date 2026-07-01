@@ -591,7 +591,14 @@ def build_stage2_finalizer_packet(
                 or {}
             ),
         },
-        "writing_rules": list((rewrite_guidance or {}).get("writing_rules") or []),
+    if isinstance(late_camp_transition, dict) and late_camp_transition.get("active"):
+        packet["hard_rules"].extend(
+            [
+                "If selected_plan.late_camp_transition.active is true, treat late SPP/TAPER as a taper morph of the existing normal camp, not as a separate pasted late-fight block.",
+                "For roles with transition_continuity, preserve that continuity in the session rationale and keep the prescription lower-cost than the earlier camp quality it carries forward.",
+                "Support_insert roles should be carried in a dedicated late_camp_transition_support_inserts payload and rendered from there, rather than being expanded from weekly_role_map.session_roles in the canonical planning brief.",
+            ]
+        )
     }
 
     if isinstance(late_camp_transition, dict) and late_camp_transition.get("active"):
