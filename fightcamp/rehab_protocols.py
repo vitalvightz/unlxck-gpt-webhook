@@ -1425,7 +1425,7 @@ def format_injury_guardrails(
                 lines.append(f"- {summary}: No rehab drills available for this phase.")
 
     has_upper_limb = any(
-        not _is_surface_type(entry.get("injury_type"))
+        not _is_surface_type(entry.get("rehab_type") or entry.get("injury_type"))
         and LOCATION_REGION_MAP.get((entry.get("canonical_location") or ""), "unspecified") == "upper_limb"
         for entry in entries
     )
