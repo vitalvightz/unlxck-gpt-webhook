@@ -394,8 +394,9 @@ async def run_structured_plan_post_processing(
     any plan whose inline conversion timed out or failed. Re-reads the freshly
     approved row, attempts the structured conversion through the canonical
     trigger (which short-circuits when the row already carries a card), and
-    persists ``structured_plan`` only when one is actually produced. Never
-    raises: any failure leaves the raw markdown fallback intact.
+    persists ``structured_plan`` when one is produced, or the structured debug
+    report when conversion ran but failed. Never raises: any failure leaves the
+    raw markdown fallback intact.
 
     The model conversion can take seconds, during which a concurrent admin action
     (reject, archive, rename, manual Stage 2 edit) may rewrite the plan's status /
@@ -436,17 +437,18 @@ async def run_structured_plan_post_processing(
             result.get("final_plan_text") or result.get("plan_text") or ""
         )
         result = await _attach_structured_plan(result, plan_row, stage2=stage2)
-        # Only write when a structured plan was actually produced; a skip/failure
-        # keeps the existing raw markdown row untouched. Persist via the narrow
-        # structured-output writer so we never overwrite status/plan_text/stage2
-        # fields that a concurrent admin action may have changed mid-conversion.
-        if result.get("structured_plan") is not None:
+        # Persist successful cards, and also persist a failed/skipped structured
+        # debug result when conversion actually ran. This keeps athlete-visible
+        # text untouched while making missed enhanced cards diagnosable.
+        report = result.get("stage2_validator_report") or {}
+        structured_debug = report.get("structured_plan") if isinstance(report, dict) else None
+        if result.get("structured_plan") is not None or structured_debug is not None:
             await asyncio.to_thread(
                 store.update_plan_structured_artifacts,
                 plan_id,
                 structured_plan=result.get("structured_plan"),
                 schema_version=result.get("schema_version"),
-                stage2_validator_report=result.get("stage2_validator_report") or {},
+                stage2_validator_report=report,
                 expected_final_plan_text=conversion_source_text,
             )
     except Exception:  # noqa: BLE001 - background work must never bubble up

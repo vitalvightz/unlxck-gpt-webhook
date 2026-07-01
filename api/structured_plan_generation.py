@@ -1584,6 +1584,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     Card`, `Breathing Reset`, `Freshness Reset`, and `Final Neural Cue` are real
     sessions when the plan gives Duration/Prescription/Purpose lines. Do not
     collapse them into rest days just because they are low-load.
+  * Tactical watch, cue-card, film-review, and visualization work is tactical /
+    mindset support, NOT physical conditioning. Use session_type "skill" or
+    "recovery" as appropriate and block_type "skill" or "mindset"; do not label
+    these as conditioning/strength/plyometric blocks.
   * If a coach-only day says `No app S&C today`, keep sessions as []. If it also
     lists any prescribed app touch on the same D-day, keep the app touch as a
     session and put the coach-owned contact in today_card.coach_led_contact.
