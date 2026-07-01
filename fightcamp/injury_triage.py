@@ -1454,7 +1454,7 @@ def _minor_surface_train_through(
             continue
         if any(
             _is_minor(item.get(key))
-            for key in ("guided_surface_type", "injury_type", "rehab_type")
+            for key in ("guided_surface_type", "surface_type", "guided_source_surface_type", "injury_type", "rehab_type")
         ):
             return True
 
