@@ -1,3 +1,6 @@
+from .weight_cut import weight_cut_risk_band, weight_cut_supervision_required
+
+
 def _is_high_pressure_weight_cut(flags: dict) -> bool:
     if not flags.get("weight_cut_risk", False):
         return False
@@ -40,7 +43,6 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
     fatigue = str(flags.get("fatigue", "low")).lower()
     weight_cut_risk = bool(flags.get("weight_cut_risk", False))
     cut_pct = float(flags.get("weight_cut_pct", 0.0) or 0.0)
-    high_pressure_cut = _is_high_pressure_weight_cut(flags)
 
     targets: dict = {
         "phase": phase,
@@ -96,10 +98,13 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
     if fatigue in ("high", "moderate"):
         targets["fatigue_adjustment"] = fatigue
 
+    days_until_fight = flags.get("days_until_fight")
     targets["weight_cut"] = {
         "active": weight_cut_risk,
-        "risk_band": _weight_cut_risk_band(weight_cut_risk, cut_pct, high_pressure_cut),
-        "supervision_required": bool(weight_cut_risk and (high_pressure_cut or cut_pct >= 6.0)),
+        "risk_band": weight_cut_risk_band(weight_cut_risk, cut_pct, days_until_fight),
+        "supervision_required": weight_cut_supervision_required(
+            weight_cut_risk, cut_pct, days_until_fight
+        ),
     }
 
     # Coach/medical-gated: exact acute-cut + supplement dosing. NEVER render
@@ -125,16 +130,6 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
         targets["coach_gated"] = coach_gated
 
     return targets
-
-
-def _weight_cut_risk_band(active: bool, cut_pct: float, high_pressure: bool) -> str:
-    if not active:
-        return "none"
-    if cut_pct >= 6.0:
-        return "severe"
-    if high_pressure or cut_pct >= 3.0:
-        return "high"
-    return "moderate"
 
 
 def generate_nutrition_block(*, flags: dict) -> str:

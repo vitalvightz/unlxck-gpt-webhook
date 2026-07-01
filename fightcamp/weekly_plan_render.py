@@ -302,7 +302,7 @@ def _recovery_session_lines() -> list[str]:
 
 
 def _sparring_session_lines() -> list[str]:
-    return ["- Coach owns this session (hard sparring). No app S&C today — keep freshness the priority."]
+    return ["- Coach owns this session (hard sparring). No extra S&C today — keep freshness the priority."]
 
 
 def _technical_session_lines() -> list[str]:

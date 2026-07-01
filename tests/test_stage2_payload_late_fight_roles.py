@@ -884,7 +884,7 @@ def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
     assert context[0]["role_key"] == "technical_touch_day"
     assert context[0]["downgraded_from_role_key"] == "hard_sparring_day"
     assert context[0]["athlete_facing_label"] == "Coach-led boxing — no hard sparring / technical only"
-    assert context[0]["display_text"] == "No app S&C today. Keep freshness priority."
+    assert context[0]["display_text"] == "No extra S&C today. Keep freshness priority."
 
 
 def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
@@ -899,4 +899,4 @@ def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
     assert len(context) == 1
     assert context[0]["role_key"] == "hard_sparring_day"
     assert context[0]["athlete_facing_label"] == "Coach-led boxing session"
-    assert context[0]["display_text"] == "No app S&C today. Keep freshness priority."
+    assert context[0]["display_text"] == "No extra S&C today. Keep freshness priority."

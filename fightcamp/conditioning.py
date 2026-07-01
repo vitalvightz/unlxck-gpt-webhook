@@ -1599,8 +1599,8 @@ def _late_fight_dosage_caps(days_until_fight: int) -> str:
             f"{override_note}"
         ),
         0: (
-            "Fight day: no app conditioning prescription. Follow coach warm-up and fight protocol only. "
-            "No additional app S&C. Optional breathing and shoulder mobility only."
+            "Fight day: no conditioning prescription. Follow coach warm-up and fight protocol only. "
+            "No additional S&C. Optional breathing and shoulder mobility only."
         ),
     }
 

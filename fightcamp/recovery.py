@@ -1,5 +1,6 @@
 from .injury_synonyms import parse_injury_phrase
 from .rehab_protocols import get_rehab_bank, normalize_rehab_location
+from .weight_cut import weight_cut_risk_band, weight_cut_supervision_required
 
 
 def _fetch_injury_drills(injuries: list, phase: str) -> list:
@@ -84,7 +85,6 @@ def compute_recovery_plan(training_context: dict) -> dict:
     age = int(training_context.get("age", 0) or 0)
     weight_cut_risk = bool(training_context.get("weight_cut_risk", False))
     cut_pct = float(training_context.get("weight_cut_pct", 0.0) or 0.0)
-    high_pressure_cut = _is_high_pressure_weight_cut(training_context)
     age_risk = age >= 35 or bool(training_context.get("age_risk", False))
 
     plan: dict = {
@@ -130,10 +130,13 @@ def compute_recovery_plan(training_context: dict) -> dict:
     elif phase == "GPP":
         plan["phase_focus"] = ["Tissue prep & joint mobility", "Reset sleep routine"]
 
+    days_until_fight = training_context.get("days_until_fight")
     plan["weight_cut"] = {
         "active": weight_cut_risk,
-        "risk_band": _recovery_weight_cut_band(weight_cut_risk, cut_pct, high_pressure_cut),
-        "supervision_required": bool(weight_cut_risk and (high_pressure_cut or cut_pct >= 6.0)),
+        "risk_band": weight_cut_risk_band(weight_cut_risk, cut_pct, days_until_fight),
+        "supervision_required": weight_cut_supervision_required(
+            weight_cut_risk, cut_pct, days_until_fight
+        ),
     }
 
     # Coach/medical-gated: acute weight-cut recovery manipulation. NEVER render
@@ -157,16 +160,6 @@ def compute_recovery_plan(training_context: dict) -> dict:
         plan["coach_gated"] = coach_gated
 
     return plan
-
-
-def _recovery_weight_cut_band(active: bool, cut_pct: float, high_pressure: bool) -> str:
-    if not active:
-        return "none"
-    if cut_pct >= 6.0:
-        return "severe"
-    if high_pressure or cut_pct >= 3.0:
-        return "high"
-    return "moderate"
 
 
 def generate_recovery_block(training_context: dict) -> str:

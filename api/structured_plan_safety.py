@@ -376,12 +376,15 @@ def detect_computed_support_conflicts(structured_plan: dict, computed_support: d
                 )
                 break
 
-    # Weight-cut risk band.
+    # Weight-cut risk band. Only an *escalated* cut (high / severe, rank >= 2)
+    # requires a supervision-tier weight_cut_warning. A moderate band is a calm,
+    # informational cut — a warning is optional there, so its absence is not a
+    # conflict and we never demand alarm copy for a routine cut.
     computed_band = _max_computed_band(support)
     expected_rank = _BAND_RANK.get(computed_band, 0)
     wcw = _as_dict(nutrition.get("weight_cut_warning"))
     structured_level = str(wcw.get("risk_level", "")) if wcw else ""
-    if expected_rank >= 1:
+    if expected_rank >= 2:
         if not wcw:
             warnings.append(
                 f"{CONFLICT}: computed weight-cut risk band {computed_band!r} but structured plan has no weight_cut_warning"
