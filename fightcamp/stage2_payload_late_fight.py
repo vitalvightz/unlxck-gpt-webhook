@@ -875,28 +875,11 @@ def _resolve_bridge_cut_bucket(athlete_model: dict[str, Any]) -> str:
     return cut_severity_bucket(score)
 
 
-def _bridge_is_contact_sport(sport: str, styles: list[str]) -> bool:
-    """Contact/combat-sport gate for moderate-cut hard-sparring suppression."""
-    if sport in _BRIDGE_STRIKING_SPORTS | _BRIDGE_MMA_SPORTS:
-        return True
-    # Grappler styles or explicit grappling sports still involve live contact
-    # load (wrestling / BJJ live rolls) and should be treated as contact sport.
-    if any(style in _BRIDGE_GRAPPLER_STYLES for style in styles):
-        return True
-    if sport in {"grappler", "wrestling", "bjj", "judo"}:
-        return True
-    return False
-
-
 def _bridge_apply_weight_cut(
     rules: dict[str, Any],
     bucket: str,
     unsafe: bool,
-    *,
-    sport: str = "",
-    styles: list[str] | None = None,
 ) -> dict[str, Any]:
-    styles = styles or []
     if unsafe:
         if rules.get("plan_mode") in (None, "", "full_plan"):
             rules["plan_mode"] = "needs_review"
@@ -917,23 +900,11 @@ def _bridge_apply_weight_cut(
         rules["reason_codes"].append("weight_cut_high_suppress_hard_work")
         return rules
     if bucket == "moderate":
-        rules["max_meaningful_stress_exposures"] = max(
-            0, rules.get("max_meaningful_stress_exposures", 3) - 1
-        )
-        rules["double_stress_day_allowed"] = False
-        rules["reason_codes"].append("weight_cut_moderate_trim_stress")
-        # Moderate cut in the bridge window for combat / contact sports zeros
-        # hard sparring and standalone glycolytic density. The plan itself is
-        # NOT blocked — technical / rhythm / strength-touch work remains.
-        if (
-            rules.get("timing_state") == TIMING_STATE_BRIDGE
-            and _bridge_is_contact_sport(sport, styles)
-        ):
-            rules["hard_sparring_cap"] = 0
-            rules["glycolytic_touch_max"] = 0
-            rules["reason_codes"].append(
-                "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
-            )
+        # A moderate active cut is note-only: it does NOT reduce training
+        # exposure, block double-stress days, or zero hard sparring /
+        # glycolytic work. It only surfaces calm hydration / fuelling guidance.
+        # Only high+ cuts (handled above) restrict hard work.
+        rules["reason_codes"].append("weight_cut_moderate_note_only")
     return rules
 
 
@@ -1067,9 +1038,7 @@ def compute_bridge_rules(
 
     rules = _bridge_apply_injury(rules, injury_norm)
     rules = _bridge_apply_fatigue(rules, fatigue_norm)
-    rules = _bridge_apply_weight_cut(
-        rules, bucket_norm, unsafe, sport=sport_norm, styles=styles
-    )
+    rules = _bridge_apply_weight_cut(rules, bucket_norm, unsafe)
     rules = _bridge_apply_sport_style(rules, sport_norm, styles)
 
     # Sport/style must never raise caps above the phase baseline.

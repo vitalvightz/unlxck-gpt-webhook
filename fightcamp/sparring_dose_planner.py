@@ -189,34 +189,6 @@ def _countdown_sparring_override(days_until_fight: Any) -> str | None:
     return "convert_all" if 0 <= days <= 17 else None
 
 
-_BRIDGE_CONTACT_SPORTS = {
-    "boxing",
-    "kickboxing",
-    "muay_thai",
-    "muay thai",
-    "mma",
-    "grappler",
-    "wrestling",
-    "bjj",
-    "judo",
-}
-_BRIDGE_GRAPPLER_STYLE_TOKENS = {"grappler", "grappler-heavy", "wrestler", "bjj"}
-
-
-def _bridge_is_contact_sport(athlete_snapshot: dict[str, Any]) -> bool:
-    sport = str(athlete_snapshot.get("sport") or "").strip().lower()
-    if sport in _BRIDGE_CONTACT_SPORTS:
-        return True
-    styles: list[str] = []
-    for key in ("tactical_style", "tactical_styles", "technical_style", "technical_styles", "style"):
-        value = athlete_snapshot.get(key)
-        if isinstance(value, str):
-            styles.extend(item.strip().lower() for item in value.split(",") if item.strip())
-        elif isinstance(value, list):
-            styles.extend(str(item).strip().lower() for item in value if str(item).strip())
-    return any(style in _BRIDGE_GRAPPLER_STYLE_TOKENS for style in styles)
-
-
 def _bridge_window_sparring_override(
     week: dict[str, Any], athlete_snapshot: dict[str, Any]
 ) -> str | None:
@@ -230,10 +202,12 @@ def _bridge_window_sparring_override(
 
     Return values reflect the evidence review:
       D-21 to D-18 (clean / low-risk)   → cap_one
-      D-21 to D-18 (fatigue high, cut
-        high, or moderate cut in a
-        contact sport)                  → deload_all
+      D-21 to D-18 (fatigue high or
+        cut high)                       → deload_all
       D-17 to D-14                      → convert_all
+
+    A moderate active cut is note-only and no longer forces deload_all here —
+    only high+ fatigue / cut pressure removes hard sparring.
     """
     days = _days_until_fight_int(athlete_snapshot)
     if days is None or not (14 <= days <= 21):
@@ -258,15 +232,13 @@ def _bridge_window_sparring_override(
         return "convert_all"
 
     # 18 <= days <= 21: cap_one is the clean-athlete default, but high-fatigue
-    # or any meaningful cut pressure on a contact-sport athlete forces zero
-    # hard sparring via deload_all.
+    # or a high+ cut forces zero hard sparring via deload_all. A moderate cut is
+    # note-only and keeps the clean-athlete cap_one behaviour.
     fatigue = _fatigue_level(athlete_snapshot)
     cut = _cut_pressure(athlete_snapshot)
     if fatigue == "high":
         return "deload_all"
     if cut == "high":
-        return "deload_all"
-    if cut == "moderate" and _bridge_is_contact_sport(athlete_snapshot):
         return "deload_all"
     return "cap_one"
 
