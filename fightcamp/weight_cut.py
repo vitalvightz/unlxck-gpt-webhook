@@ -129,10 +129,14 @@ def weight_cut_risk_band(
         pct = float(cut_pct or 0.0)
     except (TypeError, ValueError):
         pct = 0.0
+    try:
+        days = int(float(days_until_fight)) if days_until_fight is not None else None
+    except (TypeError, ValueError):
+        days = None
     if pct >= 6.0:
         return "severe"
     rank = cut_severity_rank(
-        cut_severity_bucket(compute_cut_severity_score(pct, days_until_fight))
+        cut_severity_bucket(compute_cut_severity_score(pct, days))
     )
     if rank >= _SEVERITY_ORDER.index("critical"):
         return "severe"
