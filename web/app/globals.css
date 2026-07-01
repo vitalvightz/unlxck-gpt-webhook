@@ -5613,7 +5613,7 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 }
 
 .today-injury-add .body-map-panel {
-  width: min(100%, 760px);
+  width: 100%;
   margin-inline: auto;
 }
 
@@ -9603,37 +9603,37 @@ html[data-theme="light"] .injury-card-state {
 }
 
 .body-map-panel {
-  padding: 16px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(181, 18, 43, 0.16);
-  background:
-    linear-gradient(180deg, rgba(24, 18, 22, 0.72), rgba(12, 14, 18, 0.72));
+  padding: 24px 20px 20px;
+  border-radius: var(--radius-support);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.018);
   text-align: center;
 }
 
 .body-map-title {
-  margin: 0 0 8px;
-  color: var(--text-secondary);
+  margin: 0 0 14px;
+  color: var(--text-muted);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .body-map-svg-stack {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 32px;
   align-items: start;
   justify-items: center;
+  max-width: 520px;
   margin: 0 auto;
 }
 
 .body-map-svg-wrap {
   position: relative;
   width: 100%;
-  max-width: 184px;
+  max-width: 224px;
 }
 
 .body-map-side-label {
@@ -9816,7 +9816,7 @@ html[data-theme="light"] .injury-card-state {
 
   .body-map-svg-stack {
     grid-template-columns: 1fr;
-    max-width: 184px;
+    max-width: 208px;
   }
 
   .body-map-side-label {
@@ -10017,8 +10017,8 @@ html[data-theme="light"] .injury-card-state {
 }
 
 html[data-theme="light"] .body-map-panel {
-  border-color: rgba(98, 77, 69, 0.08);
-  background: rgba(248, 242, 235, 0.5);
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(98, 77, 69, 0.025);
 }
 
 html[data-theme="light"] .body-map-zone {
