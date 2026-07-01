@@ -267,7 +267,7 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
     reasons: list[str] = []
     if str(week.get("phase") or "").strip().upper() == "TAPER":
         reasons.append("taper")
-    if _has_active_weight_cut(athlete_model) or reason_codes & {"active_weight_cut", "high_pressure_weight_cut", "weight_cut_high_suppress_hard_work"}:
+    if (_has_active_weight_cut(athlete_model) and str(athlete_model.get("cut_severity_bucket") or "").strip().lower() not in {"", "none", "low", "moderate"}) or reason_codes & {"active_weight_cut", "high_pressure_weight_cut", "weight_cut_high_suppress_hard_work", "weight_cut_unsafe_block"}:
         reasons.append("weight_cut")
     if "d17_hard_sparring_ban" in reason_codes:
         reasons.append("d17_technical_only_rule")
