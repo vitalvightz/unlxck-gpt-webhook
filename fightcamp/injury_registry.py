@@ -28,23 +28,17 @@ INJURY_TYPE_SEVERITY = MappingProxyType(derive_injury_type_severity_map())
 # category="surface" (so ``_is_surface_type`` is True), which lets the rehab
 # formatter collapse them to a single calm note instead of a wound-care drill
 # list. ``cut``/``laceration`` are deliberately absent — they carry deep-wound/
-# stitch risk and keep the detailed wound-care path.
+# stitch risk and keep the detailed wound-care path. Bruises/contusions are NOT
+# here: they are soft-tissue, not skin wounds, and train through via normal
+# full-plan routing and low-severity injury-guard handling instead.
 MINOR_SURFACE_TRAIN_THROUGH_TYPES = frozenset(
     {"graze", "abrasion", "scrape", "blister"}
 )
 
-# Impact bruises/contusions. These are NOT skin wounds (``contusion`` is
-# soft-tissue, ``bruise`` is an alias of it), so they never use the surface
-# wound-care path. They train through only when low/mild severity, and only when
-# the athlete explicitly classified them as a surface/bruise injury — a bare
-# soft-tissue "contusion" parsed from free text must not be labelled a minor
-# surface injury. Gated separately from the skin set in triage.
-MINOR_IMPACT_TRAIN_THROUGH_TYPES = frozenset({"bruise", "contusion"})
-
-# Calm, coach-facing note for a minor surface injury that trains through. This is
-# deliberately NOT medical-panic language: it treats the athlete as fit to train
-# and only asks for basic wound hygiene. It is surfaced ONCE, not repeated per
-# session or per drill.
+# Calm, coach-facing note for a minor surface (skin) injury that trains through.
+# This is deliberately NOT medical-panic language: it treats the athlete as fit
+# to train and only asks for basic wound hygiene. Surfaced once by the rehab
+# formatter in place of a wound-care drill list, not repeated per drill.
 SURFACE_MINOR_TRAIN_THROUGH_NOTE = (
     "Minor surface injury: keep it covered and clean, avoid direct friction on the "
     "area, and stop if it opens, bleeds, or becomes infected. Train normally otherwise."
