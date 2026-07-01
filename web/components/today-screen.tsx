@@ -651,9 +651,8 @@ function InjuryCheckinCard({
                 </div>
                 <div className="today-segment-row" role="group" aria-label={`Update ${getInjuryLabel(injury)}`}>
                   {INJURY_STATUS_ACTIONS.map((action) => {
-                    const isSelected =
-                      action.value === selectedStatus ||
-                      (action.value === "resolved" && confirmingClearId === injury.id);
+                    const activeStatus = confirmingClearId === injury.id ? "resolved" : selectedStatus;
+                    const isSelected = action.value === activeStatus;
 
                     return (
                       <button
