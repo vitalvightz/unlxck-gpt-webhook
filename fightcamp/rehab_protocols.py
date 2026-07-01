@@ -809,25 +809,14 @@ def generate_rehab_protocols(
             loc_title = _render_location_heading(loc, merged)
             type_title = itype.title() if itype else "Surface"
             severity = _normalize_rehab_severity((merged or {}).get("severity"))
-            # A minor skin-level injury (graze/abrasion/blister, not high severity)
-            # trains through: one calm note, no wound-care drill list, and no
-            # per-drill warning repeated every session. cut/laceration and any
-            # high-severity surface injury keep the detailed wound-care path.
+            # Surface/skin injuries are integumentary, not musculoskeletal: they
+            # never get loading rehab or a wound-care drill list — only a single
+            # note. A minor, stable graze/abrasion/blister trains through with the
+            # calm hygiene note; every other surface case (cut/laceration or a
+            # high-severity surface wound) gets the wound-care note. Danger gates
+            # (red flags, needs-review) are enforced upstream and stay untouched.
             if itype in MINOR_SURFACE_TRAIN_THROUGH_TYPES and severity != "high":
                 lines.append(f"- {loc_title} ({type_title}): {SURFACE_MINOR_TRAIN_THROUGH_NOTE}")
-                continue
-            loc_candidates = normalize_rehab_location(loc)
-            surface_drills = _collect_surface_drills(itype, loc_candidates, current_phase)[:drill_limit]
-            if surface_drills:
-                lines.append(f"- {loc_title} ({type_title}):")
-                for name, notes in surface_drills:
-                    headline = f"{name} – {notes}" if notes else name
-                    lines.append(f"  • {headline}")
-                # Wound-care caveat once for the injury, not repeated per drill.
-                lines.append(
-                    "    [Wound care] Manage the skin injury — keep it clean, "
-                    "covered, and friction-free; this is not loading rehab."
-                )
             else:
                 lines.append(f"- {loc_title} ({type_title}): {SURFACE_WOUND_CARE_NOTE}")
             continue
@@ -1224,6 +1213,11 @@ def build_coach_review_entries(
     region_entries: dict[str, dict] = {}
     for entry in entries:
         itype = entry.get("rehab_type") or entry.get("injury_type")
+        # Surface/skin injuries never generate structural coach-review guidance
+        # (region Do/Avoid rulesets, rehab drills, or exercise substitutions).
+        # They are wound-care notes only, surfaced by the injury guardrails block.
+        if _is_surface_type(itype):
+            continue
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
         severity = entry.get("severity") or INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
@@ -1375,6 +1369,10 @@ def format_injury_guardrails(
             }
         )
         lines.append(f"- {summary}")
+        # Surface/skin injuries carry no structural region guardrail — they are
+        # wound-care notes only (rendered in the Rehab Priority block below).
+        if _is_surface_type(itype):
+            continue
         ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
             severity,
             REGION_GUARDRAILS["lower_leg_foot"]["moderate"],
@@ -1410,15 +1408,14 @@ def format_injury_guardrails(
                 }
             )
             if _is_surface_type(itype):
+                # Surface/skin injuries are wound-care notes only — never a drill
+                # list. Minor, stable cases train through with the calm note; all
+                # others (cut/laceration or high-severity) get the wound-care note.
                 if (
                     itype in MINOR_SURFACE_TRAIN_THROUGH_TYPES
                     and _normalize_rehab_severity(severity) != "high"
                 ):
-                    # Minor skin-level injury trains through with one calm note.
                     lines.append(f"- {summary}: {SURFACE_MINOR_TRAIN_THROUGH_NOTE}")
-                elif drills:
-                    lines.append(f"- {summary}:")
-                    lines.extend([f"  - {d}" for d in drills[:4]])
                 else:
                     lines.append(f"- {summary}: {SURFACE_WOUND_CARE_NOTE}")
             elif drills:
@@ -1428,7 +1425,8 @@ def format_injury_guardrails(
                 lines.append(f"- {summary}: No rehab drills available for this phase.")
 
     has_upper_limb = any(
-        LOCATION_REGION_MAP.get((entry.get("canonical_location") or ""), "unspecified") == "upper_limb"
+        not _is_surface_type(entry.get("rehab_type") or entry.get("injury_type"))
+        and LOCATION_REGION_MAP.get((entry.get("canonical_location") or ""), "unspecified") == "upper_limb"
         for entry in entries
     )
     if has_upper_limb:
