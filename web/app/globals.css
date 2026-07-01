@@ -5599,12 +5599,30 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.today-injury-add-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-injury-add-title {
+  margin: 0 0 11px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .today-injury-add .body-map-panel {
   width: min(100%, 760px);
   margin-inline: auto;
 }
 
 .today-injury-map-control {
+  width: min(100%, 180px);
+  gap: 8px;
+}
+
+.today-injury-map-control label {
   align-self: flex-end;
   width: min(100%, 220px);
   gap: 8px;
@@ -6119,6 +6137,19 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   }
 
   .today-injury-map-control {
+    width: 100%;
+  }
+
+  .today-injury-add-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .today-injury-add-title {
+    margin-bottom: 0;
+  }
+
     align-self: stretch;
     width: 100%;
   }
