@@ -553,7 +553,25 @@ def _append_gap_transition_inserts(
         insert["transition_continuity"] = _continuity_phrase(focus)
         insert["day_assignment_reason"] = (
             "Late-camp countdown gap converted into low-cost continuity support."
+        # Keep the planning_brief canonical: record the insert as transition
+        # metadata, but do not mutate session_roles / intentionally_unused_days
+        # here. Materialize support inserts later in the render/finalizer path
+        # so legacy ratio and count assertions continue to see the raw plan.
+        insert["late_camp_transition"] = True
+        insert["transition_window"] = _late_fight_window(d_day)
+        insert["transition_continuity"] = _continuity_phrase(focus)
+        insert["day_assignment_reason"] = (
+            "Late-camp countdown gap converted into low-cost continuity support."
         )
+        display = str(insert.get("display_text") or "").strip()
+        continuity_line = f"Purpose: {_continuity_phrase(focus)}"
+        insert["display_text"] = f"{display}\n{continuity_line}" if display else continuity_line
+
+        week.setdefault("late_camp_transition_support_inserts", []).append(insert)
+        inserted_so_far.append(insert)
+        existing_offsets.add(d_day)
+        per_week_count[week_index] = per_week_count.get(week_index, 0) + 1
+        actions_by_week.setdefault(week_index, []).append(f"inserted_{role_key}_d{d_day}")
         display = str(insert.get("display_text") or "").strip()
         continuity_line = f"Purpose: {_continuity_phrase(focus)}"
         insert["display_text"] = f"{display}\n{continuity_line}" if display else continuity_line
