@@ -15,7 +15,10 @@ from __future__ import annotations
 import re
 
 from .normalization import clean_list
-from .stage2_render_guards import _has_active_injury_from_training_context
+from .stage2_render_guards import (
+    _all_active_injuries_surface_only_from_training_context,
+    _has_active_injury_from_training_context,
+)
 from .training_context import TrainingContext
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
@@ -144,8 +147,16 @@ def _build_athlete_model(
         training_context.support_work_days or training_context.technical_skill_days
     )
     has_active_injury = _has_active_injury_from_training_context(training_context)
+    # A stable surface/skin-only injury (graze/abrasion/blister) is a hygiene
+    # note, not injured tissue: it must not drive rehab, compression, or
+    # tissue-protection framing downstream. Bake the verdict once here.
+    surface_injury_only = (
+        has_active_injury
+        and _all_active_injuries_surface_only_from_training_context(training_context)
+    )
     return {
         "has_active_injury": has_active_injury,
+        "surface_injury_only": surface_injury_only,
         "sport": sport,
         "status": training_context.status,
         "record": record_profile["record"],

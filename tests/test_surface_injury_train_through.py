@@ -146,6 +146,66 @@ def test_malformed_or_partial_parsed_surface_injuries_do_not_bypass_active_injur
     assert _active_injury_is_moderate_plus(malformed_parsed_entry) is True
 
 
+def test_surface_only_flag_removes_injury_management_compression_reason():
+    # The role-map reason-code layer must not tag a surface-only injury as
+    # injury_management (which the finalizer renders as "compressed to protect
+    # tissue"). A real injury alongside it still tags injury_management.
+    from fightcamp.stage2_role_map import _high_fatigue_compression_reason_codes
+
+    surface_codes = _high_fatigue_compression_reason_codes(_graze_athlete(fatigue="high"))
+    assert "high_fatigue" in surface_codes
+    assert "injury_management" not in surface_codes
+
+    mixed = _graze_athlete(
+        fatigue="high",
+        injuries=["moderate stable lower-back graze", "moderate knee sprain"],
+        parsed_injuries=[dict(GRAZE), {"injury_type": "sprain", "severity": "moderate", "flags": []}],
+    )
+    assert "injury_management" in _high_fatigue_compression_reason_codes(mixed)
+
+
+def test_surface_only_neutralizes_payload_injury_pressure():
+    from fightcamp.stage2_payload import (
+        _active_injury_affects_generic_compression,
+        _active_injury_is_moderate_plus as payload_active_injury_is_moderate_plus,
+    )
+
+    surface_model = dict(
+        injuries=["moderate stable lower-back graze"],
+        parsed_injuries=[dict(GRAZE)],
+        readiness_flags=["injury_management", "moderate_fatigue"],
+        surface_injury_only=True,
+    )
+    assert payload_active_injury_is_moderate_plus(surface_model) is False
+    assert _active_injury_affects_generic_compression(surface_model) is False
+
+    real_model = dict(
+        injuries=["moderate knee sprain"],
+        parsed_injuries=[{"injury_type": "sprain", "severity": "moderate", "flags": []}],
+        readiness_flags=["injury_management"],
+        surface_injury_only=False,
+    )
+    assert payload_active_injury_is_moderate_plus(real_model) is True
+    assert _active_injury_affects_generic_compression(real_model) is True
+
+
+def test_build_athlete_model_bakes_surface_injury_only():
+    from types import SimpleNamespace
+
+    from fightcamp.stage2_render_guards import (
+        _all_active_injuries_surface_only_from_training_context,
+    )
+
+    surface_ctx = SimpleNamespace(parsed_injuries=[dict(GRAZE)], injury_restrictions=[])
+    assert _all_active_injuries_surface_only_from_training_context(surface_ctx) is True
+
+    real_ctx = SimpleNamespace(
+        parsed_injuries=[{"injury_type": "sprain", "severity": "moderate", "flags": []}],
+        injury_restrictions=[],
+    )
+    assert _all_active_injuries_surface_only_from_training_context(real_ctx) is False
+
+
 def test_moderate_stable_graze_gets_full_plan_combat_floor():
     role_map = _build_weekly_role_map(
         _graze_athlete(),

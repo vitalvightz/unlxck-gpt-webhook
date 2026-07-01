@@ -20,6 +20,7 @@ from .athlete_model import (  # noqa: F401  (re-exported for backwards compatibi
     _is_high_pressure_weight_cut,
     _parse_record,
 )
+from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_restriction_utils import (  # noqa: F401  (re-exported for backwards compatibility)
     RESTRICTION_PATTERN_HINTS,
     _MECHANICAL_TAGS,
@@ -887,9 +888,10 @@ def _resolve_phase_rule_state(
     weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
     guardrails = phase_brief.get("selection_guardrails") or {}
 
-    tissue_protection_priority = bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags or (
-        limiter_profile.get("key") == "tissue_state"
-    )
+    tissue_protection_priority = (
+        not _all_active_injuries_surface_only(athlete_model)
+        and (bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags)
+    ) or (limiter_profile.get("key") == "tissue_state")
     freshness_priority = phase == "TAPER" or bool(
         readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"}
     )

@@ -59,6 +59,7 @@ from .priority_profile import build_priority_profile, describe_priority_focus
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .stage2_render_guards import (  # noqa: F401  (re-exported for backwards compatibility)
     _NO_ACTIVE_INJURY_MARKERS,
+    _all_active_injuries_surface_only,
     _append_render_guard_writing_rules,
     _has_active_injury_from_athlete_model,
     _has_active_injury_from_training_context,
@@ -620,9 +621,10 @@ def _resolve_phase_rule_state(
     weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
     guardrails = phase_brief.get("selection_guardrails") or {}
 
-    tissue_protection_priority = bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags or (
-        limiter_profile.get("key") == "tissue_state"
-    )
+    tissue_protection_priority = (
+        not _all_active_injuries_surface_only(athlete_model)
+        and (bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags)
+    ) or (limiter_profile.get("key") == "tissue_state")
     freshness_priority = phase == "TAPER" or bool(
         readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"}
     )
@@ -1953,7 +1955,7 @@ def _high_fatigue_compression_reason_codes(
         reason_codes.append("high_pressure_weight_cut")
     elif athlete_model.get("weight_cut_risk") or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}:
         reason_codes.append("active_weight_cut")
-    if athlete_model.get("injuries") or "injury_management" in readiness_flags:
+    if (athlete_model.get("injuries") or "injury_management" in readiness_flags) and not _all_active_injuries_surface_only(athlete_model):
         reason_codes.append("injury_management")
     return reason_codes
 
@@ -1970,6 +1972,10 @@ def _cut_severity_compression_points(athlete_model: dict) -> int:
 
 def _active_injury_affects_generic_compression(athlete_model: dict) -> bool:
     """True when the generic readiness layer should count injury pressure."""
+    # A stable surface/skin-only injury is a hygiene note, not injured tissue —
+    # it must not add compression pressure.
+    if _all_active_injuries_surface_only(athlete_model):
+        return False
     if athlete_model.get("injuries"):
         return True
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
@@ -1978,6 +1984,9 @@ def _active_injury_affects_generic_compression(athlete_model: dict) -> bool:
 
 def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
     """True when the boxing crowded-week trigger sees moderate+ injury pressure."""
+    # A stable surface/skin-only injury never counts as moderate+ tissue pressure.
+    if _all_active_injuries_surface_only(athlete_model):
+        return False
     injuries = _clean_list(athlete_model.get("injuries", []))
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
     if readiness_flags & {"injury_management", "moderate_injury", "significant_injury", "severe_injury"}:

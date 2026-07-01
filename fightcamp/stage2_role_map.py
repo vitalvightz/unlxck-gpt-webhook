@@ -1716,7 +1716,7 @@ def _high_fatigue_compression_reason_codes(
         reason_codes.append("high_pressure_weight_cut")
     elif athlete_model.get("weight_cut_risk") or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}:
         reason_codes.append("active_weight_cut")
-    if athlete_model.get("injuries") or "injury_management" in readiness_flags:
+    if (athlete_model.get("injuries") or "injury_management" in readiness_flags) and not _active_injuries_all_stable_surface(athlete_model):
         reason_codes.append("injury_management")
     return reason_codes
 

@@ -68,13 +68,25 @@ def _all_active_injuries_surface_only(athlete_model: dict) -> bool:
 
     A stable surface (skin) injury — a graze/abrasion/blister that is not high
     severity and carries no red flag — is a hygiene/friction note, not injured
-    tissue. It must never license rehab/prehab rendering. Any injury restriction
-    or a non-surface parsed injury alongside it means real tissue is involved, so
-    normal rehab handling stays.
+    tissue. It must never license rehab/prehab rendering, compression, or
+    tissue-protection framing. Any injury restriction or a non-surface parsed
+    injury alongside it means real tissue is involved, so normal handling stays.
+
+    Prefers a pre-computed ``surface_injury_only`` flag when the athlete_model
+    carries one (baked in by ``build_athlete_model``), else derives it.
     """
+    if "surface_injury_only" in athlete_model:
+        return bool(athlete_model.get("surface_injury_only"))
     if athlete_model.get("injury_restrictions"):
         return False
     return all_stable_train_through_surface(athlete_model.get("parsed_injuries"))
+
+
+def _all_active_injuries_surface_only_from_training_context(training_context) -> bool:
+    """Training-context variant of :func:`_all_active_injuries_surface_only`."""
+    if getattr(training_context, "injury_restrictions", None):
+        return False
+    return all_stable_train_through_surface(getattr(training_context, "parsed_injuries", None))
 
 
 def _render_guard_flags(
@@ -104,7 +116,7 @@ def _render_guard_flags(
     # never license rehab: suppress rehab headings even though has_active_injury
     # stays true (so the hygiene note is preserved and the athlete isn't told the
     # injury does not exist).
-    surface_injury_only = has_active_injury and _all_active_injuries_surface_only(athlete_model)
+    surface_injury_only = _all_active_injuries_surface_only(athlete_model)
     render_mode = "open_ongoing_system" if open_ongoing_mode else ("late_fight_countdown_only" if late_fight_countdown else "camp_plan")
     return {
         "has_active_injury": has_active_injury,
