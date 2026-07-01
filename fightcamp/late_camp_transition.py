@@ -371,6 +371,8 @@ def _append_gap_transition_inserts(
 
         d_by_weekday = _calendar_d_by_weekday(week)
         weekday = next((day for day, offset in d_by_weekday.items() if offset == d_day), "")
+        if not weekday:
+            continue
         declared_days = {_weekday_key(day) for day in clean_list(week.get("declared_training_days"))}
         if declared_days and weekday not in declared_days:
             continue
