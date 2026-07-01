@@ -585,7 +585,14 @@ def _append_gap_transition_inserts(
 
     return actions_by_week
 
-
+        # Do not mutate the canonical weekly_role_map here. Record the insert
+        # separately so planning-brief ratio/count assertions still see the raw
+        # plan, while downstream render/finalizer code can materialize it later.
+        week.setdefault("late_camp_transition_support_inserts", []).append(insert)
+        inserted_so_far.append(insert)
+        existing_offsets.add(d_day)
+        per_week_count[week_index] = per_week_count.get(week_index, 0) + 1
+        actions_by_week.setdefault(week_index, []).append(f"inserted_{role_key}_d{d_day}")
 def apply_late_camp_transition_overlay(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any],
