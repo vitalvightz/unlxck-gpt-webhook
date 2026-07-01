@@ -12971,6 +12971,16 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   background: rgba(181, 18, 43, 0.26);
 }
 
+html[data-theme="light"] .active-conflict-button-primary {
+  border-color: rgba(146, 43, 45, 0.48);
+  background: rgba(146, 43, 45, 0.18);
+}
+
+html[data-theme="light"] .active-conflict-button-primary:hover {
+  border-color: rgba(165, 54, 56, 0.72);
+  background: rgba(146, 43, 45, 0.26);
+}
+
 .active-conflict-button-wide,
 .active-conflict-button-cancel {
   grid-column: 1 / -1;
