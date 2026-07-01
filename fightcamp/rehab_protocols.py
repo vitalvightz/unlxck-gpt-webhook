@@ -4,7 +4,11 @@ from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
-from .injury_registry import SURFACE_TISSUE_TYPES
+from .injury_registry import (
+    MINOR_SURFACE_TRAIN_THROUGH_TYPES,
+    SURFACE_MINOR_TRAIN_THROUGH_NOTE,
+    SURFACE_TISSUE_TYPES,
+)
 from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
@@ -804,6 +808,14 @@ def generate_rehab_protocols(
             merged = merged_by_key.get(group_key) if group_key else None
             loc_title = _render_location_heading(loc, merged)
             type_title = itype.title() if itype else "Surface"
+            severity = _normalize_rehab_severity((merged or {}).get("severity"))
+            # A minor skin-level injury (graze/abrasion/blister, not high severity)
+            # trains through: one calm note, no wound-care drill list, and no
+            # per-drill warning repeated every session. cut/laceration and any
+            # high-severity surface injury keep the detailed wound-care path.
+            if itype in MINOR_SURFACE_TRAIN_THROUGH_TYPES and severity != "high":
+                lines.append(f"- {loc_title} ({type_title}): {SURFACE_MINOR_TRAIN_THROUGH_NOTE}")
+                continue
             loc_candidates = normalize_rehab_location(loc)
             surface_drills = _collect_surface_drills(itype, loc_candidates, current_phase)[:drill_limit]
             if surface_drills:
@@ -811,10 +823,11 @@ def generate_rehab_protocols(
                 for name, notes in surface_drills:
                     headline = f"{name} – {notes}" if notes else name
                     lines.append(f"  • {headline}")
-                    lines.append(
-                        "    [Wound care] Manage the skin injury — keep it clean, "
-                        "covered, and friction-free; this is not loading rehab."
-                    )
+                # Wound-care caveat once for the injury, not repeated per drill.
+                lines.append(
+                    "    [Wound care] Manage the skin injury — keep it clean, "
+                    "covered, and friction-free; this is not loading rehab."
+                )
             else:
                 lines.append(f"- {loc_title} ({type_title}): {SURFACE_WOUND_CARE_NOTE}")
             continue
@@ -1397,7 +1410,13 @@ def format_injury_guardrails(
                 }
             )
             if _is_surface_type(itype):
-                if drills:
+                if (
+                    itype in MINOR_SURFACE_TRAIN_THROUGH_TYPES
+                    and _normalize_rehab_severity(severity) != "high"
+                ):
+                    # Minor skin-level injury trains through with one calm note.
+                    lines.append(f"- {summary}: {SURFACE_MINOR_TRAIN_THROUGH_NOTE}")
+                elif drills:
                     lines.append(f"- {summary}:")
                     lines.extend([f"  - {d}" for d in drills[:4]])
                 else:

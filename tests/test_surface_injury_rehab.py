@@ -18,6 +18,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.injury_registry import SURFACE_TISSUE_TYPES
 from fightcamp.rehab_protocols import (
+    SURFACE_MINOR_TRAIN_THROUGH_NOTE,
     SURFACE_WOUND_CARE_NOTE,
     _collect_surface_drills,
     _is_surface_type,
@@ -71,10 +72,45 @@ def test_surface_injury_gets_wound_care_not_loading_drills():
                 current_phase=phase,
                 parsed_entries=[_surface_entry(injury_type)],
             )
-            assert "[Wound care]" in block, (injury_type, phase)
+            # Wound-care guidance is present as either the detailed wound-care
+            # block (cut/laceration) or the calm train-through note (minor
+            # graze/abrasion/blister) — never musculoskeletal loading drills.
+            has_wound_guidance = (
+                "[Wound care]" in block or SURFACE_MINOR_TRAIN_THROUGH_NOTE in block
+            )
+            assert has_wound_guidance, (injury_type, phase)
             lowered = block.lower()
             for loading_term in LOADING_TERMS:
                 assert loading_term not in lowered, (injury_type, phase, loading_term)
+
+
+def test_minor_surface_injury_collapses_to_single_calm_note():
+    # A minor graze/abrasion/blister trains through: one calm coach-facing note,
+    # no wound-care drill list, and no per-drill warning repeated every session.
+    for injury_type in ("graze", "abrasion", "blister"):
+        for phase in PHASES:
+            block, _ = generate_rehab_protocols(
+                injury_string=f"{injury_type} on lower back",
+                exercise_data=[],
+                current_phase=phase,
+                parsed_entries=[_surface_entry(injury_type, location="lower back", severity="mild")],
+            )
+            assert SURFACE_MINOR_TRAIN_THROUGH_NOTE in block, (injury_type, phase)
+            assert "[Wound care]" not in block, (injury_type, phase)
+            # Coach language, not medical panic.
+            assert "clinician" not in block.lower(), (injury_type, phase)
+
+
+def test_non_minor_surface_wound_care_note_not_repeated_per_drill():
+    # A laceration keeps its wound-care drills, but the "[Wound care]" caveat is
+    # emitted once for the injury rather than under every drill.
+    block, _ = generate_rehab_protocols(
+        injury_string="laceration on shin",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[_surface_entry("laceration", location="shin", severity="moderate")],
+    )
+    assert block.count("[Wound care]") == 1
 
 
 def test_rehab_drills_for_phase_returns_surface_wound_care_only():

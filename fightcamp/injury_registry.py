@@ -24,6 +24,25 @@ SURFACE_TISSUE_TYPES = frozenset(
 )
 INJURY_TYPE_SEVERITY = MappingProxyType(derive_injury_type_severity_map())
 
+# Surface-injury types that train through as skin-level damage when no danger
+# signal is present: grazes, scrapes, abrasions, blisters, and mild bruises/
+# contusions. Shared by triage (which gates on danger signals) and the rehab
+# formatter (which collapses these to a single calm note instead of a wound-care
+# drill list). ``cut``/``laceration`` are deliberately absent — they carry
+# deep-wound/stitch risk and keep the detailed wound-care path.
+MINOR_SURFACE_TRAIN_THROUGH_TYPES = frozenset(
+    {"graze", "abrasion", "scrape", "blister", "bruise", "contusion"}
+)
+
+# Calm, coach-facing note for a minor surface injury that trains through. This is
+# deliberately NOT medical-panic language: it treats the athlete as fit to train
+# and only asks for basic wound hygiene. It is surfaced ONCE, not repeated per
+# session or per drill.
+SURFACE_MINOR_TRAIN_THROUGH_NOTE = (
+    "Minor surface injury: keep it covered and clean, avoid direct friction on the "
+    "area, and stop if it opens, bleeds, or becomes infected. Train normally otherwise."
+)
+
 
 def is_known_injury_type(injury_type: str | None) -> bool:
     return _normalize_injury_type(injury_type) in ALL_INJURY_TYPES
