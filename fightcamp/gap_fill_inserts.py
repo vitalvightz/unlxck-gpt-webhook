@@ -545,8 +545,11 @@ def build_tactical_watch_template(athlete_model: dict[str, Any] | None = None) -
         "3. Best entry\n"
         "4. Danger to avoid\n"
         "5. Reset cue\n\n"
-        "Output:\n"
-        "Write 3 fight cues only."
+        "Output (write exactly these 4 lines):\n"
+        "Entry cue: 1 way I get in.\n"
+        "Danger cue: 1 thing that gets me hurt.\n"
+        "Reset cue: 1 phrase to recover when it goes bad.\n"
+        "Round 1: 1 instruction I follow from the first bell."
     )
 
 
