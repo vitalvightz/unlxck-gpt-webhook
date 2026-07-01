@@ -246,6 +246,30 @@ def test_real_format_faithful_card_passes():
     assert check_structured_faithfulness(plan, REAL_SOURCE) == []
 
 
+def test_tactical_watch_note_label_is_not_treated_as_misplaced_exercise():
+    source = """# FIGHT CAMP PLAN
+
+D-17 (Friday) - Fight Tactical Watch
+- Watch: 8-12 min.
+Purpose: identify opponent rhythm.
+Output: write 3 fight cues only.
+
+D-9 (Saturday) - Fight Tactical Watch
+- Watch: 8-12 min.
+Purpose: identify bait reactions and exits.
+Output: write 3 fight cues only.
+"""
+    plan = _plan(
+        [
+            ("D-9", [("conditioning", "Watch + note")]),
+        ]
+    )
+    plan["weeks"][0]["countdown_start"] = "D-17"
+    plan["weeks"][0]["countdown_end"] = "D-9"
+
+    assert check_structured_faithfulness(plan, source) == []
+
+
 def test_week_header_is_not_parsed_as_a_training_day():
     # "GPP — Week 1 (D-33 to D-27)" must not create a D-33/D-27 section that
     # captures the following day's exercises. Pallof belongs to D-30 only, so the

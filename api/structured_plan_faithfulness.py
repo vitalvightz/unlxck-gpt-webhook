@@ -64,6 +64,8 @@ _GENERIC_TOKENS = {
     "round", "reps", "sets", "left", "right", "front", "back", "upper", "lower",
     "main", "optional", "superset", "isometric", "dynamic", "static", "hold",
     "holds", "with", "from", "this", "that", "each", "side", "both", "core",
+    "tactical", "watch", "note", "notes", "cue", "cues", "card", "film",
+    "review", "visualization", "visualisation",
 }
 
 _TOKEN_RE = re.compile(r"[a-z]+")

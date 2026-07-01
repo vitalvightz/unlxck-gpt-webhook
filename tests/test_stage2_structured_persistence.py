@@ -863,7 +863,7 @@ def test_admin_approve_attaches_structured_card_inline(monkeypatch):
 
 
 def test_admin_approve_falls_back_to_text_when_inline_card_times_out(monkeypatch):
-    """A slow inline conversion must not stall approval — text releases instantly."""
+    """A slow inline conversion must not stall approval - text releases instantly."""
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "0.01")
     store = FakeStore()
@@ -1024,9 +1024,13 @@ def test_structured_post_processing_failure_keeps_plan_text_and_ready(monkeypatc
     failed = StructuredPlanOutcome(status="invalid_fallback_used", errors=["bad shape"])
     automator = _StructuredAutomator(failed)
 
+    # Simulate the real fallback path: approval released text before a structured
+    # card existed, then deferred post-processing tried and failed to make one.
     asyncio.run(
-        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=None)
     )
+    assert "structured_plan" not in store.plans[plan_id].get("stage2_validator_report", {})
+
     asyncio.run(
         run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=automator)
     )
@@ -1035,6 +1039,9 @@ def test_structured_post_processing_failure_keeps_plan_text_and_ready(monkeypatc
     assert store.plans[plan_id]["status"] == "ready"
     assert store.plans[plan_id]["plan_text"] == "# approved plan"
     assert store.plans[plan_id].get("structured_plan") is None
+    debug = store.plans[plan_id]["stage2_validator_report"]["structured_plan"]
+    assert debug["status"] == "invalid_fallback_used"
+    assert debug["errors"] == ["bad shape"]
 
 
 class _ConcurrentMutationAutomator(_StructuredAutomator):
