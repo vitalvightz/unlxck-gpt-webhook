@@ -36,6 +36,11 @@ _HIGH_RISK_INJURY_TOKENS = {
 
 def _fatigue_level(athlete_snapshot: dict[str, Any]) -> str:
     fatigue = str(athlete_snapshot.get("fatigue") or "").strip().lower()
+    # Critical / extreme are more severe than high; collapse them to "high" so
+    # every downstream `fatigue == "high"` deload gate (including the D-21..D-18
+    # bridge override) treats them at least as conservatively as a high load.
+    if fatigue in {"critical", "extreme"}:
+        return "high"
     return fatigue if fatigue in {"low", "moderate", "high"} else "low"
 
 

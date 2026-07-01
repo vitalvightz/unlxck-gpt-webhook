@@ -954,11 +954,13 @@ def _bridge_apply_permissive(
     if not permissive:
         rules["permissive_mode_eligible"] = False
         return rules
+    # A moderate cut is note-only, so it qualifies for permissive mode exactly
+    # like a none/low cut — clean and moderate athletes keep matching caps.
     eligible = (
         rules.get("timing_state") == TIMING_STATE_BRIDGE
         and injury_mode == "full_plan"
         and fatigue in {"none", "low"}
-        and bucket in {"none", "low"}
+        and bucket in {"none", "low", "moderate"}
         and declared == 0
     )
     rules["permissive_mode_eligible"] = bool(eligible)

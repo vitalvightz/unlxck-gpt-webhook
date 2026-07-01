@@ -651,6 +651,23 @@ def test_bridge_d20_caps_hard_sparring_to_one():
     assert len(effective) == 1
 
 
+def test_bridge_d20_critical_fatigue_deloads_all_hard_sparring():
+    # Critical (and extreme) fatigue is more severe than high, so the D-21..D-18
+    # override must fully deload hard sparring — it must not fall through to the
+    # clean-athlete cap_one just because the raw level was outside {low,mod,high}.
+    for level in ("critical", "extreme"):
+        plan = compute_hard_sparring_plan(
+            week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+            athlete_snapshot=_athlete(
+                days_until_fight=20,
+                fatigue=level,
+                hard_days=["Tuesday", "Thursday"],
+            ),
+        )
+        effective = [e for e in plan if e["status"] == "hard_as_planned"]
+        assert len(effective) == 0, f"{level} fatigue kept a hard sparring day"
+
+
 def test_bridge_d17_with_moderate_cut_zeros_hard_sparring():
     plan = compute_hard_sparring_plan(
         week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
