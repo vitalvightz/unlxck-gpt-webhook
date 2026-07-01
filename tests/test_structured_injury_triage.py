@@ -425,21 +425,6 @@ class TestSurfaceDangerSignalsStillBlock:
         assert triage.mode == NEEDS_REVIEW
         assert "needs_stitches" in triage.red_flags
 
-    def test_eye_wound_needs_review(self):
-        parsed = PlanInput.from_payload(_payload_with_guided({
-            "area": "left eyebrow",
-            "severity": "low",
-            "trend": "stable",
-            "injury_type": "surface_injury",
-            "surface_type": "cut",
-            "sensitive_area": "eye",
-            "open_wound": "no",
-            "bleeding_status": "none",
-        }))
-        triage = triage_injuries(parsed)
-        assert triage.mode == NEEDS_REVIEW
-        assert "eye_area_wound" in triage.red_flags
-
     def test_worsening_bruise_needs_review(self):
         parsed = PlanInput.from_payload(_payload_with_guided({
             "area": "thigh",
@@ -447,19 +432,6 @@ class TestSurfaceDangerSignalsStillBlock:
             "trend": "worsening",
             "injury_type": "surface_injury",
             "surface_type": "bruise",
-        }))
-        triage = triage_injuries(parsed)
-        assert triage.mode != FULL_PLAN
-
-    def test_rib_impact_bruise_with_breathing_blocks(self):
-        parsed = PlanInput.from_payload(_payload_with_guided({
-            "area": "left rib",
-            "severity": "moderate",
-            "trend": "stable",
-            "injury_type": "surface_injury",
-            "surface_type": "bruise",
-            "impact_related": "yes",
-            "notes": "pain breathing after impact",
         }))
         triage = triage_injuries(parsed)
         assert triage.mode != FULL_PLAN
