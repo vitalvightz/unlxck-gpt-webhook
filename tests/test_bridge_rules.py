@@ -443,6 +443,22 @@ class TestPermissiveFallback:
         assert result["permissive_mode_eligible"] is False
         assert result["strength_touch_max"] == 1
 
+    def test_permissive_moderate_cut_matches_clean_athlete(self):
+        # A moderate cut is note-only, so it stays eligible for permissive mode
+        # exactly like a none/low cut — a grappler still earns the extra
+        # strength touch in D-21..D-19 instead of being gated off.
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="grappler",
+            fatigue="low",
+            weight_cut_bucket="moderate",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=0,
+            permissive_mode=True,
+        )
+        assert result["permissive_mode_eligible"] is True
+        assert result["strength_touch_max"] == 2
+
 
 class TestBaselineNormalCamp:
     def test_normal_camp_defaults(self):
