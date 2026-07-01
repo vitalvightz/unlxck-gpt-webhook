@@ -3258,7 +3258,16 @@ def build_planning_brief(
     # Deterministically place any session role the planner left dayless, then
     # stamp labels. Post-processing can append suppressed/omitted roles after the
     # inner builder ran, so do both here for full coverage.
-    fill_missing_session_days(weekly_role_map)
+    # Keep planning_brief canonical: attach the late-camp transition context,
+    # but avoid mutating weekly_role_map here so existing ratio/count tests
+    # continue to see the raw generated plan shape.
+    late_camp_transition = apply_late_camp_transition_overlay(
+        {
+            **weekly_role_map,
+            "weeks": [dict(week) for week in weekly_role_map.get("weeks", [])],
+        },
+        athlete_model,
+    )
     late_camp_transition = apply_late_camp_transition_overlay(
         weekly_role_map,
         athlete_model,
