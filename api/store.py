@@ -3928,12 +3928,17 @@ class SupabaseAppStore:
                     plan_id,
                 )
                 return current
+            if structured_plan is None and current.get("structured_plan") is not None:
+                logger.info(
+                    "[store] update_plan_structured_artifacts:existing_card_skip plan_id=%s",
+                    plan_id,
+                )
+                return current
 
-        payload = {
-            "structured_plan": structured_plan,
-            "schema_version": schema_version,
-            "stage2_validator_report": stage2_validator_report or {},
-        }
+        payload = {"stage2_validator_report": stage2_validator_report or {}}
+        if structured_plan is not None:
+            payload["structured_plan"] = structured_plan
+            payload["schema_version"] = schema_version
         _guard_persisted_json(
             payload.get("structured_plan"),
             field="structured_plan",

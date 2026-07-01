@@ -1044,6 +1044,27 @@ def test_structured_post_processing_failure_keeps_plan_text_and_ready(monkeypatc
     assert debug["errors"] == ["bad shape"]
 
 
+def test_structured_post_processing_normalizes_non_dict_validator_report(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+    store.plans[plan_id]["stage2_validator_report"] = "bad-report"
+    failed = StructuredPlanOutcome(status="invalid_fallback_used", errors=["bad shape"])
+
+    asyncio.run(
+        run_structured_plan_post_processing(
+            plan_id=plan_id,
+            store=store,
+            stage2=_StructuredAutomator(failed),
+        )
+    )
+
+    report = store.plans[plan_id]["stage2_validator_report"]
+    assert isinstance(report, dict)
+    assert report["structured_plan"]["status"] == "invalid_fallback_used"
+
+
 class _ConcurrentMutationAutomator(_StructuredAutomator):
     """Automator that runs a concurrent admin action *during* the slow conversion.
 
@@ -1072,6 +1093,38 @@ def _track_full_stage2_writes(store: FakeStore) -> dict[str, int]:
 
     store.update_plan_stage2 = _tracked  # type: ignore[method-assign]
     return counter
+
+
+def test_structured_post_processing_failure_does_not_clear_concurrent_card(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+
+    def _concurrent_card_write():
+        row = store.plans[plan_id]
+        row["structured_plan"] = _valid_plan()
+        row["schema_version"] = SCHEMA_VERSION
+        row["stage2_validator_report"] = {
+            "structured_plan": {
+                "status": "valid",
+                "errors": [],
+                "warnings": [],
+                "schema_version": SCHEMA_VERSION,
+            }
+        }
+
+    failed = StructuredPlanOutcome(status="invalid_fallback_used", errors=["bad shape"])
+    automator = _ConcurrentMutationAutomator(failed, on_convert=_concurrent_card_write)
+
+    asyncio.run(
+        run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=automator)
+    )
+
+    row = store.plans[plan_id]
+    assert row["structured_plan"] is not None
+    assert row["schema_version"] == SCHEMA_VERSION
+    assert row["stage2_validator_report"]["structured_plan"]["status"] == "valid"
 
 
 def test_structured_post_processing_does_not_overwrite_concurrent_manual_edit(monkeypatch):
