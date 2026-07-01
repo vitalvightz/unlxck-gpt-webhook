@@ -10,6 +10,7 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
+import { CustomSelect } from "@/components/custom-select";
 import { Skeleton } from "@/components/skeleton";
 import {
   DaySessionContext,
@@ -494,6 +495,11 @@ const BODY_MAP_SEVERITY_BY_FLAG: Record<InjuryFlagSeverity, BodyMapSeverity> = {
   severe: "high",
 };
 
+const BODY_MAP_VISIBILITY_OPTIONS = [
+  { value: "shown", label: "Show map" },
+  { value: "hidden", label: "Hide map" },
+];
+
 function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeverity {
   if (severity === "mild") {
     return "moderate";
@@ -634,7 +640,6 @@ function InjuryCheckinCard({
         <ul className="today-injury-list">
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
-            const selectedAction = INJURY_STATUS_ACTIONS.find((action) => action.value === selectedStatus);
             const isPending = pendingFlagId === injury.id;
 
             return (
@@ -664,11 +669,6 @@ function InjuryCheckinCard({
                     );
                   })}
                 </div>
-                {selectedAction ? (
-                  <p className="today-injury-status-note" role="status">
-                    {isPending ? `Saving ${selectedAction.label.toLowerCase()}...` : `${selectedAction.label} selected`}
-                  </p>
-                ) : null}
                 {confirmingClearId === injury.id ? (
                   <div
                     className="today-injury-confirm"
@@ -707,17 +707,19 @@ function InjuryCheckinCard({
       )}
 
       <form className="today-injury-add" onSubmit={addInjury}>
-        <label className="field today-injury-map-control" htmlFor={bodyMapVisibilityId}>
-          <span>Body map</span>
-          <select
-            id={bodyMapVisibilityId}
-            value={bodyMapVisibility}
-            onChange={(event) => setBodyMapVisibility(event.target.value === "hidden" ? "hidden" : "shown")}
-          >
-            <option value="shown">Show map</option>
-            <option value="hidden">Hide map</option>
-          </select>
-        </label>
+        <div className="today-injury-add-toolbar">
+          <p className="today-injury-add-title">Add injury</p>
+          <div className="field today-injury-map-control">
+            <label htmlFor={bodyMapVisibilityId}>Body map</label>
+            <CustomSelect
+              id={bodyMapVisibilityId}
+              value={bodyMapVisibility}
+              options={BODY_MAP_VISIBILITY_OPTIONS}
+              placeholder="Body map"
+              onChange={(value) => setBodyMapVisibility(value === "hidden" ? "hidden" : "shown")}
+            />
+          </div>
+        </div>
         {bodyMapVisibility === "shown" ? (
           <BodyMap
             side={bodyMapSide}
@@ -734,7 +736,7 @@ function InjuryCheckinCard({
           </div>
         ) : null}
         <label className="field" htmlFor="today-injury-area">
-          <span>Add injury</span>
+          <span className="sr-only">Add injury</span>
           <input
             id="today-injury-area"
             value={newArea}

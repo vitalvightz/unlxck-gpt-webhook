@@ -5518,17 +5518,6 @@ button.mobile-step-rail-item {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.today-injury-status-note {
-  margin: -2px 0 0;
-  color: var(--brand-red);
-  font-family: var(--font-mono), monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
-
 .today-injury-confirm {
   display: flex;
   flex-wrap: wrap;
@@ -5599,18 +5588,30 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.today-injury-add-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-injury-add-title {
+  margin: 0 0 11px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .today-injury-add .body-map-panel {
   width: min(100%, 760px);
   margin-inline: auto;
 }
 
 .today-injury-map-control {
-  align-self: flex-end;
-  width: min(100%, 220px);
+  width: min(100%, 180px);
   gap: 8px;
 }
 
-.today-injury-map-control span {
+.today-injury-map-control label {
   color: var(--text-muted);
   font-family: var(--font-mono), monospace;
   font-size: 11px;
@@ -6119,8 +6120,17 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   }
 
   .today-injury-map-control {
-    align-self: stretch;
     width: 100%;
+  }
+
+  .today-injury-add-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .today-injury-add-title {
+    margin-bottom: 0;
   }
 
   .today-readiness-strip dd {
