@@ -5,6 +5,10 @@ import re
 from typing import Any
 
 from .input_parsing import GuidedInjury, PlanInput
+from .injury_registry import (
+    MINOR_SURFACE_TRAIN_THROUGH_TYPES,
+    SURFACE_MINOR_TRAIN_THROUGH_NOTE,
+)
 from .injury_negation import remove_negated_phrases
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .sparring_advisories import summarize_sparring_injury_risk
@@ -239,28 +243,10 @@ _NEGATED_STRUCTURAL_BREAK_RE = re.compile(
 )
 
 
-# Calm, coach-facing note for a minor surface injury that trains through. This is
-# deliberately NOT medical-panic language: it treats the athlete as fit to train
-# and only asks for basic wound hygiene. It is surfaced ONCE as a global note, not
-# repeated per session (see surface_minor_train_through below).
-SURFACE_MINOR_TRAIN_THROUGH_NOTE = (
-    "Minor surface injury: keep it covered and clean, avoid direct friction on the "
-    "area, and stop if it opens, bleeds, or becomes infected. Train normally otherwise."
-)
-
-# Surface-injury types that are treated as train-through skin damage when no
-# danger signal is present. Grazes/abrasions/scrapes/blisters and mild
-# bruises/contusions are skin-level and should not restrict combat training.
-# ``cut``/``laceration`` are intentionally excluded — they carry stitch/deep-wound
-# risk and are gated elsewhere unless clearly minor.
-_MINOR_SURFACE_TRAIN_THROUGH_TYPES = {
-    "graze",
-    "abrasion",
-    "scrape",
-    "blister",
-    "bruise",
-    "contusion",
-}
+# ``SURFACE_MINOR_TRAIN_THROUGH_NOTE`` (calm coach-facing note) and
+# ``MINOR_SURFACE_TRAIN_THROUGH_TYPES`` are defined in injury_registry so the rehab
+# formatter can share them; re-exported here for callers/tests.
+_MINOR_SURFACE_TRAIN_THROUGH_TYPES = MINOR_SURFACE_TRAIN_THROUGH_TYPES
 
 # Structured surface routing signals that veto minor train-through: each routes to
 # review / medical hold via its own gate. Kept in sync with the surface danger
