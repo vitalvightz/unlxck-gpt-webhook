@@ -398,7 +398,16 @@ def _mark_transition_role(role: dict[str, Any], d_day: int, focus: list[str]) ->
             return None
 
     if _has_hard_pressure_metadata(role):
-        _clear_hard_pressure_metadata(role)
+    new_key = _transition_role_key(role, d_day)
+    changed = bool(new_key and new_key != role_key)
+    if changed:
+        role["transition_from_role_key"] = role_key
+        # Keep the canonical role_key stable in planning_brief so existing
+        # ratio/count tests continue to see the original role distribution.
+        # Presentation-only morphing can still use transition metadata,
+        # athlete_facing_label, and display_text.
+        role["transition_role_key"] = new_key
+        role_key = new_key
 
     label, display_text = _role_transition_text(role_key, d_day, focus)
     role["late_camp_transition"] = True
