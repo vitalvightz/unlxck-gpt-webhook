@@ -408,6 +408,8 @@ def apply_late_camp_transition_overlay(
 
     if not isinstance(weekly_role_map, dict):
         return {"active": False, "reason": "missing_weekly_role_map"}
+    if not isinstance(athlete_model, dict):
+        return {"active": False, "reason": "missing_athlete_model"}
     weeks = [week for week in weekly_role_map.get("weeks") or [] if isinstance(week, dict)]
     if not weeks:
         return {"active": False, "reason": "no_weeks"}
