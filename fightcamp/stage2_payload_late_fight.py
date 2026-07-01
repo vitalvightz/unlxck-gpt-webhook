@@ -4135,6 +4135,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "Partial prescription: label exactly — Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
+        "From D-10 to the fight, the progression/regression line offers regressions and stop rules only — never a progression/advance option (no add load/sets, heavier ball, stronger band, or \"to progress\").\n"
         "Declared hard-spar days are fixed. Downgrade the dose; never move or drop the day.\n"
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"

@@ -3958,7 +3958,7 @@ RULE 6 — SPORT SPECIFICITY
 The plan must read as a real combat-sport camp for this athlete. Conditioning, power work, weekly rhythm, and taper choices must match the athlete's sport, style, fight date, fatigue, injury context, weight cut, equipment, goals, weak areas, coach-led schedule, and phase.
 
 RULE 6A — SESSION COACHING STANDARD
-Every app-owned session must include exact drill/exercise, sets/reps/duration, rest, intensity or RPE, purpose, why today, and a progression/regression or stop rule. Do not render generic slot labels such as "Strength", "Aerobic support", or "Low-load mobility support" without actual coaching content.
+Every app-owned session must include exact drill/exercise, sets/reps/duration, rest, intensity or RPE, purpose, why today, and a progression/regression or stop rule. From D-10 to the fight, that line must offer regressions and stop rules only — never a progression/advance option (no "add load/sets", "heavier ball", "stronger band", or "to progress"); D-11 and earlier may still progress. Do not render generic slot labels such as "Strength", "Aerobic support", or "Low-load mobility support" without actual coaching content.
 If selected_plan.weekly_role_map.weeks[*].session_count_summary.reduced_from_planned is true, explain the smaller week once in the week lead using the provided reduction_reasons. Do not restore suppressed sessions to make the week look fuller.
 If a wrist sprain or wrist restriction exists, repeat the exact restrictions and include wrist-safe isometric or rehab exposure where appropriate; do not prescribe loaded wrist extension, gripping volume, catching, front-rack, or punch-volume work that violates the restriction.
 If a weight cut exists, reduce volume and noisy accessories, not specificity.
@@ -4094,7 +4094,7 @@ Non-negotiable output contract:
    - exact drill/exercise, sets/reps/duration, rest, and intensity/RPE
    - for D-7 and tighter, never raise a selected drill's RPE or volume; if a selected drill has RPE/rounds/work_sec fields, use those caps
    - the purpose behind the work
-   - progression/regression or stop rule
+   - progression/regression or stop rule; from D-10 to the fight, offer regressions and stop rules only — never a progression/advance option (no "add load/sets", "heavier ball", "stronger band", or "to progress"). D-11 and earlier may still progress.
    - injury/rehab insert when relevant
    - coach call when needed
 6. If session_count_summary.reduced_from_planned is true for a week, include one short reason tied to taper, weight cut, D-17 technical-only rule, injury/cut management, coach-led contact load, fight-week override, or intentional compression.
