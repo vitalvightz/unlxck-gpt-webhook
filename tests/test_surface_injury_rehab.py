@@ -23,10 +23,23 @@ from fightcamp.rehab_protocols import (
     _collect_surface_drills,
     _is_surface_type,
     _rehab_drills_for_phase,
+    build_coach_review_entries,
     format_injury_guardrails,
     generate_rehab_protocols,
     get_rehab_bank,
     normalize_rehab_location,
+)
+from fightcamp.coach_review import build_coach_review_notes
+
+# Structural region-guardrail phrasing that must never attach to a surface
+# injury. These are the spine/pelvis Do/Avoid strings that were leaking onto a
+# lower-back graze and driving trunk/anti-rotation "rehab" every session.
+STRUCTURAL_GUARDRAIL_TERMS = (
+    "trunk endurance",
+    "hinge/squat",
+    "loaded flexion",
+    "graded exposure",
+    "hip capacity",
 )
 
 PHASES = ("GPP", "SPP", "TAPER")
@@ -72,12 +85,14 @@ def test_surface_injury_gets_wound_care_not_loading_drills():
                 current_phase=phase,
                 parsed_entries=[_surface_entry(injury_type)],
             )
-            # Wound-care guidance is present as either the detailed wound-care
-            # block (cut/laceration) or the calm train-through note (minor
-            # graze/abrasion/blister) — never musculoskeletal loading drills.
+            # Surface injuries surface as a single note — the wound-care note
+            # (cut/laceration or high severity) or the calm train-through note
+            # (minor graze/abrasion/blister) — never musculoskeletal loading
+            # drills and never a wound-care drill list.
             has_wound_guidance = (
-                "[Wound care]" in block or SURFACE_MINOR_TRAIN_THROUGH_NOTE in block
+                SURFACE_WOUND_CARE_NOTE in block or SURFACE_MINOR_TRAIN_THROUGH_NOTE in block
             )
+            assert "[Wound care]" not in block, (injury_type, phase)
             assert has_wound_guidance, (injury_type, phase)
             lowered = block.lower()
             for loading_term in LOADING_TERMS:
@@ -101,16 +116,17 @@ def test_minor_surface_injury_collapses_to_single_calm_note():
             assert "clinician" not in block.lower(), (injury_type, phase)
 
 
-def test_non_minor_surface_wound_care_note_not_repeated_per_drill():
-    # A laceration keeps its wound-care drills, but the "[Wound care]" caveat is
-    # emitted once for the injury rather than under every drill.
+def test_non_minor_surface_collapses_to_single_wound_care_note():
+    # A laceration is a surface/skin injury: it surfaces as the single wound-care
+    # note only — no drill list and no "[Wound care]" drill caveat.
     block, _ = generate_rehab_protocols(
         injury_string="laceration on shin",
         exercise_data=[],
         current_phase="GPP",
         parsed_entries=[_surface_entry("laceration", location="shin", severity="moderate")],
     )
-    assert block.count("[Wound care]") == 1
+    assert block.count(SURFACE_WOUND_CARE_NOTE) == 1
+    assert "[Wound care]" not in block
 
 
 def test_rehab_drills_for_phase_returns_surface_wound_care_only():
@@ -128,6 +144,9 @@ def test_guardrails_surface_priority_shows_wound_care():
     block = format_injury_guardrails("GPP", "laceration on shin")
     assert "**Rehab Priority**" in block
     assert "No rehab drills available" not in block
+    # Surface injuries render as the wound-care note only — no structural
+    # region Do/Avoid guidance and no loading drills.
+    assert SURFACE_WOUND_CARE_NOTE in block
     lowered = block.lower()
     for loading_term in LOADING_TERMS:
         assert loading_term not in lowered, loading_term
@@ -203,3 +222,61 @@ def test_mixed_location_keeps_loading_rehab_for_structural_injury():
     )
     assert "[Function:" in block
     assert "[Wound care]" not in block
+
+
+def _lower_back_graze_entry(severity: str = "moderate") -> dict:
+    return {
+        "injury_type": "graze",
+        "rehab_type": "graze",
+        "canonical_location": "lower_back",
+        "location": "lower back",
+        "display_location": "lower back",
+        "severity": severity,
+        "flags": [],
+    }
+
+
+def test_surface_injury_gets_no_structural_region_guardrail():
+    # Regression: a moderate lower-back graze was pulling the spine/pelvis
+    # REGION_GUARDRAILS Do/Avoid ruleset (trunk endurance, hinge/squat, loaded
+    # flexion/rotation) and rendering it as structural "rehab focus". A surface
+    # injury must surface only its wound-care/train-through note.
+    for phase in PHASES:
+        block = format_injury_guardrails(
+            phase, "moderate lower-back graze", parsed_entries=[_lower_back_graze_entry()]
+        )
+        assert SURFACE_MINOR_TRAIN_THROUGH_NOTE in block, phase
+        lowered = block.lower()
+        for term in STRUCTURAL_GUARDRAIL_TERMS:
+            assert term not in lowered, (phase, term)
+
+
+def test_surface_injury_produces_no_coach_review_entry():
+    # A surface injury must not generate a coach-review safety entry (region
+    # Do/Avoid guidance, rehab-priority drills, or exercise substitutions).
+    for severity in ("moderate", "severe"):
+        entries = build_coach_review_entries(
+            "lower-back graze", "GPP", parsed_entries=[_lower_back_graze_entry(severity)]
+        )
+        assert entries == [], severity
+    notes = build_coach_review_notes(
+        build_coach_review_entries(
+            "lower-back graze", "GPP", parsed_entries=[_lower_back_graze_entry()]
+        ),
+        [],
+    )
+    assert notes == ""
+    # A real structural injury still produces a coach-review entry.
+    assert build_coach_review_entries(
+        "moderate lower-back sprain",
+        "GPP",
+        parsed_entries=[
+            {
+                "injury_type": "sprain",
+                "canonical_location": "lower_back",
+                "location": "lower back",
+                "severity": "moderate",
+                "flags": [],
+            }
+        ],
+    )
