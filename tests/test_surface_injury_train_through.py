@@ -112,12 +112,38 @@ def test_predicate_flags_stable_surface_and_spares_danger_cases():
     assert not is_stable_train_through_surface_injury({"injury_type": "sprain", "severity": "moderate"})
 
 
+def test_predicate_rejects_string_and_malformed_red_flag_inputs():
+    assert not is_stable_train_through_surface_injury(
+        {"injury_type": "graze", "severity": "moderate", "flags": "infected"}
+    )
+    assert not is_stable_train_through_surface_injury(
+        {"injury_type": "graze", "severity": "moderate", "flags": "urgent"}
+    )
+    assert not is_stable_train_through_surface_injury(
+        {"injury_type": "graze", "severity": "moderate", "flags": 1}
+    )
+
+
 # ---------------------------------------------------------------------------
 # 1. Full-plan / train-through behavior
 # ---------------------------------------------------------------------------
 
 def test_moderate_stable_graze_is_not_treated_as_active_injury():
     assert _active_injury_is_moderate_plus(_graze_athlete()) is False
+
+
+def test_malformed_or_partial_parsed_surface_injuries_do_not_bypass_active_injury_gate():
+    missing_parsed_entry = _graze_athlete(
+        injuries=["moderate stable lower-back graze", "moderate knee sprain"],
+        parsed_injuries=[dict(GRAZE)],
+    )
+    malformed_parsed_entry = _graze_athlete(
+        injuries=["moderate stable lower-back graze", "moderate knee sprain"],
+        parsed_injuries=[dict(GRAZE), "moderate knee sprain"],
+    )
+
+    assert _active_injury_is_moderate_plus(missing_parsed_entry) is True
+    assert _active_injury_is_moderate_plus(malformed_parsed_entry) is True
 
 
 def test_moderate_stable_graze_gets_full_plan_combat_floor():
