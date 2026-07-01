@@ -1731,7 +1731,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
     }}
   ],
   "daily_check_ins": [],
-  "nutrition": {{"summary": "...", "daily_focus": "...", "training_day_guidance": "...", "fight_week_guidance": "...", "weight_cut_warning": {{"risk_level": "amber", "display_text": "...", "requires_professional_support": true}}}},
+  "nutrition": {{"summary": "...", "daily_focus": "...", "training_day_guidance": "...", "fight_week_guidance": "...", "weight_cut_warning": {{"risk_level": "amber", "display_text": "...", "requires_professional_support": false}}}},
   "progression_notes": "...",
   "raw_markdown_fallback": "<the original plan markdown, verbatim>"
 }}"""
