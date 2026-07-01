@@ -309,6 +309,21 @@ def _technical_session_lines() -> list[str]:
     return ["- Technical rhythm and shadow work. Stay sharp at low fatigue; no hard contact."]
 
 
+def _fight_day_session_lines() -> list[str]:
+    return ["- Follow coach warm-up and fight protocol; no additional S&C."]
+
+
+def _display_text_lines(role: dict[str, Any]) -> list[str]:
+    text = str(role.get("display_text") or "").strip()
+    if not text:
+        return []
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return [
+        line if line.startswith(("-", "*")) else f"- {line}"
+        for line in lines
+    ]
+
+
 def _session_body(
     role: dict[str, Any],
     phase: str,
@@ -318,6 +333,13 @@ def _session_body(
     is_primary_strength: bool,
 ) -> list[str]:
     category = str(role.get("category") or "").strip().lower()
+    role_key = str(role.get("role_key") or "").strip().lower()
+    if category == "support_insert" or role.get("late_camp_transition") is True:
+        display_lines = _display_text_lines(role)
+        if display_lines:
+            return display_lines
+    if category == "fight_day" or role_key == "fight_day_protocol":
+        return _fight_day_session_lines()
     if category == "sparring":
         return _sparring_session_lines()
     if category == "recovery":

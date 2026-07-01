@@ -168,6 +168,17 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "blocked_systems",
         "blocked_intensities",
         "blocked_tags",
+
+        # Normal-camp late transition overlay
+        "late_camp_transition",
+        "transition_window",
+        "transition_continuity",
+        "transition_from_role_key",
+        "counts_toward_transition_stress",
+        "duration_min",
+        "rpe_max",
+        "support_insert_category",
+        "support_insert_cost_category",
     )
     return {key: role.get(key) for key in keep if role.get(key) not in (None, "", [])}
 
@@ -499,6 +510,11 @@ def build_stage2_finalizer_packet(
         or stage2_payload.get("days_out_payload")
         or {}
     )
+    late_camp_transition = (
+        source.get("late_camp_transition")
+        or stage2_payload.get("late_camp_transition")
+        or {}
+    )
 
     packet = {
         "packet_type": "stage2_finalizer_packet",
@@ -558,6 +574,7 @@ def build_stage2_finalizer_packet(
             "late_fight_plan_spec": late_fight_plan_spec,
             "open_plan_spec": open_plan_spec,
             "days_out_payload": days_out_payload,
+            "late_camp_transition": late_camp_transition,
             "fight_week_override": (
                 source.get("fight_week_override")
                 or stage2_payload.get("fight_week_override")
@@ -576,6 +593,15 @@ def build_stage2_finalizer_packet(
         },
         "writing_rules": list((rewrite_guidance or {}).get("writing_rules") or []),
     }
+
+    if isinstance(late_camp_transition, dict) and late_camp_transition.get("active"):
+        packet["hard_rules"].extend(
+            [
+                "If selected_plan.late_camp_transition.active is true, treat late SPP/TAPER as a taper morph of the existing normal camp, not as a separate pasted late-fight block.",
+                "For roles with transition_continuity, preserve that continuity in the session rationale and keep the prescription lower-cost than the earlier camp quality it carries forward.",
+                "Support_insert roles created by late_camp_transition are visible low-cost sessions only when they appear in weekly_role_map.session_roles; render their display_text directly and do not expand them into hard training.",
+            ]
+        )
 
     # Only dated camp mode needs compact phase context.
     if render_mode == "camp_plan":
