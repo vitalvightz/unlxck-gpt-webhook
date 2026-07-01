@@ -1824,10 +1824,13 @@ def _active_injuries_all_stable_surface(athlete_model: dict) -> bool:
     Requires at least one parsed injury and that *all* of them qualify — a real
     injury alongside a graze still counts as an active injury.
     """
-    parsed = [item for item in (athlete_model.get("parsed_injuries") or []) if isinstance(item, dict)]
-    if not parsed:
+    raw_injuries = athlete_model.get("injuries") or []
+    parsed_injuries = athlete_model.get("parsed_injuries") or []
+    if not parsed_injuries or len(parsed_injuries) != len(raw_injuries):
         return False
-    return all(is_stable_train_through_surface_injury(item) for item in parsed)
+    if not all(isinstance(item, dict) for item in parsed_injuries):
+        return False
+    return all(is_stable_train_through_surface_injury(item) for item in parsed_injuries)
 
 
 def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
