@@ -2220,6 +2220,104 @@ def _late_fight_countdown_banded_lockout_warnings(
     return warnings
 
 
+# Inside the taper (D-10 to the fight) the plan may offer regressions and stop
+# rules only — never a "make it harder" option. These phrases mark an explicit
+# progression suggestion (add load/sets, heavier ball, stronger band, "to
+# progress"). Genuine regression advice ("regress to a lighter ball", "reduce
+# to 3 x 3", "drop a set") never matches these — the negation guard below is
+# scoped to the progression cue itself so a regression clause that happens to
+# say "drop"/"reduce" on the same line does not suppress the check.
+_LATE_FIGHT_PROGRESSION_ADVICE_PHRASES = (
+    "to progress",
+    "to advance",
+    "progress to",
+    "progress by",
+    "progress the drill",
+    "advance to",
+    "advance the drill",
+    "to make it harder",
+    "to load up",
+)
+
+# Negators that, when they immediately precede the progression cue, mean the
+# line is stating *not* to progress (e.g. "do not progress the drill").
+_LATE_FIGHT_PROGRESSION_NEGATORS = (
+    "do not",
+    "don't",
+    "dont",
+    "never",
+    "no ",
+    "not ",
+    "n't ",
+    "avoid",
+    "without",
+    "instead of",
+)
+
+
+def _late_fight_progression_phrase_match(line: str, phrase: str) -> int | None:
+    """Return the start index of an un-negated progression cue, else None."""
+    parts = [re.escape(part) for part in re.split(r"[\s\-]+", phrase.lower()) if part]
+    if not parts:
+        return None
+    pattern = r"\b" + r"[\s\-]+".join(parts) + r"\b"
+    line_lower = line.lower()
+    for match in re.finditer(pattern, line_lower):
+        window = line_lower[max(0, match.start() - 24):match.start()]
+        if any(negator in window for negator in _LATE_FIGHT_PROGRESSION_NEGATORS):
+            continue
+        return match.start()
+    return None
+
+
+def _late_fight_progression_lockout_warnings(
+    spec: dict[str, Any],
+    final_plan_text: str,
+    plan_lines: list[str],
+) -> list[dict]:
+    """Flag progression suggestions on D-10 and closer; only regressions allowed."""
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if not day_blocks:
+        days_out_bucket = str(spec.get("days_out_bucket") or "")
+        match = re.match(r"^D-(\d+)$", days_out_bucket, flags=re.IGNORECASE)
+        if match:
+            day_blocks[int(match.group(1))] = plan_lines
+
+    warnings: list[dict] = []
+    seen: set[tuple[int, str]] = set()
+    for day, lines in day_blocks.items():
+        if not (0 <= day <= 10):
+            continue
+        for line in lines:
+            matched = next(
+                (
+                    phrase
+                    for phrase in _LATE_FIGHT_PROGRESSION_ADVICE_PHRASES
+                    if _late_fight_progression_phrase_match(line, phrase) is not None
+                ),
+                None,
+            )
+            if not matched:
+                continue
+            key = (day, line)
+            if key in seen:
+                continue
+            seen.add(key)
+            warnings.append(
+                {
+                    "code": "late_fight_progression_suggested",
+                    "message": (
+                        f"D-{day} suggests a progression (\"{matched}\"), but from D-10 to the "
+                        "fight the taper allows regressions and stop rules only."
+                    ),
+                    "days_out_bucket": f"D-{day}",
+                    "line": line,
+                    "blocking": True,
+                }
+            )
+    return warnings
+
+
 def _normalize_exercise_key(value: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())).strip()
 
@@ -2731,6 +2829,7 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
 
     warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_countdown_banded_lockout_warnings(spec, final_plan_text, plan_lines))
+    warnings.extend(_late_fight_progression_lockout_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_allowed_exercise_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_neural_power_stack_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
