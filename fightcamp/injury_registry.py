@@ -24,15 +24,17 @@ SURFACE_TISSUE_TYPES = frozenset(
 )
 INJURY_TYPE_SEVERITY = MappingProxyType(derive_injury_type_severity_map())
 
-# Surface *skin* injuries that train through as skin-level damage. These are all
-# category="surface" (so ``_is_surface_type`` is True), which lets the rehab
-# formatter collapse them to a single calm note instead of a wound-care drill
-# list. ``cut``/``laceration`` are deliberately absent — they carry deep-wound/
-# stitch risk and keep the detailed wound-care path. Bruises/contusions are NOT
-# here: they are soft-tissue, not skin wounds, and train through via normal
-# full-plan routing and low-severity injury-guard handling instead.
+# Surface *skin* injuries that train through as skin-level damage. Every member is
+# a canonical taxonomy type with category="surface" (so ``_is_surface_type`` is
+# True), which lets the rehab formatter collapse them to a single calm note
+# instead of a wound-care drill list. ``cut``/``laceration`` are deliberately
+# absent — they carry deep-wound/stitch risk and keep the detailed wound-care
+# path. "scrape" is not here because it is not a canonical type: the parser
+# canonicalizes scrapes to ``abrasion``. Bruises/contusions are also absent —
+# they are soft-tissue, not skin wounds, and train through via normal full-plan
+# routing and low-severity injury-guard handling instead.
 MINOR_SURFACE_TRAIN_THROUGH_TYPES = frozenset(
-    {"graze", "abrasion", "scrape", "blister"}
+    {"graze", "abrasion", "blister"}
 )
 
 # Calm, coach-facing note for a minor surface (skin) injury that trains through.
