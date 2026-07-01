@@ -1555,23 +1555,25 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   morning check-in only.
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
-- Coach-led, sparring, or technical days where the app prescribes NO S&C work
-  (e.g. "Coach-led boxing session", "no app S&C today", "technical only") MUST
-  still be emitted as a day. Leave that day's "sessions" as [] and set a concise
-  today_card.headline naming what it is (e.g. "Coach-led boxing", "Hard
-  sparring", "Technical only") so the day renders as its own card. Do NOT invent
-  S&C blocks for these days and do NOT drop the day.
-- A coach-led / sparring / technical day can ALSO carry a low-load app session on
-  the SAME day (e.g. the plan lists "Coach-led boxing — technical only" AND a
-  short app touch such as a tactical cue card, mobility reset, or freshness
-  primer). When that happens the two COEXIST — never drop one for the other:
-  emit the app S&C work as normal entries in "sessions" (with its blocks), AND
-  set today_card.coach_led_contact to the coach-owned label (e.g. "Coach-led
-  boxing — technical only"). Put the coach-owned label in coach_led_contact, NOT
-  in headline (set headline to a generic title like "Training Day" or the app session's title instead, as headline is still required), so the app session keeps its own title; the renderer shows the
-  coach-owned contact as a context line above the app session. The "no app S&C
-  today" wording only applies when there is genuinely no app work — if an app
-  session is listed for the day, keep it.
+- Coach-led, sparring, or technical days where NO programmed S&C work is
+  prescribed (e.g. "Coach-led boxing session", "no extra S&C today", "no app S&C
+  today", "technical only") MUST still be emitted as a day. Leave that day's
+  "sessions" as [] and set a concise today_card.headline naming what it is (e.g.
+  "Coach-led boxing", "Hard sparring", "Technical only") so the day renders as
+  its own card. Do NOT invent S&C blocks for these days and do NOT drop the day.
+- A coach-led / sparring / technical day can ALSO carry a low-load programmed
+  session on the SAME day (e.g. the plan lists "Coach-led boxing — technical
+  only" AND a short touch such as a tactical cue card, mobility reset, or
+  freshness primer). When that happens the two COEXIST — never drop one for the
+  other: emit the programmed S&C work as normal entries in "sessions" (with its
+  blocks), AND set today_card.coach_led_contact to the coach-owned label (e.g.
+  "Coach-led boxing — technical only"). Put the coach-owned label in
+  coach_led_contact, NOT in headline (set headline to a generic title like
+  "Training Day" or the programmed session's title instead, as headline is still
+  required), so the programmed session keeps its own title; the renderer shows the
+  coach-owned contact as a context line above it. The "no extra S&C today"
+  wording only applies when there is genuinely no programmed work — if a session
+  is listed for the day, keep it.
 - Preserve compact plan-output formats reliably:
   * A day header like `D-18 (Wednesday) — Power Transfer Touch` starts a day.
     A following `Why:` line is the session/day objective, not a separate block.
@@ -1588,9 +1590,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     mindset support, NOT physical conditioning. Use session_type "skill" or
     "recovery" as appropriate and block_type "skill" or "mindset"; do not label
     these as conditioning/strength/plyometric blocks.
-  * If a coach-only day says `No app S&C today`, keep sessions as []. If it also
-    lists any prescribed app touch on the same D-day, keep the app touch as a
-    session and put the coach-owned contact in today_card.coach_led_contact.
+  * If a coach-only day says `No extra S&C today` (or the legacy `No app S&C
+    today`), keep sessions as []. If it also lists any prescribed touch on the
+    same D-day, keep that touch as a session and put the coach-owned contact in
+    today_card.coach_led_contact.
 - Optimize for a valid first-pass card: omit optional fields you cannot fill
   from the source rather than emitting partial objects that fail schema
   validation. Preserve every dated day and every listed prescription, but do not
@@ -1611,13 +1614,29 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   for the active weight-cut summary, injury/wound handling, nutrition reminders,
   and general non-negotiables. Keep stop/modify/report SAFETY thresholds in
   red_flag_rules and full nutrition macros in nutrition — plan_notes is for the
-  brief, always-on context. A weight_cut note MUST express a risk requiring
-  qualified supervision, NEVER acute-cut directives (no sauna, dehydration,
-  water-loading, or sodium manipulation). Omit plan_notes entirely if the plan
-  states none.
+  brief, always-on context. A weight_cut note is a brief, calm statement of the
+  active cut and how it shapes recovery/fuelling; it must NEVER contain acute-cut
+  directives (no sauna, dehydration, water-loading, or sodium manipulation). Omit
+  plan_notes entirely if the plan states none.
+- WEIGHT-CUT SEVERITY GATE. The deterministic layer grades every active cut into
+  a risk band (see STAGE 1 COMPUTED SUPPORT weight_cut.risk_band: none / moderate
+  / high / severe). Match the plan's alarm level to that band — do NOT shout
+  medical warnings at a routine cut:
+  * band "none" or "moderate": treat the cut as ordinary context. Give at most ONE
+    short, calm plan_notes weight_cut summary about protecting recovery and
+    fuelling. Do NOT add a weight-cut stop/report red_flag_rule, do NOT tell the
+    athlete to "seek supervision" / "notify coach" / see a professional, and set
+    the nutrition weight_cut_warning risk_level to "none" (or omit it) with
+    requires_professional_support = false.
+  * band "high": add a single measured precaution — one weight_cut_warning at
+    risk_level "amber" and, only if warranted, one weight-cut red_flag_rule.
+  * band "severe": full supervision framing is appropriate — weight_cut_warning
+    at "red" with requires_professional_support = true and a weight-cut
+    red_flag_rule.
+  Never escalate ABOVE the computed band. When in doubt, under-warn.
 - Provide nutrition with a summary and, where a weight cut applies, a
-  weight_cut_warning. Weight-cut guidance MUST be expressed as a risk requiring
-  qualified supervision — NEVER direct acute-cut instructions (no sauna,
+  weight_cut_warning whose risk_level matches the computed band per the gate
+  above. Weight-cut guidance is NEVER direct acute-cut instructions (no sauna,
   dehydration, water-loading, or sodium-manipulation directives).
 - When the plan states them, carry per-block detail into each block:
   "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or

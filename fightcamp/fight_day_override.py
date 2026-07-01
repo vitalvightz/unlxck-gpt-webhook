@@ -26,7 +26,7 @@ from .fight_date_utils import resolve_fight_weekday
 
 FIGHT_DAY_PROTOCOL_TEXT = (
     "Fight day protocol — follow coach warm-up and fight protocol; "
-    "no additional app S&C."
+    "no additional S&C."
 )
 
 

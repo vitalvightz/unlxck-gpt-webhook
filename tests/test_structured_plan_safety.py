@@ -114,6 +114,15 @@ def test_weight_cut_risk_conflict_is_flagged():
     assert any("weight-cut risk understated" in w for w in warnings), warnings
 
 
+def test_moderate_cut_does_not_force_a_supervision_warning():
+    # A routine, moderate-severity cut (~3.5% at D-18) must NOT be flagged as a
+    # conflict just because the plan omits a supervision-tier weight_cut_warning.
+    # Only escalated (high / severe) cuts require one.
+    support = _support(weight_cut_risk=True, weight_cut_pct=3.5, days_until_fight=18)
+    plan = _plan(nutrition={"summary": "Fuel around sessions.", "daily_focus": "", "weight_cut_warning": None})
+    assert detect_computed_support_conflicts(plan, support) == []
+
+
 def test_matching_computed_support_produces_no_conflict_warning():
     support = _support(weight_cut_risk=True, weight_cut_pct=7.0)
     plan = _plan(nutrition={

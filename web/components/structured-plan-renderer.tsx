@@ -399,7 +399,7 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
       {kind === "light_combat" ? (
         <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
       ) : coachLed ? (
-        <p className="sp-today-note">No app S&amp;C today — train with your coach and keep freshness priority.</p>
+        <p className="sp-today-note">No extra S&amp;C today — train with your coach and keep freshness priority.</p>
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}

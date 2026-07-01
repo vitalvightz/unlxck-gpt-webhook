@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 CANONICAL_HARD_SPARRING_LABEL = "Coach-led boxing session"
 CANONICAL_HARD_SPARRING_BAN_LABEL = "Coach-led boxing — no hard sparring / technical only"
-CANONICAL_HARD_SPARRING_NOTE = "No app S&C today. Keep freshness priority."
+CANONICAL_HARD_SPARRING_NOTE = "No extra S&C today. Keep freshness priority."
 
 
 _PAYLOAD_MODE_MAP = {
@@ -3617,7 +3617,7 @@ def _append_declared_hard_spar_context(
                 "selection_rule": (
                     "Coach-owned boxing day downgraded to technical/rhythm only "
                     "under the D-17 hard-sparring ban; render it as a coach-owned "
-                    "label, never as an app S&C session. It must stay visible even "
+                    "label, never as a programmed S&C session. It must stay visible even "
                     "when an app session is also scheduled that day — the two "
                     "coexist on the same day, the contact does not replace the app "
                     "session and the app session does not hide the contact."
@@ -4130,8 +4130,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "COUNTDOWN CONTRACT\n"
         "One coherent countdown truth. Lead every active day D-N first, weekday second — use resolved countdown_display_label when present.\n"
         "Placement governs day assignment only — it never expands the visible session list.\n"
-        "State the ownership split: gym/coach owns boxing load; app owns S&C and rehab inserts.\n"
-        "Render only app-owned roles as athlete-facing sessions; boxing schedule is context.\n"
+        "State the ownership split to the athlete plainly: the gym/coach owns the boxing load; the S&C and rehab inserts are programmed for you. Never call these 'app-owned' or 'app-provided' in athlete-facing text — name the work directly.\n"
+        "Render only the programmed S&C/rehab roles as athlete-facing sessions; boxing schedule is context.\n"
         "Partial prescription: label exactly — Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
@@ -4139,7 +4139,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities.\n"
-"Hard sparring days are gym/coach-owned. The app must not prescribe the sparring. Default render is the minimal label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"Coach-led MMA session\", \"Coach-led Muay Thai session\", \"Coach-led kickboxing session\"). Hard sparring is not deloaded by default — only deload when fatigue, weight cut, or another readiness flag explicitly demands it. When the day is D-17 or closer to the fight (or its reason_codes include \"d17_hard_sparring_ban\"), override the label to \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" because hard sparring is banned in that window. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one app-owned note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else."
+"Hard sparring days are gym/coach-owned. The app must not prescribe the sparring. Default render is the minimal label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"Coach-led MMA session\", \"Coach-led Muay Thai session\", \"Coach-led kickboxing session\"). Hard sparring is not deloaded by default — only deload when fatigue, weight cut, or another readiness flag explicitly demands it. When the day is D-17 or closer to the fight (or its reason_codes include \"d17_hard_sparring_ban\"), override the label to \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" because hard sparring is banned in that window. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else."
     )
     if payload_mode == "fight_day_protocol_payload":
         return (

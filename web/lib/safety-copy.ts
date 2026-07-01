@@ -6,13 +6,13 @@
 //   clear an athlete. Never claim otherwise.
 // - Prefer "training allowed by your current inputs" over "safe to train", and
 //   "reduce or stop if symptoms worsen" over reassurance.
-// - Coach / clinician advice always overrides the app.
+// - Coach / clinician advice always overrides anything shown here.
 
 export const SAFETY_NOT_MEDICAL_ADVICE =
   "Unlxck is not medical advice and does not diagnose injuries.";
 
 export const SAFETY_COACH_OVERRIDE =
-  "Advice from your coach or clinician always overrides the app.";
+  "Advice from your coach or clinician always overrides anything shown here.";
 
 // One-line disclaimer for persistent / low-emphasis areas (footer, settings).
 // Keep this longer version for wider screens.

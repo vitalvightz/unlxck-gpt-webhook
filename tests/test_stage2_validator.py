@@ -208,7 +208,7 @@ def test_validate_stage2_output_accepts_two_line_d0_fight_day_protocol():
         planning_brief=_late_fight_planning_brief("D-0"),
         final_plan_text="""
         D-0 (Sunday) — Fight day protocol
-        Follow coach warm-up and fight protocol; no additional app S&C.
+        Follow coach warm-up and fight protocol; no additional S&C.
         """,
     )
 
