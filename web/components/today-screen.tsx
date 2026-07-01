@@ -640,7 +640,6 @@ function InjuryCheckinCard({
         <ul className="today-injury-list">
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
-            const selectedAction = INJURY_STATUS_ACTIONS.find((action) => action.value === selectedStatus);
             const isPending = pendingFlagId === injury.id;
 
             return (
