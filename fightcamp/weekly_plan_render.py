@@ -330,7 +330,10 @@ def _session_body(
     strength_exercises: list[dict[str, Any]],
     grouped_drills: dict[str, list[dict[str, Any]]],
     *,
-    is_primary_strength: bool,
+    if category == "support_insert" or role.get("late_camp_transition") is True:
+        display_lines = _display_text_lines(role)
+        if display_lines:
+            return display_lines
 ) -> list[str]:
     category = str(role.get("category") or "").strip().lower()
     role_key = str(role.get("role_key") or "").strip().lower()
