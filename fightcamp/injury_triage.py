@@ -6,6 +6,7 @@ from typing import Any
 
 from .input_parsing import GuidedInjury, PlanInput
 from .injury_registry import (
+    MINOR_IMPACT_TRAIN_THROUGH_TYPES,
     MINOR_SURFACE_TRAIN_THROUGH_TYPES,
     SURFACE_MINOR_TRAIN_THROUGH_NOTE,
 )
@@ -243,9 +244,9 @@ _NEGATED_STRUCTURAL_BREAK_RE = re.compile(
 )
 
 
-# ``SURFACE_MINOR_TRAIN_THROUGH_NOTE`` (calm coach-facing note) and
-# ``MINOR_SURFACE_TRAIN_THROUGH_TYPES`` are defined in injury_registry so the rehab
-# formatter can share them; re-exported here for callers/tests.
+# ``SURFACE_MINOR_TRAIN_THROUGH_NOTE`` (calm coach-facing note) and the
+# train-through type sets are defined in injury_registry so the rehab formatter
+# can share the skin set; re-exported here for callers/tests.
 _MINOR_SURFACE_TRAIN_THROUGH_TYPES = MINOR_SURFACE_TRAIN_THROUGH_TYPES
 
 # Structured surface routing signals that veto minor train-through: each routes to
@@ -1429,33 +1430,57 @@ def _minor_surface_train_through(
     """Whether the payload is a minor, skin-level surface injury that should train
     through with only a calm global note.
 
-    Requires an actual minor surface type (graze/abrasion/scrape/blister/mild
-    bruise/minor contusion) and the absence of any surface danger signal, red flag,
-    urgent flag, or high-risk category. This is the ``surface_minor_train_through``
-    concept: it never relaxes a real safety gate — it is only evaluated on the
-    full-plan path, so every danger gate has already passed by the time it runs.
+    Requires an actual minor surface type and the absence of any surface danger
+    signal, red flag, urgent flag, or high-risk category. This is the
+    ``surface_minor_train_through`` concept: it never relaxes a real safety gate —
+    it is only evaluated on the full-plan path, so every danger gate has already
+    passed by the time it runs.
+
+    Two families qualify:
+    - Skin surface types (graze/abrasion/scrape/blister) — skin-level by
+      definition, matched via any surface/injury type field.
+    - Impact bruises/contusions — soft-tissue, matched ONLY through an explicit
+      surface classification (a guided ``surface_type`` / ``guided_surface_type``),
+      never a bare parsed ``injury_type``, and only when low/mild severity. This
+      keeps an ordinary soft-tissue contusion from being mislabelled and keeps a
+      moderate/worsening bruise out of train-through.
     """
     if red_flags or urgent_flags or matched_categories:
         return False
     if routing_reasons & _SURFACE_DANGER_ROUTING_SIGNALS:
         return False
 
-    def _is_minor(value: Any) -> bool:
-        return _normalized_text(value) in _MINOR_SURFACE_TRAIN_THROUGH_TYPES
+    def _skin_type(value: Any) -> bool:
+        return _normalized_text(value) in MINOR_SURFACE_TRAIN_THROUGH_TYPES
+
+    def _minor_impact_type(value: Any, severity: Any) -> bool:
+        return (
+            _normalized_text(value) in MINOR_IMPACT_TRAIN_THROUGH_TYPES
+            and _normalize_guided_severity_token(str(severity or "")) == "low"
+        )
+
+    # An explicit surface classification the athlete/coach set on the injury.
+    surface_class_keys = ("guided_surface_type", "surface_type", "guided_source_surface_type")
 
     for guided in _effective_guided_injuries(plan_input):
-        if _normalized_text(guided.injury_type) == "surface_injury" and _is_minor(
-            guided.surface_type
+        if _normalized_text(guided.injury_type) != "surface_injury":
+            continue
+        if _skin_type(guided.surface_type) or _minor_impact_type(
+            guided.surface_type, guided.severity
         ):
             return True
 
     for item in plan_input.parsed_injuries or []:
         if not isinstance(item, dict):
             continue
-        if any(
-            _is_minor(item.get(key))
-            for key in ("guided_surface_type", "surface_type", "guided_source_surface_type", "injury_type", "rehab_type")
-        ):
+        severity = item.get("severity")
+        # Skin surface types: trusted via any type field (a parsed graze is a
+        # genuine surface injury).
+        if any(_skin_type(item.get(key)) for key in (*surface_class_keys, "injury_type", "rehab_type")):
+            return True
+        # Bruises/contusions: only via an explicit surface classification, low
+        # severity — never a bare soft-tissue ``injury_type``/``rehab_type``.
+        if any(_minor_impact_type(item.get(key), severity) for key in surface_class_keys):
             return True
 
     return False
