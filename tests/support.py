@@ -1219,11 +1219,14 @@ class FakeStore:
             current_text = str(row.get("final_plan_text") or row.get("plan_text") or "")
             if current_text != str(expected_final_plan_text):
                 return row
+            if structured_plan is None and row.get("structured_plan") is not None:
+                return row
         # Narrow write: only the structured-plan output fields. Status / plan_text
         # / stage2 fields are intentionally left untouched so a concurrent admin
         # action cannot be clobbered by a slow background conversion.
-        row["structured_plan"] = structured_plan
-        row["schema_version"] = schema_version
+        if structured_plan is not None:
+            row["structured_plan"] = structured_plan
+            row["schema_version"] = schema_version
         row["stage2_validator_report"] = stage2_validator_report or {}
         return row
 

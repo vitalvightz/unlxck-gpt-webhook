@@ -415,6 +415,9 @@ async def run_structured_plan_post_processing(
         if not plan_row:
             return
         plan_row = dict(plan_row)
+        validator_report = plan_row.get("stage2_validator_report")
+        if not isinstance(validator_report, dict):
+            validator_report = {}
         result = {
             "status": str(plan_row.get("status") or ""),
             "plan_text": str(plan_row.get("plan_text") or ""),
@@ -422,7 +425,7 @@ async def run_structured_plan_post_processing(
             "final_plan_text": str(plan_row.get("final_plan_text") or plan_row.get("plan_text") or ""),
             "pdf_url": plan_row.get("pdf_url"),
             "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
-            "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
+            "stage2_validator_report": validator_report,
             "stage2_status": str(plan_row.get("stage2_status") or ""),
             "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
             # Carry any card the inline approval attempt already produced so the
@@ -440,9 +443,13 @@ async def run_structured_plan_post_processing(
         # Persist successful cards, and also persist a failed/skipped structured
         # debug result when conversion actually ran. This keeps athlete-visible
         # text untouched while making missed enhanced cards diagnosable.
-        report = result.get("stage2_validator_report") or {}
-        structured_debug = report.get("structured_plan") if isinstance(report, dict) else None
-        if result.get("structured_plan") is not None or structured_debug is not None:
+        report = result.get("stage2_validator_report")
+        if not isinstance(report, dict):
+            report = {}
+        structured_debug = report.get("structured_plan")
+        debug_status = structured_debug.get("status") if isinstance(structured_debug, dict) else None
+        should_persist_debug = debug_status not in {None, "not_attempted"}
+        if result.get("structured_plan") is not None or should_persist_debug:
             await asyncio.to_thread(
                 store.update_plan_structured_artifacts,
                 plan_id,
