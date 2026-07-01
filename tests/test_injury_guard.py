@@ -268,6 +268,53 @@ def test_surface_plus_ambiguous_non_surface_phrase_does_not_bypass():
     assert decision.reason.get("bucket") != "surface_tissue"
 
 
+# ── PR 2: minor surface injuries do not exclude normal combat training ─────────
+#
+# A lower-back graze is skin-level damage. It must not strip broad exercise
+# categories: bench press, med-ball throws, heavy bag, pads, shadowboxing, and
+# core anti-rotation work all stay available. Only the surface skin-precaution
+# note rides along.
+
+_LOWER_BACK_GRAZE = [
+    {
+        "injury_type": "graze",
+        "canonical_location": "lower back",
+        "region": "lower_back",
+        "severity": "low",
+        "original_phrase": "graze on lower back",
+    }
+]
+
+_NORMAL_COMBAT_EXERCISES = [
+    {"name": "Barbell Bench Press", "tags": ["upper_push", "press_heavy", "horizontal_push"]},
+    {"name": "Med-Ball Rotational Throw", "tags": ["rotational_power", "core", "mech_ballistic"]},
+    {"name": "Heavy Bag Intervals", "tags": ["boxing", "conditioning", "glycolytic"]},
+    {"name": "Shadowboxing", "tags": ["boxing", "skill", "low_impact"]},
+    {"name": "Pallof Press", "tags": ["core", "anti_rotation", "stability"]},
+]
+
+
+@pytest.mark.parametrize("exercise", _NORMAL_COMBAT_EXERCISES, ids=lambda ex: ex["name"])
+def test_lower_back_graze_does_not_exclude_normal_combat_exercises(exercise):
+    decision = injury_decision(exercise, _LOWER_BACK_GRAZE, "GPP", "moderate")
+    assert decision.action == "allow", (exercise["name"], decision.action)
+    assert decision.reason.get("bucket") == "surface_tissue"
+    assert decision.reason.get("disposition") == "allow_with_skin_precautions"
+
+
+def test_lower_back_graze_does_not_exclude_back_loaded_lift():
+    # Even a heavily lumbar-loaded lift is not excluded by a skin-level graze —
+    # the graze is not a structural back injury.
+    decision = injury_decision(
+        {"name": "Barbell Deadlift", "tags": ["hinge_heavy", "lumbar_loaded", "posterior_chain_heavy"]},
+        _LOWER_BACK_GRAZE,
+        "GPP",
+        "moderate",
+    )
+    assert decision.action == "allow"
+    assert decision.reason.get("bucket") == "surface_tissue"
+
+
 def test_injury_guard_field_restrictions():
     name_only = {"name": "Pressure Fighter Stomp", "purpose": "bench press power", "tags": []}
     name_only_reasons = _drill_text_injury_reasons(name_only, ["shoulder injury"])
