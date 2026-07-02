@@ -50,7 +50,7 @@ _CONTACT_EFFECTIVE_LOADS = {"hard", "technical", "reduced"}
 _HEADLINE_BY_LOAD = {
     "hard": "Coach-led sparring",
     "reduced": "Coach-led sparring — reduced dose",
-    "technical": "Coach-led boxing — technical only",
+    "technical": "Coach-led boxing — technical-only combat",
 }
 # day_type carries no sparring value (high/moderate/low/...), so pick the closest
 # intensity bucket purely for the day's intensity tag. It does NOT drive the
@@ -66,6 +66,31 @@ _SPARRING_RE = re.compile(r"\bspar(?:r(?:ing|ed)|s)?\b", re.I)
 _COACH_LED_RE = re.compile(r"\bcoach", re.I)
 
 _DDAY_RE = re.compile(r"D-\s*(\d+)", re.I)
+_ALLOWED_TECHNICAL_FILLER_RE = re.compile(
+    r"\b("
+    r"tactical\s+watch|tactical\s+cue\s+card|cue\s+card|"
+    r"neural\s+visuali[sz]ation|visuali[sz]ation|"
+    r"breathing\s+reset|mobility\s+reset|"
+    r"technical\s+shadow(?:boxing)?|shadowboxing|rhythm\s+flow"
+    r")\b",
+    re.I,
+)
+_ALLOWED_HARD_DAY_FILLER_RE = re.compile(
+    r"\b("
+    r"tactical\s+watch|tactical\s+cue\s+card|cue\s+card|"
+    r"neural\s+visuali[sz]ation|visuali[sz]ation|breathing\s+reset"
+    r")\b",
+    re.I,
+)
+_BLOCKED_CONTACT_FILLER_RE = re.compile(
+    r"\b("
+    r"strength|power\s+transfer|med[-\s]?ball|medicine\s+ball|plyo|"
+    r"hard\s+(?:bag|pad)|bag\s+interval|pad\s+interval|"
+    r"fight[-\s]?pace|conditioning|glycolytic|alactic|primer"
+    r")\b",
+    re.I,
+)
+_HIGH_RPE_RE = re.compile(r"\brpe\s*(?:[6-9]|10|[2-9]\s*[-–]\s*(?:[6-9]|10)|[6-9]\s*\+|10\s*\+)", re.I)
 
 
 def _already_coach_led(headline: str) -> bool:
@@ -80,6 +105,38 @@ def _already_coach_led(headline: str) -> bool:
 def _parse_dday(label: Any) -> int | None:
     match = _DDAY_RE.search(str(label or ""))
     return int(match.group(1)) if match else None
+
+
+def _string_values(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        values: list[str] = []
+        for nested in value.values():
+            values.extend(_string_values(nested))
+        return values
+    if isinstance(value, (list, tuple)):
+        values: list[str] = []
+        for nested in value:
+            values.extend(_string_values(nested))
+        return values
+    return []
+
+
+def _session_text(session: Any) -> str:
+    return " ".join(_string_values(session))
+
+
+def _is_allowed_same_day_filler(session: Any, contact: _ContactDay) -> bool:
+    text = _session_text(session)
+    if _BLOCKED_CONTACT_FILLER_RE.search(text) or _HIGH_RPE_RE.search(text):
+        return False
+    allowed_re = (
+        _ALLOWED_TECHNICAL_FILLER_RE
+        if contact.headline == _HEADLINE_BY_LOAD["technical"]
+        else _ALLOWED_HARD_DAY_FILLER_RE
+    )
+    return bool(allowed_re.search(text))
 
 
 def _resolve_fight_date(planning_brief: dict[str, Any]) -> Any:
@@ -142,12 +199,55 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
 
     fight_date = _resolve_fight_date(planning_brief)
     contact_days: list[_ContactDay] = []
-    seen: set[tuple[str | None, int | None]] = set()
+    seen_dates: set[str] = set()
+    seen_ddays: set[int] = set()
+
+    def append_contact(contact: _ContactDay) -> None:
+        if contact.date and contact.date in seen_dates:
+            return
+        if contact.d_day is not None and contact.d_day in seen_ddays:
+            return
+        if contact.date:
+            seen_dates.add(contact.date)
+        if contact.d_day is not None:
+            seen_ddays.add(contact.d_day)
+        contact_days.append(contact)
 
     for week_index in range(len(weeks)):
         week = weeks[week_index]
         if not isinstance(week, dict):
             continue
+
+        role_phase = str(week.get("phase") or "").strip().upper()
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            if str(role.get("role_key") or "").strip() != "hard_sparring_day":
+                continue
+
+            raw_offset = role.get("countdown_offset")
+            d_day = raw_offset if isinstance(raw_offset, int) and raw_offset >= 0 else None
+            if d_day is None:
+                d_day = _parse_dday(
+                    role.get("scheduled_countdown_label") or role.get("countdown_label")
+                )
+            if d_day is None or d_day == 0:
+                continue
+
+            is_technical = bool(role.get("downgraded")) or str(
+                role.get("downgraded_to_role_key") or ""
+            ).strip() == "technical_touch_day"
+            load = "technical" if is_technical else "hard"
+            append_contact(
+                _ContactDay(
+                    date=str(role.get("calendar_date") or role.get("date") or "").strip() or None,
+                    d_day=d_day,
+                    headline=_HEADLINE_BY_LOAD[load],
+                    day_type=_DAY_TYPE_BY_LOAD[load],
+                    phase=role_phase,
+                    week_index=week_index + 1,
+                )
+            )
 
         schedule = extract_weekly_schedule(
             planning_brief,
@@ -182,12 +282,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             if cal is None and d_day is None:
                 continue
 
-            key = (cal, d_day)
-            if key in seen:
-                continue
-
-            seen.add(key)
-            contact_days.append(
+            append_contact(
                 _ContactDay(
                     date=cal,
                     d_day=d_day,
@@ -364,6 +459,26 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             # populated whenever it is absent — even if the headline already reads
             # coach-led — or the coexisting contact stays hidden.
             if day.get("sessions"):
+                sessions = day.get("sessions")
+                if isinstance(sessions, list):
+                    compatible_sessions = [
+                        session
+                        for session in sessions
+                        if _is_allowed_same_day_filler(session, contact)
+                    ]
+                    if len(compatible_sessions) != len(sessions):
+                        day["sessions"] = compatible_sessions
+                        notes.append(
+                            f"removed incompatible same-day app work from "
+                            f"{date or f'D-{dday}'} ({contact.headline!r})"
+                        )
+                if not day.get("sessions"):
+                    card["headline"] = contact.headline
+                    notes.append(
+                        f"stamped contact headline on {date or f'D-{dday}'} "
+                        f"({contact.headline!r})"
+                    )
+                    continue
                 if str(card.get("coach_led_contact") or "").strip():
                     continue
                 card["coach_led_contact"] = contact.headline

@@ -2,6 +2,7 @@ from fightcamp.stage2_payload_late_fight import (
     _coach_owned_context_session_sequence,
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
+    _build_late_fight_weekly_role_map,
     _countdown_offset,
     _countdown_weekday_map,
     _classify_declared_hard_days_for_late_window,
@@ -201,6 +202,33 @@ def test_bridge_d18_routine_cut_keeps_controlled_pressure_touch():
     ]
 
     assert "light_fight_pace_touch_day" in role_keys
+
+
+def test_d20_declared_friday_counts_as_final_hard_pressure_without_snc_stack():
+    athlete = _athlete(
+        20,
+        plan_creation_weekday="friday",
+        hard_sparring_days=["tuesday", "friday"],
+        fatigue="low",
+        fatigue_level="low",
+        readiness_flags=[],
+    )
+    role_map = _build_late_fight_weekly_role_map(20, athlete)
+    bridge_week = role_map["weeks"][0]
+
+    friday = next(entry for entry in bridge_week["hard_sparring_plan"] if entry["day"] == "friday")
+    assert friday["d_day"] == 20
+    assert friday["effective_load"] == "hard"
+    assert friday["status"] == "hard_as_planned"
+    assert "friday" in bridge_week["effective_hard_sparring_days"]
+
+    same_day_app_roles = [
+        role
+        for role in bridge_week["session_roles"]
+        if role.get("scheduled_day_hint") == "friday"
+        and role.get("role_key") != "hard_sparring_day"
+    ]
+    assert same_day_app_roles == []
 
 
 def test_bridge_d18_extreme_cut_blocks_light_fight_rhythm_touch():
