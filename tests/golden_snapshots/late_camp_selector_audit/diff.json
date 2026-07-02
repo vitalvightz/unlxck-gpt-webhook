@@ -597,20 +597,20 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Staggered-Stance Medicine-Ball Punch Throw",
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
+        "Scapular Pull-Up Hold",
         "Light Heavy-Bag Technical Tempo",
-        "Controlled Bird-Dog",
-        "Diaphragmatic Breathing Drills"
+        "Banded Lateral Walk",
+        "Controlled Bird-Dog"
       ],
       "added_winners": [
-        "Staggered-Stance Medicine-Ball Punch Throw",
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
+        "Scapular Pull-Up Hold",
         "Light Heavy-Bag Technical Tempo",
-        "Controlled Bird-Dog",
-        "Diaphragmatic Breathing Drills"
+        "Banded Lateral Walk",
+        "Controlled Bird-Dog"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -640,6 +640,7 @@
         "Seated Medicine-Ball Punch Throw",
         "Single-Leg Balance (Eyes Closed)",
         "Small-range cervical CARs",
+        "Staggered-Stance Medicine-Ball Punch Throw",
         "Standing hip CAR lite",
         "Supported hip airplane micro-range",
         "Towel-assisted lateral neck isometric",

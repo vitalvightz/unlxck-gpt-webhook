@@ -12,7 +12,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
-from .bank_schema import is_late_fight_metadata_safe, validate_training_item
+from .bank_schema import NON_EQUIPMENT_TOKENS, is_late_fight_metadata_safe, validate_training_item
 from .tagging import normalize_item_tags, normalize_tag, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
@@ -835,6 +835,9 @@ def _evaluate_strength_late_window(
 
     if window == D1 and not ("d1_ok" in tags or "d1_if_familiar" in tags):
         blocks.append("late_strength_block_d1_requires_d1_tags")
+    # d1 allows no equipment of any kind; d1_ok tags do not override this.
+    if window == D1 and equipment - NON_EQUIPMENT_TOKENS:
+        blocks.append("late_strength_block_d1_equipment")
     if window == D4_TO_D2 and "no_d4_to_d1" in tags:
         blocks.append("late_strength_block_no_d4_to_d1")
     if window in {D7, D6_TO_D5, D4_TO_D2, D1} and "no_d7_to_d1" in tags:

@@ -2888,19 +2888,47 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
 # the allocator must never assign such an exercise to that day — D-1 stays a
 # breathing / mobility / technical-cue primer only.
 _LATE_FIGHT_D1_UNSAFE_NAME = re.compile(
-    r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap[-_ ]bar|barbell)\b",
+    r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap[-_ ]bar|barbell"
+    r"|band(?:s|ed)?|dumbbells?|kettlebells?|med(?:icine)?[-_ ]ball|slam[-_ ]ball|sled|sandbag"
+    r"|cable|landmine|weight[-_ ]vest|pull[-_ ]?up)\b",
     re.IGNORECASE,
 )
+
+# Lazily built name -> requires-equipment map covering the strength,
+# conditioning, and coordination banks. D-1 allows no equipment of any kind,
+# so any bank exercise that needs equipment must never be assigned there.
+_D1_EQUIPMENT_BY_NAME: dict[str, bool] | None = None
+
+
+def _bank_requires_equipment(name: str) -> bool:
+    global _D1_EQUIPMENT_BY_NAME
+    if _D1_EQUIPMENT_BY_NAME is None:
+        from .bank_schema import requires_equipment
+        from .conditioning import get_conditioning_bank, get_coordination_bank
+        from .strength import get_exercise_bank
+
+        requirements: dict[str, bool] = {}
+        for bank in (get_exercise_bank(), get_conditioning_bank(), get_coordination_bank()):
+            for item in bank:
+                item_name = str(item.get("name") or "").strip().lower()
+                if item_name:
+                    requirements[item_name] = requires_equipment(item)
+        _D1_EQUIPMENT_BY_NAME = requirements
+    return _D1_EQUIPMENT_BY_NAME.get(str(name or "").strip().lower(), False)
 
 
 def _late_fight_assignment_is_unsafe(day_label: str, name: str) -> bool:
     """Return True when ``name`` must not be assigned to ``day_label``.
 
-    Today this only guards D-1, matching the validator's D-1 blocker exactly.
+    Today this only guards D-1, matching the validator's D-1 blocker exactly:
+    loaded/strength/conditioning name signals plus any bank exercise that
+    requires equipment (D-1 is equipment-free).
     """
     if str(day_label or "").strip().upper() != "D-1":
         return False
-    return bool(_LATE_FIGHT_D1_UNSAFE_NAME.search(str(name or "")))
+    if _LATE_FIGHT_D1_UNSAFE_NAME.search(str(name or "")):
+        return True
+    return _bank_requires_equipment(name)
 
 
 def _build_late_fight_allowed_exercises_by_day(
@@ -4014,7 +4042,7 @@ If selected_plan.late_fight_plan_spec.taper_micro_support_policy.active is true,
 Render taper micro-support only as "Optional micro-support:" attached to an already-valid day. Never write the internal tag `taper_micro_support` in the final plan, including in brackets or parentheses. Never render it as a session title, primary anchor, visible session role, or standalone training day.
 Obey the policy's allowed_categories, suppressed_categories, max_items, max_total_minutes, and per-category rules exactly.
 If the policy suppresses core, neck, heavy bag, grip, shadowboxing, or band face pull, do not render them as taper micro-support.
-On D-1, taper_micro_support is limited to breathing, mobility, light technical shadowboxing, or optional light band face pull only. Never render core, neck, heavy bag, grip, conditioning, hard bands, or power work on D-1.
+On D-1, taper_micro_support is limited to breathing, mobility, or light technical shadowboxing only. No equipment of any kind is allowed on D-1: never render core, neck, heavy bag, grip, conditioning, band work (including light band face pulls), med ball, weights, or power work on D-1.
 For core micro-support, keep only familiar low-fatigue stability work in tiny doses. Never use hanging leg raises, Russian twists, weighted sit-ups, long planks, high-rep abs, or any trunk/hip-flexor work likely to create soreness, pump, fatigue, or heavy breathing.
 For neck micro-support, keep isometric-only, one set, 10 sec each direction, RPE 2-4, familiar only, and never D-4 or closer unless the policy explicitly allows it.
 For heavy-bag micro-support, keep technical rhythm only, 1-2 x 45-60 sec, light contact only, and never let it become conditioning, power work, or shoulder-pump work.

@@ -102,6 +102,9 @@ LOADED_EQUIPMENT = {
     "landmine",
 }
 MED_BALL_EQUIPMENT = {"medicine_ball", "med_ball", "slam_ball"}
+# Tokens that describe the absence of equipment. Anything outside this set
+# counts as equipment and is never allowed on d1 (fight eve).
+NON_EQUIPMENT_TOKENS = {"bodyweight", "none", "mat"}
 BALLISTIC_TAGS = {"ballistic", "explosive", "mech_ballistic", "plyometric", "reactive"}
 PRIMER_ONLY_TAGS = {"neural_primer", "cns_freshness", "support_accessory"}
 STRENGTH_FULFILLMENT_TAGS = {
@@ -350,6 +353,11 @@ def _text_blob(item: dict) -> str:
     return " ".join(str(item.get(field) or "") for field in fields).lower()
 
 
+def requires_equipment(item: dict) -> bool:
+    """Return True when the item needs any equipment beyond bodyweight/mat."""
+    return bool(_equipment_tokens(item) - NON_EQUIPMENT_TOKENS)
+
+
 def _has_dense_glycolytic_profile(item: dict, *, normalized_system: str) -> bool:
     work_sec = _number_or_none(item.get("work_sec"))
     rest_sec = _number_or_none(item.get("rest_sec"))
@@ -550,7 +558,7 @@ def is_low_risk_support_candidate(
         return False
     if loaded or med_ball or ballistic or glycolytic or fight_pace or _has_high_intent_signal(item):
         return False
-    if resolved_window == D1 and (bands or isometric):
+    if resolved_window == D1 and (bands or isometric or equipment - NON_EQUIPMENT_TOKENS):
         return False
     if effective_rpe is not None and effective_rpe >= 7:
         return False
@@ -600,7 +608,7 @@ def is_low_risk_support_candidate(
     light_mobility = bool(tags & {"mobility", "recovery", "low_impact", "cns_freshness", "skill_refinement"}) or any(
         term in text for term in ("mobility", "easy reset", "light reset", "walkthrough", "walk-through")
     )
-    low_equipment = not equipment or equipment <= {"bodyweight", "none", "mat"}
+    low_equipment = not equipment or equipment <= NON_EQUIPMENT_TOKENS
     easy_text = any(term in text for term in ("easy", "light", "gentle", "low intensity", "low-intensity", "nasal"))
     low_rpe = effective_rpe is not None and effective_rpe <= 4
     technical_rhythm = bool(tags & {"technical_rhythm", "skill_refinement", "coordination"}) or any(
@@ -783,6 +791,11 @@ def is_late_fight_metadata_safe(
         and not _has_final_day_policy(item)
     ):
         _append_code(block_codes, "late_block_d1_forbidden_modality")
+
+    # No equipment of any kind is allowed on d1. This block is absolute: a
+    # final-day policy tag (d1_ok / final_day_ok) cannot override it.
+    if window == D1 and requires_equipment(item):
+        _append_code(block_codes, "late_block_d1_equipment")
 
     if _primer_only_fulfillment_block(item, source=source, source_kind=kind):
         _append_code(block_codes, "late_block_primer_only_strength_fulfillment")

@@ -52,6 +52,7 @@ REPAIR RULES:
 39. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
 40. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
 41. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
+42. D-1 is equipment-free: never render band, med-ball, bag, mitt, weight, or any other equipment-based work on D-1 — breathing, mobility, and light technical shadowboxing only.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""

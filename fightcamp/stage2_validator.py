@@ -1947,7 +1947,9 @@ _LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
         "preferred": ["Technical Shadowboxing Tempo", "Mobility Reset Flow", "Breathing Reset", "Band Face Pull", "Light Band Punch Cue", "Mirror Drill"],
     },
     "d1": {
-        "blocked": ["Sandbag Shouldering", "Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "band", "banded", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        # D-1 is equipment-free: beyond the named drills, any generic
+        # equipment term is blocked outright.
+        "blocked": ["Sandbag Shouldering", "Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "band", "banded", "bands", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Slow-Lowered Pull-Up", "Bulgarian Split Squat", "barbell", "dumbbell", "kettlebell", "medicine ball", "med ball", "slam ball", "sled", "sandbag", "cable", "landmine", "weight vest", "weighted", "heavy bag", "double-end bag", "double end bag", "focus mitt", "focus mitts", "reaction ball", "bosu", "pull-up", "pullup", "trap bar", "kettlebells", "dumbbells"],
         "preferred": [
             "Technical Shadowboxing Tempo",
             "Mobility Reset Flow",

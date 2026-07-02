@@ -100,7 +100,9 @@ def test_allowed_exercises_by_day_uses_scheduled_roles_not_plan_wide_pool():
     assert allowed["D-13"] == ["Staggered-Stance Medicine-Ball Punch Throw"]
     assert allowed["D-6"] == ["Reactive Shuffle Repeats"]
     assert allowed["D-3"] == ["Mobility Reset Flow"]
-    assert allowed["D-1"] == ["Punch-Specific Max Isometric Hold"]
+    # D-1 is equipment-free: the equipment-requiring isometric hold is dropped
+    # rather than assigned, leaving D-1 to breathing/mobility/shadowboxing.
+    assert allowed["D-1"] == []
     assert "Reactive Shuffle Repeats" not in allowed["D-1"]
     assert "Staggered-Stance Medicine-Ball Punch Throw" not in allowed["D-3"]
     assert "Band-Resisted Sprint Starts (ATP-PCr)" not in allowed["D-13"]
@@ -167,8 +169,12 @@ def test_late_fight_assignment_is_unsafe_guards_only_d1_loaded_work():
     # Separator variants of "trap bar" are all caught (hyphen / underscore / space).
     assert _late_fight_assignment_is_unsafe("D-1", "Trap-Bar Hold") is True
     assert _late_fight_assignment_is_unsafe("D-1", "trap_bar carry") is True
-    # Safe primers / cues stay allowed on D-1.
-    assert _late_fight_assignment_is_unsafe("D-1", "Punch-Specific Max Isometric Hold") is False
+    # Bank exercises that require equipment are unsafe on D-1 even when their
+    # names carry no loaded keyword (D-1 is equipment-free).
+    assert _late_fight_assignment_is_unsafe("D-1", "Punch-Specific Max Isometric Hold") is True
+    assert _late_fight_assignment_is_unsafe("D-1", "Band Face Pull") is True
+    # Safe bodyweight primers / cues stay allowed on D-1.
+    assert _late_fight_assignment_is_unsafe("D-1", "Technical Shadowboxing Tempo") is False
     assert _late_fight_assignment_is_unsafe("D-1", "Mobility Reset Flow") is False
     # Other countdown days are not guarded by this rule.
     assert _late_fight_assignment_is_unsafe("D-2", "Iso Deadlift Hold") is False
@@ -270,8 +276,8 @@ def test_valid_late_fight_output_using_each_days_allowed_exercises_passes():
         - Breathing reset - 3 min
 
         D-1 (Saturday) — Final neural cue
-        - Punch-Specific Max Isometric Hold - 2 x 5 sec
         - Technical shadowboxing - 2 light rounds
+        - Breathing reset - 3 min
         """,
     )
 
