@@ -1522,7 +1522,10 @@ def _coach_led_body_line_is_minimal(line: str) -> bool:
     if _COACH_LED_DETAIL_PATTERN.search(line):
         return False
     return (
-        phrase_in_text(normalized, "no extra s&c") or phrase_in_text(normalized, "no app s&c")
+        phrase_in_text(normalized, "coach-owned combat session")
+        or phrase_in_text(normalized, "coach owned combat session")
+        or phrase_in_text(normalized, "no extra s&c")
+        or phrase_in_text(normalized, "no app s&c")
     ) and phrase_in_text(normalized, "freshness priority")
 
 

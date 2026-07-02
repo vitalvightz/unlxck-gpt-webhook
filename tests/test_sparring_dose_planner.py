@@ -651,10 +651,11 @@ def test_bridge_d20_caps_hard_sparring_to_one():
     assert len(effective) == 1
 
 
-def test_bridge_d20_critical_fatigue_deloads_all_hard_sparring():
-    # Critical (and extreme) fatigue is more severe than high, so the D-21..D-18
-    # override must fully deload hard sparring — it must not fall through to the
-    # clean-athlete cap_one just because the raw level was outside {low,mod,high}.
+def test_bridge_d20_critical_fatigue_keeps_at_most_one_hard_without_calendar():
+    # Declared hard sparring is coach-owned: even critical/extreme fatigue no
+    # longer wipes the band via a bridge deload_all override. Without per-day
+    # calendar metadata the conservative fallback still caps a 2-day week to
+    # one effective hard exposure, but never to zero.
     for level in ("critical", "extreme"):
         plan = compute_hard_sparring_plan(
             week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
@@ -665,7 +666,57 @@ def test_bridge_d20_critical_fatigue_deloads_all_hard_sparring():
             ),
         )
         effective = [e for e in plan if e["status"] == "hard_as_planned"]
-        assert len(effective) == 0, f"{level} fatigue kept a hard sparring day"
+        assert len(effective) == 1, f"{level} fatigue should keep the protected hard day"
+
+
+def _calendar_bridge_week(hard_days: list[str]) -> dict:
+    # Fight on a Thursday; week covers D-21 (Thursday) back to D-15 (Wednesday):
+    # Friday resolves to D-20 and Tuesday resolves to D-16.
+    week = _bridge_week(hard_days=hard_days)
+    week["fight_weekday"] = "thursday"
+    week["projected_days_until_fight_end"] = 15
+    week["span_days"] = 7
+    return week
+
+
+def test_calendar_lock_keeps_d20_hard_and_converts_d16():
+    # Regression: a declared Friday spar day at D-20 is a coach-owned combat
+    # lock (never deloaded before D-17), while the declared Tuesday at D-16
+    # falls under the D-17 ban and converts to technical-only.
+    plan = compute_hard_sparring_plan(
+        week=_calendar_bridge_week(["Tuesday", "Friday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=21,
+            fatigue="low",
+            weight_cut_pct=4.0,
+            weight_cut_risk=True,
+            hard_days=["Tuesday", "Friday"],
+        ),
+    )
+    by_day = {entry["day"]: entry for entry in plan}
+    assert by_day["Friday"]["effective_load"] == "hard"
+    assert by_day["Friday"]["status"] == "hard_as_planned"
+    assert by_day["Friday"]["d_day"] == 20
+    assert by_day["Tuesday"]["effective_load"] == "technical"
+    assert "d17_hard_sparring_ban" in by_day["Tuesday"]["reason_codes"]
+    assert by_day["Tuesday"]["d_day"] == 16
+
+
+def test_calendar_lock_overrides_readiness_deload_at_d18_plus():
+    # Even with high fatigue the app cannot deload a declared hard day at
+    # D-18 or further out — the lock restores it and keeps the concern advisory.
+    plan = compute_hard_sparring_plan(
+        week=_calendar_bridge_week(["Tuesday", "Friday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=21,
+            fatigue="high",
+            hard_days=["Tuesday", "Friday"],
+        ),
+    )
+    by_day = {entry["day"]: entry for entry in plan}
+    assert by_day["Friday"]["effective_load"] == "hard"
+    assert by_day["Friday"]["status"] == "hard_as_planned"
+    assert by_day["Tuesday"]["effective_load"] == "technical"
 
 
 def test_bridge_d17_with_moderate_cut_zeros_hard_sparring():

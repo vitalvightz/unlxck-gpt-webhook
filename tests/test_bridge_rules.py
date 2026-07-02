@@ -105,9 +105,8 @@ class TestSpecUnitCases:
 
     def test_bridge_d20_boxer_with_moderate_cut(self):
         # D-20 is inside the D-21..D-18 sub-slice where the clean default is
-        # cap=1 with one optional glycolytic touch. A moderate cut is note-only
-        # for hard sparring and strength, but it cannot satisfy the extra
-        # glycolytic / combat-pressure touch.
+        # cap=1 with one controlled pressure touch. A moderate/routine cut is
+        # note-only: it keeps the D-20..D-18 pressure exposure.
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
@@ -117,11 +116,10 @@ class TestSpecUnitCases:
             hard_sparring_days_declared=0,
         )
         assert result["hard_sparring_cap"] == 1
-        assert result["glycolytic_touch_max"] == 0
+        assert result["glycolytic_touch_max"] == 1
         assert result["block_full_plan"] is False
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
-        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
         assert (
             "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
@@ -281,8 +279,10 @@ class TestSpecUnitCases:
 
 class TestBridgeHelperConsistency:
     def test_declared_hard_spar_cap_bridge_boundaries(self):
-        assert _declared_hard_spar_cap(21) == 1
-        assert _declared_hard_spar_cap(18) == 1
+        # D-21..D-18: declared hard sparring is a coach-owned combat lock —
+        # no app-side cap. From D-17 the ban zeros effective hard sparring.
+        assert _declared_hard_spar_cap(21) is None
+        assert _declared_hard_spar_cap(18) is None
         assert _declared_hard_spar_cap(17) == 0
         assert _declared_hard_spar_cap(14) == 0
 
@@ -317,12 +317,25 @@ class TestModifierOrdering:
         assert result["plan_mode"] == "needs_review"
         assert result["block_full_plan"] is True
 
-    def test_high_fatigue_zeros_hard_spar_even_if_declared(self):
+    def test_high_fatigue_keeps_declared_hard_spar_as_coach_owned_lock(self):
+        # High fatigue zeroes app-added hard sparring, but a declared hard day
+        # at D-18+ is a coach-owned combat lock the app never caps or deloads.
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
             fatigue="high",
             hard_sparring_days_declared=1,
+        )
+        assert result["hard_sparring_cap"] == 1
+        assert "declared_hard_spar_coach_owned_lock" in result["reason_codes"]
+        assert result["remaining_hard_spar_slots"] == 0
+
+    def test_high_fatigue_zeros_hard_spar_when_none_declared(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="high",
+            hard_sparring_days_declared=0,
         )
         assert result["hard_sparring_cap"] == 0
         assert result["remaining_hard_spar_slots"] == 0
@@ -587,8 +600,8 @@ class TestBridgeCapTransitions:
 
 
 class TestBridgeModerateCutContactSports:
-    """A moderate cut is note-only for hard sparring, but blocks the extra
-    late-camp glycolytic touch."""
+    """A moderate/routine cut is note-only for hard sparring and keeps the
+    D-20..D-18 controlled pressure touch."""
 
     def test_moderate_cut_boxing_keeps_hard_sparring(self):
         result = compute_bridge_rules(
@@ -599,9 +612,8 @@ class TestBridgeModerateCutContactSports:
             injury_mode="full_plan",
         )
         assert result["hard_sparring_cap"] == 1
-        assert result["glycolytic_touch_max"] == 0
+        assert result["glycolytic_touch_max"] == 1
         assert result["block_full_plan"] is False
-        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
         assert (
             "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
@@ -618,9 +630,8 @@ class TestBridgeModerateCutContactSports:
             injury_mode="full_plan",
         )
         assert result["hard_sparring_cap"] == 1
-        assert result["glycolytic_touch_max"] == 0
+        assert result["glycolytic_touch_max"] == 1
         assert result["block_full_plan"] is False
-        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
     def test_moderate_cut_grappler_keeps_hard_sparring(self):
@@ -684,7 +695,9 @@ class TestBridgeGlycolyticRules:
         )
         assert result["glycolytic_touch_max"] == 0
 
-    def test_moderate_cut_blocks_extra_glycolytic_touch_in_d21_to_d18(self):
+    def test_moderate_cut_keeps_pressure_touch_in_d21_to_d18(self):
+        # A moderate/routine cut is note-only: the single controlled pressure
+        # touch around D-20..D-18 stays available.
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
@@ -692,8 +705,7 @@ class TestBridgeGlycolyticRules:
             weight_cut_bucket="moderate",
             injury_mode="full_plan",
         )
-        assert result["glycolytic_touch_max"] == 0
-        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
+        assert result["glycolytic_touch_max"] == 1
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
     def test_moderate_fatigue_blocks_extra_glycolytic_touch_in_d21_to_d18(self):
@@ -787,8 +799,10 @@ class TestDeclaredHardSparCapHelper:
     def test_cap_transitions_through_bridge_window(self):
         from fightcamp.stage2_payload_late_fight import _declared_hard_spar_cap
 
-        assert _declared_hard_spar_cap(21) == 1
-        assert _declared_hard_spar_cap(18) == 1
+        # D-21..D-18: coach-owned combat locks — no app-side cap on declared
+        # hard sparring. From D-17 the ban zeros effective hard sparring.
+        assert _declared_hard_spar_cap(21) is None
+        assert _declared_hard_spar_cap(18) is None
         assert _declared_hard_spar_cap(17) == 0
         assert _declared_hard_spar_cap(14) == 0
 
