@@ -91,6 +91,12 @@ _BLOCKED_CONTACT_FILLER_RE = re.compile(
     re.I,
 )
 _HIGH_RPE_RE = re.compile(r"\brpe\s*(?:[6-9]|10|[2-9]\s*[-–]\s*(?:[6-9]|10)|[6-9]\s*\+|10\s*\+)", re.I)
+_SESSION_TEXT_EXCLUDED_KEYS = {
+    "coaching_cues",
+    "notes",
+    "coach_notes",
+    "description",
+}
 
 
 def _already_coach_led(headline: str) -> bool:
@@ -107,18 +113,25 @@ def _parse_dday(label: Any) -> int | None:
     return int(match.group(1)) if match else None
 
 
-def _string_values(value: Any) -> list[str]:
+def _string_values(value: Any, *, parent_key: str = "") -> list[str]:
     if isinstance(value, str):
         return [value]
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if parent_key in {"rpe", "rpe_cap", "intensity_rpe", "prescribed_intensity_rpe"}:
+            return [f"rpe {value}"]
+        return [str(value)]
     if isinstance(value, dict):
         values: list[str] = []
-        for nested in value.values():
-            values.extend(_string_values(nested))
+        for key, nested in value.items():
+            key_text = str(key).strip().lower()
+            if key_text in _SESSION_TEXT_EXCLUDED_KEYS:
+                continue
+            values.extend(_string_values(nested, parent_key=key_text))
         return values
     if isinstance(value, (list, tuple)):
         values: list[str] = []
         for nested in value:
-            values.extend(_string_values(nested))
+            values.extend(_string_values(nested, parent_key=parent_key))
         return values
     return []
 
@@ -219,7 +232,9 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             continue
 
         role_phase = str(week.get("phase") or "").strip().upper()
-        for role in week.get("session_roles") or []:
+        session_roles = week.get("session_roles")
+        role_entries = session_roles if isinstance(session_roles, list) else []
+        for role in role_entries:
             if not isinstance(role, dict):
                 continue
             if str(role.get("role_key") or "").strip() != "hard_sparring_day":

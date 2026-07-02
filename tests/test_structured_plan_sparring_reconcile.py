@@ -294,6 +294,42 @@ def test_declared_technical_day_rejects_strength_as_same_day_filler():
     assert any("removed incompatible same-day app work" in note for note in notes)
 
 
+def test_allowed_filler_ignores_blocked_words_in_free_text_notes():
+    tactical_watch = [
+        {
+            "title": "Fight Tactical Watch",
+            "description": "Visualize maintaining fight pace without chasing strength recovery.",
+            "notes": "Keep it calm.",
+        }
+    ]
+    plan = _structured_plan([_day("D-9", headline="Fight Tactical Watch", sessions=tactical_watch)])
+    reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=9, downgraded=True))
+
+    day = plan["weeks"][0]["days"][0]
+    assert day["sessions"] == tactical_watch
+    assert day["today_card"]["coach_led_contact"] == "Coach-led boxing — technical-only combat"
+
+
+def test_numeric_rpe_blocks_otherwise_allowed_technical_filler():
+    mobility = [{"title": "Mobility Reset", "rpe": 7}]
+    plan = _structured_plan([_day("D-9", headline="Mobility Reset", sessions=mobility)])
+    reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=9, downgraded=True))
+
+    day = plan["weeks"][0]["days"][0]
+    assert day["today_card"]["headline"] == "Coach-led boxing — technical-only combat"
+    assert day["sessions"] == []
+
+
+def test_malformed_session_roles_is_ignored_without_error():
+    brief = _late_context_brief(d_day=9, downgraded=True)
+    brief["weekly_role_map"]["weeks"][0]["session_roles"] = {"role_key": "hard_sparring_day"}
+    plan = _structured_plan([_day("D-9", headline="Recovery")])
+    notes = reconcile_coach_led_sparring_days(plan, brief)
+
+    assert notes == []
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Recovery"
+
+
 def test_d20_declared_hard_day_can_be_recovered_from_context_role():
     plan = _structured_plan([_day("D-20", headline="Recovery")])
     reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=20, downgraded=False))
