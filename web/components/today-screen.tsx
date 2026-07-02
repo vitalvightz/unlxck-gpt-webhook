@@ -496,8 +496,8 @@ const BODY_MAP_SEVERITY_BY_FLAG: Record<InjuryFlagSeverity, BodyMapSeverity> = {
 };
 
 const BODY_MAP_VISIBILITY_OPTIONS = [
-  { value: "shown", label: "Hide map" },
-  { value: "hidden", label: "Show map" },
+  { value: "shown", label: "Shown" },
+  { value: "hidden", label: "Hidden" },
 ];
 
 function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeverity {

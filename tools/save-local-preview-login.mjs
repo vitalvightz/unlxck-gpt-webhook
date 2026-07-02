@@ -27,7 +27,16 @@ function readEnv(filePath) {
       continue;
     }
 
-    values[trimmed.slice(0, separatorIndex)] = trimmed.slice(separatorIndex + 1);
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    values[key] = value;
   }
 
   return values;
@@ -51,7 +60,6 @@ async function main() {
   const page = await context.newPage();
 
   await page.goto("http://localhost:3000/login", { waitUntil: "networkidle", timeout: 30_000 });
-  await page.waitForTimeout(2_500);
   await page.locator("input#email").fill(email);
   await page.locator("input#password").fill(password);
   await page.getByRole("button", { name: "Log in" }).click();

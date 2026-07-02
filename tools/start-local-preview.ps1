@@ -52,6 +52,28 @@ function Add-CorsOrigin {
     $env:APP_CORS_ORIGINS = ($origins -join ",")
 }
 
+function Stop-ListeningProcessOnPort {
+    param(
+        [int]$Port,
+        [string]$Label
+    )
+
+    if (-not (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue)) {
+        return
+    }
+
+    Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique |
+        Where-Object { $_ -and $_ -ne $PID } |
+        ForEach-Object {
+            $process = Get-Process -Id $_ -ErrorAction SilentlyContinue
+            if ($process) {
+                Write-Host "Stopping $Label process $($process.Id) on port $Port"
+                Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
+}
+
 Import-DotEnv -Path $BackendEnvPath
 
 if (Test-Path -LiteralPath $WebEnvPath) {
@@ -127,4 +149,6 @@ try {
 finally {
     Stop-Job -Job $backendJob, $webJob -ErrorAction SilentlyContinue
     Remove-Job -Job $backendJob, $webJob -Force -ErrorAction SilentlyContinue
+    Stop-ListeningProcessOnPort -Port $ApiPort -Label "API"
+    Stop-ListeningProcessOnPort -Port $WebPort -Label "web"
 }
