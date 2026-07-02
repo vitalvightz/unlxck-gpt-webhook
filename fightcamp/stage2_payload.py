@@ -43,6 +43,7 @@ from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
+from .late_camp_role_morph import apply_late_camp_role_morph
 from .weekly_plan_render import fill_missing_session_days
 from .late_selector_windows import classify_late_selector_window
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
@@ -3277,6 +3278,11 @@ def build_planning_brief(
     # Add low-cost support fillers to SPP/TAPER weeks (free days first, then at
     # most one shared day) using the same insert policy as the late-fight path.
     apply_camp_week_fillers(weekly_role_map, athlete_model)
+    # Late-camp role morph: hard fight-pace/glycolytic conditioning scheduled at
+    # D-13 or closer softens to a low-cost rhythm touch. Runs last so no quota
+    # or protected-slot rule can preserve hard glycolytic work inside D-13; the
+    # D-21→D-18 combat-pressure floor is untouched by construction.
+    apply_late_camp_role_morph(weekly_role_map)
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",
