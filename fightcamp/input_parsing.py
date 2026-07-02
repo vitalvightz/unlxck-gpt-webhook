@@ -1103,6 +1103,16 @@ class PlanInput:
             issues.append("missing_fighting_style_technical")
         if self.camp_timeline_type == "scheduled_fight" and not self.next_fight_date.strip():
             issues.append("missing_next_fight_date")
+        elif (
+            self.camp_timeline_type == "scheduled_fight"
+            and self.days_until_fight is None
+        ):
+            # A scheduled fight with a date but no computed days-out means the
+            # date resolved to the past (``normalize_days_until_fight`` clamps
+            # negatives to ``None``). Generating a camp for a fight that has
+            # already happened would run with ``weeks_out == "N/A"`` and break
+            # downstream phase logic, so block it here instead.
+            issues.append("invalid_next_fight_date")
         if not self.training_days:
             issues.append("missing_training_availability")
         if self.training_frequency < 1:

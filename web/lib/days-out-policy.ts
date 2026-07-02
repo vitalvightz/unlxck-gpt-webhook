@@ -39,6 +39,20 @@ export function computeDaysUntilFight(
   return diffDays < 0 ? null : diffDays;
 }
 
+export function isFightDateInPast(
+  fightDate: string | null | undefined,
+  nowInput?: Date,
+): boolean {
+  if (!fightDate) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fightDate)) return false;
+  const [year, month, day] = fightDate.split("-").map(Number);
+  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(parsedDate.getTime())) return false;
+  const now = nowInput ? new Date(nowInput) : new Date();
+  const nowDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  return parsedDate.getTime() < nowDate.getTime();
+}
+
 const KEY_GOAL_BLOCK_REASONS: Record<string, string> = {
   power: "Too late for power development.",
   strength: "Too late for strength development.",

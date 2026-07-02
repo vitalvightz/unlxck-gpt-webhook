@@ -5,6 +5,7 @@ import {
   buildDaysOutContext,
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
+  isFightDateInPast,
   HARD_SPARRING_STRENGTH_BLOCK_REASON,
 } from "./days-out-policy.ts";
 
@@ -137,4 +138,27 @@ test("hard sparring strength rule does not change existing non-strength days-out
 
   assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "conditioning").available, true);
   assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "gas_tank").available, true);
+});
+
+test("flags a fight date before the generation day as in the past", () => {
+  const now = new Date("2026-07-02T09:00:00");
+
+  assert.equal(isFightDateInPast("2026-05-30", now), true);
+  assert.equal(isFightDateInPast("2026-07-01", now), true);
+});
+
+test("does not flag today or future fight dates as in the past", () => {
+  const now = new Date("2026-07-02T09:00:00");
+
+  assert.equal(isFightDateInPast("2026-07-02", now), false);
+  assert.equal(isFightDateInPast("2026-07-03", now), false);
+});
+
+test("treats empty or malformed fight dates as not in the past", () => {
+  const now = new Date("2026-07-02T09:00:00");
+
+  assert.equal(isFightDateInPast("", now), false);
+  assert.equal(isFightDateInPast(null, now), false);
+  assert.equal(isFightDateInPast(undefined, now), false);
+  assert.equal(isFightDateInPast("not-a-date", now), false);
 });

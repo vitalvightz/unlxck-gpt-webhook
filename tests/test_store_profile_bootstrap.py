@@ -282,7 +282,7 @@ def test_create_or_get_generation_job_returns_503_when_store_is_transiently_unav
             athlete_id="athlete-1",
             client_request_id="client-1",
             source="self_serve",
-            request_payload={"fight_date": "2026-04-18"},
+            request_payload={"fight_date": "2099-04-18"},
         )
 
     assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
@@ -372,7 +372,7 @@ def test_create_or_get_generation_job_returns_schema_detail_when_generation_jobs
             athlete_id="athlete-1",
             client_request_id="client-1",
             source="self_serve",
-            request_payload={"fight_date": "2026-04-18"},
+            request_payload={"fight_date": "2099-04-18"},
         )
 
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -408,7 +408,7 @@ def test_create_or_get_generation_job_returns_existing_row_after_unique_conflict
         athlete_id="athlete-1",
         client_request_id="client-1",
         source="self_serve",
-        request_payload={"fight_date": "2026-04-18"},
+        request_payload={"fight_date": "2099-04-18"},
     )
 
     assert result == existing_job
@@ -438,7 +438,7 @@ def test_create_or_get_generation_job_persists_source_in_insert_payload():
         athlete_id="athlete-1",
         client_request_id="client-1",
         source="admin_latest_intake",
-        request_payload={"fight_date": "2026-04-18"},
+        request_payload={"fight_date": "2099-04-18"},
     )
 
     insert_payload = table_query.insert.call_args.args[0]
@@ -453,7 +453,7 @@ def test_create_or_get_generation_job_resets_pre_start_stale_existing_job_withou
         "athlete_id": "athlete-1",
         "client_request_id": "client-1",
         "source": "self_serve",
-        "request_payload": {"fight_date": "2026-04-18"},
+        "request_payload": {"fight_date": "2099-04-18"},
         "status": "running",
         "attempt_count": 1,
         "heartbeat_at": "2026-04-05T12:00:00+00:00",
@@ -510,7 +510,7 @@ def test_create_or_get_generation_job_raises_500_when_insert_returns_no_rows_and
             athlete_id="athlete-1",
             client_request_id="client-1",
             source="self_serve",
-            request_payload={"fight_date": "2026-04-18"},
+            request_payload={"fight_date": "2099-04-18"},
         )
 
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
