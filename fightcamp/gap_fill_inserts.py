@@ -490,7 +490,14 @@ def _allowed_inserts(
     elif injury_state == "mild_stable":
         allowed |= {"mobility_rehab", "joint_prep"}
 
-    if _all_active_injuries_surface_only(athlete_model):
+    has_injury = bool(
+        athlete_model.get("has_active_injury")
+        or athlete_model.get("injuries")
+        or athlete_model.get("parsed_injuries")
+        or athlete_model.get("guided_injury")
+        or athlete_model.get("injury_restrictions")
+    )
+    if has_injury and _all_active_injuries_surface_only(athlete_model):
         allowed -= {"mobility_rehab", "joint_prep"}
 
     if "mobility_rehab" in allowed and not (
