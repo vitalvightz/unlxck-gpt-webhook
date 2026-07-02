@@ -2284,7 +2284,7 @@ _LATE_FIGHT_SC_LOCKOUT_TITLE_PATTERN = re.compile(
 # lockout even when they also carry an S&C word ("Light conditioning flush").
 # They stay under the blanket D-10 lockout only.
 _LATE_FIGHT_SC_LOCKOUT_EXCLUDE_PATTERN = re.compile(
-    r"\b(?:rehab|recovery|mobility|filler|flush|freshness|technical|tactical|sparring"
+    r"\b(?:rehab|recovery|mobility|filler|flush|technical|tactical|sparring"
     r"|warm[\s\-]?up|activation|reset|light)\b",
     re.IGNORECASE,
 )
