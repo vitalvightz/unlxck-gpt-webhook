@@ -42,6 +42,7 @@ from .gap_fill_inserts import apply_gap_fill_inserts
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
+from .camp_week_fillers import apply_camp_week_fillers
 from .weekly_plan_render import fill_missing_session_days
 from .late_selector_windows import classify_late_selector_window
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
@@ -3273,6 +3274,9 @@ def build_planning_brief(
     # stamp labels. Post-processing can append suppressed/omitted roles after the
     # inner builder ran, so do both here for full coverage.
     fill_missing_session_days(weekly_role_map)
+    # Add low-cost support fillers to SPP/TAPER weeks (free days first, then at
+    # most one shared day) using the same insert policy as the late-fight path.
+    apply_camp_week_fillers(weekly_role_map, athlete_model)
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",

@@ -318,6 +318,16 @@ def _session_body(
     is_primary_strength: bool,
 ) -> list[str]:
     category = str(role.get("category") or "").strip().lower()
+    if category == "support_insert":
+        # Gap-fill/camp filler roles carry their exact athlete-facing content;
+        # render it verbatim instead of guessing a body from a category template.
+        display_lines = [
+            stripped if stripped.startswith("-") else f"- {stripped}"
+            for line in str(role.get("display_text") or "").splitlines()
+            if (stripped := line.strip())
+        ]
+        if display_lines:
+            return display_lines
     if category == "sparring":
         return _sparring_session_lines()
     if category == "recovery":
