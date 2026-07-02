@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays
+from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_payload_late_fight import _countdown_offset, _countdown_weekday_map, _resolve_plan_creation_weekday
 
 
@@ -293,6 +294,8 @@ def _has_conditioning_goal(athlete_model: dict[str, Any]) -> bool:
 
 
 def _has_lower_leg_load_risk(athlete_model: dict[str, Any]) -> bool:
+    if _all_active_injuries_surface_only(athlete_model):
+        return False
     text = _flatten_text(
         [
             athlete_model.get("parsed_injuries"),
@@ -414,6 +417,9 @@ def _insert_category(role_key: str) -> str:
 
 
 def classify_injury_state(athlete_model: dict[str, Any]) -> Literal["none", "mild_stable", "moderate_plus"]:
+    if _all_active_injuries_surface_only(athlete_model):
+        return "none"
+
     parsed = athlete_model.get("parsed_injuries") or []
     guided = athlete_model.get("guided_injury")
     restrictions = athlete_model.get("injury_restrictions") or []
