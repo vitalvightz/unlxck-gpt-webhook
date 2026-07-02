@@ -132,9 +132,11 @@ def test_d18_remains_last_allowed_hard_spar_day():
     assert plan[0]["effective_load"] == "hard"
 
 
-def test_d21_d18_window_caps_to_one_effective_hard_day():
-    # Week ends at D-18, span 4, days D-18..D-21 — fully inside the cap window.
-    # Friday fight → D-18 = Monday, D-21 = Friday.
+def test_d21_d18_window_keeps_declared_hard_days_as_coach_owned_locks():
+    # Week ends at D-18, span 4, days D-18..D-21 — fully inside the D-18+
+    # band. Friday fight → D-18 = Monday, D-21 = Friday. Declared hard
+    # sparring days at D-18 or further out are coach-owned combat locks:
+    # the app never caps or deloads them.
     week = _week_with_calendar(
         end_d=18, span=4, fight_weekday="friday",
         hard_days=["Friday", "Monday"],
@@ -146,8 +148,7 @@ def test_d21_d18_window_caps_to_one_effective_hard_day():
     statuses = {entry["day"]: entry["status"] for entry in plan}
 
     hard_count = sum(1 for status in statuses.values() if status == "hard_as_planned")
-    assert hard_count == 1, statuses
-    assert any("d21_d18_cap_one" in entry.get("reason_codes", []) for entry in plan)
+    assert hard_count == 2, statuses
 
 
 def test_normal_week_outside_d21_keeps_hard_sparring_as_declared():

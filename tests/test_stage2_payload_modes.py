@@ -328,7 +328,10 @@ class TestLateFightPermissionsAndRendering:
         assert permissions["allow_glycolytic_build"] is False
         assert permissions["max_active_roles"] == 3
         assert permissions["max_meaningful_stress_exposures"] == 3
-        assert permissions["hard_sparring_cap"] == 1
+        # Two declared hard sparring days are coach-owned combat locks, so the
+        # surfaced cap floors at the declared count instead of asking the
+        # renderer to drop one.
+        assert permissions["hard_sparring_cap"] == 2
         assert permissions["freshness_mandatory"] is True
         assert permissions["double_stress_day_allowed"] is False
         assert "bridge week" in [term.lower() for term in rules["preferred_terms"]]

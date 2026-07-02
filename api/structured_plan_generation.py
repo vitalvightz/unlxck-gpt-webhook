@@ -1621,7 +1621,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
 - Coach-led, sparring, or technical days where NO programmed S&C work is
-  prescribed (e.g. "Coach-led boxing session", "no extra S&C today", "no app S&C
+  prescribed (e.g. "Coach-led boxing — hard sparring / controlled hard contact",
+  "Coach-led boxing — technical-only combat", "coach-owned combat session", or
+  the legacy "Coach-led boxing session", "no extra S&C today", "no app S&C
   today", "technical only") MUST still be emitted as a day. Leave that day's
   "sessions" as [] and set a concise today_card.headline naming what it is (e.g.
   "Coach-led boxing", "Hard sparring", "Technical only") so the day renders as
@@ -1636,9 +1638,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   coach_led_contact, NOT in headline (set headline to a generic title like
   "Training Day" or the programmed session's title instead, as headline is still
   required), so the programmed session keeps its own title; the renderer shows the
-  coach-owned contact as a context line above it. The "no extra S&C today"
-  wording only applies when there is genuinely no programmed work — if a session
-  is listed for the day, keep it.
+  coach-owned contact as a context line above it. The "coach-owned combat
+  session" / legacy "no extra S&C today" wording only applies when there is
+  genuinely no programmed work — if a session is listed for the day, keep it.
 - Preserve compact plan-output formats reliably:
   * A day header like `D-18 (Wednesday) — Power Transfer Touch` starts a day.
     A following `Why:` line is the session/day objective, not a separate block.
@@ -1655,10 +1657,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     mindset support, NOT physical conditioning. Use session_type "skill" or
     "recovery" as appropriate and block_type "skill" or "mindset"; do not label
     these as conditioning/strength/plyometric blocks.
-  * If a coach-only day says `No extra S&C today` (or the legacy `No app S&C
-    today`), keep sessions as []. If it also lists any prescribed touch on the
-    same D-day, keep that touch as a session and put the coach-owned contact in
-    today_card.coach_led_contact.
+  * If a coach-only day says `Coach-owned combat session` (or the legacy
+    `No extra S&C today` / `No app S&C today`), keep sessions as []. If it also
+    lists any prescribed touch on the same D-day, keep that touch as a session
+    and put the coach-owned contact in today_card.coach_led_contact.
 - Optimize for a valid first-pass card: omit optional fields you cannot fill
   from the source rather than emitting partial objects that fail schema
   validation. Preserve every dated day and every listed prescription, but do not

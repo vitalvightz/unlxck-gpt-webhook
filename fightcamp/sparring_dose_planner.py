@@ -205,14 +205,12 @@ def _bridge_window_sparring_override(
     the same days_until_fight value stay untouched so advisories can still
     use their "if the current picture carries forward" conditional wording.
 
-    Return values reflect the evidence review:
-      D-21 to D-18 (clean / low-risk)   → cap_one
-      D-21 to D-18 (fatigue high or
-        cut high)                       → deload_all
-      D-17 to D-14                      → convert_all
+    D-17 to D-14 → convert_all (the D-17 hard-sparring ban).
 
-    A moderate active cut is note-only and no longer forces deload_all here —
-    only high+ fatigue / cut pressure removes hard sparring.
+    D-21 to D-18 declared hard sparring days are coach-owned combat locks:
+    the app never deloads or caps them, whatever the readiness picture. Any
+    fatigue/cut concern is surfaced as advisory context instead of a dose
+    change, so this override returns None in that band.
     """
     days = _days_until_fight_int(athlete_snapshot)
     if days is None or not (14 <= days <= 21):
@@ -236,16 +234,8 @@ def _bridge_window_sparring_override(
     if 14 <= days <= 17:
         return "convert_all"
 
-    # 18 <= days <= 21: cap_one is the clean-athlete default, but high-fatigue
-    # or a high+ cut forces zero hard sparring via deload_all. A moderate cut is
-    # note-only and keeps the clean-athlete cap_one behaviour.
-    fatigue = _fatigue_level(athlete_snapshot)
-    cut = _cut_pressure(athlete_snapshot)
-    if fatigue == "high":
-        return "deload_all"
-    if cut == "high":
-        return "deload_all"
-    return "cap_one"
+    # 18 <= days <= 21: coach-owned combat locks — no cap, no deload.
+    return None
 
 
 def _is_d_window_stage(stage_key: Any) -> bool:
@@ -609,10 +599,13 @@ def _apply_per_day_countdown_overrides(
     hard_days: list[str],
     protected_day: str,
 ) -> list[dict[str, Any]]:
-    """Per-day calendar authority: ban D-17 onward, cap D-21..D-18 at one.
+    """Per-day calendar authority: ban D-17 onward, lock D-18 and earlier hard.
 
-    D-18 is the last allowed hard-spar day if already declared. D-17 and closer
-    convert to technical/rhythm/reduced-contact regardless of declaration.
+    D-17 and closer convert to technical/rhythm/reduced-contact regardless of
+    declaration. D-18 and further out, a declared hard sparring day is a
+    coach-owned combat lock: the app never deloads it, so any readiness- or
+    density-based downgrade applied earlier in the pipeline is restored to
+    hard here (the concern stays visible in reason_codes as advisory context).
 
     Acts on each declared hard sparring day individually using its own D-day
     inside the week — independent of phase/stage labels. This is the rule that
@@ -645,33 +638,35 @@ def _apply_per_day_countdown_overrides(
             "d_day": d_day,
         }
 
-    # D-21 to D-18: cap at one effective hard exposure across that band.
-    band_days = [d for d, dd in per_day.items() if 18 <= dd <= 21]
-    band_days_sorted = [d for d in hard_days if d in band_days]
-    if len(band_days_sorted) >= 2:
-        keeper = (
-            protected_day
-            if protected_day in band_days_sorted
-            else band_days_sorted[0]
-        )
-        for day in band_days_sorted:
-            if day == keeper:
-                continue
-            entry = plan_by_day.get(day)
-            if entry is None or entry.get("effective_load") != "hard":
-                continue
-            codes = list(entry.get("reason_codes") or [])
-            if "d21_d18_cap_one" not in codes:
-                codes.append("d21_d18_cap_one")
-            plan_by_day[day] = {
-                **entry,
-                "status": "deload_suggested",
-                "effective_load": "reduced",
-                "reason_codes": codes,
-                "reason": entry.get("reason")
-                or "D-21 to D-18: cap to one effective hard sparring exposure.",
-                "d_day": per_day[day],
-            }
+    # D-18 and further out: coach-owned combat lock — restore any earlier
+    # downgrade to hard. The app cannot deload declared hard sparring before
+    # the D-17 ban window.
+    for day, d_day in per_day.items():
+        if d_day < 18 or day not in hard_days:
+            continue
+        entry = plan_by_day.get(day)
+        if entry is None:
+            continue
+        if entry.get("effective_load") == "hard":
+            plan_by_day[day] = {**entry, "d_day": d_day}
+            continue
+        codes = list(entry.get("reason_codes") or [])
+        if "coach_owned_hard_spar_lock" not in codes:
+            codes.append("coach_owned_hard_spar_lock")
+        restored = {
+            **entry,
+            "status": "hard_as_planned",
+            "effective_load": "hard",
+            "reason_codes": codes,
+            "reason": (
+                "Coach-owned combat lock: declared hard sparring at D-18 or further out "
+                "stays hard; readiness concerns are advisory only."
+            ),
+            "d_day": d_day,
+        }
+        # A downgrade coach note no longer applies once the day is restored.
+        restored.pop("coach_note", None)
+        plan_by_day[day] = restored
 
     # Stamp d_day on every other entry too so downstream consumers see the
     # calendar reasoning regardless of whether the override fired.
@@ -695,14 +690,18 @@ def _finalize_plan(
     Centralizes invariants so every return path in ``compute_hard_sparring_plan``
     is guaranteed to pass through the same rules regardless of which branch produced
     the plan. Consecutive and cap passes are no-ops when no eligible pairs remain.
+
+    The per-day countdown authority runs last on purpose: it is the calendar
+    truth (D-17 ban, D-18+ coach-owned hard lock) and must override any
+    readiness/density downgrade the earlier passes applied.
     """
+    plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
+    if len(hard_days) >= 4:
+        plan = _apply_hard_day_cap(plan, hard_days=hard_days, protected_day=protected_day)
     if week is not None:
         plan = _apply_per_day_countdown_overrides(
             plan, week=week, hard_days=hard_days, protected_day=protected_day
         )
-    plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
-    if len(hard_days) >= 4:
-        plan = _apply_hard_day_cap(plan, hard_days=hard_days, protected_day=protected_day)
     return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
 
 

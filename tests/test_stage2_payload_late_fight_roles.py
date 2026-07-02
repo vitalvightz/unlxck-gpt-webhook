@@ -181,7 +181,9 @@ def test_bridge_d18_is_last_clean_light_fight_rhythm_touch():
     assert "alactic_sharpness_day" in d17_roles
 
 
-def test_bridge_d18_active_cut_blocks_light_fight_rhythm_touch():
+def test_bridge_d18_routine_cut_keeps_controlled_pressure_touch():
+    # A moderate/routine active cut is note-only: the single controlled
+    # pressure touch around D-20..D-18 stays in the bridge window.
     role_keys = [
         role["role_key"]
         for role in _late_fight_session_roles(
@@ -198,8 +200,27 @@ def test_bridge_d18_active_cut_blocks_light_fight_rhythm_touch():
         )
     ]
 
+    assert "light_fight_pace_touch_day" in role_keys
+
+
+def test_bridge_d18_extreme_cut_blocks_light_fight_rhythm_touch():
+    role_keys = [
+        role["role_key"]
+        for role in _late_fight_session_roles(
+            18,
+            _athlete(
+                18,
+                hard_sparring_days=[],
+                fatigue="low",
+                fatigue_level="low",
+                weight_cut_risk=True,
+                weight_cut_pct=6.0,
+                readiness_flags=["aggressive_weight_cut"],
+            ),
+        )
+    ]
+
     assert "light_fight_pace_touch_day" not in role_keys
-    assert "alactic_sharpness_day" in role_keys
 
 
 def test_pre_fight_compressed_surfaces_downgraded_hard_day_as_technical_touch_suppression():
@@ -831,9 +852,11 @@ def test_late_fight_calendar_truth_and_availability_filter_regression():
     assert "D-15" not in role_by_label
     assert "D-14" not in role_by_label
     assert "D-7" not in role_by_label
-    assert "D-12" in role_by_label
-    assert role_by_label["D-12"]["real_weekday"] == "tuesday"
-    assert "D-10" in role_by_label or "D-11" in role_by_label
+    # Tuesday (D-12) and Thursday (D-10) are declared spar weekdays — coach-owned
+    # combat days — so programmed S&C moves to the Wednesday slot (D-11).
+    assert "D-12" not in role_by_label
+    assert "D-11" in role_by_label
+    assert role_by_label["D-11"]["real_weekday"] == "wednesday"
     assert "D-6" in role_by_label
     assert "D-1" in role_by_label
     assert "D-0" not in role_by_label
@@ -925,8 +948,8 @@ def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
     assert len(context) == 1
     assert context[0]["role_key"] == "technical_touch_day"
     assert context[0]["downgraded_from_role_key"] == "hard_sparring_day"
-    assert context[0]["athlete_facing_label"] == "Coach-led boxing — no hard sparring / technical only"
-    assert context[0]["display_text"] == "No extra S&C today. Keep freshness priority."
+    assert context[0]["athlete_facing_label"] == "Coach-led boxing — technical-only combat"
+    assert context[0]["display_text"] == "Coach-owned combat session. Keep freshness priority."
 
 
 def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
@@ -934,11 +957,27 @@ def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
         {
             "role_key": "hard_sparring_day",
             "scheduled_day_hint": "friday",
-            "countdown_offset": 8,
+            "countdown_offset": 20,
         }
     ]
     context = _coach_owned_context_session_sequence(sessions)
     assert len(context) == 1
     assert context[0]["role_key"] == "hard_sparring_day"
-    assert context[0]["athlete_facing_label"] == "Coach-led boxing session"
-    assert context[0]["display_text"] == "No extra S&C today. Keep freshness priority."
+    assert context[0]["athlete_facing_label"] == "Coach-led boxing — hard sparring / controlled hard contact"
+    assert context[0]["display_text"] == "Coach-owned combat session. Keep freshness priority."
+
+
+def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
+    sessions = [
+        {
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "friday",
+            "countdown_offset": 6,
+            "downgraded": True,
+            "downgraded_to_role_key": "technical_touch_day",
+        }
+    ]
+    context = _coach_owned_context_session_sequence(sessions)
+    assert len(context) == 1
+    assert context[0]["athlete_facing_label"] == "Coach-led boxing — technical-only combat"
+    assert context[0]["display_text"] == "Coach-owned combat session. Keep freshness priority."
