@@ -37,7 +37,7 @@ def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
             "technical_style": ["boxing"],
             "tactical_style": [],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         equipment_access=[],
         training_availability=[],
         hard_sparring_days=[],
@@ -65,7 +65,7 @@ def test_plan_request_to_payload_includes_primary_goal_and_weak_area():
             "technical_style": ["boxing"],
             "tactical_style": [],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         key_goals=["power", "mobility"],
         primary_goal="power",
         weak_areas=["cns_fatigue", "hip_mobility"],
@@ -86,7 +86,7 @@ def test_plan_request_to_payload_includes_optional_collision_clarification():
             "technical_style": ["boxing"],
             "tactical_style": [],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         key_goals=["power"],
         primary_goal="power",
         weak_areas=["power"],
@@ -107,7 +107,7 @@ def test_plan_request_collision_clarification_defaults_are_optional():
             "technical_style": ["boxing"],
             "tactical_style": [],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
     )
 
     assert request.goal_weakness_collision_tags == []
@@ -121,7 +121,7 @@ def test_plan_request_accepts_optional_intake_id_field():
             "technical_style": ["boxing"],
             "tactical_style": [],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         intake_id="intake-123",
     )
 
@@ -135,7 +135,7 @@ def test_plan_request_rejects_more_than_four_hard_sparring_days():
                 "full_name": "Ari Mensah",
                 "technical_style": ["boxing"],
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
             hard_sparring_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         )
 
@@ -147,7 +147,7 @@ def test_plan_request_rejects_hard_sparring_day_outside_training_availability():
                 "full_name": "Ari Mensah",
                 "technical_style": ["boxing"],
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
             training_availability=["Monday", "Wednesday"],
             hard_sparring_days=["Tuesday"],
         )
@@ -160,7 +160,7 @@ def test_plan_request_rejects_support_work_day_outside_training_availability():
                 "full_name": "Ari Mensah",
                 "technical_style": ["boxing"],
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
             training_availability=["Monday", "Wednesday"],
             support_work_days=["Friday"],
         )
@@ -173,7 +173,7 @@ def test_plan_request_rejects_overlap_between_hard_sparring_and_support_work_day
                 "full_name": "Ari Mensah",
                 "technical_style": ["boxing"],
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
             training_availability=["Tuesday", "Thursday"],
             hard_sparring_days=["Tuesday"],
             support_work_days=["Tuesday"],
@@ -284,7 +284,7 @@ def test_plan_request_migrates_legacy_technical_skill_days_to_support_work_days(
             "full_name": "Ari Mensah",
             "technical_style": ["boxing"],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         training_availability=["Tuesday", "Friday"],
         technical_skill_days=["Tuesday", "Friday"],
     )
@@ -335,7 +335,7 @@ def test_plan_request_to_payload_includes_guided_injury_when_present():
             "full_name": "Ari Mensah",
             "technical_style": ["boxing"],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         injuries="hip flexor (moderate, improving). Avoid: deep hip flexion.",
         guided_injury={
             "area": "hip flexor",
@@ -356,7 +356,7 @@ def test_plan_request_to_payload_forwards_every_guided_injury_card():
             "full_name": "Ari Mensah",
             "technical_style": ["boxing"],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         injuries="hip flexor (moderate, improving). Avoid: deep hip flexion. Right heel. Notes: roadwork flare-up.",
         guided_injuries=[
             {
@@ -387,7 +387,7 @@ def test_plan_request_to_payload_guided_injury_forwards_full_structured_contract
             "full_name": "Ari Mensah",
             "technical_style": ["boxing"],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         guided_injuries=[
             {
                 "area": "right knee",
@@ -485,7 +485,7 @@ def test_plan_request_guided_injury_severity_accepts_and_normalizes_aliases(guid
             "full_name": "Ari Mensah",
             "technical_style": ["boxing"],
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         guided_injury={
             "area": "hip flexor",
             "severity": guided_severity,
@@ -502,7 +502,7 @@ def test_plan_request_guided_injury_severity_rejects_unknown_values():
                 "full_name": "Ari Mensah",
                 "technical_style": ["boxing"],
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
             guided_injury={
                 "area": "hip flexor",
                 "severity": "critical",
@@ -517,7 +517,7 @@ def test_plan_request_coerces_fractional_height_values_for_saved_retries():
             "technical_style": ["boxing"],
             "height_cm": 182.8,
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
     )
     req_from_string = PlanRequest(
         athlete={
@@ -525,7 +525,7 @@ def test_plan_request_coerces_fractional_height_values_for_saved_retries():
             "technical_style": ["boxing"],
             "height_cm": "182.2",
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
     )
 
     assert req.athlete.height_cm == 183
@@ -540,7 +540,7 @@ def test_plan_request_rejects_non_numeric_height_string():
                 "technical_style": ["boxing"],
                 "height_cm": "six feet",
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
         )
 
 
@@ -552,7 +552,7 @@ def test_record_format_validation_rejects_invalid_values():
                 "technical_style": ["boxing"],
                 "record": "five and one",
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
         )
     except Exception as exc:
         assert "x-x or x-x-x" in str(exc)
@@ -568,7 +568,7 @@ def test_record_format_validation_accepts_valid_formats():
                 "technical_style": ["boxing"],
                 "record": record,
             },
-            fight_date="2026-04-18",
+            fight_date="2099-04-18",
         )
         assert req.athlete.record == record
 
@@ -580,7 +580,7 @@ def test_record_format_validation_accepts_empty_record():
             "technical_style": ["boxing"],
             "record": "",
         },
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
     )
     assert req.athlete.record == ""
 
@@ -594,7 +594,7 @@ def test_record_format_validation_rejects_partial_format():
                     "technical_style": ["boxing"],
                     "record": bad,
                 },
-                fight_date="2026-04-18",
+                fight_date="2099-04-18",
             )
         except Exception as exc:
             assert "x-x or x-x-x" in str(exc)
@@ -802,6 +802,29 @@ def test_plan_input_blocks_scheduled_fight_without_date():
     assert "missing_next_fight_date" in parsed.generation_issues()
 
 
+def test_plan_input_blocks_scheduled_fight_with_past_date():
+    # A fight date before the generation day means ``days_until_fight`` is
+    # clamped to ``None``, which would run the camp with ``weeks_out == "N/A"``
+    # and break downstream phase logic — block via generation_issues.
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        fight_date="2020-05-30",
+        no_scheduled_fight=False,
+        training_availability=["Monday", "Wednesday", "Friday"],
+        weekly_training_frequency=3,
+    )
+
+    parsed = PlanInput.from_payload(request.to_payload())
+    assert parsed.camp_timeline_type == "scheduled_fight"
+    assert parsed.days_until_fight is None
+    assert "invalid_next_fight_date" in parsed.generation_issues()
+    assert "missing_next_fight_date" not in parsed.generation_issues()
+
+
 def test_plan_request_scheduled_fight_with_date_computes_countdown():
     request = PlanRequest(
         athlete={
@@ -987,7 +1010,7 @@ def test_guided_injury_input_enforces_field_caps():
 def _freq_request(value):
     return PlanRequest(
         athlete={"full_name": "Ari Mensah", "technical_style": ["boxing"]},
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         weekly_training_frequency=value,
     )
 
@@ -1055,7 +1078,7 @@ def test_weekly_training_frequency_rejects_non_numeric():
 def test_plan_request_accepts_normal_profile_text_and_normalizes_blank_optional_text():
     request = PlanRequest(
         athlete={"full_name": " Ari Mensah ", "technical_style": [" boxing "]},
-        fight_date="2026-04-18",
+        fight_date="2099-04-18",
         injuries="   ",
         training_preference="  Short pads first.  ",
         mindset_challenges="   ",

@@ -106,7 +106,7 @@ def test_generate_plan_persists_validated_final_plan_and_history():
 
     assert detail.status_code == 200
     body = detail.json()
-    assert payload["fight_date"] == "2026-04-18"
+    assert payload["fight_date"] == "2099-04-18"
     assert job["status"] == "completed"
     saved = store.get_plan(job["plan_id"])
     assert saved["plan_text"] == "# Final Plan"
@@ -115,7 +115,7 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert body["admin_outputs"] is None
     assert body["safety_state"]["state"] == "plan_ready"
     assert body["safety_state"]["status_chip"] == "PLAN READY"
-    assert store.get_latest_intake("athlete-1")["intake"]["fight_date"] == "2026-04-18"
+    assert store.get_latest_intake("athlete-1")["intake"]["fight_date"] == "2099-04-18"
     assert len(store.list_user_plans("athlete-1")) == 1
     saved = next(iter(store.plans.values()))
     assert saved["draft_plan_text"] == "# Stage 1 Draft"
@@ -2061,7 +2061,7 @@ def test_create_with_same_client_request_resets_pre_start_stale_job_without_dupl
     assert reset_job["status"] == "queued"
     assert reset_job["started_at"] is None
     assert reset_job["heartbeat_at"] is None
-    assert reset_job["request_payload"]["fight_date"] == "2026-04-18"
+    assert reset_job["request_payload"]["fight_date"] == "2099-04-18"
 
 
 def test_create_with_same_client_request_resets_worker_start_stale_job_without_duplicate():
@@ -2099,7 +2099,7 @@ def test_create_with_same_client_request_resets_worker_start_stale_job_without_d
     assert reset_job["started_at"] is None
     assert reset_job["heartbeat_at"] is None
     assert reset_job["progress_milestones"] == []
-    assert reset_job["request_payload"]["fight_date"] == "2026-04-18"
+    assert reset_job["request_payload"]["fight_date"] == "2099-04-18"
 
 
 def test_create_with_same_client_request_does_not_reset_fresh_worker_start_job():
@@ -2135,7 +2135,7 @@ def test_create_with_same_client_request_does_not_reset_fresh_worker_start_job()
     unchanged = store.get_generation_job(existing["id"])
     assert unchanged["status"] == "running"
     assert unchanged["progress_milestones"] == [{"code": "job_loaded", "label": "Generation job loaded", "detail": ""}]
-    assert unchanged["request_payload"]["fight_date"] == "2026-04-18"
+    assert unchanged["request_payload"]["fight_date"] == "2099-04-18"
 
 
 def test_create_or_get_generation_job_preserves_plan_and_intake_when_resetting_pre_start_stale_job():

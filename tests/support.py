@@ -1595,7 +1595,7 @@ def _build_request(overrides: dict | None = None) -> PlanRequest:
             "record": "5-1",
             "athlete_timezone": "Europe/London",
         },
-        "fight_date": "2026-04-18",
+        "fight_date": "2099-04-18",
         "weekly_training_frequency": 4,
         "training_availability": ["Monday", "Tuesday", "Thursday", "Saturday"],
         "hard_sparring_days": ["Tuesday", "Saturday"],
@@ -1788,7 +1788,7 @@ SYSTEM_SCENARIOS = [
         request_overrides={
             "athlete": {"weight_kg": 72.0, "target_weight_kg": 66.0},
             "fatigue_level": "moderate",
-            "fight_date": "2026-04-05",
+            "fight_date": "2099-04-05",
         },
         automator_result=finalized_result(
             plan_text=(
@@ -1828,7 +1828,7 @@ SYSTEM_SCENARIOS = [
     SystemScenario(
         key="short_notice_contradictory",
         request_overrides={
-            "fight_date": "2026-03-24",
+            "fight_date": "2099-03-24",
             "weekly_training_frequency": 6,
             "training_availability": ["Monday", "Wednesday"],
             "equipment_access": ["assault_bike", "bands", "bodyweight"],

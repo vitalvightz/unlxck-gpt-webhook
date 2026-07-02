@@ -543,7 +543,7 @@ def test_saved_onboarding_draft_round_trips_through_me_and_clears_after_generati
     assert store.profiles["athlete-1"]["onboarding_draft"] is None
     refreshed_me = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
     assert refreshed_me.json()["profile"]["onboarding_draft"] is None
-    assert refreshed_me.json()["latest_intake"]["fight_date"] == "2026-04-18"
+    assert refreshed_me.json()["latest_intake"]["fight_date"] == "2099-04-18"
 
 
 def test_onboarding_draft_endpoint_requires_auth():
