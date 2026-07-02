@@ -208,19 +208,6 @@
     "bank": "exercise_bank",
     "explicit_tags": [
       "explosive",
-      "triple_extension"
-    ],
-    "inferred_tags": [
-      "front_rack",
-      "wrist_loaded_extension"
-    ],
-    "item_id": "exercise_bank:Hang Power Clean",
-    "name": "Hang Power Clean"
-  },
-  {
-    "bank": "exercise_bank",
-    "explicit_tags": [
-      "explosive",
       "anti_rotation"
     ],
     "inferred_tags": [],
