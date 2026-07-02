@@ -59,6 +59,7 @@ import {
 import {
   buildDaysOutContext,
   computeDaysUntilFight,
+  isFightDateInPast,
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
   HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE,
@@ -306,6 +307,9 @@ function getTodayIsoDate(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
+
+const FIGHT_DATE_IN_PAST_MESSAGE =
+  "Fight date can't be in the past. Pick an upcoming date or mark \"No scheduled fight\".";
 
 function formatJoinedLabels(values: string[], emptyLabel: string): string {
   return values.length ? values.join(", ") : emptyLabel;
@@ -813,6 +817,7 @@ function getReviewStepBlockingIssue(
   if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return { message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.", step: 0, fieldId: "record" };
   if (!nextForm.athlete.technical_style.length) return { message: "Select a technical style before continuing to review.", step: 0, fieldId: "technicalStyle" };
   if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose your fight date or mark \"No scheduled fight\" before continuing to review.", step: 1, fieldId: "fightDate" };
+  if (!options.noScheduledFight && isFightDateInPast(nextForm.fight_date)) return { message: FIGHT_DATE_IN_PAST_MESSAGE, step: 1, fieldId: "fightDate" };
   if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2, fieldId: "trainingAvailabilityGroup" };
   if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return { message: "Planned sessions per week must be at least 1.", step: 1, fieldId: "sessionsPerWeek" };
   if (nextForm.weekly_training_frequency > 6) return { message: "Planned sessions per week cannot exceed 6.", step: 1, fieldId: "sessionsPerWeek" };
@@ -1652,6 +1657,12 @@ export function PlanIntakeForm() {
           fieldId: "fightDate",
         });
       }
+      if (!noScheduledFight && isFightDateInPast(nextForm.fight_date)) {
+        return reportInvalidField({
+          message: FIGHT_DATE_IN_PAST_MESSAGE,
+          fieldId: "fightDate",
+        });
+      }
       const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
       if (!parsedRounds.roundCount) {
         return reportInvalidField({
@@ -1723,6 +1734,13 @@ export function PlanIntakeForm() {
     if (!nextForm.fight_date && !noScheduledFight) {
       return reportInvalidField({
         message: "Choose your fight date or mark \"No scheduled fight\" before generating your plan.",
+        fieldId: "fightDate",
+        step: 1,
+      });
+    }
+    if (!noScheduledFight && isFightDateInPast(nextForm.fight_date)) {
+      return reportInvalidField({
+        message: FIGHT_DATE_IN_PAST_MESSAGE,
         fieldId: "fightDate",
         step: 1,
       });
