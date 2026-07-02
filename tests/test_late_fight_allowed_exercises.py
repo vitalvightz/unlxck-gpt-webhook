@@ -181,6 +181,34 @@ def test_late_fight_assignment_is_unsafe_guards_only_d1_loaded_work():
     assert _late_fight_assignment_is_unsafe("D-9", "Front Squat") is False
 
 
+def test_duplicate_bank_names_cannot_downgrade_equipment_requirement(monkeypatch):
+    # The same exercise name can appear in multiple banks with different
+    # equipment. If any version requires equipment, the name must stay
+    # equipment-required on D-1 regardless of bank iteration order.
+    from fightcamp import stage2_payload
+
+    equipment_version = {"name": "Reactive Cue Drill", "equipment": ["bands"]}
+    bodyweight_version = {"name": "Reactive Cue Drill", "equipment": ["bodyweight"]}
+    bodyweight_only = {"name": "Easy Mobility Walkthrough", "equipment": ["bodyweight"]}
+
+    # Equipment version first, bodyweight duplicate later must not downgrade.
+    monkeypatch.setattr("fightcamp.strength.get_exercise_bank", lambda: [equipment_version])
+    monkeypatch.setattr("fightcamp.conditioning.get_conditioning_bank", lambda: [bodyweight_version, bodyweight_only])
+    monkeypatch.setattr("fightcamp.conditioning.get_coordination_bank", lambda: [])
+    monkeypatch.setattr(stage2_payload, "_D1_EQUIPMENT_BY_NAME", None)
+
+    assert _late_fight_assignment_is_unsafe("D-1", "Reactive Cue Drill") is True
+    assert _late_fight_assignment_is_unsafe("D-1", "Easy Mobility Walkthrough") is False
+
+    # Reversed order: bodyweight first, equipment duplicate later still blocks.
+    monkeypatch.setattr("fightcamp.strength.get_exercise_bank", lambda: [bodyweight_version])
+    monkeypatch.setattr("fightcamp.conditioning.get_conditioning_bank", lambda: [equipment_version, bodyweight_only])
+    monkeypatch.setattr(stage2_payload, "_D1_EQUIPMENT_BY_NAME", None)
+
+    assert _late_fight_assignment_is_unsafe("D-1", "Reactive Cue Drill") is True
+    assert _late_fight_assignment_is_unsafe("D-1", "Easy Mobility Walkthrough") is False
+
+
 def test_d1_never_receives_loaded_strength_exercise():
     # Force the D-1-bound slot to carry a loaded (deadlift) exercise; the
     # allocator must drop it rather than place dangerous work on D-1.

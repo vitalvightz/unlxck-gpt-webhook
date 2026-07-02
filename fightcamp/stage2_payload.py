@@ -2912,7 +2912,9 @@ def _bank_requires_equipment(name: str) -> bool:
             for item in bank:
                 item_name = str(item.get("name") or "").strip().lower()
                 if item_name:
-                    requirements[item_name] = requires_equipment(item)
+                    # A name duplicated across banks stays equipment-required
+                    # if any version of it requires equipment.
+                    requirements[item_name] = requirements.get(item_name, False) or requires_equipment(item)
         _D1_EQUIPMENT_BY_NAME = requirements
     return _D1_EQUIPMENT_BY_NAME.get(str(name or "").strip().lower(), False)
 
