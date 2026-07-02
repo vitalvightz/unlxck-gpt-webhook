@@ -2365,6 +2365,92 @@ def _visible_calendar_session_sequence(session_sequence: list[dict[str, Any]]) -
     return sorted(unique, key=lambda entry: int(entry.get("countdown_offset") or 0), reverse=True)
 
 
+def ensure_declared_coach_combat_spine(
+    session_sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    countdown_map: dict[str, str],
+) -> list[dict[str, Any]]:
+    hard_days = {
+        str(day or "").strip().lower()
+        for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
+        if str(day or "").strip()
+    }
+    if not hard_days or not countdown_map:
+        return session_sequence
+
+    coach_labels = {
+        label: str(weekday or "").strip().lower()
+        for label, weekday in countdown_map.items()
+        if str(weekday or "").strip().lower() in hard_days
+        and (_countdown_offset(label) or 0) > 0
+    }
+    if not coach_labels:
+        return session_sequence
+
+    sequence = [
+        dict(role)
+        for role in session_sequence
+        if not (
+            str(role.get("role_key") or "").strip().lower() in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS
+            and str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "") in coach_labels
+        )
+    ]
+    existing: set[str] = set()
+    for role in sequence:
+        role_key = str(role.get("role_key") or "")
+        downgraded_from = str(role.get("downgraded_from_role_key") or "")
+        if role_key != "hard_sparring_day" and downgraded_from != "hard_sparring_day":
+            continue
+        label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+        if label:
+            existing.add(label)
+
+    for label in sorted(coach_labels, key=lambda item: int(_countdown_offset(item) or -1), reverse=True):
+        offset = _countdown_offset(label)
+        if offset is None or offset <= 0:
+            continue
+        weekday = coach_labels[label]
+        if label in existing:
+            continue
+        downgraded = offset <= 17
+        cost_class = "low" if downgraded else _late_fight_cost_class("hard_sparring_day")
+        stress_class = "support" if downgraded else _late_fight_stress_class("hard_sparring_day")
+        sequence.append(
+            {
+                "session_index": len(sequence) + 1,
+                "category": "sparring",
+                "role_key": "hard_sparring_day",
+                "preferred_pool": "declared_hard_sparring_days",
+                "anchor": _role_anchor("hard_sparring_day"),
+                "cost_class": cost_class,
+                "stress_class": stress_class,
+                "placement_source": "declared_coach_combat_spine",
+                "legal_countdown_labels": [label],
+                "governance": {"late_fight_payload": True, "coach_owned": True},
+                "locked_day": weekday,
+                "scheduled_day_hint": weekday,
+                "real_weekday": weekday,
+                "scheduled_countdown_label": label,
+                "countdown_label": label,
+                "countdown_display_label": _countdown_display_label(label, weekday),
+                "countdown_weekday": weekday,
+                "countdown_offset": offset,
+                "declared_day_locked": True,
+                "coach_owned": True,
+                "downgraded": downgraded,
+                "placement_basis": "locked",
+                "day_assignment_reason": (
+                    "Declared coach-owned combat day restored to the calendar spine before app-owned placement."
+                ),
+            }
+        )
+        if downgraded:
+            sequence[-1]["downgraded_to_role_key"] = "technical_touch_day"
+            sequence[-1]["downgrade_reason_code"] = "d17_hard_sparring_ban"
+        existing.add(label)
+    return sorted(sequence, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
+
+
 def _title_case_days(days: list[str]) -> list[str]:
     return [str(day).strip().title() for day in days if str(day).strip()]
 
@@ -3907,8 +3993,8 @@ def _append_declared_hard_spar_context(
                     "clean: no programmed S&C session is scheduled on a coach-owned "
                     "combat day."
                 ),
-                "cost_class": _late_fight_cost_class("hard_sparring_day"),
-                "stress_class": _late_fight_stress_class("hard_sparring_day"),
+                "cost_class": "low",
+                "stress_class": "support",
                 "placement_source": "declared_hard_day_downgrade_context",
                 "legal_countdown_labels": [label],
                 "governance": {"late_fight_payload": True, "coach_owned": True},
@@ -4295,23 +4381,32 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     payload_block = _days_out_payload_block(days_until_fight, athlete_model)
     allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
     roles = list(allocation.get("session_roles", []))
-    session_sequence = list(roles)
-    visible_session_sequence = _visible_insert_session_sequence(session_sequence)
     mode = payload_block["payload_mode"]
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
     resolved_countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
+    spine_countdown_map = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    session_sequence = ensure_declared_coach_combat_spine(
+        roles,
+        athlete_model,
+        spine_countdown_map,
+    )
+    visible_session_sequence = _visible_calendar_session_sequence(session_sequence)
+    app_visible_session_sequence = _visible_insert_session_sequence(session_sequence)
     role_budget = dict(allocation.get("role_budget", {}) or {})
+    role_budget["selected_active_roles"] = _late_fight_active_role_count(app_visible_session_sequence)
+    role_budget["selected_meaningful_stress_exposures"] = _late_fight_meaningful_stress_count(app_visible_session_sequence)
+    role_budget["selected_support_roles"] = _late_fight_support_role_count(app_visible_session_sequence)
     spec: dict[str, Any] = {
         "payload_variant": "late_fight_stage2_payload",
         "payload_mode": mode,
         "days_out_bucket": payload_block["days_out_bucket"],
         "late_fight_window": payload_block["late_fight_window"],
         "summary": _late_fight_summary(days_until_fight),
-        "session_cap": len(roles),
-        "session_roles": [role.get("role_key") for role in roles],
+        "session_cap": len(session_sequence),
+        "session_roles": [role.get("role_key") for role in session_sequence],
         "session_sequence": session_sequence,
-        "visible_session_cap": len(visible_session_sequence),
-        "visible_session_roles": [entry.get("role_key") for entry in visible_session_sequence],
+        "visible_session_cap": len(app_visible_session_sequence),
+        "visible_session_roles": [entry.get("role_key") for entry in app_visible_session_sequence],
         "visible_session_sequence": visible_session_sequence,
         "allowed_session_types": payload_block["allowed_session_types"],
         "forbidden_session_types": payload_block["forbidden_session_types"],

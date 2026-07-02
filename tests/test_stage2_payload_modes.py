@@ -10,6 +10,7 @@ from fightcamp.stage2_payload import (
     _late_fight_permissions,
     _late_fight_rendering_rules,
     _normalized_fatigue_level,
+    _is_app_owned_visible_role,
     build_planning_brief,
     build_stage2_handoff_text,
     build_stage2_payload,
@@ -595,10 +596,16 @@ class TestPlanningBriefBranching:
             "d1",
             "d0",
         ]
-        assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
-            "fight_week_freshness_day",
-            "neural_primer_day",
+        app_sequence = [
+            entry
+            for entry in brief["late_fight_session_sequence"]
+            if _is_app_owned_visible_role(entry.get("role_key"))
         ]
+        assert [entry["role_key"] for entry in app_sequence] == [
+            "fight_week_freshness_day",
+            "tactical_cue_card",
+        ]
+        assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
     def test_d0_planning_brief_has_empty_progression(self):
         brief = _build_brief_for(0)
@@ -611,7 +618,13 @@ class TestPlanningBriefBranching:
         assert brief["days_out_payload"]["payload_mode"] == "pre_fight_day_payload"
         assert brief["week_by_week_progression"]["weeks"] == []
         assert brief["weekly_role_map"]["weeks"] == []
-        assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["neural_primer_day"]
+        app_sequence = [
+            entry
+            for entry in brief["late_fight_session_sequence"]
+            if _is_app_owned_visible_role(entry.get("role_key"))
+        ]
+        assert [entry["role_key"] for entry in app_sequence] == ["tactical_cue_card"]
+        assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
     def test_d7_planning_brief_uses_sharpness_week_labels(self):
         brief = _build_brief_for(7)
@@ -747,7 +760,8 @@ class TestPlanningBriefBranching:
         meaningful_app_roles = [
             entry
             for entry in visible_sequence
-            if entry.get("stress_class") == "meaningful_stress"
+            if _is_app_owned_visible_role(entry.get("role_key"))
+            and entry.get("stress_class") == "meaningful_stress"
         ]
 
         assert meaningful_app_roles
@@ -769,12 +783,17 @@ class TestPlanningBriefBranching:
             "d1",
             "d0",
         ]
-        assert [entry.get("role_key") for entry in spec["visible_session_sequence"]] == [
+        app_visible_sequence = [
+            entry
+            for entry in spec["visible_session_sequence"]
+            if _is_app_owned_visible_role(entry.get("role_key"))
+        ]
+        assert [entry.get("role_key") for entry in app_visible_sequence] == [
             "strength_touch_day",
             "alactic_sharpness_day",
             "fight_week_freshness_day",
-            "neural_primer_day",
         ]
+        assert any(entry.get("role_key") == "hard_sparring_day" for entry in spec["visible_session_sequence"])
         # The session_sequence must cover every downstream stage where the
         # athlete actually has activity. Stages without declared spar in the
         # D-13 calendar (here: D-7=friday and D-6/D-5=sat/sun for a tue/thu
@@ -857,7 +876,12 @@ class TestStage2PayloadBranching:
         # and matches ``visible_session_sequence``. Coach-owned hard_sparring
         # context entries land in ``session_sequence`` (for tracking) but are
         # not part of the active allocation budget.
-        assert spec["role_budget"]["selected_active_roles"] == len(spec["visible_session_sequence"])
+        app_visible_sequence = [
+            entry
+            for entry in spec["visible_session_sequence"]
+            if _is_app_owned_visible_role(entry.get("role_key"))
+        ]
+        assert spec["role_budget"]["selected_active_roles"] == len(app_visible_sequence)
         assert all("scheduled_countdown_label" in role for role in spec["session_sequence"])
         assert all("placement_source" in role for role in spec["session_sequence"])
 
@@ -888,8 +912,14 @@ class TestStage2PayloadBranching:
 
         assert "hard_sparring_day" in spec["session_roles"]
         assert "hard_sparring_day" not in spec["visible_session_roles"]
-        assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
-        assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
+        app_visible_sequence = [
+            entry
+            for entry in spec["visible_session_sequence"]
+            if _is_app_owned_visible_role(entry.get("role_key"))
+        ]
+        assert spec["visible_session_cap"] == len(app_visible_sequence)
+        assert [entry["role_key"] for entry in app_visible_sequence] == spec["visible_session_roles"]
+        assert any(entry["role_key"] == "hard_sparring_day" for entry in spec["visible_session_sequence"])
 
 
     def test_late_fight_weekly_role_map_carries_planner_sparring_plan_for_d17_ban(self):

@@ -35,8 +35,11 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     _is_app_owned_visible_role,
     _late_fight_permissions,
     _late_fight_rendering_rules,
+    _visible_calendar_session_sequence,
     _resolve_late_fight_phase,
     _uses_late_fight_stage2_payload,
+    ensure_declared_coach_combat_spine,
+    is_low_cost_coexistable_filler,
 )
 from .gap_fill_inserts import apply_gap_fill_inserts
 from .conditioning import athlete_facing_system_label
@@ -3218,27 +3221,52 @@ def build_planning_brief(
             athlete_model,
         )
 
-        session_sequence = apply_gap_fill_inserts(
-            [
-                role
-                for role in (
-                    base_late_fight_plan_spec.get("visible_session_sequence")
-                    or _build_late_fight_session_sequence(days_until_fight, athlete_model)
-                )
-                if _is_app_owned_visible_role(role.get("role_key"))
-            ],
+        pre_gap_sequence = ensure_declared_coach_combat_spine(
+            list(
+                base_late_fight_plan_spec.get("session_sequence")
+                or base_late_fight_plan_spec.get("visible_session_sequence")
+                or _build_late_fight_session_sequence(days_until_fight, athlete_model)
+            ),
             athlete_model,
+            dict(base_late_fight_plan_spec.get("countdown_weekday_map", {})),
         )
+        session_sequence = _visible_calendar_session_sequence(
+            apply_gap_fill_inserts(pre_gap_sequence, athlete_model)
+        )
+        app_session_sequence = [
+            role
+            for role in session_sequence
+            if _is_app_owned_visible_role(role.get("role_key"))
+        ]
 
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec={
                 **base_late_fight_plan_spec,
+                "role_budget": {
+                    **dict(base_late_fight_plan_spec.get("role_budget", {})),
+                    "selected_active_roles": sum(
+                        1
+                        for role in app_session_sequence
+                        if not is_low_cost_coexistable_filler(role)
+                    ),
+                    "selected_meaningful_stress_exposures": sum(
+                        1
+                        for role in app_session_sequence
+                        if role.get("stress_class") == "meaningful_stress"
+                    ),
+                    "selected_support_roles": sum(
+                        1
+                        for role in app_session_sequence
+                        if role.get("stress_class") == "support"
+                        and not is_low_cost_coexistable_filler(role)
+                    ),
+                },
                 "visible_session_sequence": session_sequence,
-                "visible_session_cap": len(session_sequence),
-                "max_active_roles": len(session_sequence),
+                "visible_session_cap": len(app_session_sequence),
+                "max_active_roles": len(app_session_sequence),
                 "visible_session_roles": [
                     role.get("role_key")
-                    for role in session_sequence
+                    for role in app_session_sequence
                     if isinstance(role, dict)
                 ],
             },
@@ -3923,28 +3951,52 @@ def build_stage2_payload(
             athlete_model,
         )
 
-        visible_session_sequence = apply_gap_fill_inserts(
-            [
-                role
-                for role in (
-                    base_late_fight_plan_spec.get("visible_session_sequence")
-                    or base_late_fight_plan_spec.get("session_sequence")
-                    or []
-                )
-                if _is_app_owned_visible_role(role.get("role_key"))
-            ],
+        pre_gap_sequence = ensure_declared_coach_combat_spine(
+            list(
+                base_late_fight_plan_spec.get("session_sequence")
+                or base_late_fight_plan_spec.get("visible_session_sequence")
+                or []
+            ),
             athlete_model,
+            dict(base_late_fight_plan_spec.get("countdown_weekday_map", {})),
         )
+        visible_session_sequence = _visible_calendar_session_sequence(
+            apply_gap_fill_inserts(pre_gap_sequence, athlete_model)
+        )
+        app_visible_session_sequence = [
+            role
+            for role in visible_session_sequence
+            if _is_app_owned_visible_role(role.get("role_key"))
+        ]
 
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec={
                 **base_late_fight_plan_spec,
+                "role_budget": {
+                    **dict(base_late_fight_plan_spec.get("role_budget", {})),
+                    "selected_active_roles": sum(
+                        1
+                        for role in app_visible_session_sequence
+                        if not is_low_cost_coexistable_filler(role)
+                    ),
+                    "selected_meaningful_stress_exposures": sum(
+                        1
+                        for role in app_visible_session_sequence
+                        if role.get("stress_class") == "meaningful_stress"
+                    ),
+                    "selected_support_roles": sum(
+                        1
+                        for role in app_visible_session_sequence
+                        if role.get("stress_class") == "support"
+                        and not is_low_cost_coexistable_filler(role)
+                    ),
+                },
                 "visible_session_sequence": visible_session_sequence,
-                "visible_session_cap": len(visible_session_sequence),
-                "max_active_roles": len(visible_session_sequence),
+                "visible_session_cap": len(app_visible_session_sequence),
+                "max_active_roles": len(app_visible_session_sequence),
                 "visible_session_roles": [
                     role.get("role_key")
-                    for role in visible_session_sequence
+                    for role in app_visible_session_sequence
                     if isinstance(role, dict)
                 ],
             },
