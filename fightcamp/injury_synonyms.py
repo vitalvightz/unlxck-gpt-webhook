@@ -1,5 +1,6 @@
 import importlib.util
 import logging
+import os
 import re
 import threading
 from difflib import SequenceMatcher
@@ -111,6 +112,18 @@ def _log_dependency_status() -> None:
 _log_dependency_status()
 
 
+def _spacy_disabled_by_env() -> bool:
+    """UNLXCK_DISABLE_SPACY=1 keeps this process on the regex fallback path.
+
+    Intended for the memory-constrained web tier, where injury text is only
+    parsed for display (advisories, plan cards) and the ~95MB spaCy stack +
+    en_core_web_sm model is not worth the RSS. The worker/planner processes,
+    which do the authoritative injury parsing for exercise exclusion, should
+    never set this.
+    """
+    return os.getenv("UNLXCK_DISABLE_SPACY", "0").strip() == "1"
+
+
 def get_nlp():
     global _NLP, _NLP_INITIALIZED
     if _NLP_INITIALIZED:
@@ -120,6 +133,13 @@ def get_nlp():
             return _NLP
         try:
             if not _SPACY_AVAILABLE:
+                _NLP = None
+                return _NLP
+            if _spacy_disabled_by_env():
+                logger.info(
+                    "[injury-parse] spaCy disabled via UNLXCK_DISABLE_SPACY=1; "
+                    "using regex fallback parsing in this process."
+                )
                 _NLP = None
                 return _NLP
             try:
