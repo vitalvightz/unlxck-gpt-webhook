@@ -15,7 +15,13 @@ from .training_context import (
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
-from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, is_late_fight_metadata_safe, validate_training_item
+from .bank_schema import (
+    KNOWN_SYSTEMS,
+    NON_EQUIPMENT_TOKENS,
+    SYSTEM_ALIASES,
+    is_late_fight_metadata_safe,
+    validate_training_item,
+)
 from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .restriction_filtering import evaluate_restriction_impact
@@ -788,6 +794,10 @@ def _evaluate_conditioning_late_window(
     if late_band_lockout_window and "bands" in equipment and (window == "d1" or not rehab_mobility_band_ok):
         block_codes.append("late_conditioning_block_band_work_lockout")
         reason_codes.append("late_conditioning_penalty_band_work_lockout")
+    # d1 allows no equipment of any kind.
+    if window == D1 and equipment - NON_EQUIPMENT_TOKENS:
+        block_codes.append("late_conditioning_block_d1_equipment")
+        reason_codes.append("late_conditioning_block_d1_equipment")
 
     if low_noise_sharpness:
         adjustment += 0.75

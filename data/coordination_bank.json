@@ -1867,8 +1867,7 @@
         "mech_trunk_stability"
       ],
       "late_windows": [
-        "d4_to_d2",
-        "d1"
+        "d4_to_d2"
       ],
       "work_sec": 20,
       "rounds": 2,
@@ -4024,8 +4023,7 @@
         "mech_trunk_stability"
       ],
       "late_windows": [
-        "d4_to_d2",
-        "d1"
+        "d4_to_d2"
       ],
       "work_sec": 20,
       "rounds": 2,
@@ -4057,8 +4055,7 @@
         "mech_upper_press"
       ],
       "late_windows": [
-        "d4_to_d2",
-        "d1"
+        "d4_to_d2"
       ],
       "work_sec": 20,
       "rounds": 2,
@@ -5699,8 +5696,7 @@
         "mech_trunk_stability"
       ],
       "late_windows": [
-        "d4_to_d2",
-        "d1"
+        "d4_to_d2"
       ],
       "work_sec": 20,
       "rounds": 2,

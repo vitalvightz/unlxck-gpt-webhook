@@ -512,6 +512,52 @@ def test_runtime_d1_blocks_forbidden_modalities_without_final_day_policy():
     assert "late_block_d1_forbidden_modality" in safety["block_codes"]
 
 
+def test_runtime_d1_blocks_any_equipment_even_with_final_day_policy():
+    # No equipment of any kind is allowed on d1; d1_ok cannot override it.
+    for equipment in (["double_end_bag"], ["reaction_ball"], ["pad"], ["focus_mitts"]):
+        safety = is_late_fight_metadata_safe(
+            _safe_strength(equipment=equipment, tags=["strength", "d1_ok"]),
+            "exercise_bank.json",
+            D1,
+        )
+
+        assert safety["safe"] is False, equipment
+        assert "late_block_d1_equipment" in safety["block_codes"], equipment
+
+
+def test_runtime_d1_allows_bodyweight_only_items():
+    safety = is_late_fight_metadata_safe(
+        _safe_strength(equipment=["bodyweight"], tags=["strength", "d1_ok"]),
+        "exercise_bank.json",
+        D1,
+    )
+
+    assert "late_block_d1_equipment" not in safety["block_codes"]
+
+
+def test_runtime_d1_mat_and_space_descriptors_are_not_equipment():
+    # Surface descriptors like "Mat Space" tokenize into multiple tokens;
+    # none of them may trip the d1 equipment block.
+    for equipment in (["mat"], "Mat Space", "Open Space", ["mat", "bodyweight"]):
+        safety = is_late_fight_metadata_safe(
+            _safe_strength(equipment=equipment, tags=["strength", "d1_ok"]),
+            "exercise_bank.json",
+            D1,
+        )
+
+        assert "late_block_d1_equipment" not in safety["block_codes"], equipment
+
+
+def test_runtime_d1_equipment_block_outside_d1_window_does_not_apply():
+    safety = is_late_fight_metadata_safe(
+        _safe_strength(equipment=["double_end_bag"], tags=["strength"]),
+        "exercise_bank.json",
+        D4_TO_D2,
+    )
+
+    assert "late_block_d1_equipment" not in safety["block_codes"]
+
+
 def test_runtime_fallback_d1_blocks_forbidden_conditioning_modality():
     result = conditioning._evaluate_conditioning_late_window(
         _safe_conditioning(equipment=["bands"]),

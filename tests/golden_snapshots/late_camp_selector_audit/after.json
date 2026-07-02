@@ -2793,27 +2793,6 @@
     "strength": {
       "winners": [
         {
-          "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 9.6125,
-          "reason_codes": [
-            "priority_secondary_goal_match:skill_refinement",
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_ballistic_low_volume",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness",
-            "late_strength_boost_crisp_ballistic"
-          ]
-        },
-        {
           "name": "Band Row Speed Focus",
           "score": 9.1125,
           "reason_codes": [
@@ -2853,6 +2832,22 @@
           ]
         },
         {
+          "name": "Scapular Pull-Up Hold",
+          "score": 5.0875,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
           "name": "Light Heavy-Bag Technical Tempo",
           "score": 4.7875,
           "reason_codes": [
@@ -2870,8 +2865,8 @@
           ]
         },
         {
-          "name": "Controlled Bird-Dog",
-          "score": 2.1875,
+          "name": "Banded Lateral Walk",
+          "score": 2.0375,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
             "late_strength_boost_window_fit",
@@ -2885,7 +2880,7 @@
           ]
         },
         {
-          "name": "Diaphragmatic Breathing Drills",
+          "name": "Controlled Bird-Dog",
           "score": 2.1875,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -3062,6 +3057,13 @@
           "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Staggered-Stance Medicine-Ball Punch Throw",
+          "score": 5.0,
+          "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
@@ -3623,14 +3625,16 @@
           "name": "Band Face Pull",
           "score": -1.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Band Row Speed Focus",
           "score": 4.5,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -3644,42 +3648,48 @@
           "name": "Band pull-apart low volume",
           "score": -1.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Band-Resisted Jab-Cross Primer",
           "score": 5.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Band-Resisted Punch",
           "score": 1.15,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Band-Resisted Straight Punch",
           "score": 1.15,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Banded Hip Flexor Stretch",
           "score": -1.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Banded Lateral Walk",
           "score": -0.65,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -3702,6 +3712,7 @@
           "score": 5.55,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment",
             "late_block_primer_only_strength_fulfillment",
             "late_block_support_only_anchor_fulfillment"
           ]
@@ -3719,7 +3730,8 @@
           "score": -0.7,
           "reason_codes": [
             "late_block_missing_late_windows",
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -3757,6 +3769,7 @@
           "score": 4.15,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment",
             "late_block_primer_only_strength_fulfillment",
             "late_block_support_only_anchor_fulfillment"
           ]
@@ -3781,8 +3794,7 @@
           "name": "Light Heavy-Bag Technical Tempo",
           "score": 1.95,
           "reason_codes": [
-            "late_strength_block_d1_requires_d1_tags",
-            "late_strength_block_window_mismatch"
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -3813,6 +3825,7 @@
           "score": 4.2,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment",
             "late_block_support_only_anchor_fulfillment"
           ]
         },
@@ -3830,6 +3843,7 @@
           "reason_codes": [
             "late_block_high_movement_cost",
             "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment",
             "late_block_primer_only_strength_fulfillment",
             "late_block_support_only_anchor_fulfillment"
           ]
@@ -3854,14 +3868,16 @@
           "name": "Scapular Pull-Up Hold",
           "score": 1.95,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Seated Medicine-Ball Punch Throw",
           "score": 4.1,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -3898,7 +3914,8 @@
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
           "score": 5.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -3939,6 +3956,7 @@
           "score": 3.1,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment",
             "late_block_primer_only_strength_fulfillment",
             "late_block_support_only_anchor_fulfillment"
           ]
@@ -3948,6 +3966,7 @@
           "score": 3.4,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment",
             "late_block_support_only_anchor_fulfillment"
           ]
         },
@@ -4002,21 +4021,23 @@
           "name": "Assault Bike Rhythm Primer",
           "score": 2.15,
           "reason_codes": [
-            "late_conditioning_block_window_mismatch"
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Assault Bike Steady State - Counter Striker",
           "score": 0.0,
           "reason_codes": [
-            "late_block_missing_late_windows"
+            "late_block_missing_late_windows",
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Band-Resisted Straight Punch Release",
           "score": 0.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4025,7 +4046,8 @@
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact",
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4112,14 +4134,14 @@
           "name": "Easy Assault Bike",
           "score": 2.15,
           "reason_codes": [
-            "late_conditioning_block_window_mismatch"
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Easy Bike",
           "score": 2.15,
           "reason_codes": [
-            "late_conditioning_block_window_mismatch"
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4173,7 +4195,8 @@
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact",
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4212,7 +4235,8 @@
           "score": 0.0,
           "reason_codes": [
             "late_block_high_rpe",
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4260,7 +4284,8 @@
           "name": "Reactive Med Ball Chest Pass",
           "score": 0.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4274,7 +4299,7 @@
           "name": "Recovery Cycling (Nasal Breathing)",
           "score": 2.15,
           "reason_codes": [
-            "late_conditioning_block_window_mismatch"
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4288,14 +4313,15 @@
           "name": "Rogue Echo Bike Recovery Spin",
           "score": 2.15,
           "reason_codes": [
-            "late_conditioning_block_window_mismatch"
+            "late_block_d1_equipment"
           ]
         },
         {
           "name": "Seated Med Ball Chest Pop",
           "score": 0.0,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {
@@ -4319,7 +4345,8 @@
             "late_block_missing_late_windows",
             "late_block_high_rpe",
             "late_block_high_impact",
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         },
         {

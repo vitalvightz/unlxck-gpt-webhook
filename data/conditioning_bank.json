@@ -8220,11 +8220,10 @@
       "boxer",
       "mech_upper_press"
     ],
-    "notes": "Fast single shots only. Keep rhythm and accuracy high. Optional D-1 only if coach-led and very brief.",
+    "notes": "Fast single shots only. Keep rhythm and accuracy high. Not for D-1: requires equipment.",
     "late_windows": [
       "d7",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ],
     "work_sec": 10,
     "rounds": 5,
@@ -8493,8 +8492,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ],
     "work_sec": 6,
     "rounds": 2,

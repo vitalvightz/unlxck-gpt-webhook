@@ -1523,7 +1523,6 @@ def _late_fight_taper_micro_support_policy(
             "breathing",
             "mobility",
             "light technical shadowboxing",
-            "optional light band face pull",
         ],
         "d1_blocked_list": [
             "core",
@@ -1531,7 +1530,9 @@ def _late_fight_taper_micro_support_policy(
             "heavy_bag",
             "grip",
             "conditioning",
+            "bands",
             "hard_bands",
+            "equipment_work",
             "power_work",
         ],
     }
@@ -1549,9 +1550,12 @@ def _late_fight_taper_micro_support_policy(
             policy["allowed_categories"].append("breathing_based_core_cue")
             suppressed.update({"neck", "heavy_bag", "grip"})
         elif day_band == "d1":
-            policy["allowed_categories"].extend(["shadowboxing", "band_face_pull"])
-            suppressed.update({"core", "neck", "heavy_bag", "grip"})
+            # D-1 is equipment-free: shadowboxing is the only add-on beyond
+            # breathing/mobility, and band work is suppressed with the rest.
+            policy["allowed_categories"].append("shadowboxing")
+            suppressed.update({"core", "neck", "heavy_bag", "grip", "band_face_pull"})
             policy["suppression_reasons"].append("d1_blocks_core_neck_heavy_bag_grip")
+            policy["suppression_reasons"].append("d1_blocks_all_equipment_work")
 
         allow_grip = grappling_sport and days in {10, 9, 8, 7} and sport != "boxing"
 
@@ -4186,7 +4190,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "4 blocks max. Output: neural primer · technical touch · activation · mobility/reset · pre-fight notes.\n"
             "Banned: strength, conditioning, anchor, block, glycolytic, development, fight-pace density.\n"
             "Primer intensity cap: micro-dose only, RPE 3-5, 1-2 sets or 2-3 minutes total; no RPE 6-7, no pump, no fatigue.\n"
-            "Optional taper_micro_support only: breathing, mobility, light technical shadowboxing, or light band face pull. No core, neck, heavy bag, or grip.\n"
+            "Optional taper_micro_support only: breathing, mobility, or light technical shadowboxing. No equipment of any kind on D-1: no bands, no med ball, no heavy bag, no weights, no core, no neck, no grip tools.\n"
             "No weekly architecture. No hard sparring. No suppressed role restoration.\n\n"
             + _CONTRACT
         )
