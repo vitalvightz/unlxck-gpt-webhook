@@ -2294,7 +2294,7 @@ def _late_fight_countdown_block_title(lines: list[str]) -> str:
     for line in lines:
         match = _LATE_FIGHT_COUNTDOWN_TITLE.match(line)
         if match:
-            return match.group("title").strip().strip("*").strip()
+            return match.group("title").strip().strip("*_`").strip()
     return ""
 
 
