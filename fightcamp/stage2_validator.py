@@ -2224,7 +2224,11 @@ def _late_fight_countdown_banded_lockout_warnings(
 
 
 # Inside the taper (D-10 to the fight) the plan may offer regressions and stop
-# rules only — never a "make it harder" option. These phrases mark an explicit
+# rules only — never a "make it harder" option. Strength & conditioning
+# sessions lock earlier: from D-13, an S&C card (strength, power, alactic,
+# aerobic, fight-pace, neural speed work) must also stop progressing, while
+# fillers, rehab, mobility, and light recovery work keep progressing until the
+# D-10 lockout. These phrases mark an explicit
 # progression suggestion (add load/sets, heavier ball, stronger band, "to
 # progress"). Genuine regression advice ("regress to a lighter ball", "reduce
 # to 3 x 3", "drop a set") never matches these — the negation guard below is
@@ -2260,6 +2264,47 @@ _LATE_FIGHT_PROGRESSION_NEGATOR_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Session title from a countdown header line: "D-12 (Monday) — Strength".
+_LATE_FIGHT_COUNTDOWN_TITLE = re.compile(
+    r"^(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?D-\d+\s*(?:\([^)]*\)\s*)?(?:—|–|-|:)\s*(?P<title>.+)$",
+    re.IGNORECASE,
+)
+
+# Titles that mark an actual strength & conditioning session for the extended
+# D-13..D-11 lockout. Aligned with the athlete-facing labels in
+# fightcamp/role_labels.py ("Strength", "Conditioning", "Fight-pace
+# conditioning", "Alactic sharpness", "Aerobic support", "Neural speed touch").
+_LATE_FIGHT_SC_LOCKOUT_TITLE_PATTERN = re.compile(
+    r"\b(?:strength|conditioning|power|explosive|plyo(?:metric)?s?|alactic|aerobic|glycolytic|neural)\b"
+    r"|fight[\s\-]?pace",
+    re.IGNORECASE,
+)
+
+# Filler / rehab / light-work titles are exempt from the extended D-13..D-11
+# lockout even when they also carry an S&C word ("Light conditioning flush").
+# They stay under the blanket D-10 lockout only.
+_LATE_FIGHT_SC_LOCKOUT_EXCLUDE_PATTERN = re.compile(
+    r"\b(?:rehab|recovery|mobility|filler|flush|technical|tactical|sparring"
+    r"|warm[\s\-]?up|activation|reset|light)\b",
+    re.IGNORECASE,
+)
+
+
+def _late_fight_countdown_block_title(lines: list[str]) -> str:
+    for line in lines:
+        match = _LATE_FIGHT_COUNTDOWN_TITLE.match(line)
+        if match:
+            return match.group("title").strip().strip("*_`").strip()
+    return ""
+
+
+def _late_fight_title_is_strength_conditioning(title: str) -> bool:
+    if not title:
+        return False
+    if _LATE_FIGHT_SC_LOCKOUT_EXCLUDE_PATTERN.search(title):
+        return False
+    return bool(_LATE_FIGHT_SC_LOCKOUT_TITLE_PATTERN.search(title))
+
 
 def _late_fight_progression_phrase_match(line: str, phrase: str) -> int | None:
     """Return the start index of an un-negated progression cue, else None."""
@@ -2281,7 +2326,12 @@ def _late_fight_progression_lockout_warnings(
     final_plan_text: str,
     plan_lines: list[str],
 ) -> list[dict]:
-    """Flag progression suggestions on D-10 and closer; only regressions allowed."""
+    """Flag progression suggestions inside the taper lockout windows.
+
+    D-10 and closer: no session may suggest a progression. D-13 to D-11:
+    actual strength & conditioning sessions may not progress either, while
+    fillers, rehab, mobility, and light recovery work still may.
+    """
     day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
     if not day_blocks:
         days_out_bucket = str(spec.get("days_out_bucket") or "")
@@ -2292,7 +2342,12 @@ def _late_fight_progression_lockout_warnings(
     warnings: list[dict] = []
     seen: set[tuple[int, str]] = set()
     for day, lines in day_blocks.items():
-        if not (0 <= day <= 10):
+        if not (0 <= day <= 13):
+            continue
+        sc_only_window = day >= 11
+        if sc_only_window and not _late_fight_title_is_strength_conditioning(
+            _late_fight_countdown_block_title(lines)
+        ):
             continue
         for line in lines:
             if not _LATE_FIGHT_PROGRESSION_LINE.match(line):
@@ -2311,13 +2366,21 @@ def _late_fight_progression_lockout_warnings(
             if key in seen:
                 continue
             seen.add(key)
+            if sc_only_window:
+                message = (
+                    f"D-{day} is a strength & conditioning session that suggests a progression "
+                    f"(\"{matched}\"), but from D-13 to the fight, strength and conditioning "
+                    "work allows regressions and stop rules only."
+                )
+            else:
+                message = (
+                    f"D-{day} suggests a progression (\"{matched}\"), but from D-10 to the "
+                    "fight the taper allows regressions and stop rules only."
+                )
             warnings.append(
                 {
                     "code": "late_fight_progression_suggested",
-                    "message": (
-                        f"D-{day} suggests a progression (\"{matched}\"), but from D-10 to the "
-                        "fight the taper allows regressions and stop rules only."
-                    ),
+                    "message": message,
                     "days_out_bucket": f"D-{day}",
                     "line": line,
                     "blocking": True,

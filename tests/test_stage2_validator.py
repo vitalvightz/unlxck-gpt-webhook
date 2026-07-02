@@ -2704,6 +2704,79 @@ def test_late_fight_regression_only_line_is_not_flagged():
     assert "late_fight_progression_suggested" not in warning_codes
 
 
+def test_late_fight_flags_strength_conditioning_progression_from_d13():
+    brief = _late_fight_planning_brief("D-7")
+    brief["late_fight_plan_spec"].update(
+        {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-13",
+            "max_active_roles": 8,
+        }
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-14 (Sunday) — Strength
+        - Trap-Bar Deadlift — 4 x 3
+        - Progression/regression: add load to progress; drop a set to regress.
+
+        D-13 (Monday) — Strength
+        - Trap-Bar Deadlift — 4 x 3
+        - Progression/regression: add load to progress; drop a set to regress.
+
+        D-12 (Tuesday) — Fight-pace conditioning
+        - Assault Bike Repeats — 6 x 20 sec
+        - Progression/regression: add 1 round to progress; cut to 4 rounds to regress.
+
+        D-11 (Wednesday) — Neural speed touch
+        - Staggered-Stance Medicine-Ball Punch Throw — 3 x 3
+        - Progression/regression: increase medicine-ball weight to progress; use a lighter ball to regress.
+        """,
+    )
+
+    flagged = [
+        warning
+        for warning in report["warnings"]
+        if warning["code"] == "late_fight_progression_suggested"
+    ]
+    # S&C sessions lock from D-13; D-14 keeps its progression.
+    assert {warning["days_out_bucket"] for warning in flagged} == {"D-13", "D-12", "D-11"}
+    assert all(warning.get("blocking") for warning in flagged)
+
+
+def test_late_fight_filler_and_rehab_progressions_are_not_flagged_before_d10():
+    brief = _late_fight_planning_brief("D-7")
+    brief["late_fight_plan_spec"].update(
+        {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-13",
+            "max_active_roles": 8,
+        }
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-13 (Monday) — Ankle rehab insert
+        - Banded Ankle Eversion — 2 x 12
+        - Progression/regression: progress to a stronger band next session; drop reps if sore.
+
+        D-12 (Tuesday) — Recovery
+        - Easy bike spin — 15 min
+        - Progression/regression: progress to 20 min if fresh; cut to 10 min if flat.
+
+        D-11 (Wednesday) — Mobility reset
+        - Hip flow — 10 min
+        - Progression/regression: advance to deeper holds to progress; shorten holds to regress.
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    # Fillers, rehab, mobility, and recovery work stay unlocked until D-10.
+    assert "late_fight_progression_suggested" not in warning_codes
+
+
 def test_late_fight_tactical_advance_language_is_not_flagged_as_progression():
     brief = _late_fight_planning_brief("D-7")
     brief["late_fight_plan_spec"].update(
