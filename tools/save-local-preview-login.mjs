@@ -80,6 +80,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error : String(error));
+  console.error(error instanceof Error ? error : error);
   process.exit(1);
 });
