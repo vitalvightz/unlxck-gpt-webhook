@@ -106,8 +106,8 @@ class TestSpecUnitCases:
     def test_bridge_d20_boxer_with_moderate_cut(self):
         # D-20 is inside the D-21..D-18 sub-slice where the clean default is
         # cap=1 with one optional glycolytic touch. A moderate cut is note-only
-        # and must NOT zero hard sparring or glycolytic density — the baseline
-        # allowances stand, with only a calm hydration/fuelling note added.
+        # for hard sparring and strength, but it cannot satisfy the extra
+        # glycolytic / combat-pressure touch.
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
@@ -117,10 +117,11 @@ class TestSpecUnitCases:
             hard_sparring_days_declared=0,
         )
         assert result["hard_sparring_cap"] == 1
-        assert result["glycolytic_touch_max"] == 1
+        assert result["glycolytic_touch_max"] == 0
         assert result["block_full_plan"] is False
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
+        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
         assert (
             "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
@@ -586,8 +587,8 @@ class TestBridgeCapTransitions:
 
 
 class TestBridgeModerateCutContactSports:
-    """A moderate cut is note-only: it must NOT zero hard spar or optional
-    density for contact sports. Only high+ cuts restrict hard work."""
+    """A moderate cut is note-only for hard sparring, but blocks the extra
+    late-camp glycolytic touch."""
 
     def test_moderate_cut_boxing_keeps_hard_sparring(self):
         result = compute_bridge_rules(
@@ -598,8 +599,9 @@ class TestBridgeModerateCutContactSports:
             injury_mode="full_plan",
         )
         assert result["hard_sparring_cap"] == 1
-        assert result["glycolytic_touch_max"] == 1
+        assert result["glycolytic_touch_max"] == 0
         assert result["block_full_plan"] is False
+        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
         assert (
             "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
@@ -616,8 +618,9 @@ class TestBridgeModerateCutContactSports:
             injury_mode="full_plan",
         )
         assert result["hard_sparring_cap"] == 1
-        assert result["glycolytic_touch_max"] == 1
+        assert result["glycolytic_touch_max"] == 0
         assert result["block_full_plan"] is False
+        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
 
     def test_moderate_cut_grappler_keeps_hard_sparring(self):
@@ -648,8 +651,8 @@ class TestBridgeModerateCutContactSports:
 
 
 class TestBridgeGlycolyticRules:
-    """D-21..D-19 may allow one short glycolytic touch; a moderate cut is
-    note-only and keeps it, only high+ cuts suppress it."""
+    """D-21..D-18 may allow one short glycolytic touch for clean low-risk
+    athletes; D-17 and closer cannot."""
 
     def test_d20_clean_allows_one_glycolytic_touch(self):
         result = compute_bridge_rules(
@@ -661,7 +664,7 @@ class TestBridgeGlycolyticRules:
         )
         assert result["glycolytic_touch_max"] == 1
 
-    def test_d18_suppresses_glycolytic(self):
+    def test_d18_clean_allows_one_glycolytic_touch(self):
         result = compute_bridge_rules(
             days_until_fight=18,
             sport="boxing",
@@ -669,9 +672,19 @@ class TestBridgeGlycolyticRules:
             weight_cut_bucket="low",
             injury_mode="full_plan",
         )
+        assert result["glycolytic_touch_max"] == 1
+
+    def test_d17_suppresses_glycolytic(self):
+        result = compute_bridge_rules(
+            days_until_fight=17,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
         assert result["glycolytic_touch_max"] == 0
 
-    def test_moderate_cut_keeps_glycolytic_in_d21_to_d19(self):
+    def test_moderate_cut_blocks_extra_glycolytic_touch_in_d21_to_d18(self):
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
@@ -679,9 +692,32 @@ class TestBridgeGlycolyticRules:
             weight_cut_bucket="moderate",
             injury_mode="full_plan",
         )
-        # Note-only moderate cut keeps the baseline glycolytic touch.
-        assert result["glycolytic_touch_max"] == 1
+        assert result["glycolytic_touch_max"] == 0
+        assert "weight_cut_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
+
+    def test_moderate_fatigue_blocks_extra_glycolytic_touch_in_d21_to_d18(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="moderate",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        assert result["glycolytic_touch_max"] == 0
+        assert "fatigue_moderate_blocks_extra_glycolytic_touch" in result["reason_codes"]
+
+    def test_declared_hard_sparring_load_blocks_extra_glycolytic_touch(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=1,
+        )
+        assert result["glycolytic_touch_max"] == 0
+        assert "hard_sparring_load_blocks_extra_glycolytic_touch" in result["reason_codes"]
 
 
 class TestBridgeStyleCannotRaiseCaps:

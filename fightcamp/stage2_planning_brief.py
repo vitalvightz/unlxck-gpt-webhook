@@ -383,9 +383,44 @@ def _conditioning_priority_without_strength_power(training_context: TrainingCont
     return bool(selected & conditioning_tokens) and not bool(selected & strength_power_tokens)
 
 
+def _conditioning_priority_shift_allowed(training_context: TrainingContext) -> bool:
+    days = training_context.days_until_fight
+    if days is None or days > 21:
+        return True
+    if not (18 <= days <= 21):
+        return False
+
+    fatigue = str(training_context.fatigue or "").strip().lower()
+    if fatigue in {"moderate", "high", "critical", "extreme", "unsafe"}:
+        return False
+
+    if training_context.weight_cut_risk:
+        return False
+    try:
+        if float(training_context.weight_cut_pct or 0.0) > 0.0:
+            return False
+    except (TypeError, ValueError):
+        return False
+
+    if clean_list(training_context.injuries):
+        return False
+    if clean_list(training_context.parsed_injuries) or clean_list(training_context.guided_injuries):
+        return False
+    if training_context.guided_injury:
+        return False
+    if clean_list(training_context.injury_restrictions):
+        return False
+    if clean_list(training_context.hard_sparring_days):
+        return False
+
+    return True
+
+
 def _apply_conditioning_priority_session_shift(session_counts: dict, training_context: TrainingContext) -> dict:
     adjusted = dict(session_counts)
     if not _conditioning_priority_without_strength_power(training_context):
+        return adjusted
+    if not _conditioning_priority_shift_allowed(training_context):
         return adjusted
     if int(adjusted.get("strength", 0) or 0) < 2:
         return adjusted

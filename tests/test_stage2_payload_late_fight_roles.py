@@ -160,6 +160,48 @@ def test_d7_role_list_remains_unchanged():
     assert role_keys == ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"]
 
 
+def test_bridge_d18_is_last_clean_light_fight_rhythm_touch():
+    d18_roles = [
+        role["role_key"]
+        for role in _late_fight_session_roles(
+            18,
+            _athlete(18, hard_sparring_days=[], fatigue="low", fatigue_level="low", readiness_flags=[]),
+        )
+    ]
+    d17_roles = [
+        role["role_key"]
+        for role in _late_fight_session_roles(
+            17,
+            _athlete(17, hard_sparring_days=[], fatigue="low", fatigue_level="low", readiness_flags=[]),
+        )
+    ]
+
+    assert "light_fight_pace_touch_day" in d18_roles
+    assert "light_fight_pace_touch_day" not in d17_roles
+    assert "alactic_sharpness_day" in d17_roles
+
+
+def test_bridge_d18_active_cut_blocks_light_fight_rhythm_touch():
+    role_keys = [
+        role["role_key"]
+        for role in _late_fight_session_roles(
+            18,
+            _athlete(
+                18,
+                hard_sparring_days=[],
+                fatigue="low",
+                fatigue_level="low",
+                weight_cut_risk=True,
+                weight_cut_pct=2.0,
+                readiness_flags=["active_weight_cut"],
+            ),
+        )
+    ]
+
+    assert "light_fight_pace_touch_day" not in role_keys
+    assert "alactic_sharpness_day" in role_keys
+
+
 def test_pre_fight_compressed_surfaces_downgraded_hard_day_as_technical_touch_suppression():
     spec = _build_late_fight_plan_spec(
         8,

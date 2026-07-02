@@ -2305,8 +2305,9 @@ def _apply_legacy_high_fatigue_compression(
 # and SPP is not just technical rhythm — a fighter has to touch discomfort
 # before fight week. The floor GUARANTEES a single controlled hard exposure in
 # safe GPP/SPP weeks, and blocks it whenever a real safety rule says the athlete
-# should stay fresh (taper, D-7/fight week, high fatigue, high+ cut, medical
-# hold, restricted rehab, needs review, active injury, bridge suppression).
+# should stay fresh (taper, D-14 conditioning lock, D-7/fight week, high
+# fatigue, high+ cut, medical hold, restricted rehab, needs review, active
+# injury, compression, bridge suppression).
 #
 # This is an execution-layer guarantee: it never overrides a baseline
 # suppression. It only fills the gap when the athlete is safe to receive
@@ -2418,18 +2419,36 @@ def _combat_pressure_floor_blockers(week_entry: dict, athlete_model: dict) -> li
     if _active_injury_is_moderate_plus(athlete_model):
         reasons.append("active_injury_blocks_hard_work")
 
+    compression = week_entry.get("intentional_compression") or {}
+    if isinstance(compression, dict) and compression.get("active"):
+        reasons.append("intentional_compression_blocks_hard_conditioning_floor")
+
     # Fight-week / taper freshness flags.
     if readiness & {"fight_week", "fight_day_protocol"}:
         reasons.append("fight_week_flag")
 
-    # Countdown proximity: D-7 or closer / late taper block; the bridge window
-    # defers to the baseline glycolytic allowance.
+    # Countdown proximity: D-14 and closer blocks hard conditioning floor
+    # fulfilment, while the global progression/regression lock remains D-10.
+    # D-21..D-18 defers to the bridge glycolytic allowance, with extra
+    # readiness gates for active cuts.
     min_d = _week_min_d_day(week_entry, athlete_model)
     if isinstance(min_d, int) and min_d >= 0:
-        if min_d <= 13:
-            reasons.append("late_taper_or_fight_week")
-        elif min_d <= 21 and not _bridge_allows_pressure_touch(athlete_model, min_d):
-            reasons.append("bridge_suppresses_glycolytic")
+        if min_d <= 14:
+            reasons.append("late_conditioning_lock_d14")
+            if min_d <= 13:
+                reasons.append("late_taper_or_fight_week")
+        elif 15 <= min_d <= 17:
+            reasons.append("late_bridge_glycolytic_lock_d17_to_d15")
+        elif 18 <= min_d <= 21:
+            active_cut = bool(athlete_model.get("weight_cut_risk")) or "active_weight_cut" in readiness
+            try:
+                active_cut = active_cut or float(athlete_model.get("weight_cut_pct") or 0.0) > 0.0
+            except (TypeError, ValueError):
+                active_cut = True
+            if active_cut:
+                reasons.append("active_cut_blocks_extra_conditioning_floor")
+            elif not _bridge_allows_pressure_touch(athlete_model, min_d):
+                reasons.append("bridge_suppresses_glycolytic")
 
     return dedupe_preserve_order(reasons)
 

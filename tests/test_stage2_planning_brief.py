@@ -20,6 +20,35 @@ from fightcamp.recovery import generate_recovery_block
 from fightcamp.training_context import TrainingContext
 
 
+def _conditioning_shift_context(days_until_fight: int, **overrides) -> TrainingContext:
+    data = {
+        "fatigue": "low",
+        "training_frequency": 5,
+        "days_available": 5,
+        "training_days": ["Mon", "Tue", "Wed", "Thu", "Sat"],
+        "injuries": [],
+        "style_technical": ["boxing"],
+        "style_tactical": ["pressure_fighter"],
+        "weaknesses": ["gas_tank"],
+        "equipment": ["heavy_bag"],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "fight_format": "boxing",
+        "status": "amateur",
+        "key_goals": ["conditioning"],
+        "training_preference": "balanced",
+        "mental_block": [],
+        "age": 25,
+        "weight": 70.0,
+        "prev_exercises": [],
+        "recent_exercises": [],
+        "phase_weeks": {"GPP": 0, "SPP": 1, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        "days_until_fight": days_until_fight,
+    }
+    data.update(overrides)
+    return TrainingContext(**data)
+
+
 def _build_brief(athlete_model: dict, *, restrictions: list[dict] | None = None, phase: str = "SPP") -> dict:
     phase_briefs = {
         phase: {
@@ -298,6 +327,39 @@ def test_strength_or_power_priority_blocks_conditioning_ratio_shift():
 
     assert briefs["GPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
     assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
+
+
+def test_conditioning_priority_shift_allowed_for_clean_d18_pressure_floor():
+    training_context = _conditioning_shift_context(18)
+
+    briefs = stage2_planning_brief_module._build_phase_briefs(
+        training_context,
+        training_context.phase_weeks,
+    )
+
+    assert briefs["SPP"]["session_counts"] == {"strength": 1, "conditioning": 4, "recovery": 1}
+
+
+def test_conditioning_priority_shift_blocked_at_d12():
+    training_context = _conditioning_shift_context(12)
+
+    briefs = stage2_planning_brief_module._build_phase_briefs(
+        training_context,
+        training_context.phase_weeks,
+    )
+
+    assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 3, "recovery": 1}
+
+
+def test_conditioning_priority_shift_blocked_in_d21_to_d18_with_moderate_fatigue():
+    training_context = _conditioning_shift_context(18, fatigue="moderate")
+
+    briefs = stage2_planning_brief_module._build_phase_briefs(
+        training_context,
+        training_context.phase_weeks,
+    )
+
+    assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 3, "recovery": 1}
 
 
 def test_stage2_payload_injury_context_carries_rich_injury_fields():
