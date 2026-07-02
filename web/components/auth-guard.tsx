@@ -15,34 +15,28 @@ function LoadingCard({ label }: { label: string }) {
   );
 }
 
-function RecoveryCard({
-  adminOnly,
+function ConnectionLostBanner({
   isRetrying,
   onRetry,
-  onSignOut,
 }: {
-  adminOnly: boolean;
   isRetrying: boolean;
   onRetry: () => void;
-  onSignOut: () => void;
 }) {
   return (
-    <section className="panel loading-card auth-recovery-card" role="alert">
-      <p className="kicker">{adminOnly ? "Admin access" : "Workspace"}</p>
-      <h1>{adminOnly ? "Admin access needs a refresh" : "Workspace needs a refresh"}</h1>
-      <p className="muted">
-        Your session is still present, but profile access did not finish loading.
-      </p>
-      <div className="hero-actions auth-recovery-actions">
-        <button type="button" className="cta" onClick={onRetry} disabled={isRetrying}>
-          {isRetrying ? "Retrying..." : "Retry now"}
-        </button>
-        <button type="button" className="secondary-button" onClick={onSignOut} disabled={isRetrying}>
-          Sign out
-        </button>
-      </div>
-      <p className="auth-recovery-note">If the connection recovers, retry returns you to this page.</p>
-    </section>
+    <div className="connection-lost-banner" role="status" aria-live="polite">
+      <span className="connection-lost-dot" aria-hidden="true" />
+      <span className="connection-lost-text">
+        {isRetrying ? "Reconnecting…" : "No internet connection"}
+      </span>
+      <button
+        type="button"
+        className="connection-lost-retry"
+        onClick={onRetry}
+        disabled={isRetrying}
+      >
+        {isRetrying ? "Retrying…" : "Retry"}
+      </button>
+    </div>
   );
 }
 
@@ -51,7 +45,7 @@ export function RequireAuth({
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
   const router = useRouter();
-  const { isReady, isMeHydrated, hasTransientMeError, session, me, refreshMe, signOut } = useAppSession();
+  const { isReady, isMeHydrated, hasTransientMeError, session, me, refreshMe } = useAppSession();
   const [isRetryingRecovery, setIsRetryingRecovery] = useState(false);
   const role = me?.profile.role;
 
@@ -93,36 +87,39 @@ export function RequireAuth({
     }
   }
 
-  async function handleRecoverySignOut() {
-    await signOut();
-    router.push("/login");
-  }
-
-  if (!isReady) {
-    return <LoadingCard label="Checking your access" />;
-  }
-  if (!session) {
-    return <LoadingCard label="Redirecting to login" />;
-  }
-  if (adminOnly && hasTransientMeError && session && !me) {
-    return (
-      <RecoveryCard
-        adminOnly={adminOnly}
+  // The connection banner is a small, persistent overlay shown on every guarded
+  // page (admin and athlete alike) whenever profile access could not be reached.
+  // It reads as a plain "no internet" indicator rather than an app-specific
+  // failure, and the provider keeps auto-retrying in the background.
+  const connectionBanner =
+    isReady && session && hasTransientMeError ? (
+      <ConnectionLostBanner
         isRetrying={isRetryingRecovery}
         onRetry={() => void handleRetryRecovery()}
-        onSignOut={() => void handleRecoverySignOut()}
       />
-    );
-  }
-  if (adminOnly && !isMeHydrated) {
-    return <LoadingCard label={adminOnly ? "Restoring admin access" : "Restoring your workspace"} />;
-  }
-  if (isMeHydrated && !me) {
-    return <LoadingCard label="Redirecting to login" />;
-  }
-  if (adminOnly && role !== "admin") {
-    return <LoadingCard label="Redirecting to your athlete view" />;
+    ) : null;
+
+  let body: React.ReactNode;
+  if (!isReady) {
+    body = <LoadingCard label="Checking your access" />;
+  } else if (!session) {
+    body = <LoadingCard label="Redirecting to login" />;
+  } else if (adminOnly && hasTransientMeError && !me) {
+    body = <LoadingCard label="Restoring admin access" />;
+  } else if (adminOnly && !isMeHydrated) {
+    body = <LoadingCard label="Restoring admin access" />;
+  } else if (isMeHydrated && !me) {
+    body = <LoadingCard label="Redirecting to login" />;
+  } else if (adminOnly && role !== "admin") {
+    body = <LoadingCard label="Redirecting to your athlete view" />;
+  } else {
+    body = children;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {connectionBanner}
+      {body}
+    </>
+  );
 }
