@@ -102,9 +102,21 @@ LOADED_EQUIPMENT = {
     "landmine",
 }
 MED_BALL_EQUIPMENT = {"medicine_ball", "med_ball", "slam_ball"}
-# Tokens that describe the absence of equipment. Anything outside this set
-# counts as equipment and is never allowed on d1 (fight eve).
-NON_EQUIPMENT_TOKENS = {"bodyweight", "none", "mat"}
+# Tokens that describe the absence of equipment (bodyweight plus mat/floor/
+# space surface descriptors, including the split tokens the equipment
+# tokenizer produces for strings like "Mat Space" or "Open Space"). Anything
+# outside this set counts as equipment and is never allowed on d1 (fight eve).
+NON_EQUIPMENT_TOKENS = {
+    "bodyweight",
+    "none",
+    "mat",
+    "mats",
+    "mat_space",
+    "space",
+    "open_space",
+    "open",
+    "floor",
+}
 BALLISTIC_TAGS = {"ballistic", "explosive", "mech_ballistic", "plyometric", "reactive"}
 PRIMER_ONLY_TAGS = {"neural_primer", "cns_freshness", "support_accessory"}
 STRENGTH_FULFILLMENT_TAGS = {

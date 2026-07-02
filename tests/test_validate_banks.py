@@ -535,6 +535,19 @@ def test_runtime_d1_allows_bodyweight_only_items():
     assert "late_block_d1_equipment" not in safety["block_codes"]
 
 
+def test_runtime_d1_mat_and_space_descriptors_are_not_equipment():
+    # Surface descriptors like "Mat Space" tokenize into multiple tokens;
+    # none of them may trip the d1 equipment block.
+    for equipment in (["mat"], "Mat Space", "Open Space", ["mat", "bodyweight"]):
+        safety = is_late_fight_metadata_safe(
+            _safe_strength(equipment=equipment, tags=["strength", "d1_ok"]),
+            "exercise_bank.json",
+            D1,
+        )
+
+        assert "late_block_d1_equipment" not in safety["block_codes"], equipment
+
+
 def test_runtime_d1_equipment_block_outside_d1_window_does_not_apply():
     safety = is_late_fight_metadata_safe(
         _safe_strength(equipment=["double_end_bag"], tags=["strength"]),

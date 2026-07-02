@@ -10937,7 +10937,7 @@
     "contraindications": [
       "avoid if shoulder or wrist pain spikes when bracing against the bag"
     ],
-    "notes": "D-7/D-3: 2-3 x 3-5s per side with full rest. Not for D-1: requires equipment.",
+    "notes": "D-13 to D-8: 2-3 x 3-5s per side with full rest. Not for D-1: requires equipment.",
     "movement_cost": "high",
     "impact_cost": "low",
     "mechanical_risk_tags": [
@@ -11018,7 +11018,7 @@
     "contraindications": [
       "skip if front-knee irritation increases with split-stance pressure"
     ],
-    "notes": "2-3 x 5-10s per leg with full rest. Use D-3 only as a tiny exposure when needed; not for D-1 (requires bands).",
+    "notes": "2-3 x 5-10s per leg with full rest. Use in D-13 to D-8 only as a tiny exposure when needed; not for D-1: requires bands.",
     "movement_cost": "low",
     "impact_cost": "low",
     "mechanical_risk_tags": [
