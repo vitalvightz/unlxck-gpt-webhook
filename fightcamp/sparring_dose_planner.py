@@ -642,7 +642,7 @@ def _apply_per_day_countdown_overrides(
     # downgrade to hard. The app cannot deload declared hard sparring before
     # the D-17 ban window.
     for day, d_day in per_day.items():
-        if d_day < 18:
+        if d_day < 18 or day not in hard_days:
             continue
         entry = plan_by_day.get(day)
         if entry is None:

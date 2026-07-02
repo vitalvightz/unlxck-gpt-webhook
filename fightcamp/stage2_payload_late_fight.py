@@ -2268,7 +2268,7 @@ def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]
             if role_key == "hard_sparring_day" and not session.get("downgraded"):
                 session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
                 session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
-            else:
+            elif role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day":
                 # Downgraded context entries (D-17 ban) and downgraded roles
                 # both render as coach-led technical-only combat.
                 session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
