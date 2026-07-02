@@ -4,7 +4,12 @@ from typing import Any, Literal
 
 from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays
 from .stage2_render_guards import _all_active_injuries_surface_only
-from .stage2_payload_late_fight import _countdown_offset, _countdown_weekday_map, _resolve_plan_creation_weekday
+from .stage2_payload_late_fight import (
+    _countdown_offset,
+    _countdown_weekday_map,
+    _resolve_plan_creation_weekday,
+    is_low_cost_coexistable_filler,
+)
 
 
 ZERO_COST_INSERTS = {
@@ -977,6 +982,22 @@ def _candidate_offsets_from_sequence(offsets: list[int]) -> list[tuple[int, int]
     return candidate_offsets
 
 
+def _declared_hard_sparring_offsets(
+    countdown_map: dict[str, str],
+    hard_sparring_days: set[str],
+) -> list[int]:
+    offsets: list[int] = []
+    if not hard_sparring_days:
+        return offsets
+    for label, weekday in countdown_map.items():
+        if str(weekday or "").strip().lower() not in hard_sparring_days:
+            continue
+        offset = _countdown_offset(label)
+        if offset is not None and offset > 0:
+            offsets.append(offset)
+    return sorted(set(offsets), reverse=True)
+
+
 def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
     return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
 
@@ -1012,7 +1033,13 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         for day in ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
     }
 
-    existing_offsets = set(offsets)
+    existing_exclusive_offsets = {
+        offset
+        for role in ordered
+        if str(role.get("role_key") or "") != "hard_sparring_day"
+        and not is_low_cost_coexistable_filler(role)
+        and (offset := _role_offset(role)) is not None
+    }
     candidate_offsets = _candidate_offsets_from_sequence(offsets)
 
     inserts: list[dict[str, Any]] = []
@@ -1032,9 +1059,18 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     )
     conditioning_required = _has_conditioning_goal(athlete_model)
     injury_state = classify_injury_state(athlete_model)
+    coach_day_candidates = [
+        (offset, 0)
+        for offset in _declared_hard_sparring_offsets(countdown_map, hard_sparring_days)
+        if offset not in existing_exclusive_offsets
+    ]
+    if tactical_required:
+        candidate_offsets = coach_day_candidates + candidate_offsets
+    else:
+        candidate_offsets = candidate_offsets + coach_day_candidates
 
     for target_offset, gap_span in candidate_offsets:
-        if target_offset <= 0 or target_offset in existing_offsets:
+        if target_offset <= 0 or target_offset in existing_exclusive_offsets:
             continue
         weekday = countdown_map.get(f"D-{target_offset}")
         on_hard_sparring_day = bool(weekday and weekday.strip().lower() in hard_sparring_days)
@@ -1100,7 +1136,8 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             tactical_present = True
         if insert.get("role_key") in LOW_COST_AEROBIC_INSERTS:
             conditioning_present = True
-        existing_offsets.add(target_offset)
+        if not is_low_cost_coexistable_filler(insert):
+            existing_exclusive_offsets.add(target_offset)
 
     final_sequence = sorted(ordered + inserts, key=lambda role: int(_role_offset(role) or 0), reverse=True)
     for index, role in enumerate(final_sequence, start=1):
