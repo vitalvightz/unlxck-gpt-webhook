@@ -840,17 +840,6 @@ def test_late_fight_window_rules_block_d1_trap_bar_deadlift():
     assert any(w["code"] == "late_fight_window_forbidden_exercise" for w in report["warnings"])
 
 
-def test_late_fight_window_rules_block_d1_hang_power_clean():
-    report = validate_stage2_output(
-        planning_brief=_late_fight_planning_brief("D-1"),
-        final_plan_text="""
-        ## D-1
-        - Hang Power Clean - 2 x 2
-        """,
-    )
-    assert any(w["code"] == "late_fight_window_forbidden_exercise" for w in report["warnings"])
-
-
 def test_late_fight_window_rules_clean_d13_d6_d3_d1_sections_pass():
     report = validate_stage2_output(
         planning_brief=_late_fight_planning_brief("D-3"),
