@@ -2448,7 +2448,10 @@ def ensure_declared_coach_combat_spine(
             sequence[-1]["downgraded_to_role_key"] = "technical_touch_day"
             sequence[-1]["downgrade_reason_code"] = "d17_hard_sparring_ban"
         existing.add(label)
-    return sorted(sequence, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
+    sorted_sequence = sorted(sequence, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
+    for idx, role in enumerate(sorted_sequence, start=1):
+        role["session_index"] = idx
+    return sorted_sequence
 
 
 def _title_case_days(days: list[str]) -> list[str]:
