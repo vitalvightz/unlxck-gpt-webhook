@@ -14,6 +14,8 @@ from fightcamp.stage2_payload_late_fight import (
     _planned_sessions_per_week,
     _select_spaced_hard_days,
     _space_bridge_countdown_roles,
+    _visible_calendar_session_sequence,
+    ensure_declared_coach_combat_spine,
     is_low_cost_coexistable_filler,
 )
 
@@ -113,12 +115,11 @@ def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for
     assert "light_fight_pace_touch_day" in role_keys
 
     spec = _build_late_fight_plan_spec(9, athlete)
-    assert spec["visible_session_cap"] == 4
+    assert spec["visible_session_cap"] == 3
     assert set(spec["visible_session_roles"]) == {
         "strength_touch_day",
         "alactic_sharpness_day",
         "fight_week_freshness_day",
-        "neural_primer_day",
     }
 
 
@@ -1245,3 +1246,97 @@ def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
     assert len(context) == 1
     assert context[0]["athlete_facing_label"] == "Coach-led boxing — technical-only combat"
     assert context[0]["display_text"] == "Coach-owned combat session. Keep freshness priority."
+
+
+def test_declared_coach_combat_spine_keeps_tuesday_friday_thursday_fight_visible():
+    athlete = _athlete(
+        20,
+        plan_creation_weekday="friday",
+        hard_sparring_days=["tuesday", "friday"],
+    )
+
+    spec = _build_late_fight_plan_spec(20, athlete)
+    coach_roles = [
+        role
+        for role in spec["visible_session_sequence"]
+        if role.get("role_key") == "hard_sparring_day"
+    ]
+    roles_by_label = {role["countdown_label"]: role for role in coach_roles}
+
+    assert set(roles_by_label) >= {"D-20", "D-16", "D-13", "D-9", "D-6", "D-2"}
+    assert roles_by_label["D-20"].get("downgraded") is not True
+    for label in ["D-16", "D-13", "D-9", "D-6", "D-2"]:
+        assert roles_by_label[label].get("downgraded") is True
+        assert "technical-only combat" in roles_by_label[label].get("athlete_facing_label", "")
+
+
+def test_declared_coach_combat_spine_coexists_with_same_day_fillers():
+    athlete = _athlete(
+        20,
+        plan_creation_weekday="friday",
+        hard_sparring_days=["tuesday", "friday"],
+    )
+    sequence = ensure_declared_coach_combat_spine(
+        [
+            {
+                "role_key": "tactical_cue_card",
+                "category": "support_insert",
+                "stress_class": "support",
+                "cost_class": "low",
+                "scheduled_countdown_label": "D-13",
+                "countdown_label": "D-13",
+                "countdown_offset": 13,
+                "scheduled_day_hint": "friday",
+                "governance": {"meaningful_stress": False},
+            },
+            {
+                "role_key": "neural_visualization",
+                "category": "support_insert",
+                "stress_class": "support",
+                "cost_class": "low",
+                "scheduled_countdown_label": "D-6",
+                "countdown_label": "D-6",
+                "countdown_offset": 6,
+                "scheduled_day_hint": "friday",
+                "governance": {"meaningful_stress": False},
+            },
+        ],
+        athlete,
+        _countdown_weekday_map("friday", 20),
+    )
+    visible = _visible_calendar_session_sequence(sequence)
+
+    roles_by_label = {}
+    for role in visible:
+        roles_by_label.setdefault(role.get("countdown_label"), set()).add(role.get("role_key"))
+
+    assert {"hard_sparring_day", "tactical_cue_card"} <= roles_by_label["D-13"]
+    assert {"hard_sparring_day", "neural_visualization"} <= roles_by_label["D-6"]
+
+
+def test_declared_coach_combat_spine_removes_app_stressor_from_coach_day():
+    athlete = _athlete(
+        13,
+        plan_creation_weekday="friday",
+        hard_sparring_days=["friday"],
+    )
+    sequence = ensure_declared_coach_combat_spine(
+        [
+            {
+                "role_key": "strength_touch_day",
+                "category": "strength",
+                "stress_class": "meaningful_stress",
+                "cost_class": "medium",
+                "scheduled_countdown_label": "D-13",
+                "countdown_label": "D-13",
+                "countdown_offset": 13,
+                "scheduled_day_hint": "friday",
+            }
+        ],
+        athlete,
+        _countdown_weekday_map("friday", 13),
+    )
+
+    d13_roles = [role["role_key"] for role in sequence if role.get("countdown_label") == "D-13"]
+    assert "hard_sparring_day" in d13_roles
+    assert "strength_touch_day" not in d13_roles
