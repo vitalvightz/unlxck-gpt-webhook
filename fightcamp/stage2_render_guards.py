@@ -77,16 +77,31 @@ def _all_active_injuries_surface_only(athlete_model: dict) -> bool:
     """
     if "surface_injury_only" in athlete_model:
         return bool(athlete_model.get("surface_injury_only"))
-    if athlete_model.get("injury_restrictions"):
-        return False
-    return all_stable_train_through_surface(athlete_model.get("parsed_injuries"))
+    return _derive_surface_only(
+        athlete_model.get("parsed_injuries"),
+        athlete_model.get("injuries"),
+        athlete_model.get("injury_restrictions"),
+    )
 
 
 def _all_active_injuries_surface_only_from_training_context(training_context) -> bool:
     """Training-context variant of :func:`_all_active_injuries_surface_only`."""
-    if getattr(training_context, "injury_restrictions", None):
+    return _derive_surface_only(
+        getattr(training_context, "parsed_injuries", None),
+        getattr(training_context, "injuries", None),
+        getattr(training_context, "injury_restrictions", None),
+    )
+
+
+def _derive_surface_only(parsed_injuries, raw_injuries, injury_restrictions) -> bool:
+    if injury_restrictions:
         return False
-    return all_stable_train_through_surface(getattr(training_context, "parsed_injuries", None))
+    if not all_stable_train_through_surface(parsed_injuries):
+        return False
+    # If raw injury strings exist but the parser dropped or merged entries, we
+    # cannot be sure the unparsed remainder is surface — keep normal handling.
+    raw = raw_injuries or []
+    return not raw or len(parsed_injuries or []) == len(raw)
 
 
 def _render_guard_flags(

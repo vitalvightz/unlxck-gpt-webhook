@@ -204,14 +204,74 @@ def test_build_athlete_model_bakes_surface_injury_only():
         _all_active_injuries_surface_only_from_training_context,
     )
 
-    surface_ctx = SimpleNamespace(parsed_injuries=[dict(GRAZE)], injury_restrictions=[])
+    surface_ctx = SimpleNamespace(
+        injuries=["moderate stable lower-back graze"],
+        parsed_injuries=[dict(GRAZE)],
+        injury_restrictions=[],
+    )
     assert _all_active_injuries_surface_only_from_training_context(surface_ctx) is True
 
     real_ctx = SimpleNamespace(
+        injuries=["moderate knee sprain"],
         parsed_injuries=[{"injury_type": "sprain", "severity": "moderate", "flags": []}],
         injury_restrictions=[],
     )
     assert _all_active_injuries_surface_only_from_training_context(real_ctx) is False
+
+    # The parser dropping an entry (raw/parsed count mismatch) must fail safe:
+    # the unparsed remainder could be a real injury.
+    dropped_entry_ctx = SimpleNamespace(
+        injuries=["moderate stable lower-back graze", "moderate knee sprain"],
+        parsed_injuries=[dict(GRAZE)],
+        injury_restrictions=[],
+    )
+    assert _all_active_injuries_surface_only_from_training_context(dropped_entry_ctx) is False
+
+
+def test_shared_surface_only_helper_fails_safe_on_length_mismatch_and_malformed_input():
+    from fightcamp.injury_registry import all_stable_train_through_surface
+    from fightcamp.stage2_render_guards import _all_active_injuries_surface_only
+
+    # Raw/parsed count mismatch → keep normal injury handling.
+    assert _all_active_injuries_surface_only(
+        {
+            "injuries": ["moderate stable lower-back graze", "moderate knee sprain"],
+            "parsed_injuries": [dict(GRAZE)],
+        }
+    ) is False
+    # Non-iterable truthy parsed_injuries must return False, not raise.
+    assert all_stable_train_through_surface(42) is False
+    assert all_stable_train_through_surface(True) is False
+
+
+def test_surface_only_injury_does_not_steer_limiter_to_tissue_state():
+    # An injury-driven tissue_state limiter would reintroduce tissue-protection
+    # framing for a graze. Declared weaknesses / real injuries still steer it.
+    from fightcamp.stage2_planning_brief import _primary_limiter_key
+
+    base = {
+        "readiness_flags": ["injury_management", "fight_week"],
+        "short_notice": True,
+        "days_until_fight": 10,
+        "key_goals": [],
+        "weaknesses": [],
+        "style_technical": [],
+        "style_tactical": [],
+    }
+    surface_model = dict(base, injuries=["lower-back graze"], parsed_injuries=[dict(GRAZE)])
+    assert _primary_limiter_key(surface_model, []) != "tissue_state"
+
+    real_model = dict(
+        base,
+        injuries=["moderate knee sprain"],
+        parsed_injuries=[{"injury_type": "sprain", "severity": "moderate", "flags": []}],
+    )
+    assert _primary_limiter_key(real_model, []) == "tissue_state"
+
+    # A declared mobility weakness is a legitimate tissue signal even when the
+    # only injury is a surface graze.
+    weakness_model = dict(surface_model, weaknesses=["mobility"])
+    assert _primary_limiter_key(weakness_model, []) == "tissue_state"
 
 
 def test_moderate_stable_graze_gets_full_plan_combat_floor():

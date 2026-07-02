@@ -109,7 +109,10 @@ def all_stable_train_through_surface(parsed_injuries) -> bool:
     keeps normal active-injury handling. A real injury alongside a graze fails this
     check (not every entry qualifies).
     """
-    items = list(parsed_injuries or [])
+    try:
+        items = list(parsed_injuries or [])
+    except TypeError:
+        return False
     if not items or not all(isinstance(item, dict) for item in items):
         return False
     return all(is_stable_train_through_surface_injury(item) for item in items)

@@ -698,9 +698,15 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         or readiness_flags & {"moderate_fatigue", "high_fatigue", "fight_week"}
         or (style_tokens & {"boxing", "boxer"} and goal_tokens & {"skill_refinement", "striking"})
     )
+    # A stable surface/skin-only injury is a hygiene note, not tissue pressure:
+    # it must not steer the limiter to tissue_state. Declared weaknesses and
+    # restrictions still count as real tissue signals.
+    surface_skin_only = _all_active_injuries_surface_only(athlete_model)
     tissue_pressure = bool(
-        athlete_model.get("injuries")
-        or readiness_flags & {"injury_management"}
+        (
+            not surface_skin_only
+            and (athlete_model.get("injuries") or readiness_flags & {"injury_management"})
+        )
         or restriction_keys & tissue_restriction_keys
         or restriction_regions & tissue_region_tokens
     )
@@ -715,7 +721,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         return "boxing_quality_under_load"
     if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
         return "tissue_state"
-    if athlete_model.get("injuries") and tissue_pressure and (
+    if not surface_skin_only and athlete_model.get("injuries") and tissue_pressure and (
         athlete_model.get("short_notice")
         or readiness_flags & {"fight_week", "high_fatigue"}
         or (isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14)
