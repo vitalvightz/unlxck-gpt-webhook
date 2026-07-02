@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
-from .stage2_render_guards import _render_guard_flags
+from .stage2_render_guards import _all_active_injuries_surface_only, _render_guard_flags
 
 
 _ATHLETE_KEYS = (
@@ -271,7 +271,9 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
         reasons.append("weight_cut")
     if "d17_hard_sparring_ban" in reason_codes:
         reasons.append("d17_technical_only_rule")
-    if _has_active_injury(athlete_model) or "injury_management" in reason_codes:
+    if (
+        _has_active_injury(athlete_model) or "injury_management" in reason_codes
+    ) and not _all_active_injuries_surface_only(athlete_model):
         reasons.append("injury_management")
     if coach_owned_count or week.get("hard_sparring_plan") or week.get("effective_hard_sparring_days"):
         reasons.append("coach_led_contact_load")

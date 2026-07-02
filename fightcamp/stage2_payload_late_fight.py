@@ -513,7 +513,14 @@ def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_mo
     extreme_cut = _weight_cut_is_extreme(athlete_model, flags)
     if extreme_cut:
         return True
-    if "injury_management" in flags and fatigue == "moderate":
+    # A stable surface/skin-only injury is a hygiene note, not injured tissue —
+    # it must not suppress hard conditioning even if a legacy/persisted model
+    # still carries the injury_management flag.
+    if (
+        "injury_management" in flags
+        and fatigue == "moderate"
+        and not athlete_model.get("surface_injury_only")
+    ):
         sessions_per_week = _planned_sessions_per_week(athlete_model)
         if sessions_per_week <= 3:
             return True

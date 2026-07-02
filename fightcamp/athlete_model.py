@@ -15,7 +15,10 @@ from __future__ import annotations
 import re
 
 from .normalization import clean_list
-from .stage2_render_guards import _has_active_injury_from_training_context
+from .stage2_render_guards import (
+    _all_active_injuries_surface_only_from_training_context,
+    _has_active_injury_from_training_context,
+)
 from .training_context import TrainingContext
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
@@ -76,6 +79,7 @@ def _derive_readiness_flags(
     injuries: list[str],
     short_notice: bool,
     days_until_fight: int | None,
+    surface_injury_only: bool = False,
 ) -> list[str]:
     flags: list[str] = []
     fatigue_value = (fatigue or "").strip().lower()
@@ -85,7 +89,11 @@ def _derive_readiness_flags(
         flags.append("active_weight_cut")
     if weight_cut_pct >= 5.0:
         flags.append("aggressive_weight_cut")
-    if injuries:
+    # A stable surface/skin-only injury is a hygiene note, not injured tissue:
+    # it never raises the injury_management readiness flag, so no downstream
+    # consumer (archetype, compression, hard-work suppression) sees injury
+    # pressure. The injury note itself still renders via has_active_injury.
+    if injuries and not surface_injury_only:
         flags.append("injury_management")
     if short_notice:
         flags.append("short_notice")
@@ -144,8 +152,16 @@ def _build_athlete_model(
         training_context.support_work_days or training_context.technical_skill_days
     )
     has_active_injury = _has_active_injury_from_training_context(training_context)
+    # A stable surface/skin-only injury (graze/abrasion/blister) is a hygiene
+    # note, not injured tissue: it must not drive rehab, compression, or
+    # tissue-protection framing downstream. Bake the verdict once here.
+    surface_injury_only = (
+        has_active_injury
+        and _all_active_injuries_surface_only_from_training_context(training_context)
+    )
     return {
         "has_active_injury": has_active_injury,
+        "surface_injury_only": surface_injury_only,
         "sport": sport,
         "status": training_context.status,
         "record": record_profile["record"],
@@ -192,5 +208,6 @@ def _build_athlete_model(
             injuries=training_context.injuries,
             short_notice=short_notice,
             days_until_fight=training_context.days_until_fight,
+            surface_injury_only=surface_injury_only,
         ),
     }

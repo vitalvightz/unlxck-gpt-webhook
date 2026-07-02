@@ -99,13 +99,21 @@ def _floor_role(week):
 # ---------------------------------------------------------------------------
 
 def test_predicate_flags_stable_surface_and_spares_danger_cases():
+    # Every surface/skin type trains through when stable (not high severity, no
+    # red flag) — cut and laceration included: skin is skin, not tissue.
     assert is_stable_train_through_surface_injury(GRAZE) is True
     assert is_stable_train_through_surface_injury(
         {"injury_type": "abrasion", "severity": "low"}
     ) is True
-    # Deep-wound / stitch risk, severity, red flags and real tissue keep their gates.
-    assert not is_stable_train_through_surface_injury({"injury_type": "laceration", "severity": "moderate"})
+    assert is_stable_train_through_surface_injury({"injury_type": "cut", "severity": "low"}) is True
+    assert is_stable_train_through_surface_injury({"injury_type": "laceration", "severity": "moderate"}) is True
+    # Severity, red flags (infection / stitches / bleeding / review) and real
+    # tissue keep their danger gates.
     assert not is_stable_train_through_surface_injury({"injury_type": "graze", "severity": "high"})
+    assert not is_stable_train_through_surface_injury({"injury_type": "laceration", "severity": "high"})
+    assert not is_stable_train_through_surface_injury(
+        {"injury_type": "cut", "severity": "moderate", "flags": ["needs_stitches"]}
+    )
     assert not is_stable_train_through_surface_injury(
         {"injury_type": "graze", "severity": "moderate", "flags": ["suspected_infection"]}
     )
@@ -144,6 +152,172 @@ def test_malformed_or_partial_parsed_surface_injuries_do_not_bypass_active_injur
 
     assert _active_injury_is_moderate_plus(missing_parsed_entry) is True
     assert _active_injury_is_moderate_plus(malformed_parsed_entry) is True
+
+
+def test_surface_only_flag_removes_injury_management_compression_reason():
+    # The role-map reason-code layer must not tag a surface-only injury as
+    # injury_management (which the finalizer renders as "compressed to protect
+    # tissue"). A real injury alongside it still tags injury_management.
+    from fightcamp.stage2_role_map import _high_fatigue_compression_reason_codes
+
+    surface_codes = _high_fatigue_compression_reason_codes(_graze_athlete(fatigue="high"))
+    assert "high_fatigue" in surface_codes
+    assert "injury_management" not in surface_codes
+
+    mixed = _graze_athlete(
+        fatigue="high",
+        injuries=["moderate stable lower-back graze", "moderate knee sprain"],
+        parsed_injuries=[dict(GRAZE), {"injury_type": "sprain", "severity": "moderate", "flags": []}],
+    )
+    assert "injury_management" in _high_fatigue_compression_reason_codes(mixed)
+
+
+def test_surface_only_neutralizes_payload_injury_pressure():
+    from fightcamp.stage2_payload import (
+        _active_injury_affects_generic_compression,
+        _active_injury_is_moderate_plus as payload_active_injury_is_moderate_plus,
+    )
+
+    surface_model = dict(
+        injuries=["moderate stable lower-back graze"],
+        parsed_injuries=[dict(GRAZE)],
+        readiness_flags=["injury_management", "moderate_fatigue"],
+        surface_injury_only=True,
+    )
+    assert payload_active_injury_is_moderate_plus(surface_model) is False
+    assert _active_injury_affects_generic_compression(surface_model) is False
+
+    real_model = dict(
+        injuries=["moderate knee sprain"],
+        parsed_injuries=[{"injury_type": "sprain", "severity": "moderate", "flags": []}],
+        readiness_flags=["injury_management"],
+        surface_injury_only=False,
+    )
+    assert payload_active_injury_is_moderate_plus(real_model) is True
+    assert _active_injury_affects_generic_compression(real_model) is True
+
+
+def test_build_athlete_model_bakes_surface_injury_only():
+    from types import SimpleNamespace
+
+    from fightcamp.stage2_render_guards import (
+        _all_active_injuries_surface_only_from_training_context,
+    )
+
+    surface_ctx = SimpleNamespace(
+        injuries=["moderate stable lower-back graze"],
+        parsed_injuries=[dict(GRAZE)],
+        injury_restrictions=[],
+    )
+    assert _all_active_injuries_surface_only_from_training_context(surface_ctx) is True
+
+    real_ctx = SimpleNamespace(
+        injuries=["moderate knee sprain"],
+        parsed_injuries=[{"injury_type": "sprain", "severity": "moderate", "flags": []}],
+        injury_restrictions=[],
+    )
+    assert _all_active_injuries_surface_only_from_training_context(real_ctx) is False
+
+    # The parser dropping an entry (raw/parsed count mismatch) must fail safe:
+    # the unparsed remainder could be a real injury.
+    dropped_entry_ctx = SimpleNamespace(
+        injuries=["moderate stable lower-back graze", "moderate knee sprain"],
+        parsed_injuries=[dict(GRAZE)],
+        injury_restrictions=[],
+    )
+    assert _all_active_injuries_surface_only_from_training_context(dropped_entry_ctx) is False
+
+
+def test_shared_surface_only_helper_fails_safe_on_length_mismatch_and_malformed_input():
+    from fightcamp.injury_registry import all_stable_train_through_surface
+    from fightcamp.stage2_render_guards import _all_active_injuries_surface_only
+
+    # Raw/parsed count mismatch → keep normal injury handling.
+    assert _all_active_injuries_surface_only(
+        {
+            "injuries": ["moderate stable lower-back graze", "moderate knee sprain"],
+            "parsed_injuries": [dict(GRAZE)],
+        }
+    ) is False
+    # Non-iterable truthy parsed_injuries must return False, not raise.
+    assert all_stable_train_through_surface(42) is False
+    assert all_stable_train_through_surface(True) is False
+
+
+def test_surface_only_injury_does_not_raise_injury_management_readiness_flag():
+    # The injury_management readiness flag is the root signal every downstream
+    # consumer (archetype, compression, glycolytic suppression) reads. A
+    # surface-only injury must not raise it; a real injury still does.
+    from fightcamp.athlete_model import _derive_readiness_flags
+
+    surface_flags = _derive_readiness_flags(
+        fatigue="moderate",
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        injuries=["moderate stable lower-back graze"],
+        short_notice=False,
+        days_until_fight=28,
+        surface_injury_only=True,
+    )
+    assert "injury_management" not in surface_flags
+    assert "moderate_fatigue" in surface_flags
+
+    real_flags = _derive_readiness_flags(
+        fatigue="moderate",
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        injuries=["moderate knee sprain"],
+        short_notice=False,
+        days_until_fight=28,
+    )
+    assert "injury_management" in real_flags
+
+
+def test_surface_only_injury_does_not_suppress_late_fight_glycolytic():
+    # Late-fight hard conditioning must not be suppressed by a graze, even when
+    # a legacy/persisted model still carries the injury_management flag.
+    from fightcamp.stage2_payload_late_fight import _suppress_standalone_glycolytic
+
+    base = {
+        "fatigue": "moderate",
+        "readiness_flags": ["injury_management", "moderate_fatigue"],
+        "training_days": ["monday", "wednesday", "friday"],
+    }
+    surface_model = dict(base, surface_injury_only=True)
+    assert _suppress_standalone_glycolytic([], surface_model) is False
+
+    real_model = dict(base, surface_injury_only=False)
+    assert _suppress_standalone_glycolytic([], real_model) is True
+
+
+def test_surface_only_injury_does_not_steer_limiter_to_tissue_state():
+    # An injury-driven tissue_state limiter would reintroduce tissue-protection
+    # framing for a graze. Declared weaknesses / real injuries still steer it.
+    from fightcamp.stage2_planning_brief import _primary_limiter_key
+
+    base = {
+        "readiness_flags": ["injury_management", "fight_week"],
+        "short_notice": True,
+        "days_until_fight": 10,
+        "key_goals": [],
+        "weaknesses": [],
+        "style_technical": [],
+        "style_tactical": [],
+    }
+    surface_model = dict(base, injuries=["lower-back graze"], parsed_injuries=[dict(GRAZE)])
+    assert _primary_limiter_key(surface_model, []) != "tissue_state"
+
+    real_model = dict(
+        base,
+        injuries=["moderate knee sprain"],
+        parsed_injuries=[{"injury_type": "sprain", "severity": "moderate", "flags": []}],
+    )
+    assert _primary_limiter_key(real_model, []) == "tissue_state"
+
+    # A declared mobility weakness is a legitimate tissue signal even when the
+    # only injury is a surface graze.
+    weakness_model = dict(surface_model, weaknesses=["mobility"])
+    assert _primary_limiter_key(weakness_model, []) == "tissue_state"
 
 
 def test_moderate_stable_graze_gets_full_plan_combat_floor():
