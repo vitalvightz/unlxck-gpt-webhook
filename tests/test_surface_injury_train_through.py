@@ -244,6 +244,52 @@ def test_shared_surface_only_helper_fails_safe_on_length_mismatch_and_malformed_
     assert all_stable_train_through_surface(True) is False
 
 
+def test_surface_only_injury_does_not_raise_injury_management_readiness_flag():
+    # The injury_management readiness flag is the root signal every downstream
+    # consumer (archetype, compression, glycolytic suppression) reads. A
+    # surface-only injury must not raise it; a real injury still does.
+    from fightcamp.athlete_model import _derive_readiness_flags
+
+    surface_flags = _derive_readiness_flags(
+        fatigue="moderate",
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        injuries=["moderate stable lower-back graze"],
+        short_notice=False,
+        days_until_fight=28,
+        surface_injury_only=True,
+    )
+    assert "injury_management" not in surface_flags
+    assert "moderate_fatigue" in surface_flags
+
+    real_flags = _derive_readiness_flags(
+        fatigue="moderate",
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        injuries=["moderate knee sprain"],
+        short_notice=False,
+        days_until_fight=28,
+    )
+    assert "injury_management" in real_flags
+
+
+def test_surface_only_injury_does_not_suppress_late_fight_glycolytic():
+    # Late-fight hard conditioning must not be suppressed by a graze, even when
+    # a legacy/persisted model still carries the injury_management flag.
+    from fightcamp.stage2_payload_late_fight import _suppress_standalone_glycolytic
+
+    base = {
+        "fatigue": "moderate",
+        "readiness_flags": ["injury_management", "moderate_fatigue"],
+        "training_days": ["monday", "wednesday", "friday"],
+    }
+    surface_model = dict(base, surface_injury_only=True)
+    assert _suppress_standalone_glycolytic([], surface_model) is False
+
+    real_model = dict(base, surface_injury_only=False)
+    assert _suppress_standalone_glycolytic([], real_model) is True
+
+
 def test_surface_only_injury_does_not_steer_limiter_to_tissue_state():
     # An injury-driven tissue_state limiter would reintroduce tissue-protection
     # framing for a graze. Declared weaknesses / real injuries still steer it.

@@ -79,6 +79,7 @@ def _derive_readiness_flags(
     injuries: list[str],
     short_notice: bool,
     days_until_fight: int | None,
+    surface_injury_only: bool = False,
 ) -> list[str]:
     flags: list[str] = []
     fatigue_value = (fatigue or "").strip().lower()
@@ -88,7 +89,11 @@ def _derive_readiness_flags(
         flags.append("active_weight_cut")
     if weight_cut_pct >= 5.0:
         flags.append("aggressive_weight_cut")
-    if injuries:
+    # A stable surface/skin-only injury is a hygiene note, not injured tissue:
+    # it never raises the injury_management readiness flag, so no downstream
+    # consumer (archetype, compression, hard-work suppression) sees injury
+    # pressure. The injury note itself still renders via has_active_injury.
+    if injuries and not surface_injury_only:
         flags.append("injury_management")
     if short_notice:
         flags.append("short_notice")
@@ -203,5 +208,6 @@ def _build_athlete_model(
             injuries=training_context.injuries,
             short_notice=short_notice,
             days_until_fight=training_context.days_until_fight,
+            surface_injury_only=surface_injury_only,
         ),
     }
