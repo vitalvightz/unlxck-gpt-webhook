@@ -1,6 +1,7 @@
 import importlib.util
 import logging
 import re
+import threading
 from difflib import SequenceMatcher
 
 from .normalization import strip_surrounding_punctuation as _strip_surrounding_punct
@@ -26,19 +27,46 @@ else:
 
     fuzz = _FuzzFallback()
 
-if _SPACY_AVAILABLE:
-    import spacy
-    from spacy.matcher import PhraseMatcher
-    if _NEGSPACY_AVAILABLE:
-        from negspacy.negation import Negex
-    else:
-        Negex = None
-    from spacy.tokens import Token  # ✅ needed to register extensions
-else:
-    spacy = None
-    PhraseMatcher = None
-    Negex = None
-    Token = None
+# spaCy (with thinc/numpy/blis) costs ~50MB of RSS just to import, before any
+# model is loaded. Importing it lazily keeps web workers light at boot — they
+# only pay for it if a request actually reaches the injury-parsing path — and
+# noticeably speeds up cold starts on small instances. The heavy stack is
+# imported on first use via _import_spacy_stack() below.
+spacy = None
+PhraseMatcher = None
+Negex = None
+Token = None
+_SPACY_IMPORTED = False
+
+# Guards all lazy spaCy initialization (stack import, pipeline load, matcher
+# build). FastAPI runs sync endpoints on a thread pool, so two requests can
+# race into the first initialization; an RLock (get_nlp holds it while calling
+# _import_spacy_stack) with flags set only after the work completes ensures
+# late arrivals block until the state is fully built instead of observing a
+# half-initialized module.
+_SPACY_INIT_LOCK = threading.RLock()
+
+
+def _import_spacy_stack() -> None:
+    """Populate the module-level spaCy symbols on first use."""
+    global spacy, PhraseMatcher, Negex, Token, _SPACY_IMPORTED
+    if _SPACY_IMPORTED or not _SPACY_AVAILABLE:
+        return
+    with _SPACY_INIT_LOCK:
+        if _SPACY_IMPORTED:
+            return
+        import spacy as _spacy
+        from spacy.matcher import PhraseMatcher as _PhraseMatcher
+        from spacy.tokens import Token as _Token  # needed to register extensions
+
+        spacy = _spacy
+        PhraseMatcher = _PhraseMatcher
+        Token = _Token
+        if _NEGSPACY_AVAILABLE:
+            from negspacy.negation import Negex as _Negex
+
+            Negex = _Negex
+        _SPACY_IMPORTED = True
 
 _DEGRADED_LOGGED = False
 logger = logging.getLogger(__name__)
@@ -87,32 +115,42 @@ def get_nlp():
     global _NLP, _NLP_INITIALIZED
     if _NLP_INITIALIZED:
         return _NLP
-    _NLP_INITIALIZED = True
-    if not _SPACY_AVAILABLE:
-        _NLP = None
-        return _NLP
-    try:
-        # The injury pipeline relies only on tokenization, NER (which feeds
-        # Negex), sentence boundaries (the parser, which Negex uses for
-        # termination boundaries) and the negex component. The tagger,
-        # lemmatizer and attribute_ruler produce POS/lemma annotations that are
-        # never read here, so disabling them trims per-doc processing time
-        # without changing matching or negation behavior.
-        _NLP = spacy.load(
-            "en_core_web_sm",
-            disable=["tagger", "lemmatizer", "attribute_ruler"],
-        )
-    except Exception:
-        _NLP = None
-        return _NLP
-    if Token is not None:
-        Token.set_extension("negex", default=False, force=True)
-    if _NEGSPACY_AVAILABLE and _NLP is not None and "negex" not in _NLP.pipe_names:
+    with _SPACY_INIT_LOCK:
+        if _NLP_INITIALIZED:
+            return _NLP
         try:
-            _NLP.add_pipe("negex", last=True)
-        except Exception:  # pragma: no cover - Negex might not be registered
-            _NLP.add_pipe(Negex(_NLP), last=True)
-    return _NLP
+            if not _SPACY_AVAILABLE:
+                _NLP = None
+                return _NLP
+            try:
+                _import_spacy_stack()
+            except Exception:
+                _NLP = None
+                return _NLP
+            try:
+                # The injury pipeline relies only on tokenization, NER (which feeds
+                # Negex), sentence boundaries (the parser, which Negex uses for
+                # termination boundaries) and the negex component. The tagger,
+                # lemmatizer and attribute_ruler produce POS/lemma annotations that are
+                # never read here, so disabling them trims per-doc processing time
+                # without changing matching or negation behavior.
+                _NLP = spacy.load(
+                    "en_core_web_sm",
+                    disable=["tagger", "lemmatizer", "attribute_ruler"],
+                )
+            except Exception:
+                _NLP = None
+                return _NLP
+            if Token is not None:
+                Token.set_extension("negex", default=False, force=True)
+            if _NEGSPACY_AVAILABLE and _NLP is not None and "negex" not in _NLP.pipe_names:
+                try:
+                    _NLP.add_pipe("negex", last=True)
+                except Exception:  # pragma: no cover - Negex might not be registered
+                    _NLP.add_pipe(Negex(_NLP), last=True)
+            return _NLP
+        finally:
+            _NLP_INITIALIZED = True
 
 
 def get_matchers(nlp):
@@ -120,28 +158,39 @@ def get_matchers(nlp):
     global INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
     if _MATCHERS_INITIALIZED:
         return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
-    _MATCHERS_INITIALIZED = True
-    if not nlp or PhraseMatcher is None:
-        return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
-    INJURY_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
-    INJURY_MATCH_ID_TO_CANONICAL = {}
-    for _canonical, _syns in INJURY_SYNONYM_MAP.items():
-        patterns = [_canonical] + _syns
-        # PhraseMatcher with attr="LOWER" only needs token text, so tokenize the
-        # patterns with make_doc instead of running the full tagger/parser/NER
-        # pipeline over every synonym (the spaCy-recommended fast path).
-        docs = [nlp.make_doc(p) for p in patterns]
-        match_id = nlp.vocab.strings.add(_canonical)
-        INJURY_MATCHER.add(_canonical, docs)
-        INJURY_MATCH_ID_TO_CANONICAL[match_id] = _canonical
+    with _SPACY_INIT_LOCK:
+        if _MATCHERS_INITIALIZED:
+            return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
+        if not nlp or PhraseMatcher is None:
+            _MATCHERS_INITIALIZED = True
+            return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
+        # Build into locals and publish to the module globals only when fully
+        # populated, so no reader can observe a half-built matcher.
+        injury_matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
+        injury_map: dict[int, str] = {}
+        for _canonical, _syns in INJURY_SYNONYM_MAP.items():
+            patterns = [_canonical] + _syns
+            # PhraseMatcher with attr="LOWER" only needs token text, so tokenize the
+            # patterns with make_doc instead of running the full tagger/parser/NER
+            # pipeline over every synonym (the spaCy-recommended fast path).
+            docs = [nlp.make_doc(p) for p in patterns]
+            match_id = nlp.vocab.strings.add(_canonical)
+            injury_matcher.add(_canonical, docs)
+            injury_map[match_id] = _canonical
 
-    LOCATION_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
-    LOC_MATCH_ID_TO_CANONICAL = {}
-    for _key, _canonical in LOCATION_MAP.items():
-        doc = nlp.make_doc(_key)
-        match_id = nlp.vocab.strings.add(_key)
-        LOCATION_MATCHER.add(_key, [doc])
-        LOC_MATCH_ID_TO_CANONICAL[match_id] = _canonical
+        location_matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
+        location_map: dict[int, str] = {}
+        for _key, _canonical in LOCATION_MAP.items():
+            doc = nlp.make_doc(_key)
+            match_id = nlp.vocab.strings.add(_key)
+            location_matcher.add(_key, [doc])
+            location_map[match_id] = _canonical
+
+        INJURY_MATCHER = injury_matcher
+        INJURY_MATCH_ID_TO_CANONICAL = injury_map
+        LOCATION_MATCHER = location_matcher
+        LOC_MATCH_ID_TO_CANONICAL = location_map
+        _MATCHERS_INITIALIZED = True
     return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
 
 # Heavier weight to categories we want to prefer when there’s overlap
