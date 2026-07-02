@@ -248,7 +248,25 @@ required; CI uses public placeholder env values.
 
 **Backend (Render)**
 
-- Deploy two services:
+> **⚠️ Memory sizing — read before picking `--workers`.** One API worker peaks
+> at roughly **175–225MB RSS** (FastAPI + Supabase + OpenAI clients, plus the
+> spaCy stack and `en_core_web_sm` once the injury-parsing path is first hit),
+> and each in-process Stage 1 generation spawns an additional planner
+> subprocess that re-imports the pipeline (another ~200MB+ at peak). On a
+> **512MB instance (free tier), `--workers 2` plus one generation does not
+> fit** — the service OOMs ("Ran out of memory (used over 512MB)"), Render
+> restarts it in a loop, and every restart kills in-flight requests (admin
+> deletes, plan fetches) and forces a slow cold start.
+
+- **Single-service free tier (512MB) setup** — run one service only:
+  - Start command: `uvicorn api.app:app --host 0.0.0.0 --port $PORT --workers 1`
+  - Set `UNLXCK_ENABLE_IN_PROCESS_GENERATION=1` (there is no separate worker
+    service, so the API process must run generation jobs itself).
+  - Keep `APP_GENERATION_MAX_CONCURRENT_JOBS=1` (the default) — each concurrent
+    generation adds a full planner subprocess to the memory footprint.
+  - Approximate budget: uvicorn master ~30MB + 1 worker ~225MB + 1 planner
+    subprocess ~200MB ≈ 455MB peak, which fits under 512MB. Two workers do not.
+- **Paid tier (>=1GB) setup** — deploy two services:
   - Web/API service start command: `uvicorn api.app:app --host 0.0.0.0 --port $PORT --workers 2`
   - Worker service start command: `python -m api.worker`
 - `UNLXCK_ENABLE_IN_PROCESS_GENERATION` controls generation execution mode:

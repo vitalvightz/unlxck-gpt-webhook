@@ -26,19 +26,35 @@ else:
 
     fuzz = _FuzzFallback()
 
-if _SPACY_AVAILABLE:
-    import spacy
-    from spacy.matcher import PhraseMatcher
+# spaCy (with thinc/numpy/blis) costs ~50MB of RSS just to import, before any
+# model is loaded. Importing it lazily keeps web workers light at boot — they
+# only pay for it if a request actually reaches the injury-parsing path — and
+# noticeably speeds up cold starts on small instances. The heavy stack is
+# imported on first use via _import_spacy_stack() below.
+spacy = None
+PhraseMatcher = None
+Negex = None
+Token = None
+_SPACY_IMPORTED = False
+
+
+def _import_spacy_stack() -> None:
+    """Populate the module-level spaCy symbols on first use."""
+    global spacy, PhraseMatcher, Negex, Token, _SPACY_IMPORTED
+    if _SPACY_IMPORTED or not _SPACY_AVAILABLE:
+        return
+    _SPACY_IMPORTED = True
+    import spacy as _spacy
+    from spacy.matcher import PhraseMatcher as _PhraseMatcher
+    from spacy.tokens import Token as _Token  # needed to register extensions
+
+    spacy = _spacy
+    PhraseMatcher = _PhraseMatcher
+    Token = _Token
     if _NEGSPACY_AVAILABLE:
-        from negspacy.negation import Negex
-    else:
-        Negex = None
-    from spacy.tokens import Token  # ✅ needed to register extensions
-else:
-    spacy = None
-    PhraseMatcher = None
-    Negex = None
-    Token = None
+        from negspacy.negation import Negex as _Negex
+
+        Negex = _Negex
 
 _DEGRADED_LOGGED = False
 logger = logging.getLogger(__name__)
@@ -89,6 +105,11 @@ def get_nlp():
         return _NLP
     _NLP_INITIALIZED = True
     if not _SPACY_AVAILABLE:
+        _NLP = None
+        return _NLP
+    try:
+        _import_spacy_stack()
+    except Exception:
         _NLP = None
         return _NLP
     try:
