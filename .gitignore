@@ -20,6 +20,8 @@ web/test-results/
 web/.env.local
 web/.env.sentry-build-plugin
 *.tsbuildinfo
+tools/local-preview-auth-state.json
+output/playwright/
 
 # Generated artifacts (rebuild with tools/split_rehab_bank.py)
 data/rehab_bank_split.json

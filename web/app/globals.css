@@ -3960,6 +3960,15 @@ button.mobile-step-rail-item {
   gap: 16px;
 }
 
+.plan-detail-meta {
+  margin: 12px 0 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .code-block,
 .plan-text-block {
   margin: 0;

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { retryGenerationJob } from "@/lib/api";
@@ -144,8 +145,18 @@ export function getGenerationStatusTarget(
   return null;
 }
 
+export function isGenerationRibbonTargetRedundant(pathname: string | null, target: string | null): boolean {
+  if (!pathname || !target) {
+    return false;
+  }
+
+  const targetPath = target.split("?", 1)[0];
+  return pathname === targetPath || (pathname === "/plans" && targetPath.startsWith("/plans/"));
+}
+
 export function GlobalGenerationStatus() {
   const { session } = useAppSession();
+  const pathname = usePathname();
   const {
     isActive,
     statusMessage,
@@ -420,10 +431,15 @@ export function GlobalGenerationStatus() {
       const failedPlanId = latestJob.plan_id || latestJob.latest_plan_id || null;
 
       if (latestFailedJobHasOpenablePlan(latestJob) && failedPlanId) {
+        const target = `/plans/${failedPlanId}`;
+        if (isGenerationRibbonTargetRedundant(pathname, target)) {
+          return null;
+        }
+
         const isProtectedTriage = isProtectedTriageLatestJob(latestJob);
         return (
           <div className="global-generation-status global-generation-status-completed">
-            <Link href={`/plans/${failedPlanId}`} className="global-generation-status-main">
+            <Link href={target} className="global-generation-status-main">
               <div className="global-generation-status-message">
                 {isProtectedTriage
                   ? "Plan is held for admin review."
@@ -504,9 +520,14 @@ export function GlobalGenerationStatus() {
     }
 
     if (latestJob.status === "review_required" && latestJob.plan_id) {
+      const target = `/plans/${latestJob.plan_id}`;
+      if (isGenerationRibbonTargetRedundant(pathname, target)) {
+        return null;
+      }
+
       return (
         <div className="global-generation-status global-generation-status-completed">
-          <Link href={`/plans/${latestJob.plan_id}`} className="global-generation-status-main">
+          <Link href={target} className="global-generation-status-main">
             <div className="global-generation-status-message">Review saved plan</div>
             <span className="global-generation-status-cta-label">Open plan</span>
           </Link>
@@ -567,10 +588,15 @@ export function GlobalGenerationStatus() {
       const completedPlanId = latestCompletedJobOpenablePlanId(latestJob);
 
       if (completedPlanId) {
+        const target = `/plans/${completedPlanId}`;
+        if (isGenerationRibbonTargetRedundant(pathname, target)) {
+          return null;
+        }
+
         const isProtectedTriage = isProtectedTriageLatestJob(latestJob);
         return (
           <div className="global-generation-status global-generation-status-completed">
-            <Link href={`/plans/${completedPlanId}`} className="global-generation-status-main">
+            <Link href={target} className="global-generation-status-main">
               <div className="global-generation-status-message">
                 {isProtectedTriage
                   ? "Plan is held for admin review."

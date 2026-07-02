@@ -496,8 +496,8 @@ const BODY_MAP_SEVERITY_BY_FLAG: Record<InjuryFlagSeverity, BodyMapSeverity> = {
 };
 
 const BODY_MAP_VISIBILITY_OPTIONS = [
-  { value: "shown", label: "Show map" },
-  { value: "hidden", label: "Hide map" },
+  { value: "shown", label: "Hide map" },
+  { value: "hidden", label: "Show map" },
 ];
 
 function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeverity {
@@ -543,7 +543,7 @@ function InjuryCheckinCard({
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
   const [newZone, setNewZone] = useState("");
-  const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("shown");
+  const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
   const bodyMapVisibilityId = useId();
   const newInjurySelections: BodyMapSelection[] = newArea.trim()

@@ -1735,7 +1735,10 @@ export function PlanViewer({
     plan,
     injuryTriage?.mode || rawTriageMode || undefined,
   );
-  
+
+  const planDetailTitle = plan.plan_name?.trim() || "Fight camp";
+  const fightDateLabel = plan.fight_date ? `Fight date ${plan.fight_date}` : null;
+
   const blockedTitle =
     injuryTriage?.mode === "medical_hold"
       ? "Medical hold"
@@ -2511,8 +2514,9 @@ export function PlanViewer({
         <div className="section-heading">
           <div>
             <p className="kicker">Plan Detail</p>
-            <h1>{getPlanDisplayName(plan)}</h1>
+            <h1>{planDetailTitle}</h1>
             <p className="muted">{heroSummary}</p>
+            {fightDateLabel ? <p className="plan-detail-meta">{fightDateLabel}</p> : null}
           </div>
           <div className="status-card">
             <p className="status-label">Status</p>
@@ -2595,6 +2599,7 @@ export function PlanViewer({
               View athlete profile
             </Link>
           ) : null}
+          {hasPublishedPlan ? <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" /> : null}
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
@@ -2760,29 +2765,30 @@ export function PlanViewer({
             />
           ) : hasPublishedPlan ? (
             <>
-              <div className="plan-summary-actions">
-                <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
-                {canRejectApproval ? (
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={handleRejectApproval}
-                    disabled={rejectPending}
-                  >
-                    {rejectPending ? "Rejecting..." : "Reject approval"}
-                  </button>
-                ) : null}
-                {canUseAdminOutputs ? (
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={handleArchivePlan}
-                    disabled={archivePending}
-                  >
-                    {archivePending ? "Archiving..." : "Archive"}
-                  </button>
-                ) : null}
-              </div>
+              {canRejectApproval || canUseAdminOutputs ? (
+                <div className="plan-summary-actions">
+                  {canRejectApproval ? (
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={handleRejectApproval}
+                      disabled={rejectPending}
+                    >
+                      {rejectPending ? "Rejecting..." : "Reject approval"}
+                    </button>
+                  ) : null}
+                  {canUseAdminOutputs ? (
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={handleArchivePlan}
+                      disabled={archivePending}
+                    >
+                      {archivePending ? "Archiving..." : "Archive"}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}

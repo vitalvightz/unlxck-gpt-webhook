@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   getGenerationStatusTarget,
+  isGenerationRibbonTargetRedundant,
   isProtectedTriageLatestJob,
   latestCompletedJobOpenablePlanId,
   latestFailedJobHasOpenablePlan,
@@ -24,6 +25,21 @@ test("review-required generation routes with review query flag", () => {
     getGenerationStatusTarget("completed", "plan_123", "review_required", "admin_latest_intake", "ath_1"),
     "/plans/plan_123?review_required=1",
   );
+});
+
+test("generation ribbon target is redundant when path matches target without query", () => {
+  assert.equal(isGenerationRibbonTargetRedundant("/plans/plan_123", "/plans/plan_123"), true);
+  assert.equal(isGenerationRibbonTargetRedundant("/plans/plan_123", "/plans/plan_123?review_required=1"), true);
+});
+
+test("generation ribbon target is redundant on the plan dashboard for plan detail links", () => {
+  assert.equal(isGenerationRibbonTargetRedundant("/plans", "/plans/plan_123"), true);
+});
+
+test("generation ribbon target is not redundant when route is unrelated", () => {
+  assert.equal(isGenerationRibbonTargetRedundant("/plans/plan_123", "/plans/plan_456"), false);
+  assert.equal(isGenerationRibbonTargetRedundant("/today", "/plans/plan_123"), false);
+  assert.equal(isGenerationRibbonTargetRedundant(null, "/plans/plan_123"), false);
 });
 
 test("failed generation has no link target", () => {

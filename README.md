@@ -195,6 +195,32 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
+### One-command local preview
+
+On Windows, run both the FastAPI backend and Next.js frontend with local-safe
+env overrides:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/start-local-preview.ps1
+```
+
+This loads `.env` and `web/.env.local`, forces `UNLXCK_ENV=development`, points
+the frontend at `http://127.0.0.1:8000`, and allows browser access from
+`http://localhost:3000`. Use `-BackendEnvFile webservice.env` only when you
+need those service values locally; the helper still overrides production mode
+and localhost CORS for preview.
+
+For agent-driven browser checks, keep credentials in the ignored
+`tools/local-preview-login.env` file and refresh the ignored saved browser
+session with:
+
+```powershell
+node tools/save-local-preview-login.mjs
+```
+
+The script writes `tools/local-preview-auth-state.json`, which can be reused by
+Playwright-based preview checks without committing credentials or session state.
+
 #### Frontend quality gates
 
 All commands run from `web/`:
