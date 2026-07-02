@@ -6485,18 +6485,74 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   max-width: 720px;
 }
 
-.auth-recovery-card {
-  align-content: start;
-}
-
-.auth-recovery-actions {
-  margin-top: 2px;
-}
-
-.auth-recovery-note {
-  margin: 0;
-  color: var(--text-muted);
+.connection-lost-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 7px 10px 7px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-support);
+  color: var(--text-secondary);
   font-size: 12px;
+  line-height: 1;
+}
+
+.connection-lost-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger-ink);
+  animation: connection-lost-pulse 1.4s ease-in-out infinite;
+}
+
+.connection-lost-text {
+  white-space: nowrap;
+}
+
+.connection-lost-retry {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  margin: 0;
+  border-radius: var(--radius-btn);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.connection-lost-retry:hover:not(:disabled) {
+  color: var(--brand-red-hover);
+}
+
+.connection-lost-retry:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+@keyframes connection-lost-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-lost-dot {
+    animation: none;
+  }
 }
 
 .status-card .plan-summary-actions,
