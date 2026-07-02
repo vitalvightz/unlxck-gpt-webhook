@@ -178,6 +178,22 @@ def test_injury_or_mobility_need_prefers_mobility_or_joint_prep():
     assert insert["role_key"] in {"mobility_rehab", "joint_prep"}
 
 
+def test_surface_only_injury_never_gets_rehab_or_joint_prep_filler():
+    athlete = _athlete(
+        has_active_injury=True,
+        surface_injury_only=True,
+        injuries=["minor graze on elbow"],
+        parsed_injuries=[{"injury_type": "graze", "severity": "low", "flags": []}],
+        weaknesses=["mobility"],
+    )
+    allowed = _allowed_inserts(athlete, 12)
+    insert = select_gap_fill_insert(athlete, 12)
+
+    assert not (allowed & {"mobility_rehab", "joint_prep"})
+    assert insert is not None
+    assert insert["role_key"] not in {"mobility_rehab", "joint_prep"}
+
+
 def test_d1_allows_only_zero_or_recovery_inserts():
     allowed = _allowed_inserts(_athlete(), 1)
     insert = select_gap_fill_insert(_athlete(), 1)
