@@ -93,6 +93,8 @@ def _role_day_counts(session_roles: list[Any]) -> dict[str, int]:
     for role in session_roles:
         if not isinstance(role, dict):
             continue
+        if role.get("camp_week_filler"):
+            continue
         day = _canonical_day(role.get("scheduled_day_hint"))
         if day:
             counts[day] = counts.get(day, 0) + 1
