@@ -2387,34 +2387,65 @@ def ensure_declared_coach_combat_spine(
     if not coach_labels:
         return session_sequence
 
-    sequence = [
-        dict(role)
-        for role in session_sequence
-        if not (
-            str(role.get("role_key") or "").strip().lower() in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS
-            and str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "") in coach_labels
+    sequence = []
+    for role in session_sequence:
+        role_copy = dict(role)
+        label = str(
+            role_copy.get("scheduled_countdown_label")
+            or role_copy.get("countdown_label")
+            or ""
         )
-    ]
+        role_key = str(role_copy.get("role_key") or "").strip().lower()
+        downgraded_from = str(
+            role_copy.get("downgraded_from_role_key") or ""
+        ).strip().lower()
+
+        on_coach_label = label in coach_labels
+        coach_context = (
+            role_key == "hard_sparring_day"
+            or downgraded_from == "hard_sparring_day"
+        )
+        app_owned = _is_app_owned_visible_role(role_key)
+        allowed_filler = is_low_cost_coexistable_filler(role_copy)
+
+        if on_coach_label and app_owned and not coach_context and not allowed_filler:
+            continue
+
+        sequence.append(role_copy)
+
     existing: set[str] = set()
     for role in sequence:
-        role_key = str(role.get("role_key") or "")
-        downgraded_from = str(role.get("downgraded_from_role_key") or "")
+        role_key = str(role.get("role_key") or "").strip().lower()
+        downgraded_from = str(role.get("downgraded_from_role_key") or "").strip().lower()
+
         if role_key != "hard_sparring_day" and downgraded_from != "hard_sparring_day":
             continue
-        label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+
+        label = str(
+            role.get("scheduled_countdown_label")
+            or role.get("countdown_label")
+            or ""
+        )
         if label:
             existing.add(label)
 
-    for label in sorted(coach_labels, key=lambda item: int(_countdown_offset(item) or -1), reverse=True):
+    for label in sorted(
+        coach_labels,
+        key=lambda item: int(_countdown_offset(item) or -1),
+        reverse=True,
+    ):
         offset = _countdown_offset(label)
         if offset is None or offset <= 0:
             continue
+
         weekday = coach_labels[label]
         if label in existing:
             continue
+
         downgraded = offset <= 17
         cost_class = "low" if downgraded else _late_fight_cost_class("hard_sparring_day")
         stress_class = "support" if downgraded else _late_fight_stress_class("hard_sparring_day")
+
         sequence.append(
             {
                 "session_index": len(sequence) + 1,
