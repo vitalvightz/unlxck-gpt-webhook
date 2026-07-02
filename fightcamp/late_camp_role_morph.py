@@ -101,10 +101,14 @@ def _role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
     for key in ("scheduled_countdown_label", "countdown_label"):
         label = str(role.get(key) or "").strip().upper()
         if label.startswith("D-"):
-            try:
-                return int(label[2:])
-            except ValueError:
-                continue
+            digits = []
+            for char in label[2:]:
+                if char.isdigit():
+                    digits.append(char)
+                else:
+                    break
+            if digits:
+                return int("".join(digits))
     return None
 
 
