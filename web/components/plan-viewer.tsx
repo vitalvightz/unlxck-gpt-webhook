@@ -1008,10 +1008,6 @@ function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
   );
 }
 
-function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
-  return plan.plan_name?.trim() || plan.fight_date || "Open plan";
-}
-
 function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
   const normalized = humanizeStatus(riskBand || "").trim();
   if (!normalized) {
@@ -2279,7 +2275,7 @@ export function PlanViewer({
       return;
     }
 
-    const confirmed = window.confirm(`Archive "${getPlanDisplayName(plan)}"?`);
+    const confirmed = window.confirm(`Archive "${planDetailTitle}"?`);
     if (!confirmed) {
       return;
     }
@@ -2348,7 +2344,7 @@ export function PlanViewer({
       return;
     }
 
-    const confirmed = window.confirm(`Archive "${getPlanDisplayName(plan)}"?`);
+    const confirmed = window.confirm(`Archive "${planDetailTitle}"?`);
     if (!confirmed) {
       return;
     }
@@ -2393,7 +2389,7 @@ export function PlanViewer({
     // and use a single confirm. Live plans still require typing the name.
     if (isArchived) {
       const confirmed = window.confirm(
-        `Permanently delete "${getPlanDisplayName(plan)}"? This cannot be undone.`,
+        `Permanently delete "${planDetailTitle}"? This cannot be undone.`,
       );
       if (!confirmed) {
         return;
