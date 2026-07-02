@@ -224,7 +224,7 @@ def test_safe_spp_single_conditioning_slot_is_upgraded():
 def test_moderate_cut_keeps_hard_pressure_exposure():
     role_map = _build_weekly_role_map(
         _base_athlete(cut_severity_bucket="moderate"),
-        _progression(["GPP", "GPP", "SPP", "TAPER"], conditioning=1),
+        _progression(["GPP", "GPP", "GPP", "SPP", "TAPER"], conditioning=1),
         LIMITER,
     )
     week = _week(role_map, 1)
@@ -286,15 +286,35 @@ def test_taper_and_fight_week_block_hard_pressure_exposure():
 # ---------------------------------------------------------------------------
 
 class TestBridgeRespected:
-    def test_d20_moderate_cut_low_fatigue_allows_pressure_touch(self):
+    def test_d20_low_cut_low_fatigue_allows_pressure_touch(self):
         # Baseline bridge allows one glycolytic touch at D-20 -> floor may use it.
-        athlete = _base_athlete(cut_severity_bucket="moderate")
+        athlete = _base_athlete(cut_severity_bucket="low")
         assert _combat_pressure_floor_blockers(_far_week("SPP", 20), athlete) == []
 
+    def test_d18_low_cut_low_fatigue_allows_pressure_touch(self):
+        athlete = _base_athlete(cut_severity_bucket="low")
+        assert _combat_pressure_floor_blockers(_far_week("SPP", 18), athlete) == []
+
     def test_bridge_suppression_is_not_overridden(self):
-        # D-14 zeros glycolytic in the bridge -> floor must not override it.
+        # D-14 has a conditioning-specific lock; the global regression-only
+        # rule remains D-10.
         athlete = _base_athlete()
         reasons = _combat_pressure_floor_blockers(_far_week("SPP", 14), athlete)
+        assert "late_conditioning_lock_d14" in reasons
+
+    def test_d20_moderate_cut_blocks_pressure_touch(self):
+        athlete = _base_athlete(cut_severity_bucket="moderate")
+        reasons = _combat_pressure_floor_blockers(_far_week("SPP", 20), athlete)
+        assert "bridge_suppresses_glycolytic" in reasons
+
+    def test_d20_moderate_fatigue_blocks_pressure_touch(self):
+        athlete = _base_athlete(fatigue="moderate")
+        reasons = _combat_pressure_floor_blockers(_far_week("SPP", 20), athlete)
+        assert "bridge_suppresses_glycolytic" in reasons
+
+    def test_d20_declared_hard_sparring_blocks_pressure_touch(self):
+        athlete = _base_athlete(hard_sparring_days=["tuesday"])
+        reasons = _combat_pressure_floor_blockers(_far_week("SPP", 20), athlete)
         assert "bridge_suppresses_glycolytic" in reasons
 
     def test_floor_does_not_override_baseline_suppressed_glycolytic(self):

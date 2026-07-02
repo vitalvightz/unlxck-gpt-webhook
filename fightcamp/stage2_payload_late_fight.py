@@ -503,6 +503,31 @@ def _weight_cut_is_extreme(athlete_model: dict[str, Any], flags: set[str]) -> bo
     return risk and pct >= 5.0
 
 
+def _active_weight_cut_present(athlete_model: dict[str, Any], flags: set[str]) -> bool:
+    if flags & {"active_weight_cut", "aggressive_weight_cut", "extreme_weight_cut"}:
+        return True
+    if bool(athlete_model.get("weight_cut_risk")):
+        return True
+    try:
+        return float(athlete_model.get("weight_cut_pct") or 0.0) > 0.0
+    except (TypeError, ValueError):
+        return True
+
+
+def _blocks_bridge_extra_glycolytic_touch(athlete_model: dict[str, Any]) -> bool:
+    flags = _readiness_flags(athlete_model)
+    fatigue = _normalized_fatigue(athlete_model)
+    if fatigue in {"moderate", "high", "critical", "extreme"}:
+        return True
+    if _active_weight_cut_present(athlete_model, flags):
+        return True
+    if clean_list(athlete_model.get("injuries", [])):
+        return True
+    if flags & {"injury_management", "medical_hold", "restricted_rehab", "restricted_rehab_only", "needs_review"}:
+        return True
+    return False
+
+
 def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
     if len(active_hard_spar_days) >= 2:
         return True
@@ -720,7 +745,7 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "max_meaningful_stress_exposures": 3,
             "hard_sparring_cap_default": hard_spar_default,
             "strength_touch_max": 1,
-            "glycolytic_touch_max": 1 if sub == "d21_to_d19" else 0,
+            "glycolytic_touch_max": 1 if (days is not None and 18 <= days <= 21) else 0,
             "max_consecutive_hard_days": 1,
             "double_stress_day_allowed": False,
             "freshness_mandatory": True,
@@ -858,6 +883,13 @@ def _bridge_apply_fatigue(rules: dict[str, Any], fatigue: str) -> dict[str, Any]
         rules["strength_touch_max"] = min(rules.get("strength_touch_max", 1), 1)
         rules["freshness_mandatory"] = True
         rules["double_stress_day_allowed"] = False
+        if (
+            rules.get("timing_state") == TIMING_STATE_BRIDGE
+            and isinstance(rules.get("days_until_fight"), int)
+            and 18 <= rules["days_until_fight"] <= 21
+        ):
+            rules["glycolytic_touch_max"] = 0
+            rules["reason_codes"].append("fatigue_moderate_blocks_extra_glycolytic_touch")
         rules["reason_codes"].append("fatigue_moderate_trim_stress")
     return rules
 
@@ -907,10 +939,15 @@ def _bridge_apply_weight_cut(
         rules["reason_codes"].append("weight_cut_high_suppress_hard_work")
         return rules
     if bucket == "moderate":
-        # A moderate active cut is note-only: it does NOT reduce training
-        # exposure, block double-stress days, or zero hard sparring /
-        # glycolytic work. It only surfaces calm hydration / fuelling guidance.
-        # Only high+ cuts (handled above) restrict hard work.
+        # A moderate active cut is note-only for hard sparring and strength,
+        # but it must not satisfy the late-camp extra hard-conditioning floor.
+        if (
+            rules.get("timing_state") == TIMING_STATE_BRIDGE
+            and isinstance(rules.get("days_until_fight"), int)
+            and 18 <= rules["days_until_fight"] <= 21
+        ):
+            rules["glycolytic_touch_max"] = 0
+            rules["reason_codes"].append("weight_cut_moderate_blocks_extra_glycolytic_touch")
         rules["reason_codes"].append("weight_cut_moderate_note_only")
     return rules
 
@@ -947,6 +984,9 @@ def _bridge_resolve_hard_spar_slots(
     rules["hard_sparring_cap"] = cap
     rules["hard_sparring_days_declared"] = declared
     rules["remaining_hard_spar_slots"] = 0 if declared >= cap else cap - declared
+    if rules.get("timing_state") == TIMING_STATE_BRIDGE and declared > 0:
+        rules["glycolytic_touch_max"] = 0
+        rules["reason_codes"].append("hard_sparring_load_blocks_extra_glycolytic_touch")
     return rules
 
 
@@ -2337,7 +2377,6 @@ def _late_fight_candidate_roles(
     has_downgraded_hard_days = bool(permission_policy.get("downgraded_hard_days", []))
 
     if mode == "bridge_compression_payload":
-        sub_band = bridge_sub_band(days_until_fight)
         candidates.append(
             _late_fight_role_entry(
                 category="strength",
@@ -2351,8 +2390,13 @@ def _late_fight_candidate_roles(
             )
         )
         glycolytic_touch_added = False
-        if sub_band == "d21_to_d19" and not preserved_hard_days and not _suppress_standalone_glycolytic(
-            preserved_hard_days, athlete_model
+        days = _coerce_days(days_until_fight)
+        if (
+            days is not None
+            and 18 <= days <= 21
+            and not preserved_hard_days
+            and not _blocks_bridge_extra_glycolytic_touch(athlete_model)
+            and not _suppress_standalone_glycolytic(preserved_hard_days, athlete_model)
         ):
             candidates.append(
                 _late_fight_role_entry(
@@ -2360,7 +2404,7 @@ def _late_fight_candidate_roles(
                     role_key="light_fight_pace_touch_day",
                     preferred_pool="conditioning_slots",
                     preferred_system="glycolytic",
-                    selection_rule="D-21 to D-19 only: one short specific-interval touch is allowed when sparring is not owning the window.",
+                    selection_rule="D-21 to D-18 only: one short specific-interval touch is allowed when sparring is not owning the window.",
                     placement_rule="Keep it light. Do not describe it as a conditioning build and do not place between hard days.",
                     selection_priority=96 if has_downgraded_hard_days else 100,
                     legal_countdown_labels=legal_countdown_labels,
@@ -2373,7 +2417,7 @@ def _late_fight_candidate_roles(
             and bridge_low_risk_profile(athlete_model)
         ):
             # Guarantee one real conditioning exercise across the rest of the
-            # bridge (D-18..D-14) for a low-risk athlete. Below D-19 standalone
+            # bridge (D-17..D-14) for a low-risk athlete. Below D-18 standalone
             # glycolytic work is correctly forbidden, so this is an alactic
             # sharpness touch (low metabolic fatigue, non-glycolytic,
             # freshness-preserving) — the conditioning exposure the lifted
@@ -2433,8 +2477,14 @@ def _late_fight_candidate_roles(
                     role_key="light_fight_pace_touch_day",
                     preferred_pool="conditioning_slots",
                     preferred_system="glycolytic",
-                    selection_rule="Allow at most one light fight-rhythm touch only when sparring does not already own the window.",
-                    placement_rule="Keep this light, never describe it as a conditioning build, and never place it between two hard sparring collisions.",
+                    selection_rule=(
+                        "Allow at most one rhythm/freshness touch only when sparring does not already own the window. "
+                        "This cannot satisfy a hard conditioning, glycolytic, or combat-pressure quota."
+                    ),
+                    placement_rule=(
+                        "Keep this light (RPE <= 5), never describe it as a conditioning build or progression, "
+                        "and never place it between two hard sparring collisions."
+                    ),
                     selection_priority=96 if has_downgraded_hard_days else 100,
                     legal_countdown_labels=legal_countdown_labels,
                 )
@@ -3683,7 +3733,7 @@ def _late_fight_summary(days_until_fight: Any) -> str:
         return (
             "Use a bridge compression week: taper-on-ramp rather than full camp. "
             "Keep at most one hard sparring exposure in D-21 to D-18, one meaningful strength touch, "
-            "one freshness/mobility reset, and only one short glycolytic touch in D-21 to D-19. "
+            "one freshness/mobility reset, and only one short glycolytic touch in D-21 to D-18. "
             "From D-17 onward, all declared hard sparring is technical/rhythm only. No stacked hard days. No double-stress days."
         )
     if mode == "pre_fight_compressed_payload":
@@ -4144,7 +4194,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "BRIDGE COMPRESSION WEEK (D-21 to D-14)\n"
             "Taper-on-ramp, not full camp. 5 blocks per session max.\n"
             "Meaningful stress cap: 3 per rolling 7 days. Hard sparring: 1 max in D-21 to D-18 only; from D-17 onward all declared hard sparring converts to technical/rhythm only.\n"
-            "Strength/power: 1 touch max. Glycolytic touch: at most 1 in D-21 to D-19, else 0.\n"
+            "Strength/power: 1 touch max. Glycolytic touch: at most 1 in D-21 to D-18, else 0.\n"
             "One freshness/mobility reset is mandatory. No stacked hard days. No double-stress day.\n\n"
             + _CONTRACT
         )
@@ -4152,7 +4202,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         return (
             "COMPRESSED PRE-FIGHT WEEK (D-13 to D-8)\n"
             "5 blocks per session max. No effective hard sparring; all declared hard sparring converts to technical/rhythm only. Strength/power: 1 touch max.\n"
-            "Fight-rhythm touch: 1 max — suppress entirely if sparring already owns the week.\n"
+            "Fight-rhythm touch: 1 max, rhythm/freshness only, RPE <= 5 - it cannot satisfy a hard conditioning, glycolytic, or combat-pressure quota. Suppress entirely if sparring already owns the week.\n"
             "One freshness, mobility, or reset session is mandatory.\n"
             "From D-10 to D-8, taper_micro_support may appear only as one optional add-on line (4-6 min max) - never as a standalone session or anchor.\n"
             "No SPP development framing, no conditioning-build language, no glycolytic stressor between spar days.\n\n"

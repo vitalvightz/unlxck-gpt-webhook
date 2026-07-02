@@ -1443,7 +1443,7 @@ def _glycolytic_fallback(phase: str) -> dict:
     }
 
 def _bridge_glycolytic_touch_fallback() -> dict:
-    """Low-dose bridge touch for D-21 to D-19 when bridge rules allow glycolytic.
+    """Low-dose bridge touch for D-21 to D-18 when bridge rules allow glycolytic.
 
     This is not a full fight-pace conditioning fallback. It is only a small
     rhythm / tempo exposure for clean late-bridge athletes.
