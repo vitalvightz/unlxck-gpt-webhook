@@ -2956,7 +2956,7 @@ def _late_fight_best_assignment(
         if is_low_cost_coexistable_filler(role):
             label_options.extend(
                 label
-                for label in occupied_labels
+                for label in sorted(occupied_labels)
                 if label not in label_options
             )
         for label in label_options:
