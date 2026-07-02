@@ -52,6 +52,19 @@ def _session(offset: int, role_key: str = "strength_touch_day") -> dict:
     }
 
 
+def _coach_session(offset: int, weekday: str = "tuesday") -> dict:
+    return {
+        "session_index": 1,
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "scheduled_day_hint": weekday,
+        "countdown_offset": offset,
+        "countdown_label": f"D-{offset}",
+        "scheduled_countdown_label": f"D-{offset}",
+        "coach_owned": True,
+    }
+
+
 def _insert_roles(sequence: list[dict]) -> list[dict]:
     return [role for role in sequence if role.get("category") == "support_insert"]
 
@@ -324,6 +337,26 @@ def test_hard_sparring_day_blocks_physical_inserts():
 
     assert insert is not None
     assert insert["role_key"] not in PHYSICAL_INSERTS
+
+
+def test_gap_fill_can_attach_tactical_watch_to_declared_coach_day():
+    sequence = apply_gap_fill_inserts(
+        [
+            _coach_session(9, "tuesday"),
+            _session(6, "fight_week_freshness_day"),
+            _session(1, "neural_primer_day"),
+        ],
+        _athlete(
+            days_until_fight=9,
+            plan_creation_weekday="tuesday",
+            hard_sparring_days=["tuesday", "friday"],
+        ),
+    )
+
+    d9_roles = [role for role in sequence if role.get("countdown_offset") == 9]
+    assert any(role["role_key"] == "hard_sparring_day" for role in d9_roles)
+    assert any(role["role_key"] == "tactical_watch" for role in d9_roles)
+    assert all(role["role_key"] not in PHYSICAL_INSERTS for role in d9_roles)
 
 
 def test_apply_gap_fill_inserts_is_wired_into_live_stage2_payload_path(monkeypatch):

@@ -7,9 +7,11 @@ from fightcamp.stage2_payload_late_fight import (
     _countdown_weekday_map,
     _classify_declared_hard_days_for_late_window,
     _is_app_owned_visible_role,
+    _late_fight_best_assignment,
     _late_fight_session_roles,
     _planned_sessions_per_week,
     _select_spaced_hard_days,
+    is_low_cost_coexistable_filler,
 )
 
 
@@ -793,6 +795,64 @@ def test_placement_context_downgraded_technical_touch_holds_declared_offset():
         },
     )
     assert sequence[0]["countdown_label"] == "D-5"
+
+
+def test_low_cost_filler_can_share_locked_coach_combat_label():
+    roles = [
+        {
+            "_candidate_id": 1,
+            "role_key": "hard_sparring_day",
+            "category": "sparring",
+            "locked_day": "tuesday",
+            "legal_countdown_labels": ["D-9"],
+        },
+        {
+            "_candidate_id": 2,
+            "role_key": "tactical_watch",
+            "category": "support_insert",
+            "stress_class": "support",
+            "cost_class": "low",
+            "legal_countdown_labels": ["D-9"],
+        },
+    ]
+    assignment = _late_fight_best_assignment(
+        roles,
+        ["D-9"],
+        {"D-9": "tuesday"},
+        hard_weekdays={"tuesday"},
+    )
+
+    assert assignment is not None
+    _, assigned = assignment
+    assert is_low_cost_coexistable_filler(assigned[1]) is True
+    assert [role["countdown_label"] for role in assigned] == ["D-9", "D-9"]
+
+
+def test_stressor_cannot_share_locked_coach_combat_label():
+    roles = [
+        {
+            "_candidate_id": 1,
+            "role_key": "hard_sparring_day",
+            "category": "sparring",
+            "locked_day": "tuesday",
+            "legal_countdown_labels": ["D-9"],
+        },
+        {
+            "_candidate_id": 2,
+            "role_key": "strength_touch_day",
+            "category": "strength",
+            "stress_class": "meaningful_stress",
+            "cost_class": "medium",
+            "legal_countdown_labels": ["D-9"],
+        },
+    ]
+
+    assert _late_fight_best_assignment(
+        roles,
+        ["D-9"],
+        {"D-9": "tuesday"},
+        hard_weekdays={"tuesday"},
+    ) is None
 
 
 def test_non_surviving_declared_hard_days_do_not_repel_neighbor_slots():

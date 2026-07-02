@@ -5,7 +5,7 @@ from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
 from .performance_bias import bridge_low_risk_profile
 
-from itertools import combinations, permutations
+from itertools import combinations
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -117,6 +117,28 @@ _LATE_FIGHT_ROLE_SELECTION_PRIORITY = {
     "fight_week_freshness_day": 104,
     "light_fight_pace_touch_day": 100,
     "technical_touch_day": -10,
+}
+
+_COEXISTABLE_FILLER_ROLE_KEYS = {
+    "tactical_watch",
+    "tactical_cue_card",
+    "self_review",
+    "neural_visualization",
+    "breathing_reset",
+    "recovery_reset",
+    "sleep_downshift",
+    "mobility_rehab",
+    "joint_prep",
+    "movement_quality",
+    "technical_shadow_rhythm",
+    "footwork_walkthrough",
+    "fight_week_freshness_day",
+}
+_DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = {
+    "strength_touch_day",
+    "neural_primer_day",
+    "alactic_sharpness_day",
+    "light_fight_pace_touch_day",
 }
 
 
@@ -2246,6 +2268,42 @@ def _is_app_owned_visible_role(role_key: Any) -> bool:
     return str(role_key or "").strip().lower() not in {"hard_sparring_day"}
 
 
+def is_low_cost_coexistable_filler(role: dict[str, Any]) -> bool:
+    """True for support fillers that can share a coach-owned combat day."""
+    if not isinstance(role, dict):
+        return False
+    role_key = str(role.get("role_key") or "").strip().lower()
+    if role_key in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
+        return False
+    if role_key in _COEXISTABLE_FILLER_ROLE_KEYS:
+        return True
+
+    category = str(role.get("category") or "").strip().lower()
+    stress_class = str(role.get("stress_class") or "").strip().lower()
+    cost_class = str(role.get("cost_class") or "").strip().lower()
+    governance = role.get("governance") if isinstance(role.get("governance"), dict) else {}
+    non_stressor = (
+        stress_class == "support"
+        or governance.get("meaningful_stress") is False
+        or bool(role.get("execution_only"))
+        or bool(role.get("nonphysical"))
+        or bool(role.get("recovery_compatible"))
+    )
+    low_cost = cost_class in {"", "low", "zero"} or bool(role.get("low_cost"))
+    support_category = category in {
+        "support",
+        "support_insert",
+        "tactical",
+        "mental",
+        "mindset",
+        "recovery",
+        "mobility",
+        "movement_quality",
+        "technical",
+    }
+    return bool(non_stressor and low_cost and support_category)
+
+
 def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Filter post-placement sessions to the app-owned roles only."""
     return [
@@ -2877,16 +2935,42 @@ def _late_fight_best_assignment(
             unlocked_roles.append(role)
 
     open_labels = [label for label in legal_countdown_labels if label not in occupied_labels]
-    if len(unlocked_roles) > len(open_labels):
-        return None
 
     best_score: int | None = None
     best_roles: list[dict[str, Any]] | None = None
 
-    for label_perm in permutations(open_labels, len(unlocked_roles)):
-        assigned_labels = dict(locked_labels)
-        for index, role in enumerate(unlocked_roles):
-            assigned_labels[int(role.get("_candidate_id") or 0)] = label_perm[index]
+    assignments: list[dict[int, str]] = []
+
+    def _search_labels(index: int, assigned_labels: dict[int, str], used_unlocked: set[str]) -> None:
+        if index >= len(unlocked_roles):
+            assignments.append(dict(assigned_labels))
+            return
+        role = unlocked_roles[index]
+        candidate_id = int(role.get("_candidate_id") or 0)
+        label_options = _prefer_non_hard_weekday_labels(
+            list(open_labels),
+            role,
+            label_to_weekday,
+            hard_weekdays,
+        )
+        if is_low_cost_coexistable_filler(role):
+            label_options.extend(
+                label
+                for label in occupied_labels
+                if label not in label_options
+            )
+        for label in label_options:
+            if label in used_unlocked:
+                continue
+            if label in occupied_labels and not is_low_cost_coexistable_filler(role):
+                continue
+            assigned_labels[candidate_id] = label
+            _search_labels(index + 1, assigned_labels, used_unlocked | {label})
+            assigned_labels.pop(candidate_id, None)
+
+    _search_labels(0, dict(locked_labels), set())
+
+    for assigned_labels in assignments:
 
         scored_roles: list[dict[str, Any]] = []
         for role in selected_roles:
@@ -2931,9 +3015,12 @@ def _late_fight_best_assignment(
         score = _late_fight_assignment_score(scored_roles, legal_countdown_labels, label_to_weekday)
         if hard_weekdays:
             # Coach-owned combat lock: keep programmed S&C off declared spar
-            # weekdays whenever any other legal day can host it.
+            # weekdays whenever any other legal day can host it. Low-cost
+            # fillers are allowed to attach under the coach-owned combat day.
             for scored_role in scored_roles:
                 if not _is_app_owned_visible_role(scored_role.get("role_key")):
+                    continue
+                if is_low_cost_coexistable_filler(scored_role):
                     continue
                 assigned_weekday = str(scored_role.get("real_weekday") or "").strip().lower()
                 if assigned_weekday in hard_weekdays:
@@ -3241,6 +3328,24 @@ def _role_has_non_hard_weekday_option(
     )
 
 
+def _prefer_non_hard_weekday_labels(
+    labels: list[str],
+    role: dict[str, Any],
+    label_to_weekday: dict[str, str],
+    hard_weekdays: set[str] | None,
+) -> list[str]:
+    if not hard_weekdays or not _is_app_owned_visible_role(role.get("role_key")):
+        return labels
+    if is_low_cost_coexistable_filler(role):
+        return labels
+    non_hard_labels = [
+        label
+        for label in labels
+        if str(label_to_weekday.get(label) or "").strip().lower() not in hard_weekdays
+    ]
+    return non_hard_labels or labels
+
+
 def _assign_role_to_countdown_label(
     role: dict[str, Any],
     label: str,
@@ -3373,11 +3478,15 @@ def _score_composite_practical_assignment(
         if original_offset is not None:
             score -= abs(offset - original_offset) * 8
         if _is_app_owned_visible_role(role.get("role_key")):
-            # Declared spar weekdays are coach-owned combat days: keep every
-            # programmed session (meaningful or support) off them whenever the
-            # role has any other legal day.
+            # Declared spar weekdays are coach-owned combat days. Keep app-owned
+            # stressors off them, but allow low-cost fillers to attach under the
+            # coach-owned combat role.
             weekday = str(label_to_weekday.get(str(role.get("scheduled_countdown_label") or "")) or "").strip().lower()
-            if weekday in hard_weekdays and _role_has_non_hard_weekday_option(role, label_to_weekday, hard_weekdays):
+            if (
+                not is_low_cost_coexistable_filler(role)
+                and weekday in hard_weekdays
+                and _role_has_non_hard_weekday_option(role, label_to_weekday, hard_weekdays)
+            ):
                 score -= 8000
 
     ordered_visible = sorted(visible_roles, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
@@ -3525,6 +3634,12 @@ def _space_bridge_countdown_roles(
             label_to_weekday=label_to_weekday,
             training_days=training_days,
         )
+        labels = _prefer_non_hard_weekday_labels(
+            labels,
+            role,
+            label_to_weekday,
+            hard_weekdays,
+        )
         if not labels:
             if role_is_visible:
                 return
@@ -3541,7 +3656,27 @@ def _space_bridge_countdown_roles(
             return
 
         for label in labels:
-            if label in occupied_labels:
+            if label in occupied_labels and not (
+                is_low_cost_coexistable_filler(role)
+                and any(
+                    str(assigned_role.get("role_key") or "") == "hard_sparring_day"
+                    and str(
+                        assigned_role.get("scheduled_countdown_label")
+                        or assigned_role.get("countdown_label")
+                        or ""
+                    ) == label
+                    for assigned_role in assigned
+                )
+                and not any(
+                    _is_app_owned_visible_role(assigned_role.get("role_key"))
+                    and str(
+                        assigned_role.get("scheduled_countdown_label")
+                        or assigned_role.get("countdown_label")
+                        or ""
+                    ) == label
+                    for assigned_role in assigned
+                )
+            ):
                 continue
             assigned_role = _assign_role_to_countdown_label(
                 role,
