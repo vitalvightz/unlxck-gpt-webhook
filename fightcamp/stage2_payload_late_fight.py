@@ -132,13 +132,17 @@ _COEXISTABLE_FILLER_ROLE_KEYS = {
     "movement_quality",
     "technical_shadow_rhythm",
     "footwork_walkthrough",
-    "fight_week_freshness_day",
 }
 _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = {
     "strength_touch_day",
     "neural_primer_day",
     "alactic_sharpness_day",
     "light_fight_pace_touch_day",
+}
+_DAY_SLOT_SESSION_ROLE_KEYS = _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS | {
+    "hard_sparring_day",
+    "technical_touch_day",
+    "fight_week_freshness_day",
 }
 
 
@@ -2269,11 +2273,11 @@ def _is_app_owned_visible_role(role_key: Any) -> bool:
 
 
 def is_low_cost_coexistable_filler(role: dict[str, Any]) -> bool:
-    """True for support fillers that can share a coach-owned combat day."""
+    """True for support fillers that behave as same-day add-ons."""
     if not isinstance(role, dict):
         return False
     role_key = str(role.get("role_key") or "").strip().lower()
-    if role_key in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
+    if role_key in _DAY_SLOT_SESSION_ROLE_KEYS:
         return False
     if role_key in _COEXISTABLE_FILLER_ROLE_KEYS:
         return True
@@ -2302,6 +2306,10 @@ def is_low_cost_coexistable_filler(role: dict[str, Any]) -> bool:
         "technical",
     }
     return bool(non_stressor and low_cost and support_category)
+
+
+def _role_consumes_day_slot(role: dict[str, Any]) -> bool:
+    return not is_low_cost_coexistable_filler(role)
 
 
 def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -2794,11 +2802,21 @@ def _late_fight_active_role_count(roles: list[dict[str, Any]]) -> int:
     cap of 2 and the allocator drops *every* role, leaving that window empty and
     making the visible plan start at D-13 instead of D-21.
     """
-    return sum(1 for role in roles if _is_app_owned_visible_role(role.get("role_key")))
+    return sum(
+        1
+        for role in roles
+        if _is_app_owned_visible_role(role.get("role_key"))
+        and _role_consumes_day_slot(role)
+    )
 
 
 def _late_fight_support_role_count(roles: list[dict[str, Any]]) -> int:
-    return sum(1 for role in roles if role.get("stress_class") == "support")
+    return sum(
+        1
+        for role in roles
+        if role.get("stress_class") == "support"
+        and _role_consumes_day_slot(role)
+    )
 
 
 def _late_fight_locked_label(role: dict[str, Any], label_to_weekday: dict[str, str]) -> str | None:
@@ -2885,7 +2903,8 @@ def _late_fight_assignment_score(
             if actual_day and actual_day == preferred_day:
                 score += 80
 
-    for first_role, second_role in zip(ordered_roles, ordered_roles[1:]):
+    day_slot_roles = [role for role in ordered_roles if _role_consumes_day_slot(role)]
+    for first_role, second_role in zip(day_slot_roles, day_slot_roles[1:]):
         first_offset = _countdown_offset(first_role.get("scheduled_countdown_label", "")) or 0
         second_offset = _countdown_offset(second_role.get("scheduled_countdown_label", "")) or 0
         gap = first_offset - second_offset
@@ -2927,14 +2946,15 @@ def _late_fight_best_assignment(
         locked_label = _late_fight_locked_label(role, label_to_weekday)
         candidate_id = int(role.get("_candidate_id") or 0)
         if role.get("locked_day") and label_to_weekday:
-            if not locked_label or locked_label in occupied_labels:
+            if not locked_label:
                 return None
             locked_labels[candidate_id] = locked_label
-            occupied_labels.add(locked_label)
+            if _role_consumes_day_slot(role):
+                if locked_label in occupied_labels:
+                    return None
+                occupied_labels.add(locked_label)
         else:
             unlocked_roles.append(role)
-
-    open_labels = [label for label in legal_countdown_labels if label not in occupied_labels]
 
     best_score: int | None = None
     best_roles: list[dict[str, Any]] | None = None
@@ -2947,25 +2967,26 @@ def _late_fight_best_assignment(
             return
         role = unlocked_roles[index]
         candidate_id = int(role.get("_candidate_id") or 0)
+        role_consumes_day_slot = _role_consumes_day_slot(role)
+        base_labels = [
+            label
+            for label in legal_countdown_labels
+            if not role_consumes_day_slot or label not in occupied_labels
+        ]
         label_options = _prefer_non_hard_weekday_labels(
-            list(open_labels),
+            base_labels,
             role,
             label_to_weekday,
             hard_weekdays,
         )
-        if is_low_cost_coexistable_filler(role):
-            label_options.extend(
-                label
-                for label in sorted(occupied_labels)
-                if label not in label_options
-            )
         for label in label_options:
-            if label in used_unlocked:
+            if role_consumes_day_slot and label in used_unlocked:
                 continue
-            if label in occupied_labels and not is_low_cost_coexistable_filler(role):
+            if role_consumes_day_slot and label in occupied_labels:
                 continue
             assigned_labels[candidate_id] = label
-            _search_labels(index + 1, assigned_labels, used_unlocked | {label})
+            next_used_unlocked = used_unlocked | {label} if role_consumes_day_slot else used_unlocked
+            _search_labels(index + 1, assigned_labels, next_used_unlocked)
             assigned_labels.pop(candidate_id, None)
 
     _search_labels(0, dict(locked_labels), set())
@@ -3020,7 +3041,7 @@ def _late_fight_best_assignment(
             for scored_role in scored_roles:
                 if not _is_app_owned_visible_role(scored_role.get("role_key")):
                     continue
-                if is_low_cost_coexistable_filler(scored_role):
+                if str(scored_role.get("role_key") or "").strip().lower() not in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
                     continue
                 assigned_weekday = str(scored_role.get("real_weekday") or "").strip().lower()
                 if assigned_weekday in hard_weekdays:
@@ -3336,6 +3357,8 @@ def _prefer_non_hard_weekday_labels(
 ) -> list[str]:
     if not hard_weekdays or not _is_app_owned_visible_role(role.get("role_key")):
         return labels
+    if str(role.get("role_key") or "").strip().lower() not in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
+        return labels
     if is_low_cost_coexistable_filler(role):
         return labels
     non_hard_labels = [
@@ -3460,6 +3483,7 @@ def _score_composite_practical_assignment(
         for role in assigned_roles
         if _is_app_owned_visible_role(role.get("role_key"))
         and isinstance(role.get("countdown_offset"), int)
+        and _role_consumes_day_slot(role)
     ]
     for role in assigned_roles:
         offset = int(role.get("countdown_offset") or 0)
@@ -3483,7 +3507,7 @@ def _score_composite_practical_assignment(
             # coach-owned combat role.
             weekday = str(label_to_weekday.get(str(role.get("scheduled_countdown_label") or "")) or "").strip().lower()
             if (
-                not is_low_cost_coexistable_filler(role)
+                str(role.get("role_key") or "").strip().lower() in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS
                 and weekday in hard_weekdays
                 and _role_has_non_hard_weekday_option(role, label_to_weekday, hard_weekdays)
             ):
@@ -3656,27 +3680,8 @@ def _space_bridge_countdown_roles(
             return
 
         for label in labels:
-            if label in occupied_labels and not (
-                is_low_cost_coexistable_filler(role)
-                and any(
-                    str(assigned_role.get("role_key") or "") == "hard_sparring_day"
-                    and str(
-                        assigned_role.get("scheduled_countdown_label")
-                        or assigned_role.get("countdown_label")
-                        or ""
-                    ) == label
-                    for assigned_role in assigned
-                )
-                and not any(
-                    _is_app_owned_visible_role(assigned_role.get("role_key"))
-                    and str(
-                        assigned_role.get("scheduled_countdown_label")
-                        or assigned_role.get("countdown_label")
-                        or ""
-                    ) == label
-                    for assigned_role in assigned
-                )
-            ):
+            role_consumes_day_slot = _role_consumes_day_slot(role)
+            if role_consumes_day_slot and label in occupied_labels:
                 continue
             assigned_role = _assign_role_to_countdown_label(
                 role,
@@ -3687,11 +3692,11 @@ def _space_bridge_countdown_roles(
             )
             _search(
                 index + 1,
-                occupied_labels | {label},
+                occupied_labels | ({label} if role_consumes_day_slot else set()),
                 assigned + [assigned_role],
-                visible_active_count + (1 if role_is_visible else 0),
+                visible_active_count + (1 if role_is_visible and role_consumes_day_slot else 0),
                 visible_meaningful_count + (1 if role_is_visible and role_is_meaningful else 0),
-                visible_support_count + (1 if role_is_visible and role_is_support else 0),
+                visible_support_count + (1 if role_is_visible and role_is_support and role_consumes_day_slot else 0),
                 hard_spar_count + (1 if role_is_hard_spar else 0),
                 next_role_key_counts,
             )
@@ -3765,10 +3770,10 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
     role_budget = {
         "mode": mode,
         "composite_practical_allocation": True,
-        "max_active_roles": len(visible_roles),
+        "max_active_roles": _late_fight_active_role_count(visible_roles),
         "max_meaningful_stress_exposures": top_level_budget.get("max_meaningful_stress_exposures"),
         "max_support_roles": top_level_budget.get("max_support_roles"),
-        "selected_active_roles": len(public_roles),
+        "selected_active_roles": _late_fight_active_role_count(public_roles),
         "selected_visible_roles": len(visible_roles),
         "selected_meaningful_stress_exposures": _late_fight_meaningful_stress_count(public_roles),
         "selected_support_roles": _late_fight_support_role_count(public_roles),

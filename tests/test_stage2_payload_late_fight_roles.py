@@ -7,10 +7,13 @@ from fightcamp.stage2_payload_late_fight import (
     _countdown_weekday_map,
     _classify_declared_hard_days_for_late_window,
     _is_app_owned_visible_role,
+    _late_fight_active_role_count,
     _late_fight_best_assignment,
     _late_fight_session_roles,
+    _late_fight_support_role_count,
     _planned_sessions_per_week,
     _select_spaced_hard_days,
+    _space_bridge_countdown_roles,
     is_low_cost_coexistable_filler,
 )
 
@@ -828,6 +831,74 @@ def test_low_cost_filler_can_share_locked_coach_combat_label():
     assert [role["countdown_label"] for role in assigned] == ["D-9", "D-9"]
 
 
+def test_low_cost_filler_can_share_technical_touch_label():
+    roles = [
+        {
+            "_candidate_id": 1,
+            "role_key": "technical_touch_day",
+            "category": "technical",
+            "stress_class": "support",
+            "cost_class": "low",
+            "legal_countdown_labels": ["D-9"],
+        },
+        {
+            "_candidate_id": 2,
+            "role_key": "tactical_watch",
+            "category": "support_insert",
+            "stress_class": "support",
+            "cost_class": "low",
+            "legal_countdown_labels": ["D-9"],
+            "governance": {"meaningful_stress": False},
+        },
+    ]
+
+    assignment = _late_fight_best_assignment(
+        roles,
+        ["D-9"],
+        {"D-9": "tuesday"},
+    )
+
+    assert assignment is not None
+    _, assigned = assignment
+    assert is_low_cost_coexistable_filler(assigned[0]) is False
+    assert is_low_cost_coexistable_filler(assigned[1]) is True
+    assert [role["countdown_label"] for role in assigned] == ["D-9", "D-9"]
+
+
+def test_multiple_low_cost_fillers_can_share_countdown_label():
+    roles = [
+        {
+            "_candidate_id": 1,
+            "role_key": "tactical_watch",
+            "category": "support_insert",
+            "stress_class": "support",
+            "cost_class": "low",
+            "legal_countdown_labels": ["D-9"],
+            "governance": {"meaningful_stress": False},
+        },
+        {
+            "_candidate_id": 2,
+            "role_key": "tactical_cue_card",
+            "category": "support_insert",
+            "stress_class": "support",
+            "cost_class": "low",
+            "legal_countdown_labels": ["D-9"],
+            "governance": {"meaningful_stress": False},
+        },
+    ]
+
+    assignment = _late_fight_best_assignment(
+        roles,
+        ["D-9"],
+        {"D-9": "tuesday"},
+    )
+
+    assert assignment is not None
+    _, assigned = assignment
+    assert all(is_low_cost_coexistable_filler(role) for role in assigned)
+    assert [role["countdown_label"] for role in assigned] == ["D-9", "D-9"]
+
+
 def test_stressor_cannot_share_locked_coach_combat_label():
     roles = [
         {
@@ -853,6 +924,111 @@ def test_stressor_cannot_share_locked_coach_combat_label():
         {"D-9": "tuesday"},
         hard_weekdays={"tuesday"},
     ) is None
+
+
+def test_low_cost_filler_does_not_consume_active_or_support_budget():
+    roles = [
+        {
+            "role_key": "technical_touch_day",
+            "category": "technical",
+            "stress_class": "support",
+            "cost_class": "low",
+        },
+        {
+            "role_key": "tactical_watch",
+            "category": "support_insert",
+            "stress_class": "support",
+            "cost_class": "low",
+            "governance": {"meaningful_stress": False},
+        },
+    ]
+
+    assert _late_fight_active_role_count(roles) == 1
+    assert _late_fight_support_role_count(roles) == 1
+
+
+def test_composite_search_keeps_technical_session_when_filler_shares_label():
+    roles = [
+        {
+            "role_key": "technical_touch_day",
+            "category": "technical",
+            "stress_class": "support",
+            "cost_class": "low",
+            "countdown_offset": 9,
+            "countdown_label": "D-9",
+            "scheduled_countdown_label": "D-9",
+            "legal_countdown_labels": ["D-9"],
+            "selection_priority": 90,
+            "composite_segment_index": 1,
+            "composite_segment_stage_key": "d8_to_d2",
+        },
+        {
+            "role_key": "tactical_watch",
+            "category": "support_insert",
+            "stress_class": "support",
+            "cost_class": "low",
+            "countdown_offset": 9,
+            "countdown_label": "D-9",
+            "scheduled_countdown_label": "D-9",
+            "legal_countdown_labels": ["D-9"],
+            "selection_priority": 10,
+            "composite_segment_index": 1,
+            "composite_segment_stage_key": "d8_to_d2",
+            "governance": {"meaningful_stress": False},
+        },
+    ]
+
+    sequence = _space_bridge_countdown_roles(
+        roles,
+        days_until_fight=13,
+        athlete_model=_athlete(13, hard_sparring_days=[]),
+    )
+
+    roles_by_key = {role["role_key"]: role for role in sequence}
+    assert {"technical_touch_day", "tactical_watch"} <= set(roles_by_key)
+    assert roles_by_key["technical_touch_day"]["countdown_label"] == "D-9"
+    assert roles_by_key["tactical_watch"]["countdown_label"] == "D-9"
+
+
+def test_low_cost_filler_does_not_cause_meaningful_role_to_drop():
+    roles = [
+        {
+            "role_key": "strength_touch_day",
+            "category": "strength",
+            "stress_class": "meaningful_stress",
+            "cost_class": "medium",
+            "countdown_offset": 9,
+            "countdown_label": "D-9",
+            "scheduled_countdown_label": "D-9",
+            "legal_countdown_labels": ["D-9"],
+            "selection_priority": 100,
+            "composite_segment_index": 1,
+            "composite_segment_stage_key": "d8_to_d2",
+        },
+        {
+            "role_key": "tactical_watch",
+            "category": "support_insert",
+            "stress_class": "support",
+            "cost_class": "low",
+            "countdown_offset": 9,
+            "countdown_label": "D-9",
+            "scheduled_countdown_label": "D-9",
+            "legal_countdown_labels": ["D-9"],
+            "selection_priority": 10,
+            "composite_segment_index": 1,
+            "composite_segment_stage_key": "d8_to_d2",
+            "governance": {"meaningful_stress": False},
+        },
+    ]
+
+    sequence = _space_bridge_countdown_roles(
+        roles,
+        days_until_fight=13,
+        athlete_model=_athlete(13, hard_sparring_days=[]),
+    )
+
+    assert [role["role_key"] for role in sequence] == ["strength_touch_day", "tactical_watch"]
+    assert {role["countdown_label"] for role in sequence} == {"D-9"}
 
 
 def test_non_surviving_declared_hard_days_do_not_repel_neighbor_slots():
