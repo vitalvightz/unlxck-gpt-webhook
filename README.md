@@ -269,6 +269,13 @@ required; CI uses public placeholder env values.
 - **Paid tier (>=1GB) setup** — deploy two services:
   - Web/API service start command: `uvicorn api.app:app --host 0.0.0.0 --port $PORT --workers 2`
   - Worker service start command: `python -m api.worker`
+- **`UNLXCK_DISABLE_SPACY=1`** (web service only): skip loading spaCy +
+  `en_core_web_sm` in that process and use the regex fallback for injury text.
+  The web tier only parses injuries for display (advisories, plan cards), so
+  this trades slightly less precise display parsing for ~95MB of RSS — set it
+  on any web service running in 512MB. Never set it on the worker service:
+  the planner's authoritative injury parsing (exercise exclusion) should keep
+  the full spaCy pipeline.
 - `UNLXCK_ENABLE_IN_PROCESS_GENERATION` controls generation execution mode:
   - `1`: API can schedule in-process generation (legacy compatibility mode).
   - `0` (default): durable worker-only mode. API only creates generation jobs, worker processes queued jobs.
