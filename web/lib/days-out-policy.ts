@@ -45,11 +45,12 @@ export function isFightDateInPast(
 ): boolean {
   if (!fightDate) return false;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fightDate)) return false;
-  const parsed = new Date(fightDate + "T00:00:00");
-  if (Number.isNaN(parsed.getTime())) return false;
+  const [year, month, day] = fightDate.split("-").map(Number);
+  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(parsedDate.getTime())) return false;
   const now = nowInput ? new Date(nowInput) : new Date();
-  now.setHours(0, 0, 0, 0);
-  return parsed.getTime() < now.getTime();
+  const nowDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  return parsedDate.getTime() < nowDate.getTime();
 }
 
 const KEY_GOAL_BLOCK_REASONS: Record<string, string> = {
