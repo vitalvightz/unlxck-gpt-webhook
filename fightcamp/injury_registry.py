@@ -63,7 +63,7 @@ _SURFACE_TRAIN_THROUGH_RED_FLAG_MARKERS = (
 )
 
 
-def is_stable_train_through_surface_injury(injury: dict | None) -> bool:
+def is_stable_surface_only_injury(injury: dict | None) -> bool:
     """True for a stable surface (skin) injury that should train through.
 
     ANY surface/skin injury — graze, abrasion, blister, cut, or laceration — is
@@ -99,6 +99,11 @@ def is_stable_train_through_surface_injury(injury: dict | None) -> bool:
     return True
 
 
+def is_stable_train_through_surface_injury(injury: dict | None) -> bool:
+    """Backward-compatible alias for stable surface-only injury handling."""
+    return is_stable_surface_only_injury(injury)
+
+
 def all_stable_train_through_surface(parsed_injuries) -> bool:
     """True when there is ≥1 parsed injury and every one is a stable, train-through
     surface (skin) injury.
@@ -115,7 +120,7 @@ def all_stable_train_through_surface(parsed_injuries) -> bool:
         return False
     if not items or not all(isinstance(item, dict) for item in items):
         return False
-    return all(is_stable_train_through_surface_injury(item) for item in items)
+    return all(is_stable_surface_only_injury(item) for item in items)
 
 
 def is_known_injury_type(injury_type: str | None) -> bool:

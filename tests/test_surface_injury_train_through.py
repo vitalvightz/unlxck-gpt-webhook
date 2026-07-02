@@ -15,10 +15,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.injury_registry import (
     SURFACE_MINOR_TRAIN_THROUGH_NOTE,
+    is_stable_surface_only_injury,
     is_stable_train_through_surface_injury,
 )
 from fightcamp.injury_guard import injury_decision
@@ -41,6 +44,36 @@ GRAZE = {
     "severity": "moderate",
     "flags": [],
 }
+
+
+def _surface_injury(
+    injury_type: str,
+    location: str,
+    *,
+    severity: str = "moderate",
+    flags: list[str] | None = None,
+    raw: str | None = None,
+) -> dict:
+    return {
+        "injury_type": injury_type,
+        "rehab_type": injury_type,
+        "canonical_location": location,
+        "location": location.replace("_", " "),
+        "display_location": location.replace("_", " "),
+        "severity": severity,
+        "flags": list(flags or []),
+        "original_phrase": raw or f"{severity} stable {location.replace('_', ' ')} {injury_type}",
+    }
+
+
+def _surface_athlete(raw: str, entry: dict, **overrides):
+    athlete = _graze_athlete(
+        injuries=[raw],
+        parsed_injuries=[dict(entry)],
+        readiness_flags=["injury_management"],
+    )
+    athlete.update(overrides)
+    return athlete
 
 
 def _graze_athlete(**overrides):
@@ -102,6 +135,7 @@ def test_predicate_flags_stable_surface_and_spares_danger_cases():
     # Every surface/skin type trains through when stable (not high severity, no
     # red flag) — cut and laceration included: skin is skin, not tissue.
     assert is_stable_train_through_surface_injury(GRAZE) is True
+    assert is_stable_surface_only_injury(GRAZE) is True
     assert is_stable_train_through_surface_injury(
         {"injury_type": "abrasion", "severity": "low"}
     ) is True
@@ -130,6 +164,186 @@ def test_predicate_rejects_string_and_malformed_red_flag_inputs():
     assert not is_stable_train_through_surface_injury(
         {"injury_type": "graze", "severity": "moderate", "flags": 1}
     )
+
+
+def test_surface_only_gate_runs_before_location_based_gap_fill_support():
+    from fightcamp.gap_fill_inserts import (
+        _allowed_inserts,
+        _has_lower_leg_load_risk,
+        classify_injury_state,
+        select_gap_fill_insert,
+    )
+    from fightcamp.stage2_render_guards import _all_active_injuries_surface_only
+
+    entry = _surface_injury("abrasion", "shin", raw="moderate stable shin scrape")
+    athlete = _surface_athlete("moderate stable shin scrape", entry)
+
+    assert _all_active_injuries_surface_only(athlete) is True
+    assert classify_injury_state(athlete) == "none"
+    assert _has_lower_leg_load_risk(athlete) is False
+
+    allowed = _allowed_inserts(athlete, 12)
+    assert "mobility_rehab" not in allowed
+
+    insert = select_gap_fill_insert(athlete, 12)
+    assert insert is not None
+    assert insert["role_key"] not in {"mobility_rehab", "joint_prep"}
+
+
+def test_stable_lower_back_abrasion_surface_guidance_only():
+    from fightcamp.gap_fill_inserts import select_gap_fill_insert
+
+    entry = _surface_injury("abrasion", "lower_back", raw="moderate stable lower-back abrasion")
+    block, _ = generate_rehab_protocols(
+        injury_string="moderate stable lower-back abrasion",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[entry],
+    )
+
+    lowered = block.lower()
+    assert SURFACE_MINOR_TRAIN_THROUGH_NOTE in block
+    assert "covered" in lowered
+    assert "clean" in lowered
+    assert "friction" in lowered
+    for banned in (
+        "cat-cow",
+        "cat cow",
+        "deadbug",
+        "dead bug",
+        "heel slide",
+        "hip hinge",
+        "glute activation",
+        "lumbar",
+        "trunk-control",
+        "trunk control",
+        "mobility reset",
+        "[function:",
+    ):
+        assert banned not in lowered, banned
+
+    insert = select_gap_fill_insert(
+        _surface_athlete("moderate stable lower-back abrasion", entry),
+        12,
+    )
+    assert insert is not None
+    assert insert["role_key"] != "mobility_rehab"
+
+
+@pytest.mark.parametrize(
+    ("raw", "entry", "banned_terms"),
+    [
+        (
+            "moderate stable knee graze",
+            _surface_injury("graze", "knee", raw="moderate stable knee graze"),
+            ("spanish squat", "step-down", "terminal knee", "quad set", "knee rehab", "knee prehab"),
+        ),
+        (
+            "moderate stable shoulder blister",
+            _surface_injury("blister", "shoulder", raw="moderate stable shoulder blister"),
+            ("rotator", "scap", "wall slide", "shoulder rehab", "shoulder prehab"),
+        ),
+        (
+            "moderate stable forearm scrape",
+            _surface_injury("abrasion", "forearm", raw="moderate stable forearm scrape"),
+            ("wrist", "forearm mobility", "forearm prehab", "grip reset", "pronation"),
+        ),
+    ],
+)
+def test_stable_surface_locations_do_not_create_anatomical_rehab_prehab_or_mobility(
+    raw: str,
+    entry: dict,
+    banned_terms: tuple[str, ...],
+):
+    from fightcamp.gap_fill_inserts import select_gap_fill_insert
+
+    block, _ = generate_rehab_protocols(
+        injury_string=raw,
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[entry],
+    )
+
+    lowered = block.lower()
+    assert SURFACE_MINOR_TRAIN_THROUGH_NOTE in block
+    assert "[function:" not in lowered
+    assert "mobility reset" not in lowered
+    assert "prehab" not in lowered
+    for term in banned_terms:
+        assert term not in lowered, term
+
+    insert = select_gap_fill_insert(_surface_athlete(raw, entry), 12)
+    assert insert is not None
+    assert insert["role_key"] != "mobility_rehab"
+
+
+def test_stable_shin_scrape_does_not_create_ankle_calf_loading_restrictions():
+    from fightcamp.gap_fill_inserts import (
+        _has_lower_leg_load_risk,
+        _safe_conditioning_maintenance_inserts,
+        classify_injury_state,
+    )
+
+    entry = _surface_injury("abrasion", "shin", raw="moderate stable shin scrape")
+    athlete = _surface_athlete(
+        "moderate stable shin scrape",
+        entry,
+        key_goals=["conditioning"],
+        weaknesses=["gas_tank"],
+        fatigue="low",
+        fatigue_level="low",
+    )
+
+    injury_state = classify_injury_state(athlete)
+    assert injury_state == "none"
+    assert _has_lower_leg_load_risk(athlete) is False
+    safe = _safe_conditioning_maintenance_inserts(
+        athlete,
+        12,
+        injury_state,
+        on_hard_sparring_day=False,
+    )
+    assert "aerobic_skip_flush" in safe
+
+
+def test_stable_surface_only_moderate_does_not_block_hard_conditioning():
+    role_map = _build_weekly_role_map(
+        _graze_athlete(
+            injuries=["moderate stable shoulder blister"],
+            parsed_injuries=[_surface_injury("blister", "shoulder", raw="moderate stable shoulder blister")],
+        ),
+        _progression(["GPP", "GPP", "SPP", "TAPER"], conditioning=1),
+        LIMITER,
+    )
+    week = _week(role_map, 1)
+    assert week["combat_pressure_floor"]["active"] is True
+    assert _floor_role(week) is not None
+
+
+def test_red_flag_surface_injury_still_keeps_review_safety_path():
+    from fightcamp.gap_fill_inserts import classify_injury_state
+
+    infected = _surface_injury(
+        "cut",
+        "shin",
+        flags=["suspected_infection"],
+        raw="infected cut on shin",
+    )
+    athlete = _surface_athlete("infected cut on shin", infected)
+
+    assert not is_stable_surface_only_injury(infected)
+    assert classify_injury_state(athlete) == "moderate_plus"
+
+    decision = injury_decision(
+        {"name": "Jog", "tags": ["low_impact"]},
+        ["infected cut on shin"],
+        "GPP",
+        "low",
+    )
+    reason = decision.reason if isinstance(decision.reason, dict) else {}
+    assert decision.action == "modify"
+    assert reason.get("bucket") == "surface_red_flag"
+    assert "manual_review" in (decision.mods or [])
 
 
 # ---------------------------------------------------------------------------
