@@ -39,6 +39,7 @@ from .structured_plan_models import (
     PlanNoteCategory,
     PlanStatus,
     PlanType,
+    EffortMethod,
     ReadinessStatus,
     RedFlagWhen,
     RiskLevel,
@@ -241,6 +242,7 @@ _COMPLETION_VALUES = frozenset(get_args(CompletionStatus))
 _BLOCK_TYPE_VALUES = frozenset(get_args(BlockType))
 _RISK_LEVEL_VALUES = frozenset(get_args(RiskLevel))
 _PLAN_NOTE_CATEGORY_VALUES = frozenset(get_args(PlanNoteCategory))
+_EFFORT_METHOD_VALUES = frozenset(get_args(EffortMethod))
 
 # Conservative enum aliases for the most common loose values.
 _SESSION_TYPE_ALIASES = {
@@ -256,6 +258,12 @@ _SESSION_TYPE_ALIASES = {
     "rest": "recovery",
     "warmup": "primer",
     "warm-up": "primer",
+}
+_EFFORT_METHOD_ALIASES = {
+    "rpe": "RPE",
+    "rir": "RIR",
+    "hr_zone": "heart_rate_zone",
+    "heart_rate": "heart_rate_zone",
 }
 _BLOCK_TYPE_ALIASES = {
     "warmup": "preparation",
@@ -576,6 +584,38 @@ def _normalize_mindset(value: Any) -> dict[str, Any]:
     return out
 
 
+def _normalize_effort(value: Any) -> dict[str, Any] | None:
+    """Effort as an ``EffortPrescription`` dict; tolerate a bare "RPE 7-8" string.
+
+    A dict keeps its value (the schema allows float or str) and only has its
+    method aliased onto the enum. A bare string or number becomes an RPE/RIR
+    prescription when a number can be read from it; anything unreadable becomes
+    None (the field is optional) instead of failing the card.
+    """
+    if isinstance(value, dict):
+        out = dict(value)
+        out["method"] = _enum(out.get("method"), _EFFORT_METHOD_VALUES, "RPE", _EFFORT_METHOD_ALIASES)
+        if not isinstance(out.get("value"), (int, float, str)) or isinstance(out.get("value"), bool):
+            number = _coerce_float(out.get("value"))
+            if number is None:
+                return None
+            out["value"] = number
+        if out.get("scale") is not None:
+            out["scale"] = _coerce_str(out.get("scale")).strip() or None
+        return out
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return {"method": "RPE", "value": float(value), "scale": "1-10"}
+    if isinstance(value, str):
+        number = _coerce_float(value)
+        if number is None:
+            return None
+        method = "RIR" if re.search(r"\brir\b", value, re.I) else "RPE"
+        return {"method": method, "value": number, "scale": "1-10" if method == "RPE" else None}
+    return None
+
+
 def _normalize_block(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["block_id"] = _coerce_nonempty_str(out.get("block_id"), "block")
@@ -593,10 +633,16 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     ):
         if measured_key in out:
             out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
-    # Carry coaching detail through, tolerating a single string instead of a list.
+    # Carry coaching detail through, tolerating a single string instead of a
+    # list. An explicit null must also become [] — the schema fields are
+    # non-optional lists, so a passed-through None rejects the whole card.
     for list_key in ("coaching_cues", "regression_options", "substitutions"):
-        if out.get(list_key) is not None:
+        if list_key in out:
             out[list_key] = _coerce_str_list(out.get(list_key))
+    if "red_flags" in out:
+        out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]
+    if "effort" in out:
+        out["effort"] = _normalize_effort(out.get("effort"))
     if out.get("progression_rule") is not None:
         out["progression_rule"] = _coerce_str(out.get("progression_rule"))
     return out
@@ -894,6 +940,22 @@ def _normalize_red_flag(value: Any) -> dict[str, Any]:
     out["severity"] = _enum(out.get("severity"), _SEVERITY_VALUES, "amber")
     out["display_text"] = _coerce_str(out.get("display_text"))
     out["action"] = _coerce_str(out.get("action"))
+    # Machine fields arrive as prose fragments more often than schema shapes
+    # ("threshold": ">20%", "applies_to": "all sessions"); the display_text is the
+    # athlete-facing rule, so a threshold that can't be read becomes None rather
+    # than failing the whole card.
+    if "threshold" in out:
+        out["threshold"] = _coerce_float(out.get("threshold"))
+    for optional_key in ("metric", "metric_group", "operator", "logic"):
+        if out.get(optional_key) is not None:
+            out[optional_key] = _coerce_str(out.get(optional_key)).strip() or None
+    if "applies_to" in out:
+        out["applies_to"] = _coerce_str_list(out.get("applies_to"))
+    if out.get("replacement_session_type") is not None:
+        replacement = _enum(
+            out.get("replacement_session_type"), _SESSION_TYPE_VALUES, "", _SESSION_TYPE_ALIASES
+        )
+        out["replacement_session_type"] = replacement or None
     return out
 
 
@@ -911,6 +973,9 @@ def _normalize_plan_metadata(value: Any) -> dict[str, Any]:
 def _normalize_athlete_context(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["sport_profile"] = _coerce_str(out.get("sport_profile"))
+    for list_key in ("known_issues", "equipment_access"):
+        if list_key in out:
+            out[list_key] = _coerce_str_list(out.get(list_key))
     return out
 
 
@@ -1606,7 +1671,14 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   partial check-in and never invent these self-report scores or a date — if you
   cannot fill every field from the plan, leave daily_check_ins as [].
 - Provide red_flag_rules[] with machine fields (metric/operator/threshold/logic)
-  kept separate from a human-readable display_text.
+  kept separate from a human-readable display_text. "threshold" MUST be a bare
+  number (e.g. 20, not ">20%" or "form breaks") — put the comparison in
+  "operator" and the prose in display_text, and OMIT threshold entirely when the
+  rule has no numeric trigger.
+- List fields (coaching_cues, regression_options, substitutions, applies_to)
+  MUST be JSON arrays — emit [] when empty, never null and never a bare string.
+  A block's "effort" MUST be an object like
+  {{"method": "RPE", "value": 7, "scale": "1-10"}}, never a bare string.
 - Capture short plan-level reminders that live OUTSIDE any week — e.g. a header
   "Active notes" block and footer "End of plan notes" — in plan_notes[]. Each
   entry is {{"category": one of weight_cut|injury|nutrition|training|recovery|

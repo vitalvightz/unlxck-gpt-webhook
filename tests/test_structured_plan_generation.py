@@ -448,6 +448,115 @@ def test_normalize_plan_notes_coerces_category_and_drops_empty():
     validate_structured_plan(normalize_structured_plan_candidate({"plan_notes": notes}))
 
 
+def test_normalize_red_flag_machine_fields_coerce_prose_values():
+    plan = normalize_structured_plan_candidate(
+        {
+            "red_flag_rules": [
+                {
+                    "rule_id": "power_drop",
+                    "when": "during_session",
+                    "severity": "amber",
+                    "metric": "power_drop_pct",
+                    "operator": ">",
+                    "threshold": ">20%",  # prose fragment, not a number
+                    "applies_to": "neural blocks",  # lone string, not a list
+                    "display_text": "Stop if power drops >20% between reps.",
+                    "action": "stop_block",
+                },
+                {
+                    "rule_id": "wound",
+                    "when": "pre_session",
+                    "severity": "amber",
+                    "threshold": "re-opens",  # unreadable -> None, not a rejected card
+                    "replacement_session_type": "rest",  # alias -> recovery
+                    "display_text": "Stop if the wound re-opens or bleeds.",
+                    "action": "stop and contact staff",
+                },
+            ]
+        }
+    )
+    first, second = plan["red_flag_rules"]
+    assert first["threshold"] == 20.0
+    assert first["applies_to"] == ["neural blocks"]
+    assert second["threshold"] is None
+    assert second["replacement_session_type"] == "recovery"
+    validate_structured_plan(plan)
+
+
+def test_normalize_block_null_list_fields_become_empty_lists():
+    day = _normalize_day(
+        {
+            "sessions": [
+                {
+                    "blocks": [
+                        {
+                            "display_name": "Clean & Press",
+                            "regression_options": None,  # explicit null must not reject the card
+                            "coaching_cues": None,
+                            "substitutions": "med ball scoop toss",
+                        }
+                    ]
+                }
+            ]
+        }
+    )
+    block = day["sessions"][0]["blocks"][0]
+    assert block["regression_options"] == []
+    assert block["coaching_cues"] == []
+    assert block["substitutions"] == ["med ball scoop toss"]
+
+
+def test_normalize_block_red_flags_and_string_effort():
+    day = _normalize_day(
+        {
+            "sessions": [
+                {
+                    "blocks": [
+                        {
+                            "display_name": "Jab bursts",
+                            "effort": "RPE 7-8",  # bare string -> prescription (upper bound)
+                            "red_flags": [
+                                {
+                                    "rule_id": "tech",
+                                    "when": "during_session",
+                                    "severity": "amber",
+                                    "threshold": "form breaks",  # unreadable -> None
+                                    "display_text": "Drop load if technique breaks.",
+                                    "action": "reduce_load",
+                                }
+                            ],
+                        },
+                        {"display_name": "Shadow", "effort": "easy technical flow"},  # no number -> None
+                    ]
+                }
+            ]
+        }
+    )
+    first, second = day["sessions"][0]["blocks"]
+    assert first["effort"] == {"method": "RPE", "value": 8.0, "scale": "1-10"}
+    assert first["red_flags"][0]["threshold"] is None
+    assert second["effort"] is None
+
+
+def test_normalize_recovers_invalid_fallback_card_shape():
+    """The live failure: string red-flag thresholds + a null block list."""
+    plan = _live_malformed_plan()
+    plan["red_flag_rules"] = [
+        {
+            "rule_id": "power_drop",
+            "when": "during_session",
+            "severity": "amber",
+            "threshold": ">20%",
+            "display_text": "Stop if power drops >20% between reps.",
+            "action": "stop_block",
+        }
+    ]
+    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["regression_options"] = None
+    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    assert outcome.status == "valid"
+    validate_structured_plan(outcome.structured_plan)
+
+
 def test_normalize_invalid_event_type_maps_to_none():
     plan = normalize_structured_plan_candidate(
         {"event_context": {"event_type": "boxing_match", "fight_date": "2026-06-13"}}
