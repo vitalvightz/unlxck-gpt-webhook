@@ -4215,7 +4215,7 @@ Mini example (do not copy the volume/intensity when rendering D-7 or tighter; se
 D-5 (Tuesday) — Fight-speed primer
 Why: sharpen punch speed without adding fatigue.
 - Movement prep: 5 min shoulder swings, band pull-aparts, easy shadowboxing.
-- Explosive Boxing Burst Intervals — 3-4 x 6 sec fast relaxed bursts; RPE 6; full recovery 90-120 sec.
+- Explosive Boxing Burst Intervals — 2-3 x 5-6 sec fast relaxed bursts; RPE 6; full recovery 90-120 sec.
 - Coach call: Stop when speed drops. This sharpens output without soreness.
 
 Preferred longer-camp week header:

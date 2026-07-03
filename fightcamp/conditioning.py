@@ -1525,16 +1525,27 @@ def _late_support_fallback(window: str | None) -> dict:
 def _late_fight_dosage_caps(days_until_fight: int) -> str:
     """Return countdown-aware dosage caps for late-fight TAPER days."""
     override_note = "These caps override any drill default structure."
+    _d10_to_d7_caps = (
+        "late-fight caps: no conditioning development; neural speed bursts "
+        "3-4 max (5-6 sec @ RPE 6-7, rest 90-120 sec); med-ball work optional only, never required; "
+        "technical touch 1-2 short rounds max (<=2 min @ RPE 5-6); "
+        "no generic conditioning rounds; cap 6-8 min active. "
+        f"{override_note}"
+    )
     final_week_caps = {
+        10: f"D-10 {_d10_to_d7_caps}",
+        9: f"D-9 {_d10_to_d7_caps}",
+        8: f"D-8 {_d10_to_d7_caps}",
+        7: f"D-7 {_d10_to_d7_caps}",
         6: (
             "D-6 late-fight caps: no conditioning development; optional alactic sharpness only "
-            "3-4 bursts max (6 sec @ RPE 6-7, rest 120 sec); "
+            "2-3 bursts max (5-6 sec @ RPE 6-7, rest 120 sec); no kettlebell swings, no loaded power cleans; "
             "technical touch 1-2 short rounds max (<=2 min @ RPE 5-6); "
             "no generic conditioning rounds; cap 5-7 min active. "
             f"{override_note}"
         ),
         5: (
-            "D-5 late-fight caps: alactic bursts 3-4 max (6 sec @ RPE 6-7, rest 120 sec); "
+            "D-5 late-fight caps: alactic bursts 2-3 max (5-6 sec @ RPE 6-7, rest 120 sec); "
             "technical touch 1-2 short rounds max (<=2 min @ RPE 5-6); "
             "no generic 6-10 round structures; cap 5-7 min active. "
             f"{override_note}"
@@ -1547,7 +1558,8 @@ def _late_fight_dosage_caps(days_until_fight: int) -> str:
         ),
         3: (
             "D-3 late-fight caps: alactic bursts 0-3 conditional only "
-            "(4-6 sec @ RPE 5-6, rest 120 sec); "
+            "(4-6 sec @ RPE 5-6, rest 120 sec), rendered as light shadow bursts; "
+            "med-ball work optional only, never required; "
             "technical touch 1-2 short rounds max (<=2 min @ RPE 5); "
             "cap 4-6 min active. "
             f"{override_note}"
@@ -1562,6 +1574,7 @@ def _late_fight_dosage_caps(days_until_fight: int) -> str:
         1: (
             "D-1 late-fight caps: no conditioning work; optional rhythm touch only "
             "1-2 very short rhythm touches max (3-4 sec @ RPE 3-5, full rest); "
+            "light shadowboxing 2 x 60-90 sec max plus breathing/visualization; "
             "technical walk-through only; cap 2-4 min active. "
             f"{override_note}"
         ),
@@ -1645,7 +1658,7 @@ def render_conditioning_block(
     }
     _taper_dosage = (
         _late_fight_dosage_caps(_days_int)
-        if phase == "TAPER" and _days_int is not None and _days_int <= 6
+        if phase == "TAPER" and _days_int is not None and _days_int <= 10
         else "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min). Template applies unless a drill lists its own structure."
     )
     dosage_template = {

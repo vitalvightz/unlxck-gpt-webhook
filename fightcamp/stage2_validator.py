@@ -189,6 +189,13 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "medicine ball pass",
         "medicine-ball pass",
         "med-ball pass",
+        "medicine ball",
+        "med-ball",
+        "med ball",
+        "chest pass",
+        "kettlebell",
+        "power clean",
+        "power cleans",
     ),
     13: (
         "Band-Resisted Sprint Start",
@@ -200,6 +207,25 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "Band-Assisted Jump Reset",
         "Band-Resisted Sprint Start",
         "Band-Resisted Sprint Starts (ATP-PCr)",
+        "kettlebell",
+        "kettlebell swing",
+        "power clean",
+        "power cleans",
+    ),
+    5: (
+        "kettlebell",
+        "power clean",
+        "power cleans",
+    ),
+    4: (
+        "kettlebell",
+        "power clean",
+        "power cleans",
+    ),
+    2: (
+        "kettlebell",
+        "power clean",
+        "power cleans",
     ),
     1: (
         "Staggered-Stance Medicine-Ball Punch Throw",
@@ -222,6 +248,9 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "sprint start",
         "jump",
         "plyometric",
+        "kettlebell",
+        "power clean",
+        "power cleans",
     ),
 }
 _LATE_FIGHT_ALLOWED_GENERIC_PHRASES = (

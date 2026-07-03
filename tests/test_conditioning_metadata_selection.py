@@ -812,7 +812,7 @@ def test_final_week_taper_caps_keep_primers_submaximal():
 
     assert "RPE 8" not in d6
     assert "RPE 8" not in d1
-    assert "3-4 bursts max (6 sec @ RPE 6-7" in d6
+    assert "2-3 bursts max (5-6 sec @ RPE 6-7" in d6
     assert "RPE 3-5" in d1
 
 

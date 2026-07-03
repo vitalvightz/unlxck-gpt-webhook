@@ -14,6 +14,10 @@ before labels are stamped). Rule:
     D-day is D-13 or closer, morph it to a low-cost rhythm touch
     (``light_fight_pace_touch_day``) and clear its hard-pressure metadata.
 
+    If a full strength role is scheduled at D-17 or closer, cap it to a
+    low-volume neural maintenance touch (RPE 6-7, 2-3 sets); at D-12 or
+    closer its athlete-facing label also stops rendering as "Strength".
+
 The overlay only ever reduces prescribed load. It never touches:
 
 * the D-21 → D-18 combat-pressure floor (its final hard exposure stays hard);
@@ -31,6 +35,11 @@ from typing import Any
 
 # Hard fight-pace conditioning morphs to a rhythm touch from D-13 inward.
 FIGHT_PACE_MORPH_MAX_D = 13
+# Full strength-transfer softens to low-volume neural maintenance from D-17
+# inward; from D-12 inward the "Strength" role label is also replaced so late
+# camp never renders a full strength day.
+STRENGTH_NEURAL_MORPH_MAX_D = 17
+STRENGTH_LABEL_MORPH_MAX_D = 12
 # D-21 → D-18 is the preserved combat-pressure floor; D-19/D-18 keep the final
 # hard exposure. The morph window sits strictly inside D-13, so the floor is
 # never touched by construction.
@@ -47,9 +56,29 @@ HARD_FIGHT_PACE_ROLE_KEYS = frozenset(
     }
 )
 
+# Full strength roles that render the "Strength" label. strength_touch_day /
+# small_strength_touch_day / neural_primer_day are already taper-sized.
+FULL_STRENGTH_ROLE_KEYS = frozenset(
+    {
+        "primary_strength_day",
+        "secondary_strength_day",
+        "structural_strength_day",
+        "transfer_strength_day",
+        "neural_plus_strength_day",
+    }
+)
+
 # Canonical low-cost morph target (already recognised by role_labels).
 _RHYTHM_TOUCH_ROLE_KEY = "light_fight_pace_touch_day"
 _RHYTHM_TOUCH_LABEL = "Rhythm flush"
+_NEURAL_TOUCH_LABEL = "Neural speed touch"
+
+_NEURAL_MAINTENANCE_SELECTION_RULE = (
+    "Low-volume neural maintenance touch only: 2-3 crisp low-load sets at "
+    "RPE 6-7 max with full recovery between sets. Keep bar/implement speed "
+    "high and the dose tiny. No loaded strength-transfer session, no "
+    "kettlebell swings, no loaded power cleans this close to the fight."
+)
 
 # Role-level metadata that encodes "this is hard, meaningful combat pressure".
 # Stripped on morph so nothing downstream re-reads a stale hard signal.
@@ -166,6 +195,21 @@ def _morph_to_rhythm_touch(role: dict[str, Any], d_day: int) -> None:
     _clear_hard_pressure_metadata(role)
 
 
+def _soften_full_strength_role(role: dict[str, Any], d_day: int) -> None:
+    """Cap a full strength role to a low-volume neural maintenance touch."""
+    role["rpe_cap"] = "6-7"
+    role["set_cap"] = "2-3 sets"
+    role["selection_rule"] = _NEURAL_MAINTENANCE_SELECTION_RULE
+    role["late_camp_strength_morph"] = True
+    role["day_assignment_reason"] = (
+        f"Late-camp morph: full strength-transfer softened to a low-volume "
+        f"neural maintenance touch at D-{d_day}."
+    )
+    if d_day <= STRENGTH_LABEL_MORPH_MAX_D:
+        # D-12 and closer never render the "Strength" role label.
+        role["athlete_facing_label"] = _NEURAL_TOUCH_LABEL
+
+
 def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
     """Morph hard fight-pace conditioning at D-13 and closer to a rhythm touch.
 
@@ -180,6 +224,12 @@ def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any
             continue
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict):
+                continue
+            role_key = str(role.get("role_key") or "").strip().lower()
+            if role_key in FULL_STRENGTH_ROLE_KEYS:
+                d_day = _role_d_day(week, role)
+                if d_day is not None and 0 <= d_day <= STRENGTH_NEURAL_MORPH_MAX_D:
+                    _soften_full_strength_role(role, d_day)
                 continue
             if not _is_hard_fight_pace_conditioning_role(role):
                 continue

@@ -1494,12 +1494,37 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                         "Band-Assisted Jump Reset",
                         "Band-Resisted Sprint Start",
                         "Band-Resisted Sprint Starts (ATP-PCr)",
+                        "kettlebell",
+                        "kettlebell swing",
+                        "power clean",
+                        "power cleans",
                     ],
                     "preferred_drills": [
                         "Explosive Boxing Burst Intervals",
                         "Reactive Shuffle Repeats",
                     ],
-                    "reason": "D-6 boxing taper should keep sharpness low-impact and should not use jumps or sprint-start fallbacks.",
+                    "reason": "D-6 boxing taper should keep sharpness low-impact: no jumps, no sprint-start fallbacks, no kettlebell swings, no loaded power cleans — use shadow bursts or a very small dumbbell neural option instead.",
+                }
+            )
+        elif day == 3:
+            rules.append(
+                {
+                    "countdown_label": "D-3",
+                    "blocked_drills": [
+                        "medicine ball",
+                        "med-ball",
+                        "med ball",
+                        "chest pass",
+                        "kettlebell",
+                        "power clean",
+                        "power cleans",
+                    ],
+                    "preferred_drills": [
+                        "Technical Shadowboxing Tempo",
+                        "Mobility Reset Flow",
+                        "Breathing Reset",
+                    ],
+                    "reason": "D-3 primer prefers light shadow bursts (2-3 x 5-6 sec); med-ball work is never required this close to the fight.",
                 }
             )
         elif day == 1:
@@ -1589,7 +1614,8 @@ def _late_fight_taper_micro_support_policy(
         "d1_allowed_list": [
             "breathing",
             "mobility",
-            "light technical shadowboxing",
+            "visualization",
+            "light technical shadowboxing (2 x 60-90 sec max)",
         ],
         "d1_blocked_list": [
             "core",
@@ -2113,6 +2139,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
                 "Countdown insert or unified countdown schedule only — never a Monday-Sunday week.",
                 "Render only app-owned roles as sessions. Boxing schedule is context only.",
                 "5 blocks per session max. 3 meaningful stress exposures max.",
+                "From D-10: cap neural speed bursts at 3-4 x 5-6 sec, RPE 6-7, full rest. Med-ball work is optional-only — never required.",
             ],
             "preferred_terms": ["compressed week", "technical rhythm", "sharpness", "strength touch", "freshness", "mobility / reset"],
             "forbidden_terms": ["development block", "conditioning build", "secondary anchor", "extra density push", "d-0 training"],
@@ -2123,7 +2150,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "compressed_week",
             "rules": [
                 "Sharpness-week framing. D-N first, weekday second.",
-                "D-7 primers must stay submaximal: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 6 sec, full rest.",
+                "D-7 primers must stay submaximal: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 5-6 sec, full rest.",
                 "5 blocks per session max. No effective hard sparring — all declared hard sparring converts to technical/rhythm only.",
             ],
             "preferred_terms": ["sharpness week", "power touch", "neural touch", "technical rhythm", "freshness session", "mobility / reset"],
@@ -2136,7 +2163,8 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Session-by-session only. No hard sparring — spar days become technical rhythm.",
                 "Insert: 2 sessions max. 4 blocks per session max.",
-                "D-6/D-5 primers must stay submaximal: use selected drill RPE when present; cap alactic bursts at 3-4 x 6 sec, RPE 6-7, full rest.",
+                "D-6/D-5 primers must stay submaximal: use selected drill RPE when present; cap alactic bursts at 2-3 x 5-6 sec, RPE 6-7, full rest.",
+                "D-6/D-5 explosive work: 2-3 x 5-6 sec shadow bursts or 2 x 3 light explosive reps max. No kettlebell swings, no loaded power cleans.",
             ],
             "preferred_terms": ["sharpness", "power touch", "technical rhythm", "recovery", "freshness", "mobility / reset"],
             "forbidden_terms": ["primary strength", "anchor day", "conditioning block", "developmental work", "volume build", "all-out bursts", "RPE 8"],
@@ -2149,6 +2177,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
                 "Session-by-session only. No program block, no phase-explanation dump.",
                 "4 blocks per session max. Tight and action-oriented.",
                 "D-4 to D-2 primers are rhythm-only unless explicitly selected otherwise; cap at RPE 5-6 and avoid all-out language.",
+                "D-3 power/sharpness touch renders as light shadow bursts only (2-3 x 5-6 sec). Med-ball work is never required on D-3.",
             ],
             "preferred_terms": ["sharpness session", "technical touch", "low-noise power", "freshness session", "rhythm day", "primer"],
             "forbidden_terms": ["strength block", "conditioning stressor", "glycolytic session", "support strength", "weekly architecture", "all-out bursts", "RPE 8"],
@@ -2160,8 +2189,9 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Primer-only output. 4 blocks max. Under 300 words.",
                 "D-1 neural primer is micro-dose only: 1-2 sets or 2-3 minutes total, RPE 3-5; no RPE 6-7, no pump, no fatigue.",
+                "D-1 shadowboxing caps at 2 x 60-90 sec very light rounds; fill the rest with breathing or visualization only — never a full shadowboxing session.",
             ],
-            "preferred_terms": ["neural primer", "technical touch", "sharpness", "activation", "reset", "rhythm"],
+            "preferred_terms": ["neural primer", "technical touch", "sharpness", "activation", "reset", "rhythm", "breathing", "visualization"],
             "forbidden_terms": ["anchor", "strength", "conditioning", "fight-pace density", "block", "glycolytic", "contrast", "RPE 6-7", "RPE 8"],
         }
     return {
@@ -4411,6 +4441,35 @@ def _build_late_fight_weekly_role_map(
     }
 
 
+# D-17 and closer never carry a full loaded strength-transfer session: once the
+# strength touch is scheduled inside that band (e.g. D-17 right after a D-18
+# fight-pace exposure), it is capped to a low-volume neural maintenance touch.
+_STRENGTH_TOUCH_NEURAL_CAP_MAX_D = 17
+_STRENGTH_TOUCH_NEURAL_CAP_RULE = (
+    "Low-volume neural maintenance touch only: 2-3 crisp low-load sets at "
+    "RPE 6-7 max with full recovery. Never render this as a loaded "
+    "strength-transfer session at RPE 7-8 — keep it a neural/speed touch."
+)
+
+
+def _soften_late_strength_touches(session_sequence: list[dict[str, Any]]) -> None:
+    for entry in session_sequence:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("role_key") or "").strip().lower() != "strength_touch_day":
+            continue
+        offset = entry.get("countdown_offset")
+        if not isinstance(offset, int):
+            offset = _countdown_offset(
+                str(entry.get("scheduled_countdown_label") or entry.get("countdown_label") or "")
+            )
+        if offset is None or offset > _STRENGTH_TOUCH_NEURAL_CAP_MAX_D:
+            continue
+        entry["rpe_cap"] = "6-7"
+        entry["set_cap"] = "2-3 sets"
+        entry["selection_rule"] = _STRENGTH_TOUCH_NEURAL_CAP_RULE
+
+
 def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> dict[str, Any]:
     payload_block = _days_out_payload_block(days_until_fight, athlete_model)
     allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
@@ -4424,6 +4483,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         athlete_model,
         spine_countdown_map,
     )
+    _soften_late_strength_touches(session_sequence)
     visible_session_sequence = _visible_calendar_session_sequence(session_sequence)
     app_visible_session_sequence = _visible_insert_session_sequence(session_sequence)
     role_budget = dict(allocation.get("role_budget", {}) or {})
@@ -4565,7 +4625,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "4 blocks max. Output: neural primer · technical touch · activation · mobility/reset · pre-fight notes.\n"
             "Banned: strength, conditioning, anchor, block, glycolytic, development, fight-pace density.\n"
             "Primer intensity cap: micro-dose only, RPE 3-5, 1-2 sets or 2-3 minutes total; no RPE 6-7, no pump, no fatigue.\n"
-            "Optional taper_micro_support only: breathing, mobility, or light technical shadowboxing. No equipment of any kind on D-1: no bands, no med ball, no heavy bag, no weights, no core, no neck, no grip tools.\n"
+            "Optional taper_micro_support only: breathing, mobility, visualization, or light technical shadowboxing capped at 2 x 60-90 sec — never a full shadowboxing session. No equipment of any kind on D-1: no bands, no med ball, no heavy bag, no weights, no core, no neck, no grip tools.\n"
             "No weekly architecture. No hard sparring. No suppressed role restoration.\n\n"
             + _CONTRACT
         )
@@ -4574,14 +4634,15 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "BRIDGE COMPRESSION WEEK (D-21 to D-14)\n"
             "Taper-on-ramp, not full camp. 5 blocks per session max.\n"
             "Meaningful stress cap: 3 per rolling 7 days. Declared hard sparring in D-21 to D-18 is coach-owned and stays hard; from D-17 onward all declared hard sparring converts to technical-only combat.\n"
-            "Strength/power: 1 touch max. Pressure exposure: one controlled fight-pace pressure touch on D-20, D-19, or D-18 when no coach hard-sparring day owns D-21 to D-18; otherwise 0.\n"
+            "Strength/power: 1 touch max; when it lands at D-17 or closer, render it as a low-volume neural maintenance touch (2-3 crisp sets, RPE 6-7 max) — never a loaded strength-transfer session. Pressure exposure: one controlled fight-pace pressure touch on D-20, D-19, or D-18 when no coach hard-sparring day owns D-21 to D-18; otherwise 0.\n"
             "One freshness/mobility reset is mandatory. Never stack programmed S&C on a coach-owned combat day. No double-stress day.\n\n"
             + _CONTRACT
         )
     if payload_mode == "pre_fight_compressed_payload":
         return (
             "COMPRESSED PRE-FIGHT WEEK (D-13 to D-8)\n"
-            "5 blocks per session max. No effective hard sparring; all declared hard sparring converts to technical/rhythm only. Strength/power: 1 touch max.\n"
+            "5 blocks per session max. No effective hard sparring; all declared hard sparring converts to technical/rhythm only. Strength/power: 1 touch max, rendered as a low-volume neural maintenance touch (2-3 crisp sets, RPE 6-7 max) — never a loaded strength-transfer session.\n"
+            "From D-10: neural speed bursts cap at 3-4 x 5-6 sec, RPE 6-7, full rest. Med-ball work is optional-only — never required.\n"
             "Fight-rhythm touch: 1 max, rhythm/freshness only, RPE <= 5 - it cannot satisfy a hard conditioning, glycolytic, or combat-pressure quota. Suppress entirely if sparring already owns the week.\n"
             "One freshness, mobility, or reset session is mandatory.\n"
             "From D-10 to D-8, taper_micro_support may appear only as one optional add-on line (4-6 min max) - never as a standalone session or anchor.\n"
@@ -4593,7 +4654,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "SHARPNESS WEEK (D-7)\n"
             "5 blocks per session max. Stress cap: 2 meaningful exposures total.\n"
             "Neural/power: 1 max. Fight-rhythm: 1 max. No effective hard sparring; all declared hard sparring converts to technical/rhythm only.\n"
-            "Primer intensity cap: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 6 sec, full rest. No all-out language.\n"
+            "Primer intensity cap: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 5-6 sec, full rest. No all-out language.\n"
             "Optional taper_micro_support: one optional add-on line only, 3-5 min max.\n"
             "No development language, no multi-stressor stacking.\n\n"
             + _CONTRACT
@@ -4604,7 +4665,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "4 blocks per session max. Stress cap: 1 meaningful exposure.\n"
             "No hard sparring — all declared spar days convert to technical rhythm.\n"
             "Insert cap: 2 sessions (one power touch or technical rhythm + one freshness).\n"
-            "Primer intensity cap: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 6 sec, full rest. No all-out language.\n"
+            "Primer intensity cap: use selected drill RPE when present; otherwise cap at RPE 6-7, 2-3 x 5-6 sec, full rest. No all-out language.\n"
+            "Explosive work: 2-3 x 5-6 sec shadow bursts or 2 x 3 light explosive reps max. No kettlebell swings, no loaded power cleans.\n"
             "Optional taper_micro_support: one optional add-on line only, 3-5 min max.\n"
             "Session-by-session only. S&C inserts titled explicitly as countdown inserts.\n\n"
             + _CONTRACT
@@ -4613,7 +4675,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         return (
             "SHARPNESS-FIRST SESSIONS (D-4 to D-2)\n"
             "4 blocks per session max. Session-by-session only — no week headers, no program blocks.\n"
-            "D-4: sharpness + freshness. D-3: freshness default; power/sharpness touch only if fatigue is not high and no spar-spillover flag. D-2: neural primer or technical touch only.\n"
+            "D-4: sharpness + freshness. D-3: freshness default; power/sharpness touch only if fatigue is not high and no spar-spillover flag — render it as light shadow bursts only (2-3 x 5-6 sec); med-ball work is never required on D-3. D-2: neural primer or technical touch only.\n"
             "Primer intensity cap: rhythm-only unless a selected drill is lower; max RPE 5-6. No all-out language.\n"
             "Optional taper_micro_support: breathing/mobility only, or one tiny rehab-style cue, 2-4 min max.\n"
             "No strength, no conditioning, no glycolytic work, no hard sparring.\n\n"
