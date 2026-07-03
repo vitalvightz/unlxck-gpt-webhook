@@ -1581,6 +1581,37 @@ def parse_structured_json(text: str) -> Any:
         return None
 
 
+# Matches a JSON string value for raw_markdown_fallback, honouring backslash
+# escapes so a plan body full of quotes/newlines is captured as one value.
+_RAW_FALLBACK_VALUE_RE = re.compile(
+    r'("raw_markdown_fallback"\s*:\s*)"(?:[^"\\]|\\.)*"'
+)
+
+
+def _strip_fallback_from_broken_json(broken_json: str) -> str:
+    """Blank ``raw_markdown_fallback`` in a prior attempt before re-embedding it.
+
+    The repair prompt echoes the previous (invalid) JSON back to the model. If
+    that attempt copied the whole plan into ``raw_markdown_fallback`` we do not
+    want to pay to send it again — and we never want the plan echo, only its
+    structural shape, to guide the repair. Parses when possible and blanks the
+    field; otherwise falls back to a targeted regex so a genuinely broken blob
+    is still trimmed. Never raises.
+    """
+
+    if not broken_json:
+        return broken_json
+    parsed = parse_structured_json(broken_json)
+    if isinstance(parsed, dict):
+        if parsed.get("raw_markdown_fallback"):
+            parsed["raw_markdown_fallback"] = ""
+        try:
+            return json.dumps(parsed, ensure_ascii=False)
+        except (TypeError, ValueError):
+            pass
+    return _RAW_FALLBACK_VALUE_RE.sub(r'\1""', broken_json)
+
+
 _STRUCTURED_PLAN_RULES = f"""\
 You are converting an already-written fight-camp training plan into a strict,
 machine-readable JSON object. Output ONLY a single JSON object — no markdown, no
@@ -1604,8 +1635,9 @@ weeks[] -> days[] -> sessions[] -> blocks[].
 The JSON object MUST conform to the StructuredTrainingPlan schema:
 
 - It MUST set "schema_version" to "{SCHEMA_VERSION}".
-- It MUST preserve the original human-readable plan verbatim in
-  "raw_markdown_fallback".
+- Set "raw_markdown_fallback" to an empty string "". Do NOT echo the plan text
+  back into it — the system restores the verbatim original after you respond.
+  Spend your output tokens on the structured fields, not on copying the plan.
 - It MUST use countdown labels (countdown_labels[] and per-day countdown_label,
   e.g. "D-28", "D-7", "D-1", "D0", "D+1") whenever an event/fight/match date is
   known.
@@ -1807,7 +1839,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
   "daily_check_ins": [],
   "nutrition": {{"summary": "...", "daily_focus": "...", "training_day_guidance": "...", "fight_week_guidance": "...", "weight_cut_warning": {{"risk_level": "amber", "display_text": "...", "requires_professional_support": false}}}},
   "progression_notes": "...",
-  "raw_markdown_fallback": "<the original plan markdown, verbatim>"
+  "raw_markdown_fallback": ""
 }}"""
 
 
@@ -1872,7 +1904,8 @@ def build_structured_plan_prompt(
                 )
 
     sections.append(
-        "ORIGINAL PLAN (preserve this exactly in raw_markdown_fallback):\n"
+        "ORIGINAL PLAN (this is the source to convert; do NOT copy it into "
+        "raw_markdown_fallback — leave that field \"\"):\n"
         + plan_markdown
     )
 
@@ -1884,7 +1917,7 @@ def build_structured_plan_prompt(
     if broken_json:
         sections.append(
             "Previous invalid JSON to correct (return a fully valid object):\n"
-            + broken_json[:12000]
+            + _strip_fallback_from_broken_json(broken_json)[:12000]
         )
 
     if repair_errors:
