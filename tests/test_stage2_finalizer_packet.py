@@ -60,6 +60,71 @@ def test_finalizer_packet_omits_redundant_calendar_authority_and_days_out_payloa
     assert selected_plan["late_fight_plan_spec"]["payload_mode"] == "pre_fight_compressed_payload"
 
 
+def test_finalizer_packet_compact_role_omits_internal_selection_rationale():
+    # selection_rule / placement_rule / day_assignment_reason are internal Stage 1
+    # selection notes no render instruction references; they are stripped from the
+    # LLM-facing role while the authoritative day/role signals are preserved.
+    stage2_payload = {
+        "athlete_model": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [
+                        {
+                            "session_index": 1,
+                            "role_key": "primary_strength_day",
+                            "category": "strength",
+                            "scheduled_day_hint": "Wednesday",
+                            "selection_rule": "Use the highest-priority compliant strength slot first.",
+                            "placement_rule": "Place after the weekly recovery day.",
+                            "day_assignment_reason": "Neural work belongs mid-week.",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    role = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"][0]
+
+    assert "selection_rule" not in role
+    assert "placement_rule" not in role
+    assert "day_assignment_reason" not in role
+    # Authoritative placement/identity signals survive.
+    assert role["role_key"] == "primary_strength_day"
+    assert role["scheduled_day_hint"] == "Wednesday"
+    assert role["category"] == "strength"
+
+
+def test_finalizer_packet_strips_internal_late_fight_scaffolding():
+    # visible_session_sequence duplicates the top-level session_sequence, and
+    # allocator / role_budget / permission_policy are Stage 1 allocation internals
+    # no instruction references. They are dropped from the LLM-facing spec, but the
+    # referenced cap (max_active_roles) and countdown_mode_sequence are preserved,
+    # and the source spec is not mutated.
+    source_spec = {
+        "payload_mode": "pre_fight_compressed_payload",
+        "max_active_roles": 3,
+        "countdown_mode_sequence": [{"stage_key": "d13_to_d8"}],
+        "visible_session_sequence": [{"role_key": "x"}],
+        "allocator": {"internal": True},
+        "role_budget": {"selected_active_roles": 2},
+        "permission_policy": {"allow": []},
+    }
+    stage2_payload = {"athlete_model": {}, "late_fight_plan_spec": source_spec}
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    spec = packet["selected_plan"]["late_fight_plan_spec"]
+
+    for internal_key in ("visible_session_sequence", "allocator", "role_budget", "permission_policy"):
+        assert internal_key not in spec
+    assert spec["max_active_roles"] == 3
+    assert spec["countdown_mode_sequence"] == [{"stage_key": "d13_to_d8"}]
+    # Source object is untouched (non-mutating compaction).
+    assert "allocator" in source_spec and "visible_session_sequence" in source_spec
+
+
 def test_finalizer_packet_preserves_injury_context_fields_in_athlete_model():
     stage2_payload = {
         "athlete_model": {
