@@ -8,6 +8,7 @@ import pytest
 
 import api.stage2_automation as stage2_module
 from api.stage2_automation import OpenAIStage2Automator, Stage2AutomationError
+from support import FakeOpenAIClient as FakeClient
 
 
 @pytest.fixture(autouse=True)
@@ -20,47 +21,6 @@ def _structured_plan_off(monkeypatch: pytest.MonkeyPatch) -> None:
     dedicated coverage in test_stage2_structured_persistence.py.
     """
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
-
-
-class FakeStream:
-    """Minimal stand-in for the SDK's AsyncResponseStreamManager: entering the
-    context resolves (or raises) like ``create`` and ``get_final_response``
-    returns the accumulated response object."""
-
-    def __init__(self, response_coro) -> None:
-        self._coro = response_coro
-        self._response: object | None = None
-
-    async def __aenter__(self) -> "FakeStream":
-        self._response = await self._coro
-        return self
-
-    async def __aexit__(self, *exc_info: object) -> None:
-        return None
-
-    async def get_final_response(self) -> object:
-        return self._response
-
-
-class FakeResponses:
-    def __init__(self, outputs: list[object]) -> None:
-        self.outputs = list(outputs)
-        self.calls: list[dict] = []
-
-    async def create(self, **request: object) -> object:
-        self.calls.append(request)
-        output = self.outputs.pop(0)
-        if isinstance(output, Exception):
-            raise output
-        return output
-
-    def stream(self, **request: object) -> FakeStream:
-        return FakeStream(self.create(**request))
-
-
-class FakeClient:
-    def __init__(self, outputs: list[object]) -> None:
-        self.responses = FakeResponses(outputs)
 
 
 def _response(text: str, *, input_tokens: int = 10, output_tokens: int = 5) -> SimpleNamespace:

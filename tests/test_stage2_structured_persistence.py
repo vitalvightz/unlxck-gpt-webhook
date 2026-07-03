@@ -41,6 +41,7 @@ from api.store import SupabaseAppStore
 from api.structured_plan_generation import StructuredPlanOutcome, build_structured_plan_outcome
 from api.structured_plan_models import SCHEMA_VERSION
 
+from support import FakeOpenAIClient as _FakeClient
 from support import FakeStore, _build_request, _now
 from test_structured_plan_models import _valid_plan
 
@@ -229,44 +230,6 @@ def test_map_plan_detail_exposes_invalid_structured_debug():
 # ---------------------------------------------------------------------------
 # Automator integration
 # ---------------------------------------------------------------------------
-
-
-class _FakeStream:
-    def __init__(self, response_coro) -> None:
-        self._coro = response_coro
-        self._response: object | None = None
-
-    async def __aenter__(self) -> "_FakeStream":
-        self._response = await self._coro
-        return self
-
-    async def __aexit__(self, *exc_info: object) -> None:
-        return None
-
-    async def get_final_response(self) -> object:
-        return self._response
-
-
-class _FakeResponses:
-    def __init__(self, outputs: list[object]) -> None:
-        self.outputs = list(outputs)
-        self.calls: list[dict] = []
-
-    async def create(self, **request: object) -> object:
-        self.calls.append(request)
-        output = self.outputs.pop(0)
-        if isinstance(output, Exception):
-            raise output
-        return output
-
-    def stream(self, **request: object) -> _FakeStream:
-        # Delegate through create() so tests that override .create keep working.
-        return _FakeStream(self.create(**request))
-
-
-class _FakeClient:
-    def __init__(self, outputs: list[object]) -> None:
-        self.responses = _FakeResponses(outputs)
 
 
 def _response(text: str) -> SimpleNamespace:

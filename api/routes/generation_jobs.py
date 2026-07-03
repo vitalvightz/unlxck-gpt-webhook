@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from api.generation_job_helpers import _job_response
+from api.generation_job_helpers import _job_response, resolve_viewer_role
 from api.models import GenerationJobResponse, ProfileRecord
 from api.store import AppStore, is_effective_admin_profile
 
@@ -46,7 +46,7 @@ def build_generation_jobs_router(
         job = await asyncio.to_thread(store.get_visible_active_generation_job_for_athlete, profile.athlete_id)
         if not job:
             return None
-        viewer_role = "admin" if is_effective_admin_profile(profile, store) else profile.role
+        viewer_role = resolve_viewer_role(profile, is_admin=is_effective_admin_profile(profile, store))
         return _job_response(job, store=store, viewer_role=viewer_role)
 
     @router.get("/api/generation-jobs/latest", response_model=GenerationJobResponse | None)
@@ -60,7 +60,7 @@ def build_generation_jobs_router(
         is_admin = is_effective_admin_profile(profile, store)
         if not is_admin and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        return _job_response(job, store=store, viewer_role="admin" if is_admin else profile.role)
+        return _job_response(job, store=store, viewer_role=resolve_viewer_role(profile, is_admin=is_admin))
 
     @router.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     async def get_generation_job(
@@ -75,6 +75,6 @@ def build_generation_jobs_router(
         is_admin = is_effective_admin_profile(profile, store)
         if not is_admin and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        return _job_response(job, store=store, viewer_role="admin" if is_admin else (profile.role or "athlete"))
+        return _job_response(job, store=store, viewer_role=resolve_viewer_role(profile, is_admin=is_admin))
 
     return router
