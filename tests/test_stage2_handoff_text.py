@@ -275,13 +275,18 @@ def test_build_stage2_handoff_text_includes_priority_focus_guidance_without_raw_
         },
     )
 
-    assert "primary goal" in handoff.lower()
-    assert "primary weak area" in handoff.lower()
-    assert "secondary goals" in handoff.lower()
-    assert "secondary weak areas" in handoff.lower()
-    assert "Power drops when tired" in handoff
-    assert "preserve each clarification" in handoff.lower()
+    # The priority-hierarchy doctrine is carried by the finalizer packet's
+    # hard_rules (canonical, always sent) rather than a duplicate prose section.
+    lowered = handoff.lower()
+    assert "preserve the priority hierarchy from priority_focus" in lowered
+    assert "primary goal and primary weak area shape emphasis" in lowered
+    assert "preserve each clarification" in lowered
     assert "derived_clarification_tags" in handoff
+    # The collision detail value still reaches the model via the priority_focus
+    # data block, and multi-entry collision_details are preserved there.
+    assert "Power drops when tired" in handoff
+    assert '"collision_detail":"Power drops when tired"' in handoff
+    # Raw internal reason-code labels must never surface in the handoff.
     assert "priority_primary_goal_match" not in handoff
     assert "priority_collision_goal_weakness" not in handoff
     assert "priority_clarification_tag_match" not in handoff
