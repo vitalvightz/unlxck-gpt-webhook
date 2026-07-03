@@ -310,7 +310,8 @@ required; CI uses public placeholder env values.
 - Job stale recovery timeout: `APP_GENERATION_JOB_STALE_AFTER_SECONDS` (default `300`, minimum `60`)
 - Stage 1 planner timeout: `APP_STAGE1_PLANNER_TIMEOUT_SECONDS` / `STAGE1_PLANNER_TIMEOUT_SECONDS` (default `600`; `STAGE1_PLANNER_TIMEOUT_SECONDS` takes precedence when both are set)
 - Stage 2 automation timeout: `UNLXCK_STAGE2_TIMEOUT_SECONDS` (default `210`)
-- Stage 2 finalize timeout: `APP_STAGE2_FINALIZE_TIMEOUT_SECONDS` (default `240`)
+- Stage 2 structured-card call timeout: `UNLXCK_STAGE2_STRUCTURED_TIMEOUT_SECONDS` (default `600`, applies to the structured first-pass and repair calls only)
+- Stage 2 finalize timeout: `APP_STAGE2_FINALIZE_TIMEOUT_SECONDS` (default `1500`; must exceed the worst-case sum of the per-call timeouts above or card generation is cancelled early)
 - Stage 2 first-pass prompt cap: `UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS` (default `180000`)
 - API generation concurrency cap: `APP_GENERATION_MAX_CONCURRENT_JOBS` (default `1`)
 - The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
