@@ -1581,56 +1581,12 @@ def _late_fight_dosage_caps(days_until_fight: int) -> str:
     }
     if days_until_fight in final_week_caps:
         return final_week_caps[days_until_fight]
-    caps = {
-        6: (
-            "D-6 late-fight caps: no conditioning development; optional alactic sharpness only "
-            "3–5 bursts max (6–10 sec @ RPE 7–8, rest 120 sec); "
-            "technical touch 1–2 short rounds max (≤2 min @ RPE 6); "
-            "no generic conditioning rounds; cap 5–7 min active. "
-            f"{override_note}"
-        ),
-        5: (
-            "D-5 late-fight caps: alactic bursts 3–5 max (6–10 sec @ RPE 8, rest 90–120 sec); "
-            "technical touch 1–3 short rounds max (≤2 min @ RPE 6–7); "
-            "no generic 6–10 round structures; cap 7–9 min active. "
-            f"{override_note}"
-        ),
-        4: (
-            "D-4 late-fight caps: alactic bursts 2–4 max (6–8 sec @ RPE 8, rest 120 sec); "
-            "technical touch 1–2 short rounds max (≤2 min @ RPE 6); "
-            "cap 5–7 min active. "
-            f"{override_note}"
-        ),
-        3: (
-            "D-3 late-fight caps: alactic bursts 0–3 conditional only "
-            "(6–8 sec @ RPE 7–8, rest 120 sec); "
-            "technical touch 1–2 short rounds max (≤2 min @ RPE 6); "
-            "cap 4–6 min active. "
-            f"{override_note}"
-        ),
-        2: (
-            "D-2 late-fight caps: alactic bursts 0–2 optional only "
-            "(4–6 sec @ RPE 7, rest 120 sec); "
-            "technical walk-through 1–2 short rounds max (≤90 sec @ RPE 5–6); "
-            "cap 3–5 min active. "
-            f"{override_note}"
-        ),
-        1: (
-            "D-1 late-fight caps: no conditioning work; optional rhythm touch only "
-            "1–2 very short bursts max (4–6 sec @ RPE 6–7, full rest); "
-            "technical walk-through only; cap 2–4 min active. "
-            f"{override_note}"
-        ),
-        0: (
+    if days_until_fight == 0:
+        return (
             "Fight day: no conditioning prescription. Follow coach warm-up and fight protocol only. "
             "No additional S&C. Optional breathing and shoulder mobility only."
-        ),
-    }
-
-    return caps.get(
-        days_until_fight,
-        "Late-fight caps: no conditioning development; keep only low-volume rhythm, sharpness, or recovery work.",
-    )
+        )
+    return "Late-fight caps: no conditioning development; keep only low-volume rhythm, sharpness, or recovery work."
 
 def render_conditioning_block(
     grouped_drills: dict[str, list[dict]],

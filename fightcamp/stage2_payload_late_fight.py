@@ -4460,9 +4460,21 @@ def _soften_late_strength_touches(session_sequence: list[dict[str, Any]]) -> Non
             continue
         offset = entry.get("countdown_offset")
         if not isinstance(offset, int):
-            offset = _countdown_offset(
-                str(entry.get("scheduled_countdown_label") or entry.get("countdown_label") or "")
-            )
+            # Tolerate decorated labels like "D-17 (Monday)" — parse only the
+            # leading digits so a display-form label never skips the cap.
+            label = str(
+                entry.get("scheduled_countdown_label") or entry.get("countdown_label") or ""
+            ).strip().upper()
+            offset = None
+            if label.startswith("D-"):
+                digits = []
+                for char in label[2:]:
+                    if char.isdigit():
+                        digits.append(char)
+                    else:
+                        break
+                if digits:
+                    offset = int("".join(digits))
         if offset is None or offset > _STRENGTH_TOUCH_NEURAL_CAP_MAX_D:
             continue
         entry["rpe_cap"] = "6-7"
