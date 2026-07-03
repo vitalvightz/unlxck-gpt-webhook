@@ -15,6 +15,7 @@ from api.structured_plan_generation import (
     _normalize_day,
     _normalize_load,
     _normalize_measured,
+    _strip_fallback_from_broken_json,
     bank_conditioning_to_block,
     bank_strength_to_block,
     build_structured_plan_outcome,
@@ -332,6 +333,58 @@ def test_repair_prompt_includes_errors_and_broken_json():
     assert "plan_metadata: field required" in prompt
     assert '{"weeks": []}' in prompt
     assert "corrected" in prompt.lower()
+
+
+def test_prompt_does_not_ask_model_to_echo_plan_into_fallback():
+    # The plan body must still appear as the conversion SOURCE, but the model is
+    # told to leave raw_markdown_fallback empty (the server backfills it) so we do
+    # not pay ~6k output tokens echoing the plan back and risk truncation/drift.
+    plan_md = "# Fight Camp\n- Back Squat 3x5\n- Bag work 3x3min"
+    prompt = build_structured_plan_prompt(
+        plan_markdown=plan_md,
+        planning_brief={"main_limiter": "conditioning"},
+        event_date="2026-06-13",
+    )
+    # Source text is still present for conversion fidelity.
+    assert plan_md in prompt
+    # Skeleton demonstrates the empty fallback, and the old echo instruction is gone.
+    assert '"raw_markdown_fallback": ""' in prompt
+    assert "preserve this exactly in raw_markdown_fallback" not in prompt
+    assert "preserve the original human-readable plan verbatim" not in prompt
+    assert 'raw_markdown_fallback" to an empty string' in prompt
+
+
+def test_repair_prompt_strips_echoed_plan_from_broken_json():
+    # A first attempt that copied the whole plan into raw_markdown_fallback must
+    # not have that echo re-sent in the repair prompt.
+    plan_body = "VERBATIM PLAN BODY " * 400
+    broken = json.dumps(
+        {"schema_version": "x", "weeks": [{}], "raw_markdown_fallback": plan_body}
+    )
+    prompt = build_structured_plan_prompt(
+        plan_markdown="# plan",
+        repair_errors=["weeks.0.load_focus: field required"],
+        broken_json=broken,
+    )
+    # The broken-JSON echo section must not carry the copied plan body.
+    assert "VERBATIM PLAN BODY VERBATIM PLAN BODY" not in prompt
+    assert '"raw_markdown_fallback": ""' in prompt or '"raw_markdown_fallback":""' in prompt
+
+
+def test_strip_fallback_from_broken_json_valid_and_unparseable():
+    plan = "PLAN " * 500
+    # Valid JSON path: parse + blank the field.
+    valid = json.dumps({"a": 1, "raw_markdown_fallback": plan})
+    out = _strip_fallback_from_broken_json(valid)
+    assert plan.strip() not in out
+    assert json.loads(out)["raw_markdown_fallback"] == ""
+    # Unparseable path (truncated blob): regex still blanks the value.
+    truncated = '{"a":1,"raw_markdown_fallback":"' + plan.replace("\n", " ") + '","weeks":[  '
+    out2 = _strip_fallback_from_broken_json(truncated)
+    assert '"raw_markdown_fallback":""' in out2
+    assert "PLAN PLAN PLAN" not in out2
+    # Empty input is returned untouched.
+    assert _strip_fallback_from_broken_json("") == ""
 
 
 # --- parse_structured_json --------------------------------------------------

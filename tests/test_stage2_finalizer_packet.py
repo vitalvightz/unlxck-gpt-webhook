@@ -26,6 +26,40 @@ def test_open_ongoing_finalizer_packet_does_not_include_phase_briefs():
     assert "phase_briefs" not in packet
 
 
+def test_finalizer_packet_omits_redundant_calendar_authority_and_days_out_payload():
+    # calendar_authority duplicated weekly_role_map.calendar_days (the named
+    # authority) and days_out_payload was an ~85% subset of late_fight_plan_spec;
+    # neither is referenced by any render instruction, so both are dropped to trim
+    # prompt bytes. weekly_role_map.calendar_days and late_fight_plan_spec remain.
+    stage2_payload = {
+        "athlete_model": {"days_until_fight": 10},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "session_roles": [
+                        {"session_index": 1, "role_key": "primary_strength_day", "scheduled_day_hint": "Monday"}
+                    ],
+                    "calendar_days": [{"weekday": "Monday", "countdown_label": "D-10"}],
+                }
+            ]
+        },
+        "late_fight_plan_spec": {"payload_mode": "pre_fight_compressed_payload", "countdown_mode_sequence": []},
+        "days_out_payload": {"payload_mode": "pre_fight_compressed_payload"},
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    selected_plan = packet["selected_plan"]
+
+    assert "calendar_authority" not in selected_plan
+    assert "days_out_payload" not in selected_plan
+    # Canonical sources the instructions actually name are still present.
+    assert selected_plan["weekly_role_map"]["weeks"][0]["calendar_days"] == [
+        {"weekday": "Monday", "countdown_label": "D-10"}
+    ]
+    assert selected_plan["late_fight_plan_spec"]["payload_mode"] == "pre_fight_compressed_payload"
+
+
 def test_finalizer_packet_preserves_injury_context_fields_in_athlete_model():
     stage2_payload = {
         "athlete_model": {

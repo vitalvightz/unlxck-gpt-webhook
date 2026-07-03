@@ -365,41 +365,6 @@ def _compact_weekly_role_map(weekly_role_map: Any, athlete_model: dict[str, Any]
     }
 
 
-def _compact_calendar_authority(weekly_role_map: Any) -> dict[str, Any]:
-    if not isinstance(weekly_role_map, dict):
-        return {"weeks": []}
-
-    compact_weeks: list[dict[str, Any]] = []
-    for week in weekly_role_map.get("weeks", []) or []:
-        if not isinstance(week, dict):
-            continue
-        calendar_days = [
-            day
-            for day in (week.get("calendar_days") or [])
-            if isinstance(day, dict)
-        ]
-        compact_weeks.append(
-            {
-                "week_index": week.get("week_index"),
-                "phase": week.get("phase"),
-                "calendar_days": calendar_days,
-                "countdown_range": week.get("countdown_range"),
-                "session_day_hints": [
-                    {
-                        "session_index": role.get("session_index"),
-                        "role_key": role.get("role_key"),
-                        "scheduled_day_hint": role.get("scheduled_day_hint"),
-                    }
-                    for role in (week.get("session_roles") or [])
-                    if isinstance(role, dict)
-                ],
-                "fight_day_override": week.get("fight_day_override"),
-            }
-        )
-
-    return {"weeks": compact_weeks}
-
-
 def _compact_session_sequence(stage2_payload: dict[str, Any]) -> list[dict[str, Any]]:
     plan_spec = stage2_payload.get("late_fight_plan_spec") or {}
     if isinstance(plan_spec, dict):
@@ -496,12 +461,6 @@ def build_stage2_finalizer_packet(
         or {}
     )
 
-    days_out_payload = (
-        source.get("days_out_payload")
-        or stage2_payload.get("days_out_payload")
-        or {}
-    )
-
     packet = {
         "packet_type": "stage2_finalizer_packet",
         "packet_version": 1,
@@ -556,10 +515,8 @@ def build_stage2_finalizer_packet(
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map, athlete_model),
-            "calendar_authority": _compact_calendar_authority(weekly_role_map),
             "late_fight_plan_spec": late_fight_plan_spec,
             "open_plan_spec": open_plan_spec,
-            "days_out_payload": days_out_payload,
             "fight_week_override": (
                 source.get("fight_week_override")
                 or stage2_payload.get("fight_week_override")

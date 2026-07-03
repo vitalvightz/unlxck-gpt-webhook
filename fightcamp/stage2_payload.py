@@ -4380,36 +4380,12 @@ def build_stage2_handoff_text(
         payload_mode=payload_mode,
         continuation_map=continuation_map,
     )
-    selected_plan = finalizer_packet.get("selected_plan", {})
-    priority_focus = selected_plan.get("priority_focus", {}) if isinstance(selected_plan, dict) else {}
-    priority_lines = []
-    if isinstance(priority_focus, dict):
-        priority_lines = [
-            "Preserve priority hierarchy from priority_focus:",
-            "- primary goal drives the main adaptation emphasis.",
-            "- primary weak area is the main limiter to manage.",
-            "- secondary goals support the main focus without taking over.",
-            "- secondary weak areas matter but should not hijack session intent.",
-        ]
-        if priority_focus.get("goal_weakness_collisions"):
-            priority_lines.append("- if collision tags exist, keep the overlap and do not overcorrect it.")
-        collision_detail = str(priority_focus.get("collision_detail") or "").strip()
-        if collision_detail:
-            priority_lines.append(f"- collision detail: {collision_detail}")
-        collision_details = priority_focus.get("collision_details")
-        if isinstance(collision_details, list) and len(collision_details) > 1:
-            priority_lines.append(
-                "- if collision_details has multiple entries, preserve each clarification and use each one to sharpen the relevant training emphasis."
-            )
-        derived_tags = priority_focus.get("derived_clarification_tags")
-        if isinstance(derived_tags, list):
-            priority_lines.append(
-                "- use priority_focus.derived_clarification_tags as internal emphasis signals when preserving the plan's intent; they do not override hard safety, schedule, injury, phase, or recovery constraints."
-            )
-            priority_lines.append(
-                "- do not expose derived_clarification_tags or raw scoring/reason-code labels directly in athlete-facing text."
-            )
-
+    # Priority-hierarchy guidance is NOT restated here: the finalizer packet's
+    # hard_rules already carry the full priority_focus doctrine (preserve
+    # hierarchy, honour collisions via priority_focus.collision_detail /
+    # collision_details, treat derived_clarification_tags as internal-only), and
+    # the packet's selected_plan.priority_focus block supplies the underlying
+    # values. A parallel prose section here only duplicated those rules.
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
         UNLXCK_FINAL_RENDER_CONTRACT.strip(),
@@ -4419,8 +4395,6 @@ def build_stage2_handoff_text(
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
     if render_mode == "open_ongoing_system":
         sections.append(_OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS.strip())
-    if priority_lines:
-        sections.append("PRIORITY FOCUS GUIDANCE\n" + "\n".join(priority_lines))
 
     sections.append("FINALIZER PACKET\n" + _json_block(finalizer_packet))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
