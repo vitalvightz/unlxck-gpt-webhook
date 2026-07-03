@@ -387,6 +387,30 @@ def _structured_repair_enabled() -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+# Responses-API output-format object requesting a single JSON object. Applied
+# only to the structured-card calls (never the markdown plan-text pass).
+_STRUCTURED_JSON_FORMAT = {"type": "json_object"}
+
+
+def _stage2_structured_json_mode() -> bool:
+    """Whether the structured-card model calls request JSON output mode.
+
+    On by default. The structured conversion must return one JSON object; asking
+    the provider for JSON output mode (Responses API ``text.format`` =
+    ``json_object``) guarantees syntactically valid JSON and removes the
+    "structured model output was not valid JSON" failure class - the schema,
+    normalizer, faithfulness gate, and repair retry still enforce shape/content.
+    Set ``UNLXCK_STAGE2_STRUCTURED_JSON_MODE`` to a falsey value to disable it if
+    the configured model/endpoint does not accept the parameter (the plan-text
+    first pass never uses it, so free-form markdown is unaffected).
+    """
+
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE")
+    if raw is None:
+        return True  # unset → default on
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _record_structured_outcome(
     result: dict[str, Any], outcome: StructuredPlanOutcome
 ) -> dict[str, Any]:
@@ -665,6 +689,7 @@ class OpenAIStage2Automator:
         source: str,
         log_context: dict[str, str] | None = None,
         timeout: float | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> tuple[str, dict[str, Any]]:
         _enforce_stage2_prompt_budget(prompt, attempt_label=attempt_label, source=source)
         request: dict[str, Any] = {
@@ -674,6 +699,11 @@ class OpenAIStage2Automator:
             # server-side, so a dropped connection cannot kill a long generation.
             "background": True,
         }
+        if response_format is not None:
+            # Constrain the provider's output format (e.g. JSON object mode for the
+            # structured-card calls) via the Responses API text.format field. The
+            # plan-text first pass leaves this unset so it stays free-form markdown.
+            request["text"] = {"format": response_format}
         max_output_tokens = _stage2_max_output_tokens()
         if max_output_tokens > 0:
             request["max_output_tokens"] = max_output_tokens
@@ -682,12 +712,13 @@ class OpenAIStage2Automator:
             # explicit None as "no timeout at all" rather than the client default.
             request["timeout"] = timeout
         logger.info(
-            "[stage2] sending %s prompt to model=%s chars=%s max_output_tokens=%s timeout=%s",
+            "[stage2] sending %s prompt to model=%s chars=%s max_output_tokens=%s timeout=%s format=%s",
             attempt_label,
             self.model,
             len(prompt),
             max_output_tokens or "unset",
             timeout if timeout is not None else "client_default",
+            (response_format or {}).get("type", "text"),
         )
         try:
             # Stream instead of a single blocking create: the HTTP read timeout
@@ -974,6 +1005,8 @@ class OpenAIStage2Automator:
         if planning_brief:
             event_date = str(planning_brief.get("fight_date") or "")
 
+        json_format = _STRUCTURED_JSON_FORMAT if _stage2_structured_json_mode() else None
+
         first_prompt = build_structured_plan_prompt(
             plan_markdown=final_plan_text,
             planning_brief=planning_brief,
@@ -985,6 +1018,7 @@ class OpenAIStage2Automator:
             source=source,
             log_context=log_context,
             timeout=_stage2_structured_timeout_seconds(),
+            response_format=json_format,
         )
         costs.append(first_cost)
         first_json = parse_structured_json(first_text)
@@ -1034,6 +1068,7 @@ class OpenAIStage2Automator:
             source=source,
             log_context=log_context,
             timeout=_stage2_structured_timeout_seconds(),
+            response_format=json_format,
         )
         costs.append(repair_cost)
         repaired_json = parse_structured_json(repaired_text)

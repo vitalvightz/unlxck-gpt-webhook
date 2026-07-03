@@ -123,6 +123,55 @@ def test_first_pass_omits_max_output_tokens_when_disabled(monkeypatch: pytest.Mo
     assert "max_output_tokens" not in client.responses.calls[0]
 
 
+def test_structured_calls_request_json_object_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The structured-card conversion calls must ask the provider for JSON output
+    # mode so the response is always syntactically valid JSON.
+    import json
+
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")  # single call keeps it simple
+    client = FakeClient([_response(json.dumps([1, 2, 3]))])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan", planning_brief={}, source="test", costs=[]
+        )
+    )
+
+    assert client.responses.calls[0]["text"] == {"format": {"type": "json_object"}}
+
+
+def test_structured_calls_omit_json_mode_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    import json
+
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", "0")
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
+    client = FakeClient([_response(json.dumps([1, 2, 3]))])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan", planning_brief={}, source="test", costs=[]
+        )
+    )
+
+    assert "text" not in client.responses.calls[0]
+
+
+def test_plan_text_first_pass_omits_json_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The markdown plan-text pass must stay free-form (never JSON output mode),
+    # regardless of the structured JSON-mode flag.
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    client = FakeClient([_response("# final plan")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert "text" not in client.responses.calls[0]
+
+
 def test_first_pass_incomplete_response_fails_the_job(monkeypatch: pytest.MonkeyPatch) -> None:
     # A response truncated by the output-token cap must hard-fail (athlete retries)
     # rather than ship a half-written plan. This is the production failure that the
@@ -279,12 +328,18 @@ def test_retry_pass_is_never_sent_during_automatic_finalization(
         source: str,
         log_context: dict | None = None,
         timeout: float | None = None,
+        response_format: dict | None = None,
     ) -> tuple[str, dict]:
         seen_attempts.append(attempt_label)
         if attempt_label == "retry_pass":
             raise AssertionError("automatic Stage 2 finalization must not send retry_pass")
         return await original_generate_text(
-            prompt, attempt_label=attempt_label, source=source, log_context=log_context, timeout=timeout
+            prompt,
+            attempt_label=attempt_label,
+            source=source,
+            log_context=log_context,
+            timeout=timeout,
+            response_format=response_format,
         )
 
     monkeypatch.setattr(automator, "_generate_text", _record_attempt)
@@ -567,7 +622,7 @@ def test_structured_repair_disabled_skips_second_model_call(monkeypatch: pytest.
 
     labels: list[str] = []
 
-    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None, timeout=None):
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None, timeout=None, response_format=None):
         labels.append(attempt_label)
         # Valid JSON that is not a schema-valid plan: parses, then fails
         # validation so the repair gate is reached (but skipped while disabled).
@@ -598,7 +653,7 @@ def test_structured_repair_enabled_makes_second_model_call(monkeypatch: pytest.M
 
     labels: list[str] = []
 
-    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None, timeout=None):
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None, timeout=None, response_format=None):
         labels.append(attempt_label)
         return json.dumps([1, 2, 3]), {}
 
