@@ -75,6 +75,6 @@ def build_generation_jobs_router(
         is_admin = is_effective_admin_profile(profile, store)
         if not is_admin and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        return _job_response(job, store=store, viewer_role="admin" if is_admin else profile.role)
+        return _job_response(job, store=store, viewer_role="admin" if is_admin else (profile.role or "athlete"))
 
     return router
