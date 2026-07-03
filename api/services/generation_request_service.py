@@ -91,7 +91,7 @@ async def generate_plan_for_current_user(
             _generation_request_debug_summary(request_body),
         )
     is_admin = is_effective_admin_profile(profile, store)
-    viewer_role = "admin" if is_admin else "athlete"
+    viewer_role = "admin" if is_admin else profile.role
     existing_job = await asyncio.to_thread(
         store.get_generation_job_by_client_request_id,
         athlete_id=profile.athlete_id,

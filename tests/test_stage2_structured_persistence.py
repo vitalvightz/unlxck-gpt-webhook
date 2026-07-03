@@ -231,6 +231,22 @@ def test_map_plan_detail_exposes_invalid_structured_debug():
 # ---------------------------------------------------------------------------
 
 
+class _FakeStream:
+    def __init__(self, response_coro) -> None:
+        self._coro = response_coro
+        self._response: object | None = None
+
+    async def __aenter__(self) -> "_FakeStream":
+        self._response = await self._coro
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        return None
+
+    async def get_final_response(self) -> object:
+        return self._response
+
+
 class _FakeResponses:
     def __init__(self, outputs: list[object]) -> None:
         self.outputs = list(outputs)
@@ -238,7 +254,14 @@ class _FakeResponses:
 
     async def create(self, **request: object) -> object:
         self.calls.append(request)
-        return self.outputs.pop(0)
+        output = self.outputs.pop(0)
+        if isinstance(output, Exception):
+            raise output
+        return output
+
+    def stream(self, **request: object) -> _FakeStream:
+        # Delegate through create() so tests that override .create keep working.
+        return _FakeStream(self.create(**request))
 
 
 class _FakeClient:

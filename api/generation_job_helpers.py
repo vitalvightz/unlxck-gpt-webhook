@@ -34,6 +34,13 @@ _CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 _PROTECTED_TRIAGE_STATUSES = frozenset({"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"})
 
+# Non-athlete, non-admin viewers (coach / gym_owner, reserved for public beta)
+# get a retry-oriented message instead of the stored technical error. Admins
+# keep the raw error for debugging; athletes keep the existing sanitized text.
+_GENERATION_FRIENDLY_RETRY_ERROR = (
+    "Plan generation didn't complete this time. Please try again in a few moments."
+)
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -199,6 +206,8 @@ def _job_response(
     error = str(job["error"]) if job.get("error") else None
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
         error = _OPENAI_QUOTA_ATHLETE_ERROR
+    elif error and viewer_role not in {"admin", "athlete"}:
+        error = _GENERATION_FRIENDLY_RETRY_ERROR
     can_retry = (
         normalized_status == "failed"
         and isinstance(job.get("request_payload"), dict)
