@@ -398,10 +398,10 @@ class TestLateFightPermissionsAndRendering:
         d6_rules = _late_fight_rendering_rules(6)
         d1_rules = _late_fight_rendering_rules(1)
 
-        assert any("RPE 6-7" in rule and "3-4 x 6 sec" in rule for rule in d7_rules["rules"])
+        assert any("RPE 6-7" in rule and "3-4 x 5-6 sec" in rule for rule in d7_rules["rules"])
         assert "all-out bursts" in d7_rules["forbidden_terms"]
         assert "RPE 8" in d7_rules["forbidden_terms"]
-        assert any("RPE 6-7" in rule and "3-4 x 6 sec" in rule for rule in d6_rules["rules"])
+        assert any("RPE 6-7" in rule and "2-3 x 5-6 sec" in rule for rule in d6_rules["rules"])
         assert "all-out bursts" in d6_rules["forbidden_terms"]
         assert any("RPE 3-5" in rule for rule in d1_rules["rules"])
         assert "RPE 6-7" in d1_rules["forbidden_terms"]
@@ -1092,8 +1092,8 @@ class TestHandoffText:
         d1_text = self._build_handoff(1)
 
         assert "use selected drill RPE when present" in d7_text
-        assert "RPE 6-7, 3-4 x 6 sec" in d7_text
-        assert "RPE 6-7, 3-4 x 6 sec" in d6_text
+        assert "RPE 6-7, 3-4 x 5-6 sec" in d7_text
+        assert "RPE 6-7, 2-3 x 5-6 sec" in d6_text
         assert "No all-out language" in d6_text
         assert "RPE 3-5" in d1_text
         assert "no RPE 6-7" in d1_text
