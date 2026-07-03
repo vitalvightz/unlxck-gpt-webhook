@@ -34,6 +34,30 @@ _CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 _PROTECTED_TRIAGE_STATUSES = frozenset({"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"})
 
+# Non-athlete, non-admin viewers (coach / gym_owner, reserved for public beta)
+# get a retry-oriented message instead of the stored technical error. Admins
+# keep the raw error for debugging; athletes keep the existing sanitized text.
+_GENERATION_FRIENDLY_RETRY_ERROR = (
+    "Plan generation didn't complete this time. Please try again in a few moments."
+)
+
+
+def resolve_viewer_role(profile: Any, *, is_admin: bool) -> str:
+    """Viewer role for ``_job_response`` error redaction.
+
+    Only an effective admin (role AND allowlisted email, per
+    ``is_effective_admin_profile``) may see raw stored errors. A profile whose
+    role still says "admin" without passing that check must be redacted like an
+    athlete, not trusted on its stored role. Missing/blank roles also collapse
+    to "athlete".
+    """
+    if is_admin:
+        return "admin"
+    role = str(getattr(profile, "role", "") or "").strip()
+    if not role or role == "admin":
+        return "athlete"
+    return role
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -197,8 +221,15 @@ def _job_response(
         resolved_latest_plan_id = resolved_latest_plan_id or plan_id
     updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
     error = str(job["error"]) if job.get("error") else None
-    if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
-        error = _OPENAI_QUOTA_ATHLETE_ERROR
+    if error and viewer_role != "admin":
+        if error == _OPENAI_QUOTA_ADMIN_ERROR:
+            # Quota exhaustion keeps its dedicated message for EVERY non-admin
+            # viewer (athlete or coach/gym_owner): "try again in a few moments"
+            # would be wrong guidance when the actual fix is an admin restoring
+            # the OpenAI billing/quota.
+            error = _OPENAI_QUOTA_ATHLETE_ERROR
+        elif viewer_role != "athlete":
+            error = _GENERATION_FRIENDLY_RETRY_ERROR
     can_retry = (
         normalized_status == "failed"
         and isinstance(job.get("request_payload"), dict)

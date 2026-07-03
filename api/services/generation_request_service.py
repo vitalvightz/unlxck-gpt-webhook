@@ -18,6 +18,7 @@ from api.generation_job_helpers import (
     _job_response,
     _normalized_client_request_id,
     daily_generation_cap_window,
+    resolve_viewer_role,
 )
 from api.errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
 from api.environment import is_production_environment
@@ -91,7 +92,7 @@ async def generate_plan_for_current_user(
             _generation_request_debug_summary(request_body),
         )
     is_admin = is_effective_admin_profile(profile, store)
-    viewer_role = "admin" if is_admin else "athlete"
+    viewer_role = resolve_viewer_role(profile, is_admin=is_admin)
     existing_job = await asyncio.to_thread(
         store.get_generation_job_by_client_request_id,
         athlete_id=profile.athlete_id,

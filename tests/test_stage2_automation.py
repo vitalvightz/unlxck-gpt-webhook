@@ -8,6 +8,7 @@ import pytest
 
 import api.stage2_automation as stage2_module
 from api.stage2_automation import OpenAIStage2Automator, Stage2AutomationError
+from support import FakeOpenAIClient as FakeClient
 
 
 @pytest.fixture(autouse=True)
@@ -20,24 +21,6 @@ def _structured_plan_off(monkeypatch: pytest.MonkeyPatch) -> None:
     dedicated coverage in test_stage2_structured_persistence.py.
     """
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
-
-
-class FakeResponses:
-    def __init__(self, outputs: list[object]) -> None:
-        self.outputs = list(outputs)
-        self.calls: list[dict] = []
-
-    async def create(self, **request: object) -> object:
-        self.calls.append(request)
-        output = self.outputs.pop(0)
-        if isinstance(output, Exception):
-            raise output
-        return output
-
-
-class FakeClient:
-    def __init__(self, outputs: list[object]) -> None:
-        self.responses = FakeResponses(outputs)
 
 
 def _response(text: str, *, input_tokens: int = 10, output_tokens: int = 5) -> SimpleNamespace:
@@ -290,13 +273,18 @@ def test_retry_pass_is_never_sent_during_automatic_finalization(
     seen_attempts: list[str] = []
 
     async def _record_attempt(
-        prompt: str, *, attempt_label: str, source: str, log_context: dict | None = None
+        prompt: str,
+        *,
+        attempt_label: str,
+        source: str,
+        log_context: dict | None = None,
+        timeout: float | None = None,
     ) -> tuple[str, dict]:
         seen_attempts.append(attempt_label)
         if attempt_label == "retry_pass":
             raise AssertionError("automatic Stage 2 finalization must not send retry_pass")
         return await original_generate_text(
-            prompt, attempt_label=attempt_label, source=source, log_context=log_context
+            prompt, attempt_label=attempt_label, source=source, log_context=log_context, timeout=timeout
         )
 
     monkeypatch.setattr(automator, "_generate_text", _record_attempt)
@@ -579,7 +567,7 @@ def test_structured_repair_disabled_skips_second_model_call(monkeypatch: pytest.
 
     labels: list[str] = []
 
-    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None):
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None, timeout=None):
         labels.append(attempt_label)
         # Valid JSON that is not a schema-valid plan: parses, then fails
         # validation so the repair gate is reached (but skipped while disabled).
@@ -610,7 +598,7 @@ def test_structured_repair_enabled_makes_second_model_call(monkeypatch: pytest.M
 
     labels: list[str] = []
 
-    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None):
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None, timeout=None):
         labels.append(attempt_label)
         return json.dumps([1, 2, 3]), {}
 

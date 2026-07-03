@@ -193,6 +193,25 @@ def _stage2_timeout_seconds() -> float:
         return default_timeout
 
 
+def _stage2_structured_timeout_seconds() -> float:
+    # Per-request timeout for the structured-card calls only (structured_first /
+    # structured_repair). Card conversion regularly runs longer than the plan-text
+    # pass, so it gets a wider budget than the client default above. Raising this
+    # is only effective while APP_STAGE2_FINALIZE_TIMEOUT_SECONDS (the whole-finalize
+    # budget in api/generation/timeouts.py) leaves room for it.
+    default_timeout = 600.0
+    raw_value = os.getenv("UNLXCK_STAGE2_STRUCTURED_TIMEOUT_SECONDS", str(default_timeout)).strip()
+    try:
+        return max(1.0, float(raw_value))
+    except ValueError:
+        logger.warning(
+            "[stage2] invalid float env UNLXCK_STAGE2_STRUCTURED_TIMEOUT_SECONDS=%r; using %s",
+            raw_value,
+            default_timeout,
+        )
+        return default_timeout
+
+
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -645,24 +664,39 @@ class OpenAIStage2Automator:
         attempt_label: str,
         source: str,
         log_context: dict[str, str] | None = None,
+        timeout: float | None = None,
     ) -> tuple[str, dict[str, Any]]:
         _enforce_stage2_prompt_budget(prompt, attempt_label=attempt_label, source=source)
         request: dict[str, Any] = {
             "model": self.model,
             "input": prompt,
+            # Background mode: the provider keeps working on the response
+            # server-side, so a dropped connection cannot kill a long generation.
+            "background": True,
         }
         max_output_tokens = _stage2_max_output_tokens()
         if max_output_tokens > 0:
             request["max_output_tokens"] = max_output_tokens
+        if timeout is not None:
+            # Per-request override. Do NOT pass None through: the SDK treats an
+            # explicit None as "no timeout at all" rather than the client default.
+            request["timeout"] = timeout
         logger.info(
-            "[stage2] sending %s prompt to model=%s chars=%s max_output_tokens=%s",
+            "[stage2] sending %s prompt to model=%s chars=%s max_output_tokens=%s timeout=%s",
             attempt_label,
             self.model,
             len(prompt),
             max_output_tokens or "unset",
+            timeout if timeout is not None else "client_default",
         )
         try:
-            response = await self.client.responses.create(**request)
+            # Stream instead of a single blocking create: the HTTP read timeout
+            # then applies to the gap between events, not the whole generation,
+            # so long responses stop tripping idle-connection timeouts.
+            # get_final_response() drains the stream and returns the same
+            # Response object create() would have.
+            async with self.client.responses.stream(**request) as stream:
+                response = await stream.get_final_response()
         except Exception as exc:  # pragma: no cover - provider failure surfaces via integration
             # No response means no actual usage; record the estimated input cost
             # so a failed attempt still leaves an auditable cost row.
@@ -950,6 +984,7 @@ class OpenAIStage2Automator:
             attempt_label="structured_first",
             source=source,
             log_context=log_context,
+            timeout=_stage2_structured_timeout_seconds(),
         )
         costs.append(first_cost)
         first_json = parse_structured_json(first_text)
@@ -998,6 +1033,7 @@ class OpenAIStage2Automator:
             attempt_label="structured_repair",
             source=source,
             log_context=log_context,
+            timeout=_stage2_structured_timeout_seconds(),
         )
         costs.append(repair_cost)
         repaired_json = parse_structured_json(repaired_text)

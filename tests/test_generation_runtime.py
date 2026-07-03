@@ -355,9 +355,11 @@ def test_generation_job_request_parse_failure_is_diagnostic(caplog):
     assert "worker:after_request_parse" not in caplog.text
 
 
-def test_stage2_finalize_timeout_default_is_240(monkeypatch):
+def test_stage2_finalize_timeout_default_is_1500(monkeypatch):
+    # Must cover the worst-case sum of the per-request Stage 2 timeouts:
+    # plan-text pass (210s) + structured first + repair (600s each).
     monkeypatch.delenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", raising=False)
-    assert _stage2_finalize_timeout_seconds() == 240.0
+    assert _stage2_finalize_timeout_seconds() == 1500.0
 
 
 @pytest.mark.parametrize("sentinel", ["", "0", "none", "None", "NONE"])
@@ -366,9 +368,9 @@ def test_stage2_finalize_timeout_sentinels_disable_timeout(monkeypatch, sentinel
     assert _stage2_finalize_timeout_seconds() is None
 
 
-def test_stage2_finalize_timeout_invalid_falls_back_to_300(monkeypatch):
+def test_stage2_finalize_timeout_invalid_falls_back_to_default(monkeypatch):
     monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "not-a-number")
-    assert _stage2_finalize_timeout_seconds() == 300.0
+    assert _stage2_finalize_timeout_seconds() == 1500.0
 
 
 def test_stage2_finalize_timeout_respects_valid_override(monkeypatch):

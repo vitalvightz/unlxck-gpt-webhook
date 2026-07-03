@@ -1563,6 +1563,48 @@ class FakeStore:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review not found")
 
 
+class FakeOpenAIStream:
+    """Minimal stand-in for the OpenAI SDK's AsyncResponseStreamManager: entering
+    the context resolves (or raises) like ``responses.create`` would, and
+    ``get_final_response`` returns the accumulated response object."""
+
+    def __init__(self, response_coro) -> None:
+        self._coro = response_coro
+        self._response: object | None = None
+
+    async def __aenter__(self) -> "FakeOpenAIStream":
+        self._response = await self._coro
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        return None
+
+    async def get_final_response(self) -> object:
+        return self._response
+
+
+class FakeOpenAIResponses:
+    def __init__(self, outputs: list[object]) -> None:
+        self.outputs = list(outputs)
+        self.calls: list[dict] = []
+
+    async def create(self, **request: object) -> object:
+        self.calls.append(request)
+        output = self.outputs.pop(0)
+        if isinstance(output, Exception):
+            raise output
+        return output
+
+    def stream(self, **request: object) -> FakeOpenAIStream:
+        # Delegate through create() so tests that override .create keep working.
+        return FakeOpenAIStream(self.create(**request))
+
+
+class FakeOpenAIClient:
+    def __init__(self, outputs: list[object]) -> None:
+        self.responses = FakeOpenAIResponses(outputs)
+
+
 @dataclass
 class FakeStage2Automator:
     result: dict | None = None

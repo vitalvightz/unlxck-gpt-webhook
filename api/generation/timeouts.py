@@ -10,17 +10,22 @@ logger = logging.getLogger(__name__)
 
 
 def _stage2_finalize_timeout_seconds() -> float | None:
-    raw_value = os.getenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "240").strip()
+    # Budget for the WHOLE Stage 2 finalize: plan-text pass (client default
+    # 210s, UNLXCK_STAGE2_TIMEOUT_SECONDS) + structured card first pass and
+    # repair retry (600s each, UNLXCK_STAGE2_STRUCTURED_TIMEOUT_SECONDS). The
+    # default must exceed the worst-case sum of those per-request timeouts or
+    # the per-request budgets can never actually be used.
+    raw_value = os.getenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "1500").strip()
     if raw_value in {"", "0", "none", "None", "NONE"}:
         return None
     try:
         return max(1.0, float(raw_value))
     except ValueError:
         logger.warning(
-            "[jobs] generation:invalid_stage2_timeout value=%r; falling back to 300s",
+            "[jobs] generation:invalid_stage2_timeout value=%r; falling back to 1500s",
             raw_value,
         )
-        return 300.0
+        return 1500.0
 
 
 def _stage1_planner_timeout_seconds() -> float | None:
