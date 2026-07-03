@@ -1584,7 +1584,7 @@ def parse_structured_json(text: str) -> Any:
 # Matches a JSON string value for raw_markdown_fallback, honouring backslash
 # escapes so a plan body full of quotes/newlines is captured as one value.
 _RAW_FALLBACK_VALUE_RE = re.compile(
-    r'("raw_markdown_fallback"\s*:\s*)"(?:[^"\\]|\\.)*"'
+    r'("raw_markdown_fallback"\s*:\s*)"(?:[^"\\]|\\.)*"', re.DOTALL
 )
 
 
