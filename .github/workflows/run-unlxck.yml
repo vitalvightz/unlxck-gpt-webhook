@@ -10,8 +10,6 @@ jobs:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      INJURY_DEBUG: "1"
-      INJURY_TRACE: "1"
 
     steps:
       - name: Checkout repo
@@ -37,14 +35,15 @@ jobs:
 
           raw = os.environ["SUPABASE_URL"]
           cleaned = raw.strip()
-          print(f"SUPABASE_URL_RAW={raw}")
+          if not cleaned:
+              raise SystemExit("SUPABASE_URL is empty")
+          print("SUPABASE_URL present")
           if cleaned.lower().startswith("supabase_url="):
-              print(f"SUPABASE_URL_CLEANED={cleaned}")
               raise SystemExit("GitHub var still contains prefix")
           cleaned = cleaned.rstrip("/")
-          print(f"SUPABASE_URL_CLEANED={cleaned}")
           if not cleaned.startswith("https://"):
               raise SystemExit("SUPABASE_URL must start with https://")
+          print("SUPABASE_URL_CLEANED looks valid")
           PY
 
       - name: Run tests
