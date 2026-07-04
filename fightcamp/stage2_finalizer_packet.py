@@ -123,9 +123,14 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "preferred_tags",
         "preferred_exercise_names",
         "anchor",
-        "selection_rule",
-        "placement_rule",
-        "day_assignment_reason",
+        # NOTE: selection_rule / placement_rule / day_assignment_reason are
+        # deliberately NOT surfaced to the finalizer. They are internal Stage 1
+        # selection/placement rationale (which slot was chosen and why), not
+        # athlete-facing content, and no render instruction references them. The
+        # finalizer treats Stage 1 as candidates and owns its own placement, with
+        # the authoritative day signal coming from scheduled_day_hint +
+        # calendar_days; these strings were highly repetitive (a handful of unique
+        # values stamped across every role) and only bloated the prompt.
         "coach_owned",
         "display_text",
         "athlete_facing_label",
@@ -365,6 +370,37 @@ def _compact_weekly_role_map(weekly_role_map: Any, athlete_model: dict[str, Any]
     }
 
 
+# Internal late-fight scaffolding the finalizer never needs. The LLM already
+# gets the countdown session list via selected_plan.session_sequence
+# (visible_session_sequence is a byte-identical copy of it), and allocator /
+# role_budget / permission_policy are Stage 1 allocation internals that no render
+# instruction references. The one referenced cap (max_active_roles) lives at the
+# spec top level and is preserved; only these internal-only keys are stripped.
+_LATE_FIGHT_SPEC_INTERNAL_KEYS = (
+    "visible_session_sequence",
+    "allocator",
+    "role_budget",
+    "permission_policy",
+)
+
+
+def _compact_late_fight_plan_spec(late_fight_plan_spec: Any) -> Any:
+    """Return the LLM-facing late-fight spec without internal allocation scaffolding.
+
+    Non-mutating: builds a new dict so the source spec (still read by the Stage 1
+    pipeline and the Stage 2 validator) is untouched. ``countdown_mode_sequence``
+    is preserved because the handoff's countdown-continuation map reads it.
+    """
+
+    if not isinstance(late_fight_plan_spec, dict):
+        return late_fight_plan_spec
+    return {
+        key: value
+        for key, value in late_fight_plan_spec.items()
+        if key not in _LATE_FIGHT_SPEC_INTERNAL_KEYS
+    }
+
+
 def _compact_session_sequence(stage2_payload: dict[str, Any]) -> list[dict[str, Any]]:
     plan_spec = stage2_payload.get("late_fight_plan_spec") or {}
     if isinstance(plan_spec, dict):
@@ -450,7 +486,7 @@ def build_stage2_finalizer_packet(
     render_mode = guards.get("render_mode") or "camp_plan"
 
     weekly_role_map = source.get("weekly_role_map") or stage2_payload.get("weekly_role_map")
-    late_fight_plan_spec = (
+    late_fight_plan_spec = _compact_late_fight_plan_spec(
         source.get("late_fight_plan_spec")
         or stage2_payload.get("late_fight_plan_spec")
         or {}
