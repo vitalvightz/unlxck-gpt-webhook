@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import type { Viewport } from "next";
+import { headers } from "next/headers";
 
 import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
@@ -30,11 +31,21 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  // The per-request CSP (set in proxy.ts) uses a nonce + 'strict-dynamic', so the
+  // inline theme-init script must carry that nonce or it is blocked and the flash
+  // returns. Undefined when no CSP is present — the attribute is simply omitted.
+  //
+  // Only accept a value matching the shape proxy.ts generates (btoa of a random
+  // UUID -> 48-char unpadded base64). On routes the middleware excludes there is
+  // no CSP, but a client could still supply an arbitrary x-nonce header; this
+  // guard means such a value is never reflected into the page as a nonce.
+  const rawNonce = (await headers()).get("x-nonce");
+  const nonce = rawNonce && /^[A-Za-z0-9+/]{48}$/.test(rawNonce) ? rawNonce : undefined;
   return (
     <html lang="en" data-theme="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
