@@ -41,6 +41,10 @@ def get_cors_origin_regex() -> str | None:
     return value or None
 
 
+def _allow_production_cors_regex() -> bool:
+    return os.getenv("APP_ALLOW_PRODUCTION_CORS_REGEX", "").strip().lower() in {"1", "true", "yes"}
+
+
 _UNSAFE_CORS_REGEX_PATTERNS = frozenset({".*", "^.*$", ".+", "^.+$", "^.*", ".*$", "^.+", ".+$"})
 
 
@@ -76,7 +80,7 @@ def validate_production_cors_config(origins: list[str], regex: str | None) -> No
     if not origins and not regex:
         violations.append(
             "APP_CORS_ORIGINS must list at least one origin "
-            "(or APP_CORS_ORIGIN_REGEX must be set) in production"
+            "in production"
         )
 
     for origin in origins:
@@ -96,10 +100,16 @@ def validate_production_cors_config(origins: list[str], regex: str | None) -> No
                 f"APP_CORS_ORIGINS cannot contain localhost origins in production: {origin!r}"
             )
 
-    if regex is not None and _is_broad_cors_regex(regex):
-        violations.append(
-            f"APP_CORS_ORIGIN_REGEX is too broad for production: {regex!r}"
-        )
+    if regex is not None:
+        if not _allow_production_cors_regex():
+            violations.append(
+                "APP_CORS_ORIGIN_REGEX is disabled in production unless "
+                "APP_ALLOW_PRODUCTION_CORS_REGEX=1 is set"
+            )
+        elif _is_broad_cors_regex(regex):
+            violations.append(
+                f"APP_CORS_ORIGIN_REGEX is too broad for production: {regex!r}"
+            )
 
     if not violations:
         return
