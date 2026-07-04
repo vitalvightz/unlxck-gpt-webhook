@@ -23,6 +23,7 @@ constrained strings (no ``Enum`` classes), and ``from __future__`` annotations.
 """
 from __future__ import annotations
 
+import copy
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
@@ -513,6 +514,118 @@ class StructuredTrainingPlan(BaseModel):
     # Optional so legacy plans and the plan_text fallback keep working.
     deterministic_support: dict[str, Any] | None = None
     raw_markdown_fallback: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Strict json_schema generation for OpenAI structured outputs (opt-in)
+# ---------------------------------------------------------------------------
+#
+# OpenAI's strict json_schema mode guarantees the model returns an object that
+# conforms to a schema (not merely syntactically valid JSON), which lets the
+# structured-card call retire its repair retry. Strict mode imposes hard
+# requirements the raw Pydantic schema does not meet, so the schema is
+# transformed:
+#   * every object sets additionalProperties: false and lists ALL properties in
+#     `required`. Pydantic already emits Optional fields as nullable
+#     (anyOf with {"type": "null"}), so the model can emit null for them; fields
+#     with a non-null default (str="", list=[]) simply emit their empty value.
+#   * keywords strict mode rejects (default, format, numeric/length/item bounds,
+#     pattern, …) are stripped.
+#   * free-form dict[str, Any] objects (which strict mode forbids entirely) are
+#     reduced to null-only. Our two such fields are both Optional:
+#     deterministic_support is injected server-side after conversion (never
+#     model-generated), and MorningCheckIn.injury_specific degrades to null.
+#
+# IMPORTANT: this is verified here only for STRUCTURAL strict-compliance
+# (all-required, additionalProperties:false, no banned keywords, no free-form
+# objects). Whether the live OpenAI endpoint accepts the schema, and whether the
+# model output round-trips cleanly through validation, MUST be confirmed in
+# staging with a real API key before the schema mode is enabled in production.
+
+_STRICT_UNSUPPORTED_KEYWORDS = frozenset(
+    {
+        "default",
+        "format",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "minItems",
+        "maxItems",
+        "uniqueItems",
+        "multipleOf",
+    }
+)
+
+
+def _is_free_form_object(node: Any) -> bool:
+    """Whether ``node`` is a schema for an object with no declared shape.
+
+    Strict mode forbids free-form objects. A proper object (has ``properties``)
+    is never free-form; a ``dict[str, Any]`` (``additionalProperties: true``) or
+    a bare ``{"type": "object"}`` with no properties is.
+    """
+
+    if not isinstance(node, dict) or node.get("properties"):
+        return False
+    additional = node.get("additionalProperties")
+    if additional is True or isinstance(additional, dict):
+        return True
+    return node.get("type") == "object" and additional is None
+
+
+def _strictify_schema_node(node: Any) -> Any:
+    """Recursively rewrite a JSON schema node to satisfy OpenAI strict mode."""
+
+    if isinstance(node, list):
+        return [_strictify_schema_node(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+
+    # Drop free-form-object variants from unions (they cannot survive strict
+    # mode). Our free-form fields are all Optional, so this leaves the null
+    # variant and the field becomes null-only.
+    if isinstance(node.get("anyOf"), list):
+        variants = [v for v in node["anyOf"] if not _is_free_form_object(v)]
+        node = {**node, "anyOf": variants or [{"type": "null"}]}
+
+    cleaned: dict[str, Any] = {}
+    for key, value in node.items():
+        if key in _STRICT_UNSUPPORTED_KEYWORDS:
+            continue
+        cleaned[key] = _strictify_schema_node(value)
+
+    # A standalone free-form object (not reachable via the anyOf handling above)
+    # has no expressible strict shape; force it to null.
+    if _is_free_form_object(cleaned):
+        return {"type": "null"}
+
+    properties = cleaned.get("properties")
+    if isinstance(properties, dict):
+        cleaned["required"] = list(properties.keys())
+        cleaned["additionalProperties"] = False
+
+    return cleaned
+
+
+_STRICT_SCHEMA_CACHE: dict[str, Any] | None = None
+
+
+def build_strict_structured_plan_schema() -> dict[str, Any]:
+    """Return the OpenAI strict-mode json_schema for StructuredTrainingPlan.
+
+    Cached (the transform is pure). See the module comment above for the strict
+    requirements enforced and the staging-validation caveat.
+    """
+
+    global _STRICT_SCHEMA_CACHE
+    if _STRICT_SCHEMA_CACHE is None:
+        raw = StructuredTrainingPlan.model_json_schema()
+        _STRICT_SCHEMA_CACHE = _strictify_schema_node(copy.deepcopy(raw))
+    return copy.deepcopy(_STRICT_SCHEMA_CACHE)
 
 
 # ---------------------------------------------------------------------------

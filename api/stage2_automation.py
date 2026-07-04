@@ -23,6 +23,7 @@ from .structured_plan_generation import (
     parse_structured_json,
     should_attempt_structured_plan,
 )
+from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
 # Plan statuses this module writes. NOTE: a failed Stage 2 validation produces
@@ -409,6 +410,57 @@ def _stage2_structured_json_mode() -> bool:
     if raw is None:
         return True  # unset → default on
     return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _stage2_structured_schema_mode() -> bool:
+    """Whether the structured-card calls use strict json_schema (vs json_object).
+
+    OFF by default. When enabled, the calls send the strict json_schema built
+    from ``StructuredTrainingPlan`` (via
+    :func:`build_strict_structured_plan_schema`) instead of plain JSON object
+    mode, so the provider guarantees the response *conforms to the schema* - which
+    in turn makes the repair retry unnecessary (disable it with
+    ``UNLXCK_STAGE2_STRUCTURED_REPAIR=0`` once schema mode is validated).
+
+    It is off by default deliberately: the strict schema is verified only for
+    structural compliance in-repo, and whether the live endpoint accepts it and
+    the model output round-trips through validation must be confirmed in staging
+    with a real API key first. Set ``UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE`` to a
+    truthy value to opt in. JSON object mode remains the validated default.
+    """
+
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE")
+    if raw is None:
+        return False  # unset → default off (opt-in)
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _structured_response_format() -> dict[str, Any] | None:
+    """Pick the Responses-API output-format for the structured-card calls.
+
+    Strict json_schema when schema mode is opted into; otherwise JSON object mode
+    when enabled; otherwise ``None`` (free-form). Never applied to the plan-text
+    pass. A schema-build failure degrades to JSON object mode rather than raising.
+    """
+
+    if _stage2_structured_schema_mode():
+        try:
+            return {
+                "type": "json_schema",
+                "name": "structured_training_plan",
+                "schema": build_strict_structured_plan_schema(),
+                "strict": True,
+            }
+        except Exception:  # never let schema generation break the call
+            # Degrade deterministically to JSON object mode (still valid JSON),
+            # not to free-form: schema mode opted into structured output, so a
+            # build failure must not silently reintroduce non-JSON responses even
+            # when json-object mode is toggled off.
+            logger.exception("[stage2] strict schema build failed; falling back to json_object")
+            return _STRUCTURED_JSON_FORMAT
+    if _stage2_structured_json_mode():
+        return _STRUCTURED_JSON_FORMAT
+    return None
 
 
 def _record_structured_outcome(
@@ -1005,7 +1057,7 @@ class OpenAIStage2Automator:
         if planning_brief:
             event_date = str(planning_brief.get("fight_date") or "")
 
-        json_format = _STRUCTURED_JSON_FORMAT if _stage2_structured_json_mode() else None
+        json_format = _structured_response_format()
 
         first_prompt = build_structured_plan_prompt(
             plan_markdown=final_plan_text,
