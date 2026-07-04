@@ -159,6 +159,47 @@ def test_structured_calls_omit_json_mode_when_disabled(monkeypatch: pytest.Monke
     assert "text" not in client.responses.calls[0]
 
 
+def test_structured_calls_use_strict_json_schema_when_opted_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Opt-in schema mode sends the strict json_schema format instead of plain
+    # JSON object mode, so the provider guarantees schema conformance.
+    import json
+
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
+    client = FakeClient([_response(json.dumps([1, 2, 3]))])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan", planning_brief={}, source="test", costs=[]
+        )
+    )
+
+    fmt = client.responses.calls[0]["text"]["format"]
+    assert fmt["type"] == "json_schema"
+    assert fmt["strict"] is True
+    assert fmt["name"] == "structured_training_plan"
+    assert fmt["schema"]["additionalProperties"] is False
+
+
+def test_schema_mode_off_by_default_uses_json_object(monkeypatch: pytest.MonkeyPatch) -> None:
+    import json
+
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", raising=False)
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
+    client = FakeClient([_response(json.dumps([1, 2, 3]))])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan", planning_brief={}, source="test", costs=[]
+        )
+    )
+
+    assert client.responses.calls[0]["text"]["format"] == {"type": "json_object"}
+
+
 def test_plan_text_first_pass_omits_json_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     # The markdown plan-text pass must stay free-form (never JSON output mode),
     # regardless of the structured JSON-mode flag.

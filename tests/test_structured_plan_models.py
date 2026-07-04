@@ -9,10 +9,51 @@ from pydantic import ValidationError
 from api.structured_plan_models import (
     SCHEMA_VERSION,
     StructuredTrainingPlan,
+    _STRICT_UNSUPPORTED_KEYWORDS,
+    _is_free_form_object,
+    build_strict_structured_plan_schema,
     repair_structured_plan_once,
     safe_parse_structured_plan,
     validate_structured_plan,
 )
+
+
+def _walk_schema_nodes(node, path="$"):
+    """Yield (path, node) for every dict node in a JSON schema."""
+    if isinstance(node, dict):
+        yield path, node
+        for key, value in node.items():
+            yield from _walk_schema_nodes(value, f"{path}.{key}")
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from _walk_schema_nodes(value, f"{path}[{index}]")
+
+
+def test_strict_schema_is_structurally_openai_compliant():
+    # The generated schema must satisfy OpenAI strict mode's structural rules:
+    # every object closes additionalProperties and requires all of its
+    # properties, no strict-forbidden keywords survive, and no free-form object
+    # remains. (Live acceptance is validated separately in staging.)
+    schema = build_strict_structured_plan_schema()
+    for path, node in _walk_schema_nodes(schema):
+        for banned in _STRICT_UNSUPPORTED_KEYWORDS:
+            assert banned not in node, f"{banned} survived at {path}"
+        assert not _is_free_form_object(node), f"free-form object at {path}"
+        props = node.get("properties")
+        if isinstance(props, dict):
+            assert node.get("additionalProperties") is False, f"open object at {path}"
+            assert set(node.get("required", [])) == set(props), f"required!=all props at {path}"
+
+
+def test_strict_schema_reduces_server_injected_field_to_null():
+    # deterministic_support is injected server-side (never model-generated) and is
+    # a free-form dict, which strict mode forbids: it must collapse to null-only.
+    schema = build_strict_structured_plan_schema()
+    det = schema["properties"]["deterministic_support"]
+    variants = det.get("anyOf", [det])
+    assert all(v.get("type") == "null" for v in variants)
+    # The root still requires every property (strict mode).
+    assert set(schema["required"]) == set(schema["properties"])
 
 
 def _block() -> dict:
