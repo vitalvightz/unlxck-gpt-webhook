@@ -158,6 +158,31 @@ def test_get_user_from_token_missing_bearer_returns_authentication_required():
     assert exc_info.value.detail == "authentication required"
 
 
+def test_get_user_from_token_hashes_token_cache_keys():
+    raw_token = "raw-secret-bearer-token"
+    user = type(
+        "User",
+        (),
+        {
+            "id": "athlete-1",
+            "email": "ari@example.com",
+            "user_metadata": {"full_name": "Ari"},
+        },
+    )()
+    client = MagicMock()
+    client.auth.get_user.return_value = type("Response", (), {"user": user})()
+
+    service = SupabaseAuthService(client)
+
+    first_user = service.get_user_from_token(f"Bearer {raw_token}")
+    second_user = service.get_user_from_token(raw_token)
+
+    assert first_user == second_user
+    assert client.auth.get_user.call_count == 1
+    assert raw_token not in service._token_cache
+    assert auth_module._token_cache_key(raw_token) in service._token_cache
+
+
 def test_is_auth_api_error_duck_types_supabase_module():
     assert is_auth_api_error(_FakeSupabaseAuthApiError(401))
     assert is_auth_api_error(_FakeGotrueAuthApiError(401))

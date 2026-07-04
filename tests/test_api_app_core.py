@@ -730,6 +730,7 @@ def test_production_cors_strict_mode_rejects_broad_regex(monkeypatch: pytest.Mon
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
     monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", regex)
+    monkeypatch.setenv("APP_ALLOW_PRODUCTION_CORS_REGEX", "1")
 
     with pytest.raises(ValueError, match="too broad"):
         create_app(
@@ -739,12 +740,27 @@ def test_production_cors_strict_mode_rejects_broad_regex(monkeypatch: pytest.Mon
         )
 
 
-def test_production_cors_allows_narrow_subdomain_regex(monkeypatch: pytest.MonkeyPatch):
-    """Narrow regex constrained to a specific domain should still work in production."""
+def test_production_cors_rejects_regex_without_explicit_opt_in(monkeypatch: pytest.MonkeyPatch):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
     monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
+
+    with pytest.raises(ValueError, match="APP_ALLOW_PRODUCTION_CORS_REGEX=1"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+def test_production_cors_allows_regex_only_with_explicit_opt_in(monkeypatch: pytest.MonkeyPatch):
+    """Narrow regex constrained to a specific domain requires explicit production opt-in."""
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
+    monkeypatch.setenv("APP_ALLOW_PRODUCTION_CORS_REGEX", "1")
     # Should not raise
     create_app(
         store=FakeStore(),

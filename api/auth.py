@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import warnings
@@ -60,6 +61,10 @@ class AuthenticatedUser:
 
 class AuthService(Protocol):
     def get_user_from_token(self, token: str) -> AuthenticatedUser: ...
+
+
+def _token_cache_key(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 class SupabaseAuthService:
@@ -153,7 +158,9 @@ class SupabaseAuthService:
         if not token:
             raise self._unauthorized()
 
-        cached_user = self._get_cached_user(token)
+        cache_key = _token_cache_key(token)
+
+        cached_user = self._get_cached_user(cache_key)
         if cached_user is not None:
             return cached_user
 
@@ -207,15 +214,15 @@ class SupabaseAuthService:
             metadata=metadata,
         )
 
-        self._cache_user(token, authenticated_user)
+        self._cache_user(cache_key, authenticated_user)
 
         return authenticated_user
 
-    def _get_cached_user(self, token: str) -> AuthenticatedUser | None:
+    def _get_cached_user(self, cache_key: str) -> AuthenticatedUser | None:
         now = monotonic()
 
         with self._cache_lock:
-            cached = self._token_cache.get(token)
+            cached = self._token_cache.get(cache_key)
 
             if cached is None:
                 return None
@@ -223,16 +230,16 @@ class SupabaseAuthService:
             user, expires_at = cached
 
             if expires_at <= now:
-                self._token_cache.pop(token, None)
+                self._token_cache.pop(cache_key, None)
                 return None
 
             return user
 
-    def _cache_user(self, token: str, user: AuthenticatedUser) -> None:
+    def _cache_user(self, cache_key: str, user: AuthenticatedUser) -> None:
         now = monotonic()
 
         with self._cache_lock:
-            self._token_cache[token] = (user, now + self._cache_ttl_seconds)
+            self._token_cache[cache_key] = (user, now + self._cache_ttl_seconds)
             self._prune_cache(now)
 
     def _prune_cache(self, now: float) -> None:
