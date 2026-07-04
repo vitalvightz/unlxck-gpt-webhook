@@ -9,7 +9,7 @@ Athlete-first fight camp planning. Backend in Python (FastAPI), frontend in Next
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js (TypeScript), deployed on Vercel |
-| Backend | FastAPI (Python 3.10+), deployed on Render |
+| Backend | FastAPI (Python 3.11+), deployed on Render |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | AI finalization | OpenAI (Stage 2 plan finalizer) |
 
