@@ -48,6 +48,7 @@ from .completion import (
 from .injury_checkin import (
     DeclaredInjury,
     ReconciliationPlan,
+    build_injury_label,
     open_injury_flag_risks,
     reconcile_injury_checkin,
 )
@@ -116,6 +117,7 @@ __all__ = [
     # injury_checkin
     "DeclaredInjury",
     "ReconciliationPlan",
+    "build_injury_label",
     "open_injury_flag_risks",
     "reconcile_injury_checkin",
     # injury_signal

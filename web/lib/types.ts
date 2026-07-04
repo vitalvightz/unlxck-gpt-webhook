@@ -4,6 +4,9 @@
 // `gym`) because the account represents the person managing the gym organisation.
 export type UserRole = "athlete" | "coach" | "gym_owner" | "admin";
 export type AppearanceMode = "dark" | "light";
+// localStorage key used to remember the applied appearance mode so the document
+// can restore it before first paint (see the pre-paint script in the app layout).
+export const APPEARANCE_STORAGE_KEY = "unlxck.appearance-mode";
 export type SexValue = "male" | "female";
 export type DailyActivityLevel = "low" | "mixed" | "active_job";
 export type WeighInType = "same_day" | "day_before" | "informal";
@@ -789,6 +792,9 @@ export type InjuryFlagRecord = {
   source: string;
   body_area: string;
   description: string;
+  // Clean, athlete-facing label derived server-side from the injury synonym
+  // logic (e.g. "Left wrist tightness"). Present on Today's open_injuries.
+  label?: string;
   severity: InjuryFlagSeverity;
   status: InjuryFlagStatus;
   resolved_at?: string | null;

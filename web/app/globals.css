@@ -5122,7 +5122,7 @@ button.mobile-step-rail-item {
 
 .today-readiness-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   margin: 2px 0 0;
@@ -5133,9 +5133,10 @@ button.mobile-step-rail-item {
 
 .today-readiness-strip div {
   display: grid;
-  gap: 4px;
+  align-content: center;
+  gap: 5px;
   min-width: 0;
-  padding: 11px 12px;
+  padding: 12px 14px;
   background: rgba(12, 13, 16, 0.72);
 }
 
@@ -5169,6 +5170,22 @@ button.mobile-step-rail-item {
 
 .today-readiness-strip [data-tone="clear"] dd {
   color: #8fd9a8;
+}
+
+/* Light theme: the strip's cells are hardcoded dark above, which renders as an
+   unreadable dark band on the light background. Re-tone the surface, border and
+   the "clear" accent so the strip reads on light. */
+html[data-theme="light"] .today-readiness-strip {
+  border-color: var(--border-default);
+  background: var(--border-subtle);
+}
+
+html[data-theme="light"] .today-readiness-strip div {
+  background: var(--bg-surface);
+}
+
+html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
+  color: var(--success-ink);
 }
 
 .today-card {

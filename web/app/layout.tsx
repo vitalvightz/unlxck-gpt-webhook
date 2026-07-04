@@ -7,7 +7,15 @@ import { AuthProvider } from "@/components/auth-provider";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { ToastProvider } from "@/components/toast-provider";
 import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
+import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
 import "./globals.css";
+
+// Runs synchronously in <head> before first paint: restore the athlete's saved
+// appearance mode so a light-theme user never sees the dark SSR default flash to
+// light after hydration. Kept dependency-free so it can be inlined as a string.
+const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.stringify(
+  APPEARANCE_STORAGE_KEY,
+)});if(m==="light"||m==="dark"){var d=document.documentElement;d.dataset.theme=m;d.style.colorScheme=m;}}catch(e){}})();`;
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +32,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" data-theme="dark" style={{ colorScheme: "dark" }}>
+    <html lang="en" data-theme="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

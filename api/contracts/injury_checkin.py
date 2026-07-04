@@ -19,6 +19,7 @@ one appears — this PR only persists it and feeds the risk watch.
 
 from __future__ import annotations
 
+import re
 from typing import Iterable, Literal, Mapping, Sequence
 
 from pydantic import BaseModel, Field, model_validator
@@ -76,9 +77,91 @@ class ReconciliationPlan(BaseModel):
     updates: list[FlagUpdate] = Field(default_factory=list)
 
 
+# Canonical injury-type key (from the shared injury synonym logic) -> the short
+# athlete-facing noun we display. Everything not listed maps to itself, so only
+# the keys whose canonical name reads oddly to an athlete need an entry.
+_CONDITION_DISPLAY_NOUN = {"contusion": "bruise"}
+
+# Curated condition words (with their common inflections) stripped out of the
+# body-location text so a label never reads "wrist tightness tightness". This is
+# deliberately a small, safe list — NOT the full synonym map, whose looser
+# entries ("full", "hit", "point"...) would eat real location words.
+_CONDITION_STRIP = re.compile(
+    r"\b(?:bruis(?:e|ed|ing)|contusion|hyperextend(?:ed|ing|s)?|hyperextension|"
+    r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broken|break|ruptur(?:e|ed)|tears?|torn|"
+    r"sprain(?:ed|ing)?|strain(?:ed|ing)?|pulled|tendon[ai]tis|tendinopathy|"
+    r"imping(?:ed|ement)|instability|unstable|inflam(?:ed|mation|matory)|"
+    r"swollen|swelling|stiff(?:ness)?|tight(?:ness)?|sore(?:ness)?|"
+    r"ach(?:e|es|ing|y)|pain(?:ful)?|hurts?|hurting|abrasion|graze|blister|laceration)\b",
+    re.I,
+)
+
+# Connective/filler words removed once the condition is stripped, leaving only
+# the body location. Laterality (left/right) is deliberately kept.
+_LOCATION_FILLER = re.compile(
+    r"\b(?:is|are|was|were|been|be|has|have|had|got|getting|gets|feels?|feeling|felt|"
+    r"seems?|it|this|that|a|an|the|my|some|really|quite|very|bit|of|in|on|with|and)\b",
+    re.I,
+)
+
+
+def _clean_location(text: str) -> str:
+    """Reduce a body-area string to just the location words (no condition/filler)."""
+    text = _CONDITION_STRIP.sub(" ", text)
+    text = _LOCATION_FILLER.sub(" ", text)
+    text = re.sub(r"[^a-zA-Z\s/-]", " ", text)
+    words = [w for w in text.lower().split() if w]
+    seen: list[str] = []
+    for word in words:
+        if word not in seen:
+            seen.append(word)
+    return " ".join(seen)
+
+
+def build_injury_label(body_area: object, description: object) -> str:
+    """Build a short, athlete-facing injury label using the injury synonym logic.
+
+    The condition is identified with the shared deterministic injury scorer rather
+    than parsing the athlete's exact words, so a flag stored as "left wrist" with a
+    "tightness" intake type reads as "Left wrist tightness", and colourful phrasing
+    ("dead leg", "corked", "black and blue") still resolves to the right noun. The
+    location is taken from the clean structured ``body_area`` so free-text notes
+    never leak into the label.
+    """
+    from fightcamp.injury_scoring import score_injury_phrase
+
+    body = str(body_area or "").strip()
+    desc = str(description or "").strip()
+    location_source = body or desc
+    if not location_source:
+        return "injury"
+
+    condition_key = str(score_injury_phrase(f"{body} {desc}").get("injury_type") or "")
+    condition = (
+        _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
+        if condition_key and condition_key != "unspecified"
+        else ""
+    )
+
+    location = _clean_location(location_source)
+    if condition and location and not location.endswith(condition):
+        label = f"{location} {condition}"
+    elif condition and not location:
+        label = condition
+    else:
+        label = location or location_source
+
+    label = label.strip()
+    if not label:
+        return "injury"
+    return (label[0].upper() + label[1:])[:60]
+
+
 def _flag_label(flag: Mapping[str, object]) -> str:
-    label = str(flag.get("body_area") or "").strip() or str(flag.get("description") or "").strip()
-    return label[:60] if label else "injury"
+    label = str(flag.get("label") or "").strip()
+    if label:
+        return label[:60]
+    return build_injury_label(flag.get("body_area"), flag.get("description"))
 
 
 def reconcile_injury_checkin(
