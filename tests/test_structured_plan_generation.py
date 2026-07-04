@@ -323,6 +323,37 @@ def test_repair_prompt_instructs_shape_only_fix_and_includes_skeleton():
     assert "EXACT ROOT SKELETON" in prompt
 
 
+def test_planning_brief_context_is_allowlisted_and_deterministic():
+    # The brief can be 100k+ chars of internal Stage 1 machinery. Only the
+    # athlete/event/phase context keys are surfaced, the giant internal pools are
+    # dropped, and the selection is stable regardless of dict ordering.
+    brief = {
+        "athlete_snapshot": {"sport": "boxing", "status": "amateur"},
+        "phase_strategy": {"GPP": {"weeks": 2}},
+        "main_limiter": "conditioning",
+        "priority_focus": {"primary_goal": "power"},
+        # Giant internal structures that must NOT reach the prompt:
+        "candidate_pools": {"GPP": {"strength_slots": list(range(500))}},
+        "weekly_role_map": {"weeks": [{"session_roles": list(range(200))}]},
+        "stage1_selection_summary": {"noise": "x" * 5000},
+        "weekly_stress_map": {"noise": "y" * 5000},
+    }
+    prompt = build_structured_plan_prompt(plan_markdown="# plan", planning_brief=brief)
+
+    # Context keys present; internal machinery absent.
+    assert '"athlete_snapshot"' in prompt
+    assert '"phase_strategy"' in prompt
+    assert '"main_limiter"' in prompt
+    for internal in ("candidate_pools", "stage1_selection_summary", "weekly_stress_map"):
+        assert internal not in prompt
+    # weekly_role_map lives in the finalizer packet, never in the card context.
+    assert '"weekly_role_map"' not in prompt
+
+    # Deterministic: reversing the brief's key order yields an identical prompt.
+    reordered = dict(reversed(list(brief.items())))
+    assert build_structured_plan_prompt(plan_markdown="# plan", planning_brief=reordered) == prompt
+
+
 def test_repair_prompt_includes_errors_and_broken_json():
     prompt = build_structured_plan_prompt(
         plan_markdown="# plan",

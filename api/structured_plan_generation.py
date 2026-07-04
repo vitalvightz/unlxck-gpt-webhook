@@ -1843,6 +1843,49 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
 }}"""
 
 
+# Athlete/event/phase context keys the structured conversion can use as soft
+# context. Everything else in the brief (candidate_pools, weekly_role_map,
+# stage1_selection_summary, weekly_stress_map, late_fight_plan_spec, …) is
+# internal Stage 1 machinery the conversion never needs — the plan markdown and
+# computed_support already carry the authoritative content — so it is left out.
+_BRIEF_CONTEXT_KEYS = (
+    "athlete_snapshot",
+    "archetype_summary",
+    "fight_demands",
+    "fight_week_override",
+    "phase_strategy",
+    "main_limiter",
+    "limiter_profile",
+    "priority_focus",
+    "compressed_priorities",
+    "main_risks",
+)
+
+# Backstop cap on the selected context (the allowlist is normally ~6k chars; this
+# only bites if athlete_snapshot / phase_strategy balloon). Applied to the
+# deterministic selection, so any truncation is stable rather than key-order
+# dependent.
+_BRIEF_CONTEXT_CHAR_CAP = 8000
+
+
+def _select_brief_context(planning_brief: Any) -> dict[str, Any]:
+    """Pick the athlete/event/phase context keys from a (possibly huge) brief.
+
+    Deterministic allowlist: returns the present :data:`_BRIEF_CONTEXT_KEYS` in a
+    fixed order so the serialized context does not depend on dict ordering, and
+    the large internal Stage 1 structures never reach the prompt. Non-dict input
+    yields ``{}``.
+    """
+
+    if not isinstance(planning_brief, dict):
+        return {}
+    return {
+        key: planning_brief[key]
+        for key in _BRIEF_CONTEXT_KEYS
+        if key in planning_brief and planning_brief[key] not in (None, "", [], {})
+    }
+
+
 def build_structured_plan_prompt(
     *,
     plan_markdown: str,
@@ -1868,20 +1911,21 @@ def build_structured_plan_prompt(
         # compressed prose. The rest of the brief stays capped (it is broad
         # context, not source-of-truth numbers).
         computed_support = None
-        brief_rest = planning_brief
         if isinstance(planning_brief, dict) and "computed_support" in planning_brief:
             computed_support = planning_brief.get("computed_support")
-            brief_rest = {
-                key: value
-                for key, value in planning_brief.items()
-                if key != "computed_support"
-            }
 
+        # Select only the athlete/event/phase context keys. The full brief is
+        # huge (100k+ chars: candidate_pools, weekly_role_map, selection
+        # summaries) and a blind slice fed the conversion ~6k chars of whichever
+        # giant internal structure happened to serialize first — nondeterministic
+        # noise, not the context this section claims. An explicit allowlist is
+        # deterministic and drops the internal pools entirely.
+        brief_context = _select_brief_context(planning_brief)
         try:
-            brief_json = json.dumps(brief_rest, ensure_ascii=False)[:6000]
+            brief_json = json.dumps(brief_context, ensure_ascii=False)[:_BRIEF_CONTEXT_CHAR_CAP]
         except (TypeError, ValueError):
             brief_json = ""
-        if brief_json:
+        if brief_json and brief_json != "{}":
             sections.append(
                 "PLANNING BRIEF (context for athlete/event/phases — do not copy "
                 "verbatim):\n" + brief_json
