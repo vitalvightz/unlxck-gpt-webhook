@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type Dispatch, 
 
 import { ApiError, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import type { AppearanceMode, MeResponse } from "@/lib/types";
+import { APPEARANCE_STORAGE_KEY, type AppearanceMode, type MeResponse } from "@/lib/types";
 
 const ME_RETRY_ATTEMPTS = 3;
 const ME_RETRY_DELAY_MS = 1_200;
@@ -40,6 +40,15 @@ function applyAppearanceMode(mode: AppearanceMode) {
   }
   document.documentElement.dataset.theme = mode;
   document.documentElement.style.colorScheme = mode;
+  // Persist so the pre-paint script in the document head can restore this theme
+  // on the next load before React hydrates — otherwise a light-theme user sees a
+  // black flash while the dark SSR default is swapped out.
+  try {
+    window.localStorage.setItem(APPEARANCE_STORAGE_KEY, mode);
+  } catch {
+    // Ignore storage failures (private mode, disabled storage) — the theme still
+    // applies for this session; only the next-load flash prevention is lost.
+  }
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
@@ -299,10 +308,19 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     if (!isReady) {
       return;
     }
-    applyAppearanceMode(
-      appearancePreview ?? (session && me?.profile.appearance_mode === "light" ? "light" : "dark"),
-    );
-  }, [appearancePreview, isReady, session, me?.profile.appearance_mode]);
+    if (appearancePreview) {
+      applyAppearanceMode(appearancePreview);
+      return;
+    }
+    // An authenticated session can be ready before /me (and its appearance_mode)
+    // has loaded. Forcing "dark" here would overwrite the theme the pre-paint
+    // script already restored from localStorage and cause a flash, so hold the
+    // current theme until the profile arrives.
+    if (session && !me) {
+      return;
+    }
+    applyAppearanceMode(session && me?.profile.appearance_mode === "light" ? "light" : "dark");
+  }, [appearancePreview, isReady, session, me]);
 
   async function refreshMe() {
     await loadMe(session);

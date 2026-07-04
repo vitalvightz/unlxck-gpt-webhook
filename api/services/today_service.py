@@ -33,6 +33,7 @@ from api.contracts.completion import (
 )
 from api.contracts.injury_checkin import (
     DeclaredInjury,
+    build_injury_label,
     open_injury_flag_risks,
     reconcile_injury_checkin,
 )
@@ -1146,6 +1147,11 @@ def build_today_command_view(
         plan_row=plan_row,
         open_flags=_open_injury_flags(store, athlete_id),
     )
+    # Attach a clean, athlete-facing label derived from the injury synonym logic
+    # so the reminder text and the check-in card render the same normalized name
+    # ("Left wrist tightness") instead of raw stored words.
+    for injury in open_injuries:
+        injury["label"] = build_injury_label(injury.get("body_area"), injury.get("description"))
 
     return build_command_view(
         current_training_day=training_day,

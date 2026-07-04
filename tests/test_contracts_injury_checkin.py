@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from api.contracts.injury_checkin import (
     DeclaredInjury,
+    build_injury_label,
     open_injury_flag_risks,
     reconcile_injury_checkin,
 )
@@ -124,7 +125,7 @@ def test_severe_open_flag_is_a_stop_level_risk():
     )
     assert len(risks) == 1
     assert risks[0].category == "active_injury_worse"
-    assert "left knee" in risks[0].text
+    assert "Left knee" in risks[0].text
 
 
 def test_non_severe_open_flags_are_a_tracking_reminder():
@@ -137,4 +138,65 @@ def test_non_severe_open_flags_are_a_tracking_reminder():
     assert len(risks) == 1
     assert risks[0].category == "reminder"
     assert "2 open injuries" in risks[0].text
-    assert "wrist" in risks[0].text
+    assert "Wrist" in risks[0].text
+
+
+def test_reminder_uses_injury_logic_for_intake_labels():
+    # A "left wrist" flag with a "tightness" intake type (stored in the
+    # description as "left wrist: tightness") must read as the normalized label,
+    # not the raw body_area — and colourful synonyms resolve to the right noun.
+    risks = open_injury_flag_risks(
+        [
+            {
+                "status": "monitoring",
+                "severity": "mild",
+                "body_area": "left wrist",
+                "description": "left wrist: tightness",
+            },
+            {
+                "status": "open",
+                "severity": "mild",
+                "body_area": "thigh",
+                "description": "dead leg",
+            },
+        ]
+    )
+    assert "Left wrist tightness" in risks[0].text
+    assert "Thigh bruise" in risks[0].text
+
+
+def test_flag_label_prefers_precomputed_label():
+    risks = open_injury_flag_risks(
+        [{"status": "open", "severity": "mild", "label": "Right ankle sprain"}]
+    )
+    assert "Right ankle sprain" in risks[0].text
+
+
+def test_build_injury_label_normalizes_condition_and_location():
+    assert build_injury_label("left wrist", "left wrist: tightness") == "Left wrist tightness"
+    assert build_injury_label("upper back", "upper back: bruise") == "Upper back bruise"
+    # Free-text notes never leak into the label — only the location + condition.
+    assert (
+        build_injury_label("left knee", "left knee: tightness. hurts when squatting")
+        == "Left knee tightness"
+    )
+    # No recognized condition: the clean location passes through.
+    assert build_injury_label("left wrist", "left wrist") == "Left wrist"
+    # Nothing to label.
+    assert build_injury_label("", "") == "injury"
+
+
+def test_build_injury_label_never_leaks_free_text_notes():
+    # With no structured body_area, the location must come from the scorer's
+    # structured side + location — never from cleaning the free-text description,
+    # so athlete notes ("hurts when squatting") can never leak into the label.
+    assert (
+        build_injury_label("", "left knee: tightness. hurts when squatting")
+        == "Left knee tightness"
+    )
+    assert (
+        build_injury_label("", "right shoulder impingement when pressing overhead")
+        == "Right shoulder impingement"
+    )
+    # Free text the scorer can't resolve to a location yields no leaked words.
+    assert build_injury_label("", "totally unparseable gibberish note") == "injury"

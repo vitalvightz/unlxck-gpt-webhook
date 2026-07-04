@@ -268,12 +268,10 @@ function NoActivePlanState() {
 }
 
 function TodayReadinessStrip({
-  hasPlan,
   needsCheckin,
   openInjuryCount,
   completionStatus,
 }: {
-  hasPlan: boolean;
   needsCheckin: boolean;
   openInjuryCount: number;
   completionStatus: TodayCompletionStatus;
@@ -284,10 +282,6 @@ function TodayReadinessStrip({
 
   return (
     <dl className="today-readiness-strip" aria-label="Today command status">
-      <div>
-        <dt>Plan</dt>
-        <dd>{hasPlan ? "Matched" : "Missing"}</dd>
-      </div>
       <div>
         <dt>Check-in</dt>
         <dd>{needsCheckin ? "Due" : "Logged"}</dd>
@@ -496,8 +490,8 @@ const BODY_MAP_SEVERITY_BY_FLAG: Record<InjuryFlagSeverity, BodyMapSeverity> = {
 };
 
 const BODY_MAP_VISIBILITY_OPTIONS = [
-  { value: "shown", label: "Shown" },
-  { value: "hidden", label: "Hidden" },
+  { value: "shown", label: "Show" },
+  { value: "hidden", label: "Hide" },
 ];
 
 function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeverity {
@@ -511,6 +505,12 @@ function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeveri
 }
 
 function getInjuryLabel(injury: InjuryFlagRecord): string {
+  // Prefer the server-computed label (built from the shared injury synonym
+  // logic) so the card matches the reminder and never re-parses raw words.
+  const serverLabel = injury.label?.trim();
+  if (serverLabel) {
+    return serverLabel;
+  }
   const raw = injury.body_area?.trim() || injury.description?.trim();
   return normalizeInjuryLabel(raw) || "Injury";
 }
@@ -1308,7 +1308,6 @@ export function TodayScreen() {
           </div>
         </div>
         <TodayReadinessStrip
-          hasPlan={hasPlan}
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}
           completionStatus={state.today.completion_status}
