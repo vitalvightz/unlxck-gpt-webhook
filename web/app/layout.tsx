@@ -35,7 +35,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // The per-request CSP (set in proxy.ts) uses a nonce + 'strict-dynamic', so the
   // inline theme-init script must carry that nonce or it is blocked and the flash
   // returns. Undefined when no CSP is present — the attribute is simply omitted.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  //
+  // Only accept a value matching the shape proxy.ts generates (btoa of a random
+  // UUID -> 48-char unpadded base64). On routes the middleware excludes there is
+  // no CSP, but a client could still supply an arbitrary x-nonce header; this
+  // guard means such a value is never reflected into the page as a nonce.
+  const rawNonce = (await headers()).get("x-nonce");
+  const nonce = rawNonce && /^[A-Za-z0-9+/]{48}$/.test(rawNonce) ? rawNonce : undefined;
   return (
     <html lang="en" data-theme="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <head>
