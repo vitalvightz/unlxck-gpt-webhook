@@ -184,3 +184,19 @@ def test_build_injury_label_normalizes_condition_and_location():
     assert build_injury_label("left wrist", "left wrist") == "Left wrist"
     # Nothing to label.
     assert build_injury_label("", "") == "injury"
+
+
+def test_build_injury_label_never_leaks_free_text_notes():
+    # With no structured body_area, the location must come from the scorer's
+    # structured side + location — never from cleaning the free-text description,
+    # so athlete notes ("hurts when squatting") can never leak into the label.
+    assert (
+        build_injury_label("", "left knee: tightness. hurts when squatting")
+        == "Left knee tightness"
+    )
+    assert (
+        build_injury_label("", "right shoulder impingement when pressing overhead")
+        == "Right shoulder impingement"
+    )
+    # Free text the scorer can't resolve to a location yields no leaked words.
+    assert build_injury_label("", "totally unparseable gibberish note") == "injury"

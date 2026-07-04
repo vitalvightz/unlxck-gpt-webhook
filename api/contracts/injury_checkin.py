@@ -109,7 +109,12 @@ def _clean_location(text: str) -> str:
     """Reduce a body-area string to just the location words (no condition/filler)."""
     text = _CONDITION_STRIP.sub(" ", text)
     text = _LOCATION_FILLER.sub(" ", text)
-    text = re.sub(r"[^a-zA-Z\s/-]", " ", text)
+    # Keep unicode letters (non-English body-area input), spaces, slashes and
+    # hyphens; drop digits/underscores and punctuation so parser debris cannot
+    # leak in. \w keeps letters+digits+underscore, then the second pass removes
+    # the digits and underscores it let through.
+    text = re.sub(r"[^\w\s/-]", " ", text)
+    text = re.sub(r"[\d_]", " ", text)
     words = [w for w in text.lower().split() if w]
     seen: list[str] = []
     for word in words:
@@ -124,32 +129,49 @@ def build_injury_label(body_area: object, description: object) -> str:
     The condition is identified with the shared deterministic injury scorer rather
     than parsing the athlete's exact words, so a flag stored as "left wrist" with a
     "tightness" intake type reads as "Left wrist tightness", and colourful phrasing
-    ("dead leg", "corked", "black and blue") still resolves to the right noun. The
-    location is taken from the clean structured ``body_area`` so free-text notes
-    never leak into the label.
+    ("dead leg", "corked", "black and blue") still resolves to the right noun.
+
+    Location comes from the clean structured ``body_area`` when present. When it is
+    empty we fall back to the scorer's *structured* side + location (e.g. "left" +
+    "knee") rather than cleaning the free-text description, so athlete notes like
+    "hurts when squatting" can never leak into the label.
     """
+    # Deferred import: keeps the fightcamp NLP/synonym stack from loading eagerly
+    # for every importer of api.contracts, which only some code paths ever need.
     from fightcamp.injury_scoring import score_injury_phrase
 
     body = str(body_area or "").strip()
     desc = str(description or "").strip()
-    location_source = body or desc
-    if not location_source:
+    if not (body or desc):
         return "injury"
 
-    condition_key = str(score_injury_phrase(f"{body} {desc}").get("injury_type") or "")
+    score = score_injury_phrase(f"{body} {desc}")
+    condition_key = str(score.get("injury_type") or "") if score else ""
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"
         else ""
     )
 
-    location = _clean_location(location_source)
+    if body:
+        location = _clean_location(body)
+    else:
+        side = str(score.get("side") or "") if score else ""
+        scored_location = str(score.get("location") or "") if score else ""
+        parts = [
+            side if side and side != "unspecified" else "",
+            scored_location.replace("_", " ") if scored_location and scored_location != "unspecified" else "",
+        ]
+        location = " ".join(part for part in parts if part).strip()
+
     if condition and location and not location.endswith(condition):
         label = f"{location} {condition}"
     elif condition and not location:
         label = condition
     else:
-        label = location or location_source
+        # No condition and no structured location: fall back to the cleaned
+        # body-area (never the raw free-text description).
+        label = location or _clean_location(body)
 
     label = label.strip()
     if not label:

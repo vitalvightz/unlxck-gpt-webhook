@@ -308,10 +308,19 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     if (!isReady) {
       return;
     }
-    applyAppearanceMode(
-      appearancePreview ?? (session && me?.profile.appearance_mode === "light" ? "light" : "dark"),
-    );
-  }, [appearancePreview, isReady, session, me?.profile.appearance_mode]);
+    if (appearancePreview) {
+      applyAppearanceMode(appearancePreview);
+      return;
+    }
+    // An authenticated session can be ready before /me (and its appearance_mode)
+    // has loaded. Forcing "dark" here would overwrite the theme the pre-paint
+    // script already restored from localStorage and cause a flash, so hold the
+    // current theme until the profile arrives.
+    if (session && !me) {
+      return;
+    }
+    applyAppearanceMode(session && me?.profile.appearance_mode === "light" ? "light" : "dark");
+  }, [appearancePreview, isReady, session, me]);
 
   async function refreshMe() {
     await loadMe(session);
