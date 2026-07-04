@@ -572,7 +572,7 @@ def _is_free_form_object(node: Any) -> bool:
     if not isinstance(node, dict) or node.get("properties"):
         return False
     additional = node.get("additionalProperties")
-    if additional is True or (isinstance(additional, dict) and additional):
+    if additional is True or isinstance(additional, dict):
         return True
     return node.get("type") == "object" and additional is None
 
