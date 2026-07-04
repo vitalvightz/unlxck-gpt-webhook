@@ -1197,6 +1197,27 @@ export default function PlansPage() {
               )}
             </div>
 
+            {/* Archive expands directly under its toggle so opening/closing it is
+                visible right where the control is — not appended far below the
+                always-shown recent plans, where it read as "not working". */}
+            {archivedPlans.length > 0 && isArchiveOpen ? (
+              <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label="Older saved plans">
+                <div className="plan-history-list plans-history-list">
+                  {archivedPlans.map((plan) => (
+                    <PlanCard
+                      key={plan.plan_id}
+                      plan={plan}
+                      accessToken={session?.access_token ?? null}
+                      onPlanDeleted={handlePlanDeleted}
+                      onPlanRenamed={handlePlanRenamed}
+                      activePlanId={activePlanId}
+                      onSetActive={handleSetActive}
+                      isSettingActive={isSettingActivePlanId === plan.plan_id}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {otherSavedPlans.length > 0 ? (
               <div className="plan-history-list plans-history-list">
@@ -1216,25 +1237,6 @@ export default function PlansPage() {
             ) : (
               <p className="muted">No other saved plans.</p>
             )}
-
-            {archivedPlans.length > 0 && isArchiveOpen ? (
-              <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label="Older saved plans">
-                <div className="plan-history-list plans-history-list">
-                  {archivedPlans.map((plan) => (
-                    <PlanCard
-                      key={plan.plan_id}
-                      plan={plan}
-                      accessToken={session?.access_token ?? null}
-                      onPlanDeleted={handlePlanDeleted}
-                      onPlanRenamed={handlePlanRenamed}
-                      activePlanId={activePlanId}
-                      onSetActive={handleSetActive}
-                      isSettingActive={isSettingActivePlanId === plan.plan_id}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </div>
         ) : null}
         {overlapConflictPlan ? (
