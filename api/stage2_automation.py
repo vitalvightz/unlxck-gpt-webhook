@@ -452,7 +452,12 @@ def _structured_response_format() -> dict[str, Any] | None:
                 "strict": True,
             }
         except Exception:  # never let schema generation break the call
+            # Degrade deterministically to JSON object mode (still valid JSON),
+            # not to free-form: schema mode opted into structured output, so a
+            # build failure must not silently reintroduce non-JSON responses even
+            # when json-object mode is toggled off.
             logger.exception("[stage2] strict schema build failed; falling back to json_object")
+            return _STRUCTURED_JSON_FORMAT
     if _stage2_structured_json_mode():
         return _STRUCTURED_JSON_FORMAT
     return None

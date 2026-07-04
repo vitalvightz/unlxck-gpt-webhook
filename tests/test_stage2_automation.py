@@ -200,6 +200,19 @@ def test_schema_mode_off_by_default_uses_json_object(monkeypatch: pytest.MonkeyP
     assert client.responses.calls[0]["text"]["format"] == {"type": "json_object"}
 
 
+def test_schema_build_failure_degrades_to_json_object_not_free_form(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Schema mode on, JSON-object mode explicitly off: a schema-build failure must
+    # still return json_object (valid JSON), never None (free-form).
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_JSON_MODE", "0")
+
+    def _boom() -> dict:
+        raise RuntimeError("schema build broke")
+
+    monkeypatch.setattr(stage2_module, "build_strict_structured_plan_schema", _boom)
+    assert stage2_module._structured_response_format() == {"type": "json_object"}
+
+
 def test_plan_text_first_pass_omits_json_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     # The markdown plan-text pass must stay free-form (never JSON output mode),
     # regardless of the structured JSON-mode flag.
