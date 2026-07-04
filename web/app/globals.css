@@ -5665,13 +5665,49 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 
 .today-injury-selection {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 4px 10px;
-  align-items: baseline;
+  align-items: center;
   padding: 10px 12px;
   border: 1px solid rgba(181, 18, 43, 0.24);
   border-radius: 12px;
   background: rgba(181, 18, 43, 0.08);
+}
+
+.today-injury-selection-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: end;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(181, 18, 43, 0.3);
+  background: rgba(181, 18, 43, 0.12);
+  color: var(--brand-red);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.today-injury-selection-clear::before {
+  content: "×";
+  font-size: 15px;
+  line-height: 1;
+}
+
+.today-injury-selection-clear:hover {
+  background: rgba(181, 18, 43, 0.18);
+  border-color: rgba(181, 18, 43, 0.42);
+}
+
+.today-injury-selection-clear:active {
+  transform: scale(0.96);
 }
 
 .today-injury-selection span,
