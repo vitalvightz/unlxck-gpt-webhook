@@ -42,7 +42,7 @@ def get_cors_origin_regex() -> str | None:
 
 
 def _allow_production_cors_regex() -> bool:
-    return os.getenv("APP_ALLOW_PRODUCTION_CORS_REGEX", "").strip() == "1"
+    return os.getenv("APP_ALLOW_PRODUCTION_CORS_REGEX", "").strip().lower() in {"1", "true", "yes"}
 
 
 _UNSAFE_CORS_REGEX_PATTERNS = frozenset({".*", "^.*$", ".+", "^.+$", "^.*", ".*$", "^.+", ".+$"})
