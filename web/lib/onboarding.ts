@@ -211,6 +211,31 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
   });
 }
 
+export function mergeSavedOnboardingDraft(
+  me: MeResponse | null,
+  draft: Record<string, unknown>,
+  athlete: PlanRequest["athlete"],
+): MeResponse | null {
+  if (!me) {
+    return null;
+  }
+
+  return {
+    ...me,
+    profile: {
+      ...me.profile,
+      full_name: athlete.full_name ?? me.profile.full_name,
+      technical_style: athlete.technical_style,
+      tactical_style: athlete.tactical_style,
+      stance: athlete.stance ?? me.profile.stance,
+      professional_status: athlete.professional_status ?? me.profile.professional_status,
+      record: athlete.record ?? me.profile.record,
+      athlete_timezone: athlete.athlete_timezone ?? me.profile.athlete_timezone,
+      onboarding_draft: draft,
+    },
+  };
+}
+
 export function mergePlanRequestDraft(
   existingDraft: Record<string, unknown> | null | undefined,
   nextPlanRequest: PlanRequest,
