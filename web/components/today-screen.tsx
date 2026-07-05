@@ -744,6 +744,7 @@ function InjuryCheckinCard({
               type="button"
               className="today-injury-selection-clear"
               onClick={clearBodyMapSelection}
+              disabled={isAdding}
               aria-label={`Clear selected area, ${newArea.trim()}`}
             >
               Clear
