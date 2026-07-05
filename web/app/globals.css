@@ -5710,6 +5710,12 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   transform: scale(0.96);
 }
 
+.today-injury-selection-clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
 .today-injury-selection span,
 .today-injury-selection small {
   color: var(--text-muted);
