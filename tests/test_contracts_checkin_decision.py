@@ -95,8 +95,8 @@ class TestPhaseBias:
             replace(CLEAN, sleep="poor", body="flat", pain="manageable", phase="TAPER")
         )
         assert decision.decision == "pull_back"
-        assert "freshness matters" in decision.reason
-        assert "fatigue-heavy accessories" in decision.reason
+        assert "recovery day" in decision.reason
+        assert "Skip the planned session" in decision.reason
 
     def test_poor_flat_manageable_in_reintegration_pulls_back(self):
         decision = evaluate_checkin(
