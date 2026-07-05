@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
@@ -26,60 +27,99 @@ import {
 } from "@/lib/today";
 import type { PlanSummary, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
 
-const landingPreviewStages = [
+const landingWorkspaceRows = [
   {
-    label: "Advanced Intake",
-    title: "Guided athlete intake",
-    summary: "Capture profile, fight context, availability, and restrictions in one structured flow.",
-    highlights: ["Profile + camp setup", "Training + restrictions"],
+    step: "01",
+    label: "Intake",
+    status: "Complete",
+    title: "Intake",
+    body: "Fight date, schedule, style, goals, and restrictions.",
   },
   {
-    label: "Nutrition",
-    title: "Readiness stays connected",
-    summary: "Weight setup, bodyweight logs, and nutrition readiness live beside the camp workflow.",
-    highlights: ["Weight targets", "Daily readiness"],
+    step: "02",
+    label: "Readiness",
+    status: "Checked",
+    title: "Readiness",
+    body: "Load, nutrition, injuries, and availability.",
   },
   {
-    label: "Plans",
-    title: "The latest camp reopens fast",
-    summary: "Saved history and the latest plan stay attached to the athlete account.",
-    highlights: ["Plan history", "In-app display"],
+    step: "03",
+    label: "Camp Plan",
+    status: "Ready",
+    title: "Camp plan",
+    body: "Phases, sessions, targets, and recovery.",
+  },
+  {
+    step: "04",
+    label: "Saved History",
+    status: "Saved",
+    title: "History",
+    body: "Latest camp and past plans stay attached.",
   },
 ] as const;
 
-const landingProofPoints = [
+const landingOutcomePoints = [
   {
-    label: "Saved history",
-    title: "Every generated camp stays attached to the athlete account.",
-    body: "Reopen the latest version fast without rebuilding context from scratch.",
+    label: "Intake",
+    value: "Context and limits",
   },
   {
-    label: "Structured planning",
-    title: "The intake is organized enough to catch gaps before generation.",
-    body: "Fight context, training load, restrictions, and performance goals stay in one flow.",
+    label: "Readiness",
+    value: "Load and safety",
   },
   {
-    label: "Built for return visits",
-    title: "The workspace makes it easy to resume, review, and export between sessions.",
-    body: "Mobile-friendly access means the product still works when athletes are away from a desk.",
+    label: "Camp Plan",
+    value: "Weeks and sessions",
+  },
+  {
+    label: "Saved History",
+    value: "Plans attached",
   },
 ] as const;
 
 const landingWorkflowSteps = [
   {
     label: "Step 1",
-    title: "Set up the athlete profile",
-    body: "Create the account, capture the athlete profile, and save the draft as you go.",
+    title: "Complete intake",
+    body: "Add fight context, availability, restrictions, history, and goals.",
   },
   {
     label: "Step 2",
-    title: "Review readiness and restrictions",
-    body: "Keep nutrition, fight context, and safety signals connected before generation.",
+    title: "Run readiness check",
+    body: "Check load, nutrition, injuries, and schedule limits.",
   },
   {
     label: "Step 3",
-    title: "Generate and reopen camps",
-    body: "Turn the intake into a saved camp plan, then return to the latest version any time.",
+    title: "Generate fight camp",
+    body: "Create phases, sessions, targets, and key performance work.",
+  },
+  {
+    label: "Step 4",
+    title: "Return between sessions",
+    body: "Reopen, review, and continue on mobile or desktop.",
+  },
+] as const;
+
+const landingProductProofPoints = [
+  {
+    label: "Intake",
+    title: "Context before output.",
+    body: "Fight date, schedule, style, training age, equipment, restrictions, and goals.",
+  },
+  {
+    label: "Readiness",
+    title: "Constraints stay visible.",
+    body: "Load, recovery, nutrition, injury limits, and availability stay beside the plan.",
+  },
+  {
+    label: "Camp Plan",
+    title: "The plan is structured.",
+    body: "Phases, daily sessions, conditioning, strength, recovery, and targets.",
+  },
+  {
+    label: "Saved History",
+    title: "Return without rebuilding.",
+    body: "Latest camp and previous plans stay attached for review and continuation.",
   },
 ] as const;
 
@@ -232,37 +272,6 @@ export default function HomePage() {
   const router = useRouter();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
-  const [activePreviewIndex, setActivePreviewIndex] = useState(0);
-  const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
-
-  function setPreviewIndex(nextIndex: number) {
-    const totalStages = landingPreviewStages.length;
-    setActivePreviewIndex((nextIndex + totalStages) % totalStages);
-    setPreviewPausedUntil(Date.now() + 9000);
-  }
-
-  function showPreviousPreview() {
-    setPreviewIndex(activePreviewIndex - 1);
-  }
-
-  function showNextPreview() {
-    setPreviewIndex(activePreviewIndex + 1);
-  }
-
-  useEffect(() => {
-    if (session) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      if (document.hidden || Date.now() < previewPausedUntil) {
-        return;
-      }
-      setActivePreviewIndex((currentIndex) => (currentIndex + 1) % landingPreviewStages.length);
-    }, 4500);
-
-    return () => window.clearInterval(intervalId);
-  }, [previewPausedUntil, session]);
 
   useEffect(() => {
     if (isReady && session && isMeHydrated && !me) {
@@ -530,16 +539,20 @@ export default function HomePage() {
     );
   }
 
-  const activePreviewStage = landingPreviewStages[activePreviewIndex];
-
   return (
     <>
       <section className="hero-panel public-hero-panel">
         <div className="public-hero-grid">
           <div className="hero-panel-copy public-hero-copy">
-            <p className="eyebrow">Athlete-first beta</p>
-            <h1 className="hero-title">See the camp workflow before you sign up.</h1>
-            <p className="public-hero-summary">UNLXCK brings intake, readiness, generation, and saved history into one athlete workspace instead of scattering them across notes and forms.</p>
+            <p className="public-hero-motto" aria-label="Unlxck Your Potential">
+              <span>UNLXCK</span>
+              <span>Your Potential</span>
+            </p>
+            <h1 className="hero-title public-hero-title" aria-label="Your camp. Lxcked in.">
+              <span>Your camp.</span>
+              <span>Lxcked in.</span>
+            </h1>
+            <p className="public-hero-summary">Intake, readiness, camp plan, and saved history in one workspace.</p>
             <div className="hero-actions">
               <Link href="/signup" className="cta">
                 Start free beta
@@ -548,97 +561,62 @@ export default function HomePage() {
                 Log in
               </Link>
             </div>
-            <div className="public-proof-strip" aria-label="Product highlights">
-              <div className="public-proof-pill">
-                <span className="label">Structured intake</span>
-                <span className="public-proof-value">Profile, camp context, and restrictions in one flow</span>
-              </div>
-              <div className="public-proof-pill">
-                <span className="label">Saved plans</span>
-                <span className="public-proof-value">Latest camp and history stay attached</span>
-              </div>
-              <div className="public-proof-pill">
-                <span className="label">Built to return to</span>
-                <span className="public-proof-value">Resume the next task fast on desktop or mobile</span>
-              </div>
+            <div className="public-proof-strip" aria-label="Product outcomes">
+              {landingOutcomePoints.map((point) => (
+                <div key={point.label} className="public-proof-pill">
+                  <span className="label">{point.label}</span>
+                  <span className="public-proof-value">{point.value}</span>
+                </div>
+              ))}
             </div>
           </div>
 
           <article className="support-panel public-preview-panel">
             <div className="public-preview-header">
               <div>
-                <p className="kicker">Product preview</p>
-                <h2 className="form-section-title">What the workspace actually looks like</h2>
+                <p className="kicker">Workspace preview</p>
+                <h2 className="form-section-title">One app workflow.</h2>
               </div>
-              <span className="badge status-badge-neutral">Live flow</span>
+              <span className="badge status-badge-neutral">Beta</span>
             </div>
             <div className="public-preview-window">
               <div className="public-preview-toolbar">
-                {landingPreviewStages.map((stage, index) => (
-                  <button
-                    key={stage.label}
-                    type="button"
-                    className={index === activePreviewIndex ? "public-preview-dot public-preview-dot-active" : "public-preview-dot"}
-                    aria-label={`Show ${stage.label}`}
-                    aria-pressed={index === activePreviewIndex}
-                    onClick={() => setPreviewIndex(index)}
-                  />
-                ))}
-                <span className="public-preview-toolbar-label">Athlete workspace</span>
+                <span className="public-preview-dot public-preview-dot-active" aria-hidden="true" />
+                <span className="public-preview-toolbar-label">UNLXCK workspace</span>
               </div>
-              <div className="public-preview-carousel" aria-live="polite">
-                <article key={activePreviewStage.label} className="public-preview-card">
-                  <div className="public-preview-card-header">
+              <div className="public-preview-shell">
+                <aside className="public-preview-sidebar" aria-label="Preview navigation">
+                  <span className="public-preview-section-label">Workspace</span>
+                  <span className="public-preview-nav-active">Overview</span>
+                  <span>Today</span>
+                  <span>Plan</span>
+                  <span>Intake</span>
+                </aside>
+              <div className="public-workspace-list">
+                {landingWorkspaceRows.map((row) => (
+                  <article key={row.step} className="public-workspace-row">
+                    <span className="public-workspace-step">{row.step}</span>
                     <div>
-                      <p className="label">{activePreviewStage.label}</p>
-                      <h3 className="public-preview-card-title">{activePreviewStage.title}</h3>
+                      <p className="label">{row.label}</p>
+                      <h3 className="public-preview-card-title">{row.title}</h3>
+                      <p className="muted">{row.body}</p>
                     </div>
-                  </div>
-                  <p className="muted">{activePreviewStage.summary}</p>
-                  <div className="public-preview-chip-row">
-                    {activePreviewStage.highlights.map((highlight) => (
-                      <span key={highlight} className="public-preview-chip">
-                        {highlight}
-                      </span>
-                    ))}
-                  </div>
-                </article>
+                    <span className="public-workspace-status">{row.status}</span>
+                  </article>
+                ))}
               </div>
-              <div className="public-preview-controls" aria-label="Product preview controls">
-                <button type="button" className="public-preview-control" aria-label="Previous preview" onClick={showPreviousPreview}>
-                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                    <path d="M12.5 4.5 7 10l5.5 5.5" />
-                  </svg>
-                </button>
-                <div className="public-preview-progress" aria-hidden="true">
-                  {landingPreviewStages.map((stage, index) => (
-                    <span
-                      key={`${stage.label}-progress`}
-                      className={
-                        index === activePreviewIndex
-                          ? "public-preview-progress-segment public-preview-progress-segment-active"
-                          : "public-preview-progress-segment"
-                      }
-                    />
-                  ))}
-                </div>
-                <button type="button" className="public-preview-control" aria-label="Next preview" onClick={showNextPreview}>
-                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                    <path d="m7.5 4.5 5.5 5.5-5.5 5.5" />
-                  </svg>
-                </button>
               </div>
             </div>
           </article>
         </div>
       </section>
 
-      <section className="public-proof-grid" aria-label="Trust and proof points">
-        {landingProofPoints.map((point) => (
-          <article key={point.title} className="support-panel public-proof-card">
-            <p className="kicker">{point.label}</p>
-            <h2 className="form-section-title">{point.title}</h2>
-            <p className="muted">{point.body}</p>
+      <section className="public-proof-grid" aria-label="Product proof points">
+        {landingProductProofPoints.map((section) => (
+          <article key={section.title} className="support-panel public-proof-card">
+            <p className="kicker">{section.label}</p>
+            <h2 className="form-section-title">{section.title}</h2>
+            <p className="muted">{section.body}</p>
           </article>
         ))}
       </section>
@@ -646,10 +624,10 @@ export default function HomePage() {
       <section className="public-section-break" aria-labelledby="public-journey-heading">
         <div className="public-section-break-line" aria-hidden="true" />
         <div className="public-section-break-copy">
-          <p className="kicker">How it starts</p>
-          <h2 id="public-journey-heading">From setup to saved camp.</h2>
+          <p className="kicker">How it works</p>
+          <h2 id="public-journey-heading">From setup to review.</h2>
         </div>
-        <div className="public-section-break-count" aria-hidden="true">03</div>
+        <Image className="public-section-break-logo" src="/unlxck-icon.jpg" alt="" width={72} height={72} aria-hidden="true" />
       </section>
 
       <section className="metric-grid public-journey-grid">
@@ -662,6 +640,21 @@ export default function HomePage() {
             <p className="muted">{step.body}</p>
           </article>
         ))}
+      </section>
+
+      <section className="public-final-cta" aria-labelledby="public-final-cta-heading">
+        <div>
+          <p className="kicker">Unlxck Your Potential</p>
+          <h2 id="public-final-cta-heading">Build the first camp.</h2>
+        </div>
+        <div className="hero-actions">
+          <Link href="/signup" className="cta">
+            Start free beta
+          </Link>
+          <Link href="/login" className="secondary-button">
+            Log in
+          </Link>
+        </div>
       </section>
     </>
   );
