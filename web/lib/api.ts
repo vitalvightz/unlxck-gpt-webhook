@@ -513,14 +513,19 @@ export function changeUsername(token: string, payload: UsernameChangeRequest): P
   return request;
 }
 
+export type OnboardingDraftSaveResponse = {
+  ok: boolean;
+  updated_at: string;
+};
+
 export function saveOnboardingDraft(
   token: string,
   payload: Pick<
     ProfileUpdateRequest,
     "onboarding_draft" | "full_name" | "technical_style" | "tactical_style" | "stance" | "professional_status" | "record" | "athlete_timezone"
   >,
-): Promise<MeResponse> {
-  return readJson<MeResponse>("/api/onboarding/draft", {
+): Promise<OnboardingDraftSaveResponse> {
+  return readJson<OnboardingDraftSaveResponse>("/api/onboarding/draft", {
     method: "PATCH",
     token,
     body: JSON.stringify(payload),
