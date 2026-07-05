@@ -4165,6 +4165,8 @@ def _ensure_compressed_freshness_role(
     days_until_fight: Any,
     athlete_model: dict[str, Any],
 ) -> dict[str, Any]:
+    if not isinstance(allocation, dict):
+        return allocation
     days = _coerce_days(days_until_fight)
     if not isinstance(days, int) or not (8 <= days <= 13):
         return allocation
