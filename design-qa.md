@@ -1,6 +1,6 @@
-source visual truth path: C:\Users\Micha\.codex\generated_images\019f336f-ad9f-7172-9f0b-d75e8cad2623\ig_0a886c5d8a13b182016a4a9f3be9d48191852dad0348e49452.png
-implementation screenshot path: C:\Users\Micha\AppData\Local\Temp\unlxck-landing-final-desktop-v2.png
-mobile implementation screenshot path: C:\Users\Micha\AppData\Local\Temp\unlxck-landing-final-mobile-v2.png
+source visual reference: local product-led concept image generated during design QA; temporary artifact not committed
+implementation evidence: in-app browser screenshots and DOM checks captured during QA; temporary screenshots not committed
+committed visual asset: web/public/unlxck-icon.jpg
 latest mobile hero check: in-app browser viewport 390x844
 latest tablet proof/CTA check: in-app browser viewport 842x698
 viewport: desktop 1440x1000, mobile 390x844
