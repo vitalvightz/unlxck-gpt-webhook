@@ -2436,7 +2436,10 @@ def ensure_declared_coach_combat_spine(
             or downgraded_from == "hard_sparring_day"
         )
         app_owned = _is_app_owned_visible_role(role_key)
-        allowed_filler = is_low_cost_coexistable_filler(role_copy)
+        allowed_filler = (
+            is_low_cost_coexistable_filler(role_copy)
+            or role_key == "fight_week_freshness_day"
+        )
 
         if on_coach_label and app_owned and not coach_context and not allowed_filler:
             continue
@@ -2965,6 +2968,7 @@ def _late_fight_support_role_count(roles: list[dict[str, Any]]) -> int:
         1
         for role in roles
         if role.get("stress_class") == "support"
+        and _is_app_owned_visible_role(role.get("role_key"))
         and _role_consumes_day_slot(role)
     )
 
@@ -4105,6 +4109,7 @@ def _late_fight_practical_allocation_plan(days_until_fight: Any, athlete_model: 
         allocation = _bridge_countdown_practical_allocation_plan(days_until_fight, athlete_model)
     else:
         allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
+    allocation = _ensure_compressed_freshness_role(allocation, days_until_fight, athlete_model)
     return _append_declared_hard_spar_context(allocation, days_until_fight, athlete_model)
 
 
@@ -4153,6 +4158,64 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     if mode == "fight_day_protocol_payload":
         return "Use fight-day protocol guidance only. Activation, warm-up, cue, fuel, walk-through, and recover — no training-plan language."
     return "Use the normal camp-stage payload."
+
+
+def _ensure_compressed_freshness_role(
+    allocation: dict[str, Any],
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> dict[str, Any]:
+    days = _coerce_days(days_until_fight)
+    if not isinstance(days, int) or not (8 <= days <= 13):
+        return allocation
+    roles = list(allocation.get("session_roles", []))
+    countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
+    hard_weekdays = _declared_hard_weekdays(athlete_model)
+    if any(
+        str(role.get("role_key") or "") == "fight_week_freshness_day"
+        and _is_app_owned_visible_role(role.get("role_key"))
+        for role in roles
+    ):
+        return allocation
+    legal_labels = list((allocation.get("role_budget", {}) or {}).get("legal_countdown_labels") or [])
+    if not legal_labels:
+        legal_labels = list((allocation.get("allocator", {}) or {}).get("legal_countdown_labels") or [])
+    labels_with_offsets = [
+        (label, _countdown_offset(str(label)))
+        for label in legal_labels
+        if _countdown_offset(str(label)) is not None
+    ]
+    if not labels_with_offsets:
+        return allocation
+    non_hard_labels = [
+        item
+        for item in labels_with_offsets
+        if str(countdown_map.get(str(item[0])) or "").strip().lower() not in hard_weekdays
+    ]
+    label = str(min(non_hard_labels or labels_with_offsets, key=lambda item: int(item[1] or 0))[0])
+    role = _late_fight_role_entry(
+        category="recovery",
+        role_key="fight_week_freshness_day",
+        preferred_pool="rehab_slots_or_recovery_only",
+        selection_rule="Freshness reset is mandatory in compressed pre-fight countdown output.",
+        placement_rule="Keep this as the lowest-load day and preserve readiness over extra development.",
+        selection_priority=104,
+        required=True,
+        legal_countdown_labels=[label],
+    )
+    roles.append(_assign_role_to_countdown_label(role, label, countdown_map))
+    updated = dict(allocation)
+    updated["session_roles"] = sorted(
+        roles,
+        key=lambda item: int(item.get("countdown_offset") or 0),
+        reverse=True,
+    )
+    role_budget = dict(updated.get("role_budget", {}) or {})
+    role_budget["selected_active_roles"] = _late_fight_active_role_count(updated["session_roles"])
+    role_budget["selected_meaningful_stress_exposures"] = _late_fight_meaningful_stress_count(updated["session_roles"])
+    role_budget["selected_support_roles"] = _late_fight_support_role_count(updated["session_roles"])
+    updated["role_budget"] = role_budget
+    return updated
 
 
 def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> dict[str, Any]:

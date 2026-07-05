@@ -265,39 +265,51 @@ export default function AdminPage() {
     let active = true;
     setIsDirectoryLoading(true);
     setError(null);
-    Promise.allSettled([
-      listAdminAthletes(token, { q: searchNeedle, limit: DIRECTORY_PAGE_SIZE, offset: athletesOffset }),
-      listAdminPlans(token, { q: searchNeedle, limit: DIRECTORY_PAGE_SIZE, offset: plansOffset }),
-    ])
-      .then(([athletesResult, plansResult]) => {
-        if (!active) return;
-        const loadErrors: string[] = [];
 
-        if (athletesResult.status === "fulfilled") {
-          setAthletes(athletesResult.value);
-          setAthletesHasMore(athletesResult.value.length === DIRECTORY_PAGE_SIZE);
-        } else {
-          loadErrors.push(getErrorMessage(athletesResult.reason, "Unable to load athlete accounts."));
+    const loadDirectory = async () => {
+      const loadErrors: string[] = [];
+
+      try {
+        try {
+          const athletesResult = await listAdminAthletes(token, {
+            q: searchNeedle,
+            limit: DIRECTORY_PAGE_SIZE,
+            offset: athletesOffset,
+          });
+          if (!active) return;
+          setAthletes(athletesResult);
+          setAthletesHasMore(athletesResult.length === DIRECTORY_PAGE_SIZE);
+        } catch (athletesError) {
+          if (!active) return;
+          loadErrors.push(getErrorMessage(athletesError, "Unable to load athlete accounts."));
         }
 
-        if (plansResult.status === "fulfilled") {
-          setPlans(plansResult.value);
-          setPlansHasMore(plansResult.value.length === DIRECTORY_PAGE_SIZE);
-        } else {
-          loadErrors.push(getErrorMessage(plansResult.reason, "Unable to load plan history."));
+        try {
+          const plansResult = await listAdminPlans(token, {
+            q: searchNeedle,
+            limit: DIRECTORY_PAGE_SIZE,
+            offset: plansOffset,
+          });
+          if (!active) return;
+          setPlans(plansResult);
+          setPlansHasMore(plansResult.length === DIRECTORY_PAGE_SIZE);
+        } catch (plansError) {
+          if (!active) return;
+          loadErrors.push(getErrorMessage(plansError, "Unable to load plan history."));
         }
 
         setError(loadErrors.length ? loadErrors.join(" ") : null);
-      })
-      .catch((adminError) => {
+      } catch (adminError) {
         if (!active) return;
         setError(adminError instanceof Error ? adminError.message : "Unable to load admin data.");
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setIsDirectoryLoading(false);
         }
-      });
+      }
+    };
+
+    void loadDirectory();
 
     return () => {
       active = false;
@@ -326,65 +338,73 @@ export default function AdminPage() {
     }
 
     let active = true;
+    let jobLoadInFlight = false;
 
-    const loadJobs = (isInitial: boolean) => {
+    const loadJobs = async (isInitial: boolean) => {
+      if (jobLoadInFlight) return;
+      jobLoadInFlight = true;
       if (isInitial) {
         setIsJobsLoading(true);
       }
-      Promise.allSettled([
-        listAdminActiveGenerationJobs(token),
-        listAdminTriageGenerationJobs(token),
-        listAdminReviewPlans(token),
-        listAdminReviews(token, "pending"),
-      ])
-        .then(([activeResult, triageResult, reviewPlansResult, reviewsResult]) => {
+
+      try {
+        try {
+          const activeResult = await listAdminActiveGenerationJobs(token);
           if (!active) return;
+          setActiveJobs(activeResult);
+          setActiveWarning(null);
+        } catch (activeError) {
+          if (!active) return;
+          // On a transient poll failure keep the last good snapshot rather
+          // than blanking the live monitor; only clear it on first load.
+          if (isInitial) setActiveJobs([]);
+          setActiveWarning(getErrorMessage(activeError, "Unable to load active generation jobs."));
+        }
 
-          if (activeResult.status === "fulfilled") {
-            setActiveJobs(activeResult.value);
-            setActiveWarning(null);
-          } else {
-            // On a transient poll failure keep the last good snapshot rather
-            // than blanking the live monitor; only clear it on first load.
-            if (isInitial) setActiveJobs([]);
-            setActiveWarning(getErrorMessage(activeResult.reason, "Unable to load active generation jobs."));
-          }
+        try {
+          const triageResult = await listAdminTriageGenerationJobs(token);
+          if (!active) return;
+          setTriageJobs(triageResult);
+          setTriageWarning(null);
+        } catch (triageError) {
+          if (!active) return;
+          if (isInitial) setTriageJobs([]);
+          setTriageWarning(getErrorMessage(triageError, "Unable to load suspended triage jobs."));
+        }
 
-          if (triageResult.status === "fulfilled") {
-            setTriageJobs(triageResult.value);
-            setTriageWarning(null);
-          } else {
-            if (isInitial) setTriageJobs([]);
-            setTriageWarning(getErrorMessage(triageResult.reason, "Unable to load suspended triage jobs."));
-          }
+        try {
+          const reviewPlansResult = await listAdminReviewPlans(token);
+          if (!active) return;
+          setReviewPlans(reviewPlansResult);
+          setReviewPlansWarning(null);
+        } catch (reviewPlansError) {
+          if (!active) return;
+          if (isInitial) setReviewPlans([]);
+          setReviewPlansWarning(getErrorMessage(reviewPlansError, "Unable to load held/review plans."));
+        }
 
-          if (reviewPlansResult.status === "fulfilled") {
-            setReviewPlans(reviewPlansResult.value);
-            setReviewPlansWarning(null);
-          } else {
-            if (isInitial) setReviewPlans([]);
-            setReviewPlansWarning(getErrorMessage(reviewPlansResult.reason, "Unable to load held/review plans."));
-          }
+        try {
+          const reviewsResult = await listAdminReviews(token, "pending");
+          if (!active) return;
+          setAttentionReviews(reviewsResult);
+          setAttentionWarning(null);
+        } catch (reviewsError) {
+          if (!active) return;
+          if (isInitial) setAttentionReviews([]);
+          setAttentionWarning(getErrorMessage(reviewsError, "Unable to load the athlete attention queue."));
+        }
 
-          if (reviewsResult.status === "fulfilled") {
-            setAttentionReviews(reviewsResult.value);
-            setAttentionWarning(null);
-          } else {
-            if (isInitial) setAttentionReviews([]);
-            setAttentionWarning(getErrorMessage(reviewsResult.reason, "Unable to load the athlete attention queue."));
-          }
-
-          setLastCheckedAt(new Date().toISOString());
-        })
-        .finally(() => {
-          if (active && isInitial) {
-            setIsJobsLoading(false);
-          }
-        });
+        setLastCheckedAt(new Date().toISOString());
+      } finally {
+        jobLoadInFlight = false;
+        if (active && isInitial) {
+          setIsJobsLoading(false);
+        }
+      }
     };
 
-    loadJobs(true);
-    const timer = setInterval(() => loadJobs(false), ACTIVE_JOBS_POLL_INTERVAL_MS);
+    void loadJobs(true);
+    const timer = setInterval(() => void loadJobs(false), ACTIVE_JOBS_POLL_INTERVAL_MS);
 
     return () => {
       active = false;

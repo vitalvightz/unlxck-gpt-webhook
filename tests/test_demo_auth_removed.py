@@ -13,7 +13,7 @@ BANNED_MARKERS = {
     "signIn" + "Demo",
 }
 
-EXCLUDED_PARTS = {"node_modules", ".git", "__pycache__", ".next"}
+EXCLUDED_PARTS = {"node_modules", ".git", "__pycache__", ".next", ".app_data"}
 
 
 def test_demo_auth_markers_removed_from_repo():
@@ -32,7 +32,7 @@ def test_demo_auth_markers_removed_from_repo():
 
         try:
             text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
+        except (UnicodeDecodeError, PermissionError):
             continue
 
         for marker in BANNED_MARKERS:

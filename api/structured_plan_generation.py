@@ -1925,11 +1925,12 @@ def build_structured_plan_prompt(
             brief_json = json.dumps(brief_context, ensure_ascii=False)[:_BRIEF_CONTEXT_CHAR_CAP]
         except (TypeError, ValueError):
             brief_json = ""
-        if brief_json and brief_json != "{}":
-            sections.append(
-                "PLANNING BRIEF (context for athlete/event/phases — do not copy "
-                "verbatim):\n" + brief_json
-            )
+        if not brief_json:
+            brief_json = "{}"
+        sections.append(
+            "PLANNING BRIEF (context for athlete/event/phases — do not copy "
+            "verbatim):\n" + brief_json
+        )
 
         if computed_support:
             try:

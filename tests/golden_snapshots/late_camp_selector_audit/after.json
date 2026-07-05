@@ -344,6 +344,13 @@
           ]
         },
         {
+          "name": "Bent-Over Row",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
           "name": "Burpee-to-Punch (Tabata)",
           "score": 2.05,
           "reason_codes": [
@@ -451,6 +458,14 @@
           ]
         },
         {
+          "name": "Kettlebell Suitcase Carry Hold",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
           "name": "Lateral Bound-to-Slip",
           "score": 2.35,
           "reason_codes": [
@@ -518,6 +533,14 @@
           "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Pallof Press Iso (Against Resistance)",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -610,6 +633,14 @@
           "score": 1.45,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Suitcase Carry Holds",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -1159,6 +1190,13 @@
           ]
         },
         {
+          "name": "Bent-Over Row",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
           "name": "Burpee-to-Punch (Tabata)",
           "score": 2.05,
           "reason_codes": [
@@ -1283,6 +1321,14 @@
           ]
         },
         {
+          "name": "Kettlebell Suitcase Carry Hold",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
           "name": "Lateral Bound-to-Slip",
           "score": 2.35,
           "reason_codes": [
@@ -1350,6 +1396,14 @@
           "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Pallof Press Iso (Against Resistance)",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -1450,6 +1504,14 @@
           "score": -1.75,
           "reason_codes": [
             "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
+          "name": "Suitcase Carry Holds",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -1803,6 +1865,13 @@
           "reason_codes": [
             "late_block_high_movement_cost",
             "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
+          "name": "Sandbag Shouldering",
+          "score": 0.0,
+          "reason_codes": [
             "late_block_support_only_anchor_fulfillment"
           ]
         },
@@ -2397,6 +2466,13 @@
           ]
         },
         {
+          "name": "Sandbag Shouldering",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
           "name": "Seated Medicine-Ball Punch Throw",
           "score": 4.1,
           "reason_codes": [
@@ -2793,6 +2869,27 @@
     "strength": {
       "winners": [
         {
+          "name": "Staggered-Stance Medicine-Ball Punch Throw",
+          "score": 9.6125,
+          "reason_codes": [
+            "priority_secondary_goal_match:skill_refinement",
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_ballistic_low_volume",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_speed",
+            "late_strength_boost_freshness",
+            "late_strength_boost_crisp_ballistic"
+          ]
+        },
+        {
           "name": "Band Row Speed Focus",
           "score": 9.1125,
           "reason_codes": [
@@ -2832,22 +2929,6 @@
           ]
         },
         {
-          "name": "Scapular Pull-Up Hold",
-          "score": 5.0875,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
           "name": "Light Heavy-Bag Technical Tempo",
           "score": 4.7875,
           "reason_codes": [
@@ -2865,8 +2946,8 @@
           ]
         },
         {
-          "name": "Banded Lateral Walk",
-          "score": 2.0375,
+          "name": "Controlled Bird-Dog",
+          "score": 2.1875,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
             "late_strength_boost_window_fit",
@@ -2880,7 +2961,7 @@
           ]
         },
         {
-          "name": "Controlled Bird-Dog",
+          "name": "Diaphragmatic Breathing Drills",
           "score": 2.1875,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -3039,6 +3120,13 @@
           ]
         },
         {
+          "name": "Sandbag Shouldering",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
           "name": "Seated Medicine-Ball Punch Throw",
           "score": 4.1,
           "reason_codes": [
@@ -3057,13 +3145,6 @@
           "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
-            "late_strength_block_window_mismatch"
-          ]
-        },
-        {
-          "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 5.0,
-          "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
@@ -3693,6 +3774,14 @@
           ]
         },
         {
+          "name": "Bird Dog Hold",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Chin tuck nod",
           "score": -1.0,
           "reason_codes": [
@@ -3862,6 +3951,15 @@
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Sandbag Shouldering",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any
 from .build_block import (
     PhaseBlock,
     _md_to_html,
@@ -40,6 +41,220 @@ def _insert_lead_summary(plan_text: str, lead_summary: str) -> str:
     title = parts[0]
     rest = parts[1].lstrip("\n") if len(parts) > 1 else ""
     return f"{title}\n\n{lead_summary}\n\n{rest}".rstrip()
+
+
+def _normalise_countdown_label(value: Any) -> str:
+    match = re.search(r"\bD-(\d{1,2})\b", str(value or ""), re.IGNORECASE)
+    if not match:
+        return ""
+    return f"D-{int(match.group(1))}"
+
+
+def _late_fight_role_display(role: dict[str, Any]) -> str:
+    label = str(role.get("athlete_facing_label") or role.get("display_label") or "").strip()
+    if label:
+        return label
+    role_key = str(role.get("role_key") or "countdown session").replace("_", " ").strip()
+    return role_key.capitalize()
+
+
+def _late_fight_role_countdown_label(role: dict[str, Any]) -> str:
+    return (
+        _normalise_countdown_label(role.get("scheduled_countdown_label"))
+        or _normalise_countdown_label(role.get("countdown_label"))
+        or _normalise_countdown_label(role.get("countdown_display_label"))
+    )
+
+
+def _late_fight_role_display_label(role: dict[str, Any], countdown_label: str) -> str:
+    display = str(role.get("countdown_display_label") or "").strip()
+    if display:
+        return display
+    weekday = str(
+        role.get("real_weekday")
+        or role.get("countdown_weekday")
+        or role.get("scheduled_day_hint")
+        or ""
+    ).strip()
+    return f"{countdown_label} ({weekday.title()})" if weekday else countdown_label
+
+
+def _late_fight_role_is_hidden_context(role: dict[str, Any]) -> bool:
+    role_key = str(role.get("role_key") or "").strip().lower()
+    category = str(role.get("category") or "").strip().lower()
+    return bool(role_key == "hard_sparring_day" or (category == "sparring" and role.get("coach_owned")))
+
+
+def _late_fight_sequence_from_brief(planning_brief: dict[str, Any]) -> list[dict[str, Any]]:
+    for key in ("late_fight_session_sequence", "session_sequence", "countdown_sessions"):
+        value = planning_brief.get(key)
+        if isinstance(value, list) and value:
+            return [entry for entry in value if isinstance(entry, dict)]
+    spec = planning_brief.get("late_fight_plan_spec") or {}
+    if isinstance(spec, dict):
+        for key in ("visible_session_sequence", "session_sequence", "countdown_sessions", "sessions"):
+            value = spec.get(key)
+            if isinstance(value, list) and value:
+                return [entry for entry in value if isinstance(entry, dict)]
+    return []
+
+
+def _late_fight_window_for_role(role: dict[str, Any]) -> str:
+    stage_key = str(role.get("composite_segment_stage_key") or "").strip().lower()
+    if stage_key:
+        return stage_key
+    offset = None
+    label = _late_fight_role_countdown_label(role)
+    if label.startswith("D-"):
+        try:
+            offset = int(label[2:])
+        except ValueError:
+            offset = None
+    if offset is None:
+        return ""
+    if 8 <= offset <= 13:
+        return "d13_to_d8"
+    if offset == 7:
+        return "d7"
+    if 5 <= offset <= 6:
+        return "d6_to_d5"
+    if 2 <= offset <= 4:
+        return "d4_to_d2"
+    if offset == 1:
+        return "d1"
+    return ""
+
+
+def _late_fight_preferred_cue(role: dict[str, Any]) -> str:
+    return {
+        "d13_to_d8": "Mobility Reset Flow",
+        "d7": "Mobility Reset Flow",
+        "d6_to_d5": "Reactive Shuffle Repeats",
+        "d4_to_d2": "Breathing Reset",
+        "d1": "Breathing Reset",
+    }.get(_late_fight_window_for_role(role), "Mobility Reset Flow")
+
+
+def _candidate_names_from_slot(slot: dict[str, Any]) -> list[str]:
+    names: list[str] = []
+    selected = slot.get("selected") or {}
+    if isinstance(selected, dict):
+        selected_name = str(selected.get("name") or "").strip()
+        if selected_name:
+            names.append(selected_name)
+    for alternate in slot.get("alternates", []) or []:
+        if not isinstance(alternate, dict):
+            continue
+        alternate_name = str(alternate.get("name") or "").strip()
+        if alternate_name:
+            names.append(alternate_name)
+    return list(dict.fromkeys(names))
+
+
+def _slots_for_phase_requirement(phase_pool: dict[str, Any], requirement: str) -> list[dict[str, Any]]:
+    strength_slots = [slot for slot in phase_pool.get("strength_slots", []) or [] if isinstance(slot, dict)]
+    conditioning_slots = [slot for slot in phase_pool.get("conditioning_slots", []) or [] if isinstance(slot, dict)]
+    rehab_slots = [slot for slot in phase_pool.get("rehab_slots", []) or [] if isinstance(slot, dict)]
+    if requirement == "rehab":
+        return rehab_slots
+    if requirement in {"aerobic", "glycolytic", "alactic"}:
+        return [slot for slot in conditioning_slots if slot.get("role") == requirement]
+    if requirement == "primary_strength":
+        return strength_slots[:1]
+    if requirement == "extra_strength_accessory":
+        return strength_slots[1:]
+    return [
+        slot
+        for slot in conditioning_slots + strength_slots + rehab_slots
+        if slot.get("role") == requirement
+    ]
+
+
+def _render_late_fight_phase_notes(planning_brief: dict[str, Any]) -> list[str]:
+    candidate_pools = planning_brief.get("candidate_pools") or {}
+    phase_strategy = planning_brief.get("phase_strategy") or {}
+    lines: list[str] = []
+    for phase, strategy in phase_strategy.items():
+        must_keep = [
+            str(item).strip()
+            for item in (strategy.get("must_keep") or [])
+            if str(item).strip()
+        ]
+        if not must_keep:
+            continue
+        phase_pool = candidate_pools.get(phase) or {}
+        phase_lines: list[str] = []
+        for requirement in must_keep:
+            names: list[str] = []
+            for slot in _slots_for_phase_requirement(phase_pool, requirement):
+                names.extend(_candidate_names_from_slot(slot))
+            if not names:
+                continue
+            phase_lines.append(
+                f"- {requirement.replace('_', ' ').title()}: {', '.join(list(dict.fromkeys(names))[:4])}"
+            )
+        if phase_lines:
+            lines.extend(["", f"## {str(phase).upper()}", *phase_lines])
+    return lines
+
+
+def _late_fight_terminal_d0_header(context: PlanRuntimeContext, planning_brief: dict[str, Any]) -> str:
+    spec = planning_brief.get("late_fight_plan_spec") or {}
+    countdown_map = spec.get("countdown_weekday_map") if isinstance(spec, dict) else {}
+    weekday = ""
+    if isinstance(countdown_map, dict):
+        weekday = str(countdown_map.get("D-0") or "").strip()
+    if not weekday:
+        weekday = _resolve_fight_weekday(context) or ""
+    label = f"D-0 ({weekday.title()})" if weekday else "D-0"
+    return f"### {label} - Fight day protocol"
+
+
+def _render_late_fight_stage1_draft(
+    *,
+    context: PlanRuntimeContext,
+    planning_brief: dict[str, Any],
+) -> str | None:
+    spec = planning_brief.get("late_fight_plan_spec") or {}
+    if not isinstance(spec, dict) or not spec:
+        return None
+
+    sequence = _late_fight_sequence_from_brief(planning_brief)
+    lines = ["# LATE-FIGHT COUNTDOWN"]
+    phase_notes = _render_late_fight_phase_notes(planning_brief)
+    if phase_notes:
+        lines.extend(phase_notes)
+    lines.extend(["", "## Countdown Sessions", ""])
+    seen: set[tuple[str, str]] = set()
+    for role in sequence:
+        if _late_fight_role_is_hidden_context(role):
+            continue
+        if role.get("render_mandatory") is False:
+            continue
+        countdown_label = _late_fight_role_countdown_label(role)
+        if not countdown_label or countdown_label == "D-0":
+            continue
+        identity = (countdown_label, str(role.get("role_key") or ""))
+        if identity in seen:
+            continue
+        seen.add(identity)
+        display_label = _late_fight_role_display_label(role, countdown_label)
+        lines.extend(
+            [
+                f"### {display_label} - {_late_fight_role_display(role)}",
+                f"Cue: {_late_fight_preferred_cue(role)}.",
+                "Purpose: hold the assigned taper job, protect freshness, and stop if sharpness drops.",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            _late_fight_terminal_d0_header(context, planning_brief),
+            FIGHT_DAY_PROTOCOL_TEXT,
+        ]
+    )
+    return "\n".join(lines).strip()
 
 
 def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
@@ -457,6 +672,12 @@ def build_stage2_outputs(
 
     if isinstance(planning_brief, dict):
         planning_brief["stage1_selection_summary"] = stage1_selection_summary
+        late_fight_draft = _render_late_fight_stage1_draft(
+            context=context,
+            planning_brief=planning_brief,
+        )
+        if late_fight_draft:
+            rendered.fight_plan_text = late_fight_draft
     # Deterministic injury / weight-cut lead summary. The validator scans the
     # first plan lines for this context, so render it right after the title.
     lead_summary = render_lead_summary(planning_brief)

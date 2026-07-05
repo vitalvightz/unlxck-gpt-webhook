@@ -91,15 +91,23 @@ PLAN_SUMMARY_SELECT = (
     "stage2_validator_report, pdf_url, created_at"
 )
 GENERATION_JOB_SELECT = "*"
-# Admin job-list endpoints render diagnostics that need request_payload and
-# final_result but never read stage1_result (the largest intermediate blob,
-# the full Stage 1 planner output). Listing many rows with select="*" loads
-# every stage1_result into memory at once and was OOM-ing the 512MB instance,
-# so admin list queries use this explicit projection that drops stage1_result.
-GENERATION_JOB_ADMIN_LIST_SELECT = (
+# Admin job-list endpoints never read stage1_result (the largest intermediate
+# blob, the full Stage 1 planner output). Listing many rows with select="*"
+# loads every stage1_result into memory at once and was OOM-ing the 512MB
+# instance, so admin list queries use explicit projections.
+GENERATION_JOB_ADMIN_BASE_SELECT = (
     "id, athlete_id, client_request_id, source, status, attempt_count, "
     "heartbeat_at, started_at, completed_at, created_at, updated_at, error, "
-    "intake_id, plan_id, progress_milestones, request_payload, final_result"
+    "intake_id, plan_id, progress_milestones"
+)
+GENERATION_JOB_ADMIN_ACTIVE_SELECT = (
+    f"{GENERATION_JOB_ADMIN_BASE_SELECT}, request_payload"
+)
+GENERATION_JOB_ADMIN_TRIAGE_SELECT = (
+    f"{GENERATION_JOB_ADMIN_BASE_SELECT}, request_payload, final_result"
+)
+GENERATION_JOB_ADMIN_LIST_SELECT = (
+    f"{GENERATION_JOB_ADMIN_BASE_SELECT}, request_payload, final_result"
 )
 
 _TRANSIENT_SUPABASE_ERRORS = (
@@ -2947,7 +2955,7 @@ class SupabaseAppStore:
             response = self._run_with_transient_retry(
                 operation=f"list_admin_triage_generation_jobs limit={limit}",
                 fn=lambda: self.client.table("generation_jobs")
-                .select(GENERATION_JOB_ADMIN_LIST_SELECT)
+                .select(GENERATION_JOB_ADMIN_TRIAGE_SELECT)
                 .eq("status", "review_required")
                 .is_("plan_id", "null")
                 .order("created_at", desc=True)
@@ -2974,7 +2982,7 @@ class SupabaseAppStore:
             response = self._run_with_transient_retry(
                 operation=f"list_admin_active_generation_jobs limit={limit}",
                 fn=lambda: self.client.table("generation_jobs")
-                .select(GENERATION_JOB_ADMIN_LIST_SELECT)
+                .select(GENERATION_JOB_ADMIN_ACTIVE_SELECT)
                 .in_("status", ["queued", "running"])
                 .order("created_at", desc=True)
                 .limit(limit)

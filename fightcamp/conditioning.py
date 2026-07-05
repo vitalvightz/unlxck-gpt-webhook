@@ -735,7 +735,12 @@ def _evaluate_conditioning_late_window(
     equipment = set(normalize_equipment_list(drill.get("equipment", [])))
     if window in TAPER_ONLY_CONDITIONING_WINDOWS:
         phases = {str(value).strip().upper() for value in (drill.get("phases") or []) if str(value).strip()}
-        if phases and "TAPER" not in phases:
+        support_alactic = (
+            system == "alactic"
+            and bool(drill.get("support_only"))
+            and str(drill.get("lactate_load", "")).strip().lower() == "low"
+        )
+        if phases and "TAPER" not in phases and not support_alactic:
             return {
                 "blocked": True,
                 "severity": "blocked",
@@ -2073,6 +2078,8 @@ def generate_conditioning_block(flags):
     preferred_order = phase_priority.get(phase.upper(), ["aerobic", "glycolytic", "alactic"])
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
     style_system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
+    scored_system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
+    scored_style_system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
     # Track drills per individual style for even distribution
     style_drills_by_style = {
         s: {"aerobic": [], "glycolytic": [], "alactic": []} for s in style_names
@@ -2344,7 +2351,9 @@ def generate_conditioning_block(flags):
                 if preferred_name_match:
                     reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
-                system_drills[system].append((d, total_score, reasons))
+                entry = (d, total_score, reasons)
+                system_drills[system].append(entry)
+                scored_system_drills[system].append(entry)
 
     _run_conditioning_poststep("base_bank_score", _load_and_score_base_conditioning_bank)
 
@@ -2603,7 +2612,9 @@ def generate_conditioning_block(flags):
                 if preferred_name_match:
                     reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
-                style_system_drills[system].append((d, score, reasons))
+                entry = (d, score, reasons)
+                style_system_drills[system].append(entry)
+                scored_style_system_drills[system].append(entry)
                 style_conditioning_diagnostics["entries_scored"] += 1
                 if d.get("name"):
                     style_conditioning_scored_names.add(d["name"])
@@ -3882,8 +3893,8 @@ def generate_conditioning_block(flags):
 
     def _build_candidate_reservoir_step():
         reservoir = _build_conditioning_candidate_reservoir(
-            system_drills,
-            style_system_drills,
+            scored_system_drills,
+            scored_style_system_drills,
             grouped_drills,
             reason_lookup,
         )

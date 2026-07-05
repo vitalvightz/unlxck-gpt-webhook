@@ -1674,6 +1674,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # emitted before the fetch) and the warm/cold prime paths report the same
     # substep.
     exercise_bank = _run_substep("candidate_pool", get_exercise_bank)
+    source_candidate_count = len(exercise_bank)
     style_exercises = get_style_exercises()
     universal_strength_names = get_universal_strength_names()
 
@@ -1807,6 +1808,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 _record_late_penalty(exercise, fallback_score, late_eval["penalty_codes"])
         return post_score_late_eval_cache[cache_key]
 
+    def _record_prefilter_late_eval(exercise: dict) -> None:
+        if not active_late_window:
+            return
+        _get_post_score_late_eval(exercise, fallback_score=0.0)
+
     def _late_safe_marker_profile(
         exercise: dict,
         *,
@@ -1915,10 +1921,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         ex_equipment = normalize_equipment_list(ex.get("equipment", []))
         if legacy_taper_gate:
             if any(t in taper_banned for t in tags_lower) or any(eq in {"barbell", "trap_bar"} for eq in ex_equipment):
+                _record_prefilter_late_eval(ex)
                 continue
             if not any(t in taper_allowed for t in tags_lower):
+                _record_prefilter_late_eval(ex)
                 continue
         if phase not in ex.get("phases", []):
+            if _exercise_late_windows(ex):
+                _record_prefilter_late_eval(ex)
             continue
         if phase in {"SPP", "TAPER"} and _is_over_100_percent_isometric(ex):
             continue
@@ -3128,6 +3138,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         capped_weighted = weighted_exercises[:500]
         if len(weighted_exercises) > len(capped_weighted):
             log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=len(weighted_exercises), actual=len(capped_weighted))
+        elif source_candidate_count > 500:
+            log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=source_candidate_count, actual=len(capped_weighted))
         return _build_strength_candidate_reservoir(capped_weighted)
     candidate_reservoir = _run_real_poststep("candidate_reservoir_build", _build_capped_candidate_reservoir)
     deduped_late_blocks = {

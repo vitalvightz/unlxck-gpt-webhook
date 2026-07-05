@@ -236,9 +236,9 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     if speed_signal:
         add_unique(
             primary,
-            "speed / reaction sharpness",
-            "speed_reaction_sharpness",
-            "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
+            "speed / footwork sharpness",
+            "speed_footwork_sharpness",
+            "Use a short full-rest alactic speed dose for footwork speed and neural sharpness, not conditioning volume.",
         )
 
     footwork_signal = bool(
@@ -246,7 +246,15 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         or goal_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
     )
 
-    if footwork_signal:
+    skill_refinement_signal = bool(goal_tokens & {"skill_refinement"} or weakness_tokens & {"skill_refinement"})
+    if ultra_short_window and footwork_signal and skill_refinement_signal:
+        add_unique(
+            primary,
+            "footwork / technical sharpness",
+            "footwork_technical_sharpness",
+            "Collapse footwork and skill refinement into one practical fight-week target.",
+        )
+    elif footwork_signal:
         add_unique(
             primary,
             "footwork / ring-movement quality",
@@ -259,7 +267,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         or goal_tokens & {"skill_refinement", "striking"}
     )
 
-    if technical_sharpness_signal:
+    if technical_sharpness_signal and not any(entry["kind"] == "footwork_technical_sharpness" for entry in primary):
         add_unique(
             primary,
             "technical sharpness",
@@ -489,7 +497,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
-    if "speed / reaction sharpness" in compressed_labels:
+    if "speed / footwork sharpness" in compressed_labels:
         return "sharpness_under_fatigue"
     if "footwork / ring-movement quality" in compressed_labels:
         return "boxing_quality_under_load"

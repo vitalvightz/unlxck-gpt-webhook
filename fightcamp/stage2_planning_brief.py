@@ -213,12 +213,20 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
         add_unique(
             speed_bucket,
-            "speed / reaction sharpness",
-            "speed_reaction_sharpness",
-            "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
+            "speed / footwork sharpness",
+            "speed_footwork_sharpness",
+            "Use a short full-rest alactic speed dose for footwork speed and neural sharpness, not conditioning volume.",
         )
 
-    if footwork_goal_signal or footwork_weakness_signal:
+    skill_refinement_signal = bool(goal_tokens & {"skill_refinement"} or weakness_tokens & {"skill_refinement"})
+    if ultra_short_window and (footwork_goal_signal or footwork_weakness_signal) and skill_refinement_signal:
+        add_unique(
+            primary,
+            "footwork / technical sharpness",
+            "footwork_technical_sharpness",
+            "Collapse footwork and skill refinement into one practical fight-week target.",
+        )
+    elif footwork_goal_signal or footwork_weakness_signal:
         footwork_bucket = primary if (footwork_goal_signal or primary_goal_tokens & _FOOTWORK_QUALITY_TOKENS) else embedded
         add_unique(
             footwork_bucket,
@@ -232,7 +240,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         or goal_tokens & {"skill_refinement", "striking"}
     )
 
-    if technical_sharpness_signal:
+    if technical_sharpness_signal and not any(entry["kind"] == "footwork_technical_sharpness" for entry in primary):
         add_unique(
             primary,
             "technical sharpness",
@@ -430,13 +438,44 @@ def _apply_conditioning_priority_session_shift(session_counts: dict, training_co
     return adjusted
 
 
+def _cap_session_counts_to_frequency(session_counts: dict, training_context: TrainingContext) -> dict:
+    adjusted = dict(session_counts)
+    days_until_fight = training_context.days_until_fight
+    if isinstance(days_until_fight, int) and days_until_fight <= 21:
+        return adjusted
+    try:
+        frequency = int(training_context.training_frequency or training_context.days_available or 0)
+    except (TypeError, ValueError):
+        frequency = 0
+    if frequency <= 0:
+        return adjusted
+    total = sum(int(adjusted.get(key, 0) or 0) for key in ("strength", "conditioning", "recovery"))
+    overflow = max(0, total - frequency)
+    if overflow <= 0:
+        return adjusted
+    for key in ("conditioning", "strength", "recovery"):
+        current = int(adjusted.get(key, 0) or 0)
+        floor = 1 if key in {"strength", "recovery"} and current > 0 else 0
+        removable = max(0, current - floor)
+        take = min(removable, overflow)
+        if take:
+            adjusted[key] = current - take
+            overflow -= take
+        if overflow <= 0:
+            break
+    return adjusted
+
+
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
     briefs: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
-        session_counts = _apply_conditioning_priority_session_shift(
-            allocate_sessions(training_context.training_frequency, phase),
+        session_counts = _cap_session_counts_to_frequency(
+            _apply_conditioning_priority_session_shift(
+                allocate_sessions(training_context.training_frequency, phase),
+                training_context,
+            ),
             training_context,
         )
         risk_flags: list[str] = []
@@ -675,7 +714,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
-    if "speed / reaction sharpness" in compressed_labels:
+    if "speed / footwork sharpness" in compressed_labels:
         return "sharpness_under_fatigue"
     if "footwork / ring-movement quality" in compressed_labels:
         return "boxing_quality_under_load"
