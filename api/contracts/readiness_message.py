@@ -267,7 +267,7 @@ def _sport_tokens(context: ReadinessContext) -> set[str]:
     elif isinstance(plan_tech, Sequence):
         values.extend(plan_tech)
     text = " ".join(_clean(value).lower() for value in values if value)
-    tokens = {part for part in text.replace("/", " ").replace(",", " ").split() if part}
+    tokens = {part for part in text.replace("/", " ").replace(",", " ").replace("-", " ").split() if part}
     if "muay" in tokens or "thai" in tokens:
         tokens.add("muay_thai")
     if "jiu" in tokens or "jitsu" in tokens:
@@ -516,7 +516,7 @@ def build_readiness_adjustment(
 
     contact_sport = _is_combat_contact_sport(context)
     days_until_fight = _days_until_fight(context, context.training_day)
-    if days_until_fight is not None and days_until_fight <= 7 and decision != "pull_back":
+    if days_until_fight is not None and 0 <= days_until_fight <= 7 and decision != "pull_back":
         triggers.append("fight_week")
         if decision == "train_as_planned" and phase != "TAPER":
             title = "Sharp work only."

@@ -163,6 +163,39 @@ def test_repeated_poor_readiness_adds_stronger_warning():
     _assert_card_shape(adjustment)
 
 
+def test_hyphenated_combat_sports_are_recognized_for_contact_guidance():
+    for style in ("muay-thai", "jiu-jitsu"):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(sleep="poor"),
+            ReadinessContext(
+                intake={"athlete": {"technical_style": [style]}},
+                today_session=_session(title="Sparring and hard conditioning"),
+            ),
+        )
+
+        assert adjustment.decision == "modify"
+        assert "contact_sport" in adjustment.triggers
+        assert "contact rounds" in adjustment.action
+        _assert_card_shape(adjustment)
+
+
+def test_past_fight_date_does_not_trigger_fight_week_message():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none", phase="GPP"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            active_plan={"fight_date": "2026-06-15"},
+            today_session=_session(title="Strength session"),
+        ),
+    )
+
+    assert adjustment.decision == "train_as_planned"
+    assert adjustment.title == "Full session."
+    assert "fight_week" not in adjustment.triggers
+    assert "Fight week" not in adjustment.message
+    _assert_card_shape(adjustment)
+
+
 def test_message_explains_change_reason_and_next_action_without_filler():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor", body="flat"),
