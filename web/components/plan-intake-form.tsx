@@ -45,7 +45,7 @@ import { SafetyNote } from "@/components/safety-note";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { INJURY_INTAKE_SAFETY } from "@/lib/safety-copy";
 import { LevelSlider, type LevelValue } from "@/components/rating-controls";
-import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft, mergeSavedOnboardingDraft } from "@/lib/onboarding";
 import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import { FOCUS_CAP_DISABLED_REASON, getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
@@ -1815,7 +1815,7 @@ export function PlanIntakeForm() {
         current_step: step,
         no_scheduled_fight: noScheduledFight,
       };
-      const updatedMe = await saveOnboardingDraft(session.access_token, {
+      await saveOnboardingDraft(session.access_token, {
         full_name: nextForm.athlete.full_name,
         technical_style: nextForm.athlete.technical_style,
         tactical_style: nextForm.athlete.tactical_style,
@@ -1825,8 +1825,11 @@ export function PlanIntakeForm() {
         athlete_timezone: nextForm.athlete.athlete_timezone,
         onboarding_draft: nextDraft,
       });
-      
-      replaceMe(updatedMe);
+
+      const nextMe = mergeSavedOnboardingDraft(me, nextDraft, nextForm.athlete);
+      if (nextMe) {
+        replaceMe(nextMe);
+      }
       lastSavedSnapshotRef.current = JSON.stringify(nextForm);
       setSaveStatus("saved");
       setLastSavedAt(Date.now());

@@ -11,7 +11,7 @@ import { WhyTooltip } from "@/components/why-tooltip";
 import { saveOnboardingDraft } from "@/lib/api";
 import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { markGenerationIntent } from "@/lib/generation-intent";
-import { hydratePlanRequest } from "@/lib/onboarding";
+import { hydratePlanRequest, mergeSavedOnboardingDraft } from "@/lib/onboarding";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -725,7 +725,7 @@ function QuickBuildFormInner() {
           training_preset: trainingPresetMatch,
           focus_preset: focusPresetMatch,
         };
-        const updatedMe = await saveOnboardingDraft(session.access_token, {
+        await saveOnboardingDraft(session.access_token, {
           full_name: planRequest.athlete.full_name,
           technical_style: planRequest.athlete.technical_style,
           tactical_style: planRequest.athlete.tactical_style,
@@ -735,8 +735,11 @@ function QuickBuildFormInner() {
           athlete_timezone: planRequest.athlete.athlete_timezone ?? "",
           onboarding_draft: draft,
         });
-        
-        replaceMe(updatedMe);
+
+        const nextMe = mergeSavedOnboardingDraft(me, draft, planRequest.athlete);
+        if (nextMe) {
+          replaceMe(nextMe);
+        }
         if (!writePendingGenerationPayload(planRequest, "quick_build")) {
           setSubmitError("Unable to prepare the generation payload. Reload and try again.");
           return;
