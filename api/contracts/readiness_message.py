@@ -391,6 +391,13 @@ def _normal_base_message(
         triggers.append("repeated_poor_readiness")
     if poor and flat and manageable_pain and phase in {"TAPER", "REINTEGRATION"}:
         decision = "pull_back"
+        return (
+            decision,
+            "Pull back today.",
+            "Poor sleep, flat body, and manageable pain during taper/reintegration require a recovery day.",
+            "Skip the planned session and use recovery or light mobility work instead.",
+            triggers,
+        )
 
     if decision == "train_as_planned":
         if phase == "TAPER":

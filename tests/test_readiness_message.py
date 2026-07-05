@@ -128,6 +128,22 @@ def test_taper_produces_freshness_first_wording():
     _assert_card_shape(adjustment)
 
 
+def test_taper_poor_flat_manageable_pain_pulls_back_without_modify_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat", pain="manageable", phase="TAPER"),
+        ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
+    )
+
+    assert adjustment.decision == "pull_back"
+    assert "Pull back today." in adjustment.message
+    assert "recovery day" in adjustment.message
+    assert "Skip the planned session" in adjustment.message
+    assert "Keep sharp work only" not in adjustment.message
+    assert "Remove 1 set" not in adjustment.message
+    assert "fatigue-heavy accessories" not in adjustment.message
+    _assert_card_shape(adjustment)
+
+
 def test_repeated_poor_readiness_adds_stronger_warning():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),
