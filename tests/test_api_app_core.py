@@ -21,12 +21,17 @@ def test_create_app_primes_plan_banks_on_startup(monkeypatch):
     def _fake_prime_plan_banks(*, logger=None):
         calls.append(logger)
 
-    monkeypatch.setattr(app_module, "prime_plan_banks", _fake_prime_plan_banks)
+    # Priming is imported lazily inside the lifespan (fightcamp.plan_pipeline)
+    # so the web service can skip loading it entirely; patch it at the source.
+    import fightcamp.plan_pipeline as plan_pipeline_module
+
+    monkeypatch.setattr(plan_pipeline_module, "prime_plan_banks", _fake_prime_plan_banks)
 
     app = create_app(
         store=FakeStore(),
         auth_service=FakeAuthService({}),
         stage2_automator=FakeStage2Automator(),
+        enable_in_process_generation=True,
     )
 
     with TestClient(app):
@@ -34,6 +39,31 @@ def test_create_app_primes_plan_banks_on_startup(monkeypatch):
 
     assert len(calls) == 1
     assert calls[0] is app_module.logger
+
+
+def test_create_app_skips_plan_bank_priming_in_worker_only_mode(monkeypatch):
+    calls: list[object] = []
+
+    def _fake_prime_plan_banks(*, logger=None):
+        calls.append(logger)
+
+    import fightcamp.plan_pipeline as plan_pipeline_module
+
+    monkeypatch.setattr(plan_pipeline_module, "prime_plan_banks", _fake_prime_plan_banks)
+
+    # Worker-only web service (in-process generation disabled): bank priming is
+    # worker-side work and must not run at web startup.
+    app = create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+        enable_in_process_generation=False,
+    )
+
+    with TestClient(app):
+        pass
+
+    assert calls == []
 
 
 def test_root_and_health_return_ok_for_render_probes():
@@ -339,7 +369,11 @@ def test_default_planner_forwards_progress_callback_to_runtime_planner(monkeypat
         seen["progress_callback"] = progress_callback
         return {"ok": True}
 
-    monkeypatch.setattr(app_module, "runtime_default_planner", fake_runtime_default_planner)
+    # _default_planner now imports the planner lazily from the concrete stage1
+    # runner (keeping fightcamp.main out of the web import graph); patch it there.
+    import api.generation.stage1_runner as stage1_runner_module
+
+    monkeypatch.setattr(stage1_runner_module, "default_planner", fake_runtime_default_planner)
 
     def callback(code, label, detail, meta):
         return None

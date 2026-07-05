@@ -6,7 +6,7 @@ import os
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +16,6 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 from pydantic import ValidationError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
-from fightcamp.plan_pipeline import prime_plan_banks
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .errors import generation_already_in_flight_error
@@ -43,16 +42,7 @@ from .models import (
     ProfileUpdateRequest,
 )
 from .performance_focus import validate_performance_focus_selections
-from .generation_runtime import (
-    default_planner as runtime_default_planner,
-    is_in_process_generation_enabled,
-    schedule_generation_job_if_needed,
-    utc_now_iso,
-)
-from .stage2_automation import (
-    Stage2Automator,
-    build_default_stage2_automator,
-)
+from .generation.time_utils import utc_now_iso
 from .store import AppStore, SupabaseAppStore, is_effective_admin_profile, is_startup_stale_generation_job
 from .sentry_config import init_sentry
 from .services.generation_request_service import generate_plan_for_current_user
@@ -104,11 +94,46 @@ from .routes import (
     build_today_router,
 )
 
+if TYPE_CHECKING:
+    from .stage2_automation import Stage2Automator
+
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
 init_sentry()
+
+
+def is_in_process_generation_enabled() -> bool:
+    return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
+
+
+async def schedule_generation_job_if_needed(**kwargs: Any) -> dict[str, Any]:
+    """Create-only in the default (worker) path; schedule in-process on demand.
+
+    The web service creates generation jobs and lets the worker run them, so
+    this stays free of the heavy generation runtime unless in-process generation
+    is explicitly enabled. Only then do we import the scheduler (which pulls the
+    planner/orchestrator surface) and, if the caller did not supply one, build a
+    Stage 2 automator lazily.
+    """
+    enable_in_process_generation = bool(kwargs.get("enable_in_process_generation"))
+    job = kwargs["job"]
+    if not enable_in_process_generation:
+        logger.info(
+            "[api] generation:job_created_worker_will_process job_id=%s",
+            str(job.get("id") or ""),
+        )
+        return job
+    if kwargs.get("stage2") is None:
+        from .stage2_automation import build_default_stage2_automator
+
+        kwargs["stage2"] = build_default_stage2_automator()
+    from .generation.scheduler import (
+        schedule_generation_job_if_needed as _schedule_generation_job_if_needed,
+    )
+
+    return await _schedule_generation_job_if_needed(**kwargs)
 
 
 def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
@@ -248,7 +273,12 @@ def _default_planner(
     *,
     progress_callback=None,
 ) -> dict[str, Any]:
-    return runtime_default_planner(payload, progress_callback=progress_callback)
+    # Imported lazily: stage1_runner pulls fightcamp.main (the heavy planner
+    # side), which the web service must not load unless in-process generation is
+    # deliberately enabled.
+    from .generation.stage1_runner import default_planner
+
+    return default_planner(payload, progress_callback=progress_callback)
 
 
 def _noop_planner(
@@ -346,7 +376,7 @@ def create_app(
     store: AppStore,
     auth_service: AuthService,
     planner: Planner = _default_planner,
-    stage2_automator: Stage2Automator | None = None,
+    stage2_automator: "Stage2Automator | None" = None,
     mode_label: str = "supabase-authenticated",
     enable_in_process_generation: bool = True,
 ) -> FastAPI:
@@ -354,7 +384,15 @@ def create_app(
 
     @asynccontextmanager
     async def _app_lifespan(_: FastAPI):
-        await asyncio.to_thread(prime_plan_banks, logger=logger)
+        # Bank priming loads the strength/conditioning/rehab exercise banks into
+        # memory for the Stage 1 planner. That is worker-side work; a web service
+        # that only creates jobs neither needs the banks resident nor should pay
+        # the fightcamp.plan_pipeline import to get prime_plan_banks. Skip it (and
+        # keep the import lazy) unless in-process generation is enabled.
+        if enable_in_process_generation:
+            from fightcamp.plan_pipeline import prime_plan_banks
+
+            await asyncio.to_thread(prime_plan_banks, logger=logger)
         await asyncio.to_thread(_log_admin_count_on_startup, store)
         yield
 
@@ -367,7 +405,11 @@ def create_app(
     app.state.store = store
     app.state.auth_service = auth_service
     app.state.planner = planner
-    app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
+    # Do not build the Stage 2 automator at startup — constructing it imports the
+    # OpenAI Stage 2 surface (fightcamp.stage2_pipeline). It is built lazily on
+    # first use by get_stage2_automator so the web service starts light while
+    # web-side admin structured-card work still gets a real automator on demand.
+    app.state.stage2_automator = stage2_automator
     app.state.mode_label = mode_label
     app.state.enable_in_process_generation = enable_in_process_generation
     app.state.active_generation_tasks = set()
@@ -526,8 +568,17 @@ def create_app(
     def get_planner(request: Request) -> Planner:
         return request.app.state.planner
 
-    def get_stage2_automator(request: Request) -> Stage2Automator:
-        return request.app.state.stage2_automator
+    def get_stage2_automator(request: Request) -> Any:
+        # Build the automator on first use and cache it on app.state. This keeps
+        # startup free of the OpenAI Stage 2 import while preserving admin
+        # structured-card generation, which runs in the web process.
+        automator = request.app.state.stage2_automator
+        if automator is None:
+            from .stage2_automation import build_default_stage2_automator
+
+            automator = build_default_stage2_automator()
+            request.app.state.stage2_automator = automator
+        return automator
 
     def get_active_generation_tasks(request: Request) -> set[str]:
         return request.app.state.active_generation_tasks
@@ -769,7 +820,7 @@ def create_app(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
         planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
@@ -810,7 +861,7 @@ def create_app(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
         planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
@@ -856,7 +907,7 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(100, ge=1, le=200),
         store: AppStore = Depends(get_store),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
     ) -> list[AdminPlanSummary]:
         # Held/blocked plans awaiting an admin decision. Kept separate from the
         # general plan history so a paused plan stays visible even when profile
@@ -944,7 +995,7 @@ def create_app(
         submission: ManualStage2SubmissionRequest,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
     ) -> PlanDetail:
         return await submit_manual_stage2_service(
             plan_id=plan_id,
@@ -959,7 +1010,7 @@ def create_app(
         background_tasks: BackgroundTasks,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
     ) -> PlanDetail:
         # Approval is a fast DB-only release so the admin click returns well
         # within the frontend/proxy timeout. Any structured-plan conversion runs
@@ -983,7 +1034,7 @@ def create_app(
         background_tasks: BackgroundTasks,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
         limit: int = Query(default=25, ge=1, le=200),
     ) -> dict[str, Any]:
         # Find displayable plans with no structured card, then convert them in the
@@ -1008,7 +1059,7 @@ def create_app(
         profile: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
         planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
@@ -1037,7 +1088,7 @@ def create_app(
         profile: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
         planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
@@ -1243,7 +1294,7 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
         planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
+        stage2: Any = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:

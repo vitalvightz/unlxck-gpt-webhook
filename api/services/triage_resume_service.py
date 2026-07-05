@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from fastapi import BackgroundTasks, HTTPException, status
 
@@ -18,16 +18,35 @@ from ..generation_job_helpers import (
     _triage_job_has_resume_approval,
     _utc_now_iso,
 )
-from ..generation_runtime import schedule_generation_job_if_needed
 from ..models import (
     ApproveAndResumeGenerationRequest,
     GenerationJobResponse,
     ProfileRecord,
 )
-from ..stage2_automation import Stage2Automator
 from ..store import AppStore
 
+if TYPE_CHECKING:
+    from ..stage2_automation import Stage2Automator
+
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+async def schedule_generation_job_if_needed(**kwargs: Any) -> dict[str, Any]:
+    """Create-only in the default (worker) path; schedule in-process on demand.
+
+    Mirrors api.app.schedule_generation_job_if_needed: in worker-only mode this
+    returns without importing the scheduler, so the generation runtime — and
+    through it fightcamp.main — never loads into a web process that only creates
+    jobs. The scheduler (and its planner/orchestrator surface) is imported only
+    when in-process generation is explicitly enabled.
+    """
+    if not bool(kwargs.get("enable_in_process_generation")):
+        return kwargs["job"]
+    from ..generation.scheduler import (
+        schedule_generation_job_if_needed as _schedule_generation_job_if_needed,
+    )
+
+    return await _schedule_generation_job_if_needed(**kwargs)
 
 
 def _is_correctly_linked_admin_resume_job(
@@ -71,7 +90,7 @@ async def approve_and_resume_plan_triage(
     profile: ProfileRecord,
     store: AppStore,
     planner_fn: Planner,
-    stage2: Stage2Automator,
+    stage2: Any | None,
     active_tasks: set[str],
     enable_in_process_generation: bool,
 ) -> GenerationJobResponse:
@@ -308,7 +327,7 @@ async def approve_and_resume_job_triage(
     profile: ProfileRecord,
     store: AppStore,
     planner_fn: Planner,
-    stage2: Stage2Automator,
+    stage2: Any | None,
     active_tasks: set[str],
     enable_in_process_generation: bool,
 ) -> GenerationJobResponse:

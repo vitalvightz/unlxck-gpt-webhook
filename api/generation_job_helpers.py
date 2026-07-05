@@ -15,11 +15,15 @@ except ImportError:  # pragma: no cover - defensive fallback only
 from fastapi import HTTPException, status
 
 from .generation_config import generation_job_stale_after_seconds
-from .generation_runtime import (
+# Import from the concrete (light) generation modules rather than the
+# generation_runtime shim: the shim eagerly re-exports the planner/orchestrator
+# surface (fightcamp.main), which the web service must not load just to reach a
+# couple of error strings and the stale-job check.
+from .generation.stage2_runner import (
     _OPENAI_QUOTA_ADMIN_ERROR,
     _OPENAI_QUOTA_ATHLETE_ERROR,
-    is_stale_job as runtime_is_stale_job,
 )
+from .generation.heartbeat import is_stale_job as runtime_is_stale_job
 from .models import (
     PROFILE_REFRESH_FAILED_WARNING,
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY,

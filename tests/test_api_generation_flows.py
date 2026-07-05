@@ -4938,7 +4938,7 @@ def test_retry_generation_job_route_delegates_to_retry_service(monkeypatch: pyte
     assert response.json()["job_id"] == "service-job"
     assert calls["job_id"] == "original-job"
     assert calls["profile"].athlete_id == "athlete-1"
-    assert calls["schedule_generation_job_if_needed"] is schedule_generation_job_if_needed
+    assert calls["schedule_generation_job_if_needed"] is app_module.schedule_generation_job_if_needed
     assert calls["plan_generate_daily_limit_per_user"] is app_module._plan_generate_daily_limit_per_user
     assert calls["is_exempt_from_daily_generation_cap"] is app_module._is_exempt_from_daily_generation_cap
 
