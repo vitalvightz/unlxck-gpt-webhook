@@ -3,25 +3,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, status
-from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
-from fightcamp.stage2_policy import (
-    apply_publish_blocking_review_gate,
-    publish_blocking_review_findings,
-)
 
 from ..models import PlanDetail
 from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
 
-from ..stage2_automation import (
-    Stage2Automator,
-    _structured_plan_enabled,
-    attempt_structured_plan_for_result,
-)
 from ..structured_plan_generation import has_clean_structured_card
 from ..store import AppStore
+
+if TYPE_CHECKING:
+    from ..stage2_automation import Stage2Automator
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +86,8 @@ async def _attach_structured_plan(
 
     if stage2 is None:
         return result
+    from ..stage2_automation import attempt_structured_plan_for_result
+
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
     result, _costs = await attempt_structured_plan_for_result(
         result,
@@ -161,6 +156,8 @@ def _reuse_prewarmed_structured_card(
     built from superseded text) so the caller runs a fresh conversion.
     """
 
+    from ..stage2_automation import _structured_plan_enabled
+
     if not _structured_plan_enabled():
         return None
     if not has_clean_structured_card(plan_row):
@@ -202,6 +199,8 @@ async def prewarm_structured_plan(
     writer keyed to the source text, so a concurrent edit/reject mid-conversion
     can never publish a stale card or clobber newer state. Never raises.
     """
+
+    from ..stage2_automation import _structured_plan_enabled
 
     if stage2 is None or not _structured_plan_enabled():
         return
@@ -255,6 +254,12 @@ async def prewarm_structured_plan(
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
+    from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
+    from fightcamp.stage2_policy import (
+        apply_publish_blocking_review_gate,
+        publish_blocking_review_findings,
+    )
+
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
     review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
     validator_report = apply_publish_blocking_review_gate(review["validator_report"])
@@ -303,6 +308,8 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
     validator_report = plan_row.get("stage2_validator_report") or {}
     if planning_brief:
+        from fightcamp.stage2_pipeline import review_stage2_output
+
         review = review_stage2_output(planning_brief=planning_brief, final_plan_text=approved_text)
         validator_report = review["validator_report"]
     return {

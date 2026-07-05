@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ..stage2_automation import Stage2Automator
 from .timeouts import _stage2_finalize_timeout_seconds
+
+if TYPE_CHECKING:
+    from ..stage2_automation import Stage2Automator
 
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
 _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."

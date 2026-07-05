@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
 
@@ -25,8 +25,10 @@ from api.environment import is_production_environment
 from api.models import GenerationJobResponse, PlanRequest, ProfileRecord
 from api.performance_focus import validate_performance_focus_selections
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
-from api.stage2_automation import Stage2Automator
 from api.store import AppStore, is_effective_admin_profile, is_startup_stale_generation_job
+
+if TYPE_CHECKING:
+    from api.stage2_automation import Stage2Automator
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 ScheduleGenerationJob = Callable[..., Awaitable[dict[str, Any]]]
@@ -57,7 +59,7 @@ async def generate_plan_for_current_user(
     profile: ProfileRecord,
     store: AppStore,
     planner_fn: Planner,
-    stage2: Stage2Automator,
+    stage2: Stage2Automator | None,
     active_tasks: set[str],
     enable_in_process_generation: bool,
     schedule_generation_job_if_needed: ScheduleGenerationJob,

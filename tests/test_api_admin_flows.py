@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import sys
+import types
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
@@ -2797,6 +2799,43 @@ def test_admin_review_queue_lists_held_plan_when_profile_lookup_succeeds():
     held = next(row for row in body if row["plan_id"] == plan["id"])
     assert held["athlete_email"] == "ari@example.com"
     assert held["profile_unavailable"] is False
+
+
+def test_admin_review_queue_does_not_build_stage2_when_prewarm_disabled(monkeypatch):
+    monkeypatch.delenv("APP_ADMIN_STRUCTURED_PREWARM_ENABLED", raising=False)
+    calls: list[object] = []
+
+    def _build_default_stage2_automator():
+        calls.append(object())
+        raise AssertionError("admin review queue should not build Stage 2 by default")
+
+    fake_stage2_module = types.ModuleType("api.stage2_automation")
+    fake_stage2_module.build_default_stage2_automator = _build_default_stage2_automator
+    monkeypatch.setitem(sys.modules, "api.stage2_automation", fake_stage2_module)
+
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    store.ensure_profile(admin)
+    plan = _seed_held_plan(store, athlete_id=athlete.user_id)
+    app = create_app(
+        store=store,
+        auth_service=FakeAuthService({"admin-token": admin}),
+        planner=_planner,
+        stage2_automator=None,
+        enable_in_process_generation=False,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/admin/plans/review", headers={"Authorization": "Bearer admin-token"}
+        )
+
+    assert response.status_code == 200
+    assert any(row["plan_id"] == plan["id"] for row in response.json())
+    assert calls == []
+    assert app.state.stage2_automator is None
 
 
 def test_admin_review_queue_renders_when_profile_lookup_fails():

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import copy
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
 
@@ -18,8 +18,10 @@ from api.generation_job_helpers import (
 from api.errors import generation_already_in_flight_error
 from api.models import GenerationJobResponse, ProfileRecord
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
-from api.stage2_automation import Stage2Automator
 from api.store import AppStore, is_effective_admin_profile, is_startup_stale_generation_job
+
+if TYPE_CHECKING:
+    from api.stage2_automation import Stage2Automator
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 ScheduleGenerationJob = Callable[..., Awaitable[dict[str, Any]]]
@@ -33,7 +35,7 @@ async def retry_generation_job(
     profile: ProfileRecord,
     store: AppStore,
     planner_fn: Planner,
-    stage2: Stage2Automator,
+    stage2: Stage2Automator | None,
     active_tasks: set[str],
     enable_in_process_generation: bool,
     schedule_generation_job_if_needed: ScheduleGenerationJob,

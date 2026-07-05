@@ -378,7 +378,7 @@ def _map_plan_detail(
     )
     parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
     display_plan_text = str(row.get("plan_text") or "")
-    if not display_plan_text and summary.status == "archived":
+    if not display_plan_text and summary.status == "archived" and not include_admin:
         display_plan_text = str(row.get("final_plan_text") or row.get("draft_plan_text") or "")
     is_legacy_review_required = str(row.get("status") or "").strip().lower() == "review_required"
     if (
