@@ -524,15 +524,15 @@ def create_app(
         return await call_next(request)
 
     @app.middleware("http")
-    @app.middleware("http")
     async def limit_admin_concurrency(request: Request, call_next):
         if request.url.path.startswith("/api/admin/"):
             semaphore = getattr(request.app.state, "admin_request_semaphore", None)
-            if semaphore:
+            if semaphore is not None:
                 async with semaphore:
                     return await call_next(request)
-        return await call_next(request)
 
+        return await call_next(request)
+        
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         request_id = str(uuid.uuid4())[:8]
