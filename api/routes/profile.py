@@ -52,6 +52,7 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
             profile.athlete_id,
             ProfileUpdateRequest(**update_data),
         )
-        return {"ok": True, "updated_at": str(updated.get("updated_at") or "")}
+        updated_at = (updated or {}).get("updated_at")
+        return {"ok": True, "updated_at": str(updated_at or "")}
     
     return router
