@@ -83,31 +83,70 @@ export type TodayDecisionBanner = {
   state: TodayRecommendationState;
   /** Short command headline, e.g. "PULL BACK TODAY". */
   title: string;
-  /** One command-like line. Prefers the backend reason when present. */
+  /** One clear reason sentence. Prefers the backend reason when present. */
   detail: string;
+  /** One clear action sentence. */
+  action?: string;
+  /** Optional safety sentence, shown only when the backend sends one. */
+  safety?: string;
   tone: string;
 };
 
 const DECISION_BANNERS: Record<
   Exclude<TodayRecommendationState, "not_checked_in">,
-  { title: string; detail: string; tone: string }
+  { title: string; detail: string; action: string; tone: string }
 > = {
   train_as_planned: {
     title: "TRAIN AS PLANNED",
     detail: "Readiness is acceptable. Complete today's prescribed session.",
+    action: "Keep the prescribed dose.",
     tone: "green",
   },
   modify: {
     title: "MODIFY SESSION",
     detail: "Use the safer version today. Remove high-impact work and keep output controlled.",
+    action: "Keep the work clean and do not chase volume.",
     tone: "amber",
   },
   pull_back: {
     title: "PULL BACK TODAY",
     detail: "Reduce load and intensity. Keep the session technical. Stop if pain rises.",
+    action: "Use recovery, mobility, or coach-guided alternatives.",
     tone: "red",
   },
 };
+
+function parseBackendAdjustment(reason: string | null | undefined): {
+  title?: string;
+  detail?: string;
+  action?: string;
+  safety?: string;
+} {
+  const lines = (reason ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length >= 3) {
+    return {
+      title: lines[0],
+      detail: lines[1],
+      action: lines[2],
+      safety: lines[3],
+    };
+  }
+  if (lines.length === 2) {
+    return {
+      title: lines[0],
+      detail: lines[1],
+    };
+  }
+  if (lines.length === 1) {
+    return {
+      detail: lines[0],
+    };
+  }
+  return {};
+}
 
 /**
  * The compact decision banner shown above today's session blocks once the
@@ -124,10 +163,13 @@ export function getTodayDecisionBanner(
     return null;
   }
   const banner = DECISION_BANNERS[state];
+  const backend = parseBackendAdjustment(reason);
   return {
     state,
-    title: banner.title,
-    detail: reason?.trim() || banner.detail,
+    title: backend.title || banner.title,
+    detail: backend.detail || banner.detail,
+    action: backend.action || banner.action,
+    safety: backend.safety,
     tone: banner.tone,
   };
 }

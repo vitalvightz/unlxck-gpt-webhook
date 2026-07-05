@@ -49,7 +49,11 @@ class TestTodayCheckin:
         assert resp.status_code == 201
         body = resp.json()
         assert body["recommendation_state"] == "modify"
-        assert body["recommendation_reason"] == "Poor sleep; use the modified option today."
+        assert body["recommendation_reason"].splitlines() == [
+            "Session reduced.",
+            "Poor sleep lowers recovery margin today.",
+            "Remove 1 set from loaded work and do not add extra conditioning.",
+        ]
         assert "poor_sleep" in body["triggers"]
         assert store.today_checkins["athlete-1"], "check-in row must persist"
 
@@ -73,7 +77,7 @@ class TestTodayCheckin:
         assert second.status_code == 201
         assert len(store.today_checkins["athlete-1"]) == 2
         assert second.json()["warnings"] == [
-            "You already submitted a check-in for another plan today. This check-in is saved to the selected active plan only."
+            "You already completed a check-in today. This response applies to the current active plan only."
         ]
 
     def test_client_supplied_recommendation_is_ignored(self):
