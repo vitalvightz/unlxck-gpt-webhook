@@ -26,8 +26,8 @@ class TestNormalRules:
         assert decision.decision == "modify"
         assert decision.reason.splitlines() == [
             "Session reduced.",
-            "Poor sleep lowers recovery margin today.",
-            "Remove 1 set from loaded work and do not add extra conditioning.",
+            "Poor sleep means your body has less room to recover today.",
+            "Cut 1 round and do not add extra conditioning.",
         ]
 
     def test_flat_body_modifies(self):
@@ -52,8 +52,8 @@ class TestHardOverrides:
         assert decision.decision == "pull_back"
         assert decision.reason.splitlines() == [
             "Rehab only today.",
-            "Pain is high, so loading and impact are not appropriate.",
-            "Use rehab or easy mobility only; skip heavy work, sparring, and hard conditioning.",
+            "Pain is high, so contact and impact are not safe today.",
+            "Use rehab or easy mobility only; skip sparring, pads, bag work, and conditioning.",
         ]
 
     def test_active_injury_worse_pulls_back(self):
@@ -97,7 +97,7 @@ class TestPhaseBias:
         assert decision.decision == "pull_back"
         assert "Pull back today." in decision.reason
         assert "recovery day" in decision.reason
-        assert "Skip the planned session" in decision.reason
+        assert "Skip combat work" in decision.reason
         assert "Keep sharp work only" not in decision.reason
         assert "Remove 1 set" not in decision.reason
         assert "fatigue-heavy accessories" not in decision.reason

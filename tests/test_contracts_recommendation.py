@@ -10,8 +10,8 @@ YESTERDAY = "2026-06-17"
 READINESS_REASON = "\n".join(
     [
         "Session reduced.",
-        "Poor sleep lowers recovery margin today.",
-        "Remove 1 set from loaded work and do not add extra conditioning.",
+        "Poor sleep means your body has less room to recover today.",
+        "Cut 1 round and do not add extra conditioning.",
     ]
 )
 
