@@ -44,6 +44,10 @@ import {
   type BlockedInjuryContextSummary,
 } from "@/lib/triage-block-reasons";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
+import {
+  PROFILE_REFRESH_FAILED_ATHLETE_NOTICE,
+  planHasProfileRefreshFailed,
+} from "@/lib/profile-refresh-warning";
 import { hasTriageResumeApproval, shouldShowTriageBlockedState } from "@/lib/triage-view";
 
 const TRIAGE_RESUME_FETCH_ATTEMPTS = 5;
@@ -2533,6 +2537,16 @@ export function PlanViewer({
         {archivedPreview ? (
           <div className="quick-build-refine-banner cm-archived-banner" role="status">
             This plan is archived history. Preview only; it does not affect Today, calendar, streaks, or notifications.
+          </div>
+        ) : null}
+
+        {planHasProfileRefreshFailed(plan) ? (
+          <div
+            className="quick-build-refine-banner cm-profile-refresh-notice"
+            role="status"
+            aria-live="polite"
+          >
+            {PROFILE_REFRESH_FAILED_ATHLETE_NOTICE}
           </div>
         ) : null}
 

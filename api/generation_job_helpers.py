@@ -21,6 +21,8 @@ from .generation_runtime import (
     is_stale_job as runtime_is_stale_job,
 )
 from .models import (
+    PROFILE_REFRESH_FAILED_WARNING,
+    PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
     AdminGenerationJobDiagnostic,
     GenerationJobResponse,
     GenerationRequestPayloadSummary,
@@ -160,6 +162,34 @@ def _job_warnings_from_milestones(raw: Any) -> list[str]:
     return warnings
 
 
+def _has_durable_profile_refresh_failed(job: dict[str, Any]) -> bool:
+    """Whether the durable profile-refresh-failed marker is set on the job.
+
+    The marker rides ``final_result["why_log"]`` (written by the generation
+    orchestrator), so it survives the FIFO eviction of the progress-milestone list.
+    """
+    final_result = job.get("final_result")
+    if not isinstance(final_result, dict):
+        return False
+    why_log = final_result.get("why_log")
+    if not isinstance(why_log, dict):
+        return False
+    return bool(why_log.get(PROFILE_REFRESH_FAILED_WHY_LOG_KEY))
+
+
+def _job_warnings(job: dict[str, Any]) -> list[str]:
+    """Job warnings, merging progress-milestone warnings with the durable marker.
+
+    The progress-milestone list is capped (FIFO), so a long run can evict the
+    profile-refresh warning milestone. Merging the durable ``why_log`` marker keeps
+    the warning on the response regardless of eviction, deduped against milestones.
+    """
+    warnings = _job_warnings_from_milestones(job.get("progress_milestones"))
+    if _has_durable_profile_refresh_failed(job) and PROFILE_REFRESH_FAILED_WARNING not in warnings:
+        warnings.append(PROFILE_REFRESH_FAILED_WARNING)
+    return warnings
+
+
 def _job_response(
     job: dict[str, Any],
     *,
@@ -284,7 +314,7 @@ def _job_response(
         status_url=f"/api/generation-jobs/{job['id']}",
         message=message,
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
-        warnings=_job_warnings_from_milestones(job.get("progress_milestones")),
+        warnings=_job_warnings(job),
         can_retry=can_retry,
         stage2_status=stage2_status or None,
         requires_admin_resume=requires_admin_resume,
@@ -570,7 +600,7 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
         requires_admin_resume=requires_admin_resume,
         is_stale=is_stale,
         profile_unavailable=bool(job.get("profile_enrichment_failed")),
-        warnings=_job_warnings_from_milestones(job.get("progress_milestones")),
+        warnings=_job_warnings(job),
         request_payload_summary=_request_payload_summary(job.get("request_payload")),
     )
 

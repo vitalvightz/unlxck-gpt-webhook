@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..models import PROFILE_REFRESH_FAILED_WHY_LOG_KEY
+
 _TRIAGE_FINAL_RESULT_STATUSES = frozenset(
     {"triage_blocked", "medical_hold", "restricted_rehab_only", "needs_review"}
 )
@@ -43,6 +45,15 @@ def _compact_generation_job_final_result(final_result: dict[str, Any]) -> dict[s
         for key in ("why_log", "injury_triage", "full_name"):
             if key in final_result:
                 compact[key] = final_result.get(key)
+    # Preserve the durable profile-refresh-failed marker on every path (not just
+    # triage): the plan row keeps the full why_log, but the lean job final_result
+    # must still carry this one key so job.warnings survives milestone eviction.
+    why_log = final_result.get("why_log")
+    if isinstance(why_log, dict) and PROFILE_REFRESH_FAILED_WHY_LOG_KEY in why_log:
+        compact_why_log = compact.get("why_log")
+        compact_why_log = dict(compact_why_log) if isinstance(compact_why_log, dict) else {}
+        compact_why_log[PROFILE_REFRESH_FAILED_WHY_LOG_KEY] = why_log[PROFILE_REFRESH_FAILED_WHY_LOG_KEY]
+        compact["why_log"] = compact_why_log
     return compact
 
 

@@ -592,6 +592,10 @@ export type PlanDetail = PlanSummary & {
   latest_intake?: PlanRequest | null;
   admin_outputs?: AdminPlanOutputs | null;
   plan_source?: string | null;
+  // True when the stored profile could not be refreshed during generation, so
+  // this plan was built from the submitted intake and the saved profile may be
+  // stale. Surfaced as a non-blocking notice in the plan viewer.
+  profile_refresh_failed?: boolean;
 };
 
 export type ProgressMilestone = {

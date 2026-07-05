@@ -20,7 +20,11 @@ from typing import Any, Callable
 from fastapi import HTTPException, status
 
 from ..error_sanitizer import sanitize_error_text
-from ..models import ProfileUpdateRequest
+from ..models import (
+    PROFILE_REFRESH_FAILED_WARNING as _PROFILE_REFRESH_FAILED_WARNING,
+    PROFILE_REFRESH_FAILED_WHY_LOG_KEY as _PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
+    ProfileUpdateRequest,
+)
 from ..stage2_automation import (
     Stage2AutomationError,
     Stage2AutomationUnavailableError,
@@ -45,7 +49,23 @@ from .types import Planner, ProgressCallback
 
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
-_PROFILE_REFRESH_FAILED_WARNING = "Profile refresh failed; plan generated from submitted intake only."
+
+
+def _mark_profile_refresh_failed(final_result: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of ``final_result`` with the durable profile-refresh marker set.
+
+    Idempotent and defensive: preserves any existing ``why_log`` contents and only adds
+    the marker. Never mutates the input in place so callers can keep their own binding.
+    """
+    if not isinstance(final_result, dict):
+        return final_result
+    existing_why_log = final_result.get("why_log")
+    why_log = dict(existing_why_log) if isinstance(existing_why_log, dict) else {}
+    why_log[_PROFILE_REFRESH_FAILED_WHY_LOG_KEY] = {
+        "at": utc_now_iso(),
+        "detail": _PROFILE_REFRESH_FAILED_WARNING,
+    }
+    return {**final_result, "why_log": why_log}
 
 
 async def run_generation_job(
@@ -64,6 +84,7 @@ async def run_generation_job(
     stage1_timed_out = threading.Event()
     seen_milestone_codes: set[str] = set()
     claimed_attempt_count: int | None = None
+    profile_refresh_failed = False
 
     def _safe_error_and_frame(exc: Exception) -> tuple[str, traceback.FrameSummary | None]:
         tb = traceback.extract_tb(exc.__traceback__)
@@ -323,6 +344,7 @@ async def run_generation_job(
                 "Athlete profile fields were refreshed.",
             )
         except Exception as exc:
+            profile_refresh_failed = True
             safe_error, frame = _safe_error_and_frame(exc)
             logger.error(
                 "[jobs] generation:update_profile_failed athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
@@ -529,6 +551,13 @@ async def run_generation_job(
         # resume runtime branch persists a real plan row at that point.
         triage_skipped = _is_triage_skipped_final_result(final_result)
         plan_id = plan_id or (str(job.get("plan_id") or "") or None)
+
+        # Persist the durable profile-refresh-failed marker into the result that is
+        # about to be written, so it lands in both the generation job's final_result
+        # and (on the plan-success path) the plan row's why_log column. Applied once
+        # here so every terminal branch below carries it.
+        if profile_refresh_failed:
+            final_result = _mark_profile_refresh_failed(final_result)
 
         if triage_skipped:
             await persist_triage_review_required(
