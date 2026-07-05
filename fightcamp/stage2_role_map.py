@@ -748,6 +748,11 @@ def _upgrade_unused_days_to_low_load_support(
         for role in session_roles
         if str(role.get("scheduled_day_hint") or "").strip()
     }
+    support_work_days = {
+        str(day).strip().lower()
+        for day in clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days") or [])
+        if str(day).strip()
+    }
 
     for day_entry in week_entry.get("intentionally_unused_days") or []:
         day = str(day_entry.get("day") or "").strip()
@@ -810,6 +815,8 @@ def _upgrade_unused_days_to_low_load_support(
                 continue
 
         role_key = support_profile["role_key"]
+        if role_key == "converted_low_aerobic_gas_tank_day" and day.lower() in support_work_days:
+            role_key = "recovery_aerobic_gas_tank_day"
         preferred_system = support_profile["preferred_system"]
         preferred_tags = list(support_profile["preferred_tags"])
         preferred_exercise_names = list(support_profile.get("preferred_exercise_names") or [])
@@ -2380,7 +2387,7 @@ def _combat_pressure_floor_blockers(week_entry: dict, athlete_model: dict) -> li
     """Return the reason codes that block a hard combat-pressure exposure.
 
     An empty list means the athlete is safe to receive a controlled hard
-    exposure this week. A moderate weight cut is deliberately NOT a blocker.
+    exposure this week.
     """
     phase = str(week_entry.get("phase", "")).upper()
     if phase not in {"GPP", "SPP"}:
@@ -2445,7 +2452,14 @@ def _combat_pressure_floor_blockers(week_entry: dict, athlete_model: dict) -> li
                 active_cut = active_cut or float(athlete_model.get("weight_cut_pct") or 0.0) > 0.0
             except (TypeError, ValueError):
                 active_cut = True
-            if active_cut:
+            hard_sparring_declared = bool(clean_list(athlete_model.get("hard_sparring_days", [])))
+            if cut_bucket in {"moderate", "high", "critical", "extreme"}:
+                reasons.append("bridge_suppresses_glycolytic")
+            elif fatigue in {"moderate", "high", "critical", "extreme"}:
+                reasons.append("bridge_suppresses_glycolytic")
+            elif hard_sparring_declared:
+                reasons.append("bridge_suppresses_glycolytic")
+            elif active_cut:
                 reasons.append("active_cut_blocks_extra_conditioning_floor")
             elif not _bridge_allows_pressure_touch(athlete_model, min_d):
                 reasons.append("bridge_suppresses_glycolytic")
@@ -2909,8 +2923,20 @@ def _build_weekly_role_map(
             for day in calendar_days
             if str(day.get("weekday") or "").strip() and isinstance(day.get("d_day"), int)
         }
+        declared_support_days = {
+            str(day).strip().lower()
+            for day in clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days") or [])
+            if str(day).strip()
+        }
         for role in session_roles:
             weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
+            if (
+                role.get("role_key") == "converted_low_aerobic_gas_tank_day"
+                and weekday in declared_support_days
+            ):
+                role["role_key"] = "recovery_aerobic_gas_tank_day"
+                role["gas_tank_recovery_touch"] = True
+                role["priority_recovery_touch"] = True
             if not weekday or weekday not in d_day_by_weekday:
                 continue
             d_day = d_day_by_weekday[weekday]

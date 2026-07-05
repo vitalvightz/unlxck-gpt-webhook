@@ -470,7 +470,7 @@ export default function HomePage() {
           <div className="overview-command-grid">
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
-              <h1 className="hero-title">Fight camp control room</h1>
+              <h1 className="hero-title">Camp command centre</h1>
               <p className="overview-command-summary">Today&apos;s training decision, next target, and risk watch from the active camp plan.</p>
               <div className="overview-operational-strip" aria-label="Camp status">
                 <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>

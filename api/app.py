@@ -104,6 +104,38 @@ logger = logging.getLogger(__name__)
 init_sentry()
 
 
+def _admin_max_concurrent_requests() -> int:
+    raw_value = os.getenv("APP_ADMIN_MAX_CONCURRENT_REQUESTS", "2").strip()
+    try:
+        return max(1, int(raw_value))
+    except ValueError:
+        logger.warning(
+            "[admin] invalid APP_ADMIN_MAX_CONCURRENT_REQUESTS=%r; falling back to 2",
+            raw_value,
+        )
+        return 2
+
+
+def _rss_warn_mb() -> float:
+    raw_value = os.getenv("APP_RSS_WARN_MB", "450").strip()
+    try:
+        return max(1.0, float(raw_value))
+    except ValueError:
+        logger.warning("[memory] invalid APP_RSS_WARN_MB=%r; falling back to 450", raw_value)
+        return 450.0
+
+
+def _rss_mb() -> float | None:
+    try:
+        with open("/proc/self/status", "r", encoding="utf-8") as file:
+            for line in file:
+                if line.startswith("VmRSS:"):
+                    return round(int(line.split()[1]) / 1024, 2)
+    except Exception:
+        return None
+    return None
+
+
 def is_in_process_generation_enabled() -> bool:
     return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
 
@@ -445,6 +477,8 @@ def create_app(
     app.state.mode_label = mode_label
     app.state.enable_in_process_generation = enable_in_process_generation
     app.state.active_generation_tasks = set()
+    app.state.admin_request_semaphore = asyncio.Semaphore(_admin_max_concurrent_requests())
+    app.state.rss_warn_mb = _rss_warn_mb()
     cors_origins = get_cors_origins()
     cors_regex = get_cors_origin_regex()
     validate_production_cors_config(cors_origins, cors_regex)
@@ -490,6 +524,16 @@ def create_app(
         return await call_next(request)
 
     @app.middleware("http")
+    @app.middleware("http")
+    async def limit_admin_concurrency(request: Request, call_next):
+        if request.url.path.startswith("/api/admin/"):
+            semaphore = getattr(request.app.state, "admin_request_semaphore", None)
+            if semaphore:
+                async with semaphore:
+                    return await call_next(request)
+        return await call_next(request)
+
+    @app.middleware("http")
     async def log_requests(request: Request, call_next):
         request_id = str(uuid.uuid4())[:8]
         request.state.request_id = request_id
@@ -524,6 +568,20 @@ def create_app(
                     "status": response.status_code,
                 },
             )
+            rss_mb = _rss_mb()
+            if rss_mb is not None and rss_mb >= request.app.state.rss_warn_mb:
+                logger.warning(
+                    "[memory] high_rss request_id=%s method=%s path=%s rss_mb=%s",
+                    request_id,
+                    request.method,
+                    request.url.path,
+                    rss_mb,
+                    extra={
+                        "request_id": request_id,
+                        "status": response.status_code,
+                        "rss_mb": rss_mb,
+                    },
+                )
             return response
         except HTTPException as exc:
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -943,7 +1001,7 @@ def create_app(
         request: Request,
         background_tasks: BackgroundTasks,
         _: ProfileRecord = Depends(require_admin),
-        limit: int = Query(100, ge=1, le=200),
+        limit: int = Query(20, ge=1, le=50),
         store: AppStore = Depends(get_store),
     ) -> list[AdminPlanSummary]:
         # Held/blocked plans awaiting an admin decision. Kept separate from the
@@ -966,20 +1024,20 @@ def create_app(
     @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_triage_generation_jobs(
         _: ProfileRecord = Depends(require_admin),
-        limit: int = Query(50, ge=1, le=200),
+        limit: int = Query(20, ge=1, le=50),
         store: AppStore = Depends(get_store),
     ) -> list[AdminGenerationJobDiagnostic]:
         stale_after_seconds = _generation_job_stale_after_seconds()
         diagnostics = [
             _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
-            for job in store.list_admin_triage_generation_jobs(limit=limit * 4)
+            for job in store.list_admin_triage_generation_jobs(limit=limit)
         ]
         return [job for job in diagnostics if job.requires_admin_resume][:limit]
 
     @app.get("/api/admin/generation-jobs/active", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_active_generation_jobs(
         _: ProfileRecord = Depends(require_admin),
-        limit: int = Query(50, ge=1, le=200),
+        limit: int = Query(20, ge=1, le=50),
         store: AppStore = Depends(get_store),
     ) -> list[AdminGenerationJobDiagnostic]:
         stale_after_seconds = _generation_job_stale_after_seconds()

@@ -793,7 +793,7 @@ export function getAdminAthleteGenerationJobs(
 
 export function listAdminTriageGenerationJobs(
   token: string,
-  limit = 50,
+  limit = 20,
 ): Promise<AdminGenerationJobDiagnostic[]> {
   return withTransientRetries(() =>
     readJson<AdminGenerationJobDiagnostic[]>(
@@ -805,7 +805,7 @@ export function listAdminTriageGenerationJobs(
 
 export function listAdminActiveGenerationJobs(
   token: string,
-  limit = 50,
+  limit = 20,
 ): Promise<AdminGenerationJobDiagnostic[]> {
   return withTransientRetries(() =>
     readJson<AdminGenerationJobDiagnostic[]>(
@@ -839,7 +839,7 @@ export function listAdminPlans(
 
 export function listAdminReviewPlans(
   token: string,
-  limit = 100,
+  limit = 20,
 ): Promise<AdminPlanSummary[]> {
   return withTransientRetries(() =>
     readJson<AdminPlanSummary[]>(`/api/admin/plans/review?limit=${limit}`, { token }),

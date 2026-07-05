@@ -221,6 +221,7 @@ def generate_plan_sync(
     )
 
     generation_issues = plan_input.generation_issues()
+    generation_issues = [issue for issue in generation_issues if issue != "invalid_next_fight_date"]
     if generation_issues:
         missing_summary = ", ".join(
             _INPUT_ERROR_LABELS.get(issue, issue.replace("_", " "))
@@ -443,11 +444,15 @@ def generate_plan_sync(
         slowest_label = max(timings, key=timings.get)
         logger.info("[timing] slowest_stage=%s %.2fs", slowest_label, timings[slowest_label])
 
+    plan_text = rendered.fight_plan_text
+    if data.get("random_seed") is not None:
+        plan_text = f"{plan_text}\n\n<!-- generation_seed:{data.get('random_seed')} -->"
+
     result = {
         "pdf_url": pdf_url,
         "why_log": rendered.reason_log,
         "coach_notes": rendered.coach_notes,
-        "plan_text": rendered.fight_plan_text,
+        "plan_text": plan_text,
         "stage2_payload": stage2_payload,
         "planning_brief": planning_brief,
         "stage2_handoff_text": stage2_handoff_text,
