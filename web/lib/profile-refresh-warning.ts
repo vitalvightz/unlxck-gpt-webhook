@@ -19,3 +19,19 @@ export function hasProfileRefreshFailedWarning(job: WarningCarrier | null | unde
     (job?.progress_milestones?.some((milestone) => milestone.code === PROFILE_REFRESH_FAILED_WARNING_CODE) ?? false)
   );
 }
+
+// Athlete-facing copy: shorter and non-alarming, shown inline on the plan view.
+// The admin banner above is for support/ops; this is for the athlete reading
+// their own plan.
+export const PROFILE_REFRESH_FAILED_ATHLETE_NOTICE =
+  "This plan was built from the intake you just submitted. We couldn't refresh your saved profile, so it may still show older details — update your profile in settings if anything's changed.";
+
+type PlanWithProfileRefreshFlag = {
+  profile_refresh_failed?: boolean | null;
+};
+
+export function planHasProfileRefreshFailed(
+  plan: PlanWithProfileRefreshFlag | null | undefined,
+): boolean {
+  return plan?.profile_refresh_failed === true;
+}

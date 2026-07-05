@@ -85,6 +85,16 @@ MENTAL_BLOCKERS_MAX_CHARS = 1500
 PREVIOUS_PLAN_FEEDBACK_MAX_CHARS = 1500
 GENERIC_PROFILE_NOTES_MAX_CHARS = 1000
 
+# Durable marker + human-readable warning for a mid-generation profile-refresh
+# failure. The generation orchestrator writes the key into
+# ``final_result["why_log"]`` (persisted to both the generation job row and the
+# plan's ``why_log`` column) when the profile write fails but generation
+# continues from the submitted payload; the job/plan response mappers read it
+# back so the warning survives progress-milestone eviction and is queryable.
+# Kept in lockstep with the web copy in web/lib/profile-refresh-warning.ts.
+PROFILE_REFRESH_FAILED_WHY_LOG_KEY = "profile_refresh_failed"
+PROFILE_REFRESH_FAILED_WARNING = "Profile refresh failed; plan generated from submitted intake only."
+
 _PROFILE_TEXT_LIMITS = {
     "full_name": ATHLETE_FULL_NAME_MAX_CHARS,
     "stance": PROFILE_SHORT_TEXT_MAX_CHARS,
@@ -1475,6 +1485,11 @@ class PlanDetail(PlanSummary):
     advisories: list[PlanAdvisory] = Field(default_factory=list)
     admin_outputs: AdminPlanOutputs | None = None
     plan_source: str | None = None
+    # Athlete-safe signal (not gated behind admin_outputs): true when the stored
+    # profile could not be refreshed during generation, so this plan was built
+    # from the submitted intake and the saved profile may be stale. Derived from
+    # the plan row's why_log marker in plan_mappers._map_plan_detail.
+    profile_refresh_failed: bool = False
 
 
 class ProgressMilestone(BaseModel):

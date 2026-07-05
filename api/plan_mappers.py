@@ -16,6 +16,7 @@ from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .models import (
+    PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
     AdminAthleteRecord,
     AdminPlanOutputs,
     AdminPlanSummary,
@@ -405,6 +406,11 @@ def _map_plan_detail(
         safety_state=_map_plan_safety_state(row),
         advisories=build_plan_advisories(planning_brief=planning_brief),
         plan_source=plan_source,
+        profile_refresh_failed=bool(
+            (row.get("why_log") if isinstance(row.get("why_log"), dict) else {}).get(
+                PROFILE_REFRESH_FAILED_WHY_LOG_KEY
+            )
+        ),
         admin_outputs=(
             AdminPlanOutputs(
                 coach_notes=str(row.get("coach_notes") or ""),

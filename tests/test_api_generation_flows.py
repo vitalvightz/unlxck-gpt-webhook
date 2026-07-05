@@ -18,6 +18,7 @@ from api.auth import AuthenticatedUser
 from api.generation_job_helpers import daily_generation_cap_window
 from api.generation_runtime import run_generation_job, schedule_generation_job_if_needed, should_skip_stage2
 from api.models import ProfileUpdateRequest
+from api.plan_mappers import _map_plan_detail
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from api.store import (
     _latest_generation_job_activity_at,
@@ -3070,6 +3071,55 @@ def test_run_generation_job_warns_when_profile_refresh_fails_but_generation_cont
     diagnostic = app_module._admin_generation_job_diagnostic(refreshed_job, stale_after_seconds=90)
     assert response.warnings == [warning]
     assert diagnostic.warnings == [warning]
+
+    # Durable marker: the warning must also ride final_result/why_log so it is
+    # queryable and survives progress-milestone eviction (below).
+    assert refreshed_job["final_result"]["why_log"]["profile_refresh_failed"]["detail"] == warning
+    plan = store.get_plan(refreshed_job["plan_id"])
+    assert plan["why_log"]["profile_refresh_failed"]["detail"] == warning
+
+    # Athlete-facing plan detail exposes the derived flag even without admin access.
+    plan_detail = _map_plan_detail(plan, include_admin=False)
+    assert plan_detail.profile_refresh_failed is True
+
+    # Eviction resilience: even if every progress milestone is dropped (the list is
+    # FIFO-capped), the durable marker keeps the warning on the job response.
+    evicted_job = {**refreshed_job, "progress_milestones": []}
+    assert app_module._job_response(evicted_job, store=store).warnings == [warning]
+    assert (
+        app_module._admin_generation_job_diagnostic(evicted_job, stale_after_seconds=90).warnings
+        == [warning]
+    )
+
+
+def test_run_generation_job_clean_run_has_no_profile_refresh_flag():
+    store = FakeStore()
+    _seed_athlete_profile(store)
+    request = _build_request()
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="profile-refresh-ok",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "completed"
+    assert "profile_refresh_failed" not in refreshed_job["final_result"].get("why_log", {})
+    plan = store.get_plan(refreshed_job["plan_id"])
+    assert "profile_refresh_failed" not in plan.get("why_log", {})
+    assert _map_plan_detail(plan, include_admin=False).profile_refresh_failed is False
+    assert app_module._job_response(refreshed_job, store=store).warnings == []
 
 
 def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
