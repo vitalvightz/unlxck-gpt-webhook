@@ -628,6 +628,15 @@ function InjuryCheckinCard({
     setNewSeverity((current) => (sameZone ? cycleInjuryFlagSeverity(current) : "mild"));
   }
 
+  // Explicit way out of a selection: the map gesture is fully committed to
+  // select / raise-severity, so clearing lives here as a visible control rather
+  // than a hidden extra tap or long-press.
+  function clearBodyMapSelection() {
+    setNewArea("");
+    setNewZone("");
+    setNewSeverity("moderate");
+  }
+
   return (
     <section className="today-card today-injury-card" aria-labelledby="today-injury-heading">
       <div className="today-card-head">
@@ -731,7 +740,16 @@ function InjuryCheckinCard({
           <div className="today-injury-selection" aria-live="polite">
             <span>Selected</span>
             <strong>{newArea.trim()}</strong>
-            <small>Tap the same zone to raise severity.</small>
+            <button
+              type="button"
+              className="today-injury-selection-clear"
+              onClick={clearBodyMapSelection}
+              disabled={isAdding}
+              aria-label={`Clear selected area, ${newArea.trim()}`}
+            >
+              Clear
+            </button>
+            <small>Tap the same zone to raise severity, or Clear to start over.</small>
           </div>
         ) : null}
         <label className="field" htmlFor="today-injury-area">
