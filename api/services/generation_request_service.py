@@ -56,7 +56,7 @@ async def generate_plan_for_current_user(
     profile: ProfileRecord,
     store: AppStore,
     planner_fn: Planner,
-    stage2: Any | None,
+    stage2: Stage2Automator | None,
     active_tasks: set[str],
     enable_in_process_generation: bool,
     schedule_generation_job_if_needed: ScheduleGenerationJob,
