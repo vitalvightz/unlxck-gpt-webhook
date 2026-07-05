@@ -448,6 +448,9 @@ required; CI uses public placeholder env values.
 | GET | `/api/dashboard` | Live athlete dashboard state |
 | GET | `/api/today` | Today/Overview command view |
 | GET | `/api/today/landing` | Today landing state |
+| POST | `/api/today/checkin` | Submit a Today check-in (returns evaluated recommendation) |
+| POST | `/api/today/injury-checkin` | Reconcile Today declared injuries |
+| POST | `/api/today/session-completion` | Update Today session completion status |
 | GET | `/api/checkins` | List daily check-ins |
 | POST | `/api/checkins` | Submit a daily check-in |
 | GET | `/api/session-logs` | List logged sessions |
