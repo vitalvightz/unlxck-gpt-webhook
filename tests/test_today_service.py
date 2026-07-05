@@ -496,7 +496,11 @@ class TestCheckinSubmit:
         )
         assert store.today_checkins[ATHLETE], "check-in row must persist"
         assert row["recommendation_state"] == "modify"
-        assert row["recommendation_reason"] == "Poor sleep; use the modified option today."
+        assert row["recommendation_reason"].splitlines() == [
+            "Session reduced.",
+            "Poor sleep lowers recovery margin today.",
+            "Remove 1 set from loaded work and do not add extra conditioning.",
+        ]
         assert "poor_sleep" in row["recommendation_triggers"]
 
     def test_same_day_duplicate_upserts_single_row(self):
@@ -508,6 +512,9 @@ class TestCheckinSubmit:
         )
         assert len(store.today_checkins[ATHLETE]) == 1
         assert second["recommendation_state"] == "modify"
+        assert second["warnings"] == [
+            "You already completed a check-in today. This response applies to the current active plan only."
+        ]
 
     def test_client_supplied_recommendation_is_ignored(self):
         store = _store_with_plan()
@@ -544,7 +551,7 @@ class TestCheckinSubmit:
 
         assert len(store.today_checkins[ATHLETE]) == 2
         assert row["warnings"] == [
-            "You already submitted a check-in for another plan today. This check-in is saved to the selected active plan only."
+            "You already completed a check-in today. This response applies to the current active plan only."
         ]
 
     def test_same_day_warning_handles_null_lister_and_immutable_row(self):
@@ -1364,7 +1371,7 @@ class TestCommandView:
 
         assert view.today.recommendation_state == "not_checked_in"
         assert view.today.warnings == [
-            "You already submitted a check-in for another plan today. This check-in is saved to the selected active plan only."
+            "You already completed a check-in today. This response applies to the current active plan only."
         ]
 
     def test_next_session_crosses_into_following_week(self):

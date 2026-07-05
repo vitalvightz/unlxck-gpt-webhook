@@ -83,18 +83,24 @@ test("decision banner gives command-like copy for each checked-in state", () => 
     state: "train_as_planned",
     title: "TRAIN AS PLANNED",
     detail: "Readiness is acceptable. Complete today's prescribed session.",
+    action: "Keep the prescribed dose.",
+    safety: undefined,
     tone: "green",
   });
   assert.deepEqual(getTodayDecisionBanner("modify"), {
     state: "modify",
     title: "MODIFY SESSION",
     detail: "Use the safer version today. Remove high-impact work and keep output controlled.",
+    action: "Keep the work clean and do not chase volume.",
+    safety: undefined,
     tone: "amber",
   });
   assert.deepEqual(getTodayDecisionBanner("pull_back"), {
     state: "pull_back",
     title: "PULL BACK TODAY",
     detail: "Reduce load and intensity. Keep the session technical. Stop if pain rises.",
+    action: "Use recovery, mobility, or coach-guided alternatives.",
+    safety: undefined,
     tone: "red",
   });
 });
@@ -103,7 +109,29 @@ test("decision banner prefers the backend readiness reason when present", () => 
   const banner = getTodayDecisionBanner("pull_back", "Sleep was poor and pain is high today.");
   assert.equal(banner?.title, "PULL BACK TODAY");
   assert.equal(banner?.detail, "Sleep was poor and pain is high today.");
+  assert.equal(banner?.action, "Use recovery, mobility, or coach-guided alternatives.");
   assert.equal(banner?.tone, "red");
+});
+
+test("decision banner parses backend adjustment card lines", () => {
+  const banner = getTodayDecisionBanner(
+    "pull_back",
+    [
+      "No training today.",
+      "You selected a red flag symptom, so training is not safe.",
+      "Stop training and seek medical advice.",
+      "Use medical guidance before returning to hard work.",
+    ].join("\n"),
+  );
+
+  assert.deepEqual(banner, {
+    state: "pull_back",
+    title: "No training today.",
+    detail: "You selected a red flag symptom, so training is not safe.",
+    action: "Stop training and seek medical advice.",
+    safety: "Use medical guidance before returning to hard work.",
+    tone: "red",
+  });
 });
 
 test("check-in payload does not include a frontend recommendation", () => {

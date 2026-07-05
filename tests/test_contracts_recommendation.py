@@ -7,9 +7,16 @@ from api.contracts.recommendation import (
 
 TODAY = "2026-06-18"
 YESTERDAY = "2026-06-17"
+READINESS_REASON = "\n".join(
+    [
+        "Session reduced.",
+        "Poor sleep lowers recovery margin today.",
+        "Remove 1 set from loaded work and do not add extra conditioning.",
+    ]
+)
 
 
-def _rec(training_day, decision="modify", reason="Poor sleep; use the modified option today."):
+def _rec(training_day, decision="modify", reason=READINESS_REASON):
     return {"training_day": training_day, "decision": decision, "reason": reason}
 
 
@@ -27,11 +34,11 @@ class TestValidity:
 class TestResolveState:
     def test_valid_recommendation_mirrors_decision_and_reason(self):
         view = resolve_recommendation_state(
-            _rec(TODAY, decision="pull_back", reason="Pain is high today; pull back and use recovery work."),
+            _rec(TODAY, decision="pull_back"),
             current_training_day=TODAY,
         )
         assert view.state == "pull_back"
-        assert view.reason == "Pain is high today; pull back and use recovery work."
+        assert view.reason == READINESS_REASON
         assert view.is_history is False
 
     def test_expired_recommendation_returns_not_checked_in_as_history(self):
@@ -41,7 +48,7 @@ class TestResolveState:
         assert view.reason is None
         # ...but it may be shown as labelled history.
         assert view.is_history is True
-        assert view.history_reason == "Poor sleep; use the modified option today."
+        assert view.history_reason == READINESS_REASON
 
     def test_missing_recommendation_returns_not_checked_in(self):
         view = resolve_recommendation_state(None, current_training_day=TODAY)

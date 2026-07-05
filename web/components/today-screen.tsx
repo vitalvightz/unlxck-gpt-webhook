@@ -911,11 +911,8 @@ function DecisionBanner({
       <div className="today-decision-body">
         <p className="today-decision-title">{banner.title}</p>
         <p className="today-decision-detail">{banner.detail}</p>
-        {state === "pull_back" ? (
-          <p className="today-decision-safety">
-            If pain escalates or red flags appear, stop and switch to recovery work.
-          </p>
-        ) : null}
+        {banner.action ? <p className="today-decision-detail">{banner.action}</p> : null}
+        {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
       </div>
     </div>
   );

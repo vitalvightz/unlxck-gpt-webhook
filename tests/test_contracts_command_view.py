@@ -9,9 +9,16 @@ from api.contracts.command_view import (
 
 TODAY = "2026-06-18"
 PLAN = {"id": "plan-1", "name": "Camp A", "phase": "SPP"}
+READINESS_REASON = "\n".join(
+    [
+        "Session reduced.",
+        "Poor sleep lowers recovery margin today.",
+        "Remove 1 set from loaded work and do not add extra conditioning.",
+    ]
+)
 
 
-def _rec(training_day=TODAY, decision="modify", reason="Poor sleep; use the modified option today."):
+def _rec(training_day=TODAY, decision="modify", reason=READINESS_REASON):
     return {"training_day": training_day, "decision": decision, "reason": reason}
 
 
@@ -54,7 +61,7 @@ class TestRecommendationMirror:
             current_training_day=TODAY, plan=PLAN, recommendation=_rec(decision="pull_back")
         )
         assert view.today.recommendation_state == "pull_back"
-        assert view.today.recommendation_reason == "Poor sleep; use the modified option today."
+        assert view.today.recommendation_reason == READINESS_REASON
 
     def test_expired_recommendation_returns_not_checked_in(self):
         view = build_command_view(

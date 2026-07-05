@@ -24,7 +24,11 @@ class TestNormalRules:
     def test_poor_sleep_modifies(self):
         decision = evaluate_checkin(replace(CLEAN, sleep="poor"))
         assert decision.decision == "modify"
-        assert decision.reason == "Poor sleep; use the modified option today."
+        assert decision.reason.splitlines() == [
+            "Session reduced.",
+            "Poor sleep lowers recovery margin today.",
+            "Remove 1 set from loaded work and do not add extra conditioning.",
+        ]
 
     def test_flat_body_modifies(self):
         decision = evaluate_checkin(replace(CLEAN, body="flat"))
@@ -46,12 +50,17 @@ class TestHardOverrides:
     def test_high_pain_pulls_back(self):
         decision = evaluate_checkin(replace(CLEAN, pain="high"))
         assert decision.decision == "pull_back"
-        assert decision.reason == "Pain is high today; pull back and use recovery work."
+        assert decision.reason.splitlines() == [
+            "Rehab only today.",
+            "Pain is high, so loading and impact are not appropriate.",
+            "Use rehab or easy mobility only; skip heavy work, sparring, and hard conditioning.",
+        ]
 
     def test_active_injury_worse_pulls_back(self):
         decision = evaluate_checkin(replace(CLEAN, active_injury="worse"))
         assert decision.decision == "pull_back"
-        assert "pull back" in decision.reason.lower()
+        assert "Rehab only today." in decision.reason
+        assert "injury is worse" in decision.reason
 
     def test_each_safety_flag_pulls_back(self):
         for flag in (
@@ -86,10 +95,8 @@ class TestPhaseBias:
             replace(CLEAN, sleep="poor", body="flat", pain="manageable", phase="TAPER")
         )
         assert decision.decision == "pull_back"
-        assert decision.reason == (
-            "Poor sleep, flat body state and manageable pain during taper; "
-            "pull back today."
-        )
+        assert "freshness matters" in decision.reason
+        assert "fatigue-heavy accessories" in decision.reason
 
     def test_poor_flat_manageable_in_reintegration_pulls_back(self):
         decision = evaluate_checkin(
@@ -119,7 +126,7 @@ class TestPhaseBias:
     def test_very_hard_previous_session_modifies_in_spp(self):
         decision = evaluate_checkin(replace(CLEAN, previous_session="very_hard", phase="SPP"))
         assert decision.decision == "modify"
-        assert "very_hard_previous" in decision.triggers
+        assert "recent_hard_session" in decision.triggers
 
     def test_very_hard_previous_session_allowed_in_gpp(self):
         decision = evaluate_checkin(replace(CLEAN, previous_session="very_hard", phase="GPP"))

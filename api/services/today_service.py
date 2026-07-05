@@ -5,12 +5,12 @@ Everything here is server-authoritative:
 
 * the **training day** is computed from the athlete's timezone (04:00 rollover),
   never supplied by the client;
-* the **recommendation** is computed by ``evaluate_checkin`` and persisted on the
+* the **recommendation** is computed by the readiness-message engine and persisted on the
   check-in row — the client never calculates or supplies it;
 * the **command view** and **landing** state are derived from persisted rows.
 
-No saved plan is ever mutated here, and no readiness text is invented: reasons
-come straight from the deterministic evaluator.
+No saved plan is ever mutated here. Readiness text comes from the deterministic
+message engine.
 """
 
 from __future__ import annotations
@@ -23,7 +23,6 @@ from typing import Any, Mapping
 from fastapi import HTTPException, status
 from pydantic import ValidationError
 
-from api.contracts.checkin_decision import CheckinInputs, evaluate_checkin
 from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
 from api.contracts.completion import (
     TERMINAL_COMPLETION_STATUSES,
@@ -39,6 +38,7 @@ from api.contracts.injury_checkin import (
 )
 from api.contracts.injury_signal import derive_injury_signal
 from api.contracts.landing import LandingDecision, resolve_landing
+from api.contracts.readiness_message import ReadinessCheckin, ReadinessContext, build_readiness_adjustment
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
 from api.services.active_plan import resolve_active_plan
@@ -85,9 +85,9 @@ _CHECKIN_INPUT_FIELDS = (
     "worse_next_day_pain",
 )
 
-OTHER_PLAN_CHECKIN_WARNING = (
-    "You already submitted a check-in for another plan today. "
-    "This check-in is saved to the selected active plan only."
+TODAY_CHECKIN_WARNING = (
+    "You already completed a check-in today. "
+    "This response applies to the current active plan only."
 )
 
 INTAKE_INJURY_SOURCE = "intake"
@@ -153,23 +153,104 @@ def resolve_training_day(athlete_timezone: str | None, *, now: datetime | None =
     )
 
 
-def _checkin_inputs_from(payload: Mapping[str, Any]) -> CheckinInputs:
-    return CheckinInputs(**{field: payload[field] for field in _CHECKIN_INPUT_FIELDS})
+def _readiness_checkin_from(payload: Mapping[str, Any]) -> ReadinessCheckin:
+    return ReadinessCheckin(**{field: payload[field] for field in _CHECKIN_INPUT_FIELDS})
 
 
-def _same_day_other_plan_warnings(
+def _same_day_checkin_warnings(
     store: AppStore,
     *,
     athlete_id: str,
     plan_id: str,
     training_day: str,
+    include_current_plan: bool = False,
 ) -> list[str]:
     lister = getattr(store, "list_today_checkins_for_day", None)
     if not callable(lister):
         return []
     rows = lister(athlete_id, training_day) or []
-    has_other_plan_checkin = any(str(row.get("plan_id") or "") != plan_id for row in rows)
-    return [OTHER_PLAN_CHECKIN_WARNING] if has_other_plan_checkin else []
+    if include_current_plan:
+        has_same_day_checkin = bool(rows)
+    else:
+        has_same_day_checkin = any(str(row.get("plan_id") or "") != plan_id for row in rows)
+    return [TODAY_CHECKIN_WARNING] if has_same_day_checkin else []
+
+
+def _safe_recent_today_checkins(store: AppStore, athlete_id: str, *, limit: int = 4) -> list[dict[str, Any]]:
+    lister = getattr(store, "list_today_checkins", None)
+    if not callable(lister):
+        return []
+    try:
+        return list(lister(athlete_id, limit=limit) or [])
+    except Exception:
+        return []
+
+
+def _safe_recent_session_completions(store: AppStore, athlete_id: str, *, limit: int = 3) -> list[dict[str, Any]]:
+    lister = getattr(store, "list_session_completions", None)
+    if not callable(lister):
+        return []
+    try:
+        return list(lister(athlete_id, limit=limit) or [])
+    except Exception:
+        return []
+
+
+def _entry_mapping_for_readiness(entry: Any) -> dict[str, Any]:
+    if entry is None:
+        return {}
+    if isinstance(entry, Mapping):
+        return dict(entry)
+    keys = (
+        "session_id",
+        "title",
+        "label",
+        "status",
+        "reason",
+        "coach_note",
+        "effective_load",
+        "primary_focus",
+        "emphasis",
+        "weekday",
+        "calendar_date",
+    )
+    return {key: getattr(entry, key) for key in keys if getattr(entry, key, None) not in (None, "")}
+
+
+def _today_session_for_readiness(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any]:
+    structured_entry = _structured_today_session_entry(plan_row, training_day)
+    if structured_entry:
+        return dict(structured_entry)
+
+    (
+        _latest_visible_plan_row,
+        _parse_iso_date,
+        _resolve_current_week,
+        _resolve_today_and_next,
+        _weekly_schedule_or_none,
+    ) = _plan_schedule_helpers()
+    training_date = _parse_iso_date(training_day)
+    if training_date is None:
+        return {}
+    try:
+        _week_index, week = _resolve_current_week(plan_row, today=training_date)
+        today_entry, _next_entry = _resolve_today_and_next(week, today=training_date)
+    except Exception:
+        return {}
+    if not _has_scheduled_day_content(today_entry):
+        return {}
+    return _entry_mapping_for_readiness(today_entry)
+
+
+def _intake_payload_for_readiness(store: AppStore, plan_row: Mapping[str, Any]) -> Mapping[str, Any]:
+    intake_id = str(plan_row.get("intake_id") or "").strip()
+    getter = getattr(store, "get_intake", None)
+    if not intake_id or not callable(getter):
+        return {}
+    try:
+        return _intake_payload_from_row(getter(intake_id))
+    except Exception:
+        return {}
 
 
 def submit_today_checkin(
@@ -193,17 +274,31 @@ def submit_today_checkin(
 
     # Writes are service-role (RLS does not gate them here), so the backend must
     # prove the plan belongs to the caller before persisting anything.
-    if store.get_plan_for_athlete(plan_id, athlete_id) is None:
+    plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
+    if plan_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
     training_day = resolve_training_day(athlete_timezone, now=now)
-    warnings = _same_day_other_plan_warnings(
+    warnings = _same_day_checkin_warnings(
         store,
         athlete_id=athlete_id,
         plan_id=plan_id,
         training_day=training_day,
+        include_current_plan=True,
     )
-    decision = evaluate_checkin(_checkin_inputs_from(payload))
+    decision = build_readiness_adjustment(
+        _readiness_checkin_from(payload),
+        ReadinessContext(
+            training_day=training_day,
+            phase=str(payload.get("phase") or plan_row.get("phase") or ""),
+            today_session=_today_session_for_readiness(plan_row, training_day),
+            active_plan=plan_row,
+            intake=_intake_payload_for_readiness(store, plan_row),
+            open_injuries=_open_injury_flags(store, athlete_id),
+            recent_checkins=_safe_recent_today_checkins(store, athlete_id),
+            recent_sessions=_safe_recent_session_completions(store, athlete_id),
+        ),
+    )
 
     fields: dict[str, Any] = {
         "plan_id": plan_id,
@@ -211,7 +306,7 @@ def submit_today_checkin(
         "athlete_timezone": athlete_timezone or "",
         # Server-computed recommendation — never trust a client-supplied value.
         "recommendation_state": decision.decision,
-        "recommendation_reason": decision.reason,
+        "recommendation_reason": decision.message,
         "recommendation_triggers": list(decision.triggers),
     }
     for field in _CHECKIN_INPUT_FIELDS:
@@ -1076,7 +1171,7 @@ def build_today_command_view(
     # risk watch (avoids a redundant DB roundtrip).
     today_checkin = store.get_today_checkin(athlete_id, plan_id, training_day)
     recommendation = _recommendation_mapping(today_checkin)
-    warnings = _same_day_other_plan_warnings(
+    warnings = _same_day_checkin_warnings(
         store,
         athlete_id=athlete_id,
         plan_id=plan_id,
