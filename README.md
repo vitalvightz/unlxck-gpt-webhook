@@ -11,7 +11,8 @@ Athlete-first fight camp planning. Backend in Python (FastAPI), frontend in Next
 | Frontend | Next.js (TypeScript), deployed on Vercel |
 | Backend | FastAPI (Python 3.11+), deployed on Render |
 | Database | Supabase (PostgreSQL + Auth + Storage) |
-| AI finalization | OpenAI (Stage 2 plan finalizer) |
+| AI finalization | OpenAI (Stage 2 markdown finalizer + structured-card conversion) |
+| Observability | structlog (structured logging) + Sentry (error monitoring) |
 
 ---
 
@@ -23,7 +24,18 @@ Plan generation runs in two stages:
 The Python planner (`fightcamp/`) reads the athlete's intake profile and builds a full draft plan. It scores exercises and conditioning drills by weakness tags, goal tags, style tags, phase, and equipment availability. The injury guard removes anything that violates active restrictions and selects safe replacements. Output includes the draft plan text, candidate pools, coach review notes, and the Stage 2 handoff package.
 
 **Stage 2 — AI finalization**
-The handoff package is sent to OpenAI. Stage 2 currently makes one automated finalizer call. The validator then reviews that output. If validation fails, the **plan** is marked `held_for_review` (its generation **job** surfaces as `review_required`) and the validator report plus repair guidance are saved for manual review. Automatic retry is currently disabled unless future code changes explicitly enable it.
+The handoff package is sent to OpenAI. Stage 2 makes an automated markdown
+finalizer call and then, by default, a **structured-card** pass that converts
+the plan into the machine-readable `StructuredTrainingPlan` schema
+(`api/structured_plan_models.py`). The structured pass is deliberately additive
+— it runs beside the raw-text flow, gets one optional repair retry on invalid
+JSON, and always falls back to `raw_markdown_fallback` so a failed structured
+conversion never blocks generation or leaves the athlete with a blank plan
+(`api/structured_plan_generation.py`). The validator then reviews the output. If
+validation fails, the **plan** is marked `held_for_review` (its generation
+**job** surfaces as `review_required`) and the validator report plus repair
+guidance are saved for manual review. Automatic retry of the whole job is
+currently disabled unless future code changes explicitly enable it.
 
 > Plan status and generation-job status are **separate** vocabularies that must
 > not be used interchangeably. `held_for_review` is a *plan* status; the worker
@@ -41,25 +53,65 @@ Generated plans are saved and displayed in-app as structured text, HTML, and JSO
 
 ```
 api/                    FastAPI application
-  app.py                Routes, lifespan, generation job creation, admin endpoints
+  app.py                App assembly, lifespan, middleware, router mounting, admin endpoints
   worker.py             Durable generation worker entry point
   auth.py               Supabase token verification
   store.py              Supabase persistence (profiles, intakes, plans, jobs)
   models.py             Pydantic request/response models
-  stage2_automation.py  OpenAI Stage 2 call orchestration
-  nutrition_workspace.py Nutrition workspace endpoints
+  environment.py        Production environment detection and defaults
+  cors_config.py        Fail-fast production CORS resolution
+  readiness.py          Startup runtime-schema readiness check
+  schema_requirements.py Required plan runtime columns
+  errors.py             Shared API error constructors
+  error_sanitizer.py    Strips internals from error responses
+  request_body_guard.py Request body size-limit middleware
+  json_limits.py        JSON payload size caps
+  sentry_config.py      Sentry initialization
+  performance_focus.py  Performance-focus selection validation
+  plan_mappers.py       Row → response-model mappers
+  generation_job_helpers.py  Job response + viewer-role helpers
+  stage2_automation.py  OpenAI Stage 2 (markdown + structured-card) orchestration
+  structured_plan_models.py   StructuredTrainingPlan schema
+  structured_plan_generation.py  Stage 2 → structured-plan bridge (validate/repair/fallback)
+  structured_plan_faithfulness.py  Structured-vs-source faithfulness checks
+  structured_plan_safety.py   Structured-plan safety guardrails
+  structured_plan_sparring_reconcile.py  Coach-led sparring reconciliation
+  nutrition_workspace.py Nutrition workspace helpers
   state_machine.py      Shared plan/job status mapping
   generation_config.py  Generation timeout and stale-job settings
   generation_runtime.py Backward-compatible re-export shim for api.generation
+  routes/               APIRouter modules mounted by app.py
+    profile.py          /api/me, username, onboarding draft
+    plans.py            Plan list/detail/weekly-schedule/rename/active/delete
+    generation_jobs.py  Generation job create/poll/retry
+    nutrition.py        Nutrition workspace endpoints
+    today.py            Block 4 Today/Overview surface
+    daily.py            Live athlete daily flow: dashboard, check-ins, session logs, injury flags, review queue
+  services/             Route-agnostic business logic
+    generation_request_service.py  Plan generation request handling
+    generation_retry_service.py     Job retry orchestration
+    admin_stage2_service.py         Manual Stage 2, approvals, structured backfill
+    triage_resume_service.py        Approve-and-resume triage logic
+    today_service.py                Server-authoritative today/recommendation
+    active_plan.py                  Active-plan resolution
+  contracts/            Pure, network-free Block 4 domain logic
+    checkin_decision.py, injury_checkin.py, injury_signal.py,
+    training_day.py, recommendation.py, command_view.py,
+    landing.py, completion.py
   generation/           Generation runtime package
     scheduler.py        API-side in-process scheduling gate
     orchestrator.py     Job claim, Stage 1, Stage 2, persistence orchestration
     stage1_runner.py    Planner subprocess execution and timeout handling
     stage2_runner.py    Stage 2 finalization timeout and quota handling
     persistence.py      Plan and job persistence helpers
+    payloads.py         Generation payload assembly
     milestones.py       Progress milestone recording
     heartbeat.py        Stale-job heartbeat helpers
     triage.py           Review-required and Stage 2 skip logic
+    admin_linkage.py    Admin-initiated job linkage
+    timeouts.py         Timeout resolution helpers
+    time_utils.py       Timestamp helpers
+    types.py            Shared generation types
 
 fightcamp/              Plan generation engine
   main.py               Entry point — orchestrates full generation pipeline
@@ -97,15 +149,25 @@ data/                   JSON banks (loaded at runtime)
   exercise_bank.json
   conditioning_bank.json
   rehab_bank.json
-  style_conditioning_bank.json
+  style_conditioning_bank.json    (+ style_conditioning_bank_archive.json)
+  style_taper_conditioning.json
+  style_specific_exercises/       Per-style exercise sets
+  footwork_conditioning_bank.json
+  universal_gpp_strength.json
+  universal_gpp_conditioning.json
   coordination_bank.json
   injury_exclusion_map.json
+  regex_patterns.json
+  format_energy_weights.json
+  bank_inferred_tags.json
   tag_vocabulary.json
 
 web/                    Next.js frontend
-  app/                  App Router pages (plans, onboarding, settings, nutrition, admin)
+  app/                  App Router pages (onboarding, intake, plans, today,
+                        dashboard, nutrition, settings, admin, coach, gym-owner)
   components/           UI components
   lib/                  API client, types, utilities
+  e2e/                  Playwright smoke + accessibility tests
 
 tests/                  Pytest test suite
 tools/                  Developer scripts (bank audits, validation, generation)
@@ -313,7 +375,11 @@ required; CI uses public placeholder env values.
 - Stage 2 structured-card call timeout: `UNLXCK_STAGE2_STRUCTURED_TIMEOUT_SECONDS` (default `600`, applies to the structured first-pass and repair calls only)
 - Stage 2 finalize timeout: `APP_STAGE2_FINALIZE_TIMEOUT_SECONDS` (default `1500`; must exceed the worst-case sum of the per-call timeouts above or card generation is cancelled early)
 - Stage 2 first-pass prompt cap: `UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS` (default `180000`)
+- Stage 2 model: `UNLXCK_STAGE2_MODEL` (default `gpt-5-mini`)
+- Structured-card generation: `UNLXCK_STAGE2_STRUCTURED_PLAN` (default on; set `0`/`false`/`off` to disable and fall back to raw `plan_text`), with `UNLXCK_STAGE2_STRUCTURED_REPAIR` (default on — one repair retry on invalid JSON), `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` (default on — request JSON output mode), and `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` (default off — opt-in strict `json_schema`)
+- Stage 2 output token cap: `UNLXCK_STAGE2_MAX_OUTPUT_TOKENS` (default `0` = no cap; shared with the model's reasoning tokens, so too low truncates the plan and fails the job)
 - API generation concurrency cap: `APP_GENERATION_MAX_CONCURRENT_JOBS` (default `1`)
+- Error monitoring: set `SENTRY_DSN` to enable Sentry; tune with `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE` (default `0.1`), `SENTRY_SEND_DEFAULT_PII` (default `false`), and `SENTRY_ENABLE_LOGS`. See `.env.example` for the full annotated list.
 - The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
 - Runtime guards are split between process-local best-effort protections and durable database-backed protections:
   - `active_generation_tasks` is process-local and only prevents duplicate scheduling inside one API process.
@@ -370,29 +436,81 @@ required; CI uses public placeholder env values.
 | GET | `/api/plans/latest` | Get latest plan detail |
 | GET | `/api/plans/latest/weekly-schedule` | Get latest plan weekly schedule |
 | GET | `/api/plans` | List saved plans |
+| GET | `/api/plans/active` | Get the athlete's active plan |
 | GET | `/api/plans/{id}` | Get plan detail |
 | GET | `/api/plans/{id}/weekly-schedule` | Get plan weekly schedule |
 | PATCH | `/api/plans/{id}` | Update plan metadata |
 | PATCH | `/api/plans/{id}/name` | Rename plan |
+| POST | `/api/plans/{id}/set-active` | Set plan as the active plan |
 | DELETE | `/api/plans/{id}` | Delete plan |
 | GET | `/api/nutrition/current` | Get nutrition workspace |
 | PUT | `/api/nutrition/current` | Update nutrition workspace |
+| GET | `/api/dashboard` | Live athlete dashboard state |
+| GET | `/api/today` | Today/Overview command view |
+| GET | `/api/today/landing` | Today landing state |
+| POST | `/api/today/checkin` | Submit a Today check-in (returns evaluated recommendation) |
+| POST | `/api/today/injury-checkin` | Reconcile Today declared injuries |
+| POST | `/api/today/session-completion` | Update Today session completion status |
+| GET | `/api/checkins` | List daily check-ins |
+| POST | `/api/checkins` | Submit a daily check-in |
+| GET | `/api/session-logs` | List logged sessions |
+| POST | `/api/session-logs` | Log a completed session |
+| GET | `/api/injury-flags` | List the athlete's injury flags |
+| POST | `/api/injury-flags` | Raise an injury flag |
 | GET | `/api/admin/athletes` | Admin: list athletes |
 | GET | `/api/admin/athletes/{athlete_id}` | Admin: athlete detail |
+| GET | `/api/admin/athletes/{athlete_id}/daily-status` | Admin: athlete daily-flow status |
 | GET | `/api/admin/athletes/{athlete_id}/generation-jobs` | Admin: athlete generation jobs |
 | PATCH | `/api/admin/athletes/{athlete_id}/latest-intake` | Admin: update latest intake |
 | POST | `/api/admin/athletes/{athlete_id}/plans/generate-from-latest-intake` | Admin: generate from latest intake |
 | GET | `/api/admin/athletes/{athlete_id}/nutrition/current` | Admin: get athlete nutrition workspace |
 | PUT | `/api/admin/athletes/{athlete_id}/nutrition/current` | Admin: update athlete nutrition workspace |
 | GET | `/api/admin/plans` | Admin: list all plans |
+| GET | `/api/admin/plans/review` | Admin: list review-required plans |
+| POST | `/api/admin/plans/structured-plan/backfill` | Admin: backfill structured plans |
 | POST | `/api/admin/plans/{plan_id}/manual-stage2` | Admin: run manual Stage 2 |
 | POST | `/api/admin/plans/{plan_id}/approve` | Admin: approve review-required plan |
 | POST | `/api/admin/plans/{plan_id}/approve-and-resume-generation` | Admin: approve and resume generation |
 | POST | `/api/admin/plans/{plan_id}/reject` | Admin: reject review-required plan |
 | POST | `/api/admin/plans/{plan_id}/archive` | Admin: archive plan |
+| GET | `/api/admin/reviews` | Admin: list injury/check-in review queue |
+| POST | `/api/admin/reviews/{review_id}/resolve` | Admin: resolve a review item |
+| PATCH | `/api/admin/injury-flags/{flag_id}` | Admin: update an injury flag |
 | GET | `/api/admin/generation-jobs/triage` | Admin: triage generation jobs |
 | GET | `/api/admin/generation-jobs/active` | Admin: active generation jobs |
+| DELETE | `/api/admin/generation-jobs/{job_id}` | Admin: delete a generation job |
 | GET | `/api/admin/diagnostics/state-integrity` | Admin: state integrity diagnostics |
+
+---
+
+## Live athlete daily flow (Block 4)
+
+Beyond one-shot plan generation, the app runs a daily operating layer that turns
+a saved plan into a day-to-day flow: persistent plans, daily check-ins, session
+logs, injury flags, rule-based adaptations, and an admin attention queue. It is
+served by `api/routes/today.py` and `api/routes/daily.py` over the
+`/api/today`, `/api/dashboard`, `/api/checkins`, `/api/session-logs`, and
+`/api/injury-flags` endpoints.
+
+Design invariants (full contract in [`docs/live-athlete-flow.md`](docs/live-athlete-flow.md)
+and [`docs/block-4-ux-hierarchy-addendum.md`](docs/block-4-ux-hierarchy-addendum.md)):
+
+- **Training weeks and sessions stay derived** from the persisted plan via the
+  same weekly-schedule mapper the plan viewer uses — no second source of truth.
+- **The server is authoritative.** The training day is computed from the
+  athlete's timezone with a `04:00` local rollover, and the check-in
+  recommendation is computed by the deterministic evaluator and persisted on the
+  check-in row. The client never supplies the day or the recommendation.
+- **No saved plan is ever mutated** by the daily flow; every rule decision is
+  recorded as an append-only `adaptation_notes` row.
+- Pure, network-free domain logic lives in `api/contracts/` (check-in decision
+  table, injury signals, training-day math, recommendation, command/landing
+  views); `api/services/today_service.py` wires it to persistence.
+
+New Supabase tables (`daily_checkins`, `session_logs`, `injury_flags`,
+`adaptation_notes`, `admin_reviews`) are added by
+`supabase/migrations/20260611120000_add_live_athlete_daily_tracking.sql` and
+enforced by the runtime schema gate.
 
 ---
 
@@ -414,7 +532,7 @@ pytest -v
 
 ### Fast lane (skip the heavy spaCy stack)
 
-Only ~14 of the test files exercise the spaCy/negspacy injury-parsing path
+Only ~15 of the test files exercise the spaCy/negspacy injury-parsing path
 (which installs spaCy + the `en_core_web_sm` model and loads it at runtime).
 Those tests are auto-tagged with the `spacy` marker, so day-to-day iteration on
 everything else can skip both the slow install and the model load:
@@ -431,7 +549,7 @@ pytest -m spacy
 ```
 
 Performance notes:
-- `pytest -n auto` (via `pytest-xdist`) distributes the 122 test files across
+- `pytest -n auto` (via `pytest-xdist`) distributes the ~160 test files across
   CPU cores; spaCy loads once per worker rather than once for the whole serial
   run.
 - The injury PhraseMatchers are built with `nlp.make_doc()` (tokenizer only)
@@ -439,7 +557,11 @@ Performance notes:
   ~0.01s, and the model loads with unused components (tagger/lemmatizer/
   attribute_ruler) disabled.
 
-Tests covering: injury guard, sparring advisories, stage 2 payload modes, planning brief, conditioning diagnostics, surgical rehab integration, input parsing, restriction parsing, and more.
+Tests covering: injury guard, sparring advisories, stage 2 payload modes,
+planning brief, conditioning diagnostics, surgical rehab integration, input
+parsing, restriction parsing, structured-plan generation/safety, the live
+athlete daily flow (check-ins, session logs, injury flags, today/dashboard),
+admin flows, state-machine integrity, and more.
 
 ---
 
