@@ -1662,6 +1662,43 @@ def test_scheduler_returns_failed_row_for_stale_running_job():
     assert scheduled["heartbeat_at"] is not None
 
 
+def test_app_schedule_wrapper_recovers_stale_running_job_in_worker_only_mode():
+    store = FakeStore()
+    store.ensure_profile(AuthenticatedUser("athlete-1", "athlete@example.com", "Test Athlete", {}))
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="app-wrapper-stale-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    stale_started = "2026-01-01T00:00:00+00:00"
+    stale_running = store.update_generation_job(
+        created["id"],
+        status="running",
+        started_at=stale_started,
+        heartbeat_at=stale_started,
+        progress_milestones=[],
+    )
+
+    scheduled = asyncio.run(
+        app_module.schedule_generation_job_if_needed(
+            job=stale_running,
+            background_tasks=BackgroundTasks(),
+            store=store,
+            planner_fn=_planner,
+            stage2=None,
+            active_tasks=set(),
+            enable_in_process_generation=False,
+            stale_job_checker=app_module._is_stale_job,
+            stale_after_seconds=90,
+        )
+    )
+
+    assert scheduled["status"] == "failed"
+    assert scheduled["completed_at"] is not None
+    assert scheduled["heartbeat_at"] is not None
+
+
 def test_generate_plan_worker_only_mode_returns_queue_metadata_and_does_not_schedule():
     client, store, _ = _build_client(enable_in_process_generation=False)
     response = client.post(

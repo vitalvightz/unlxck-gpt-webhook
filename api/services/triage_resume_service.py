@@ -40,8 +40,32 @@ async def schedule_generation_job_if_needed(**kwargs: Any) -> dict[str, Any]:
     jobs. The scheduler (and its planner/orchestrator surface) is imported only
     when in-process generation is explicitly enabled.
     """
+    job = kwargs["job"]
+    current_status = str(job.get("status") or "queued")
+    if current_status == "running":
+        stale_job_checker = kwargs.get("stale_job_checker")
+        stale_after_seconds = int(kwargs.get("stale_after_seconds") or 90)
+        if callable(stale_job_checker) and stale_job_checker(job, stale_after_seconds=stale_after_seconds):
+            from ..generation.heartbeat import recover_stale_running_job
+
+            job = await asyncio.to_thread(
+                recover_stale_running_job,
+                job=job,
+                store=kwargs["store"],
+                stale_after_seconds=stale_after_seconds,
+            )
+            kwargs["job"] = job
+            current_status = str(job.get("status") or "")
+            if current_status != "queued":
+                return job
+        else:
+            return job
     if not bool(kwargs.get("enable_in_process_generation")):
-        return kwargs["job"]
+        return job
+    if kwargs.get("stage2") is None:
+        from ..stage2_automation import build_default_stage2_automator
+
+        kwargs["stage2"] = build_default_stage2_automator()
     from ..generation.scheduler import (
         schedule_generation_job_if_needed as _schedule_generation_job_if_needed,
     )
@@ -327,7 +351,7 @@ async def approve_and_resume_job_triage(
     profile: ProfileRecord,
     store: AppStore,
     planner_fn: Planner,
-    stage2: Any | None,
+    stage2: Stage2Automator | None,
     active_tasks: set[str],
     enable_in_process_generation: bool,
 ) -> GenerationJobResponse:

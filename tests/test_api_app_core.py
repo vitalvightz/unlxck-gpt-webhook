@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import sys
+import types
 from uuid import uuid4
 
 import pytest
@@ -64,6 +66,46 @@ def test_create_app_skips_plan_bank_priming_in_worker_only_mode(monkeypatch):
         pass
 
     assert calls == []
+
+
+def test_generate_plan_worker_only_does_not_build_stage2_when_missing(monkeypatch):
+    calls: list[object] = []
+
+    def _build_default_stage2_automator():
+        calls.append(object())
+        raise AssertionError("worker-only plan generation should not build Stage 2")
+
+    fake_stage2_module = types.ModuleType("api.stage2_automation")
+    fake_stage2_module.build_default_stage2_automator = _build_default_stage2_automator
+    monkeypatch.setitem(sys.modules, "api.stage2_automation", fake_stage2_module)
+
+    store = FakeStore()
+    seed_default_profiles(store)
+    athlete = auth_module.AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    app = create_app(
+        store=store,
+        auth_service=FakeAuthService({"athlete-token": athlete}),
+        planner=_planner,
+        stage2_automator=None,
+        enable_in_process_generation=False,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/plans/generate",
+            headers={"Authorization": "Bearer athlete-token"},
+            json=_build_request().model_dump(mode="json"),
+        )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "queued"
+    assert calls == []
+    assert app.state.stage2_automator is None
 
 
 def test_root_and_health_return_ok_for_render_probes():
