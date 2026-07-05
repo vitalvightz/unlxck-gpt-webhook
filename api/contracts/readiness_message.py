@@ -319,13 +319,15 @@ def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, sessi
         )
 
     if checkin.active_injury == "worse":
-        action = "No sprinting, jumping, heavy lower-body work, sparring, or hard conditioning."
+        reason = "The injury is worse, so hard combat work is not safe today."
+        action = "No sparring, live rounds, clinch work, hard bag work, or conditioning."
         if session_risk == "low":
-            action = "Use rehab or mobility only and keep all work pain-free."
+            reason = "The injury is worse, so hard training is not safe today."
+            action = "Use mobility, rehab, or light shadowboxing only."
         return ReadinessAdjustment(
             decision="pull_back",
             title="Rehab only today.",
-            reason="The injury is worse, so loading is not appropriate.",
+            reason=reason,
             action=action,
             safety="Seek medical advice if pain is sharp, unstable, swollen, or neurological.",
             triggers=_with_context_triggers(
@@ -341,8 +343,8 @@ def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, sessi
         return ReadinessAdjustment(
             decision="pull_back",
             title="Rehab only today.",
-            reason="Pain is high, so loading and impact are not appropriate.",
-            action="Use rehab or easy mobility only; skip heavy work, sparring, and hard conditioning.",
+            reason="Pain is high, so contact and impact are not safe today.",
+            action="Use rehab or easy mobility only; skip sparring, pads, bag work, and conditioning.",
             triggers=_with_context_triggers(
                 "pain_high",
                 session_risk=session_risk,
@@ -394,8 +396,8 @@ def _normal_base_message(
         return (
             decision,
             "Pull back today.",
-            "Poor sleep, flat body, and manageable pain during taper/reintegration require a recovery day.",
-            "Skip the planned session and use recovery or light mobility work instead.",
+            "Poor sleep, a flat body, and pain mean your body needs a recovery day.",
+            "Skip combat work and use recovery or light mobility instead.",
             triggers,
         )
 
@@ -404,8 +406,8 @@ def _normal_base_message(
             return (
                 decision,
                 "Sharp work only.",
-                "You are in taper, so freshness matters more than extra volume today.",
-                "Complete the planned sharp work and do not add fatigue-heavy accessories.",
+                "You are in taper, so sharpness matters more than extra work today.",
+                "Keep speed and timing work only; remove tiring rounds.",
                 triggers,
             )
         return (
@@ -420,8 +422,8 @@ def _normal_base_message(
         return (
             decision,
             "Session reduced.",
-            "Readiness has been poor across recent check-ins, so recovery is not rebounding.",
-            "Cut volume and intensity today and do not add hard conditioning.",
+            "Your check-ins have been poor for a few days, so your body is not bouncing back.",
+            "Cut rounds and intensity today. Do not add conditioning.",
             triggers,
         )
 
@@ -429,50 +431,55 @@ def _normal_base_message(
         return (
             decision,
             "Session reduced.",
-            "You are in taper, so freshness matters more than extra volume today.",
-            "Keep sharp work only and remove fatigue-heavy accessories.",
+            "You are in taper, so sharpness matters more than extra work today.",
+            "Keep speed and timing work only; remove tiring rounds.",
             triggers,
         )
 
     if poor and flat:
-        reason = "Poor sleep plus flat body lowers output and recovery margin today."
-        action = "Remove 1 set, cap intensity, and skip finishers or extra conditioning."
+        reason = "Poor sleep plus a flat body means your output will drop today."
+        action = "Cut 1 round, cap intensity, and skip finishers."
         if session_risk == "high":
-            reason = "Poor sleep plus flat body before high-risk work lowers recovery margin today."
-            action = "Remove 1 set and cut sprinting, plyos, sparring, and hard conditioning."
+            reason = "Poor sleep plus a flat body before hard combat work raises injury risk today."
+            action = "Skip sparring, hard rounds, and conditioning finishers."
         elif session_risk == "low":
-            action = "Keep the easy work and cut optional volume."
+            reason = "Poor sleep means your body has less room to recover, but today's work is light."
+            action = "Keep the easy work and cut anything extra."
         return decision, "Session reduced.", reason, action, triggers
 
     if poor:
-        reason = "Poor sleep lowers recovery margin today."
-        action = "Remove 1 set from loaded work and do not add extra conditioning."
+        reason = "Poor sleep means your body has less room to recover today."
+        action = "Cut 1 round and do not add extra conditioning."
         if session_risk == "high":
-            reason = "Poor sleep before high-risk work lowers recovery margin today."
-            action = "Remove 1 set and cut sprinting, plyos, sparring, and hard conditioning."
+            reason = "Poor sleep before hard combat work raises injury risk today."
+            action = "Skip sparring, hard rounds, and conditioning finishers."
         elif session_risk == "low":
-            reason = "Poor sleep lowers recovery margin, but today's work is low risk."
-            action = "Keep the easy work and cut optional volume."
+            reason = "Poor sleep means your body has less room to recover, but today's work is light."
+            action = "Keep the easy work and cut anything extra."
         return decision, "Session reduced.", reason, action, triggers
 
     if flat:
-        action = "Keep reps clean and stay below max-effort work."
+        reason = "A flat body lowers speed, reactions, and sharpness today."
+        action = "Keep rounds technical and stay away from all-out work."
         if session_risk == "high":
-            action = "Cap intensity and remove max-effort, sprint, plyo, and hard conditioning work."
-        return decision, "Intensity capped.", "Flat body state lowers speed and bracing quality today.", action, triggers
+            reason = "A flat body lowers reaction speed and defensive sharpness today."
+            action = "No sparring, hard bag rounds, or max-output conditioning."
+        return decision, "Intensity capped.", reason, action, triggers
 
     if manageable_pain:
-        action = "Avoid painful ranges and remove high-impact or max-effort work."
+        reason = "Manageable pain means the area needs protection today."
+        action = "Avoid painful shots, clinch positions, impact, and hard conditioning."
         if session_risk == "high":
-            action = "Remove impact, sparring, heavy loading, and hard conditioning."
-        return decision, "Load reduced.", "Manageable pain needs tissue margin today.", action, triggers
+            reason = "Manageable pain before contact work needs protection today."
+            action = "Skip sparring, clinch pressure, hard bag work, and conditioning."
+        return decision, "Load reduced.", reason, action, triggers
 
     if tracked_injury and session_risk == "high":
         return (
             decision,
             "Load controlled.",
-            "A tracked injury is active, so high-risk work needs tissue margin today.",
-            "Remove impact, sparring, heavy loading, and max-effort work.",
+            "An active injury means hard combat work needs to be limited today.",
+            "Remove sparring, clinch pressure, hard bag work, and all-out rounds.",
             triggers,
         )
 
@@ -480,16 +487,16 @@ def _normal_base_message(
         return (
             decision,
             "Session reduced.",
-            "The recent session load was high, so quality is the limiter today.",
-            "Keep intensity controlled and remove fatigue-heavy accessories.",
+            "Your recent training load was high, so quality matters more today.",
+            "Keep rounds controlled and remove tiring extras.",
             triggers,
         )
 
     return (
         decision,
         "Session adjusted.",
-        "Readiness needs a conservative dose today.",
-        "Reduce volume and keep the work technically clean.",
+        "Your body needs a safer dose today.",
+        "Reduce volume and keep the work clean.",
         triggers,
     )
 
@@ -521,7 +528,7 @@ def build_readiness_adjustment(
         if decision == "train_as_planned" and phase != "TAPER":
             title = "Sharp work only."
             reason = "Fight week rewards freshness, not extra fatigue."
-            action = "Run the planned sharp work and leave conditioning volume alone."
+            action = "Keep timing, speed, and rhythm work; leave conditioning volume alone."
 
     if contact_sport and session_risk == "high" and decision == "modify" and "contact_sport" not in triggers:
         action = action.rstrip(".") + " and do not add extra contact rounds."

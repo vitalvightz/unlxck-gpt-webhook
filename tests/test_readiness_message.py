@@ -59,7 +59,8 @@ def test_injury_worse_overrides_good_sleep_and_motivation_signals():
     assert adjustment.decision == "pull_back"
     assert adjustment.title == "Rehab only today."
     assert "injury is worse" in adjustment.reason
-    assert "sprinting" in adjustment.action
+    assert "sparring" in adjustment.action
+    assert "hard bag work" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -85,7 +86,8 @@ def test_poor_sleep_removes_one_set_or_reduces_volume():
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
     assert "Poor sleep" in adjustment.reason
-    assert "Remove 1 set" in adjustment.action
+    assert "Cut 1 round" in adjustment.action
+    assert "set" not in adjustment.message.lower()
     _assert_card_shape(adjustment)
 
 
@@ -97,8 +99,8 @@ def test_flat_body_caps_intensity():
 
     assert adjustment.decision == "modify"
     assert adjustment.title == "Intensity capped."
-    assert "Flat body" in adjustment.reason
-    assert "max-effort" in adjustment.action
+    assert "flat body" in adjustment.reason.lower()
+    assert "all-out work" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -110,8 +112,10 @@ def test_poor_sleep_plus_flat_body_gives_stronger_reduction():
 
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
-    assert "Poor sleep plus flat body" in adjustment.reason
-    assert "sprinting, plyos, sparring, and hard conditioning" in adjustment.action
+    assert "Poor sleep plus a flat body" in adjustment.reason
+    assert "sparring" in adjustment.action
+    assert "hard rounds" in adjustment.action
+    assert "conditioning finishers" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -123,8 +127,9 @@ def test_taper_produces_freshness_first_wording():
 
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
-    assert "freshness matters" in adjustment.reason
-    assert "fatigue-heavy accessories" in adjustment.action
+    assert "sharpness" in adjustment.reason
+    assert "speed" in adjustment.action
+    assert "timing" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -137,7 +142,7 @@ def test_taper_poor_flat_manageable_pain_pulls_back_without_modify_copy():
     assert adjustment.decision == "pull_back"
     assert "Pull back today." in adjustment.message
     assert "recovery day" in adjustment.message
-    assert "Skip the planned session" in adjustment.message
+    assert "Skip combat work" in adjustment.message
     assert "Keep sharp work only" not in adjustment.message
     assert "Remove 1 set" not in adjustment.message
     assert "fatigue-heavy accessories" not in adjustment.message
@@ -158,8 +163,43 @@ def test_repeated_poor_readiness_adds_stronger_warning():
     )
 
     assert adjustment.decision == "modify"
-    assert "recent check-ins" in adjustment.reason
-    assert "Cut volume and intensity" in adjustment.action
+    assert "body is not bouncing back" in adjustment.reason
+    assert "Cut rounds and intensity" in adjustment.action
+    _assert_card_shape(adjustment)
+
+
+def test_high_risk_combat_session_uses_combat_reduction_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "sparring" in adjustment.action
+    assert "hard rounds" in adjustment.action
+    assert "conditioning finishers" in adjustment.action
+    _assert_card_shape(adjustment)
+
+
+def test_flat_body_high_risk_uses_bag_or_max_output_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(body="flat"),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "hard bag rounds" in adjustment.action or "max-output conditioning" in adjustment.action
+    _assert_card_shape(adjustment)
+
+
+def test_manageable_pain_high_risk_uses_contact_protection_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(pain="manageable"),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "clinch pressure" in adjustment.action or "hard bag work" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -196,6 +236,23 @@ def test_past_fight_date_does_not_trigger_fight_week_message():
     _assert_card_shape(adjustment)
 
 
+def test_fight_week_uses_timing_speed_and_rhythm_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none", phase="GPP"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            active_plan={"fight_date": "2026-06-21"},
+            today_session=_session(title="Technical boxing rounds"),
+        ),
+    )
+
+    assert adjustment.decision == "train_as_planned"
+    assert adjustment.title == "Sharp work only."
+    assert "Fight week rewards freshness" in adjustment.reason
+    assert "timing, speed, and rhythm" in adjustment.action
+    _assert_card_shape(adjustment)
+
+
 def test_message_explains_change_reason_and_next_action_without_filler():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor", body="flat"),
@@ -209,3 +266,46 @@ def test_message_explains_change_reason_and_next_action_without_filler():
     assert "consider modifying" not in adjustment.message.lower()
     assert "based on your readiness" not in adjustment.message.lower()
     _assert_card_shape(adjustment)
+
+
+def test_readiness_messages_do_not_use_old_general_training_terms():
+    scenarios = [
+        (
+            ReadinessCheckin(sleep="poor"),
+            ReadinessContext(today_session=_session(title="Moderate strength")),
+        ),
+        (
+            ReadinessCheckin(sleep="poor"),
+            ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ),
+        (
+            ReadinessCheckin(body="flat"),
+            ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ),
+        (
+            ReadinessCheckin(pain="manageable"),
+            ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ),
+        (
+            ReadinessCheckin(sleep="poor", phase="TAPER"),
+            ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
+        ),
+        (
+            ReadinessCheckin(sleep="poor", body="flat", pain="manageable", phase="TAPER"),
+            ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
+        ),
+    ]
+    banned = (
+        "plyos",
+        "sprinting",
+        "heavy lower-body",
+        "tissue margin",
+        "recovery margin",
+        "fatigue-heavy accessories",
+        "Remove 1 set",
+    )
+
+    for checkin, context in scenarios:
+        message = build_readiness_adjustment(checkin, context).message
+        for phrase in banned:
+            assert phrase not in message

@@ -51,8 +51,8 @@ class TestTodayCheckin:
         assert body["recommendation_state"] == "modify"
         assert body["recommendation_reason"].splitlines() == [
             "Session reduced.",
-            "Poor sleep lowers recovery margin today.",
-            "Remove 1 set from loaded work and do not add extra conditioning.",
+            "Poor sleep means your body has less room to recover today.",
+            "Cut 1 round and do not add extra conditioning.",
         ]
         assert "poor_sleep" in body["triggers"]
         assert store.today_checkins["athlete-1"], "check-in row must persist"
