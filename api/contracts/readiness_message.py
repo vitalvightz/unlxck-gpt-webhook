@@ -255,10 +255,17 @@ def _intake_athlete(context: ReadinessContext) -> Mapping[str, Any]:
 def _sport_tokens(context: ReadinessContext) -> set[str]:
     values: list[Any] = []
     athlete = _intake_athlete(context)
-    values.extend(athlete.get("technical_style") or [])
-    values.extend(athlete.get("tactical_style") or [])
+    for val in (athlete.get("technical_style"), athlete.get("tactical_style")):
+        if isinstance(val, str):
+            values.append(val)
+        elif isinstance(val, Sequence):
+            values.extend(val)
     plan = context.active_plan or {}
-    values.extend(plan.get("technical_style") or [])
+    plan_tech = plan.get("technical_style")
+    if isinstance(plan_tech, str):
+        values.append(plan_tech)
+    elif isinstance(plan_tech, Sequence):
+        values.extend(plan_tech)
     text = " ".join(_clean(value).lower() for value in values if value)
     tokens = {part for part in text.replace("/", " ").replace(",", " ").split() if part}
     if "muay" in tokens or "thai" in tokens:
