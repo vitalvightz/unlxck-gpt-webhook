@@ -1826,7 +1826,10 @@ export function PlanIntakeForm() {
         onboarding_draft: nextDraft,
       });
 
-      replaceMe(mergeSavedOnboardingDraft(me, nextDraft, nextForm.athlete));
+      const nextMe = mergeSavedOnboardingDraft(me, nextDraft, nextForm.athlete);
+      if (nextMe) {
+        replaceMe(nextMe);
+      }
       lastSavedSnapshotRef.current = JSON.stringify(nextForm);
       setSaveStatus("saved");
       setLastSavedAt(Date.now());

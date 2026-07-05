@@ -736,7 +736,10 @@ function QuickBuildFormInner() {
           onboarding_draft: draft,
         });
 
-        replaceMe(mergeSavedOnboardingDraft(me, draft, planRequest.athlete));
+        const nextMe = mergeSavedOnboardingDraft(me, draft, planRequest.athlete);
+        if (nextMe) {
+          replaceMe(nextMe);
+        }
         if (!writePendingGenerationPayload(planRequest, "quick_build")) {
           setSubmitError("Unable to prepare the generation payload. Reload and try again.");
           return;
