@@ -24,7 +24,7 @@ export function hasProfileRefreshFailedWarning(job: WarningCarrier | null | unde
 // The admin banner above is for support/ops; this is for the athlete reading
 // their own plan.
 export const PROFILE_REFRESH_FAILED_ATHLETE_NOTICE =
-  "This plan was built from the intake you just submitted. We couldn't refresh your saved profile, so it may still show older details — update your profile in settings if anything's changed.";
+  "Built from your latest intake. Your saved profile couldn't be refreshed and may be outdated.";
 
 type PlanWithProfileRefreshFlag = {
   profile_refresh_failed?: boolean | null;
