@@ -225,8 +225,8 @@ export function mergeSavedOnboardingDraft(
     profile: {
       ...me.profile,
       full_name: athlete.full_name ?? me.profile.full_name,
-      technical_style: athlete.technical_style,
-      tactical_style: athlete.tactical_style,
+      technical_style: athlete.technical_style ?? me.profile.technical_style,
+      tactical_style: athlete.tactical_style ?? me.profile.tactical_style,
       stance: athlete.stance ?? me.profile.stance,
       professional_status: athlete.professional_status ?? me.profile.professional_status,
       record: athlete.record ?? me.profile.record,
