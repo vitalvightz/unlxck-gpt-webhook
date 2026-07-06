@@ -39,6 +39,36 @@ const BASE_STATE: TodayCommandView = {
   quick_actions: [],
 };
 
+const TAPER_REASON = [
+  "Sharp work only.",
+  "You are in taper, so sharpness matters more than extra work today.",
+  "Keep speed and timing work only; remove tiring rounds.",
+].join("\n");
+
+const MODIFY_REASON = [
+  "Session reduced.",
+  "Poor sleep before hard combat work raises injury risk today.",
+  "Skip sparring, hard rounds, and conditioning finishers.",
+].join("\n");
+
+const PULL_BACK_REASON = [
+  "Pull back today.",
+  "Several warnings are showing, so your body is not ready for hard combat work.",
+  "Skip combat work and use recovery or light mobility instead.",
+].join("\n");
+
+const INJURY_REASON = [
+  "Rehab only today.",
+  "The injury is worse, so hard combat work is not safe today.",
+  "No sparring, live rounds, clinch work, hard bag work, or conditioning.",
+].join("\n");
+
+const RED_FLAG_REASON = [
+  "No training today.",
+  "You selected a red flag symptom, so training is not safe.",
+  "Stop training and seek medical advice.",
+].join("\n");
+
 function installFetchMock(responseBody: unknown) {
   const calls: Array<{ input: string; init?: RequestInit }> = [];
   const originalFetch = globalThis.fetch;
@@ -78,60 +108,59 @@ test("decision banner is hidden before check-in", () => {
   assert.equal(getTodayDecisionBanner("not_checked_in"), null);
 });
 
-test("decision banner gives command-like copy for each checked-in state", () => {
-  assert.deepEqual(getTodayDecisionBanner("train_as_planned"), {
-    state: "train_as_planned",
-    title: "TRAIN AS PLANNED",
-    detail: "Readiness is acceptable. Complete today's prescribed session.",
-    action: "Keep the prescribed dose.",
-    safety: undefined,
-    tone: "green",
-  });
-  assert.deepEqual(getTodayDecisionBanner("modify"), {
-    state: "modify",
-    title: "MODIFY SESSION",
-    detail: "Use the safer version today. Remove high-impact work and keep output controlled.",
-    action: "Keep the work clean and do not chase volume.",
-    safety: undefined,
-    tone: "amber",
-  });
-  assert.deepEqual(getTodayDecisionBanner("pull_back"), {
-    state: "pull_back",
-    title: "PULL BACK TODAY",
-    detail: "Reduce load and intensity. Keep the session technical. Stop if pain rises.",
-    action: "Use recovery, mobility, or coach-guided alternatives.",
-    safety: undefined,
-    tone: "red",
-  });
+test("preview session shows PREVIEW instead of GO and stays neutral", () => {
+  const banner = getTodayDecisionBanner("train_as_planned", TAPER_REASON, { isPreview: true });
+  const uncheckedPreview = getTodayDecisionBanner("not_checked_in", null, { isPreview: true });
+
+  assert.equal(banner?.chip, "PREVIEW");
+  assert.notEqual(banner?.chip, "GO");
+  assert.equal(banner?.displayState, "preview");
+  assert.equal(banner?.tone, "neutral");
+  assert.equal(uncheckedPreview?.chip, "PREVIEW");
+  assert.equal(uncheckedPreview?.title, "Session preview");
+  assert.equal(uncheckedPreview?.detail.includes("check-in is clear"), false);
 });
 
-test("decision banner prefers the backend readiness reason when present", () => {
-  const banner = getTodayDecisionBanner("pull_back", "Sleep was poor and pain is high today.");
-  assert.equal(banner?.title, "PULL BACK TODAY");
-  assert.equal(banner?.detail, "Sleep was poor and pain is high today.");
-  assert.equal(banner?.action, "Use recovery, mobility, or coach-guided alternatives.");
-  assert.equal(banner?.tone, "red");
+test("actionable recommendation states show the correct coach chips", () => {
+  const go = getTodayDecisionBanner("train_as_planned", TAPER_REASON);
+  const adjust = getTodayDecisionBanner("modify", MODIFY_REASON);
+  const pullBack = getTodayDecisionBanner("pull_back", PULL_BACK_REASON);
+
+  assert.equal(go?.chip, "GO");
+  assert.equal(go?.tone, "green");
+  assert.equal(adjust?.chip, "ADJUST");
+  assert.equal(adjust?.tone, "amber");
+  assert.equal(pullBack?.chip, "PULL BACK");
+  assert.equal(pullBack?.tone, "red");
 });
 
-test("decision banner parses backend adjustment card lines", () => {
-  const banner = getTodayDecisionBanner(
+test("safety pull-back copy maps to rehab-only or no-training chips", () => {
+  const injury = getTodayDecisionBanner("pull_back", INJURY_REASON);
+  const highPain = getTodayDecisionBanner(
     "pull_back",
     [
-      "No training today.",
-      "You selected a red flag symptom, so training is not safe.",
-      "Stop training and seek medical advice.",
-      "Use medical guidance before returning to hard work.",
+      "Rehab only today.",
+      "Pain is high, so contact and impact are not safe today.",
+      "Use rehab or easy mobility only; skip sparring, pads, bag work, and conditioning.",
     ].join("\n"),
   );
+  const redFlag = getTodayDecisionBanner("pull_back", RED_FLAG_REASON);
 
-  assert.deepEqual(banner, {
-    state: "pull_back",
-    title: "No training today.",
-    detail: "You selected a red flag symptom, so training is not safe.",
-    action: "Stop training and seek medical advice.",
-    safety: "Use medical guidance before returning to hard work.",
-    tone: "red",
-  });
+  assert.equal(injury?.chip, "REHAB ONLY");
+  assert.equal(injury?.blocksTraining, true);
+  assert.equal(highPain?.chip, "REHAB ONLY");
+  assert.equal(redFlag?.chip, "NO TRAINING");
+  assert.equal(redFlag?.title, "No training today");
+});
+
+test("decision banner removes trailing title stops and shortens taper display copy", () => {
+  const taper = getTodayDecisionBanner("train_as_planned", TAPER_REASON);
+  const modified = getTodayDecisionBanner("modify", MODIFY_REASON);
+
+  assert.equal(taper?.title, "Sharp taper work");
+  assert.equal(taper?.detail, "Taper phase: sharpness over extra rounds.");
+  assert.equal(taper?.action, "Keep speed and timing clean. Remove tiring rounds.");
+  assert.equal(modified?.title, "Session reduced");
 });
 
 test("check-in payload does not include a frontend recommendation", () => {
@@ -206,9 +235,9 @@ test("missing phase does not silently default an active plan check-in to GPP", (
 
 test("recommendation copy maps valid backend states", () => {
   assert.equal(getRecommendationCopy("train_as_planned").label, "Train as planned");
-  assert.equal(getRecommendationCopy("modify").label, "Modify");
+  assert.equal(getRecommendationCopy("modify").label, "Adjust");
   assert.equal(getRecommendationCopy("pull_back").label, "Pull back");
-  assert.match(getRecommendationCopy("pull_back").actionText, /Reduce load today/);
+  assert.match(getRecommendationCopy("pull_back").actionText, /light mobility/);
 });
 
 test("session empty and completion action states are mapped", () => {
@@ -345,6 +374,60 @@ test("submit completion calls the Today completion endpoint", async () => {
     assert.equal(mock.calls[0].init?.method, "POST");
   } finally {
     mock.restore();
+  }
+});
+
+test("Today session card uses short preview wording and Next session label", () => {
+  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
+
+  assert.equal(source.includes('kicker: "Next session"'), true);
+  assert.equal(source.includes('kicker: "Next scheduled session"'), false);
+  assert.equal(
+    source.includes("Preview only. Completion opens on the matched training day."),
+    true,
+  );
+});
+
+test("Today recommendation styles keep preview neutral, modify amber, and pull-back red", () => {
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  const neutralBlock = css.match(/\.today-decision-banner\[data-tone="neutral"\]\s*{[^}]+}/)?.[0] ?? "";
+  const amberBlock = css.match(/\.today-decision-banner\[data-tone="amber"\]\s*{[^}]+}/)?.[0] ?? "";
+  const redBlock = css.match(/\.today-decision-banner\[data-tone="red"\]\s*{[^}]+}/)?.[0] ?? "";
+
+  assert.match(neutralBlock, /border-left-color/);
+  assert.doesNotMatch(neutralBlock, /#ff6b75|#e23a4c|219,\s*47,\s*64/);
+  assert.match(amberBlock, /#f1bd61|214,\s*175,\s*106/);
+  assert.doesNotMatch(amberBlock, /#ff6b75|#e23a4c|219,\s*47,\s*64/);
+  assert.match(redBlock, /#ff6b75|219,\s*47,\s*64/);
+});
+
+test("readiness display messages do not include banned old wording", () => {
+  const banners = [
+    getTodayDecisionBanner("train_as_planned", TAPER_REASON),
+    getTodayDecisionBanner("modify", MODIFY_REASON),
+    getTodayDecisionBanner("pull_back", PULL_BACK_REASON),
+    getTodayDecisionBanner("pull_back", INJURY_REASON),
+    getTodayDecisionBanner("pull_back", RED_FLAG_REASON),
+  ];
+  const text = banners
+    .map((banner) => [banner?.title, banner?.detail, banner?.action, banner?.safety].filter(Boolean).join(" "))
+    .join(" ")
+    .toLowerCase();
+
+  for (const banned of [
+    "prescribed dose",
+    "readiness state",
+    "modify session",
+    "tissue margin",
+    "recovery margin",
+    "fatigue-heavy accessories",
+    "max-effort",
+    "sprinting",
+    "plyos",
+    "heavy lower-body",
+    "remove 1 set",
+  ]) {
+    assert.equal(text.includes(banned), false, banned);
   }
 });
 

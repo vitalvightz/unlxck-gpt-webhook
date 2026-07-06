@@ -44,7 +44,7 @@ export function normalizeTodayPhase(phase: string | null | undefined): TodayChec
 export function getRecommendationCopy(state: TodayRecommendationState): {
   label: string;
   icon: string;
-  tone: string;
+  tone: TodayDecisionTone;
   actionText: string;
 } {
   if (state === "train_as_planned") {
@@ -52,36 +52,48 @@ export function getRecommendationCopy(state: TodayRecommendationState): {
       label: "Train as planned",
       icon: "GO",
       tone: "green",
-      actionText: "Execute the planned work and keep the session clean.",
+      actionText: "Start session and keep the work clean.",
     };
   }
   if (state === "modify") {
     return {
-      label: "Modify",
-      icon: "MOD",
+      label: "Adjust",
+      icon: "ADJUST",
       tone: "amber",
-      actionText: "Use the reduced option, keep quality high, and avoid chasing volume.",
+      actionText: "Follow adjusted work and skip extras.",
     };
   }
   if (state === "pull_back") {
     return {
       label: "Pull back",
-      icon: "STOP",
+      icon: "PULL",
       tone: "red",
-      actionText: "Reduce load today. Use recovery, mobility, or coach-guided alternatives.",
+      actionText: "Use recovery or light mobility today.",
     };
   }
   return {
     label: "Not checked in yet",
     icon: "CHK",
     tone: "neutral",
-    actionText: "Submit the fast check-in to unlock today's backend recommendation.",
+    actionText: "Submit the fast check-in to unlock today's recommendation.",
   };
 }
 
+export type TodayDecisionTone = "green" | "amber" | "red" | "neutral";
+
+export type TodayDecisionDisplayState =
+  | "go"
+  | "adjust"
+  | "pull_back"
+  | "rehab_only"
+  | "no_training"
+  | "preview";
+
 export type TodayDecisionBanner = {
   state: TodayRecommendationState;
-  /** Short command headline, e.g. "PULL BACK TODAY". */
+  displayState: TodayDecisionDisplayState;
+  chip: "GO" | "ADJUST" | "PULL BACK" | "REHAB ONLY" | "NO TRAINING" | "PREVIEW";
+  /** Short coach-card headline, e.g. "Pull back today". */
   title: string;
   /** One clear reason sentence. Prefers the backend reason when present. */
   detail: string;
@@ -89,31 +101,39 @@ export type TodayDecisionBanner = {
   action?: string;
   /** Optional safety sentence, shown only when the backend sends one. */
   safety?: string;
-  tone: string;
+  tone: TodayDecisionTone;
+  blocksTraining: boolean;
 };
 
 const DECISION_BANNERS: Record<
   Exclude<TodayRecommendationState, "not_checked_in">,
-  { title: string; detail: string; action: string; tone: string }
+  { title: string; detail: string; action: string; tone: TodayDecisionTone }
 > = {
   train_as_planned: {
-    title: "TRAIN AS PLANNED",
-    detail: "Readiness is acceptable. Complete today's prescribed session.",
-    action: "Keep the prescribed dose.",
+    title: "Sharp work ready",
+    detail: "Your check-in is clear for today's combat work.",
+    action: "Start session and keep the work clean.",
     tone: "green",
   },
   modify: {
-    title: "MODIFY SESSION",
-    detail: "Use the safer version today. Remove high-impact work and keep output controlled.",
-    action: "Keep the work clean and do not chase volume.",
+    title: "Session reduced",
+    detail: "Hard combat work needs to be controlled today.",
+    action: "Follow adjusted work and skip extras.",
     tone: "amber",
   },
   pull_back: {
-    title: "PULL BACK TODAY",
-    detail: "Reduce load and intensity. Keep the session technical. Stop if pain rises.",
-    action: "Use recovery, mobility, or coach-guided alternatives.",
+    title: "Pull back today",
+    detail: "Your body is not ready for hard combat work.",
+    action: "Use recovery or light mobility instead.",
     tone: "red",
   },
+};
+
+const PREVIEW_BANNER = {
+  title: "Session preview",
+  detail: "This session is not open today.",
+  action: "Completion opens on the matched training day.",
+  tone: "neutral" as const,
 };
 
 function parseBackendAdjustment(reason: string | null | undefined): {
@@ -148,6 +168,142 @@ function parseBackendAdjustment(reason: string | null | undefined): {
   return {};
 }
 
+function stripTitleStop(value: string | undefined): string | undefined {
+  const text = value?.trim();
+  if (!text) {
+    return undefined;
+  }
+  return text.replace(/\.+$/g, "").trim();
+}
+
+function normalizeTitleKey(value: string | undefined): string {
+  return stripTitleStop(value)?.toLowerCase() ?? "";
+}
+
+function normalizeBackendAdjustment(
+  backend: ReturnType<typeof parseBackendAdjustment>,
+): ReturnType<typeof parseBackendAdjustment> {
+  const title = stripTitleStop(backend.title);
+  const detail = backend.detail?.trim();
+  const action = backend.action?.trim();
+  const safety = backend.safety?.trim();
+
+  if (
+    normalizeTitleKey(backend.title) === "sharp work only" &&
+    detail === "You are in taper, so sharpness matters more than extra work today." &&
+    action === "Keep speed and timing work only; remove tiring rounds."
+  ) {
+    return {
+      title: "Sharp taper work",
+      detail: "Taper phase: sharpness over extra rounds.",
+      action: "Keep speed and timing clean. Remove tiring rounds.",
+      safety,
+    };
+  }
+
+  return {
+    title,
+    detail,
+    action,
+    safety,
+  };
+}
+
+function getSafetyDisplayState(
+  state: TodayRecommendationState,
+  backend: ReturnType<typeof parseBackendAdjustment>,
+): TodayDecisionDisplayState | null {
+  if (state !== "pull_back") {
+    return null;
+  }
+
+  const titleKey = normalizeTitleKey(backend.title);
+  const text = [backend.title, backend.detail, backend.action, backend.safety]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    titleKey === "no training today" ||
+    text.includes("red flag") ||
+    text.includes("seek medical advice")
+  ) {
+    return "no_training";
+  }
+
+  if (
+    titleKey === "rehab only today" ||
+    text.includes("injury is worse") ||
+    text.includes("pain is high")
+  ) {
+    return "rehab_only";
+  }
+
+  return null;
+}
+
+function getDisplayState(
+  state: TodayRecommendationState,
+  backend: ReturnType<typeof parseBackendAdjustment>,
+  isPreview: boolean,
+): TodayDecisionDisplayState | null {
+  const safetyState = getSafetyDisplayState(state, backend);
+  if (safetyState) {
+    return safetyState;
+  }
+
+  if (isPreview) {
+    return "preview";
+  }
+
+  if (state === "train_as_planned") {
+    return "go";
+  }
+  if (state === "modify") {
+    return "adjust";
+  }
+  if (state === "pull_back") {
+    return "pull_back";
+  }
+  return null;
+}
+
+function getDisplayTone(displayState: TodayDecisionDisplayState): TodayDecisionTone {
+  if (displayState === "go") {
+    return "green";
+  }
+  if (displayState === "adjust") {
+    return "amber";
+  }
+  if (displayState === "preview") {
+    return "neutral";
+  }
+  return "red";
+}
+
+function getDisplayChip(displayState: TodayDecisionDisplayState): TodayDecisionBanner["chip"] {
+  if (displayState === "go") {
+    return "GO";
+  }
+  if (displayState === "adjust") {
+    return "ADJUST";
+  }
+  if (displayState === "pull_back") {
+    return "PULL BACK";
+  }
+  if (displayState === "rehab_only") {
+    return "REHAB ONLY";
+  }
+  if (displayState === "no_training") {
+    return "NO TRAINING";
+  }
+  return "PREVIEW";
+}
+
+function displayBlocksTraining(displayState: TodayDecisionDisplayState): boolean {
+  return displayState === "pull_back" || displayState === "rehab_only" || displayState === "no_training";
+}
+
 /**
  * The compact decision banner shown above today's session blocks once the
  * athlete has checked in. Returns null before check-in (no decision yet). The
@@ -158,19 +314,33 @@ function parseBackendAdjustment(reason: string | null | undefined): {
 export function getTodayDecisionBanner(
   state: TodayRecommendationState,
   reason?: string | null,
+  options: { isPreview?: boolean } = {},
 ): TodayDecisionBanner | null {
-  if (state === "not_checked_in") {
+  const backend = normalizeBackendAdjustment(parseBackendAdjustment(reason));
+  const displayState = getDisplayState(state, backend, Boolean(options.isPreview));
+
+  if (!displayState) {
     return null;
   }
-  const banner = DECISION_BANNERS[state];
-  const backend = parseBackendAdjustment(reason);
+
+  // Past the preview check, getDisplayState only returns a truthy display
+  // state for a checked-in recommendation (not_checked_in yields "preview" or
+  // null), so state is guaranteed to be a DECISION_BANNERS key here.
+  const banner =
+    displayState === "preview"
+      ? PREVIEW_BANNER
+      : DECISION_BANNERS[state as Exclude<TodayRecommendationState, "not_checked_in">];
+
   return {
     state,
+    displayState,
+    chip: getDisplayChip(displayState),
     title: backend.title || banner.title,
     detail: backend.detail || banner.detail,
     action: backend.action || banner.action,
     safety: backend.safety,
-    tone: banner.tone,
+    tone: getDisplayTone(displayState),
+    blocksTraining: displayBlocksTraining(displayState),
   };
 }
 
