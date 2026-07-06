@@ -92,7 +92,8 @@ _CONDITION_STRIP = re.compile(
     r"sprain(?:ed|ing)?|strain(?:ed|ing)?|pulled|tendon[ai]tis|tendinopathy|"
     r"imping(?:ed|ement)|instability|unstable|inflam(?:ed|mation|matory)|"
     r"swollen|swelling|stiff(?:ness)?|tight(?:ness)?|sore(?:ness)?|"
-    r"ach(?:e|es|ing|y)|pain(?:ful)?|hurts?|hurting|abrasion|graze|blister|laceration)\b",
+    r"ach(?:e|es|ing|y)|pain(?:ful)?|hurts?|hurting|abrasion|graz(?:e|ed|ing)|"
+    r"blister(?:s|ed)?|lacerat(?:e|ed|ion)|cuts?|wound(?:s|ed)?)\b",
     re.I,
 )
 
@@ -163,6 +164,15 @@ def build_injury_label(body_area: object, description: object) -> str:
             scored_location.replace("_", " ") if scored_location and scored_location != "unspecified" else "",
         ]
         location = " ".join(part for part in parts if part).strip()
+
+    # Safety net that ties the location cleaner back to the scorer: the scorer can
+    # recognise a condition word (e.g. "cut") that the curated strip list does not
+    # remove, which would double it up ("cut neck cut"). Drop any location token
+    # that IS the condition — canonical noun or matched key — so the condition is
+    # only ever appended once, for any injury type, wherever it sits in the phrase.
+    if condition and location:
+        drop = {condition.lower(), condition_key.lower()}
+        location = " ".join(word for word in location.split() if word.lower() not in drop).strip()
 
     if condition and location and not location.endswith(condition):
         label = f"{location} {condition}"

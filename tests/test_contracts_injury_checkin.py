@@ -186,6 +186,21 @@ def test_build_injury_label_normalizes_condition_and_location():
     assert build_injury_label("", "") == "injury"
 
 
+def test_build_injury_label_never_doubles_the_condition_word():
+    # Regression: the scorer recognises "cut", but the curated location strip
+    # list once omitted it, so the surviving "cut" got the condition appended
+    # again ("Cut neck cut"). The condition must appear exactly once, wherever it
+    # sits in the athlete's phrasing.
+    assert build_injury_label("cut neck", "cut neck") == "Neck cut"
+    assert build_injury_label("cut on left eyebrow", "cut on left eyebrow") == "Left eyebrow cut"
+    # Inflected surface-injury words are stripped from the location too, so the
+    # canonical noun is never doubled by an inflection the strip list missed.
+    assert build_injury_label("grazed knuckles", "grazed knuckles") == "Knuckles graze"
+    # A condition word must never be the *only* thing left after stripping it out
+    # of the location — the canonical noun still labels the injury.
+    assert build_injury_label("cut", "cut") == "Cut"
+
+
 def test_build_injury_label_never_leaks_free_text_notes():
     # With no structured body_area, the location must come from the scorer's
     # structured side + location — never from cleaning the free-text description,
