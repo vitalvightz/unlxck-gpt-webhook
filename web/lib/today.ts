@@ -173,11 +173,36 @@ function stripTitleStop(value: string | undefined): string | undefined {
   if (!text) {
     return undefined;
   }
-  return text.replace(/\.+$/g, "").trim();
+  return text.replace(/[.!?]+$/g, "").trim();
 }
 
 function normalizeTitleKey(value: string | undefined): string {
   return stripTitleStop(value)?.toLowerCase() ?? "";
+}
+
+/**
+ * Guard against the title and the body repeating the same command. When the
+ * first sentence of `detail` just restates the title — e.g. title "Pull back
+ * today" with detail "Pull back today. Several warnings are showing…" — drop
+ * that leading sentence so the card never shows the command twice. Pure display
+ * cleanup: the meaning is unchanged, and nothing is removed when it would leave
+ * the body empty. Applies to every recommendation state.
+ */
+function stripDuplicateLeadSentence(title: string, detail: string): string {
+  const trimmed = detail.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  const match = trimmed.match(/^([^.!?]*[.!?])\s+([\s\S]+)$/);
+  if (!match) {
+    return trimmed;
+  }
+  const [, firstSentence, rest] = match;
+  const remainder = rest.trim();
+  if (normalizeTitleKey(firstSentence) === normalizeTitleKey(title) && remainder) {
+    return remainder;
+  }
+  return trimmed;
 }
 
 function normalizeBackendAdjustment(
@@ -331,12 +356,15 @@ export function getTodayDecisionBanner(
       ? PREVIEW_BANNER
       : DECISION_BANNERS[state as Exclude<TodayRecommendationState, "not_checked_in">];
 
+  const title = backend.title || banner.title;
+  const detail = stripDuplicateLeadSentence(title, backend.detail || banner.detail);
+
   return {
     state,
     displayState,
     chip: getDisplayChip(displayState),
-    title: backend.title || banner.title,
-    detail: backend.detail || banner.detail,
+    title,
+    detail,
     action: backend.action || banner.action,
     safety: backend.safety,
     tone: getDisplayTone(displayState),
@@ -530,4 +558,21 @@ export function getVisibleRiskWatch(risks: TodayCommandView["risk_watch"]): {
 } {
   const visible = risks.slice(0, 2);
   return { visible, overflow: Math.max(0, risks.length - visible.length) };
+}
+
+/**
+ * Display copy for a risk-watch row. Keyed on the backend category so the row
+ * never parrots the main recommendation word-for-word ("Recommendation: pull
+ * back today.") — it names the consequence instead ("Hard combat work is
+ * blocked today."). Falls back to the backend text for categories without an
+ * override. Pure display transform — the stored risk data is untouched.
+ */
+const RISK_WATCH_TEXT_OVERRIDES: Record<string, string> = {
+  stop_red_flag: "Hard combat work is blocked today.",
+  phase_taper: "Protect freshness. Do not chase fatigue.",
+};
+
+export function getRiskWatchText(risk: { category?: string | null; text?: string | null }): string {
+  const key = (risk.category ?? "").trim();
+  return RISK_WATCH_TEXT_OVERRIDES[key] || risk.text?.trim() || "Monitor this before training.";
 }

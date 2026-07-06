@@ -46,6 +46,7 @@ import {
   completionRequiresReviewFields,
   getCompletionLabel,
   getRecommendationCopy,
+  getRiskWatchText,
   getSessionFocus,
   getSessionTitle,
   getTodayDecisionBanner,
@@ -305,35 +306,22 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
     return null;
   }
   const { visible, overflow } = getVisibleRiskWatch(risks);
-  const overflowRisks = risks.slice(visible.length);
+  const shown = isExpanded ? risks : visible;
   return (
     <section className="today-risk-watch" aria-label="Risk watch">
-      {visible.map((risk) => (
-        <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
-          <span className="today-risk-icon" aria-hidden="true">
-            !
-          </span>
-          <div>
-            <p className="today-risk-label">{risk.label}</p>
-            <p className="today-risk-text">{risk.text || "Monitor this before training."}</p>
-          </div>
-        </article>
-      ))}
-      {isExpanded ? (
-        <div id={overflowId} className="today-risk-overflow">
-          {overflowRisks.map((risk) => (
-            <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
-              <span className="today-risk-icon" aria-hidden="true">
-                !
-              </span>
-              <div>
-                <p className="today-risk-label">{risk.label}</p>
-                <p className="today-risk-text">{risk.text || "Monitor this before training."}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : null}
+      <div id={overflowId} className="today-risk-list">
+        {shown.map((risk, index) => (
+          <article key={`${risk.category}-${risk.label}-${index}`} className="today-risk-item" data-tone={risk.tone}>
+            <span className="today-risk-icon" aria-hidden="true">
+              !
+            </span>
+            <div className="today-risk-copy">
+              <p className="today-risk-label">{risk.label}</p>
+              <p className="today-risk-text">{getRiskWatchText(risk)}</p>
+            </div>
+          </article>
+        ))}
+      </div>
       {overflow > 0 ? (
         <button
           type="button"
@@ -343,7 +331,7 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
           data-expanded={isExpanded ? "true" : "false"}
           onClick={() => setIsExpanded((current) => !current)}
         >
-          {isExpanded ? "Show less" : `+${overflow} more`}
+          {isExpanded ? "Show less" : `+${overflow} more warning${overflow > 1 ? "s" : ""}`}
         </button>
       ) : null}
     </section>

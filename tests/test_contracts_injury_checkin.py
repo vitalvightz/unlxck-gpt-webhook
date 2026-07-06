@@ -11,7 +11,19 @@ from api.contracts.injury_checkin import (
     build_injury_label,
     open_injury_flag_risks,
     reconcile_injury_checkin,
+    _TRIAGE_DISPLAY_NOUN,
 )
+
+
+# Action/verb words that must never survive in the LOCATION half of a label
+# (they belong to the type noun at the end, e.g. "tear" in "ACL tear").
+_LEAK_WORDS = {
+    "torn", "tore", "snapped", "snap", "popped", "pop", "blown", "broke", "broken",
+    "cracked", "shattered", "dislocated", "fractured", "ruptured", "sprained", "strained",
+}
+
+# Known punctuation edge: redundant with "ko'd" / "knocked out", which do fire.
+_KNOWN_UNDETECTED = {"k.o.'d"}
 
 
 def _declare(**kwargs) -> DeclaredInjury:
@@ -184,6 +196,125 @@ def test_build_injury_label_normalizes_condition_and_location():
     assert build_injury_label("left wrist", "left wrist") == "Left wrist"
     # Nothing to label.
     assert build_injury_label("", "") == "injury"
+
+
+def test_build_injury_label_never_doubles_the_condition_word():
+    # Regression: the scorer recognises "cut", but the curated location strip
+    # list once omitted it, so the surviving "cut" got the condition appended
+    # again ("Cut neck cut"). The condition must appear exactly once, wherever it
+    # sits in the athlete's phrasing.
+    assert build_injury_label("cut neck", "cut neck") == "Neck cut"
+    assert build_injury_label("cut on left eyebrow", "cut on left eyebrow") == "Left eyebrow cut"
+    # Inflected surface-injury words are stripped from the location too, so the
+    # canonical noun is never doubled by an inflection the strip list missed.
+    assert build_injury_label("grazed knuckles", "grazed knuckles") == "Knuckles graze"
+    # A condition word must never be the *only* thing left after stripping it out
+    # of the location — the canonical noun still labels the injury.
+    assert build_injury_label("cut", "cut") == "Cut"
+
+
+def test_build_injury_label_is_clean_for_every_injury_type():
+    # One representative athlete phrase per canonical type: the label must be a
+    # clean "<location> <type-noun>" with no leaked descriptor/synonym words and
+    # no doubled condition. Locks in map-driven stripping across every type.
+    cases = {
+        # rehab types
+        "sprained ankle": "Ankle sprain",
+        "rolled ankle": "Ankle sprain",
+        "pulled hamstring": "Hamstring strain",
+        "calf cramp": "Calf strain",
+        "tight hip": "Hip tightness",
+        "scraped knee": "Knee abrasion",
+        "mat burn on elbow": "Elbow abrasion",
+        "cut lip": "Lip cut",
+        "nick on eyebrow": "Eyebrow cut",
+        "gash on shin": "Shin laceration",
+        "grazed knuckles": "Knuckles graze",
+        "scratch on cheek": "Cheek graze",
+        "blister on heel": "Heel blister",
+        "bruised thigh": "Thigh bruise",
+        "corked calf": "Calf bruise",
+        "swollen knee": "Knee swelling",
+        "achilles tendonitis": "Achilles tendonitis",
+        "jumpers knee": "Knee tendonitis",
+        "shoulder impingement": "Shoulder impingement",
+        "hip pinch": "Hip impingement",
+        "unstable shoulder": "Shoulder instability",
+        "stiff neck": "Neck stiffness",
+        "frozen shoulder": "Shoulder stiffness",
+        "knee pain": "Knee pain",
+        "sore quads": "Quads soreness",
+        "hyperextended elbow": "Elbow hyperextension",
+        # structural / triage types
+        "dislocated shoulder": "Shoulder dislocation",
+        "subluxation shoulder": "Shoulder dislocation",
+        "fractured collarbone": "Collarbone fracture",
+        # a concussion carries no body location and never doubles its own word
+        "concussed": "Concussion",
+        "got rocked": "Concussion",
+        "head knock": "Concussion",
+        # tears / ruptures keep their type noun; named ligaments show the type alone
+        "knee tendon tear": "Knee tendon rupture",
+        "torn tendon": "Tendon rupture",
+        "acl tear": "ACL tear",
+        "torn acl": "ACL tear",
+        "mcl tear": "MCL tear",
+        "torn ligament": "Ligament tear",
+        "muscle tear": "Muscle tear",
+        "torn hamstring": "Hamstring tear",
+        "snapped achilles": "Achilles rupture",
+        "achilles rupture": "Achilles rupture",
+    }
+    for phrase, expected in cases.items():
+        assert build_injury_label(phrase, phrase) == expected, phrase
+
+
+def test_every_triage_category_has_a_display_noun():
+    # Map-driven: any triage category the system can emit MUST have a display noun,
+    # otherwise a detected tear/rupture/fracture would render with no type in the
+    # label. Adding a new category to TRIAGE_CATEGORY_MAP without a noun fails here.
+    from fightcamp.injury_synonyms import TRIAGE_CATEGORY_MAP
+
+    missing = sorted(set(TRIAGE_CATEGORY_MAP.values()) - set(_TRIAGE_DISPLAY_NOUN))
+    assert missing == [], f"triage categories with no display noun: {missing}"
+
+
+def test_every_structural_phrase_is_urgent_and_cleanly_labelled():
+    # Map-driven contract over the WHOLE structural/triage vocabulary: every phrase
+    # the maps know must (1) flag urgent and (2) produce a clean label whose
+    # location half carries no leftover action verb. Adding a new phrase to either
+    # map without wiring it through the label builder fails here.
+    from fightcamp.injury_scoring import score_injury_phrase
+    from fightcamp.injury_synonyms import STRUCTURAL_RED_FLAG_MAP, TRIAGE_CATEGORY_MAP
+
+    phrases = sorted(set(STRUCTURAL_RED_FLAG_MAP) | set(TRIAGE_CATEGORY_MAP))
+    not_urgent, leaked = [], []
+    for phrase in phrases:
+        if phrase in _KNOWN_UNDETECTED:
+            continue
+        score = score_injury_phrase(f"{phrase} {phrase}")
+        if "urgent" not in score["flags"]:
+            not_urgent.append(phrase)
+        label = build_injury_label(phrase, phrase)
+        # The type noun is the final word(s); the location half is everything before
+        # it and must not contain an action verb like "torn"/"snapped".
+        location_tokens = set(label.lower().split()[:-1])
+        if location_tokens & _LEAK_WORDS:
+            leaked.append((phrase, label))
+    assert not_urgent == [], f"structural phrases not flagged urgent: {not_urgent}"
+    assert leaked == [], f"action verbs leaked into location: {leaked}"
+
+
+def test_build_injury_label_recognizes_lay_fracture_words():
+    # Regression: fracture words used to be recognised only in the exact phrase
+    # "broken bone", so "broken collarbone" lost its type and read as a bare
+    # "Collarbone". Lay fracture words are now detected with any body part, and a
+    # structural injury still surfaces its display noun via the triage category.
+    assert build_injury_label("broken collarbone", "broken collarbone") == "Collarbone fracture"
+    assert build_injury_label("broke my collarbone", "broke my collarbone") == "Collarbone fracture"
+    assert build_injury_label("broken nose", "broken nose") == "Nose fracture"
+    assert build_injury_label("cracked rib", "cracked rib") == "Rib fracture"
+    assert build_injury_label("shattered wrist", "shattered wrist") == "Wrist fracture"
 
 
 def test_build_injury_label_never_leaks_free_text_notes():

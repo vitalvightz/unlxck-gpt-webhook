@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -20,9 +20,11 @@ import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatAppDate } from "@/lib/date-format";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import {
+  getRiskWatchText,
   getSessionDayLabel,
   getSessionFocus,
   getSessionTitle,
+  getTodayDecisionBanner,
   hasTodaySession,
 } from "@/lib/today";
 import type { PlanSummary, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
@@ -267,6 +269,55 @@ function enrichConfirmedActivePlan(
   };
 }
 
+/**
+ * Overview risk watch. Shows the two highest-priority flags, with any extras
+ * behind an in-place "+N more" toggle so the card expands smoothly instead of
+ * routing away or truncating. Row copy runs through getRiskWatchText so a flag
+ * never parrots the main recommendation word-for-word.
+ */
+function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watch"] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const overflowId = useId();
+
+  if (!risks.length) {
+    return (
+      <article className="status-card overview-command-card overview-risk-card">
+        <p className="status-label">Risk watch</p>
+        <p className="muted">No risk flags from today&apos;s command view.</p>
+      </article>
+    );
+  }
+
+  const visible = risks.slice(0, 2);
+  const overflow = risks.length - visible.length;
+  const shown = isExpanded ? risks : visible;
+
+  return (
+    <article className="status-card overview-command-card overview-risk-card">
+      <p className="status-label">Risk watch</p>
+      <div id={overflowId} className="overview-risk-list">
+        {shown.map((risk, index) => (
+          <div key={`${risk.category}-${risk.label}-${index}`} className="overview-risk-row" data-tone={risk.tone}>
+            <span className="overview-risk-row-label">{humanizeIfRawEnum(risk.label) || risk.label}</span>
+            <span className="overview-risk-row-text">{getRiskWatchText(risk)}</span>
+          </div>
+        ))}
+      </div>
+      {overflow > 0 ? (
+        <button
+          type="button"
+          className="overview-risk-more"
+          aria-controls={overflowId}
+          aria-expanded={isExpanded}
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          {isExpanded ? "Show less" : `+${overflow} more warning${overflow > 1 ? "s" : ""}`}
+        </button>
+      ) : null}
+    </article>
+  );
+}
+
 export default function HomePage() {
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
@@ -451,27 +502,33 @@ export default function HomePage() {
         ? "Open Today for the matched session."
         : "Generate a plan to see your next session.";
     const risks = commandState?.risk_watch ?? [];
-    const visibleRisks = risks.slice(0, 2);
-    const riskOverflow = Math.max(0, risks.length - visibleRisks.length);
     const recommendation = commandState?.today?.recommendation_state ?? "not_checked_in";
-    const todayStateLabel = recommendation === "train_as_planned"
-      ? "Train as planned"
-      : recommendation === "modify"
-        ? "Modify today"
-        : recommendation === "pull_back"
-          ? "Pull back today"
-          : "Check in required";
-    // Decision tone drives the colour accents on the command cards (matches Today).
+    // Reuse the same decision framing as the Today screen so the title, the
+    // deduped body copy, and the block/allow meaning stay identical across
+    // screens. Null before check-in (no decision yet).
+    const decisionBanner = getTodayDecisionBanner(
+      recommendation,
+      commandState?.today?.recommendation_reason ?? null,
+    );
+    const decisionTitle = decisionBanner?.title ?? "Check in required";
+    const decisionLines = decisionBanner
+      ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
+      : ["Submit today's fast check-in to unlock your training decision."];
+    const decisionSafety = decisionBanner?.safety;
+    const decisionBlocks = decisionBanner?.blocksTraining ?? false;
+    // Decision tone drives the colour accents on the decision card (matches
+    // Today). Neutral/preview carries no accent — the next-session preview stays
+    // grey and is never tinted red just because today is a pull-back.
     const decisionTone =
-      recommendation === "train_as_planned"
-        ? "green"
-        : recommendation === "modify"
-          ? "amber"
-          : recommendation === "pull_back"
-            ? "red"
-            : undefined;
+      decisionBanner && decisionBanner.tone !== "neutral" ? decisionBanner.tone : undefined;
     const primaryHref = hasActivePlan ? "/today" : "/onboarding";
-    const primaryLabel = hasActivePlan ? (recommendation === "not_checked_in" ? "Open Today / Check in" : "Open Today") : "Complete Intake";
+    const primaryLabel = !hasActivePlan
+      ? "Complete Intake"
+      : recommendation === "not_checked_in"
+        ? "Open Today / Check in"
+        : decisionBlocks
+          ? "View recommendation"
+          : "Open Today";
 
     return (
       <>
@@ -503,8 +560,13 @@ export default function HomePage() {
             </div>
             <div className="status-card overview-next-action overview-decision-card overview-command-card" data-tone={decisionTone}>
               <p className="status-label">Today&apos;s state</p>
-              <h2 className="plan-summary-title">{todayStateLabel}</h2>
-              <p className="muted">{commandState?.today?.recommendation_reason || "Open Today for the current decision and session log."}</p>
+              <h2 className="plan-summary-title overview-decision-title">{decisionTitle}</h2>
+              <div className="overview-decision-copy">
+                {decisionLines.map((line, index) => (
+                  <p key={index} className="muted">{line}</p>
+                ))}
+                {decisionSafety ? <p className="muted overview-decision-safety">{decisionSafety}</p> : null}
+              </div>
               <div className="plan-summary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
                 {hasActivePlan ? (
@@ -517,22 +579,13 @@ export default function HomePage() {
           </div>
 
           <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-            <article className="status-card overview-command-card overview-next-session-card" data-tone={decisionTone}>
+            <article className="status-card overview-command-card overview-next-session-card">
               <p className="status-label">Next session</p>
               <h2 className="plan-summary-title">{nextSessionTitle}</h2>
               {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
               <p className="muted">{nextSessionFocus}</p>
             </article>
-            <article className="status-card overview-command-card overview-risk-card">
-              <p className="status-label">Risk watch</p>
-              {visibleRisks.length ? visibleRisks.map((risk) => (
-                <div key={`${risk.category}-${risk.label}`} className="overview-risk-row" data-tone={risk.tone}>
-                  <span className="overview-risk-row-label">{humanizeIfRawEnum(risk.label) || risk.label}</span>
-                  <span className="overview-risk-row-text">{risk.text || "Monitor before training."}</span>
-                </div>
-              )) : <p className="muted">No risk flags from today&apos;s command view.</p>}
-              {riskOverflow ? <span className="badge status-badge-neutral">+{riskOverflow} more</span> : null}
-            </article>
+            <OverviewRiskWatch risks={risks} />
           </div>
         </section>
       </>

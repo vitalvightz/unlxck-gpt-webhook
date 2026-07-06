@@ -82,17 +82,63 @@ class ReconciliationPlan(BaseModel):
 # the keys whose canonical name reads oddly to an athlete need an entry.
 _CONDITION_DISPLAY_NOUN = {"contusion": "bruise"}
 
+# Structural / urgent injuries deliberately carry injury_type "unspecified" (they
+# are routed by the triage category, not by ordinary rehab typing), but they
+# still have an obvious display noun. When the scorer nulls injury_type, the label
+# recovers the noun from the triage category so a tear/rupture/fracture never
+# loses its type — "knee tendon tear" reads "Knee tendon rupture", "acl tear"
+# reads "ACL tear", "broken collarbone" reads "Collarbone fracture".
+_TRIAGE_DISPLAY_NOUN = {
+    "fracture": "fracture",
+    "dislocation": "dislocation",
+    "concussion": "concussion",
+    "tendon_rupture": "rupture",
+    "muscle_rupture": "tear",
+    "ligament_tear": "tear",
+    "acl_tear": "ACL tear",
+    "mcl_tear": "MCL tear",
+    "pcl_tear": "PCL tear",
+    "lcl_tear": "LCL tear",
+    "hernia": "hernia",
+    "infection": "infection",
+    "nerve_involvement": "nerve issue",
+}
+
+# Triage categories whose name already implies the body part (a named knee
+# ligament, or a head/brain injury), so the label shows the type alone rather
+# than pinning it to a body region — "ACL tear", not "Knee ACL tear".
+_LOCATIONLESS_TRIAGE = {"acl_tear", "mcl_tear", "pcl_tear", "lcl_tear", "concussion"}
+
+# Prefix nouns forced to their conventional casing in the final label.
+_LABEL_ABBREVIATIONS = ("acl", "mcl", "pcl", "lcl", "mtss", "it band", "ac joint")
+
+# Bare dizziness / lightheadedness with no head-impact context is a soft,
+# non-urgent monitor note (commonly a weight-cut symptom, not a head injury), so
+# it is NOT routed to concussion. It carries no injury type or location, so give
+# it a clean standalone noun label.
+_SOFT_SYMPTOM_LABELS = {
+    "dizzy": "Dizziness",
+    "dizziness": "Dizziness",
+    "feeling dizzy": "Dizziness",
+    "feel dizzy": "Dizziness",
+    "lightheaded": "Lightheadedness",
+    "light headed": "Lightheadedness",
+    "light-headed": "Lightheadedness",
+}
+
 # Curated condition words (with their common inflections) stripped out of the
 # body-location text so a label never reads "wrist tightness tightness". This is
 # deliberately a small, safe list — NOT the full synonym map, whose looser
 # entries ("full", "hit", "point"...) would eat real location words.
 _CONDITION_STRIP = re.compile(
     r"\b(?:bruis(?:e|ed|ing)|contusion|hyperextend(?:ed|ing|s)?|hyperextension|"
-    r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broken|break|ruptur(?:e|ed)|tears?|torn|"
+    r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broke(?:n)?|break|crack(?:ed)?|shattered|"
+    r"ruptur(?:e|ed)|tears?|torn|tore|snap(?:ped)?|pop(?:ped)?|blown|"
     r"sprain(?:ed|ing)?|strain(?:ed|ing)?|pulled|tendon[ai]tis|tendinopathy|"
     r"imping(?:ed|ement)|instability|unstable|inflam(?:ed|mation|matory)|"
     r"swollen|swelling|stiff(?:ness)?|tight(?:ness)?|sore(?:ness)?|"
-    r"ach(?:e|es|ing|y)|pain(?:ful)?|hurts?|hurting|abrasion|graze|blister|laceration)\b",
+    r"ach(?:e|es|ing|y)|pain(?:ful)?|hurts?|hurting|abrasion|graz(?:e|ed|ing)|"
+    r"blister(?:s|ed)?|lacerat(?:e|ed|ion)|cuts?|wound(?:s|ed)?)\b",
     re.I,
 )
 
@@ -123,6 +169,28 @@ def _clean_location(text: str) -> str:
     return " ".join(seen)
 
 
+def _strip_type_synonyms(location: str, synonyms: Sequence[str], condition_key: str) -> str:
+    """Remove the DETECTED injury type's own synonyms from the location text.
+
+    The scorer already told us which type matched, so the synonym list for that
+    exact type is the authoritative set of condition/descriptor words to strip —
+    "rolled" for a sprain, "cramp" for a strain, "pinch" for an impingement,
+    "frozen" for stiffness. This is why it can't eat unrelated body words: it only
+    ever removes phrasing that belongs to the type that actually matched. Longer
+    phrases go first so "mat burn" is removed before a bare "burn" would be.
+    """
+    if not location or not condition_key or condition_key == "unspecified":
+        return location
+    phrases = sorted({*synonyms, condition_key}, key=len, reverse=True)
+    text = f" {location.lower()} "
+    for phrase in phrases:
+        phrase = phrase.strip().lower()
+        if not phrase:
+            continue
+        text = re.sub(rf"(?<!\S){re.escape(phrase)}(?!\S)", " ", text)
+    return " ".join(text.split())
+
+
 def build_injury_label(body_area: object, description: object) -> str:
     """Build a short, athlete-facing injury label using the injury synonym logic.
 
@@ -139,6 +207,7 @@ def build_injury_label(body_area: object, description: object) -> str:
     # Deferred import: keeps the fightcamp NLP/synonym stack from loading eagerly
     # for every importer of api.contracts, which only some code paths ever need.
     from fightcamp.injury_scoring import score_injury_phrase
+    from fightcamp.injury_synonyms import INJURY_SYNONYM_MAP, TRIAGE_CATEGORY_MAP
 
     body = str(body_area or "").strip()
     desc = str(description or "").strip()
@@ -147,22 +216,69 @@ def build_injury_label(body_area: object, description: object) -> str:
 
     score = score_injury_phrase(f"{body} {desc}")
     condition_key = str(score.get("injury_type") or "") if score else ""
+    triage_category = str(score.get("triage_category") or "") if score else ""
+    # Structural injuries (fracture / tear / rupture / dislocation / concussion)
+    # deliberately null out injury_type, so recover the display noun from the
+    # triage category. condition_key becomes the display noun; triage_category is
+    # kept separately to drive synonym stripping and location handling.
+    if condition_key in ("", "unspecified"):
+        condition_key = _TRIAGE_DISPLAY_NOUN.get(triage_category, condition_key)
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"
         else ""
     )
 
-    if body:
-        location = _clean_location(body)
-    else:
-        side = str(score.get("side") or "") if score else ""
-        scored_location = str(score.get("location") or "") if score else ""
-        parts = [
+    # Bare dizziness/lightheadedness (no injury type resolved) is a soft note, not
+    # a concussion — surface a clean noun and stop before the location machinery.
+    if not condition:
+        normalized = " ".join(f"{body} {desc}".lower().split())
+        for phrase, soft_label in _SOFT_SYMPTOM_LABELS.items():
+            if re.search(rf"(?<!\S){re.escape(phrase)}(?!\S)", normalized):
+                return soft_label
+
+    # The scorer's canonical side + location, used both as the no-body fallback and
+    # to recover a location when synonym stripping empties the athlete's own words
+    # (e.g. "jumpers knee" -> the synonym is stripped, "knee" comes from here).
+    side = str(score.get("side") or "") if score else ""
+    scored_location = str(score.get("location") or "") if score else ""
+    canonical_location = " ".join(
+        part
+        for part in (
             side if side and side != "unspecified" else "",
             scored_location.replace("_", " ") if scored_location and scored_location != "unspecified" else "",
-        ]
-        location = " ".join(part for part in parts if part).strip()
+        )
+        if part
+    ).strip()
+
+    # Strip set = the matched rehab type's synonyms plus, for a structural injury,
+    # the triage surface phrases that map to this category. Both come from the
+    # shared maps (source of truth), so descriptor phrasing — "rolled", "pinch",
+    # "frozen", "jumpers knee", "subluxation", "got rocked" — never pads the label.
+    strip_phrases = list(INJURY_SYNONYM_MAP.get(condition_key, []))
+    if triage_category:
+        strip_phrases += [phrase for phrase, cat in TRIAGE_CATEGORY_MAP.items() if cat == triage_category]
+
+    if body:
+        location = _clean_location(body)
+        # Fall back to the scorer's canonical location if stripping leaves nothing,
+        # then to the raw cleaned location so a colloquialism is never blanked.
+        stripped = _strip_type_synonyms(location, strip_phrases, condition_key or triage_category)
+        location = stripped or canonical_location or location
+    else:
+        location = canonical_location
+
+    # Some categories name their own region (a knee ligament, or a head/brain
+    # injury) or carry only colloquial phrasing with no usable location, so the
+    # label shows the type alone — "ACL tear", "Concussion".
+    if triage_category in _LOCATIONLESS_TRIAGE:
+        location = ""
+
+    # Safety net: drop any location token that IS the condition — canonical noun or
+    # matched key — so the condition is only ever appended once, wherever it sits.
+    if condition and location:
+        drop = {condition.lower(), condition_key.lower()}
+        location = " ".join(word for word in location.split() if word.lower() not in drop).strip()
 
     if condition and location and not location.endswith(condition):
         label = f"{location} {condition}"
@@ -176,7 +292,12 @@ def build_injury_label(body_area: object, description: object) -> str:
     label = label.strip()
     if not label:
         return "injury"
-    return (label[0].upper() + label[1:])[:60]
+    label = (label[0].upper() + label[1:])[:60]
+    # Force conventional casing on abbreviations that survive as location words
+    # ("acl gone" -> location "acl" -> "ACL gone").
+    for abbr in _LABEL_ABBREVIATIONS:
+        label = re.sub(rf"(?<!\S){re.escape(abbr)}(?!\S)", abbr.upper(), label, flags=re.IGNORECASE)
+    return label
 
 
 def _flag_label(flag: Mapping[str, object]) -> str:
