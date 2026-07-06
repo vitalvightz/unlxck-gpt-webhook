@@ -173,7 +173,7 @@ function stripTitleStop(value: string | undefined): string | undefined {
   if (!text) {
     return undefined;
   }
-  return text.replace(/\.+$/g, "").trim();
+  return text.replace(/[.!?]+$/g, "").trim();
 }
 
 function normalizeTitleKey(value: string | undefined): string {

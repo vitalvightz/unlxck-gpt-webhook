@@ -275,7 +275,7 @@ function enrichConfirmedActivePlan(
  * routing away or truncating. Row copy runs through getRiskWatchText so a flag
  * never parrots the main recommendation word-for-word.
  */
-function OverviewRiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
+function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watch"] }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const overflowId = useId();
 
@@ -296,8 +296,8 @@ function OverviewRiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] })
     <article className="status-card overview-command-card overview-risk-card">
       <p className="status-label">Risk watch</p>
       <div id={overflowId} className="overview-risk-list">
-        {shown.map((risk) => (
-          <div key={`${risk.category}-${risk.label}`} className="overview-risk-row" data-tone={risk.tone}>
+        {shown.map((risk, index) => (
+          <div key={`${risk.category}-${risk.label}-${index}`} className="overview-risk-row" data-tone={risk.tone}>
             <span className="overview-risk-row-label">{humanizeIfRawEnum(risk.label) || risk.label}</span>
             <span className="overview-risk-row-text">{getRiskWatchText(risk)}</span>
           </div>

@@ -310,8 +310,8 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
   return (
     <section className="today-risk-watch" aria-label="Risk watch">
       <div id={overflowId} className="today-risk-list">
-        {shown.map((risk) => (
-          <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
+        {shown.map((risk, index) => (
+          <article key={`${risk.category}-${risk.label}-${index}`} className="today-risk-item" data-tone={risk.tone}>
             <span className="today-risk-icon" aria-hidden="true">
               !
             </span>
