@@ -1728,6 +1728,60 @@ select:focus-visible {
   line-height: 1.4;
 }
 
+.overview-risk-list {
+  display: grid;
+  gap: 8px;
+}
+
+/* In-place expander for extra risk flags — matches the Today toggle so the two
+   screens feel like one system. Full-width, quiet, and clearly tappable. */
+.overview-risk-more {
+  justify-self: stretch;
+  width: 100%;
+  margin-top: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.overview-risk-more:hover,
+.overview-risk-more:focus-visible {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
+}
+
+/* Deduped decision copy: an ALL-CAPS command title with a calm two-line body,
+   the title clearly separated from the reason + action. */
+.overview-decision-title {
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  font-weight: 800;
+}
+
+.overview-decision-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.overview-decision-copy .muted {
+  margin: 0;
+}
+
+.overview-decision-safety {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 .overview-primary-action::after {
   content: "";
   position: absolute;
@@ -5325,10 +5379,11 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
 
 .today-decision-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: 0;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   color: var(--text-primary);
 }
 
@@ -5367,10 +5422,6 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
   font-size: clamp(21px, 2.2vw, 28px);
   line-height: 1.08;
   letter-spacing: -0.025em;
-}
-
-.today-risk-overflow {
-  display: contents;
 }
 
 .today-risk-icon {
@@ -5773,74 +5824,84 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   opacity: 0.82;
 }
 
+/* Risk watch reads as a calm coach note: a single stacked column of thin
+   accent-ruled rows, not a wall of glowing alert cards. */
 .today-risk-watch {
   display: flex;
-  align-items: stretch;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .today-risk-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-  align-items: center;
-  min-width: min(100%, 260px);
-  flex: 1 1 260px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 11px;
+  align-items: start;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-left-width: 3px;
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.035);
+  border-radius: 12px;
+  padding: 11px 13px;
+  background: rgba(255, 255, 255, 0.028);
 }
 
-/* The "!" badge is a filled, branded chip — meaning never rests on colour alone
-   (the label + text still carry it), but each tone now reads instantly. */
+.today-risk-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* The "!" badge is a quiet, tone-tinted chip — not a filled glowing puck.
+   Meaning never rests on colour alone (the label + text carry it). */
 .today-risk-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 8px;
   border-color: transparent;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
-  color: #fff;
 }
 
 .today-risk-item[data-tone="stop"],
 .today-risk-item[data-tone="warning"] {
-  border-color: rgba(219, 47, 64, 0.45);
+  border-color: rgba(219, 47, 64, 0.24);
   border-left-color: #e23a4c;
-  background: linear-gradient(135deg, rgba(219, 47, 64, 0.12), rgba(219, 47, 64, 0.03));
+  background: rgba(219, 47, 64, 0.06);
 }
 
 .today-risk-item[data-tone="stop"] .today-risk-icon,
 .today-risk-item[data-tone="warning"] .today-risk-icon {
-  background: linear-gradient(180deg, #e23a4c, #b5122b);
-  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.42);
+  background: rgba(226, 58, 76, 0.2);
+  color: #ffd8dc;
 }
 
 .today-risk-item[data-tone="caution"] {
-  border-color: rgba(214, 175, 106, 0.42);
+  border-color: rgba(214, 175, 106, 0.24);
   border-left-color: #d6af6a;
-  background: linear-gradient(135deg, rgba(214, 175, 106, 0.14), rgba(214, 175, 106, 0.03));
+  background: rgba(214, 175, 106, 0.07);
 }
 
 .today-risk-item[data-tone="caution"] .today-risk-icon {
-  background: linear-gradient(180deg, #e6c27d, #c79a45);
-  color: #2a2007;
-  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.34);
+  background: rgba(230, 194, 125, 0.2);
+  color: #ffe2a6;
 }
 
 .today-risk-item[data-tone="info"] {
-  border-color: rgba(120, 168, 224, 0.36);
+  border-color: rgba(120, 168, 224, 0.24);
   border-left-color: #78a8e0;
-  background: linear-gradient(135deg, rgba(120, 168, 224, 0.12), rgba(120, 168, 224, 0.03));
+  background: rgba(120, 168, 224, 0.06);
 }
 
 .today-risk-item[data-tone="info"] .today-risk-icon {
-  background: linear-gradient(180deg, #6ea2e0, #3f6fb0);
-  box-shadow: 0 4px 14px rgba(63, 111, 176, 0.34);
+  background: rgba(110, 162, 224, 0.2);
+  color: #d6e6ff;
 }
 
 .today-risk-text {
@@ -5863,7 +5924,7 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 }
 
 .today-risk-more {
-  align-self: center;
+  align-self: flex-start;
 }
 
 .today-session-summary {
@@ -12555,14 +12616,17 @@ html[data-theme="light"] .today-risk-item[data-tone="info"] {
 }
 
 html[data-theme="light"] .today-segment,
-html[data-theme="light"] .today-risk-more {
+html[data-theme="light"] .today-risk-more,
+html[data-theme="light"] .overview-risk-more {
   border-color: rgba(98, 77, 69, 0.12);
   background: rgba(255, 255, 255, 0.74);
 }
 
 html[data-theme="light"] .today-segment:hover,
 html[data-theme="light"] .today-risk-more:hover,
-html[data-theme="light"] .today-risk-more:focus-visible {
+html[data-theme="light"] .today-risk-more:focus-visible,
+html[data-theme="light"] .overview-risk-more:hover,
+html[data-theme="light"] .overview-risk-more:focus-visible {
   border-color: rgba(146, 43, 45, 0.16);
   background: rgba(255, 255, 255, 0.92);
 }
