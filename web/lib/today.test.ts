@@ -359,14 +359,30 @@ function stateWithInjuries(
   };
 }
 
-test("only a severe, open injury counts as the active blocking injury", () => {
-  assert.equal(getActiveSevereInjury([makeInjury()])?.id, "inj-1");
-  assert.equal(getActiveSevereInjury([makeInjury({ severity: "moderate" })]), null);
-  // Easing (monitoring) or resolved severe injuries relax the block.
-  assert.equal(getActiveSevereInjury([makeInjury({ status: "monitoring" })]), null);
-  assert.equal(getActiveSevereInjury([makeInjury({ status: "resolved" })]), null);
+test("every severity x status combo blocks iff a non-resolved severe injury exists", () => {
+  // Exhaustive matrix so no combo can silently open a bypass. The block is
+  // severity-driven: a SEVERE injury blocks in every non-resolved status
+  // (including "monitoring"/easing — that was the reported bypass). Moderate/mild
+  // never hard-block, and a resolved injury clears.
+  const severities = ["mild", "moderate", "severe"] as const;
+  const statuses = ["open", "monitoring", "resolved"] as const;
+  for (const severity of severities) {
+    for (const status of statuses) {
+      const blocks = severity === "severe" && status !== "resolved";
+      const result = getActiveSevereInjury([makeInjury({ severity, status })]);
+      assert.equal(Boolean(result), blocks, `${severity}/${status} should ${blocks ? "block" : "not block"}`);
+    }
+  }
   assert.equal(getActiveSevereInjury([]), null);
   assert.equal(getActiveSevereInjury(undefined), null);
+});
+
+test("a severe injury still blocks when a mild injury is open alongside it", () => {
+  const injuries = [
+    makeInjury({ id: "mild-1", severity: "mild", status: "open" }),
+    makeInjury({ id: "sev-1", severity: "severe", status: "monitoring" }),
+  ];
+  assert.equal(getActiveSevereInjury(injuries)?.id, "sev-1");
 });
 
 test("severe injury override supersedes the daily recommendation banner", () => {
@@ -380,7 +396,19 @@ test("severe injury override supersedes the daily recommendation banner", () => 
   assert.equal(banner?.blocksTraining, true);
   assert.match(banner?.detail ?? "", /Active severe injury: Chest bruise/);
   assert.match(banner?.detail ?? "", /hard sparring/);
+  assert.match(banner?.detail ?? "", /easing does not lift/);
   assert.match(banner?.safety ?? "", /superseded by the injury warning/);
+});
+
+test("marking a severe injury easing does not lift the override (bypass fix)", () => {
+  const easing = getInjuryOverrideBanner(
+    stateWithInjuries([makeInjury({ status: "monitoring" })]),
+    "Hard sparring",
+  );
+  assert.ok(easing, "an easing severe injury must still block");
+  assert.equal(easing?.blocksTraining, true);
+  // Clearing (resolving) it is the only way to lift the hold.
+  assert.equal(getInjuryOverrideBanner(stateWithInjuries([makeInjury({ status: "resolved" })]), "Hard sparring"), null);
 });
 
 test("no injury override without a severe active injury", () => {

@@ -1017,7 +1017,7 @@ function SessionCard({
       ? decisionBanner.tone
       : undefined;
   const terminalStatusCopy = injuryOverride
-    ? "Held by an active severe injury. Ease or clear it in the injury check-in above — do not train this as a load-reduced session."
+    ? "Held by an active severe injury. Clear it (or get it medically cleared) in the injury check-in above — marking it easing does not lift the hold, and this is not a load-reduced session."
     : decisionBlocksTraining
       ? "Follow the recommendation above. Do not start this session from Today."
       : isNextSessionPreview

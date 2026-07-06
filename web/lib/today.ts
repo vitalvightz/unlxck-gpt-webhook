@@ -390,17 +390,19 @@ function injuryFlagLabel(injury: InjuryFlagRecord): string {
 }
 
 /**
- * The highest-priority open injury that must hard-block training today: an
- * active (open) injury the athlete flagged as severe. Easing (monitoring) or
- * resolved injuries do not block — that mirrors the backend's "open severe
- * injury" stop signal and lets the block relax once the athlete marks it easing.
+ * The highest-priority active injury that must hard-block training today: any
+ * non-resolved injury the athlete flagged as SEVERE. The block is driven by
+ * severity, not day-status — a severe injury is still severe while it is
+ * "easing" (monitoring), so marking it easing must NOT unblock hard training the
+ * same day (that was a bypass). Only clearing it (resolved) — a deliberate,
+ * confirmed action — or downgrading its severity lifts the block.
  */
 export function getActiveSevereInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): InjuryFlagRecord | null {
   return (
     (openInjuries ?? []).find(
-      (injury) => injury.severity === "severe" && injury.status === "open",
+      (injury) => injury.severity === "severe" && injury.status !== "resolved",
     ) ?? null
   );
 }
@@ -434,7 +436,7 @@ export function getInjuryOverrideBanner(
     displayState: "injury_blocked",
     chip: "INJURY HOLD",
     title: "Session blocked",
-    detail: `Active severe injury: ${label}. Do not complete ${sessionPhrase} until it is eased, cleared, or medically cleared.`,
+    detail: `Active severe injury: ${label}. Do not complete ${sessionPhrase} until it is cleared or medically cleared — marking it easing does not lift the hold.`,
     // Only call out the superseded guidance when a daily recommendation actually
     // exists to supersede (i.e. the athlete has checked in).
     safety:

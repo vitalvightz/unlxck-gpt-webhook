@@ -140,6 +140,23 @@ def test_severe_open_flag_is_a_stop_level_risk():
     assert "Left knee" in risks[0].text
 
 
+def test_severe_easing_flag_stays_a_stop_level_risk():
+    # Regression: a severe injury marked "easing" (monitoring) is still severe, so
+    # it must stay a stop-level risk, not quietly drop to the soft "train around
+    # it" reminder. This closes the "mark it easing to bypass the hold" gap and
+    # keeps the risk consistent with the Today/Overview injury hold.
+    risks = open_injury_flag_risks(
+        [{"status": "monitoring", "severity": "severe", "body_area": "chest"}]
+    )
+    assert len(risks) == 1
+    assert risks[0].category == "active_injury_worse"
+    assert "Chest" in risks[0].text
+    # Only resolving it clears the stop.
+    assert open_injury_flag_risks(
+        [{"status": "resolved", "severity": "severe", "body_area": "chest"}]
+    ) == []
+
+
 def test_non_severe_open_flags_are_a_tracking_reminder():
     risks = open_injury_flag_risks(
         [
