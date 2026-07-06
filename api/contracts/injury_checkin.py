@@ -136,6 +136,28 @@ def _clean_location(text: str) -> str:
     return " ".join(seen)
 
 
+def _strip_type_synonyms(location: str, synonyms: Sequence[str], condition_key: str) -> str:
+    """Remove the DETECTED injury type's own synonyms from the location text.
+
+    The scorer already told us which type matched, so the synonym list for that
+    exact type is the authoritative set of condition/descriptor words to strip —
+    "rolled" for a sprain, "cramp" for a strain, "pinch" for an impingement,
+    "frozen" for stiffness. This is why it can't eat unrelated body words: it only
+    ever removes phrasing that belongs to the type that actually matched. Longer
+    phrases go first so "mat burn" is removed before a bare "burn" would be.
+    """
+    if not location or not condition_key or condition_key == "unspecified":
+        return location
+    phrases = sorted({*synonyms, condition_key}, key=len, reverse=True)
+    text = f" {location.lower()} "
+    for phrase in phrases:
+        phrase = phrase.strip().lower()
+        if not phrase:
+            continue
+        text = re.sub(rf"(?<!\S){re.escape(phrase)}(?!\S)", " ", text)
+    return " ".join(text.split())
+
+
 def build_injury_label(body_area: object, description: object) -> str:
     """Build a short, athlete-facing injury label using the injury synonym logic.
 
@@ -152,6 +174,7 @@ def build_injury_label(body_area: object, description: object) -> str:
     # Deferred import: keeps the fightcamp NLP/synonym stack from loading eagerly
     # for every importer of api.contracts, which only some code paths ever need.
     from fightcamp.injury_scoring import score_injury_phrase
+    from fightcamp.injury_synonyms import INJURY_SYNONYM_MAP
 
     body = str(body_area or "").strip()
     desc = str(description or "").strip()
@@ -170,22 +193,33 @@ def build_injury_label(body_area: object, description: object) -> str:
         else ""
     )
 
-    if body:
-        location = _clean_location(body)
-    else:
-        side = str(score.get("side") or "") if score else ""
-        scored_location = str(score.get("location") or "") if score else ""
-        parts = [
+    # The scorer's canonical side + location, used both as the no-body fallback and
+    # to recover a location when synonym stripping empties the athlete's own words
+    # (e.g. "jumpers knee" -> the synonym is stripped, "knee" comes from here).
+    side = str(score.get("side") or "") if score else ""
+    scored_location = str(score.get("location") or "") if score else ""
+    canonical_location = " ".join(
+        part
+        for part in (
             side if side and side != "unspecified" else "",
             scored_location.replace("_", " ") if scored_location and scored_location != "unspecified" else "",
-        ]
-        location = " ".join(part for part in parts if part).strip()
+        )
+        if part
+    ).strip()
 
-    # Safety net that ties the location cleaner back to the scorer: the scorer can
-    # recognise a condition word (e.g. "cut") that the curated strip list does not
-    # remove, which would double it up ("cut neck cut"). Drop any location token
-    # that IS the condition — canonical noun or matched key — so the condition is
-    # only ever appended once, for any injury type, wherever it sits in the phrase.
+    if body:
+        location = _clean_location(body)
+        # Strip the matched type's own synonyms (source of truth) so descriptor
+        # phrasing — "rolled", "cramp", "pinch", "frozen", "jumpers knee" — never
+        # pads the label. Fall back to the scorer's canonical location if that
+        # leaves nothing, and to the raw cleaned location if even that is empty.
+        stripped = _strip_type_synonyms(location, INJURY_SYNONYM_MAP.get(condition_key, []), condition_key)
+        location = stripped or canonical_location or location
+    else:
+        location = canonical_location
+
+    # Safety net: drop any location token that IS the condition — canonical noun or
+    # matched key — so the condition is only ever appended once, wherever it sits.
     if condition and location:
         drop = {condition.lower(), condition_key.lower()}
         location = " ".join(word for word in location.split() if word.lower() not in drop).strip()

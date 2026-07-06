@@ -201,6 +201,46 @@ def test_build_injury_label_never_doubles_the_condition_word():
     assert build_injury_label("cut", "cut") == "Cut"
 
 
+def test_build_injury_label_is_clean_for_every_injury_type():
+    # One representative athlete phrase per canonical type: the label must be a
+    # clean "<location> <type-noun>" with no leaked descriptor/synonym words and
+    # no doubled condition. Locks in map-driven stripping across every type.
+    cases = {
+        # rehab types
+        "sprained ankle": "Ankle sprain",
+        "rolled ankle": "Ankle sprain",
+        "pulled hamstring": "Hamstring strain",
+        "calf cramp": "Calf strain",
+        "tight hip": "Hip tightness",
+        "scraped knee": "Knee abrasion",
+        "mat burn on elbow": "Elbow abrasion",
+        "cut lip": "Lip cut",
+        "nick on eyebrow": "Eyebrow cut",
+        "gash on shin": "Shin laceration",
+        "grazed knuckles": "Knuckles graze",
+        "scratch on cheek": "Cheek graze",
+        "blister on heel": "Heel blister",
+        "bruised thigh": "Thigh bruise",
+        "corked calf": "Calf bruise",
+        "swollen knee": "Knee swelling",
+        "achilles tendonitis": "Achilles tendonitis",
+        "jumpers knee": "Knee tendonitis",
+        "shoulder impingement": "Shoulder impingement",
+        "hip pinch": "Hip impingement",
+        "unstable shoulder": "Shoulder instability",
+        "stiff neck": "Neck stiffness",
+        "frozen shoulder": "Shoulder stiffness",
+        "knee pain": "Knee pain",
+        "sore quads": "Quads soreness",
+        "hyperextended elbow": "Elbow hyperextension",
+        # structural / triage types
+        "dislocated shoulder": "Shoulder dislocation",
+        "fractured collarbone": "Collarbone fracture",
+    }
+    for phrase, expected in cases.items():
+        assert build_injury_label(phrase, phrase) == expected, phrase
+
+
 def test_build_injury_label_recognizes_lay_fracture_words():
     # Regression: fracture words used to be recognised only in the exact phrase
     # "broken bone", so "broken collarbone" lost its type and read as a bare
