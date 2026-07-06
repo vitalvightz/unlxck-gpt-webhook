@@ -235,7 +235,12 @@ def test_build_injury_label_is_clean_for_every_injury_type():
         "hyperextended elbow": "Elbow hyperextension",
         # structural / triage types
         "dislocated shoulder": "Shoulder dislocation",
+        "subluxation shoulder": "Shoulder dislocation",
         "fractured collarbone": "Collarbone fracture",
+        # a concussion carries no body location and never doubles its own word
+        "concussed": "Concussion",
+        "got rocked": "Concussion",
+        "head knock": "Concussion",
     }
     for phrase, expected in cases.items():
         assert build_injury_label(phrase, phrase) == expected, phrase

@@ -174,7 +174,7 @@ def build_injury_label(body_area: object, description: object) -> str:
     # Deferred import: keeps the fightcamp NLP/synonym stack from loading eagerly
     # for every importer of api.contracts, which only some code paths ever need.
     from fightcamp.injury_scoring import score_injury_phrase
-    from fightcamp.injury_synonyms import INJURY_SYNONYM_MAP
+    from fightcamp.injury_synonyms import INJURY_SYNONYM_MAP, TRIAGE_CATEGORY_MAP
 
     body = str(body_area or "").strip()
     desc = str(description or "").strip()
@@ -207,16 +207,28 @@ def build_injury_label(body_area: object, description: object) -> str:
         if part
     ).strip()
 
+    # Strip set = the matched rehab type's synonyms plus, for a structural injury,
+    # the triage surface phrases that map to this category. Both come from the
+    # shared maps (source of truth), so descriptor phrasing — "rolled", "pinch",
+    # "frozen", "jumpers knee", "subluxation", "got rocked" — never pads the label.
+    strip_phrases = list(INJURY_SYNONYM_MAP.get(condition_key, []))
+    if condition_key in _TRIAGE_DISPLAY_NOUN:
+        strip_phrases += [phrase for phrase, cat in TRIAGE_CATEGORY_MAP.items() if cat == condition_key]
+
     if body:
         location = _clean_location(body)
-        # Strip the matched type's own synonyms (source of truth) so descriptor
-        # phrasing — "rolled", "cramp", "pinch", "frozen", "jumpers knee" — never
-        # pads the label. Fall back to the scorer's canonical location if that
-        # leaves nothing, and to the raw cleaned location if even that is empty.
-        stripped = _strip_type_synonyms(location, INJURY_SYNONYM_MAP.get(condition_key, []), condition_key)
+        # Fall back to the scorer's canonical location if stripping leaves nothing,
+        # then to the raw cleaned location so a colloquialism is never blanked.
+        stripped = _strip_type_synonyms(location, strip_phrases, condition_key)
         location = stripped or canonical_location or location
     else:
         location = canonical_location
+
+    # A concussion is a head/brain injury — no body location belongs in the label,
+    # and colloquial concussion phrasing ("got rocked", "seeing stars") carries
+    # none — so it reads just "Concussion", never "Rocked concussion".
+    if condition_key == "concussion":
+        location = ""
 
     # Safety net: drop any location token that IS the condition — canonical noun or
     # matched key — so the condition is only ever appended once, wherever it sits.
