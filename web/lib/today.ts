@@ -1,4 +1,5 @@
 import type {
+  InjuryFlagRecord,
   TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
@@ -87,12 +88,13 @@ export type TodayDecisionDisplayState =
   | "pull_back"
   | "rehab_only"
   | "no_training"
+  | "injury_blocked"
   | "preview";
 
 export type TodayDecisionBanner = {
   state: TodayRecommendationState;
   displayState: TodayDecisionDisplayState;
-  chip: "GO" | "ADJUST" | "PULL BACK" | "REHAB ONLY" | "NO TRAINING" | "PREVIEW";
+  chip: "GO" | "ADJUST" | "PULL BACK" | "REHAB ONLY" | "NO TRAINING" | "INJURY HOLD" | "PREVIEW";
   /** Short coach-card headline, e.g. "Pull back today". */
   title: string;
   /** One clear reason sentence. Prefers the backend reason when present. */
@@ -369,6 +371,78 @@ export function getTodayDecisionBanner(
     safety: backend.safety,
     tone: getDisplayTone(displayState),
     blocksTraining: displayBlocksTraining(displayState),
+  };
+}
+
+/** Athlete-facing label for an open injury flag. Today's `open_injuries` carry a
+ * clean server-computed `label` (built from the shared injury synonym logic);
+ * fall back to a lightly capitalized body area only when it is absent. */
+function injuryFlagLabel(injury: InjuryFlagRecord): string {
+  const serverLabel = injury.label?.trim();
+  if (serverLabel) {
+    return serverLabel;
+  }
+  const raw = (injury.body_area?.trim() || injury.description?.trim() || "").replace(/\s+/g, " ");
+  if (!raw) {
+    return "a severe injury";
+  }
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+/**
+ * The highest-priority open injury that must hard-block training today: an
+ * active (open) injury the athlete flagged as severe. Easing (monitoring) or
+ * resolved injuries do not block — that mirrors the backend's "open severe
+ * injury" stop signal and lets the block relax once the athlete marks it easing.
+ */
+export function getActiveSevereInjury(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+): InjuryFlagRecord | null {
+  return (
+    (openInjuries ?? []).find(
+      (injury) => injury.severity === "severe" && injury.status === "open",
+    ) ?? null
+  );
+}
+
+/**
+ * A severe active injury is the highest-priority constraint for today and
+ * supersedes the daily check-in recommendation. When one is present this returns
+ * a red, training-blocking banner that names the injury and the scheduled
+ * session; otherwise null, so callers fall back to the daily decision banner.
+ *
+ * This is a display-priority override, not a plan mutation: the stored daily
+ * recommendation stays in the command view / history, but the athlete sees the
+ * injury stop lead instead of a stale "load reduced" adjustment. Safety never
+ * gets weaker — a severe injury can only make today more restrictive.
+ */
+export function getInjuryOverrideBanner(
+  state: TodayCommandView,
+  sessionName?: string,
+): TodayDecisionBanner | null {
+  const injury = getActiveSevereInjury(state.open_injuries);
+  if (!injury) {
+    return null;
+  }
+  const label = injuryFlagLabel(injury);
+  const name = (sessionName ?? "").trim();
+  const sessionPhrase =
+    name && name.toLowerCase() !== "today's session" ? name.toLowerCase() : "this session";
+  const recommendationState = state.today?.recommendation_state ?? "not_checked_in";
+  return {
+    state: recommendationState,
+    displayState: "injury_blocked",
+    chip: "INJURY HOLD",
+    title: "Session blocked",
+    detail: `Active severe injury: ${label}. Do not complete ${sessionPhrase} until it is eased, cleared, or medically cleared.`,
+    // Only call out the superseded guidance when a daily recommendation actually
+    // exists to supersede (i.e. the athlete has checked in).
+    safety:
+      recommendationState !== "not_checked_in"
+        ? "Previous readiness guidance is superseded by the injury warning."
+        : undefined,
+    tone: "red",
+    blocksTraining: true,
   };
 }
 
