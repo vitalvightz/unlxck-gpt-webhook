@@ -997,7 +997,7 @@ function SessionCard({
   // today is logged / carries no app card (session_relation === "next"). Resolving
   // by that target day — not the bare calendar day — stops the card from sticking
   // on the finished session while the header has already advanced to "Next
-  // next session", which is exactly how Overview already behaves.
+  // session", which is exactly how Overview already behaves.
   const focusDate = resolveSessionFocusDate(trainingDay, session);
   const current = resolveCurrentDay(structuredPlan, focusDate);
   const showStructuredBlocks = current.inRange && Boolean(current.day);
