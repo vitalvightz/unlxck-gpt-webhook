@@ -261,6 +261,24 @@ class TestInjuryCheckin:
         assert updated.status_code == 201
         assert updated.json()["open_injuries"][0]["severity"] == "severe"
 
+    def test_injury_checkin_refreshes_existing_readiness_recommendation(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        checkin = client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body())
+        assert checkin.status_code == 201
+        assert checkin.json()["recommendation_state"] == "train_as_planned"
+
+        injury = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"body_area": "belly", "severity": "severe", "status": "worse"}]},
+        )
+        assert injury.status_code == 201
+
+        body = client.get("/api/today", headers=ATHLETE).json()
+        assert body["today"]["recommendation_state"] == "pull_back"
+        assert "Rehab only today." in body["today"]["recommendation_reason"]
+
     def test_new_injury_without_identity_is_rejected(self):
         client, store, _ = _build_client()
         _seed_plan(store)

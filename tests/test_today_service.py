@@ -1105,6 +1105,67 @@ class TestCommandView:
 
         assert updated["open_injuries"][0]["severity"] == "severe"
 
+    def test_worse_injury_refreshes_existing_readiness_recommendation(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        initial = submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(),
+            now=now,
+        )
+        assert initial["recommendation_state"] == "train_as_planned"
+
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"injuries": [{"body_area": "belly", "severity": "severe", "status": "worse"}]},
+            now=now,
+        )
+
+        updated = store.get_today_checkin(ATHLETE, PLAN, "2026-06-18")
+        assert updated is not None
+        assert updated["active_injury"] == "none"
+        assert updated["recommendation_state"] == "pull_back"
+        assert "active_injury_worse" in updated["recommendation_triggers"]
+        assert "Rehab only today." in updated["recommendation_reason"]
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=now)
+        assert view.today.recommendation_state == "pull_back"
+        assert "Rehab only today." in (view.today.recommendation_reason or "")
+
+    def test_new_injury_refreshes_existing_readiness_before_high_risk_session(self):
+        store = _store_with_plan()
+        structured_plan = _combined_contact_and_app_structured_plan()
+        structured_plan["weeks"][0]["days"][0]["sessions"][1]["session_type"] = "sparring"
+        structured_plan["weeks"][0]["days"][0]["sessions"][1]["title"] = "Hard sparring"
+        store.plans[PLAN]["structured_plan"] = structured_plan
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        initial = submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(phase="SPP"),
+            now=now,
+        )
+        assert initial["recommendation_state"] == "train_as_planned"
+
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"injuries": [{"body_area": "left shoulder", "severity": "moderate", "status": "ongoing"}]},
+            now=now,
+        )
+
+        updated = store.get_today_checkin(ATHLETE, PLAN, "2026-06-18")
+        assert updated is not None
+        assert updated["recommendation_state"] == "modify"
+        assert "tracked_injury_high_risk_session" in updated["recommendation_triggers"]
+        assert "Load controlled." in updated["recommendation_reason"]
+
     def test_severe_open_injury_is_a_stop_level_risk(self):
         store = _store_with_plan()
         submit_today_injury_checkin(

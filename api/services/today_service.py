@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import date, datetime, timezone
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from fastapi import HTTPException, status
 from pydantic import ValidationError
@@ -38,7 +38,12 @@ from api.contracts.injury_checkin import (
 )
 from api.contracts.injury_signal import derive_injury_signal
 from api.contracts.landing import LandingDecision, resolve_landing
-from api.contracts.readiness_message import ReadinessCheckin, ReadinessContext, build_readiness_adjustment
+from api.contracts.readiness_message import (
+    ReadinessAdjustment,
+    ReadinessCheckin,
+    ReadinessContext,
+    build_readiness_adjustment,
+)
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
 from api.services.active_plan import resolve_active_plan
@@ -157,6 +162,18 @@ def _readiness_checkin_from(payload: Mapping[str, Any]) -> ReadinessCheckin:
     return ReadinessCheckin(**{field: payload[field] for field in _CHECKIN_INPUT_FIELDS})
 
 
+def _stored_readiness_checkin_from(
+    row: Mapping[str, Any],
+    *,
+    active_injury_override: str | None = None,
+) -> ReadinessCheckin:
+    defaults = ReadinessCheckin()
+    values = {field: row.get(field, getattr(defaults, field)) for field in _CHECKIN_INPUT_FIELDS}
+    if active_injury_override:
+        values["active_injury"] = active_injury_override
+    return ReadinessCheckin(**values)
+
+
 def _same_day_checkin_warnings(
     store: AppStore,
     *,
@@ -253,6 +270,82 @@ def _intake_payload_for_readiness(store: AppStore, plan_row: Mapping[str, Any]) 
         return {}
 
 
+def _readiness_context_for_today(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_row: Mapping[str, Any],
+    training_day: str,
+    phase: str,
+    open_injuries: Sequence[Mapping[str, Any]] | None = None,
+) -> ReadinessContext:
+    return ReadinessContext(
+        training_day=training_day,
+        phase=phase,
+        today_session=_today_session_for_readiness(plan_row, training_day),
+        active_plan=plan_row,
+        intake=_intake_payload_for_readiness(store, plan_row),
+        open_injuries=tuple(open_injuries) if open_injuries is not None else _open_injury_flags(store, athlete_id),
+        recent_checkins=_safe_recent_today_checkins(store, athlete_id),
+        recent_sessions=_safe_recent_session_completions(store, athlete_id),
+    )
+
+
+def _recommendation_fields_from_decision(
+    *,
+    checkin_row: Mapping[str, Any],
+    decision: ReadinessAdjustment,
+) -> dict[str, Any]:
+    defaults = ReadinessCheckin()
+    fields: dict[str, Any] = {
+        "plan_id": checkin_row.get("plan_id"),
+        "training_day": checkin_row.get("training_day"),
+        "athlete_timezone": checkin_row.get("athlete_timezone") or "",
+        "recommendation_state": decision.decision,
+        "recommendation_reason": decision.message,
+        "recommendation_triggers": list(decision.triggers),
+    }
+    for field in _CHECKIN_INPUT_FIELDS:
+        fields[field] = checkin_row.get(field, getattr(defaults, field))
+    return fields
+
+
+def _refresh_today_recommendation_after_injury_change(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_row: Mapping[str, Any],
+    training_day: str,
+    open_injuries: Sequence[Mapping[str, Any]],
+    injury_reported_worse: bool,
+) -> dict[str, Any] | None:
+    plan_id = str(plan_row.get("id") or "").strip()
+    if not plan_id:
+        return None
+    today_checkin = store.get_today_checkin(athlete_id, plan_id, training_day)
+    if not today_checkin:
+        return None
+
+    active_injury_override = "worse" if injury_reported_worse else None
+    decision = build_readiness_adjustment(
+        _stored_readiness_checkin_from(today_checkin, active_injury_override=active_injury_override),
+        _readiness_context_for_today(
+            store,
+            athlete_id=athlete_id,
+            plan_row=plan_row,
+            training_day=training_day,
+            phase=str(today_checkin.get("phase") or plan_row.get("phase") or ""),
+            open_injuries=open_injuries,
+        ),
+    )
+    return dict(
+        store.upsert_today_checkin(
+            athlete_id,
+            _recommendation_fields_from_decision(checkin_row=today_checkin, decision=decision),
+        )
+    )
+
+
 def submit_today_checkin(
     store: AppStore,
     *,
@@ -288,15 +381,12 @@ def submit_today_checkin(
     )
     decision = build_readiness_adjustment(
         _readiness_checkin_from(payload),
-        ReadinessContext(
+        _readiness_context_for_today(
+            store,
+            athlete_id=athlete_id,
+            plan_row=plan_row,
             training_day=training_day,
             phase=str(payload.get("phase") or plan_row.get("phase") or ""),
-            today_session=_today_session_for_readiness(plan_row, training_day),
-            active_plan=plan_row,
-            intake=_intake_payload_for_readiness(store, plan_row),
-            open_injuries=_open_injury_flags(store, athlete_id),
-            recent_checkins=_safe_recent_today_checkins(store, athlete_id),
-            recent_sessions=_safe_recent_session_completions(store, athlete_id),
         ),
     )
 
@@ -423,6 +513,7 @@ def submit_today_injury_checkin(
     *,
     athlete_id: str,
     payload: Mapping[str, Any],
+    athlete_timezone: str | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Reconcile a day's declared injuries against the athlete's open flags.
@@ -454,8 +545,16 @@ def submit_today_injury_checkin(
         ) from exc
 
     now_iso = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
+    training_day = resolve_training_day(athlete_timezone, now=now)
     active_plan_row = resolve_active_plan(store, athlete_id).plan
-    plan_id = str(active_plan_row.get("id")) if active_plan_row else None
+    plan_id = str(active_plan_row.get("id") or "").strip() if active_plan_row else None
+    if active_plan_row and plan_id:
+        plan_reader = getattr(store, "get_plan_for_athlete", None)
+        if callable(plan_reader):
+            full_plan_row = plan_reader(plan_id, athlete_id)
+            if full_plan_row:
+                active_plan_row = full_plan_row
+    injury_reported_worse = any(injury.status == "worse" for injury in declared)
 
     for fields in plan.creates:
         store.create_injury_flag(athlete_id, {**fields, "plan_id": plan_id})
@@ -468,7 +567,17 @@ def submit_today_injury_checkin(
         store.update_injury_flag(update.flag_id, fields)
 
     open_after = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
-    return {"open_injuries": open_after}
+    refreshed_recommendation = None
+    if active_plan_row:
+        refreshed_recommendation = _refresh_today_recommendation_after_injury_change(
+            store,
+            athlete_id=athlete_id,
+            plan_row=active_plan_row,
+            training_day=training_day,
+            open_injuries=open_after,
+            injury_reported_worse=injury_reported_worse,
+        )
+    return {"open_injuries": open_after, "recommendation": refreshed_recommendation}
 
 
 def _session_id_for_entry(entry: Any) -> str | None:
