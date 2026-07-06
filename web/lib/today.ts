@@ -323,12 +323,13 @@ export function getTodayDecisionBanner(
     return null;
   }
 
+  // Past the preview check, getDisplayState only returns a truthy display
+  // state for a checked-in recommendation (not_checked_in yields "preview" or
+  // null), so state is guaranteed to be a DECISION_BANNERS key here.
   const banner =
     displayState === "preview"
       ? PREVIEW_BANNER
-      : state === "not_checked_in"
-        ? DECISION_BANNERS.train_as_planned
-        : DECISION_BANNERS[state];
+      : DECISION_BANNERS[state as Exclude<TodayRecommendationState, "not_checked_in">];
 
   return {
     state,
