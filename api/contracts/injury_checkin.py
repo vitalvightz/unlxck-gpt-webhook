@@ -84,13 +84,46 @@ _CONDITION_DISPLAY_NOUN = {"contusion": "bruise"}
 
 # Structural / urgent injuries deliberately carry injury_type "unspecified" (they
 # are routed by the triage category, not by ordinary rehab typing), but they
-# still have an obvious display noun. When the scorer nulls injury_type, fall back
-# to the triage category so the label reads "Collarbone fracture" rather than a
-# bare "Collarbone".
+# still have an obvious display noun. When the scorer nulls injury_type, the label
+# recovers the noun from the triage category so a tear/rupture/fracture never
+# loses its type — "knee tendon tear" reads "Knee tendon rupture", "acl tear"
+# reads "ACL tear", "broken collarbone" reads "Collarbone fracture".
 _TRIAGE_DISPLAY_NOUN = {
     "fracture": "fracture",
     "dislocation": "dislocation",
     "concussion": "concussion",
+    "tendon_rupture": "rupture",
+    "muscle_rupture": "tear",
+    "ligament_tear": "tear",
+    "acl_tear": "ACL tear",
+    "mcl_tear": "MCL tear",
+    "pcl_tear": "PCL tear",
+    "lcl_tear": "LCL tear",
+    "hernia": "hernia",
+    "infection": "infection",
+    "nerve_involvement": "nerve issue",
+}
+
+# Triage categories whose name already implies the body part (a named knee
+# ligament, or a head/brain injury), so the label shows the type alone rather
+# than pinning it to a body region — "ACL tear", not "Knee ACL tear".
+_LOCATIONLESS_TRIAGE = {"acl_tear", "mcl_tear", "pcl_tear", "lcl_tear", "concussion"}
+
+# Prefix nouns forced to their conventional casing in the final label.
+_LABEL_ABBREVIATIONS = ("acl", "mcl", "pcl", "lcl", "mtss", "it band", "ac joint")
+
+# Bare dizziness / lightheadedness with no head-impact context is a soft,
+# non-urgent monitor note (commonly a weight-cut symptom, not a head injury), so
+# it is NOT routed to concussion. It carries no injury type or location, so give
+# it a clean standalone noun label.
+_SOFT_SYMPTOM_LABELS = {
+    "dizzy": "Dizziness",
+    "dizziness": "Dizziness",
+    "feeling dizzy": "Dizziness",
+    "feel dizzy": "Dizziness",
+    "lightheaded": "Lightheadedness",
+    "light headed": "Lightheadedness",
+    "light-headed": "Lightheadedness",
 }
 
 # Curated condition words (with their common inflections) stripped out of the
@@ -100,7 +133,7 @@ _TRIAGE_DISPLAY_NOUN = {
 _CONDITION_STRIP = re.compile(
     r"\b(?:bruis(?:e|ed|ing)|contusion|hyperextend(?:ed|ing|s)?|hyperextension|"
     r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broke(?:n)?|break|crack(?:ed)?|shattered|"
-    r"ruptur(?:e|ed)|tears?|torn|"
+    r"ruptur(?:e|ed)|tears?|torn|tore|snap(?:ped)?|pop(?:ped)?|blown|"
     r"sprain(?:ed|ing)?|strain(?:ed|ing)?|pulled|tendon[ai]tis|tendinopathy|"
     r"imping(?:ed|ement)|instability|unstable|inflam(?:ed|mation|matory)|"
     r"swollen|swelling|stiff(?:ness)?|tight(?:ness)?|sore(?:ness)?|"
@@ -183,15 +216,26 @@ def build_injury_label(body_area: object, description: object) -> str:
 
     score = score_injury_phrase(f"{body} {desc}")
     condition_key = str(score.get("injury_type") or "") if score else ""
-    # Structural injuries (fracture / dislocation / concussion) null out
-    # injury_type, so recover the display noun from the triage category.
-    if condition_key in ("", "unspecified") and score:
-        condition_key = _TRIAGE_DISPLAY_NOUN.get(str(score.get("triage_category") or ""), condition_key)
+    triage_category = str(score.get("triage_category") or "") if score else ""
+    # Structural injuries (fracture / tear / rupture / dislocation / concussion)
+    # deliberately null out injury_type, so recover the display noun from the
+    # triage category. condition_key becomes the display noun; triage_category is
+    # kept separately to drive synonym stripping and location handling.
+    if condition_key in ("", "unspecified"):
+        condition_key = _TRIAGE_DISPLAY_NOUN.get(triage_category, condition_key)
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"
         else ""
     )
+
+    # Bare dizziness/lightheadedness (no injury type resolved) is a soft note, not
+    # a concussion — surface a clean noun and stop before the location machinery.
+    if not condition:
+        normalized = " ".join(f"{body} {desc}".lower().split())
+        for phrase, soft_label in _SOFT_SYMPTOM_LABELS.items():
+            if re.search(rf"(?<!\S){re.escape(phrase)}(?!\S)", normalized):
+                return soft_label
 
     # The scorer's canonical side + location, used both as the no-body fallback and
     # to recover a location when synonym stripping empties the athlete's own words
@@ -212,22 +256,22 @@ def build_injury_label(body_area: object, description: object) -> str:
     # shared maps (source of truth), so descriptor phrasing — "rolled", "pinch",
     # "frozen", "jumpers knee", "subluxation", "got rocked" — never pads the label.
     strip_phrases = list(INJURY_SYNONYM_MAP.get(condition_key, []))
-    if condition_key in _TRIAGE_DISPLAY_NOUN:
-        strip_phrases += [phrase for phrase, cat in TRIAGE_CATEGORY_MAP.items() if cat == condition_key]
+    if triage_category:
+        strip_phrases += [phrase for phrase, cat in TRIAGE_CATEGORY_MAP.items() if cat == triage_category]
 
     if body:
         location = _clean_location(body)
         # Fall back to the scorer's canonical location if stripping leaves nothing,
         # then to the raw cleaned location so a colloquialism is never blanked.
-        stripped = _strip_type_synonyms(location, strip_phrases, condition_key)
+        stripped = _strip_type_synonyms(location, strip_phrases, condition_key or triage_category)
         location = stripped or canonical_location or location
     else:
         location = canonical_location
 
-    # A concussion is a head/brain injury — no body location belongs in the label,
-    # and colloquial concussion phrasing ("got rocked", "seeing stars") carries
-    # none — so it reads just "Concussion", never "Rocked concussion".
-    if condition_key == "concussion":
+    # Some categories name their own region (a knee ligament, or a head/brain
+    # injury) or carry only colloquial phrasing with no usable location, so the
+    # label shows the type alone — "ACL tear", "Concussion".
+    if triage_category in _LOCATIONLESS_TRIAGE:
         location = ""
 
     # Safety net: drop any location token that IS the condition — canonical noun or
@@ -248,7 +292,12 @@ def build_injury_label(body_area: object, description: object) -> str:
     label = label.strip()
     if not label:
         return "injury"
-    return (label[0].upper() + label[1:])[:60]
+    label = (label[0].upper() + label[1:])[:60]
+    # Force conventional casing on abbreviations that survive as location words
+    # ("acl gone" -> location "acl" -> "ACL gone").
+    for abbr in _LABEL_ABBREVIATIONS:
+        label = re.sub(rf"(?<!\S){re.escape(abbr)}(?!\S)", abbr.upper(), label, flags=re.IGNORECASE)
+    return label
 
 
 def _flag_label(flag: Mapping[str, object]) -> str:

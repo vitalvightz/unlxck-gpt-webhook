@@ -11,7 +11,19 @@ from api.contracts.injury_checkin import (
     build_injury_label,
     open_injury_flag_risks,
     reconcile_injury_checkin,
+    _TRIAGE_DISPLAY_NOUN,
 )
+
+
+# Action/verb words that must never survive in the LOCATION half of a label
+# (they belong to the type noun at the end, e.g. "tear" in "ACL tear").
+_LEAK_WORDS = {
+    "torn", "tore", "snapped", "snap", "popped", "pop", "blown", "broke", "broken",
+    "cracked", "shattered", "dislocated", "fractured", "ruptured", "sprained", "strained",
+}
+
+# Known punctuation edge: redundant with "ko'd" / "knocked out", which do fire.
+_KNOWN_UNDETECTED = {"k.o.'d"}
 
 
 def _declare(**kwargs) -> DeclaredInjury:
@@ -241,9 +253,56 @@ def test_build_injury_label_is_clean_for_every_injury_type():
         "concussed": "Concussion",
         "got rocked": "Concussion",
         "head knock": "Concussion",
+        # tears / ruptures keep their type noun; named ligaments show the type alone
+        "knee tendon tear": "Knee tendon rupture",
+        "torn tendon": "Tendon rupture",
+        "acl tear": "ACL tear",
+        "torn acl": "ACL tear",
+        "mcl tear": "MCL tear",
+        "torn ligament": "Ligament tear",
+        "muscle tear": "Muscle tear",
+        "torn hamstring": "Hamstring tear",
+        "snapped achilles": "Achilles rupture",
+        "achilles rupture": "Achilles rupture",
     }
     for phrase, expected in cases.items():
         assert build_injury_label(phrase, phrase) == expected, phrase
+
+
+def test_every_triage_category_has_a_display_noun():
+    # Map-driven: any triage category the system can emit MUST have a display noun,
+    # otherwise a detected tear/rupture/fracture would render with no type in the
+    # label. Adding a new category to TRIAGE_CATEGORY_MAP without a noun fails here.
+    from fightcamp.injury_synonyms import TRIAGE_CATEGORY_MAP
+
+    missing = sorted(set(TRIAGE_CATEGORY_MAP.values()) - set(_TRIAGE_DISPLAY_NOUN))
+    assert missing == [], f"triage categories with no display noun: {missing}"
+
+
+def test_every_structural_phrase_is_urgent_and_cleanly_labelled():
+    # Map-driven contract over the WHOLE structural/triage vocabulary: every phrase
+    # the maps know must (1) flag urgent and (2) produce a clean label whose
+    # location half carries no leftover action verb. Adding a new phrase to either
+    # map without wiring it through the label builder fails here.
+    from fightcamp.injury_scoring import score_injury_phrase
+    from fightcamp.injury_synonyms import STRUCTURAL_RED_FLAG_MAP, TRIAGE_CATEGORY_MAP
+
+    phrases = sorted(set(STRUCTURAL_RED_FLAG_MAP) | set(TRIAGE_CATEGORY_MAP))
+    not_urgent, leaked = [], []
+    for phrase in phrases:
+        if phrase in _KNOWN_UNDETECTED:
+            continue
+        score = score_injury_phrase(f"{phrase} {phrase}")
+        if "urgent" not in score["flags"]:
+            not_urgent.append(phrase)
+        label = build_injury_label(phrase, phrase)
+        # The type noun is the final word(s); the location half is everything before
+        # it and must not contain an action verb like "torn"/"snapped".
+        location_tokens = set(label.lower().split()[:-1])
+        if location_tokens & _LEAK_WORDS:
+            leaked.append((phrase, label))
+    assert not_urgent == [], f"structural phrases not flagged urgent: {not_urgent}"
+    assert leaked == [], f"action verbs leaked into location: {leaked}"
 
 
 def test_build_injury_label_recognizes_lay_fracture_words():
