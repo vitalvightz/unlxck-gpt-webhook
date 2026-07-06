@@ -201,6 +201,18 @@ def test_build_injury_label_never_doubles_the_condition_word():
     assert build_injury_label("cut", "cut") == "Cut"
 
 
+def test_build_injury_label_recognizes_lay_fracture_words():
+    # Regression: fracture words used to be recognised only in the exact phrase
+    # "broken bone", so "broken collarbone" lost its type and read as a bare
+    # "Collarbone". Lay fracture words are now detected with any body part, and a
+    # structural injury still surfaces its display noun via the triage category.
+    assert build_injury_label("broken collarbone", "broken collarbone") == "Collarbone fracture"
+    assert build_injury_label("broke my collarbone", "broke my collarbone") == "Collarbone fracture"
+    assert build_injury_label("broken nose", "broken nose") == "Nose fracture"
+    assert build_injury_label("cracked rib", "cracked rib") == "Rib fracture"
+    assert build_injury_label("shattered wrist", "shattered wrist") == "Wrist fracture"
+
+
 def test_build_injury_label_never_leaks_free_text_notes():
     # With no structured body_area, the location must come from the scorer's
     # structured side + location — never from cleaning the free-text description,

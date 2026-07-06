@@ -82,13 +82,25 @@ class ReconciliationPlan(BaseModel):
 # the keys whose canonical name reads oddly to an athlete need an entry.
 _CONDITION_DISPLAY_NOUN = {"contusion": "bruise"}
 
+# Structural / urgent injuries deliberately carry injury_type "unspecified" (they
+# are routed by the triage category, not by ordinary rehab typing), but they
+# still have an obvious display noun. When the scorer nulls injury_type, fall back
+# to the triage category so the label reads "Collarbone fracture" rather than a
+# bare "Collarbone".
+_TRIAGE_DISPLAY_NOUN = {
+    "fracture": "fracture",
+    "dislocation": "dislocation",
+    "concussion": "concussion",
+}
+
 # Curated condition words (with their common inflections) stripped out of the
 # body-location text so a label never reads "wrist tightness tightness". This is
 # deliberately a small, safe list — NOT the full synonym map, whose looser
 # entries ("full", "hit", "point"...) would eat real location words.
 _CONDITION_STRIP = re.compile(
     r"\b(?:bruis(?:e|ed|ing)|contusion|hyperextend(?:ed|ing|s)?|hyperextension|"
-    r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broken|break|ruptur(?:e|ed)|tears?|torn|"
+    r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broke(?:n)?|break|crack(?:ed)?|shattered|"
+    r"ruptur(?:e|ed)|tears?|torn|"
     r"sprain(?:ed|ing)?|strain(?:ed|ing)?|pulled|tendon[ai]tis|tendinopathy|"
     r"imping(?:ed|ement)|instability|unstable|inflam(?:ed|mation|matory)|"
     r"swollen|swelling|stiff(?:ness)?|tight(?:ness)?|sore(?:ness)?|"
@@ -148,6 +160,10 @@ def build_injury_label(body_area: object, description: object) -> str:
 
     score = score_injury_phrase(f"{body} {desc}")
     condition_key = str(score.get("injury_type") or "") if score else ""
+    # Structural injuries (fracture / dislocation / concussion) null out
+    # injury_type, so recover the display noun from the triage category.
+    if condition_key in ("", "unspecified") and score:
+        condition_key = _TRIAGE_DISPLAY_NOUN.get(str(score.get("triage_category") or ""), condition_key)
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"

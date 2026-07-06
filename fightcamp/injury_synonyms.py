@@ -362,9 +362,15 @@ STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
     "muscle rupture": _taxonomy_flags_for("muscle_rupture"),
     "muscle ruptured": _taxonomy_flags_for("muscle_rupture"),
 
-    # Bone
+    # Bone. Lay fracture words are recognised on their own (not only "broken
+    # bone") so "broken collarbone", "broke my hand", "cracked rib" and
+    # "shattered wrist" all route to the suspected-fracture red flag.
     "fracture": ("structural_red_flag", "suspected_fracture", "urgent"),
     "broken bone": ("structural_red_flag", "suspected_fracture", "urgent"),
+    "broken": ("structural_red_flag", "suspected_fracture", "urgent"),
+    "broke": ("structural_red_flag", "suspected_fracture", "urgent"),
+    "cracked": ("structural_red_flag", "suspected_fracture", "urgent"),
+    "shattered": ("structural_red_flag", "suspected_fracture", "urgent"),
 
     # Concussion / head injury
     "concussion": ("structural_red_flag", "suspected_concussion", "urgent"),
@@ -411,6 +417,10 @@ TRIAGE_CATEGORY_MAP: dict[str, str] = {
     "sublux": "dislocation",
     "fracture": "fracture",
     "broken bone": "fracture",
+    "broken": "fracture",
+    "broke": "fracture",
+    "cracked": "fracture",
+    "shattered": "fracture",
     "concussion": "concussion",
     "concussed": "concussion",
     "head injury": "concussion",
