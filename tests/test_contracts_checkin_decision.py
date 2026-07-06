@@ -96,7 +96,7 @@ class TestPhaseBias:
         )
         assert decision.decision == "pull_back"
         assert "Pull back today." in decision.reason
-        assert "recovery day" in decision.reason
+        assert "Several warnings are showing" in decision.reason
         assert "Skip combat work" in decision.reason
         assert "Keep sharp work only" not in decision.reason
         assert "Remove 1 set" not in decision.reason
@@ -110,17 +110,19 @@ class TestPhaseBias:
         )
         assert decision.decision == "pull_back"
 
-    def test_poor_flat_manageable_in_gpp_only_modifies(self):
+    def test_poor_flat_manageable_in_gpp_pulls_back_from_pain_stack(self):
         decision = evaluate_checkin(
             replace(CLEAN, sleep="poor", body="flat", pain="manageable", phase="GPP")
         )
-        assert decision.decision == "modify"
+        assert decision.decision == "pull_back"
+        assert "Several warnings are showing" in decision.reason
 
-    def test_poor_flat_manageable_in_spp_only_modifies(self):
+    def test_poor_flat_manageable_in_spp_pulls_back_from_pain_stack(self):
         decision = evaluate_checkin(
             replace(CLEAN, sleep="poor", body="flat", pain="manageable", phase="SPP")
         )
-        assert decision.decision == "modify"
+        assert decision.decision == "pull_back"
+        assert "Several warnings are showing" in decision.reason
 
     def test_phase_bias_never_makes_less_conservative(self):
         # GPP must not upgrade a modify back to train_as_planned.

@@ -121,6 +121,12 @@ class ReadinessAdjustment:
         return "\n".join(line for line in (self.title, self.reason, self.action, self.safety) if line)
 
 
+@dataclass(frozen=True)
+class _SoftWarningState:
+    triggers: tuple[str, ...]
+    effective: tuple[str, ...]
+
+
 def _clean(value: Any) -> str:
     return str(value or "").strip()
 
@@ -188,6 +194,10 @@ def _row_training_day(row: Mapping[str, Any]) -> str:
     return _clean(row.get("training_day") or row.get("checkin_date"))
 
 
+def _row_value(row: Mapping[str, Any], key: str) -> str:
+    return _clean(row.get(key)).lower()
+
+
 def _row_is_poor_readiness(row: Mapping[str, Any]) -> bool:
     state = _clean(row.get("recommendation_state") or row.get("decision")).lower()
     if state in {"modify", "pull_back"}:
@@ -213,21 +223,60 @@ def _current_is_poor_readiness(checkin: ReadinessCheckin) -> bool:
     )
 
 
-def _recent_poor_readiness_count(checkin: ReadinessCheckin, context: ReadinessContext) -> int:
-    count = 1 if _current_is_poor_readiness(checkin) else 0
+def _prior_unique_checkins(context: ReadinessContext, *, limit: int = 2) -> tuple[Mapping[str, Any], ...]:
+    rows: list[Mapping[str, Any]] = []
     prior_days_seen: set[str] = set()
     for row in context.recent_checkins:
         day = _row_training_day(row)
-        if day and day == context.training_day:
+        if not day:
+            continue
+        if context.training_day and day == context.training_day:
             continue
         if day in prior_days_seen:
             continue
         prior_days_seen.add(day)
+        rows.append(row)
+        if len(rows) >= limit:
+            break
+    return tuple(rows)
+
+
+def _recent_poor_readiness_count(checkin: ReadinessCheckin, context: ReadinessContext) -> int:
+    count = 1 if _current_is_poor_readiness(checkin) else 0
+    for row in _prior_unique_checkins(context):
         if _row_is_poor_readiness(row):
             count += 1
-        if len(prior_days_seen) >= 2:
-            break
     return count
+
+
+def _three_day_streak(
+    checkin_value: str,
+    prior_rows: Sequence[Mapping[str, Any]],
+    key: str,
+    allowed_values: set[str],
+) -> bool:
+    if checkin_value not in allowed_values or len(prior_rows) < 2:
+        return False
+    return all(_row_value(row, key) in allowed_values for row in prior_rows[:2])
+
+
+_PAIN_ORDER = {
+    "none": 0,
+    "manageable": 1,
+    "high": 2,
+}
+
+
+def _pain_worsening_trend(checkin: ReadinessCheckin, prior_rows: Sequence[Mapping[str, Any]]) -> bool:
+    if checkin.pain not in _PAIN_ORDER or len(prior_rows) < 2:
+        return False
+    yesterday, day_before = prior_rows[:2]
+    pain_values = [
+        _PAIN_ORDER.get(_row_value(day_before, "pain"), 0),
+        _PAIN_ORDER.get(_row_value(yesterday, "pain"), 0),
+        _PAIN_ORDER[checkin.pain],
+    ]
+    return pain_values[-1] > 0 and pain_values[-1] > pain_values[0] and pain_values == sorted(pain_values)
 
 
 def _recent_hard_session_count(context: ReadinessContext) -> int:
@@ -287,6 +336,11 @@ def _days_until_fight(context: ReadinessContext, training_day: str) -> int | Non
         return (date.fromisoformat(fight_date[:10]) - date.fromisoformat(training_day[:10])).days
     except ValueError:
         return None
+
+
+def _is_fight_week(context: ReadinessContext) -> bool:
+    days_until_fight = _days_until_fight(context, context.training_day)
+    return days_until_fight is not None and 0 <= days_until_fight <= 7
 
 
 def _with_context_triggers(*triggers: str, session_risk: SessionRisk, phase: str, contact_sport: bool) -> tuple[str, ...]:
@@ -357,97 +411,145 @@ def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, sessi
     return None
 
 
-def _normal_base_message(
+def _append_unique(values: list[str], value: str) -> None:
+    if value and value not in values:
+        values.append(value)
+
+
+def _collect_soft_warnings(
     *,
     checkin: ReadinessCheckin,
     context: ReadinessContext,
     session_risk: SessionRisk,
     phase: str,
     repeated_poor: bool,
-) -> tuple[RecommendationDecision, str, str, str, list[str]]:
-    decision: RecommendationDecision = "train_as_planned"
+    fight_week: bool,
+) -> _SoftWarningState:
     triggers: list[str] = []
+    current_effective: list[str] = []
+    trend_effective: list[str] = []
+    context_effective: list[str] = []
+    prior_rows = _prior_unique_checkins(context)
     poor = checkin.sleep == "poor"
     flat = checkin.body == "flat"
     manageable_pain = checkin.pain == "manageable"
-    recent_hard = checkin.previous_session == "very_hard" or _recent_hard_session_count(context) >= 2
+    recent_hard_count = _recent_hard_session_count(context)
+    recent_hard = checkin.previous_session == "very_hard" or recent_hard_count >= 2
     tracked_injury = checkin.active_injury == "stable" or bool(context.open_injuries)
+    poor_sleep_streak = _three_day_streak(checkin.sleep, prior_rows, "sleep", {"poor"})
+    flat_body_streak = _three_day_streak(checkin.body, prior_rows, "body", {"flat"})
+    pain_streak = _three_day_streak(checkin.pain, prior_rows, "pain", {"manageable", "high"})
+    pain_worsening = _pain_worsening_trend(checkin, prior_rows)
 
     if poor:
-        decision = _more_conservative(decision, "modify")
-        triggers.append("poor_sleep")
+        _append_unique(triggers, "poor_sleep")
+        if poor_sleep_streak:
+            _append_unique(triggers, "poor_sleep_3_day_streak")
+            _append_unique(trend_effective, "poor_sleep_3_day_streak")
+        else:
+            _append_unique(current_effective, "poor_sleep")
     if flat:
-        decision = _more_conservative(decision, "modify")
-        triggers.append("flat_body")
+        _append_unique(triggers, "flat_body")
+        if flat_body_streak:
+            _append_unique(triggers, "flat_body_3_day_streak")
+            _append_unique(trend_effective, "flat_body_3_day_streak")
+        else:
+            _append_unique(current_effective, "flat_body")
     if manageable_pain:
-        decision = _more_conservative(decision, "modify")
-        triggers.append("manageable_pain")
+        _append_unique(triggers, "manageable_pain")
+        if pain_streak:
+            _append_unique(triggers, "pain_3_day_streak")
+            _append_unique(trend_effective, "pain_3_day_streak")
+        if pain_worsening:
+            _append_unique(triggers, "pain_worsening_trend")
+            _append_unique(trend_effective, "pain_worsening_trend")
+        if not pain_streak and not pain_worsening:
+            _append_unique(current_effective, "manageable_pain")
     if tracked_injury and session_risk == "high":
-        decision = _more_conservative(decision, "modify")
-        triggers.append("tracked_injury_high_risk_session")
+        _append_unique(triggers, "tracked_injury_high_risk_session")
+        _append_unique(context_effective, "tracked_injury_high_risk_session")
     if recent_hard and phase in {"SPP", "TAPER", "REINTEGRATION"}:
-        decision = _more_conservative(decision, "modify")
-        triggers.append("recent_hard_session")
+        _append_unique(triggers, "recent_hard_session")
+        _append_unique(context_effective, "recent_hard_session")
     if repeated_poor:
-        decision = _more_conservative(decision, "modify")
-        triggers.append("repeated_poor_readiness")
-    if poor and flat and manageable_pain and phase in {"TAPER", "REINTEGRATION"}:
-        decision = "pull_back"
-        return (
-            decision,
-            "Pull back today.",
-            "Poor sleep, a flat body, and pain mean your body needs a recovery day.",
-            "Skip combat work and use recovery or light mobility instead.",
-            triggers,
-        )
+        _append_unique(triggers, "repeated_poor_readiness")
+        if not trend_effective:
+            _append_unique(context_effective, "repeated_poor_readiness")
 
-    if decision == "train_as_planned":
-        if phase == "TAPER":
-            return (
-                decision,
-                "Sharp work only.",
-                "You are in taper, so sharpness matters more than extra work today.",
-                "Keep speed and timing work only; remove tiring rounds.",
-                triggers,
-            )
-        return (
-            decision,
-            "Full session.",
-            "Sleep, body state, and pain are clear today.",
-            "Run the planned work and keep the prescribed dose.",
-            triggers,
-        )
+    if recent_hard_count >= 2 and _current_is_poor_readiness(checkin):
+        _append_unique(triggers, "recent_hard_load_plus_poor_today")
+        if len(current_effective) == 1 and not trend_effective and not context_effective:
+            current_effective.clear()
+        _append_unique(context_effective, "recent_hard_load_plus_poor_today")
 
-    if repeated_poor:
+    has_soft_warning = bool(current_effective or trend_effective or context_effective)
+    if phase == "TAPER" and has_soft_warning:
+        _append_unique(triggers, "taper_poor_readiness")
+        _append_unique(context_effective, "taper_poor_readiness")
+    elif phase == "REINTEGRATION" and has_soft_warning:
+        _append_unique(triggers, "reintegration_poor_readiness")
+        _append_unique(context_effective, "reintegration_poor_readiness")
+
+    if fight_week and (current_effective or trend_effective or context_effective):
+        _append_unique(triggers, "fight_week")
+        _append_unique(context_effective, "fight_week")
+
+    return _SoftWarningState(
+        triggers=tuple(dict.fromkeys(triggers)),
+        effective=tuple(dict.fromkeys([*trend_effective, *current_effective, *context_effective])),
+    )
+
+
+def _has_pain_warning(warnings: Sequence[str]) -> bool:
+    return bool({"manageable_pain", "pain_3_day_streak", "pain_worsening_trend"} & set(warnings))
+
+
+def _specific_soft_warning_message(
+    warning: str,
+    *,
+    session_risk: SessionRisk,
+) -> tuple[RecommendationDecision, str, str, str]:
+    if warning == "poor_sleep_3_day_streak":
         return (
-            decision,
+            "modify",
             "Session reduced.",
-            "Your check-ins have been poor for a few days, so your body is not bouncing back.",
-            "Cut rounds and intensity today. Do not add conditioning.",
-            triggers,
+            "Poor sleep has built up for 3 days, so your body has less room to recover.",
+            "Cut 1 round and remove conditioning today.",
         )
 
-    if phase == "TAPER":
+    if warning == "flat_body_3_day_streak":
         return (
-            decision,
-            "Session reduced.",
-            "You are in taper, so sharpness matters more than extra work today.",
-            "Keep speed and timing work only; remove tiring rounds.",
-            triggers,
+            "modify",
+            "Intensity capped.",
+            "Your body has felt flat for 3 days, so speed and reactions may drop.",
+            "Keep rounds technical and stay away from all-out work.",
         )
 
-    if poor and flat:
-        reason = "Poor sleep plus a flat body means your output will drop today."
-        action = "Cut 1 round, cap intensity, and skip finishers."
-        if session_risk == "high":
-            reason = "Poor sleep plus a flat body before hard combat work raises injury risk today."
-            action = "Skip sparring, hard rounds, and conditioning finishers."
-        elif session_risk == "low":
-            reason = "Poor sleep means your body has less room to recover, but today's work is light."
-            action = "Keep the easy work and cut anything extra."
-        return decision, "Session reduced.", reason, action, triggers
+    if warning == "pain_3_day_streak":
+        return (
+            "modify",
+            "Load reduced.",
+            "Pain has shown up for 3 days, so the area needs protection.",
+            "Skip sparring, clinch pressure, hard bag work, and conditioning.",
+        )
 
-    if poor:
+    if warning == "pain_worsening_trend":
+        return (
+            "modify",
+            "Load reduced.",
+            "Pain is getting worse, so hard combat work needs to be limited.",
+            "Skip sparring, clinch pressure, hard bag work, and conditioning.",
+        )
+
+    if warning == "recent_hard_load_plus_poor_today":
+        return (
+            "modify",
+            "Session reduced.",
+            "Your recent training load was high and today's check-in is poor.",
+            "Keep rounds controlled and remove tiring extras.",
+        )
+
+    if warning == "poor_sleep":
         reason = "Poor sleep means your body has less room to recover today."
         action = "Cut 1 round and do not add extra conditioning."
         if session_risk == "high":
@@ -456,48 +558,122 @@ def _normal_base_message(
         elif session_risk == "low":
             reason = "Poor sleep means your body has less room to recover, but today's work is light."
             action = "Keep the easy work and cut anything extra."
-        return decision, "Session reduced.", reason, action, triggers
+        return "modify", "Session reduced.", reason, action
 
-    if flat:
+    if warning == "flat_body":
         reason = "A flat body lowers speed, reactions, and sharpness today."
         action = "Keep rounds technical and stay away from all-out work."
         if session_risk == "high":
             reason = "A flat body lowers reaction speed and defensive sharpness today."
             action = "No sparring, hard bag rounds, or max-output conditioning."
-        return decision, "Intensity capped.", reason, action, triggers
+        return "modify", "Intensity capped.", reason, action
 
-    if manageable_pain:
+    if warning == "manageable_pain":
         reason = "Manageable pain means the area needs protection today."
         action = "Avoid painful shots, clinch positions, impact, and hard conditioning."
         if session_risk == "high":
             reason = "Manageable pain before contact work needs protection today."
             action = "Skip sparring, clinch pressure, hard bag work, and conditioning."
-        return decision, "Load reduced.", reason, action, triggers
+        return "modify", "Load reduced.", reason, action
 
-    if tracked_injury and session_risk == "high":
+    if warning == "repeated_poor_readiness":
         return (
-            decision,
+            "modify",
+            "Session reduced.",
+            "Your check-ins have been poor for a few days, so your body is not bouncing back.",
+            "Cut rounds and intensity today. Do not add conditioning.",
+        )
+
+    if warning == "tracked_injury_high_risk_session":
+        return (
+            "modify",
             "Load controlled.",
             "An active injury means hard combat work needs to be limited today.",
             "Remove sparring, clinch pressure, hard bag work, and all-out rounds.",
-            triggers,
         )
 
-    if recent_hard:
+    if warning == "recent_hard_session":
         return (
-            decision,
+            "modify",
             "Session reduced.",
             "Your recent training load was high, so quality matters more today.",
             "Keep rounds controlled and remove tiring extras.",
-            triggers,
+        )
+
+    if warning == "taper_poor_readiness":
+        return (
+            "modify",
+            "Session reduced.",
+            "You are in taper, so sharpness matters more than extra work today.",
+            "Keep speed and timing work only; remove tiring rounds.",
+        )
+
+    if warning == "reintegration_poor_readiness":
+        return (
+            "modify",
+            "Session reduced.",
+            "You are rebuilding, so hard combat work needs to stay controlled today.",
+            "Keep it light and remove tiring rounds.",
+        )
+
+    return "modify", "Session adjusted.", "Your body needs a safer dose today.", "Reduce volume and keep the work clean."
+
+
+def _soft_warning_message(
+    warnings: Sequence[str],
+    *,
+    session_risk: SessionRisk,
+    phase: str,
+    fight_week: bool,
+) -> tuple[RecommendationDecision, str, str, str]:
+    warning_count = len(warnings)
+    if warning_count >= 3:
+        if session_risk == "high" or _has_pain_warning(warnings) or phase in {"TAPER", "REINTEGRATION"} or fight_week:
+            return (
+                "pull_back",
+                "Pull back today.",
+                "Several warnings are showing, so your body is not ready for hard combat work.",
+                "Skip combat work and use recovery or light mobility instead.",
+            )
+        return (
+            "modify",
+            "Session reduced.",
+            "Several warnings are showing, so today needs a safer dose.",
+            "Cut rounds, cap intensity, and remove conditioning.",
+        )
+
+    if warning_count == 2:
+        return (
+            "modify",
+            "Session reduced.",
+            "More than one warning is showing, so hard combat work needs to be reduced today.",
+            "Keep rounds controlled. Skip sparring, hard rounds, and conditioning finishers.",
+        )
+
+    if warning_count == 1:
+        return _specific_soft_warning_message(warnings[0], session_risk=session_risk)
+
+    if fight_week:
+        return (
+            "train_as_planned",
+            "Sharp work only.",
+            "Fight week rewards freshness, not extra fatigue.",
+            "Keep timing, speed, and rhythm work; leave conditioning volume alone.",
+        )
+
+    if phase == "TAPER":
+        return (
+            "train_as_planned",
+            "Sharp work only.",
+            "You are in taper, so sharpness matters more than extra work today.",
+            "Keep speed and timing work only; remove tiring rounds.",
         )
 
     return (
-        decision,
-        "Session adjusted.",
-        "Your body needs a safer dose today.",
-        "Reduce volume and keep the work clean.",
-        triggers,
+        "train_as_planned",
+        "Full session.",
+        "Your sleep, body, and pain check are clear today.",
+        "Run the planned work and keep the rounds clean.",
     )
 
 
@@ -512,23 +688,34 @@ def build_readiness_adjustment(
     if risk:
         return risk
 
+    contact_sport = _is_combat_contact_sport(context)
+    fight_week = _is_fight_week(context)
     repeated_poor = _recent_poor_readiness_count(checkin, context) >= 3
-    decision, title, reason, action, triggers = _normal_base_message(
+    soft_warnings = _collect_soft_warnings(
         checkin=checkin,
         context=context,
         session_risk=session_risk,
         phase=phase,
         repeated_poor=repeated_poor,
+        fight_week=fight_week,
     )
 
-    contact_sport = _is_combat_contact_sport(context)
-    days_until_fight = _days_until_fight(context, context.training_day)
-    if days_until_fight is not None and 0 <= days_until_fight <= 7 and decision != "pull_back":
+    if "pain_worsening_trend" in soft_warnings.effective and session_risk == "high":
+        decision: RecommendationDecision = "pull_back"
+        title = "Pull back today."
+        reason = "Pain is getting worse, so hard combat work is not safe today."
+        action = "Use recovery, rehab, or light mobility instead."
+    else:
+        decision, title, reason, action = _soft_warning_message(
+            soft_warnings.effective,
+            session_risk=session_risk,
+            phase=phase,
+            fight_week=fight_week,
+        )
+
+    triggers = list(soft_warnings.triggers)
+    if fight_week and not soft_warnings.effective:
         triggers.append("fight_week")
-        if decision == "train_as_planned" and phase != "TAPER":
-            title = "Sharp work only."
-            reason = "Fight week rewards freshness, not extra fatigue."
-            action = "Keep timing, speed, and rhythm work; leave conditioning volume alone."
 
     if contact_sport and session_risk == "high" and decision == "modify" and "contact_sport" not in triggers:
         action = action.rstrip(".") + " and do not add extra contact rounds."
