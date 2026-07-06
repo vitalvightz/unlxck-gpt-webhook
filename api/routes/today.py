@@ -85,6 +85,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         result = submit_today_injury_checkin(
             store,
             athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
             payload=request_body.model_dump(),
         )
         return TodayInjuryCheckinResponse(
