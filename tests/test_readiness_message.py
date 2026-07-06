@@ -258,6 +258,63 @@ def test_pain_worsening_trend_pulls_back_before_high_risk_work():
     _assert_card_shape(adjustment)
 
 
+def test_new_pain_after_clear_days_does_not_trigger_worsening_trend():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(pain="manageable"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_checkins=_prior_checkins(
+                {"training_day": "2026-06-17", "pain": "none"},
+                {"training_day": "2026-06-16", "pain": "none"},
+            ),
+            today_session=_session(title="Moderate strength"),
+        ),
+    )
+
+    assert "pain_worsening_trend" not in adjustment.triggers
+    assert adjustment.decision == "modify"
+    assert "Manageable pain means the area needs protection" in adjustment.reason
+    _assert_card_shape(adjustment)
+
+
+def test_existing_pain_that_stays_manageable_triggers_worsening_trend():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(pain="manageable"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_checkins=_prior_checkins(
+                {"training_day": "2026-06-17", "pain": "manageable"},
+                {"training_day": "2026-06-16", "pain": "none"},
+            ),
+            today_session=_session(title="Moderate strength"),
+        ),
+    )
+
+    assert "pain_worsening_trend" in adjustment.triggers
+    assert "Pain is getting worse" in adjustment.reason
+    _assert_card_shape(adjustment)
+
+
+def test_manageable_pain_streak_to_high_pain_still_uses_hard_override():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(pain="high"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_checkins=_prior_checkins(
+                {"training_day": "2026-06-17", "pain": "manageable"},
+                {"training_day": "2026-06-16", "pain": "manageable"},
+            ),
+            today_session=_session(title="Sparring and hard conditioning"),
+        ),
+    )
+
+    assert adjustment.decision == "pull_back"
+    assert adjustment.title == "Rehab only today."
+    assert "pain_worsening_trend" not in adjustment.triggers
+    assert "pain_high" in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
 def test_two_hard_sessions_plus_poor_today_uses_load_trend_message():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),
@@ -317,6 +374,44 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
     assert "poor_sleep_3_day_streak" in adjustment.triggers
     assert "flat_body_3_day_streak" in adjustment.triggers
     assert "recent_hard_load_plus_poor_today" in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
+def test_poor_sleep_in_taper_uses_taper_specific_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", phase="TAPER"),
+        ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "taper_poor_readiness" in adjustment.triggers
+    assert "sharpness matters" in adjustment.reason
+    assert "More than one warning is showing" not in adjustment.message
+    _assert_card_shape(adjustment)
+
+
+def test_flat_body_in_reintegration_uses_reintegration_specific_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(body="flat", phase="REINTEGRATION"),
+        ReadinessContext(phase="REINTEGRATION", today_session=_session(title="Mobility")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "reintegration_poor_readiness" in adjustment.triggers
+    assert "You are rebuilding" in adjustment.reason
+    assert "More than one warning is showing" not in adjustment.message
+    _assert_card_shape(adjustment)
+
+
+def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat", pain="manageable", phase="TAPER"),
+        ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
+    )
+
+    assert adjustment.decision == "pull_back"
+    assert "Several warnings are showing" in adjustment.message
+    assert "Skip combat work" in adjustment.message
     _assert_card_shape(adjustment)
 
 

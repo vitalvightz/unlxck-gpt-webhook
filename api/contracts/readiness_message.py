@@ -276,7 +276,12 @@ def _pain_worsening_trend(checkin: ReadinessCheckin, prior_rows: Sequence[Mappin
         _PAIN_ORDER.get(_row_value(yesterday, "pain"), 0),
         _PAIN_ORDER[checkin.pain],
     ]
-    return pain_values[-1] > 0 and pain_values[-1] > pain_values[0] and pain_values == sorted(pain_values)
+    return (
+        pain_values[-1] > 0
+        and pain_values[1] > 0
+        and pain_values[-1] > pain_values[0]
+        and pain_values == sorted(pain_values)
+    )
 
 
 def _recent_hard_session_count(context: ReadinessContext) -> int:
@@ -641,6 +646,12 @@ def _soft_warning_message(
             "Several warnings are showing, so today needs a safer dose.",
             "Cut rounds, cap intensity, and remove conditioning.",
         )
+
+    if "taper_poor_readiness" in warnings:
+        return _specific_soft_warning_message("taper_poor_readiness", session_risk=session_risk)
+
+    if "reintegration_poor_readiness" in warnings:
+        return _specific_soft_warning_message("reintegration_poor_readiness", session_risk=session_risk)
 
     if warning_count == 2:
         return (
