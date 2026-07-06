@@ -54,6 +54,7 @@ import {
   hasTodaySession,
   resolveSessionFocusDate,
   shouldShowTodayCheckin,
+  type TodayDecisionBanner,
 } from "@/lib/today";
 import type {
   InjuryFlagRecord,
@@ -69,7 +70,6 @@ import type {
   TodayInjuryCheckinStatus,
   TodayInjuryDeclaration,
   TodayPreviousSession,
-  TodayRecommendationState,
   TodaySession,
 } from "@/lib/types";
 
@@ -194,10 +194,10 @@ function getSessionRelationCopy(
       completionStatus === "modified" ||
       completionStatus === "skipped";
     return {
-      kicker: "Next scheduled session",
+      kicker: "Next session",
       status: "Preview",
       helper: loggedToday
-        ? "Today's session is logged, so this shows your next scheduled session."
+        ? "Today's session is logged, so this shows your next session."
         : "Today has no matched training card, so this shows the next available plan day.",
     };
   }
@@ -892,21 +892,22 @@ function CompletionForm({
  * blocks — it never mutates the saved plan.
  */
 function DecisionBanner({
-  state,
-  reason,
+  banner,
 }: {
-  state: TodayRecommendationState;
-  reason?: string | null;
+  banner: TodayDecisionBanner | null;
 }) {
-  const banner = getTodayDecisionBanner(state, reason);
   if (!banner) {
     return null;
   }
-  const icon = getRecommendationCopy(state).icon;
   return (
-    <div className="today-decision-banner" data-tone={banner.tone} role="status">
+    <div
+      className="today-decision-banner"
+      data-state={banner.displayState}
+      data-tone={banner.tone}
+      role="status"
+    >
       <span className="today-decision-icon" aria-hidden="true">
-        {icon}
+        {banner.chip}
       </span>
       <div className="today-decision-body">
         <p className="today-decision-title">{banner.title}</p>
@@ -996,25 +997,35 @@ function SessionCard({
   // today is logged / carries no app card (session_relation === "next"). Resolving
   // by that target day — not the bare calendar day — stops the card from sticking
   // on the finished session while the header has already advanced to "Next
-  // scheduled session", which is exactly how Overview already behaves.
+  // next session", which is exactly how Overview already behaves.
   const focusDate = resolveSessionFocusDate(trainingDay, session);
   const current = resolveCurrentDay(structuredPlan, focusDate);
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
   const isNextSessionPreview = session.session_relation === "next";
+  const isRecommendationPreview = isNextSessionPreview || !hasSession;
   const relationCopy = getSessionRelationCopy(session, status);
-  const canCompleteSession = canCompleteTodaySession(session) && !isNextSessionPreview;
   const recommendationState = state.today.recommendation_state;
+  const decisionBanner = getTodayDecisionBanner(recommendationState, state.today.recommendation_reason, {
+    isPreview: isRecommendationPreview,
+  });
+  const decisionBlocksTraining = Boolean(decisionBanner?.blocksTraining);
+  const canCompleteSession =
+    canCompleteTodaySession(session) && !isNextSessionPreview && !decisionBlocksTraining;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.
-  const recommendationTone = getRecommendationCopy(recommendationState).tone;
   const cardTone =
-    recommendationTone === "green" ||
-    recommendationTone === "amber" ||
-    recommendationTone === "red"
-      ? recommendationTone
+    decisionBanner?.tone === "green" ||
+    decisionBanner?.tone === "amber" ||
+    decisionBanner?.tone === "red"
+      ? decisionBanner.tone
       : undefined;
+  const terminalStatusCopy = decisionBlocksTraining
+    ? "Follow the recommendation above. Do not start this session from Today."
+    : isNextSessionPreview
+      ? "Preview only. Completion opens on the matched training day."
+      : "Session details available, but completion is unavailable for this entry.";
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -1068,7 +1079,7 @@ function SessionCard({
             </h2>
           </div>
         </div>
-        <DecisionBanner state={recommendationState} reason={state.today.recommendation_reason} />
+        <DecisionBanner banner={decisionBanner} />
         {showStructuredBlocks ? (
           <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
         ) : (
@@ -1103,7 +1114,7 @@ function SessionCard({
           <h2 id="today-session-heading">{headline}</h2>
         </div>
       </div>
-      <DecisionBanner state={recommendationState} reason={state.today.recommendation_reason} />
+      <DecisionBanner banner={decisionBanner} />
       {showStructuredBlocks ? (
         <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
       ) : (
@@ -1136,10 +1147,8 @@ function SessionCard({
       )}
 
       {!canCompleteSession ? (
-        <p className="today-terminal-status">
-          {isNextSessionPreview
-            ? `${relationCopy.helper} Completion opens on the matched training day.`
-            : "Session details available, but completion is unavailable for this entry."}
+        <p className="today-terminal-status" data-tone={decisionBlocksTraining ? "blocked" : "neutral"}>
+          {terminalStatusCopy}
         </p>
       ) : null}
 

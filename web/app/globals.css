@@ -5243,14 +5243,14 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
 .today-decision-banner {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  align-items: start;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-left-width: 3px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .today-decision-body {
@@ -5266,70 +5266,84 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
   justify-content: center;
   align-self: start;
   flex: 0 0 auto;
-  min-width: 44px;
-  height: 28px;
-  padding: 0 8px;
+  min-width: 0;
+  min-height: 24px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   font-family: var(--font-mono), monospace;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  line-height: 1;
+  letter-spacing: 0.04em;
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
 }
 
+.today-decision-banner[data-tone="neutral"] {
+  border-left-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.today-decision-banner[data-tone="neutral"] .today-decision-icon {
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.07);
+}
+
 .today-decision-banner[data-tone="red"] {
   border-left-color: #ff6b75;
-  background: linear-gradient(135deg, rgba(219, 47, 64, 0.14), rgba(219, 47, 64, 0.05));
+  background: rgba(219, 47, 64, 0.08);
 }
 
 .today-decision-banner[data-tone="red"] .today-decision-icon {
-  background: linear-gradient(180deg, #e23a4c, #b5122b);
-  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.4);
+  border-color: rgba(255, 107, 117, 0.34);
+  background: rgba(226, 58, 76, 0.22);
+  color: #ffd8dc;
 }
 
 .today-decision-banner[data-tone="amber"] {
   border-left-color: #f1bd61;
-  background: linear-gradient(135deg, rgba(214, 175, 106, 0.16), rgba(214, 175, 106, 0.05));
+  background: rgba(214, 175, 106, 0.08);
 }
 
 .today-decision-banner[data-tone="amber"] .today-decision-icon {
-  background: linear-gradient(180deg, #e6c27d, #c79a45);
-  color: #2a2007;
-  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.32);
+  border-color: rgba(241, 189, 97, 0.36);
+  background: rgba(241, 189, 97, 0.2);
+  color: #ffe2a6;
 }
 
 .today-decision-banner[data-tone="green"] {
   border-left-color: #76d393;
-  background: linear-gradient(135deg, rgba(39, 174, 96, 0.16), rgba(39, 174, 96, 0.05));
+  background: rgba(39, 174, 96, 0.08);
 }
 
 .today-decision-banner[data-tone="green"] .today-decision-icon {
-  background: linear-gradient(180deg, #4cc47e, #1f9d5a);
-  box-shadow: 0 4px 14px rgba(39, 174, 96, 0.32);
+  border-color: rgba(118, 211, 147, 0.34);
+  background: rgba(76, 196, 126, 0.18);
+  color: #d7ffe5;
 }
 
 .today-decision-title {
   margin: 0;
-  font-family: var(--font-mono), monospace;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  line-height: 1.2;
+  letter-spacing: 0;
   color: var(--text-primary);
 }
 
 .today-decision-detail {
   margin: 0;
   color: var(--text-secondary, rgba(255, 255, 255, 0.72));
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 14.5px;
+  line-height: 1.45;
 }
 
 .today-decision-safety {
   margin: 2px 0 0;
   color: var(--text-secondary, rgba(255, 255, 255, 0.72));
-  font-size: 12.5px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.4;
   opacity: 0.85;
 }
 
@@ -5381,9 +5395,15 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
 }
 
 .today-terminal-status {
-  border-left: 3px solid rgba(219, 47, 64, 0.72);
+  border-left: 3px solid rgba(255, 255, 255, 0.18);
   padding-left: 12px;
   color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.today-terminal-status[data-tone="blocked"] {
+  border-left-color: rgba(219, 47, 64, 0.72);
 }
 
 .today-risk-more {
@@ -12483,25 +12503,36 @@ html[data-theme="light"] .today-inline-warning {
   background: rgba(255, 255, 255, 0.58);
 }
 
+html[data-theme="light"] .today-decision-banner[data-tone="neutral"] {
+  border-color: rgba(98, 77, 69, 0.12);
+  border-left-color: rgba(98, 77, 69, 0.28);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="neutral"] .today-decision-icon {
+  color: rgba(43, 35, 31, 0.7);
+  background: rgba(43, 35, 31, 0.06);
+}
+
 html[data-theme="light"] .today-decision-banner[data-tone="red"],
 html[data-theme="light"] .today-risk-item[data-tone="stop"],
 html[data-theme="light"] .today-risk-item[data-tone="warning"] {
   border-color: color-mix(in srgb, var(--brand-red) 24%, transparent);
   border-left-color: var(--brand-red);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-red) 8%, transparent), rgba(255, 255, 255, 0.62));
+  background: color-mix(in srgb, var(--brand-red) 8%, white);
 }
 
 html[data-theme="light"] .today-decision-banner[data-tone="amber"],
 html[data-theme="light"] .today-risk-item[data-tone="caution"] {
   border-color: color-mix(in srgb, var(--progress-gold) 24%, transparent);
   border-left-color: var(--progress-gold);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--progress-gold) 9%, transparent), rgba(255, 255, 255, 0.62));
+  background: color-mix(in srgb, var(--progress-gold) 9%, white);
 }
 
 html[data-theme="light"] .today-decision-banner[data-tone="green"] {
   border-color: color-mix(in srgb, var(--success-ink) 20%, transparent);
   border-left-color: var(--success-ink);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--success-ink) 8%, transparent), rgba(255, 255, 255, 0.62));
+  background: color-mix(in srgb, var(--success-ink) 8%, white);
 }
 
 html[data-theme="light"] .today-risk-item[data-tone="info"] {
