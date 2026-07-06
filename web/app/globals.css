@@ -5406,6 +5406,19 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
   border-left-color: rgba(219, 47, 64, 0.72);
 }
 
+/* The neutral banner and terminal status borders use white opacity, which is
+   invisible on the light-theme background. Give them a warm dark tint so the
+   left rule and outline stay legible in light mode. */
+html[data-theme="light"] .today-decision-banner[data-tone="neutral"] {
+  border-color: rgba(98, 77, 69, 0.12);
+  border-left-color: rgba(98, 77, 69, 0.28);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="light"] .today-terminal-status {
+  border-left-color: rgba(98, 77, 69, 0.24);
+}
+
 .today-risk-more {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
