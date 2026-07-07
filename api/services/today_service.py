@@ -326,7 +326,13 @@ def _refresh_today_recommendation_after_injury_change(
     if not today_checkin:
         return None
 
-    active_injury_override = "worse" if injury_reported_worse else None
+    # Escalate the readiness recommendation when the injury is reported worse OR
+    # an active severe injury is present — a severe injury added as "ongoing" must
+    # still pull training back, not sit at the daily "load reduced" copy. Routing
+    # it through the same "worse" path keeps the engine's copy ("Rehab only
+    # today.") consistent across both entry points.
+    has_active_severe = _active_severe_injury(open_injuries) is not None
+    active_injury_override = "worse" if (injury_reported_worse or has_active_severe) else None
     decision = build_readiness_adjustment(
         _stored_readiness_checkin_from(today_checkin, active_injury_override=active_injury_override),
         _readiness_context_for_today(
@@ -418,6 +424,50 @@ def _recommendation_mapping(checkin: Mapping[str, Any] | None) -> dict[str, Any]
     }
 
 
+# Session-completion transitions that mean "I trained (or am training) this".
+# A severe injury blocks these; skipping / reverting to not-started stays allowed.
+_TRAINING_COMPLETION_STATUSES: frozenset[str] = frozenset({"started", "done", "modified"})
+
+
+def _active_severe_injury(
+    open_flags: Sequence[Mapping[str, Any]] | None,
+) -> Mapping[str, Any] | None:
+    """The first active (non-resolved) SEVERE injury flag, or None.
+
+    Severity-driven, not day-status driven: a severe injury is still severe while
+    it is easing (monitoring), so only clearing it (resolved) drops it out. This
+    is the single source of truth shared by the completion guard and the command
+    view's injury-hold recommendation, matching the Today/Overview UI.
+    """
+    for flag in open_flags or []:
+        if (
+            str(flag.get("severity") or "") == "severe"
+            and str(flag.get("status") or "") != "resolved"
+        ):
+            return flag
+    return None
+
+
+def _severe_injury_recommendation(
+    injury: Mapping[str, Any], training_day: str
+) -> dict[str, Any]:
+    """A hard-block (pull_back) recommendation that supersedes the daily readiness
+    copy when a severe injury is active. The stored daily check-in is untouched
+    (it stays in history); this only reshapes the live command view so every
+    consumer — not just the Today UI — sees the injury hold as authoritative."""
+    label = injury.get("label") or build_injury_label(
+        injury.get("body_area"), injury.get("description")
+    )
+    reason = "\n".join(
+        [
+            "Session blocked",
+            f"Active severe injury: {label}. This is not a load-reduced session.",
+            "Clear it or get it medically cleared before training — marking it easing does not lift the hold.",
+        ]
+    )
+    return {"decision": "pull_back", "reason": reason, "training_day": training_day}
+
+
 def upsert_session_completion(
     store: AppStore,
     *,
@@ -448,6 +498,24 @@ def upsert_session_completion(
     training_day = resolve_training_day(athlete_timezone, now=now)
     now_iso = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
     status_value = str(payload.get("status") or "not_started")
+
+    # Server-side safety hold: an active severe injury blocks actually training
+    # this session (start / done / modified) — not just in the UI. Skipping or
+    # reverting to not-started stays allowed so the athlete can still log that
+    # they backed off. Mirrors the Today/Overview injury hold.
+    if status_value in _TRAINING_COMPLETION_STATUSES:
+        severe = _active_severe_injury(_open_injury_flags(store, athlete_id))
+        if severe is not None:
+            label = severe.get("label") or build_injury_label(
+                severe.get("body_area"), severe.get("description")
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Blocked by an active severe injury ({label}). Clear it or get it "
+                    "medically cleared before starting or completing this session."
+                ),
+            )
 
     existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
 
@@ -1356,6 +1424,18 @@ def build_today_command_view(
     # ("Left wrist tightness") instead of raw stored words.
     for injury in open_injuries:
         injury["label"] = build_injury_label(injury.get("body_area"), injury.get("description"))
+
+    # A severe active injury is the highest-priority constraint for the day: it
+    # supersedes the daily readiness recommendation with a hard pull-back so the
+    # live command view is authoritative (the stored daily check-in stays in
+    # history). This catches a severe injury carried in from intake / a prior day
+    # that never went through the injury check-in refresh. It only ESCALATES —
+    # when the recommendation is already a pull-back (e.g. the readiness engine
+    # produced "Rehab only today." on injury report) we keep that richer copy.
+    severe_injury = _active_severe_injury(open_injuries)
+    current_decision = str((recommendation or {}).get("decision") or "")
+    if severe_injury is not None and current_decision != "pull_back":
+        recommendation = _severe_injury_recommendation(severe_injury, training_day)
 
     return build_command_view(
         current_training_day=training_day,
