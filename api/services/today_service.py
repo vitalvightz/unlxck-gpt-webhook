@@ -33,6 +33,7 @@ from api.contracts.completion import (
 from api.contracts.injury_checkin import (
     DeclaredInjury,
     build_injury_label,
+    injury_consequence_tier,
     open_injury_flag_risks,
     reconcile_injury_checkin,
 )
@@ -279,16 +280,47 @@ def _readiness_context_for_today(
     phase: str,
     open_injuries: Sequence[Mapping[str, Any]] | None = None,
 ) -> ReadinessContext:
+    resolved_injuries = (
+        open_injuries if open_injuries is not None else _open_injury_flags(store, athlete_id)
+    )
     return ReadinessContext(
         training_day=training_day,
         phase=phase,
         today_session=_today_session_for_readiness(plan_row, training_day),
         active_plan=plan_row,
         intake=_intake_payload_for_readiness(store, plan_row),
-        open_injuries=tuple(open_injuries) if open_injuries is not None else _open_injury_flags(store, athlete_id),
+        # Attach the coarse consequence tier so the readiness engine can scale the
+        # decision by injury TYPE (head/neck, structural, rib, tendon, joint), not
+        # severity alone. Single chokepoint for every readiness computation.
+        open_injuries=_with_injury_consequence(resolved_injuries),
         recent_checkins=_safe_recent_today_checkins(store, athlete_id),
         recent_sessions=_safe_recent_session_completions(store, athlete_id),
     )
+
+
+def _with_injury_consequence(
+    injuries: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    """Return the open injuries with a ``consequence`` tier attached (best-effort).
+
+    Classification reuses the shared taxonomy via ``injury_consequence_tier``; a
+    transient scorer failure must never crash Today, so it degrades to ``None``
+    (minor) for that injury rather than raising.
+    """
+    enriched: list[dict[str, Any]] = []
+    for injury in injuries or []:
+        row = dict(injury)
+        if "consequence" not in row:
+            try:
+                row["consequence"] = injury_consequence_tier(
+                    row.get("body_area"),
+                    row.get("description"),
+                    severity=row.get("severity"),
+                )
+            except Exception:
+                row["consequence"] = None
+        enriched.append(row)
+    return tuple(enriched)
 
 
 def _recommendation_fields_from_decision(

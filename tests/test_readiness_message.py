@@ -463,14 +463,29 @@ def test_flat_body_high_risk_uses_bag_or_max_output_copy():
     _assert_card_shape(adjustment)
 
 
-def test_manageable_pain_high_risk_uses_contact_protection_copy():
+def test_manageable_pain_before_high_risk_work_pulls_back():
+    # A pain signal before hard combat work is a pull-back, not a modify whose
+    # action already tells the athlete to skip the whole session (the amber-state /
+    # stop-action contradiction). On a lower-risk session it stays a modify.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(pain="manageable"),
         ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
     )
 
+    assert adjustment.decision == "pull_back"
+    assert "not safe today" in adjustment.reason
+    assert "manageable_pain" in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
+def test_manageable_pain_on_lower_risk_session_stays_modify():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(pain="manageable"),
+        ReadinessContext(today_session=_session(title="Technical skill drilling")),
+    )
+
     assert adjustment.decision == "modify"
-    assert "clinch pressure" in adjustment.action or "hard bag work" in adjustment.action
+    assert "clinch" in adjustment.action
     _assert_card_shape(adjustment)
 
 
