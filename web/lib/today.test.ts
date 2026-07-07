@@ -24,11 +24,12 @@ import {
   hasTodaySession,
   isHardCombatSession,
   isSessionToday,
+  resolveDecisionTier,
   shouldShowTodayCheckin,
 } from "./today.ts";
 import type { InjuryFlagRecord } from "./types.ts";
 import { submitTodayCheckin, submitTodaySessionCompletion } from "./api.ts";
-import type { TodayCommandView } from "./types.ts";
+import type { TodayCommandView, TodaySession } from "./types.ts";
 
 process.env.NEXT_PUBLIC_API_DEBUG = "false";
 
@@ -672,4 +673,74 @@ test("Overview STOP state routes to the safe session, never 'View recommendation
   // STOP must be handled before the generic block branch so it never falls
   // through to "View recommendation".
   assert.equal(source.indexOf("isStop") < source.indexOf('"View recommendation"'), true);
+});
+
+// ---------------------------------------------------------------------------
+// Decision-tier unification: the banner and the risk-watch footer both render
+// from one authoritative tier, so they can never contradict.
+// ---------------------------------------------------------------------------
+
+function stateWithTier(
+  decision_tier: TodayCommandView["today"]["decision_tier"],
+  recommendation_state: TodayCommandView["today"]["recommendation_state"] = "pull_back",
+  recommendation_reason: string | null = PULL_BACK_REASON,
+): TodayCommandView {
+  return {
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, recommendation_state, recommendation_reason, decision_tier },
+  };
+}
+
+test("resolveDecisionTier prefers the authoritative backend tier over the banner parse", () => {
+  const state = stateWithTier("pull_back");
+  const banner = getTodayDecisionBanner(
+    state.today.recommendation_state,
+    state.today.recommendation_reason,
+  );
+  assert.equal(resolveDecisionTier(state.today, banner), "pull_back");
+
+  const stopState = stateWithTier("stop", "pull_back", INJURY_REASON);
+  const stopBanner = getTodayDecisionBanner(
+    stopState.today.recommendation_state,
+    stopState.today.recommendation_reason,
+  );
+  assert.equal(resolveDecisionTier(stopState.today, stopBanner), "stop");
+});
+
+test("resolveDecisionTier keeps the preview framing for a next-session card", () => {
+  const banner = getTodayDecisionBanner("not_checked_in", null, { isPreview: true });
+  assert.equal(resolveDecisionTier({ decision_tier: "green" }, banner), "preview");
+});
+
+test("risk footer never shouts louder than the decision tier", () => {
+  // A plain PULL BACK day still carries a stop_red_flag risk (it echoes the
+  // recommendation); the footer must read PULL BACK, not STOP.
+  const risks: TodayCommandView["risk_watch"] = [
+    { category: "stop_red_flag", priority: 1, icon: "octagon-x", label: "Stop", text: "Pull back.", tone: "stop" },
+  ];
+  assert.equal(getRiskWatchSummary(risks, "pull_back").strongestLabel, "PULL BACK");
+  assert.equal(getRiskWatchSummary(risks, "modify").strongestLabel, "MODIFY");
+  // A genuine STOP day keeps the STOP signal.
+  assert.equal(getRiskWatchSummary(risks, "stop").strongestLabel, "STOP");
+  // Without a tier the raw signal is returned (back-compat).
+  assert.equal(getRiskWatchSummary(risks).strongestLabel, "STOP");
+});
+
+test("tier and footer agree across the decision hierarchy", () => {
+  const injuryRisk: TodayCommandView["risk_watch"] = [
+    { category: "active_injury_worse", priority: 2, icon: "bandage", label: "Injury worsening", text: "", tone: "stop" },
+  ];
+  // Injury signal is clamped to the tier: MODIFY tier → footer cannot read INJURY-as-stop louder than modify.
+  assert.equal(getRiskWatchSummary(injuryRisk, "modify").strongestLabel, "MODIFY");
+  assert.equal(getRiskWatchSummary(injuryRisk, "stop").strongestLabel, "INJURY");
+});
+
+test("a next session that is not today is never completable even without a session_relation", () => {
+  // session_relation is absent, but session_scope is not "today": the session
+  // must read as pending (isSessionToday === false), so the completion gate
+  // (canCompleteTodaySession && sessionIsToday) can never open.
+  const session: TodaySession = { session_id: "sess-9", effective_load: "hard" };
+  assert.equal(isSessionToday(session, "next"), false);
+  assert.equal(isSessionToday(session, "none"), false);
+  assert.equal(canCompleteTodaySession(session) && isSessionToday(session, "next"), false);
 });

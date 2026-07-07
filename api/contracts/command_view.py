@@ -156,22 +156,24 @@ _TIER_RANK: dict[str, int] = {
     "stop": 4,
 }
 
-# Stop-level risk categories: when present, the day is at minimum a STOP.
-_STOP_RISK_CATEGORIES = frozenset({"stop_red_flag", "active_injury_worse"})
+# Stop-level risk categories: when present, the day is at minimum a STOP. NOTE:
+# `stop_red_flag` is deliberately excluded — it is emitted for EVERY pull_back (it
+# echoes the recommendation), so clamping on it would force a plain PULL BACK to
+# read as STOP. `active_injury_worse` only fires for a severe / worse injury hold.
+_STOP_RISK_CATEGORIES = frozenset({"active_injury_worse"})
 
-# A pull_back recommendation whose reason carries one of these signals is a hard
-# STOP (rehab-only / no-training / injury-hold), not a plain pull-back. These match
-# the copy the readiness engine and the injury-hold override emit.
+# A pull_back recommendation is a hard STOP (rehab-only / no-training / injury-hold)
+# rather than a plain pull-back when its first line (the title) is one of these, or
+# its reason carries one of the specific stop markers. The markers are deliberately
+# narrow — phrases that ONLY appear in stop copy — so a plain pull-back's generic
+# "seek medical advice" safety line never falsely reads as a STOP. Every backend
+# stop path already carries a distinguishing title; the markers are a backstop.
 _STOP_REASON_TITLES = frozenset({"no training today", "rehab only today", "session blocked"})
 _STOP_REASON_MARKERS = (
     "red flag",
-    "seek medical",
     "injury is worse",
     "was reported worse",
     "pain is high",
-    "not safe today",
-    "do not complete",
-    "medically cleared",
     "head, neck, or nerve",
 )
 

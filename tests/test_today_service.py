@@ -1284,6 +1284,36 @@ class TestCommandView:
         assert "tracked_injury_high_risk_session" in updated["recommendation_triggers"]
         assert "Load controlled." in updated["recommendation_reason"]
 
+    def test_tendon_injury_pulls_back_before_high_risk_session_with_tier(self):
+        # Type-aware escalation end-to-end: a moderate tendon (load-sensitive) injury
+        # before a high-exposure session is a pull-back, and the command view exposes
+        # the authoritative decision_tier the whole UI renders from.
+        store = _store_with_plan()
+        structured_plan = _combined_contact_and_app_structured_plan()
+        structured_plan["weeks"][0]["days"][0]["sessions"][1]["session_type"] = "sparring"
+        structured_plan["weeks"][0]["days"][0]["sessions"][1]["title"] = "Hard sparring"
+        store.plans[PLAN]["structured_plan"] = structured_plan
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        submit_today_checkin(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=_checkin_payload(phase="SPP"), now=now
+        )
+
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {"body_area": "knee", "description": "knee tendonitis", "severity": "moderate", "status": "ongoing"}
+                ]
+            },
+            now=now,
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=now)
+        assert view.today.recommendation_state == "pull_back"
+        assert view.today.decision_tier == "pull_back"
+
     def test_severe_open_injury_is_a_stop_level_risk(self):
         store = _store_with_plan()
         submit_today_injury_checkin(
