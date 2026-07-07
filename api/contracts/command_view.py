@@ -136,10 +136,102 @@ class QuickAction(BaseModel):
     route: str
 
 
+# ---------------------------------------------------------------------------
+# Decision tier (STOP / PULL BACK / MODIFY / GREEN) — single authoritative source
+#
+# The Today banner and the risk-watch footer used to be derived independently on
+# the client (the banner by substring-parsing the reason, the footer from the risk
+# categories), so they could disagree — e.g. a PULL BACK banner over a STOP footer.
+# This tier is computed once here from the recommendation + risks + injuries, and
+# both surfaces render from it, so they can never contradict.
+# ---------------------------------------------------------------------------
+
+DecisionTier = Literal["stop", "pull_back", "modify", "green", "not_checked_in"]
+
+_TIER_RANK: dict[str, int] = {
+    "not_checked_in": 0,
+    "green": 1,
+    "modify": 2,
+    "pull_back": 3,
+    "stop": 4,
+}
+
+# Stop-level risk categories: when present, the day is at minimum a STOP.
+_STOP_RISK_CATEGORIES = frozenset({"stop_red_flag", "active_injury_worse"})
+
+# A pull_back recommendation whose reason carries one of these signals is a hard
+# STOP (rehab-only / no-training / injury-hold), not a plain pull-back. These match
+# the copy the readiness engine and the injury-hold override emit.
+_STOP_REASON_TITLES = frozenset({"no training today", "rehab only today", "session blocked"})
+_STOP_REASON_MARKERS = (
+    "red flag",
+    "seek medical",
+    "injury is worse",
+    "was reported worse",
+    "pain is high",
+    "not safe today",
+    "do not complete",
+    "medically cleared",
+    "head, neck, or nerve",
+)
+
+
+def _active_severe_injury_present(open_injuries: Sequence[Mapping[str, Any]] | None) -> bool:
+    for injury in open_injuries or []:
+        if (
+            str(injury.get("severity") or "").lower() == "severe"
+            and str(injury.get("status") or "").lower() in {"open", "monitoring"}
+        ):
+            return True
+    return False
+
+
+def resolve_decision_tier(
+    *,
+    recommendation_state: str,
+    recommendation_reason: str | None,
+    risks: Sequence[RiskWatchItem] | None = None,
+    open_injuries: Sequence[Mapping[str, Any]] | None = None,
+) -> DecisionTier:
+    """The single authoritative decision tier the whole Today UI renders from.
+
+    Never weaker than the strongest risk in the footer, so the banner and footer
+    cannot contradict. A severe active injury is always a STOP (injury hold), even
+    before a check-in.
+    """
+    if _active_severe_injury_present(open_injuries):
+        return "stop"
+
+    state = str(recommendation_state or "not_checked_in")
+    if state == "pull_back":
+        reason = str(recommendation_reason or "")
+        title = reason.splitlines()[0].strip().lower().rstrip(".!?") if reason else ""
+        lowered = reason.lower()
+        if title in _STOP_REASON_TITLES or any(marker in lowered for marker in _STOP_REASON_MARKERS):
+            tier: DecisionTier = "stop"
+        else:
+            tier = "pull_back"
+    elif state == "modify":
+        tier = "modify"
+    elif state == "train_as_planned":
+        tier = "green"
+    else:
+        tier = "not_checked_in"
+
+    # The tier can never be weaker than the strongest risk shown in the footer.
+    if any((r.category in _STOP_RISK_CATEGORIES) for r in (risks or [])):
+        if _TIER_RANK["stop"] > _TIER_RANK[tier]:
+            tier = "stop"
+    return tier
+
+
 class CommandViewToday(BaseModel):
     training_day: str
     recommendation_state: RecommendationState = "not_checked_in"
     recommendation_reason: str | None = None
+    # Authoritative decision tier (STOP/PULL BACK/MODIFY/GREEN). Both the banner and
+    # the risk-watch footer render from this so they cannot disagree.
+    decision_tier: DecisionTier = "not_checked_in"
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"
@@ -237,10 +329,17 @@ def build_command_view(
         "none": "",
     }[resolved_session_scope]
 
+    sorted_risks = sort_risk_watch(risks or [])
     today = CommandViewToday(
         training_day=training_day,
         recommendation_state=rec_view.state,
         recommendation_reason=rec_view.reason,
+        decision_tier=resolve_decision_tier(
+            recommendation_state=rec_view.state,
+            recommendation_reason=rec_view.reason,
+            risks=sorted_risks,
+            open_injuries=open_injuries,
+        ),
         warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},
         session_scope=resolved_session_scope,
@@ -251,7 +350,7 @@ def build_command_view(
     return CommandView(
         active_plan=active_plan,
         today=today,
-        risk_watch=sort_risk_watch(risks or []),
+        risk_watch=sorted_risks,
         open_injuries=[dict(injury) for injury in (open_injuries or [])],
         week_summary=dict(week_summary) if week_summary else {},
         quick_actions=_quick_actions(active_plan.get("id")),

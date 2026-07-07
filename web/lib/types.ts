@@ -949,6 +949,9 @@ export type TodayCommandView = {
     training_day: string;
     recommendation_state: TodayRecommendationState;
     recommendation_reason?: string | null;
+    // Authoritative decision tier computed by the backend. The banner and the
+    // risk-watch footer both render from this so they cannot contradict.
+    decision_tier?: "stop" | "pull_back" | "modify" | "green" | "not_checked_in";
     warnings?: string[];
     next_session: TodaySession;
     session_scope: "today" | "next" | "none";

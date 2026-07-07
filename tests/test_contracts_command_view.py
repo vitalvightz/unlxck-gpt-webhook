@@ -3,6 +3,7 @@
 from api.contracts.command_view import (
     build_command_view,
     make_risk,
+    resolve_decision_tier,
     sort_risk_watch,
     visible_risk_watch,
 )
@@ -168,6 +169,7 @@ class TestShape:
             "training_day",
             "recommendation_state",
             "recommendation_reason",
+            "decision_tier",
             "warnings",
             "next_session",
             "session_scope",
@@ -175,3 +177,50 @@ class TestShape:
             "completion_status",
         }
         assert dumped["today"]["training_day"] == TODAY
+
+
+class TestDecisionTier:
+    """The single authoritative tier the banner and the risk footer both render."""
+
+    def test_green_modify_pullback_map_directly(self):
+        assert resolve_decision_tier(recommendation_state="train_as_planned", recommendation_reason="Full session.") == "green"
+        assert resolve_decision_tier(recommendation_state="modify", recommendation_reason="Session reduced.") == "modify"
+        assert resolve_decision_tier(recommendation_state="not_checked_in", recommendation_reason=None) == "not_checked_in"
+
+    def test_plain_pull_back_is_pull_back_not_stop(self):
+        # A soft-warning pull-back ("Pull back today.") is a PULL BACK tier, never a
+        # STOP — this is the exact banner/footer contradiction being closed.
+        reason = "\n".join(["Pull back today.", "Several warnings are showing.", "Skip combat work."])
+        assert resolve_decision_tier(recommendation_state="pull_back", recommendation_reason=reason) == "pull_back"
+
+    def test_rehab_only_and_no_training_are_stop(self):
+        rehab = "\n".join(["Rehab only today.", "The injury is worse.", "No sparring."])
+        assert resolve_decision_tier(recommendation_state="pull_back", recommendation_reason=rehab) == "stop"
+        no_train = "\n".join(["No training today.", "You selected a red flag symptom.", "Seek medical advice."])
+        assert resolve_decision_tier(recommendation_state="pull_back", recommendation_reason=no_train) == "stop"
+
+    def test_severe_injury_is_stop_even_before_checkin(self):
+        tier = resolve_decision_tier(
+            recommendation_state="not_checked_in",
+            recommendation_reason=None,
+            open_injuries=[{"severity": "severe", "status": "open"}],
+        )
+        assert tier == "stop"
+
+    def test_tier_never_weaker_than_a_stop_level_risk(self):
+        # If a stop-level risk is showing in the footer, the tier is at least STOP so
+        # the two surfaces can never contradict.
+        tier = resolve_decision_tier(
+            recommendation_state="not_checked_in",
+            recommendation_reason=None,
+            risks=[make_risk("active_injury_worse", text="Active severe injury.")],
+        )
+        assert tier == "stop"
+
+    def test_build_command_view_exposes_the_tier(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(decision="modify"),
+        )
+        assert view.today.decision_tier == "modify"

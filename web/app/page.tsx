@@ -20,7 +20,6 @@ import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import {
   getCampDayLabel,
-  getDecisionTier,
   getInjuryOverrideBanner,
   getRiskWatchSummary,
   getRiskWatchText,
@@ -33,6 +32,8 @@ import {
   hasTodaySession,
   isHardCombatSession,
   isSessionToday,
+  resolveDecisionTier,
+  type TodayDecisionTier,
 } from "@/lib/today";
 import { SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import type { PlanSummary, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
@@ -283,7 +284,13 @@ function enrichConfirmedActivePlan(
  * routing away or truncating. Row copy runs through getRiskWatchText so a flag
  * never parrots the main recommendation word-for-word.
  */
-function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watch"] }) {
+function OverviewRiskWatch({
+  risks = [],
+  tier,
+}: {
+  risks?: TodayCommandView["risk_watch"];
+  tier?: TodayDecisionTier;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const overflowId = useId();
 
@@ -300,7 +307,7 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
   const visible = safeRisks.slice(0, 2);
   const overflow = safeRisks.length - visible.length;
   const shown = isExpanded ? safeRisks : visible;
-  const summary = getRiskWatchSummary(safeRisks);
+  const summary = getRiskWatchSummary(safeRisks, tier);
 
   return (
     <article className="status-card overview-command-card overview-risk-card">
@@ -534,7 +541,7 @@ export default function HomePage() {
     // The tier is the strongest-decision framing shared with Today: STOP (hard
     // block) overrides everything, then PULL BACK / MODIFY / GREEN. The eyebrow +
     // uppercase label come from the tier, the body from the resolved banner.
-    const decisionTier = getDecisionTier(decisionBanner);
+    const decisionTier = resolveDecisionTier(commandState?.today, decisionBanner);
     const tierMeta = getTierMeta(decisionTier);
     const isStop = decisionTier === "stop";
     const decisionTitle = tierMeta.label;
@@ -674,7 +681,7 @@ export default function HomePage() {
                 <p className="muted">{nextSessionFocus}</p>
               </article>
             )}
-            <OverviewRiskWatch risks={risks} />
+            <OverviewRiskWatch risks={risks} tier={decisionTier} />
             <p className="overview-medical-disclaimer">{SAFETY_DISCLAIMER_TIGHT}</p>
           </div>
         </section>

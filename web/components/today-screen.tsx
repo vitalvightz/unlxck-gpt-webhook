@@ -59,10 +59,12 @@ import {
   isSessionToday,
   hasActivePlan,
   hasTodaySession,
+  resolveDecisionTier,
   resolveSessionFocusDate,
   shouldShowTodayCheckin,
   type SafeSessionView,
   type TodayDecisionBanner,
+  type TodayDecisionTier,
 } from "@/lib/today";
 import type {
   InjuryFlagRecord,
@@ -888,15 +890,19 @@ function CompletionForm({
  */
 function DecisionBanner({
   banner,
+  tier,
 }: {
   banner: TodayDecisionBanner | null;
+  tier?: TodayDecisionTier;
 }) {
   if (!banner) {
     return null;
   }
   // Headline the tier ("Stop today" etc.) so Today matches the Overview action
   // framing; the chip carries the tier marker and the detail keeps the specifics.
-  const tierLabel = getTierMeta(getDecisionTier(banner)).label;
+  // Prefer the authoritative backend tier when supplied so the headline can never
+  // disagree with the resolved decision.
+  const tierLabel = getTierMeta(tier ?? getDecisionTier(banner)).label;
   return (
     <div
       className="today-decision-banner"
@@ -1038,7 +1044,7 @@ function SessionCard({
   const injuryOverride = getInjuryOverrideBanner(state, getSessionTitle(session));
   const decisionBanner = injuryOverride ?? dailyDecisionBanner;
   const decisionBlocksTraining = Boolean(decisionBanner?.blocksTraining);
-  const decisionTier = getDecisionTier(decisionBanner);
+  const decisionTier = resolveDecisionTier(state.today, decisionBanner);
   const sessionIsToday = isSessionToday(session, state.today.session_scope);
   // STOP + the scheduled session is today: show the recovery/mobility safe
   // session in place of the real blocks so Today never displays hard combat as
@@ -1046,8 +1052,12 @@ function SessionCard({
   const safeSession =
     decisionTier === "stop" && hasSession && sessionIsToday ? getSafeSessionView(getSessionTitle(session)) : null;
   const nextIsHardCombat = isHardCombatSession(session);
+  // Gate completion on the scope-aware "is this today" check, not just the
+  // session_relation stamp: a session that reaches the card without an explicit
+  // session_relation but whose scope is not "today" must still read as pending,
+  // never completable.
   const canCompleteSession =
-    canCompleteTodaySession(session) && !isNextSessionPreview && !decisionBlocksTraining;
+    canCompleteTodaySession(session) && sessionIsToday && !decisionBlocksTraining;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.
@@ -1117,7 +1127,7 @@ function SessionCard({
             </h2>
           </div>
         </div>
-        <DecisionBanner banner={decisionBanner} />
+        <DecisionBanner banner={decisionBanner} tier={decisionTier} />
         {showStructuredBlocks ? (
           <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
         ) : (
@@ -1152,7 +1162,7 @@ function SessionCard({
           <h2 id="today-session-heading">{headline}</h2>
         </div>
       </div>
-      <DecisionBanner banner={decisionBanner} />
+      <DecisionBanner banner={decisionBanner} tier={decisionTier} />
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (

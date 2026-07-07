@@ -697,6 +697,30 @@ export function getDecisionTier(banner: TodayDecisionBanner | null): TodayDecisi
   }
 }
 
+/**
+ * The authoritative decision tier the whole Today UI should render from. Prefers
+ * the backend-computed `today.decision_tier` (the single source of truth that
+ * keeps the banner and the risk-watch footer in agreement) and only falls back to
+ * the banner-derived tier for the preview framing (a client-only display concern)
+ * or for older payloads that predate the field.
+ */
+export function resolveDecisionTier(
+  today: Pick<TodayCommandView["today"], "decision_tier"> | null | undefined,
+  banner: TodayDecisionBanner | null,
+): TodayDecisionTier {
+  const bannerTier = getDecisionTier(banner);
+  // "preview" is a display framing for a future/next session, not a decision the
+  // backend tier models — keep it.
+  if (bannerTier === "preview") {
+    return "preview";
+  }
+  const backendTier = today?.decision_tier;
+  if (backendTier) {
+    return backendTier;
+  }
+  return bannerTier;
+}
+
 export type TodayTierMeta = {
   /** Uppercase headline, e.g. "STOP TODAY". */
   label: string;
@@ -819,11 +843,44 @@ const RISK_SIGNAL_LABELS: Record<string, string> = {
   reminder: "REMINDER",
 };
 
+// How loud each footer signal is, so it can be clamped to never shout louder than
+// the day's decision tier (a plain PULL BACK day carries a `stop_red_flag` risk,
+// but its footer must not read "STOP").
+const RISK_SIGNAL_STRENGTH: Record<string, number> = {
+  STOP: 3,
+  "PULL BACK": 2,
+  INJURY: 2,
+  PAIN: 2,
+};
+const TIER_SIGNAL_LABEL: Record<TodayDecisionTier, string> = {
+  stop: "STOP",
+  pull_back: "PULL BACK",
+  modify: "MODIFY",
+  green: "GREEN",
+  preview: "",
+  not_checked_in: "",
+};
+const TIER_SIGNAL_STRENGTH: Record<TodayDecisionTier, number> = {
+  stop: 3,
+  pull_back: 2,
+  modify: 1,
+  green: 0,
+  preview: 0,
+  not_checked_in: 0,
+};
+
 /**
  * Summary line for the risk-watch card. Risks arrive pre-sorted by priority, so
  * the first is the strongest signal. Returns the count and a short label for it.
+ *
+ * When a decision tier is supplied, the strongest-signal label is clamped so it
+ * can never read louder than the tier — the footer and the banner are two views
+ * of the same decision and must not contradict.
  */
-export function getRiskWatchSummary(risks: TodayCommandView["risk_watch"] | null | undefined): {
+export function getRiskWatchSummary(
+  risks: TodayCommandView["risk_watch"] | null | undefined,
+  tier?: TodayDecisionTier,
+): {
   count: number;
   strongestLabel: string;
 } {
@@ -833,7 +890,15 @@ export function getRiskWatchSummary(risks: TodayCommandView["risk_watch"] | null
     return { count: 0, strongestLabel: "" };
   }
   const category = (safeRisks[0]?.category ?? "").trim();
-  const strongestLabel =
+  let strongestLabel =
     RISK_SIGNAL_LABELS[category] || (safeRisks[0]?.label ?? "").trim().toUpperCase() || "SIGNAL";
+  if (tier) {
+    const signalStrength = RISK_SIGNAL_STRENGTH[strongestLabel] ?? 1;
+    if (signalStrength > TIER_SIGNAL_STRENGTH[tier]) {
+      // The risk is louder than the decision — downgrade its label to the tier's
+      // word (e.g. STOP → PULL BACK) so the two surfaces agree.
+      strongestLabel = TIER_SIGNAL_LABEL[tier] || strongestLabel;
+    }
+  }
   return { count, strongestLabel };
 }
