@@ -531,7 +531,14 @@ export default function HomePage() {
     // IS the blocked one and correctly reads red.
     const decisionTone =
       decisionBanner && decisionBanner.tone !== "neutral" ? decisionBanner.tone : undefined;
-    const primaryHref = hasActivePlan ? "/today" : "/onboarding";
+    // When an injury blocks the day, deep-link straight to the injury check-in
+    // card (matches the Today CTA) so the athlete lands on the action, not the
+    // top of the page.
+    const primaryHref = !hasActivePlan
+      ? "/onboarding"
+      : injuryOverride
+        ? "/today#today-injury"
+        : "/today";
     const primaryLabel = !hasActivePlan
       ? "Complete Intake"
       : injuryOverride
