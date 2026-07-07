@@ -296,10 +296,11 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
     );
   }
 
-  const visible = risks.slice(0, 2);
-  const overflow = risks.length - visible.length;
-  const shown = isExpanded ? risks : visible;
-  const summary = getRiskWatchSummary(risks);
+  const safeRisks = risks ?? [];
+  const visible = safeRisks.slice(0, 2);
+  const overflow = safeRisks.length - visible.length;
+  const shown = isExpanded ? safeRisks : visible;
+  const summary = getRiskWatchSummary(safeRisks);
 
   return (
     <article className="status-card overview-command-card overview-risk-card">
