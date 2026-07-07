@@ -1136,6 +1136,90 @@ class TestCommandView:
         assert view.today.recommendation_state == "pull_back"
         assert "Rehab only today." in (view.today.recommendation_reason or "")
 
+    def test_worse_mild_injury_stop_survives_later_mild_injury(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        submit_today_checkin(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=_checkin_payload(), now=now
+        )
+
+        knee = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"injuries": [{"body_area": "knee", "severity": "mild", "status": "worse"}]},
+            now=now,
+        )
+        assert knee["recommendation"]["recommendation_state"] == "pull_back"
+        assert knee["open_injuries"][0]["latest_reported_status"] == "worse"
+
+        updated = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {"body_area": "ear", "description": "ear cut", "severity": "mild", "status": "ongoing"}
+                ]
+            },
+            now=now,
+        )
+
+        assert updated["recommendation"]["recommendation_state"] == "pull_back"
+        assert "active_injury_worse" in updated["recommendation"]["recommendation_triggers"]
+
+    def test_multiple_mild_injuries_without_worsening_do_not_stop(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        submit_today_checkin(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=_checkin_payload(), now=now
+        )
+
+        updated = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {"body_area": "knee", "severity": "mild", "status": "ongoing"},
+                    {"body_area": "ear", "description": "ear cut", "severity": "mild", "status": "ongoing"},
+                ]
+            },
+            now=now,
+        )
+
+        assert updated["recommendation"]["recommendation_state"] in {"train_as_planned", "modify"}
+        assert "active_injury_worse" not in updated["recommendation"]["recommendation_triggers"]
+
+    def test_severe_injury_stop_survives_later_mild_injury(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        submit_today_checkin(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=_checkin_payload(), now=now
+        )
+
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"injuries": [{"body_area": "shoulder", "severity": "severe", "status": "ongoing"}]},
+            now=now,
+        )
+        updated = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {"body_area": "ear", "description": "ear cut", "severity": "mild", "status": "ongoing"}
+                ]
+            },
+            now=now,
+        )
+
+        assert updated["recommendation"]["recommendation_state"] == "pull_back"
+        assert "active_injury_worse" in updated["recommendation"]["recommendation_triggers"]
+
     def test_severe_ongoing_injury_escalates_recommendation_to_pull_back(self):
         # The reported bug: a severe injury added as "ongoing" (not "worse") used
         # to leave the recommendation at the daily "load reduced" copy. It must

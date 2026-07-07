@@ -357,6 +357,23 @@ def _with_context_triggers(*triggers: str, session_risk: SessionRisk, phase: str
         values.append("contact_sport")
     return tuple(dict.fromkeys(values))
 
+def _active_context_injury_stop(context: ReadinessContext) -> tuple[str, str] | None:
+    """Return the active injury trigger/reason that should stop training."""
+    for injury in context.open_injuries:
+        if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
+            continue
+        label = (
+            _clean(injury.get("label"))
+            or _clean(injury.get("body_area"))
+            or _clean(injury.get("description"))
+            or "injury"
+        )
+        if _clean(injury.get("severity")).lower() == "severe":
+            return "active_injury_worse", f"Active severe injury: {label}."
+        if _clean(injury.get("latest_reported_status")).lower() == "worse":
+            return "active_injury_worse", f"The {label} injury is worse."
+    return None
+
 
 def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, session_risk: SessionRisk, phase: str) -> ReadinessAdjustment | None:
     flags = _active_safety_flags(checkin)
@@ -377,11 +394,13 @@ def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, sessi
             session_risk=session_risk,
         )
 
-    if checkin.active_injury == "worse":
-        reason = "The injury is worse, so hard combat work is not safe today."
+    active_injury_stop = _active_context_injury_stop(context)
+    if checkin.active_injury == "worse" or active_injury_stop is not None:
+        _trigger, context_reason = active_injury_stop or ("active_injury_worse", "The injury is worse.")
+        reason = f"{context_reason} Hard combat work is not safe today."
         action = "No sparring, live rounds, clinch work, hard bag work, or conditioning."
         if session_risk == "low":
-            reason = "The injury is worse, so hard training is not safe today."
+            reason = f"{context_reason} Hard training is not safe today."
             action = "Use mobility, rehab, or light shadowboxing only."
         return ReadinessAdjustment(
             decision="pull_back",
