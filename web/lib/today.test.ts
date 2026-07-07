@@ -10,13 +10,20 @@ import {
   completionRequiresReviewFields,
   canCompleteTodaySession,
   getActiveSevereInjury,
+  getCampDayLabel,
   getCompletionActions,
+  getDecisionTier,
   getInjuryOverrideBanner,
   getRecommendationCopy,
+  getRiskWatchSummary,
+  getSafeSessionView,
+  getTierMeta,
   getTodayDecisionBanner,
   getVisibleRiskWatch,
   hasActivePlan,
   hasTodaySession,
+  isHardCombatSession,
+  isSessionToday,
   shouldShowTodayCheckin,
 } from "./today.ts";
 import type { InjuryFlagRecord } from "./types.ts";
@@ -588,4 +595,82 @@ test("fatigue level control is backed by a range input for drag interaction", ()
   assert.equal(source.includes('className="level-slider-input"'), true);
   assert.equal(source.includes('type="range"'), true);
   assert.equal(source.includes("onPointerDown={selectLevelFromPointer}"), true);
+});
+
+test("decision tiers map 1:1 with display-states", () => {
+  const green = getTodayDecisionBanner("train_as_planned", TAPER_REASON);
+  const modify = getTodayDecisionBanner("modify", MODIFY_REASON);
+  const pullBack = getTodayDecisionBanner("pull_back", PULL_BACK_REASON);
+  const rehab = getTodayDecisionBanner("pull_back", INJURY_REASON);
+  const noTraining = getTodayDecisionBanner("pull_back", RED_FLAG_REASON);
+  const injury = getInjuryOverrideBanner(stateWithInjuries([makeInjury()]), "Hard sparring");
+  const preview = getTodayDecisionBanner("train_as_planned", TAPER_REASON, { isPreview: true });
+
+  assert.equal(getDecisionTier(green), "green");
+  assert.equal(getDecisionTier(modify), "modify");
+  assert.equal(getDecisionTier(pullBack), "pull_back");
+  assert.equal(getDecisionTier(rehab), "stop");
+  assert.equal(getDecisionTier(noTraining), "stop");
+  assert.equal(getDecisionTier(injury), "stop");
+  assert.equal(getDecisionTier(preview), "preview");
+  assert.equal(getDecisionTier(null), "not_checked_in");
+});
+
+test("tier meta gives the coach-facing labels and STOP blocks", () => {
+  assert.equal(getTierMeta("stop").label, "Stop today");
+  assert.equal(getTierMeta("stop").blocks, true);
+  assert.equal(getTierMeta("pull_back").label, "Pull back today");
+  assert.equal(getTierMeta("modify").label, "Modify today");
+  assert.equal(getTierMeta("green").label, "Green light");
+  assert.equal(getTierMeta("stop").eyebrow, "Today's action");
+});
+
+test("isSessionToday prefers the session relation, then the scope", () => {
+  assert.equal(isSessionToday({ session_relation: "today" }), true);
+  assert.equal(isSessionToday({ session_relation: "next" }), false);
+  assert.equal(isSessionToday({}, "today"), true);
+  assert.equal(isSessionToday({}, "next"), false);
+  assert.equal(isSessionToday(null), false);
+});
+
+test("isHardCombatSession reads load + status, not technical/rest", () => {
+  assert.equal(isHardCombatSession({ effective_load: "hard" }), true);
+  assert.equal(isHardCombatSession({ status: "hard_as_planned" }), true);
+  assert.equal(isHardCombatSession({ effective_load: "technical" }), false);
+  assert.equal(isHardCombatSession({ effective_load: "none" }), false);
+  assert.equal(isHardCombatSession({}), false);
+});
+
+test("safe session names the blocked work and lists allowed/blocked", () => {
+  const view = getSafeSessionView("Technical sparring");
+  assert.match(view.detail, /Technical sparring is blocked today/);
+  assert.equal(view.title, "Recovery / mobility only");
+  assert.equal(view.allowed.length, 5);
+  assert.equal(view.blocked.includes("Sparring"), true);
+  assert.equal(view.blocked.includes("Heavy lifting"), true);
+});
+
+test("camp day counts down from training day to fight date", () => {
+  assert.equal(getCampDayLabel("2026-07-06", "2026-07-23"), "D-17");
+  assert.equal(getCampDayLabel("2026-07-23", "2026-07-23"), "D-0");
+  assert.equal(getCampDayLabel("", "2026-07-23"), "");
+  assert.equal(getCampDayLabel("2026-07-24", "2026-07-23"), ""); // past fight
+});
+
+test("risk watch summary reports count and the strongest signal", () => {
+  assert.deepEqual(getRiskWatchSummary([]), { count: 0, strongestLabel: "" });
+  const summary = getRiskWatchSummary([
+    { category: "stop_red_flag", priority: 1, icon: "octagon-x", label: "Stop", text: "x", tone: "stop" },
+    { category: "phase_taper", priority: 5, icon: "calendar-clock", label: "Taper", text: "y", tone: "caution" },
+  ]);
+  assert.equal(summary.count, 2);
+  assert.equal(summary.strongestLabel, "STOP");
+});
+
+test("Overview STOP state routes to the safe session, never 'View recommendation'", () => {
+  const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.equal(source.includes('"View safe session"'), true);
+  // STOP must be handled before the generic block branch so it never falls
+  // through to "View recommendation".
+  assert.equal(source.indexOf("isStop") < source.indexOf('"View recommendation"'), true);
 });

@@ -45,17 +45,23 @@ import {
   completionRequiresModificationReason,
   completionRequiresReviewFields,
   getCompletionLabel,
+  getDecisionTier,
   getInjuryOverrideBanner,
   getRecommendationCopy,
   getRiskWatchText,
+  getSafeSessionView,
   getSessionFocus,
   getSessionTitle,
+  getTierMeta,
   getTodayDecisionBanner,
   getVisibleRiskWatch,
+  isHardCombatSession,
+  isSessionToday,
   hasActivePlan,
   hasTodaySession,
   resolveSessionFocusDate,
   shouldShowTodayCheckin,
+  type SafeSessionView,
   type TodayDecisionBanner,
 } from "@/lib/today";
 import type {
@@ -888,6 +894,9 @@ function DecisionBanner({
   if (!banner) {
     return null;
   }
+  // Headline the tier ("Stop today" etc.) so Today matches the Overview action
+  // framing; the chip carries the tier marker and the detail keeps the specifics.
+  const tierLabel = getTierMeta(getDecisionTier(banner)).label;
   return (
     <div
       className="today-decision-banner"
@@ -899,10 +908,34 @@ function DecisionBanner({
         {banner.chip}
       </span>
       <div className="today-decision-body">
-        <p className="today-decision-title">{banner.title}</p>
+        <p className="today-decision-title">{tierLabel}</p>
         <p className="today-decision-detail">{banner.detail}</p>
         {banner.action ? <p className="today-decision-detail">{banner.action}</p> : null}
         {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The recovery/mobility-only card shown in place of the scheduled blocks when
+ * today is a STOP — Today never displays hard combat as available under a stop.
+ */
+function SafeSessionCard({ view }: { view: SafeSessionView }) {
+  return (
+    <div className="today-safe-session" data-tone="red">
+      <p className="today-safe-session-eyebrow">{view.eyebrow}</p>
+      <p className="today-safe-session-title">{view.title}</p>
+      <p className="today-safe-session-detail">{view.detail}</p>
+      <div className="today-safe-session-lists">
+        <div className="today-safe-list" data-kind="allowed">
+          <p className="today-safe-list-label">Allowed</p>
+          <ul>{view.allowed.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+        <div className="today-safe-list" data-kind="blocked">
+          <p className="today-safe-list-label">Blocked</p>
+          <ul>{view.blocked.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
       </div>
     </div>
   );
@@ -1005,6 +1038,14 @@ function SessionCard({
   const injuryOverride = getInjuryOverrideBanner(state, getSessionTitle(session));
   const decisionBanner = injuryOverride ?? dailyDecisionBanner;
   const decisionBlocksTraining = Boolean(decisionBanner?.blocksTraining);
+  const decisionTier = getDecisionTier(decisionBanner);
+  const sessionIsToday = isSessionToday(session, state.today.session_scope);
+  // STOP + the scheduled session is today: show the recovery/mobility safe
+  // session in place of the real blocks so Today never displays hard combat as
+  // available under a stop. Future sessions stay visible but read as pending.
+  const safeSession =
+    decisionTier === "stop" && hasSession && sessionIsToday ? getSafeSessionView(getSessionTitle(session)) : null;
+  const nextIsHardCombat = isHardCombatSession(session);
   const canCompleteSession =
     canCompleteTodaySession(session) && !isNextSessionPreview && !decisionBlocksTraining;
   // Tint the session card to match today's decision (green/amber/red) so the page
@@ -1112,7 +1153,9 @@ function SessionCard({
         </div>
       </div>
       <DecisionBanner banner={decisionBanner} />
-      {showStructuredBlocks ? (
+      {safeSession ? (
+        <SafeSessionCard view={safeSession} />
+      ) : showStructuredBlocks ? (
         <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
       ) : (
         <div className="today-session-summary">
@@ -1138,10 +1181,26 @@ function SessionCard({
           ) : null}
           <div>
             <p className="today-detail-label">Status</p>
-            <p>{isNextSessionPreview ? relationCopy.status : getCompletionLabel(status)}</p>
+            <p>{isNextSessionPreview ? "Pending — requires fresh check-in" : getCompletionLabel(status)}</p>
           </div>
         </div>
       )}
+      {isNextSessionPreview && !safeSession ? (
+        <div className="today-next-planned-note">
+          <p className="today-pending-line">
+            <span className="today-pending-pill">Pending</span>
+            Requires a fresh check-in before clearance.
+          </p>
+          {nextIsHardCombat ? (
+            <div className="today-caution-row">
+              <span className="today-caution-label">Caution</span>
+              <span className="today-caution-text">
+                Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {!canCompleteSession ? (
         <div className="today-terminal-block">

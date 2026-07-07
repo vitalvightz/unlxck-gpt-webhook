@@ -1682,6 +1682,232 @@ html[data-theme="light"] .overview-next-session-blocked {
   color: var(--danger-ink, #8e2d2f);
 }
 
+/* ---------------------------------------------------------------------------
+   Decision-hierarchy cards (safe session, next-planned pending, caution,
+   risk footer, disclaimer) — shared look across Overview + Today.
+   --------------------------------------------------------------------------- */
+
+/* Safe session (STOP): recovery/mobility only, with allowed/blocked columns. */
+.overview-safe-session-lists,
+.today-safe-session-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.today-safe-session {
+  margin: 0 0 14px;
+  padding: 13px 14px;
+  border: 1px solid rgba(219, 47, 64, 0.24);
+  border-left: 3px solid #e23a4c;
+  border-radius: 12px;
+  background: rgba(219, 47, 64, 0.06);
+}
+
+.today-safe-session-eyebrow {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-safe-session-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.today-safe-session-detail {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.overview-safe-list,
+.today-safe-list {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.overview-safe-list-label,
+.today-safe-list-label {
+  margin: 0 0 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.overview-safe-list[data-kind="allowed"] .overview-safe-list-label,
+.today-safe-list[data-kind="allowed"] .today-safe-list-label {
+  color: #76d393;
+}
+
+.overview-safe-list[data-kind="blocked"] .overview-safe-list-label,
+.today-safe-list[data-kind="blocked"] .today-safe-list-label {
+  color: #ff8d9a;
+}
+
+.overview-safe-list ul,
+.today-safe-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 5px;
+}
+
+.overview-safe-list li,
+.today-safe-list li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.overview-safe-list[data-kind="allowed"] li::before,
+.today-safe-list[data-kind="allowed"] li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #76d393;
+  font-weight: 700;
+}
+
+.overview-safe-list[data-kind="blocked"] li::before,
+.today-safe-list[data-kind="blocked"] li::before {
+  content: "✕";
+  position: absolute;
+  left: 0;
+  color: #ff8d9a;
+  font-weight: 700;
+}
+
+/* Next-planned: pending pill + caution row (future combat sessions). */
+.overview-session-pending,
+.today-pending-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.overview-pending-pill,
+.today-pending-pill {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 175, 106, 0.4);
+  background: rgba(214, 175, 106, 0.16);
+  color: #e6c27d;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.overview-caution-row,
+.today-caution-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid #d6af6a;
+  border-radius: 10px;
+  background: rgba(214, 175, 106, 0.08);
+}
+
+.overview-caution-label,
+.today-caution-label {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e6c27d;
+}
+
+.overview-caution-text,
+.today-caution-text {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.today-next-planned-note {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 14px;
+}
+
+/* Risk-watch severity footer. */
+.overview-risk-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.overview-risk-strongest {
+  color: #ff8d9a;
+  font-weight: 700;
+}
+
+/* Compact medical disclaimer under the Overview stack. */
+.overview-medical-disclaimer {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+html[data-theme="light"] .today-safe-session {
+  border-color: rgba(146, 43, 45, 0.2);
+  background: rgba(146, 43, 45, 0.05);
+}
+
+html[data-theme="light"] .overview-safe-list[data-kind="allowed"] .overview-safe-list-label,
+html[data-theme="light"] .today-safe-list[data-kind="allowed"] .today-safe-list-label,
+html[data-theme="light"] .overview-safe-list[data-kind="allowed"] li::before,
+html[data-theme="light"] .today-safe-list[data-kind="allowed"] li::before {
+  color: var(--success-ink, #1f7a44);
+}
+
+html[data-theme="light"] .overview-safe-list[data-kind="blocked"] .overview-safe-list-label,
+html[data-theme="light"] .today-safe-list[data-kind="blocked"] .today-safe-list-label,
+html[data-theme="light"] .overview-safe-list[data-kind="blocked"] li::before,
+html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before,
+html[data-theme="light"] .overview-risk-strongest {
+  color: var(--danger-ink, #8e2d2f);
+}
+
 .overview-risk-card {
   display: grid;
   gap: 10px;
