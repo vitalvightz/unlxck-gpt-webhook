@@ -1689,6 +1689,14 @@ class TestSessionCompletion:
         )
         assert row["status"] == "done"
 
+    def test_resolved_severe_injury_does_not_block_completion_when_supplied(self):
+        store = _store_with_plan()
+        self._add_severe_injury(store, status="resolved")
+        row = upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done")
+        )
+        assert row["status"] == "done"
+
     def test_duplicate_completion_upserts_single_row(self):
         store = _store_with_plan()
         now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)

@@ -218,9 +218,11 @@ class TestInjuryCheckin:
         open_injuries = resp.json()["open_injuries"]
         assert len(open_injuries) == 1
         assert open_injuries[0]["status"] == "open"
+        assert open_injuries[0]["latest_reported_status"] == "ongoing"
 
         command = client.get("/api/today", headers=ATHLETE).json()
         assert len(command["open_injuries"]) == 1
+        assert command["open_injuries"][0]["latest_reported_status"] == "ongoing"
         categories = [risk["category"] for risk in command["risk_watch"]]
         assert "reminder" in categories
 

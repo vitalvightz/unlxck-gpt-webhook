@@ -730,6 +730,7 @@ export type AdaptationDecisionValue =
 
 export type InjuryFlagSeverity = "mild" | "moderate" | "severe";
 export type InjuryFlagStatus = "open" | "monitoring" | "resolved";
+export type InjuryReportedStatus = "ongoing" | "improving" | "worse" | "resolved";
 export type AdminReviewStatus = "pending" | "acknowledged" | "resolved";
 
 export type DailyCheckinRequest = {
@@ -801,6 +802,7 @@ export type InjuryFlagRecord = {
   label?: string;
   severity: InjuryFlagSeverity;
   status: InjuryFlagStatus;
+  latest_reported_status?: InjuryReportedStatus;
   resolved_at?: string | null;
   created_at: string;
   updated_at: string;

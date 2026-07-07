@@ -432,7 +432,7 @@ _TRAINING_COMPLETION_STATUSES: frozenset[str] = frozenset({"started", "done", "m
 def _active_severe_injury(
     open_flags: Sequence[Mapping[str, Any]] | None,
 ) -> Mapping[str, Any] | None:
-    """The first active (non-resolved) SEVERE injury flag, or None.
+    """The first active (open/monitoring) SEVERE injury flag, or None.
 
     Severity-driven, not day-status driven: a severe injury is still severe while
     it is easing (monitoring), so only clearing it (resolved) drops it out. This
@@ -442,7 +442,7 @@ def _active_severe_injury(
     for flag in open_flags or []:
         if (
             str(flag.get("severity") or "") == "severe"
-            and str(flag.get("status") or "") != "resolved"
+            and str(flag.get("status") or "") in {"open", "monitoring"}
         ):
             return flag
     return None
