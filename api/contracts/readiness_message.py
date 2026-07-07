@@ -357,21 +357,20 @@ def _with_context_triggers(*triggers: str, session_risk: SessionRisk, phase: str
         values.append("contact_sport")
     return tuple(dict.fromkeys(values))
 
-def _active_context_injury_stop(context: ReadinessContext) -> tuple[str, str] | None:
-    """Return the active injury trigger/reason that should stop training."""
+def _active_context_injury_stop(context: ReadinessContext) -> str | None:
+    """Return the active injury reason that should stop training."""
     for injury in context.open_injuries:
         if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
             continue
-        label = (
-            _clean(injury.get("label"))
-            or _clean(injury.get("body_area"))
-            or _clean(injury.get("description"))
-            or "injury"
-        )
+        label = _clean(injury.get("label"))
+        if not label:
+            from api.contracts.injury_checkin import build_injury_label
+
+            label = build_injury_label(injury.get("body_area"), injury.get("description"))
         if _clean(injury.get("severity")).lower() == "severe":
-            return "active_injury_worse", f"Active severe injury: {label}."
+            return f"Active severe injury: {label}."
         if _clean(injury.get("latest_reported_status")).lower() == "worse":
-            return "active_injury_worse", f"The {label} injury is worse."
+            return f"The {label} injury is worse."
     return None
 
 
@@ -394,9 +393,9 @@ def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, sessi
             session_risk=session_risk,
         )
 
-    active_injury_stop = _active_context_injury_stop(context)
-    if checkin.active_injury == "worse" or active_injury_stop is not None:
-        _trigger, context_reason = active_injury_stop or ("active_injury_worse", "The injury is worse.")
+    active_injury_stop_reason = _active_context_injury_stop(context)
+    if checkin.active_injury == "worse" or active_injury_stop_reason is not None:
+        context_reason = active_injury_stop_reason or "The injury is worse."
         reason = f"{context_reason} Hard combat work is not safe today."
         action = "No sparring, live rounds, clinch work, hard bag work, or conditioning."
         if session_risk == "low":
