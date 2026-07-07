@@ -652,3 +652,185 @@ export function getRiskWatchText(risk: { category?: string | null; text?: string
   const key = (risk.category ?? "").trim();
   return RISK_WATCH_TEXT_OVERRIDES[key] || risk.text?.trim() || "Monitor this before training.";
 }
+
+// ---------------------------------------------------------------------------
+// Decision hierarchy (STOP / PULL BACK / MODIFY / GREEN LIGHT)
+//
+// A single tier abstraction the Overview and Today screens both consume so the
+// two can never disagree on the strongest decision. The tier is derived from the
+// display-state the readiness engine + injury override already produce — no new
+// backend signal. STOP is the hard-block tier (severe injury / red flag / rehab
+// only) and always leads the page.
+// ---------------------------------------------------------------------------
+
+export type TodayDecisionTier =
+  | "stop"
+  | "pull_back"
+  | "modify"
+  | "green"
+  | "preview"
+  | "not_checked_in";
+
+/** Map a resolved decision banner to its tier. Null banner (not checked in) is
+ *  its own tier so the UI can prompt a check-in rather than imply a decision. */
+export function getDecisionTier(banner: TodayDecisionBanner | null): TodayDecisionTier {
+  if (!banner) {
+    return "not_checked_in";
+  }
+  switch (banner.displayState) {
+    case "injury_blocked":
+    case "no_training":
+    case "rehab_only":
+      return "stop";
+    case "pull_back":
+      return "pull_back";
+    case "adjust":
+      return "modify";
+    case "go":
+      return "green";
+    case "preview":
+      return "preview";
+    default:
+      return "not_checked_in";
+  }
+}
+
+export type TodayTierMeta = {
+  /** Uppercase headline, e.g. "STOP TODAY". */
+  label: string;
+  /** Eyebrow above the headline. */
+  eyebrow: string;
+  tone: TodayDecisionTone;
+  /** Whether hard training is blocked at this tier. */
+  blocks: boolean;
+};
+
+const TIER_META: Record<TodayDecisionTier, TodayTierMeta> = {
+  stop: { label: "Stop today", eyebrow: "Today's action", tone: "red", blocks: true },
+  pull_back: { label: "Pull back today", eyebrow: "Today's action", tone: "red", blocks: false },
+  modify: { label: "Modify today", eyebrow: "Today's action", tone: "amber", blocks: false },
+  green: { label: "Green light", eyebrow: "Today's action", tone: "green", blocks: false },
+  preview: { label: "Session preview", eyebrow: "Next session", tone: "neutral", blocks: false },
+  not_checked_in: { label: "Check in required", eyebrow: "Today's action", tone: "neutral", blocks: false },
+};
+
+export function getTierMeta(tier: TodayDecisionTier): TodayTierMeta {
+  return TIER_META[tier];
+}
+
+/**
+ * Whether the scheduled session is TODAY (vs a future planned day). Prefers the
+ * session's own relation, then the command-view scope. Future sessions must be
+ * shown as pending clearance, never removed.
+ */
+export function isSessionToday(
+  session: Pick<TodaySession, "session_relation"> | null | undefined,
+  sessionScope?: TodayCommandView["today"]["session_scope"] | null,
+): boolean {
+  if (session?.session_relation === "today") {
+    return true;
+  }
+  if (session?.session_relation === "next") {
+    return false;
+  }
+  return sessionScope === "today";
+}
+
+/**
+ * Whether a session is hard combat / high-risk work (sparring, hard pads, hard
+ * rounds). There is no dedicated flag, so this reads the load + status enums the
+ * plan already carries. Technical / reduced / rest sessions are NOT hard combat.
+ */
+export function isHardCombatSession(
+  session: Pick<TodaySession, "effective_load" | "status"> | null | undefined,
+): boolean {
+  const load = (session?.effective_load ?? "").trim().toLowerCase();
+  if (load === "hard") {
+    return true;
+  }
+  const status = (session?.status ?? "").trim().toLowerCase();
+  return status === "hard_as_planned" || status === "hard";
+}
+
+export type SafeSessionView = {
+  eyebrow: string;
+  title: string;
+  detail: string;
+  allowed: string[];
+  blocked: string[];
+};
+
+/**
+ * The recovery/mobility-only session shown in place of the scheduled work when
+ * today is a STOP. Static coach copy — the scheduled session is named so the
+ * athlete sees exactly what is being held.
+ */
+export function getSafeSessionView(blockedSessionName?: string): SafeSessionView {
+  const name = (blockedSessionName ?? "").trim();
+  const blockedLead =
+    name && name.toLowerCase() !== "today's session" ? `${name} is blocked today.` : "Hard combat work is blocked today.";
+  return {
+    eyebrow: "Today's safe session",
+    title: "Recovery / mobility only",
+    detail: `${blockedLead} Protect freshness, reduce risk, and keep the body moving without adding stress.`,
+    allowed: ["Easy mobility", "Light bike or walk", "Breathing reset", "Gentle activation", "Coach-approved rehab"],
+    blocked: ["Sparring", "Hard pads", "HIIT", "Heavy lifting", "Plyos or explosive lower-body work"],
+  };
+}
+
+/**
+ * Today's countdown to the fight ("D-17"), computed from the training day and
+ * fight date. Returns "" when either is missing/unparseable. Fight day is D-0.
+ */
+export function getCampDayLabel(
+  trainingDay?: string | null,
+  fightDate?: string | null,
+): string {
+  const toUtcNoon = (value?: string | null): number | null => {
+    const iso = (value ?? "").trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      return null;
+    }
+    const ms = new Date(`${iso}T12:00:00Z`).getTime();
+    return Number.isNaN(ms) ? null : ms;
+  };
+  const today = toUtcNoon(trainingDay);
+  const fight = toUtcNoon(fightDate);
+  if (today === null || fight === null) {
+    return "";
+  }
+  const days = Math.round((fight - today) / 86_400_000);
+  if (days < 0) {
+    return "";
+  }
+  return `D-${days}`;
+}
+
+// Short "strongest signal" name per risk category, for the risk-watch footer.
+const RISK_SIGNAL_LABELS: Record<string, string> = {
+  stop_red_flag: "STOP",
+  active_injury_worse: "INJURY",
+  high_pain: "PAIN",
+  weight_cut: "WEIGHT",
+  phase_taper: "TAPER",
+  fatigue: "FATIGUE",
+  reminder: "REMINDER",
+};
+
+/**
+ * Summary line for the risk-watch card. Risks arrive pre-sorted by priority, so
+ * the first is the strongest signal. Returns the count and a short label for it.
+ */
+export function getRiskWatchSummary(risks: TodayCommandView["risk_watch"]): {
+  count: number;
+  strongestLabel: string;
+} {
+  const count = risks.length;
+  if (!count) {
+    return { count: 0, strongestLabel: "" };
+  }
+  const category = (risks[0].category ?? "").trim();
+  const strongestLabel =
+    RISK_SIGNAL_LABELS[category] || (risks[0].label ?? "").trim().toUpperCase() || "SIGNAL";
+  return { count, strongestLabel };
+}

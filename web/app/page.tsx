@@ -17,17 +17,24 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
-import { formatAppDate } from "@/lib/date-format";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import {
+  getCampDayLabel,
+  getDecisionTier,
   getInjuryOverrideBanner,
+  getRiskWatchSummary,
   getRiskWatchText,
+  getSafeSessionView,
   getSessionDayLabel,
   getSessionFocus,
   getSessionTitle,
+  getTierMeta,
   getTodayDecisionBanner,
   hasTodaySession,
+  isHardCombatSession,
+  isSessionToday,
 } from "@/lib/today";
+import { SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import type { PlanSummary, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
 
 const landingWorkspaceRows = [
@@ -292,6 +299,7 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
   const visible = risks.slice(0, 2);
   const overflow = risks.length - visible.length;
   const shown = isExpanded ? risks : visible;
+  const summary = getRiskWatchSummary(risks);
 
   return (
     <article className="status-card overview-command-card overview-risk-card">
@@ -315,6 +323,10 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
           {isExpanded ? "Show less" : `+${overflow} more warning${overflow > 1 ? "s" : ""}`}
         </button>
       ) : null}
+      <p className="overview-risk-footer">
+        <span>{summary.count} active warning{summary.count === 1 ? "" : "s"}</span>
+        <span className="overview-risk-strongest">Strongest signal: {summary.strongestLabel}</span>
+      </p>
     </article>
   );
 }
@@ -518,12 +530,27 @@ export default function HomePage() {
       ? getInjuryOverrideBanner(commandState, hasNextSession ? nextSessionTitle : undefined)
       : null;
     const decisionBanner = injuryOverride ?? dailyDecisionBanner;
-    const decisionTitle = decisionBanner?.title ?? "Check in required";
+    // The tier is the strongest-decision framing shared with Today: STOP (hard
+    // block) overrides everything, then PULL BACK / MODIFY / GREEN. The eyebrow +
+    // uppercase label come from the tier, the body from the resolved banner.
+    const decisionTier = getDecisionTier(decisionBanner);
+    const tierMeta = getTierMeta(decisionTier);
+    const isStop = decisionTier === "stop";
+    const decisionTitle = tierMeta.label;
     const decisionLines = decisionBanner
       ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
       : ["Submit today's fast check-in to unlock your training decision."];
     const decisionSafety = decisionBanner?.safety;
     const decisionBlocks = decisionBanner?.blocksTraining ?? false;
+    // Today's countdown to the fight, and whether the scheduled session is today
+    // (vs a future planned day that must read as pending, not cleared).
+    const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
+    const sessionIsToday = isSessionToday(sessionPreview, commandState?.today?.session_scope);
+    const nextIsHardCombat = hasNextSession && isHardCombatSession(sessionPreview);
+    // STOP + the scheduled session is today -> replace it with a safe session.
+    // Any future scheduled session -> show it as pending clearance, never cleared.
+    const safeSession = isStop && hasNextSession && sessionIsToday ? getSafeSessionView(nextSessionTitle) : null;
+    const showNextPlanned = hasNextSession && !sessionIsToday;
     // Decision tone drives the colour accents on the decision card (matches
     // Today). Neutral/preview carries no accent — the next-session preview stays
     // grey and is never tinted red just because today is a pull-back. The
@@ -538,16 +565,22 @@ export default function HomePage() {
       ? "/onboarding"
       : injuryOverride
         ? "/today#today-injury"
-        : "/today";
+        : isStop
+          ? "/today#today-session"
+          : "/today";
+    // STOP is not a recommendation to train, so it never says "View
+    // recommendation" — it routes to the safe session (or the injury check-in).
     const primaryLabel = !hasActivePlan
       ? "Complete Intake"
       : injuryOverride
         ? "Open injury check-in"
-        : recommendation === "not_checked_in"
-          ? "Open Today / Check in"
-          : decisionBlocks
-            ? "View recommendation"
-            : "Open Today";
+        : isStop
+          ? "View safe session"
+          : recommendation === "not_checked_in"
+            ? "Open Today / Check in"
+            : decisionBlocks
+              ? "View recommendation"
+              : "Open Today";
 
     return (
       <>
@@ -556,11 +589,11 @@ export default function HomePage() {
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
               <h1 className="hero-title">Camp command centre</h1>
-              <p className="overview-command-summary">Today&apos;s training decision, next target, and risk watch from the active camp plan.</p>
+              <p className="overview-command-summary">Today&apos;s training decision, next safe action, and active risk signals from your camp plan.</p>
               <div className="overview-operational-strip" aria-label="Camp status">
-                <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Camp day</span><span className="overview-operational-value">{campDay || "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today?.training_day ? formatAppDate(commandState.today.training_day) : "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
               {commandError ? (
@@ -578,7 +611,7 @@ export default function HomePage() {
               ) : null}
             </div>
             <div className="status-card overview-next-action overview-decision-card overview-command-card" data-tone={decisionTone}>
-              <p className="status-label">Today&apos;s state</p>
+              <p className="status-label">{tierMeta.eyebrow}</p>
               <h2 className="plan-summary-title overview-decision-title">{decisionTitle}</h2>
               <div className="overview-decision-copy">
                 {decisionLines.map((line, index) => (
@@ -598,22 +631,50 @@ export default function HomePage() {
           </div>
 
           <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-            <article
-              className="status-card overview-command-card overview-next-session-card"
-              data-tone={injuryOverride ? "red" : undefined}
-            >
-              <p className="status-label">Next session</p>
-              <h2 className="plan-summary-title">{nextSessionTitle}</h2>
-              {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
-              {injuryOverride ? (
-                <p className="overview-next-session-blocked">
-                  Blocked — not cleared to train until the severe injury is eased or cleared.
+            {safeSession ? (
+              <article className="status-card overview-command-card overview-safe-session-card" data-tone="red">
+                <p className="status-label">{safeSession.eyebrow}</p>
+                <h2 className="plan-summary-title">{safeSession.title}</h2>
+                <p className="muted">{safeSession.detail}</p>
+                <div className="overview-safe-session-lists">
+                  <div className="overview-safe-list" data-kind="allowed">
+                    <p className="overview-safe-list-label">Allowed</p>
+                    <ul>{safeSession.allowed.map((item) => <li key={item}>{item}</li>)}</ul>
+                  </div>
+                  <div className="overview-safe-list" data-kind="blocked">
+                    <p className="overview-safe-list-label">Blocked</p>
+                    <ul>{safeSession.blocked.map((item) => <li key={item}>{item}</li>)}</ul>
+                  </div>
+                </div>
+              </article>
+            ) : showNextPlanned ? (
+              <article className="status-card overview-command-card overview-next-session-card">
+                <p className="status-label">Next planned session</p>
+                <h2 className="plan-summary-title">{nextSessionTitle}</h2>
+                {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
+                <p className="overview-session-pending">
+                  <span className="overview-pending-pill">Pending</span>
+                  Requires a fresh check-in before clearance.
                 </p>
-              ) : (
+                {nextIsHardCombat ? (
+                  <div className="overview-caution-row">
+                    <span className="overview-caution-label">Caution</span>
+                    <span className="overview-caution-text">
+                      Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
+                    </span>
+                  </div>
+                ) : null}
+              </article>
+            ) : (
+              <article className="status-card overview-command-card overview-next-session-card">
+                <p className="status-label">Next session</p>
+                <h2 className="plan-summary-title">{nextSessionTitle}</h2>
+                {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
                 <p className="muted">{nextSessionFocus}</p>
-              )}
-            </article>
+              </article>
+            )}
             <OverviewRiskWatch risks={risks} />
+            <p className="overview-medical-disclaimer">{SAFETY_DISCLAIMER_TIGHT}</p>
           </div>
         </section>
       </>
