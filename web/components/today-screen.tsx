@@ -45,6 +45,7 @@ import {
   completionRequiresModificationReason,
   completionRequiresReviewFields,
   getCompletionLabel,
+  getInjuryOverrideBanner,
   getRecommendationCopy,
   getRiskWatchText,
   getSessionFocus,
@@ -626,7 +627,7 @@ function InjuryCheckinCard({
   }
 
   return (
-    <section className="today-card today-injury-card" aria-labelledby="today-injury-heading">
+    <section id="today-injury" className="today-card today-injury-card" aria-labelledby="today-injury-heading">
       <div className="today-card-head">
         <div>
           <p className="kicker">Injury check-in</p>
@@ -994,9 +995,15 @@ function SessionCard({
   const isRecommendationPreview = isNextSessionPreview || !hasSession;
   const relationCopy = getSessionRelationCopy(session, status);
   const recommendationState = state.today.recommendation_state;
-  const decisionBanner = getTodayDecisionBanner(recommendationState, state.today.recommendation_reason, {
+  const dailyDecisionBanner = getTodayDecisionBanner(recommendationState, state.today.recommendation_reason, {
     isPreview: isRecommendationPreview,
   });
+  // A severe active injury is the highest-priority constraint for today and must
+  // lead the card, superseding the daily readiness adjustment (which stays in
+  // data/history). When there is no severe injury this is null and the normal
+  // daily decision banner is shown.
+  const injuryOverride = getInjuryOverrideBanner(state, getSessionTitle(session));
+  const decisionBanner = injuryOverride ?? dailyDecisionBanner;
   const decisionBlocksTraining = Boolean(decisionBanner?.blocksTraining);
   const canCompleteSession =
     canCompleteTodaySession(session) && !isNextSessionPreview && !decisionBlocksTraining;
@@ -1009,11 +1016,13 @@ function SessionCard({
     decisionBanner?.tone === "red"
       ? decisionBanner.tone
       : undefined;
-  const terminalStatusCopy = decisionBlocksTraining
-    ? "Follow the recommendation above. Do not start this session from Today."
-    : isNextSessionPreview
-      ? "Preview only. Completion opens on the matched training day."
-      : "Session details available, but completion is unavailable for this entry.";
+  const terminalStatusCopy = injuryOverride
+    ? "Held by an active severe injury. Clear it (or get it medically cleared) in the injury check-in above — marking it easing does not lift the hold, and this is not a load-reduced session."
+    : decisionBlocksTraining
+      ? "Follow the recommendation above. Do not start this session from Today."
+      : isNextSessionPreview
+        ? "Preview only. Completion opens on the matched training day."
+        : "Session details available, but completion is unavailable for this entry.";
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -1135,9 +1144,16 @@ function SessionCard({
       )}
 
       {!canCompleteSession ? (
-        <p className="today-terminal-status" data-tone={decisionBlocksTraining ? "blocked" : "neutral"}>
-          {terminalStatusCopy}
-        </p>
+        <div className="today-terminal-block">
+          <p className="today-terminal-status" data-tone={decisionBlocksTraining ? "blocked" : "neutral"}>
+            {terminalStatusCopy}
+          </p>
+          {injuryOverride ? (
+            <a href="#today-injury" className="secondary-button today-terminal-action">
+              Open injury check-in
+            </a>
+          ) : null}
+        </div>
       ) : null}
 
       {canCompleteSession && status === "not_started" ? (

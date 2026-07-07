@@ -360,24 +360,24 @@ def open_injury_flag_risks(
 ) -> list[RiskWatchItem]:
     """Surface tracked open injuries as a single risk-watch item.
 
-    A severe open injury reads as a stop-level "keep load off it" item; otherwise
-    a softer "training around it" reminder so the badge stays live for as long as
-    any injury is open and clears the moment they are all resolved.
+    Any active (non-resolved) severe injury reads as a stop-level "keep load off
+    it" item; otherwise a softer "training around it" reminder so the badge stays
+    live for as long as any injury is open and clears the moment they are all
+    resolved. The severe stop is driven by SEVERITY, not day-status: an easing
+    (monitoring) severe injury is still severe, so it must not quietly drop to the
+    soft reminder — that mirrors the Today/Overview injury hold and closes the
+    "mark it easing to bypass" gap.
     """
     active = [f for f in open_flags if str(f.get("status") or "") in ACTIVE_FLAG_STATUSES]
     if not active:
         return []
 
-    severe = [
-        f
-        for f in active
-        if str(f.get("severity") or "") == "severe" and str(f.get("status") or "") == "open"
-    ]
+    severe = [f for f in active if str(f.get("severity") or "") == "severe"]
     if severe:
         return [
             make_risk(
                 "active_injury_worse",
-                text=f"Open severe injury: {_flag_label(severe[0])}. Keep load off it until cleared.",
+                text=f"Active severe injury: {_flag_label(severe[0])}. Keep load off it until cleared.",
             )
         ]
 

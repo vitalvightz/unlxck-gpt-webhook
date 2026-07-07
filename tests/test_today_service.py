@@ -1136,6 +1136,40 @@ class TestCommandView:
         assert view.today.recommendation_state == "pull_back"
         assert "Rehab only today." in (view.today.recommendation_reason or "")
 
+    def test_severe_ongoing_injury_escalates_recommendation_to_pull_back(self):
+        # The reported bug: a severe injury added as "ongoing" (not "worse") used
+        # to leave the recommendation at the daily "load reduced" copy. It must
+        # now pull training back at the source, driven by severity.
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        initial = submit_today_checkin(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=_checkin_payload(), now=now
+        )
+        assert initial["recommendation_state"] == "train_as_planned"
+
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"injuries": [{"body_area": "chest", "severity": "severe", "status": "ongoing"}]},
+            now=now,
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=now)
+        assert view.today.recommendation_state == "pull_back"
+
+    def test_intake_severe_injury_escalates_command_view_without_a_checkin(self):
+        # A severe injury carried in from intake (no injury check-in refresh) is
+        # still escalated by the command-view catch-all.
+        store = _store_with_plan()
+        store.create_injury_flag(
+            ATHLETE,
+            {"source": "intake", "plan_id": PLAN, "body_area": "neck", "severity": "severe", "status": "open"},
+        )
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert view.today.recommendation_state == "pull_back"
+        assert "severe injury" in (view.today.recommendation_reason or "").lower()
+
     def test_new_injury_refreshes_existing_readiness_before_high_risk_session(self):
         store = _store_with_plan()
         structured_plan = _combined_contact_and_app_structured_plan()
@@ -1513,6 +1547,63 @@ class TestSessionCompletion:
         )
         assert row["status"] == "skipped"
         assert completion_landing_state(completion_status_of(row)) == "completed"
+
+    def _add_severe_injury(self, store, *, status: str = "open"):
+        store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "checkin",
+                "plan_id": PLAN,
+                "body_area": "chest",
+                "description": "chest bruise",
+                "severity": "severe",
+                "status": status,
+            },
+        )
+
+    @pytest.mark.parametrize("training_status", ["started", "done", "modified"])
+    def test_active_severe_injury_blocks_training_completion(self, training_status):
+        # Server-side hold: a severe injury rejects actually training the session,
+        # so the block is enforced at the API, not just hidden in the UI.
+        store = _store_with_plan()
+        self._add_severe_injury(store)
+        payload = self._payload(status=training_status)
+        if training_status == "modified":
+            payload["modification_reason"] = "tried anyway"
+        with pytest.raises(HTTPException) as exc:
+            upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="", payload=payload)
+        assert exc.value.status_code == 409
+        assert "severe injury" in exc.value.detail.lower()
+
+    def test_severe_injury_easing_still_blocks_completion(self):
+        # The bypass: marking it easing (monitoring) must not open completion.
+        store = _store_with_plan()
+        self._add_severe_injury(store, status="monitoring")
+        with pytest.raises(HTTPException) as exc:
+            upsert_session_completion(
+                store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done")
+            )
+        assert exc.value.status_code == 409
+
+    def test_severe_injury_still_allows_skipping_the_session(self):
+        # The athlete can still log that they backed off.
+        store = _store_with_plan()
+        self._add_severe_injury(store)
+        row = upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="skipped")
+        )
+        assert row["status"] == "skipped"
+
+    def test_moderate_injury_does_not_block_completion(self):
+        store = _store_with_plan()
+        store.create_injury_flag(
+            ATHLETE,
+            {"source": "checkin", "plan_id": PLAN, "body_area": "calf", "severity": "moderate", "status": "open"},
+        )
+        row = upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done")
+        )
+        assert row["status"] == "done"
 
     def test_duplicate_completion_upserts_single_row(self):
         store = _store_with_plan()

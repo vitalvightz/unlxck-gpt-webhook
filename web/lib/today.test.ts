@@ -9,7 +9,9 @@ import {
   completionRequiresModificationReason,
   completionRequiresReviewFields,
   canCompleteTodaySession,
+  getActiveSevereInjury,
   getCompletionActions,
+  getInjuryOverrideBanner,
   getRecommendationCopy,
   getTodayDecisionBanner,
   getVisibleRiskWatch,
@@ -17,6 +19,7 @@ import {
   hasTodaySession,
   shouldShowTodayCheckin,
 } from "./today.ts";
+import type { InjuryFlagRecord } from "./types.ts";
 import { submitTodayCheckin, submitTodaySessionCompletion } from "./api.ts";
 import type { TodayCommandView } from "./types.ts";
 
@@ -327,6 +330,99 @@ test("risk watch shows icon label text records with overflow count", () => {
   assert.equal(visible[0].label.length > 0, true);
   assert.equal(visible[0].text.length > 0, true);
   assert.equal(overflow, 1);
+});
+
+function makeInjury(overrides: Partial<InjuryFlagRecord> = {}): InjuryFlagRecord {
+  return {
+    id: "inj-1",
+    athlete_id: "ath-1",
+    source: "checkin",
+    body_area: "chest",
+    description: "chest bruise",
+    label: "Chest bruise",
+    severity: "severe",
+    status: "open",
+    created_at: "2026-07-06T00:00:00Z",
+    updated_at: "2026-07-06T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function stateWithInjuries(
+  injuries: InjuryFlagRecord[],
+  recommendation: TodayCommandView["today"]["recommendation_state"] = "modify",
+): TodayCommandView {
+  return {
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, recommendation_state: recommendation, recommendation_reason: MODIFY_REASON },
+    open_injuries: injuries,
+  };
+}
+
+test("every severity x status combo blocks iff a non-resolved severe injury exists", () => {
+  // Exhaustive matrix so no combo can silently open a bypass. The block is
+  // severity-driven: a SEVERE injury blocks in every non-resolved status
+  // (including "monitoring"/easing — that was the reported bypass). Moderate/mild
+  // never hard-block, and a resolved injury clears.
+  const severities = ["mild", "moderate", "severe"] as const;
+  const statuses = ["open", "monitoring", "resolved"] as const;
+  for (const severity of severities) {
+    for (const status of statuses) {
+      const blocks = severity === "severe" && status !== "resolved";
+      const result = getActiveSevereInjury([makeInjury({ severity, status })]);
+      assert.equal(Boolean(result), blocks, `${severity}/${status} should ${blocks ? "block" : "not block"}`);
+    }
+  }
+  assert.equal(getActiveSevereInjury([]), null);
+  assert.equal(getActiveSevereInjury(undefined), null);
+});
+
+test("a severe injury still blocks when a mild injury is open alongside it", () => {
+  const injuries = [
+    makeInjury({ id: "mild-1", severity: "mild", status: "open" }),
+    makeInjury({ id: "sev-1", severity: "severe", status: "monitoring" }),
+  ];
+  assert.equal(getActiveSevereInjury(injuries)?.id, "sev-1");
+});
+
+test("severe injury override supersedes the daily recommendation banner", () => {
+  const banner = getInjuryOverrideBanner(stateWithInjuries([makeInjury()]), "Hard sparring");
+
+  assert.ok(banner);
+  assert.equal(banner?.chip, "INJURY HOLD");
+  assert.equal(banner?.title, "Session blocked");
+  assert.equal(banner?.displayState, "injury_blocked");
+  assert.equal(banner?.tone, "red");
+  assert.equal(banner?.blocksTraining, true);
+  assert.match(banner?.detail ?? "", /Active severe injury: Chest bruise/);
+  assert.match(banner?.detail ?? "", /hard sparring/);
+  assert.match(banner?.detail ?? "", /easing does not lift/);
+  assert.match(banner?.safety ?? "", /superseded by the injury warning/);
+});
+
+test("marking a severe injury easing does not lift the override (bypass fix)", () => {
+  const easing = getInjuryOverrideBanner(
+    stateWithInjuries([makeInjury({ status: "monitoring" })]),
+    "Hard sparring",
+  );
+  assert.ok(easing, "an easing severe injury must still block");
+  assert.equal(easing?.blocksTraining, true);
+  // Clearing (resolving) it is the only way to lift the hold.
+  assert.equal(getInjuryOverrideBanner(stateWithInjuries([makeInjury({ status: "resolved" })]), "Hard sparring"), null);
+});
+
+test("no injury override without a severe active injury", () => {
+  assert.equal(
+    getInjuryOverrideBanner(stateWithInjuries([makeInjury({ severity: "moderate" })]), "Hard sparring"),
+    null,
+  );
+  assert.equal(getInjuryOverrideBanner(BASE_STATE, "Hard sparring"), null);
+});
+
+test("override falls back to 'this session' and drops the superseded line before check-in", () => {
+  const banner = getInjuryOverrideBanner(stateWithInjuries([makeInjury()], "not_checked_in"), "Today's session");
+  assert.match(banner?.detail ?? "", /Do not complete this session/);
+  assert.equal(banner?.safety, undefined);
 });
 
 test("submit check-in calls the Today check-in endpoint", async () => {

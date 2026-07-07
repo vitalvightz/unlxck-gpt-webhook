@@ -1667,6 +1667,21 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
+/* Next-session card when a severe injury blocks the scheduled work — the card
+   itself is the blocked one, so a red note here is correct (not a neutral card
+   tinted red by an unrelated pull-back). */
+.overview-next-session-blocked {
+  margin: 0;
+  color: #ff8d9a;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+html[data-theme="light"] .overview-next-session-blocked {
+  color: var(--danger-ink, #8e2d2f);
+}
+
 .overview-risk-card {
   display: grid;
   gap: 10px;
@@ -5455,6 +5470,19 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
 
 .today-terminal-status[data-tone="blocked"] {
   border-left-color: rgba(219, 47, 64, 0.72);
+}
+
+/* Blocked terminal state groups the "do not train" note with the CTA that
+   routes the athlete to the injury check-in instead of a start button. */
+.today-terminal-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.today-terminal-action {
+  align-self: flex-start;
 }
 
 /* The neutral banner and terminal status borders use white opacity, which is

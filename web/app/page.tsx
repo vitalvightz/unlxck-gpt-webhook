@@ -20,6 +20,7 @@ import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatAppDate } from "@/lib/date-format";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import {
+  getInjuryOverrideBanner,
   getRiskWatchText,
   getSessionDayLabel,
   getSessionFocus,
@@ -506,10 +507,17 @@ export default function HomePage() {
     // Reuse the same decision framing as the Today screen so the title, the
     // deduped body copy, and the block/allow meaning stay identical across
     // screens. Null before check-in (no decision yet).
-    const decisionBanner = getTodayDecisionBanner(
+    const dailyDecisionBanner = getTodayDecisionBanner(
       recommendation,
       commandState?.today?.recommendation_reason ?? null,
     );
+    // A severe active injury is the highest-priority constraint and supersedes
+    // the daily readiness copy here too, so Overview and Today agree on the
+    // block. Null when there is no severe injury.
+    const injuryOverride = commandState
+      ? getInjuryOverrideBanner(commandState, hasNextSession ? nextSessionTitle : undefined)
+      : null;
+    const decisionBanner = injuryOverride ?? dailyDecisionBanner;
     const decisionTitle = decisionBanner?.title ?? "Check in required";
     const decisionLines = decisionBanner
       ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
@@ -518,17 +526,28 @@ export default function HomePage() {
     const decisionBlocks = decisionBanner?.blocksTraining ?? false;
     // Decision tone drives the colour accents on the decision card (matches
     // Today). Neutral/preview carries no accent — the next-session preview stays
-    // grey and is never tinted red just because today is a pull-back.
+    // grey and is never tinted red just because today is a pull-back. The
+    // exception is a severe injury: it blocks the scheduled session, so its card
+    // IS the blocked one and correctly reads red.
     const decisionTone =
       decisionBanner && decisionBanner.tone !== "neutral" ? decisionBanner.tone : undefined;
-    const primaryHref = hasActivePlan ? "/today" : "/onboarding";
+    // When an injury blocks the day, deep-link straight to the injury check-in
+    // card (matches the Today CTA) so the athlete lands on the action, not the
+    // top of the page.
+    const primaryHref = !hasActivePlan
+      ? "/onboarding"
+      : injuryOverride
+        ? "/today#today-injury"
+        : "/today";
     const primaryLabel = !hasActivePlan
       ? "Complete Intake"
-      : recommendation === "not_checked_in"
-        ? "Open Today / Check in"
-        : decisionBlocks
-          ? "View recommendation"
-          : "Open Today";
+      : injuryOverride
+        ? "Open injury check-in"
+        : recommendation === "not_checked_in"
+          ? "Open Today / Check in"
+          : decisionBlocks
+            ? "View recommendation"
+            : "Open Today";
 
     return (
       <>
@@ -579,11 +598,20 @@ export default function HomePage() {
           </div>
 
           <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-            <article className="status-card overview-command-card overview-next-session-card">
+            <article
+              className="status-card overview-command-card overview-next-session-card"
+              data-tone={injuryOverride ? "red" : undefined}
+            >
               <p className="status-label">Next session</p>
               <h2 className="plan-summary-title">{nextSessionTitle}</h2>
               {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
-              <p className="muted">{nextSessionFocus}</p>
+              {injuryOverride ? (
+                <p className="overview-next-session-blocked">
+                  Blocked — not cleared to train until the severe injury is eased or cleared.
+                </p>
+              ) : (
+                <p className="muted">{nextSessionFocus}</p>
+              )}
             </article>
             <OverviewRiskWatch risks={risks} />
           </div>
