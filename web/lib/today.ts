@@ -821,16 +821,17 @@ const RISK_SIGNAL_LABELS: Record<string, string> = {
  * Summary line for the risk-watch card. Risks arrive pre-sorted by priority, so
  * the first is the strongest signal. Returns the count and a short label for it.
  */
-export function getRiskWatchSummary(risks: TodayCommandView["risk_watch"]): {
+export function getRiskWatchSummary(risks: TodayCommandView["risk_watch"] | null | undefined): {
   count: number;
   strongestLabel: string;
 } {
-  const count = risks.length;
+  const safeRisks = risks ?? [];
+  const count = safeRisks.length;
   if (!count) {
     return { count: 0, strongestLabel: "" };
   }
-  const category = (risks[0].category ?? "").trim();
+  const category = (safeRisks[0]?.category ?? "").trim();
   const strongestLabel =
-    RISK_SIGNAL_LABELS[category] || (risks[0].label ?? "").trim().toUpperCase() || "SIGNAL";
+    RISK_SIGNAL_LABELS[category] || (safeRisks[0]?.label ?? "").trim().toUpperCase() || "SIGNAL";
   return { count, strongestLabel };
 }
