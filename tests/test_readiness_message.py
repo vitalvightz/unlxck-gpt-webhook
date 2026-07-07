@@ -17,7 +17,7 @@ def _assert_card_shape(adjustment):
     lines = _message_lines(adjustment)
     assert 3 <= len(lines) <= 4
     assert all(line.endswith(".") for line in lines)
-    assert len(adjustment.message.split()) <= 55
+    assert len(adjustment.message.split()) <= 75
     assert adjustment.title
     assert adjustment.reason
     assert adjustment.action
@@ -394,12 +394,106 @@ def test_poor_sleep_plus_flat_body_stacks_two_warnings():
 
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
-    assert "More than one warning is showing" in adjustment.reason
+    assert "Multiple warning sources are showing" in adjustment.reason
+    assert "poor sleep + flat body" in adjustment.reason
     assert "sparring" in adjustment.action
     assert "hard rounds" in adjustment.action
     assert "conditioning finishers" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "flat_body" in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
+def test_hard_sparring_only_has_no_warning_sources_or_modify_card():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none"),
+        ReadinessContext(today_session=_session(title="Hard sparring")),
+    )
+
+    assert adjustment.decision == "train_as_planned"
+    assert "Warning sources:" not in adjustment.message
+    assert "Multiple warning sources are showing" not in adjustment.message
+    assert "session_risk_high" in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
+def test_selected_injury_severity_without_added_injury_is_not_counted():
+    # Draft form state is not part of ReadinessContext.open_injuries. Only an
+    # added injury row may count.
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none"),
+        ReadinessContext(today_session=_session(title="Hard sparring"), open_injuries=()),
+    )
+
+    assert adjustment.decision == "train_as_planned"
+    assert "active injury" not in adjustment.message.lower()
+    assert "tracked_injury_high_risk_session" not in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
+def test_removing_injury_clears_related_warning_source():
+    with_injury = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none"),
+        ReadinessContext(
+            today_session=_session(title="Hard sparring"),
+            open_injuries=(_injury(None, "mild", label="knee pain"),),
+        ),
+    )
+    without_injury = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none"),
+        ReadinessContext(today_session=_session(title="Hard sparring"), open_injuries=()),
+    )
+
+    assert "tracked_injury_high_risk_session" in with_injury.triggers
+    assert "active injury" in with_injury.reason
+    assert without_injury.decision == "train_as_planned"
+    assert "tracked_injury_high_risk_session" not in without_injury.triggers
+    assert "active injury" not in without_injury.message.lower()
+    _assert_card_shape(with_injury)
+    _assert_card_shape(without_injury)
+
+
+def test_resetting_checkin_clears_stale_warning_state():
+    poor = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat", pain="none"),
+        ReadinessContext(today_session=_session(title="Technical skill drilling")),
+    )
+    reset = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none"),
+        ReadinessContext(today_session=_session(title="Technical skill drilling")),
+    )
+
+    assert poor.decision == "modify"
+    assert "Multiple warning sources are showing" in poor.reason
+    assert reset.decision == "train_as_planned"
+    assert "poor_sleep" not in reset.triggers
+    assert "flat_body" not in reset.triggers
+    assert "Multiple warning sources are showing" not in reset.message
+    _assert_card_shape(poor)
+    _assert_card_shape(reset)
+
+
+def test_one_manageable_pain_warning_does_not_claim_multiple_sources():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(pain="manageable"),
+        ReadinessContext(today_session=_session(title="Technical skill drilling")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "One warning source is showing: manageable pain." in adjustment.reason
+    assert "Multiple warning sources are showing" not in adjustment.message
+    _assert_card_shape(adjustment)
+
+
+def test_hidden_context_warning_is_surfaced_in_source_list():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", phase="TAPER"),
+        ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "Multiple warning sources are showing: poor sleep + taper plus poor check-in." in adjustment.reason
+    assert "taper_poor_readiness" in adjustment.triggers
     _assert_card_shape(adjustment)
 
 
@@ -425,7 +519,7 @@ def test_taper_poor_flat_manageable_pain_pulls_back_without_modify_copy():
 
     assert adjustment.decision == "pull_back"
     assert "Pull back today." in adjustment.message
-    assert "Several warnings are showing" in adjustment.message
+    assert "Multiple warning sources are showing" in adjustment.message
     assert "Skip combat work" in adjustment.message
     assert "Keep sharp work only" not in adjustment.message
     assert "Remove 1 set" not in adjustment.message
@@ -447,7 +541,7 @@ def test_repeated_poor_readiness_adds_stronger_warning():
     )
 
     assert adjustment.decision == "modify"
-    assert "More than one warning is showing" in adjustment.reason
+    assert "Multiple warning sources are showing" in adjustment.reason
     assert "Skip sparring, hard rounds, and conditioning finishers" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "repeated_poor_readiness" in adjustment.triggers
@@ -620,7 +714,7 @@ def test_three_soft_warnings_pull_back_before_high_risk_combat_work():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "Several warnings are showing" in adjustment.reason
+    assert "Multiple warning sources are showing" in adjustment.reason
     assert "Skip combat work" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "flat_body" in adjustment.triggers
@@ -647,7 +741,7 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
     )
 
     assert adjustment.decision == "modify"
-    assert "Several warnings are showing" in adjustment.reason
+    assert "Multiple warning sources are showing" in adjustment.reason
     assert "Cut rounds, cap intensity, and remove conditioning" in adjustment.action
     assert "poor_sleep_3_day_streak" in adjustment.triggers
     assert "flat_body_3_day_streak" in adjustment.triggers
@@ -663,8 +757,8 @@ def test_poor_sleep_in_taper_uses_taper_specific_copy():
 
     assert adjustment.decision == "modify"
     assert "taper_poor_readiness" in adjustment.triggers
-    assert "sharpness matters" in adjustment.reason
-    assert "More than one warning is showing" not in adjustment.message
+    assert "poor sleep + taper plus poor check-in" in adjustment.reason
+    assert "Multiple warning sources are showing" in adjustment.message
     _assert_card_shape(adjustment)
 
 
@@ -676,8 +770,8 @@ def test_flat_body_in_reintegration_uses_reintegration_specific_copy():
 
     assert adjustment.decision == "modify"
     assert "reintegration_poor_readiness" in adjustment.triggers
-    assert "You are rebuilding" in adjustment.reason
-    assert "More than one warning is showing" not in adjustment.message
+    assert "flat body + return phase plus poor check-in" in adjustment.reason
+    assert "Multiple warning sources are showing" in adjustment.message
     _assert_card_shape(adjustment)
 
 
@@ -688,7 +782,7 @@ def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "Several warnings are showing" in adjustment.message
+    assert "Multiple warning sources are showing" in adjustment.message
     assert "Skip combat work" in adjustment.message
     _assert_card_shape(adjustment)
 
