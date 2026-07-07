@@ -893,7 +893,7 @@ export function getRiskWatchSummary(
   let strongestLabel =
     RISK_SIGNAL_LABELS[category] || (safeRisks[0]?.label ?? "").trim().toUpperCase() || "SIGNAL";
   if (tier) {
-    const signalStrength = RISK_SIGNAL_STRENGTH[strongestLabel] ?? 1;
+    const signalStrength = RISK_SIGNAL_STRENGTH[strongestLabel] ?? 0;
     if (signalStrength > TIER_SIGNAL_STRENGTH[tier]) {
       // The risk is louder than the decision — downgrade its label to the tier's
       // word (e.g. STOP → PULL BACK) so the two surfaces agree.
