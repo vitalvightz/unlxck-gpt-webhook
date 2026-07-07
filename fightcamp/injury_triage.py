@@ -1041,6 +1041,51 @@ def _combo_gate_result(
             sparring_risk_band=highest_band,
         )
 
+    # A high-severity injury carrying ANY other trend (improving / easing / same /
+    # unrecognised) must not slip past the gate to full-plan generation just because
+    # it was marked improving — the same "mark it easing to bypass" hole the daily
+    # check-in subsystem already closes severity-first. Treat it like a high-stable
+    # injury: restricted rehab when structural/restriction signals are present,
+    # otherwise coach/admin review.
+    if any(severity == "high" for severity, _ in combos):
+        routing_reasons.add("combo_gate:high_other_trend")
+
+        if (
+            has_structural_severe_signal
+            or has_mapped_restricted
+            or has_clinician_restriction_signal
+            or has_function_loss_signal
+        ):
+            return _build_result(
+                mode=RESTRICTED_REHAB_ONLY,
+                reasons=[
+                    "High-severity injury still shows structural/restriction risk signals despite an improving trend.",
+                    "Normal fight-camp loading/sparring generation remains suspended.",
+                ],
+                clinician_clearance_required=True,
+                should_block_stage2=True,
+                red_flags=red_flags,
+                matched_categories=matched_categories,
+                routing_reasons=routing_reasons,
+                urgent_flags=urgent_flags,
+                sparring_risk_band=highest_band,
+            )
+
+        return _build_result(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "High-severity injury requires coach/admin review before any normal plan, even when marked improving.",
+                "Automatic full-plan generation is blocked by triage combo gate.",
+            ],
+            clinician_clearance_required=False,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
+
     if any(("moderate", trend) in combos for trend in _WORSENING_TRENDS):
         routing_reasons.add("combo_gate:moderate_worsening")
 
