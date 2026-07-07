@@ -307,6 +307,86 @@ def _flag_label(flag: Mapping[str, object]) -> str:
     return build_injury_label(flag.get("body_area"), flag.get("description"))
 
 
+# Coarse injury "consequence" tier consumed by the daily Today readiness engine so
+# the decision can scale restriction by injury TYPE, not severity alone:
+#   * "neuro"          — head / neck / nerve / concussion: brain & nerve tissue,
+#                        restrict on any session.
+#   * "structural"     — fracture / tear / rupture / dislocation / rib / infection /
+#                        post-surgery: restrict hard & moderate exposure.
+#   * "load_sensitive" — tendon (tendonitis) / joint (impingement, instability):
+#                        restrict high-load / high-impact exposure.
+#   * None             — surface / soft-tissue (bruise) / symptom (soreness,
+#                        stiffness): minor, do NOT restrict by default.
+# Derived from the shared injury taxonomy (single source of truth) so it never
+# drifts from the plan-generation triage.
+_CONSEQUENCE_NEURO_TRIAGE = frozenset({"concussion", "nerve_involvement"})
+_CONSEQUENCE_STRUCTURAL_TRIAGE = frozenset(
+    {
+        "fracture",
+        "dislocation",
+        "tendon_rupture",
+        "muscle_rupture",
+        "ligament_tear",
+        "acl_tear",
+        "mcl_tear",
+        "pcl_tear",
+        "lcl_tear",
+        "hernia",
+        "infection",
+    }
+)
+_CONSEQUENCE_NEURO_CATEGORIES = frozenset({"neurological"})
+_CONSEQUENCE_STRUCTURAL_CATEGORIES = frozenset({"structural", "medical", "post_op"})
+_CONSEQUENCE_LOAD_SENSITIVE_CATEGORIES = frozenset({"overuse", "mechanical"})
+# Rib / lower-torso structural area: even a "bruised rib" needs rotation, contact,
+# clinch and heavy-brace protection, so it is never treated as a plain bruise.
+_RIB_LOCATION_RE = re.compile(
+    r"\b(?:ribs?|rib\s*cage|ribcage|costal|sternum|floating\s+rib)\b", re.I
+)
+
+
+def injury_consequence_tier(
+    body_area: object,
+    description: object,
+    *,
+    severity: object = None,
+) -> str | None:
+    """Return the coarse consequence tier for an injury, or ``None`` for minor
+    (surface / soft-tissue / symptom) injuries that should not restrict training by
+    default. Pure classification off the shared taxonomy — see the tier notes above.
+    """
+    # Deferred import: keeps the fightcamp NLP/synonym stack out of the eager import
+    # graph for callers that never classify an injury.
+    from fightcamp.injury_registry import get_registry_category
+    from fightcamp.injury_scoring import score_injury_phrase
+
+    text = f"{str(body_area or '').strip()} {str(description or '').strip()}".strip()
+    if not text:
+        return None
+    score = score_injury_phrase(text) or {}
+    triage_category = str(score.get("triage_category") or "")
+    if triage_category in _CONSEQUENCE_NEURO_TRIAGE:
+        return "neuro"
+    if triage_category in _CONSEQUENCE_STRUCTURAL_TRIAGE:
+        return "structural"
+
+    category = get_registry_category(str(score.get("injury_type") or ""))
+    if category in _CONSEQUENCE_NEURO_CATEGORIES:
+        tier: str | None = "neuro"
+    elif category in _CONSEQUENCE_STRUCTURAL_CATEGORIES:
+        tier = "structural"
+    elif category in _CONSEQUENCE_LOAD_SENSITIVE_CATEGORIES:
+        tier = "load_sensitive"
+    else:
+        tier = None
+
+    # A rib injury of any non-structural type is still torso-structural for exposure
+    # purposes (rotation / contact / bracing), never a harmless bruise.
+    if tier in (None, "load_sensitive") and _RIB_LOCATION_RE.search(text):
+        tier = "structural"
+    return tier
+
+
 def reconcile_injury_checkin(
     *,
     declared: Sequence[DeclaredInjury],

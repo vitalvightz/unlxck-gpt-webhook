@@ -304,6 +304,26 @@ def test_text_escalation_overrides_guided_low_and_still_blocks_stage2():
     assert triage.mode != FULL_PLAN
 
 
+def test_high_severity_improving_guided_injury_still_blocks_full_plan():
+    # A high-severity injury marked "improving" must not slip past the combo gate
+    # to a full plan — the same "mark it easing to bypass" hole the daily check-in
+    # subsystem closes severity-first. It is held for coach/admin review instead.
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "left knee",
+        "severity": "high",
+        "trend": "improving",
+        "notes": "still limited but getting better",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    triage = triage_injuries(parsed)
+
+    assert triage.mode != FULL_PLAN
+    assert triage.should_block_stage2 is True
+    assert "combo_gate:high_other_trend" in triage.routing_reasons
+
+
 def test_second_guided_card_can_trigger_medical_hold():
     payload = _payload_with_injury("")
     payload["guided_injuries"] = [

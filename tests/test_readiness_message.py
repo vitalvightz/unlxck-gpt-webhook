@@ -68,6 +68,81 @@ def test_injury_worse_overrides_good_sleep_and_motivation_signals():
     _assert_card_shape(adjustment)
 
 
+# ---------------------------------------------------------------------------
+# Type-aware injury × session matrix. `consequence` is the coarse tier the Today
+# service attaches from the shared taxonomy (neuro / structural / load_sensitive /
+# None). Set explicitly here so the matrix is deterministic and NLP-independent.
+# ---------------------------------------------------------------------------
+
+
+def _injury(consequence, severity="moderate", *, status="open", label="left knee", worse=False):
+    return {
+        "status": status,
+        "severity": severity,
+        "consequence": consequence,
+        "label": label,
+        "latest_reported_status": "worse" if worse else "ongoing",
+    }
+
+
+def _decision(title, injuries):
+    return build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=_session(title=title), open_injuries=tuple(injuries)),
+    )
+
+
+def test_neuro_injury_pulls_back_on_every_session():
+    for title in ("Recovery mobility", "Technical skill drilling", "Hard sparring"):
+        adj = _decision(title, [_injury("neuro", "mild", label="neck nerve issue")])
+        assert adj.decision == "pull_back", title
+        assert adj.title == "Rehab only today."
+        _assert_card_shape(adj)
+
+
+def test_structural_moderate_injury_scales_by_session_exposure():
+    rib = [_injury("structural", "moderate", label="rib")]
+    assert _decision("Clinch and wrestling", rib).decision == "pull_back"
+    assert _decision("Technical skill drilling", rib).decision == "pull_back"
+    assert _decision("Recovery mobility", rib).decision == "modify"
+
+
+def test_load_sensitive_injury_scales_by_session_exposure():
+    tendon = [_injury("load_sensitive", "moderate", label="knee tendon")]
+    assert _decision("HIIT conditioning circuit", tendon).decision == "pull_back"
+    assert _decision("Bag work and heavy bag rounds", tendon).decision == "pull_back"
+    assert _decision("Technical skill drilling", tendon).decision == "modify"
+    assert _decision("Recovery mobility", tendon).decision == "train_as_planned"
+
+
+def test_minor_surface_injury_never_stops_training():
+    graze = [_injury(None, "mild", label="knuckle graze")]
+    # A hard session may be trimmed to a modify, but a minor surface injury must
+    # never force a stop, and a light session stays green.
+    assert _decision("Hard sparring", graze).decision in {"modify", "train_as_planned"}
+    assert _decision("Hard sparring", graze).decision != "pull_back"
+    assert _decision("Recovery mobility", graze).decision == "train_as_planned"
+
+
+def test_green_copy_never_claims_clear_while_injured():
+    adj = _decision("Recovery mobility", [_injury(None, "mild", label="knuckle graze")])
+    assert adj.decision == "train_as_planned"
+    assert "knuckle graze" in adj.reason
+    assert adj.reason != "Your sleep, body, and pain check are clear today."
+    _assert_card_shape(adj)
+
+
+def test_new_high_exposure_session_terms_classify_as_high():
+    for title in (
+        "Heavy bag rounds",
+        "Clinch and wrestling",
+        "HIIT conditioning circuit",
+        "Explosive plyometric lower body",
+        "Live sparring rounds",
+    ):
+        assert classify_session_risk(_session(title=title)) == "high", title
+
+
 def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="good", body="sharp", pain="none"),
@@ -463,14 +538,29 @@ def test_flat_body_high_risk_uses_bag_or_max_output_copy():
     _assert_card_shape(adjustment)
 
 
-def test_manageable_pain_high_risk_uses_contact_protection_copy():
+def test_manageable_pain_before_high_risk_work_pulls_back():
+    # A pain signal before hard combat work is a pull-back, not a modify whose
+    # action already tells the athlete to skip the whole session (the amber-state /
+    # stop-action contradiction). On a lower-risk session it stays a modify.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(pain="manageable"),
         ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
     )
 
+    assert adjustment.decision == "pull_back"
+    assert "not safe today" in adjustment.reason
+    assert "manageable_pain" in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
+def test_manageable_pain_on_lower_risk_session_stays_modify():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(pain="manageable"),
+        ReadinessContext(today_session=_session(title="Technical skill drilling")),
+    )
+
     assert adjustment.decision == "modify"
-    assert "clinch pressure" in adjustment.action or "hard bag work" in adjustment.action
+    assert "clinch" in adjustment.action
     _assert_card_shape(adjustment)
 
 

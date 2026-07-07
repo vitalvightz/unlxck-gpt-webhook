@@ -37,15 +37,38 @@ _HIGH_RISK_TERMS = (
     "plyo",
     "plyometric",
     "jump",
+    "bound",
+    "explosive",
+    "ballistic",
     "heavy lower",
     "heavy squat",
     "deadlift",
+    "heavy press",
+    "loaded carry",
     "max effort",
     "max-effort",
+    "max load",
+    "1rm",
     "hard conditioning",
+    "hiit",
     "hard spar",
     "sparring",
     "live work",
+    "live round",
+    "live spar",
+    "clinch",
+    "wrestl",
+    "grappl",
+    "takedown",
+    "sprawl",
+    # Impact striking on the bag is high-consequence work for an injured athlete;
+    # the engine's own pull-back copy already names "hard bag work" as the thing to
+    # remove, so it must classify as high, not fall through to medium.
+    "bag work",
+    "bagwork",
+    "heavy bag",
+    "hard bag",
+    "bag round",
     "competition",
 )
 
@@ -372,6 +395,110 @@ def _active_context_injury_stop(context: ReadinessContext) -> str | None:
         if _clean(injury.get("latest_reported_status")).lower() == "worse":
             return f"The {label} injury is worse."
     return None
+
+
+# Injury consequence tier + severity + session exposure -> restriction floor.
+# Severe/worse injuries are already stopped by _active_context_injury_stop, so this
+# grades ONLY the moderate/mild high-consequence gap that severity+worse alone
+# missed. Minor injuries (tier None: surface / soft-tissue / symptom) never reach
+# here, so a bruise or blister keeps training by default.
+_INJURY_FLOOR_RANK: dict[str | None, int] = {None: 0, "modify": 1, "pull_back": 2}
+
+
+def _injury_floor_for(tier: str, severity: str, session_risk: SessionRisk) -> str | None:
+    high = session_risk == "high"
+    low = session_risk == "low"
+    if tier == "neuro":
+        # Head / neck / nerve tissue is not safe to train through on any session.
+        return "pull_back"
+    if tier == "structural":
+        if severity == "mild":
+            return None if low else "modify"
+        return "modify" if low else "pull_back"
+    if tier == "load_sensitive":
+        if severity == "mild":
+            return "modify" if high else None
+        if high:
+            return "pull_back"
+        if low:
+            return None
+        return "modify"
+    return None
+
+
+def _context_injury_floor(
+    context: ReadinessContext, session_risk: SessionRisk
+) -> tuple[str | None, str, str]:
+    """Strongest injury-driven restriction floor across active open injuries.
+
+    Returns ``(floor, label, tier)`` where ``floor`` is ``None`` / ``"modify"`` /
+    ``"pull_back"``. Only open/monitoring injuries carrying a high-consequence tier
+    participate; severe / worse are handled by ``_active_context_injury_stop``.
+    """
+    best_floor: str | None = None
+    best_label = ""
+    best_tier = ""
+    for injury in context.open_injuries:
+        if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
+            continue
+        tier = _clean(injury.get("consequence")).lower()
+        if tier not in {"neuro", "structural", "load_sensitive"}:
+            continue
+        severity = _clean(injury.get("severity")).lower() or "moderate"
+        floor = _injury_floor_for(tier, severity, session_risk)
+        if _INJURY_FLOOR_RANK[floor] > _INJURY_FLOOR_RANK[best_floor]:
+            best_floor = floor
+            best_tier = tier
+            label = _clean(injury.get("label"))
+            if not label:
+                from api.contracts.injury_checkin import build_injury_label
+
+                label = build_injury_label(injury.get("body_area"), injury.get("description"))
+            best_label = label
+    return best_floor, best_label, best_tier
+
+
+def _injury_floor_pull_back(
+    tier: str,
+    label: str,
+    *,
+    session_risk: SessionRisk,
+    phase: str,
+    contact_sport: bool,
+) -> ReadinessAdjustment:
+    """A type-aware pull-back for a moderate high-consequence injury. Head/neck use
+    STOP-tone ``Rehab only today.`` copy; structural / tendon / joint use PULL BACK
+    copy (recovery / light technical), scaled to the injury, not a blanket stop."""
+    label = label or "injury"
+    if tier == "neuro":
+        title = "Rehab only today."
+        reason = f"Your {label} involves head, neck, or nerve symptoms, so training is not safe today."
+        action = "No sparring, impact, or hard work today — rest and monitor symptoms."
+        safety = "Seek medical advice for worsening headache, dizziness, numbness, vision changes, or neck pain."
+    elif tier == "structural":
+        title = "Pull back today."
+        reason = f"Your {label} needs load and impact kept off it today."
+        action = "Skip sparring, clinch, rotation, heavy loading, and conditioning; keep it to light rehab or mobility."
+        safety = "Seek medical advice if pain is sharp, worsening, unstable, or swelling increases."
+    else:  # load_sensitive
+        title = "Pull back today."
+        reason = f"Hard work would overload your {label} today."
+        action = "Skip sparring, hard bag work, plyos, and heavy loading; use rehab or light technical only."
+        safety = "Seek medical advice if pain is sharp, unstable, swollen, or neurological."
+    return ReadinessAdjustment(
+        decision="pull_back",
+        title=title,
+        reason=reason,
+        action=action,
+        safety=safety,
+        triggers=_with_context_triggers(
+            "active_injury_restriction",
+            session_risk=session_risk,
+            phase=phase,
+            contact_sport=contact_sport,
+        ),
+        session_risk=session_risk,
+    )
 
 
 def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, session_risk: SessionRisk, phase: str) -> ReadinessAdjustment | None:
@@ -706,6 +833,19 @@ def _soft_warning_message(
     )
 
 
+def _first_active_open_injury_label(context: ReadinessContext) -> str:
+    for injury in context.open_injuries:
+        if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
+            continue
+        label = _clean(injury.get("label"))
+        if label:
+            return label
+        from api.contracts.injury_checkin import build_injury_label
+
+        return build_injury_label(injury.get("body_area"), injury.get("description"))
+    return ""
+
+
 def build_readiness_adjustment(
     checkin: ReadinessCheckin,
     context: ReadinessContext | None = None,
@@ -713,11 +853,24 @@ def build_readiness_adjustment(
     context = context or ReadinessContext()
     phase = _normalize_phase(context.phase or checkin.phase)
     session_risk = classify_session_risk(context.today_session)
+    contact_sport = _is_combat_contact_sport(context)
     risk = _risk_adjustment(checkin, context, session_risk, phase)
     if risk:
         return risk
 
-    contact_sport = _is_combat_contact_sport(context)
+    # Type-aware injury floor: a moderate head-neck / structural / rib / tendon /
+    # joint injury restricts by exposure even when it is not flagged "worse". A
+    # pull-back floor is terminal; a modify floor raises the soft-warning decision.
+    injury_floor, injury_label, injury_tier = _context_injury_floor(context, session_risk)
+    if injury_floor == "pull_back":
+        return _injury_floor_pull_back(
+            injury_tier,
+            injury_label,
+            session_risk=session_risk,
+            phase=phase,
+            contact_sport=contact_sport,
+        )
+
     fight_week = _is_fight_week(context)
     repeated_poor = _recent_poor_readiness_count(checkin, context) >= 3
     soft_warnings = _collect_soft_warnings(
@@ -729,20 +882,46 @@ def build_readiness_adjustment(
         fight_week=fight_week,
     )
 
-    if "pain_worsening_trend" in soft_warnings.effective and session_risk == "high":
-        decision: RecommendationDecision = "pull_back"
+    decision, title, reason, action = _soft_warning_message(
+        soft_warnings.effective,
+        session_risk=session_risk,
+        phase=phase,
+        fight_week=fight_week,
+    )
+
+    # A pain signal before hard combat work is a pull-back, not a modify: the modify
+    # copy already tells the athlete to skip the entire session, so the state must
+    # match the action (fixes the amber-state / stop-action contradiction). Only
+    # promote when the soft-warning stack has not already pulled back, so the
+    # richer "several warnings" copy is preserved.
+    if decision != "pull_back" and _has_pain_warning(soft_warnings.effective) and session_risk == "high":
+        decision = "pull_back"
         title = "Pull back today."
-        reason = "Pain is getting worse, so hard combat work is not safe today."
-        action = "Use recovery, rehab, or light mobility instead."
-    else:
-        decision, title, reason, action = _soft_warning_message(
-            soft_warnings.effective,
-            session_risk=session_risk,
-            phase=phase,
-            fight_week=fight_week,
+        reason = (
+            "Pain is getting worse, so hard combat work is not safe today."
+            if "pain_worsening_trend" in soft_warnings.effective
+            else "Pain before hard combat work is not safe today."
         )
+        action = "Skip sparring and hard work; use recovery, rehab, or light mobility instead."
+
+    # Raise a clean/soft decision to the injury modify-floor, and never tell an
+    # athlete carrying an open injury that their "check is clear".
+    if injury_floor == "modify" and decision == "train_as_planned":
+        decision = "modify"
+        label = injury_label or "your injury"
+        title = "Load controlled."
+        reason = f"An active injury ({label}) means hard combat work needs to be limited today."
+        action = "Keep it controlled: skip sparring, clinch pressure, hard bag work, and all-out rounds."
+    elif decision == "train_as_planned":
+        green_label = _first_active_open_injury_label(context)
+        if green_label:
+            title = "Train around it."
+            reason = f"Your sleep, body, and pain check are clear — just protect your {green_label} today."
+            action = "Run the planned work, keep the area clean, and stop if it flares."
 
     triggers = list(soft_warnings.triggers)
+    if injury_floor == "modify" and "active_injury_restriction" not in triggers:
+        triggers.append("active_injury_restriction")
     if fight_week and not soft_warnings.effective:
         triggers.append("fight_week")
 
