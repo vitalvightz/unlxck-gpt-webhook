@@ -325,7 +325,10 @@ def reconcile_injury_checkin(
     for injury in declared:
         flag_status = _FLAG_STATUS_BY_REPORT[injury.status]
         if injury.flag_id and injury.flag_id in known:
-            fields: dict[str, object] = {"status": flag_status}
+            fields: dict[str, object] = {
+                "status": flag_status,
+                "latest_reported_status": injury.status,
+            }
             if injury.severity is not None:
                 fields["severity"] = injury.severity
             if injury.body_area.strip():
@@ -349,6 +352,7 @@ def reconcile_injury_checkin(
                 "description": description,
                 "severity": injury.severity or "moderate",
                 "status": flag_status,
+                "latest_reported_status": injury.status,
             }
         )
 

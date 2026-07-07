@@ -1303,6 +1303,8 @@ create table if not exists public.injury_flags (
     check (severity in ('mild', 'moderate', 'severe')),
   status text not null default 'open'
     check (status in ('open', 'monitoring', 'resolved')),
+  latest_reported_status text not null default 'ongoing'
+    check (latest_reported_status in ('ongoing', 'improving', 'worse', 'resolved')),
   resolved_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -366,16 +366,15 @@ function stateWithInjuries(
   };
 }
 
-test("every severity x status combo blocks iff a non-resolved severe injury exists", () => {
+test("every severity x status combo blocks iff an active severe injury exists", () => {
   // Exhaustive matrix so no combo can silently open a bypass. The block is
-  // severity-driven: a SEVERE injury blocks in every non-resolved status
-  // (including "monitoring"/easing — that was the reported bypass). Moderate/mild
-  // never hard-block, and a resolved injury clears.
+  // severity-driven: a SEVERE injury blocks while open or monitoring/easing.
+  // Moderate/mild never hard-block, and a resolved injury clears.
   const severities = ["mild", "moderate", "severe"] as const;
   const statuses = ["open", "monitoring", "resolved"] as const;
   for (const severity of severities) {
     for (const status of statuses) {
-      const blocks = severity === "severe" && status !== "resolved";
+      const blocks = severity === "severe" && (status === "open" || status === "monitoring");
       const result = getActiveSevereInjury([makeInjury({ severity, status })]);
       assert.equal(Boolean(result), blocks, `${severity}/${status} should ${blocks ? "block" : "not block"}`);
     }

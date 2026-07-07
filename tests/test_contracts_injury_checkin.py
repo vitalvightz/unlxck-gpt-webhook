@@ -39,6 +39,7 @@ def test_new_injury_opens_a_flag():
     assert plan.updates == []
     create = plan.creates[0]
     assert create["status"] == "open"
+    assert create["latest_reported_status"] == "ongoing"
     assert create["severity"] == "moderate"
     assert create["body_area"] == "left knee"
     assert create["description"] == "left knee"  # falls back to body area
@@ -51,6 +52,7 @@ def test_improving_new_injury_opens_in_monitoring():
         open_flag_ids=[],
     )
     assert plan.creates[0]["status"] == "monitoring"
+    assert plan.creates[0]["latest_reported_status"] == "improving"
 
 
 def test_existing_flag_resolved_is_an_update_not_a_create():
@@ -62,6 +64,7 @@ def test_existing_flag_resolved_is_an_update_not_a_create():
     assert len(plan.updates) == 1
     assert plan.updates[0].flag_id == "f1"
     assert plan.updates[0].fields["status"] == "resolved"
+    assert plan.updates[0].fields["latest_reported_status"] == "resolved"
 
 
 def test_existing_flag_worse_keeps_open_and_updates_severity():
@@ -69,7 +72,11 @@ def test_existing_flag_worse_keeps_open_and_updates_severity():
         declared=[_declare(flag_id="f1", severity="severe", status="worse")],
         open_flag_ids=["f1"],
     )
-    assert plan.updates[0].fields == {"status": "open", "severity": "severe"}
+    assert plan.updates[0].fields == {
+        "status": "open",
+        "severity": "severe",
+        "latest_reported_status": "worse",
+    }
 
 
 def test_existing_flag_status_update_does_not_default_severity():
@@ -77,7 +84,7 @@ def test_existing_flag_status_update_does_not_default_severity():
         declared=[_declare(flag_id="f1", status="ongoing")],
         open_flag_ids=["f1"],
     )
-    assert plan.updates[0].fields == {"status": "open"}
+    assert plan.updates[0].fields == {"status": "open", "latest_reported_status": "ongoing"}
 
 
 def test_unknown_flag_id_is_treated_as_new_not_a_foreign_update():

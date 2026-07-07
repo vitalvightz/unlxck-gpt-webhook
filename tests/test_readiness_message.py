@@ -68,6 +68,30 @@ def test_injury_worse_overrides_good_sleep_and_motivation_signals():
     _assert_card_shape(adjustment)
 
 
+def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="sharp", pain="none"),
+        ReadinessContext(
+            today_session=_session(title="Sparring and hard conditioning"),
+            open_injuries=[
+                {
+                    "status": "open",
+                    "severity": "mild",
+                    "body_area": "cut neck",
+                    "description": "cut neck",
+                    "latest_reported_status": "worse",
+                }
+            ],
+        ),
+    )
+
+    assert adjustment.decision == "pull_back"
+    assert "The Neck cut injury is worse." in adjustment.reason
+    assert "cut neck" not in adjustment.reason
+    assert "active_injury_worse" in adjustment.triggers
+    _assert_card_shape(adjustment)
+
+
 def test_high_pain_returns_rehab_only_guidance():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(pain="high"),

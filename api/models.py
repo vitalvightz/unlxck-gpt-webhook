@@ -1643,6 +1643,7 @@ AdaptationDecisionValue = Literal[
 ]
 InjuryFlagSeverity = Literal["mild", "moderate", "severe"]
 InjuryFlagStatus = Literal["open", "monitoring", "resolved"]
+InjuryReportedStatus = Literal["ongoing", "improving", "worse", "resolved"]
 AdminReviewStatus = Literal["pending", "acknowledged", "resolved"]
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -1760,6 +1761,7 @@ class InjuryFlagRecord(BaseModel):
     description: str
     severity: InjuryFlagSeverity = "moderate"
     status: InjuryFlagStatus = "open"
+    latest_reported_status: InjuryReportedStatus = "ongoing"
     resolved_at: str | None = None
     created_at: str = ""
     updated_at: str = ""

@@ -402,7 +402,9 @@ export function getActiveSevereInjury(
 ): InjuryFlagRecord | null {
   return (
     (openInjuries ?? []).find(
-      (injury) => injury.severity === "severe" && injury.status !== "resolved",
+      (injury) =>
+        injury.severity === "severe" &&
+        (injury.status === "open" || injury.status === "monitoring"),
     ) ?? null
   );
 }
