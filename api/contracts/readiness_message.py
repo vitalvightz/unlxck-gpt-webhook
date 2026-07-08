@@ -249,12 +249,23 @@ def is_support_session(session: Mapping[str, Any] | None) -> bool:
     Prefers the authoritative structured signals the plan attaches to a support
     insert (``category``/``stress_class``/``governance.meaningful_stress``/
     ``support_insert_category``) and falls back to the distinctive athlete-facing
-    labels that always survive to the Today card. A session that also carries a
-    high-risk term is never treated as a filler.
+    labels that always survive to the Today card. Safety-first: obvious high-risk
+    wording (sparring, heavy squat, ...) always vetoes the classification, even a
+    structured "support" flag — the injury hold must win when the copy says hard work.
     """
     if not isinstance(session, Mapping) or not session:
         return False
 
+    # Safety-first: build the session text up front and let obvious high-risk
+    # wording VETO a support classification before any structured signal is
+    # accepted. A mislabeled ``stress_class: support`` / ``meaningful_stress: False``
+    # flag on a hard session (sparring, heavy squat, ...) must never open the injury
+    # exemption — the injury hold has to win when the copy says hard work.
+    text = _session_text(session)
+    if text and any(term in text for term in _HIGH_RISK_TERMS):
+        return False
+
+    # Structured support-insert signals are the primary positive detector.
     for key in ("category", "session_type", "status"):
         if _clean(session.get(key)).lower() == "support_insert":
             return True
@@ -266,8 +277,8 @@ def is_support_session(session: Mapping[str, Any] | None) -> bool:
     if _clean(session.get("support_insert_category")).lower() in _SUPPORT_INSERT_CATEGORIES:
         return True
 
-    text = _session_text(session)
-    if not text or any(term in text for term in _HIGH_RISK_TERMS):
+    # Fall back to the distinctive athlete-facing filler labels.
+    if not text:
         return False
     return any(term in text for term in _SUPPORT_SESSION_TERMS)
 

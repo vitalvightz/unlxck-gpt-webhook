@@ -161,6 +161,16 @@ def test_is_support_session_detects_fillers_and_ignores_hard_work():
     assert is_support_session(_session(title="Hard sparring")) is False
 
 
+def test_support_session_is_safety_first_high_risk_wording_vetoes_structured_signal():
+    # A mislabeled structured "support" flag on a hard session must NOT open the
+    # injury exemption — high-risk wording always wins.
+    assert is_support_session({"stress_class": "support", "title": "Hard sparring"}) is False
+    assert is_support_session({"governance": {"meaningful_stress": False}, "title": "Heavy squat"}) is False
+    assert is_support_session({"category": "support_insert", "title": "sparring reset"}) is False
+    # A genuine structured filler with safe wording is still accepted.
+    assert is_support_session({"category": "support_insert", "title": "Tactical Cue Card"}) is True
+
+
 def _filler_session():
     return {
         "title": "Tactical Cue Card",
