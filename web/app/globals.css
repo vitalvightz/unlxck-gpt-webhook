@@ -2306,10 +2306,10 @@ html[data-theme="light"] .overview-risk-strongest {
 .camp-progress[data-variant="today"] {
   margin: 2px 0 0;
   padding: 14px 16px;
-  border: 1px solid rgba(214, 175, 106, 0.18);
+  border: 1px solid color-mix(in srgb, var(--progress-gold, #d6af6a) 18%, transparent);
   border-radius: 12px;
   background:
-    radial-gradient(circle at top left, rgba(214, 175, 106, 0.08), transparent 60%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--progress-gold, #d6af6a) 8%, transparent), transparent 60%),
     rgba(255, 255, 255, 0.02);
 }
 
