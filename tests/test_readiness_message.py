@@ -216,6 +216,112 @@ def test_filler_session_still_blocked_by_red_flag_symptom():
     assert adj.title == "No training today."
 
 
+def test_filler_session_ignores_fatigue_soft_warnings():
+    # A restorative filler is not reduced by accumulated fatigue signals — a poor
+    # 3-day sleep streak still leaves a breathing/cue-card day fully allowed.
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            today_session=_filler_session(),
+            recent_checkins=[
+                {"training_day": "2026-06-17", "sleep": "poor", "body": "flat"},
+                {"training_day": "2026-06-16", "sleep": "poor", "body": "flat"},
+            ],
+        ),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+    _assert_card_shape(adj)
+
+
+# ---------------------------------------------------------------------------
+# Accumulated check-in signals must only be built from RECENT history — sporadic
+# check-ins/sessions weeks apart must not inflate a "3-day streak" / "recent load".
+# ---------------------------------------------------------------------------
+
+
+def test_streak_is_not_assembled_from_non_adjacent_checkins():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_checkins=[
+                {"training_day": "2026-06-02", "sleep": "poor"},
+                {"training_day": "2026-05-20", "sleep": "poor"},
+            ],
+            today_session=_session(title="Technical skill drilling"),
+        ),
+    )
+    # Weeks-apart poor sleep is NOT a 3-day streak — just today's single warning.
+    assert "poor_sleep_3_day_streak" not in adj.triggers
+    assert "poor_sleep" in adj.triggers
+
+
+def test_adjacent_checkins_still_form_a_streak():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_checkins=[
+                {"training_day": "2026-06-17", "sleep": "poor"},
+                {"training_day": "2026-06-16", "sleep": "poor"},
+            ],
+            today_session=_session(title="Technical skill drilling"),
+        ),
+    )
+    assert "poor_sleep_3_day_streak" in adj.triggers
+
+
+def test_streak_requires_consecutive_calendar_days():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat", pain="manageable"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_checkins=[
+                {"training_day": "2026-06-17", "sleep": "poor", "body": "flat", "pain": "manageable"},
+                {"training_day": "2026-06-15", "sleep": "poor", "body": "flat", "pain": "manageable"},
+            ],
+            today_session=_session(title="Technical skill drilling"),
+        ),
+    )
+    assert "poor_sleep_3_day_streak" not in adj.triggers
+    assert "flat_body_3_day_streak" not in adj.triggers
+    assert "pain_3_day_streak" not in adj.triggers
+    assert "poor_sleep" in adj.triggers
+
+
+def test_unparseable_training_day_preserves_best_effort_streak():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(
+            training_day="not-a-date",
+            recent_checkins=[
+                {"training_day": "2026-06-17", "sleep": "poor"},
+                {"training_day": "2026-06-15", "sleep": "poor"},
+            ],
+            today_session=_session(title="Technical skill drilling"),
+        ),
+    )
+    assert "poor_sleep_3_day_streak" in adj.triggers
+
+
+def test_recent_hard_load_ignores_stale_sessions():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_sessions=[
+                {"training_day": "2026-05-20", "session_rpe": 9},
+                {"training_day": "2026-05-18", "session_rpe": 9},
+            ],
+            today_session=_session(title="Technical skill drilling"),
+        ),
+    )
+    # Hard sessions weeks ago are not "recent load".
+    assert "recent_hard_load_plus_poor_today" not in adj.triggers
+
+
 def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="good", body="sharp", pain="none"),
@@ -493,9 +599,9 @@ def test_two_hard_sessions_plus_poor_today_uses_load_trend_message():
         ReadinessContext(
             today_session=_session(title="Moderate strength"),
             recent_sessions=[
-                {"session_rpe": 8},
-                {"session_rpe": 9},
-                {"session_rpe": 5},
+                {"training_day": "2026-06-17", "session_rpe": 8},
+                {"training_day": "2026-06-16", "session_rpe": 9},
+                {"training_day": "2026-06-15", "session_rpe": 5},
             ],
         ),
     )
@@ -532,9 +638,9 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
                 {"training_day": "2026-06-16", "sleep": "poor", "body": "flat"},
             ),
             recent_sessions=[
-                {"session_rpe": 8},
-                {"session_rpe": 9},
-                {"session_rpe": 5},
+                {"training_day": "2026-06-17", "session_rpe": 8},
+                {"training_day": "2026-06-16", "session_rpe": 9},
+                {"training_day": "2026-06-15", "session_rpe": 5},
             ],
             today_session=_session(title="Mobility and recovery"),
         ),
