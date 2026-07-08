@@ -295,6 +295,32 @@ def _row_value(row: Mapping[str, Any], key: str) -> str:
     return _clean(row.get(key)).lower()
 
 
+# Accumulated check-in signals (streaks, worsening trends, repeated-poor counts) and
+# the "recent hard session" fatigue signal must only be built from RECENT history —
+# otherwise sporadic check-ins/sessions weeks apart inflate a "3-day streak" or
+# "recent hard load" that never happened. These windows bound how far back a prior
+# day may sit relative to today.
+_CHECKIN_RECENCY_WINDOW_DAYS = 3
+_SESSION_RECENCY_WINDOW_DAYS = 4
+
+
+def _parse_iso_day(value: Any) -> date | None:
+    try:
+        return date.fromisoformat(_clean(value)[:10])
+    except ValueError:
+        return None
+
+
+def _days_before(training_day: str, row_day: str) -> int | None:
+    """Whole days ``row_day`` sits before ``training_day`` (0 = same day), or None
+    when either date is missing/unparseable."""
+    today = _parse_iso_day(training_day)
+    prior = _parse_iso_day(row_day)
+    if today is None or prior is None:
+        return None
+    return (today - prior).days
+
+
 def _row_is_poor_readiness(row: Mapping[str, Any]) -> bool:
     state = _clean(row.get("recommendation_state") or row.get("decision")).lower()
     if state in {"modify", "pull_back"}:
@@ -321,16 +347,28 @@ def _current_is_poor_readiness(checkin: ReadinessCheckin) -> bool:
 
 
 def _prior_unique_checkins(context: ReadinessContext, *, limit: int = 2) -> tuple[Mapping[str, Any], ...]:
+    """The most recent distinct prior check-in days (newest first), bounded to the
+    recent window so a streak/trend can never be assembled from days weeks apart.
+
+    When today's date is unparseable the window is not applied (there is nothing to
+    measure proximity against), preserving the prior best-effort behaviour.
+    """
+    training_day = _clean(context.training_day)
+    windowed = _parse_iso_day(training_day) is not None
     rows: list[Mapping[str, Any]] = []
     prior_days_seen: set[str] = set()
     for row in context.recent_checkins:
         day = _row_training_day(row)
         if not day:
             continue
-        if context.training_day and day == context.training_day:
+        if training_day and day == training_day:
             continue
         if day in prior_days_seen:
             continue
+        if windowed:
+            delta = _days_before(training_day, day)
+            if delta is None or not (1 <= delta <= _CHECKIN_RECENCY_WINDOW_DAYS):
+                continue
         prior_days_seen.add(day)
         rows.append(row)
         if len(rows) >= limit:
@@ -382,8 +420,16 @@ def _pain_worsening_trend(checkin: ReadinessCheckin, prior_rows: Sequence[Mappin
 
 
 def _recent_hard_session_count(context: ReadinessContext) -> int:
+    training_day = _clean(context.training_day)
+    windowed = _parse_iso_day(training_day) is not None
     count = 0
     for row in context.recent_sessions[:3]:
+        if windowed:
+            # Only count hard sessions from the recent window — a hard session weeks
+            # ago is not "recent load".
+            delta = _days_before(training_day, _clean(row.get("training_day")))
+            if delta is None or not (0 <= delta <= _SESSION_RECENCY_WINDOW_DAYS):
+                continue
         try:
             rpe = int(row.get("session_rpe") if row.get("session_rpe") is not None else row.get("rpe"))
         except (TypeError, ValueError):
@@ -934,6 +980,47 @@ def _first_active_open_injury_label(context: ReadinessContext) -> str:
     return ""
 
 
+def _safe_filler_adjustment(
+    checkin: ReadinessCheckin,
+    context: ReadinessContext,
+    session_risk: SessionRisk,
+    phase: str,
+    contact_sport: bool,
+) -> ReadinessAdjustment:
+    """A safe support / filler session is always allowed once red flags are clear.
+
+    It is restorative low/zero-stress work, so neither an injury (exempted upstream)
+    nor an accumulated fatigue soft-warning should reduce it — the athlete just does
+    the easy session.
+    """
+    label = _first_active_open_injury_label(context)
+    has_signal = (
+        bool(context.open_injuries)
+        or checkin.active_injury != "none"
+        or checkin.pain != "none"
+    )
+    if has_signal:
+        reason = (
+            f"This is low-stress recovery or skill work — safe to do around your {label}."
+            if label
+            else "This is low-stress recovery or skill work — safe to do today."
+        )
+        action = "Do the session as planned; keep it easy and stop anything that hurts."
+    else:
+        reason = "This is low-stress recovery or skill work."
+        action = "Do the session as planned and keep it easy."
+    return ReadinessAdjustment(
+        decision="train_as_planned",
+        title="Safe session today.",
+        reason=reason,
+        action=action,
+        triggers=_with_context_triggers(
+            "support_session", session_risk=session_risk, phase=phase, contact_sport=contact_sport
+        ),
+        session_risk=session_risk,
+    )
+
+
 def build_readiness_adjustment(
     checkin: ReadinessCheckin,
     context: ReadinessContext | None = None,
@@ -950,13 +1037,17 @@ def build_readiness_adjustment(
     if risk:
         return risk
 
+    # A safe support / filler session is always allowed once red flags are clear: it
+    # is restorative, so neither an injury (exempted above) nor a fatigue soft-warning
+    # should reduce it. Return the "safe session" adjustment and skip the injury floor
+    # and the soft-warning fatigue logic entirely.
+    if support_session:
+        return _safe_filler_adjustment(checkin, context, session_risk, phase, contact_sport)
+
     # Type-aware injury floor: a moderate head-neck / structural / rib / tendon /
     # joint injury restricts by exposure even when it is not flagged "worse". A
     # pull-back floor is terminal; a modify floor raises the soft-warning decision.
-    # Skipped for a safe support/filler session (no meaningful physical stress).
-    injury_floor, injury_label, injury_tier = (
-        _context_injury_floor(context, session_risk) if not support_session else (None, "", "")
-    )
+    injury_floor, injury_label, injury_tier = _context_injury_floor(context, session_risk)
     if injury_floor == "pull_back":
         return _injury_floor_pull_back(
             injury_tier,
@@ -1013,22 +1104,6 @@ def build_readiness_adjustment(
             title = "Train around it."
             reason = f"Your sleep, body, and pain check are clear — just protect your {green_label} today."
             action = "Run the planned work, keep the area clean, and stop if it flares."
-
-    # Reassure on a safe filler day carried alongside an injury/pain signal: the
-    # session is low-stress recovery/skill work, so it is fine to do (not a STOP).
-    if (
-        support_session
-        and decision == "train_as_planned"
-        and (context.open_injuries or checkin.active_injury != "none" or checkin.pain != "none")
-    ):
-        filler_label = _first_active_open_injury_label(context)
-        title = "Safe session today."
-        reason = (
-            f"This is low-stress recovery or skill work — safe to do around your {filler_label}."
-            if filler_label
-            else "This is low-stress recovery or skill work — safe to do today."
-        )
-        action = "Do the session as planned; keep it easy and stop anything that hurts."
 
     triggers = list(soft_warnings.triggers)
     if injury_floor == "modify" and "active_injury_restriction" not in triggers:
