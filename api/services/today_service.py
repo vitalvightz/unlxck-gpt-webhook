@@ -507,7 +507,7 @@ def _completion_session_is_support(
     """True when the session being completed is today's low-cost support / filler
     session (so an injury hold does not block logging it). Structured-plan aware;
     conservatively False when the day's session cannot be resolved."""
-    entry = _structured_today_session_entry(plan_row, training_day)
+    entry = _today_session_for_readiness(plan_row, training_day)
     if not entry:
         return False
     entry_id = _session_id_for_entry(entry)
