@@ -170,6 +170,7 @@ class TestShape:
             "recommendation_state",
             "recommendation_reason",
             "decision_tier",
+            "injury_hold_exempt",
             "warnings",
             "next_session",
             "session_scope",

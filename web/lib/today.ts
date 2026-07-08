@@ -424,6 +424,12 @@ export function getInjuryOverrideBanner(
   state: TodayCommandView,
   sessionName?: string,
 ): TodayDecisionBanner | null {
+  // A low-cost support / filler session (mental cue, breathing/mobility reset) is
+  // exempt from the injury hold — it is the safe work the hold itself prescribes,
+  // so a severe injury must not block it. The backend flags this on the command view.
+  if (state.today?.injury_hold_exempt) {
+    return null;
+  }
   const injury = getActiveSevereInjury(state.open_injuries);
   if (!injury) {
     return null;
