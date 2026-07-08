@@ -200,14 +200,13 @@ def _has_scored_body_location(canonical_location: str) -> bool:
 # The location map is the same object on every call, so its derived phrase/token
 # sets are computed once on first use and reused thereafter — this keeps the
 # deferred import cheap while making per-label lookups O(1).
-_KNOWN_LOCATION_PHRASES: set[str] | None = None
-_KNOWN_LOCATION_TOKENS: set[str] | None = None
+_KNOWN_LOCATION_VOCAB: tuple[set[str], set[str]] | None = None
 
 
 def _location_vocabulary(location_map: Mapping[str, str]) -> tuple[set[str], set[str]]:
     """Return the cached (phrases, tokens) vocabulary, building it on first use."""
-    global _KNOWN_LOCATION_PHRASES, _KNOWN_LOCATION_TOKENS
-    if _KNOWN_LOCATION_PHRASES is None or _KNOWN_LOCATION_TOKENS is None:
+    global _KNOWN_LOCATION_VOCAB
+    if _KNOWN_LOCATION_VOCAB is None:
         phrases = {
             re.sub(r"[_/-]+", " ", str(phrase).lower()).strip()
             for phrase in (*location_map.keys(), *location_map.values())
@@ -219,8 +218,8 @@ def _location_vocabulary(location_map: Mapping[str, str]) -> tuple[set[str], set
         tokens: set[str] = set()
         for phrase in phrases:
             tokens.update(phrase.split())
-        _KNOWN_LOCATION_PHRASES, _KNOWN_LOCATION_TOKENS = phrases, tokens
-    return _KNOWN_LOCATION_PHRASES, _KNOWN_LOCATION_TOKENS
+        _KNOWN_LOCATION_VOCAB = (phrases, tokens)
+    return _KNOWN_LOCATION_VOCAB
 
 
 def _looks_like_location_only(location: str, location_map: Mapping[str, str]) -> bool:
