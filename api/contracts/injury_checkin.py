@@ -149,6 +149,7 @@ _LOCATION_FILLER = re.compile(
     r"seems?|it|this|that|a|an|the|my|some|really|quite|very|bit|of|in|on|with|and)\b",
     re.I,
 )
+_LOCATION_SIDE_WORDS = {"left", "right", "both", "bilateral"}
 
 
 def _clean_location(text: str) -> str:
@@ -191,6 +192,34 @@ def _strip_type_synonyms(location: str, synonyms: Sequence[str], condition_key: 
     return " ".join(text.split())
 
 
+def _has_scored_body_location(canonical_location: str) -> bool:
+    return any(word not in _LOCATION_SIDE_WORDS for word in canonical_location.lower().split())
+
+
+def _looks_like_location_only(location: str, location_map: Mapping[str, str]) -> bool:
+    """True when cleaned no-condition text is only body-location words."""
+    normalized = re.sub(r"[_/-]+", " ", location.lower())
+    normalized = " ".join(word for word in normalized.split() if word not in _LOCATION_SIDE_WORDS)
+    if not normalized:
+        return False
+
+    known_phrases = {
+        re.sub(r"[_/-]+", " ", str(phrase).lower()).strip()
+        for phrase in (*location_map.keys(), *location_map.values())
+        if str(phrase).strip()
+    }
+    # Body-map combined labels and common singulars that the scorer may route to
+    # another region but should still display cleanly as typed.
+    known_phrases.update({"head", "head neck", "rib"})
+    if normalized in known_phrases:
+        return True
+
+    known_tokens: set[str] = set()
+    for phrase in known_phrases:
+        known_tokens.update(phrase.split())
+    return all(word in known_tokens for word in normalized.split())
+
+
 def build_injury_label(body_area: object, description: object) -> str:
     """Build a short, athlete-facing injury label using the injury synonym logic.
 
@@ -207,7 +236,7 @@ def build_injury_label(body_area: object, description: object) -> str:
     # Deferred import: keeps the fightcamp NLP/synonym stack from loading eagerly
     # for every importer of api.contracts, which only some code paths ever need.
     from fightcamp.injury_scoring import score_injury_phrase
-    from fightcamp.injury_synonyms import INJURY_SYNONYM_MAP, TRIAGE_CATEGORY_MAP
+    from fightcamp.injury_synonyms import INJURY_SYNONYM_MAP, LOCATION_MAP, TRIAGE_CATEGORY_MAP
 
     body = str(body_area or "").strip()
     desc = str(description or "").strip()
@@ -261,10 +290,19 @@ def build_injury_label(body_area: object, description: object) -> str:
 
     if body:
         location = _clean_location(body)
-        # Fall back to the scorer's canonical location if stripping leaves nothing,
-        # then to the raw cleaned location so a colloquialism is never blanked.
-        stripped = _strip_type_synonyms(location, strip_phrases, condition_key or triage_category)
-        location = stripped or canonical_location or location
+        if condition:
+            # Fall back to the scorer's canonical location if stripping leaves
+            # nothing, then to the raw cleaned location so a colloquialism is
+            # never blanked.
+            stripped = _strip_type_synonyms(location, strip_phrases, condition_key or triage_category)
+            location = stripped or canonical_location or location
+        elif (
+            location
+            and canonical_location
+            and _has_scored_body_location(canonical_location)
+            and not _looks_like_location_only(location, LOCATION_MAP)
+        ):
+            location = canonical_location
     else:
         location = canonical_location
 

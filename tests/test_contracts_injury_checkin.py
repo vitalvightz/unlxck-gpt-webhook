@@ -222,6 +222,21 @@ def test_build_injury_label_normalizes_condition_and_location():
     assert build_injury_label("", "") == "injury"
 
 
+def test_build_injury_label_unrecognized_condition_falls_back_to_location():
+    assert (
+        build_injury_label(
+            "left shoulder tngling i dont know why",
+            "left shoulder tngling i dont know why",
+        )
+        == "Left shoulder"
+    )
+    # Correctly recognized symptom text still keeps the type noun.
+    assert build_injury_label("left shoulder", "tingling i dont know why") == "Left shoulder nerve issue"
+    # Clean manual/body-map locations must not be collapsed to coarser scorer regions.
+    assert build_injury_label("hip flexor", "hip flexor") == "Hip flexor"
+    assert build_injury_label("Head / Neck", "Head / Neck") == "Head / neck"
+
+
 def test_build_injury_label_never_doubles_the_condition_word():
     # Regression: the scorer recognises "cut", but the curated location strip
     # list once omitted it, so the surviving "cut" got the condition appended
