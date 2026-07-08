@@ -51,7 +51,7 @@ class TestTodayCheckin:
         assert body["recommendation_state"] == "modify"
         assert body["recommendation_reason"].splitlines() == [
             "Session reduced.",
-            "Poor sleep means your body has less room to recover today.",
+            "One warning source is showing: poor sleep. Poor sleep means your body has less room to recover today.",
             "Cut 1 round and do not add extra conditioning.",
         ]
         assert "poor_sleep" in body["triggers"]

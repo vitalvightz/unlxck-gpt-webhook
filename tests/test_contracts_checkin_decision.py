@@ -26,7 +26,7 @@ class TestNormalRules:
         assert decision.decision == "modify"
         assert decision.reason.splitlines() == [
             "Session reduced.",
-            "Poor sleep means your body has less room to recover today.",
+            "One warning source is showing: poor sleep. Poor sleep means your body has less room to recover today.",
             "Cut 1 round and do not add extra conditioning.",
         ]
 
