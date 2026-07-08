@@ -2296,6 +2296,62 @@ html[data-theme="light"] .overview-risk-strongest {
   line-height: 1.5;
 }
 
+/* Camp progress bar — shared "how far through camp" strip on Today + Overview.
+   Reuses the gold .overview-progress track/fill with a labelled header. */
+.camp-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.camp-progress[data-variant="today"] {
+  margin: 2px 0 0;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--progress-gold, #d6af6a) 18%, transparent);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--progress-gold, #d6af6a) 8%, transparent), transparent 60%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.camp-progress[data-variant="overview"] {
+  margin-top: 4px;
+}
+
+.camp-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.camp-progress-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.camp-progress-meta {
+  color: var(--progress-gold, #d6af6a);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+html[data-theme="light"] .camp-progress[data-variant="today"] {
+  border-color: color-mix(in srgb, var(--progress-gold, #96713b) 22%, transparent);
+  background: color-mix(in srgb, var(--progress-gold, #96713b) 6%, white);
+}
+
+html[data-theme="light"] .camp-progress-meta {
+  color: var(--progress-gold, #96713b);
+}
+
 .onboarding-validation-panel {
   display: grid;
   gap: 16px;

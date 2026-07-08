@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { CampProgressBar } from "@/components/camp-progress-bar";
 import { EmptyState } from "@/components/empty-state";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
-import { getToday } from "@/lib/api";
+import { getPlan, getToday } from "@/lib/api";
+import { useTrainingDay } from "@/lib/use-training-day";
 import {
   getOptionLabel,
   PROFESSIONAL_STATUS_OPTIONS,
@@ -36,7 +38,7 @@ import {
   type TodayDecisionTier,
 } from "@/lib/today";
 import { SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
-import type { PlanSummary, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
+import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
 
 const landingWorkspaceRows = [
   {
@@ -342,8 +344,10 @@ function OverviewRiskWatch({
 export default function HomePage() {
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
+  const trainingDay = useTrainingDay();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
+  const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
 
   useEffect(() => {
     if (isReady && session && isMeHydrated && !me) {
@@ -408,6 +412,33 @@ export default function HomePage() {
       active = false;
     };
   }, [session?.access_token]);
+
+  // Best-effort structured plan for the camp-progress bar. Read-only: if it
+  // fails, Overview just hides the bar (the rest of the command view is
+  // unaffected). Mirrors how Today loads the same data.
+  const activePlanId = commandState?.active_plan?.id;
+  useEffect(() => {
+    const token = session?.access_token;
+    if (!token || !activePlanId) {
+      setStructuredPlan(null);
+      return;
+    }
+    let cancelled = false;
+    getPlan(token, activePlanId)
+      .then((detail) => {
+        if (!cancelled) {
+          setStructuredPlan(detail.outputs?.structured_plan ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStructuredPlan(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.access_token, activePlanId]);
 
   if (session && hasTransientMeError) {
     return (
@@ -604,6 +635,7 @@ export default function HomePage() {
                 <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
+              <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
               {commandError ? (
                 <div className="error-banner" role="alert">
                   <span>{commandError}</span>
