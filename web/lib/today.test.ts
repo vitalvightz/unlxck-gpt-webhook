@@ -744,3 +744,17 @@ test("a next session that is not today is never completable even without a sessi
   assert.equal(isSessionToday(session, "none"), false);
   assert.equal(canCompleteTodaySession(session) && isSessionToday(session, "next"), false);
 });
+
+test("a severe injury does not block a safe filler session (injury_hold_exempt)", () => {
+  const severe = makeInjury({ severity: "severe", status: "open" });
+  const normalState: TodayCommandView = { ...BASE_STATE, open_injuries: [severe] };
+  // Normally a severe injury forces the INJURY HOLD override banner.
+  assert.equal(getInjuryOverrideBanner(normalState)?.chip, "INJURY HOLD");
+  // On a filler day the backend exempts the hold, so no override banner shows.
+  const fillerState: TodayCommandView = {
+    ...BASE_STATE,
+    open_injuries: [severe],
+    today: { ...BASE_STATE.today, injury_hold_exempt: true },
+  };
+  assert.equal(getInjuryOverrideBanner(fillerState), null);
+});

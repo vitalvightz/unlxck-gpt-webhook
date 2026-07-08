@@ -194,14 +194,17 @@ def resolve_decision_tier(
     recommendation_reason: str | None,
     risks: Sequence[RiskWatchItem] | None = None,
     open_injuries: Sequence[Mapping[str, Any]] | None = None,
+    injury_hold_exempt: bool = False,
 ) -> DecisionTier:
     """The single authoritative decision tier the whole Today UI renders from.
 
     Never weaker than the strongest risk in the footer, so the banner and footer
     cannot contradict. A severe active injury is always a STOP (injury hold), even
-    before a check-in.
+    before a check-in — unless ``injury_hold_exempt`` is set, which happens when
+    today's scheduled session is a low-cost support / filler (mental cue, breathing
+    or mobility reset) that the injury hold does not apply to.
     """
-    if _active_severe_injury_present(open_injuries):
+    if not injury_hold_exempt and _active_severe_injury_present(open_injuries):
         return "stop"
 
     state = str(recommendation_state or "not_checked_in")
@@ -220,8 +223,9 @@ def resolve_decision_tier(
     else:
         tier = "not_checked_in"
 
-    # The tier can never be weaker than the strongest risk shown in the footer.
-    if any((r.category in _STOP_RISK_CATEGORIES) for r in (risks or [])):
+    # The tier can never be weaker than the strongest risk shown in the footer,
+    # unless today's session is exempt from the injury hold (a safe filler).
+    if not injury_hold_exempt and any((r.category in _STOP_RISK_CATEGORIES) for r in (risks or [])):
         if _TIER_RANK["stop"] > _TIER_RANK[tier]:
             tier = "stop"
     return tier
@@ -234,6 +238,9 @@ class CommandViewToday(BaseModel):
     # Authoritative decision tier (STOP/PULL BACK/MODIFY/GREEN). Both the banner and
     # the risk-watch footer render from this so they cannot disagree.
     decision_tier: DecisionTier = "not_checked_in"
+    # True when today's scheduled session is a low-cost support / filler that an
+    # injury hold does not apply to, so the UI must not block it for an injury.
+    injury_hold_exempt: bool = False
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"
@@ -308,6 +315,7 @@ def build_command_view(
     risks: Sequence[RiskWatchItem | Mapping[str, Any]] | None = None,
     open_injuries: Sequence[Mapping[str, Any]] | None = None,
     week_summary: Mapping[str, Any] | None = None,
+    injury_hold_exempt: bool = False,
 ) -> CommandView:
     """Assemble the normalized command view from derived inputs.
 
@@ -341,7 +349,9 @@ def build_command_view(
             recommendation_reason=rec_view.reason,
             risks=sorted_risks,
             open_injuries=open_injuries,
+            injury_hold_exempt=injury_hold_exempt,
         ),
+        injury_hold_exempt=injury_hold_exempt,
         warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},
         session_scope=resolved_session_scope,

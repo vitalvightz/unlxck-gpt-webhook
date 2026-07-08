@@ -5,6 +5,7 @@ from api.contracts.readiness_message import (
     ReadinessContext,
     build_readiness_adjustment,
     classify_session_risk,
+    is_support_session,
 )
 
 
@@ -141,6 +142,68 @@ def test_new_high_exposure_session_terms_classify_as_high():
         "Live sparring rounds",
     ):
         assert classify_session_risk(_session(title=title)) == "high", title
+
+
+# ---------------------------------------------------------------------------
+# Safe filler / support sessions (mental cue, breathing/mobility reset) must not
+# be hard-blocked by an injury — they are the safe work an injury STOP prescribes.
+# ---------------------------------------------------------------------------
+
+
+def test_is_support_session_detects_fillers_and_ignores_hard_work():
+    assert is_support_session(_session(title="Tactical Cue Card", session_type="skill")) is True
+    assert is_support_session({"title": "Breathing Reset"}) is True
+    assert is_support_session({"category": "support_insert", "title": "Anything"}) is True
+    assert is_support_session({"stress_class": "support", "title": "x"}) is True
+    assert is_support_session({"support_insert_category": "mobility", "title": "x"}) is True
+    # A real loaded session that merely mentions mobility in a warm-up is not a filler.
+    assert is_support_session(_session(title="Heavy squat then mobility")) is False
+    assert is_support_session(_session(title="Hard sparring")) is False
+
+
+def _filler_session():
+    return {
+        "title": "Tactical Cue Card",
+        "session_type": "support_insert",
+        "category": "support_insert",
+        "support_insert_category": "tactical",
+        "effective_load": "technical",
+        "objective": "distil one clean in-fight cue",
+    }
+
+
+def test_filler_session_is_not_blocked_by_worse_or_severe_injury():
+    for injuries in (
+        [{"status": "open", "severity": "moderate", "label": "neck injury",
+          "consequence": "neuro", "latest_reported_status": "worse"}],
+        [{"status": "open", "severity": "severe", "label": "neck injury", "consequence": "neuro"}],
+    ):
+        adj = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(today_session=_filler_session(), open_injuries=tuple(injuries)),
+        )
+        assert adj.decision == "train_as_planned"
+        assert adj.title == "Safe session today."
+        _assert_card_shape(adj)
+
+
+def test_filler_session_is_not_blocked_by_high_pain():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(pain="high"),
+        ReadinessContext(today_session=_filler_session()),
+    )
+    assert adj.decision == "train_as_planned"
+
+
+def test_filler_session_still_blocked_by_red_flag_symptom():
+    # Acute red-flag symptoms are a medical emergency and stop everything, filler
+    # or not.
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(neurological_symptoms=True),
+        ReadinessContext(today_session=_filler_session()),
+    )
+    assert adj.decision == "pull_back"
+    assert adj.title == "No training today."
 
 
 def test_context_worse_injury_uses_clean_label_when_row_has_no_label():

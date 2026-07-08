@@ -952,6 +952,9 @@ export type TodayCommandView = {
     // Authoritative decision tier computed by the backend. The banner and the
     // risk-watch footer both render from this so they cannot contradict.
     decision_tier?: "stop" | "pull_back" | "modify" | "green" | "not_checked_in";
+    // True when today's scheduled session is a low-cost support / filler that an
+    // injury hold does not apply to (mental cue, breathing/mobility reset).
+    injury_hold_exempt?: boolean;
     warnings?: string[];
     next_session: TodaySession;
     session_scope: "today" | "next" | "none";

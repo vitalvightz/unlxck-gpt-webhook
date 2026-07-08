@@ -209,6 +209,69 @@ def classify_session_risk(session: Mapping[str, Any] | None) -> SessionRisk:
     return "medium"
 
 
+# Distinctive labels/roles for the plan's low-cost "filler" support inserts
+# (fightcamp/gap_fill_inserts.py): tactical/mental cue work, breathing & sleep
+# resets, and mobility/rehab touches. These carry no meaningful physical stress,
+# so an injury must not hard-block them — a neck injury cannot stop you writing a
+# mental cue, and mobility/rehab is exactly what an injury STOP prescribes. The
+# terms are deliberately specific (insert labels, not bare "mobility") so a real
+# loaded session that merely mentions mobility in a warm-up is never misread.
+_SUPPORT_SESSION_TERMS = (
+    "cue card",
+    "fight cue",
+    "self-review",
+    "self review",
+    "tactical watch",
+    "visualization",
+    "visualisation",
+    "mental rehearsal",
+    "mindset",
+    "breathing reset",
+    "recovery reset",
+    "sleep downshift",
+    "downshift mobility",
+    "mobility/rehab",
+    "mobility rehab",
+    "rehab reset",
+    "movement quality",
+    "restorative",
+)
+# Structured support-insert categories emitted by _build_insert_role.
+_SUPPORT_INSERT_CATEGORIES = frozenset(
+    {"tactical", "mental", "recovery", "mobility", "movement_quality"}
+)
+
+
+def is_support_session(session: Mapping[str, Any] | None) -> bool:
+    """True for a low-cost support / filler session (mental cue work, breathing or
+    sleep reset, mobility/rehab touch) that carries no meaningful physical stress.
+
+    Prefers the authoritative structured signals the plan attaches to a support
+    insert (``category``/``stress_class``/``governance.meaningful_stress``/
+    ``support_insert_category``) and falls back to the distinctive athlete-facing
+    labels that always survive to the Today card. A session that also carries a
+    high-risk term is never treated as a filler.
+    """
+    if not isinstance(session, Mapping) or not session:
+        return False
+
+    for key in ("category", "session_type", "status"):
+        if _clean(session.get(key)).lower() == "support_insert":
+            return True
+    if _clean(session.get("stress_class")).lower() == "support":
+        return True
+    governance = session.get("governance")
+    if isinstance(governance, Mapping) and governance.get("meaningful_stress") is False:
+        return True
+    if _clean(session.get("support_insert_category")).lower() in _SUPPORT_INSERT_CATEGORIES:
+        return True
+
+    text = _session_text(session)
+    if not text or any(term in text for term in _HIGH_RISK_TERMS):
+        return False
+    return any(term in text for term in _SUPPORT_SESSION_TERMS)
+
+
 def _active_safety_flags(checkin: ReadinessCheckin) -> tuple[str, ...]:
     return tuple(flag for flag in _SAFETY_FLAG_LABELS if bool(getattr(checkin, flag, False)))
 
@@ -501,7 +564,14 @@ def _injury_floor_pull_back(
     )
 
 
-def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, session_risk: SessionRisk, phase: str) -> ReadinessAdjustment | None:
+def _risk_adjustment(
+    checkin: ReadinessCheckin,
+    context: ReadinessContext,
+    session_risk: SessionRisk,
+    phase: str,
+    *,
+    support_session: bool = False,
+) -> ReadinessAdjustment | None:
     flags = _active_safety_flags(checkin)
     contact_sport = _is_combat_contact_sport(context)
     if flags:
@@ -519,6 +589,13 @@ def _risk_adjustment(checkin: ReadinessCheckin, context: ReadinessContext, sessi
             triggers=_with_context_triggers(*flags, "red_flag", session_risk=session_risk, phase=phase, contact_sport=contact_sport),
             session_risk=session_risk,
         )
+
+    # A low-cost support / filler session (mental cue work, breathing/sleep reset,
+    # mobility or rehab touch) carries no meaningful physical stress, so an injury
+    # or high pain must NOT hard-block it — it is exactly the safe work an injury
+    # STOP recommends. Acute red-flag symptoms above still stop everything.
+    if support_session:
+        return None
 
     active_injury_stop_reason = _active_context_injury_stop(context)
     if checkin.active_injury == "worse" or active_injury_stop_reason is not None:
@@ -854,14 +931,21 @@ def build_readiness_adjustment(
     phase = _normalize_phase(context.phase or checkin.phase)
     session_risk = classify_session_risk(context.today_session)
     contact_sport = _is_combat_contact_sport(context)
-    risk = _risk_adjustment(checkin, context, session_risk, phase)
+    # A low-cost support / filler session (mental cue work, breathing/sleep reset,
+    # mobility or rehab touch) is exempt from injury-driven blocks — it is the safe
+    # work an injury STOP itself recommends.
+    support_session = is_support_session(context.today_session)
+    risk = _risk_adjustment(checkin, context, session_risk, phase, support_session=support_session)
     if risk:
         return risk
 
     # Type-aware injury floor: a moderate head-neck / structural / rib / tendon /
     # joint injury restricts by exposure even when it is not flagged "worse". A
     # pull-back floor is terminal; a modify floor raises the soft-warning decision.
-    injury_floor, injury_label, injury_tier = _context_injury_floor(context, session_risk)
+    # Skipped for a safe support/filler session (no meaningful physical stress).
+    injury_floor, injury_label, injury_tier = (
+        _context_injury_floor(context, session_risk) if not support_session else (None, "", "")
+    )
     if injury_floor == "pull_back":
         return _injury_floor_pull_back(
             injury_tier,
@@ -918,6 +1002,22 @@ def build_readiness_adjustment(
             title = "Train around it."
             reason = f"Your sleep, body, and pain check are clear — just protect your {green_label} today."
             action = "Run the planned work, keep the area clean, and stop if it flares."
+
+    # Reassure on a safe filler day carried alongside an injury/pain signal: the
+    # session is low-stress recovery/skill work, so it is fine to do (not a STOP).
+    if (
+        support_session
+        and decision == "train_as_planned"
+        and (context.open_injuries or checkin.active_injury != "none" or checkin.pain != "none")
+    ):
+        filler_label = _first_active_open_injury_label(context)
+        title = "Safe session today."
+        reason = (
+            f"This is low-stress recovery or skill work — safe to do around your {filler_label}."
+            if filler_label
+            else "This is low-stress recovery or skill work — safe to do today."
+        )
+        action = "Do the session as planned; keep it easy and stop anything that hurts."
 
     triggers = list(soft_warnings.triggers)
     if injury_floor == "modify" and "active_injury_restriction" not in triggers:

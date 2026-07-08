@@ -44,6 +44,7 @@ from api.contracts.readiness_message import (
     ReadinessCheckin,
     ReadinessContext,
     build_readiness_adjustment,
+    is_support_session,
 )
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
@@ -500,6 +501,21 @@ def _severe_injury_recommendation(
     return {"decision": "pull_back", "reason": reason, "training_day": training_day}
 
 
+def _completion_session_is_support(
+    plan_row: Mapping[str, Any], training_day: str, session_id: str
+) -> bool:
+    """True when the session being completed is today's low-cost support / filler
+    session (so an injury hold does not block logging it). Structured-plan aware;
+    conservatively False when the day's session cannot be resolved."""
+    entry = _structured_today_session_entry(plan_row, training_day)
+    if not entry:
+        return False
+    entry_id = _session_id_for_entry(entry)
+    if session_id and entry_id and str(entry_id) != str(session_id):
+        return False
+    return is_support_session(entry)
+
+
 def upsert_session_completion(
     store: AppStore,
     *,
@@ -524,7 +540,8 @@ def upsert_session_completion(
     _require_valid_plan_id(plan_id)
 
     # Service-role write: enforce plan ownership at the backend (RLS won't here).
-    if store.get_plan_for_athlete(plan_id, athlete_id) is None:
+    plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
+    if plan_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
     training_day = resolve_training_day(athlete_timezone, now=now)
@@ -534,8 +551,12 @@ def upsert_session_completion(
     # Server-side safety hold: an active severe injury blocks actually training
     # this session (start / done / modified) — not just in the UI. Skipping or
     # reverting to not-started stays allowed so the athlete can still log that
-    # they backed off. Mirrors the Today/Overview injury hold.
-    if status_value in _TRAINING_COMPLETION_STATUSES:
+    # they backed off. Mirrors the Today/Overview injury hold. A low-cost support /
+    # filler session (mental cue, breathing/mobility reset) is exempt — it is the
+    # safe work the hold itself prescribes.
+    if status_value in _TRAINING_COMPLETION_STATUSES and not _completion_session_is_support(
+        plan_row, training_day, session_id
+    ):
         severe = _active_severe_injury(_open_injury_flags(store, athlete_id))
         if severe is not None:
             label = severe.get("label") or build_injury_label(
@@ -1464,15 +1485,26 @@ def build_today_command_view(
     # that never went through the injury check-in refresh. It only ESCALATES —
     # when the recommendation is already a pull-back (e.g. the readiness engine
     # produced "Rehab only today." on injury report) we keep that richer copy.
+    # A low-cost support / filler session (mental cue card, breathing/mobility reset)
+    # is the safe work an injury STOP itself prescribes, so the injury hold does not
+    # apply to it — a neck injury cannot block writing a mental cue. Exempt today's
+    # scheduled filler from the severe-injury override, the decision tier, and the
+    # completion guard.
+    today_is_support_filler = (
+        has_today_session
+        and not today_is_complete
+        and is_support_session(_entry_mapping_for_readiness(today_session_entry))
+    )
     severe_injury = _active_severe_injury(open_injuries)
     current_decision = str((recommendation or {}).get("decision") or "")
-    if severe_injury is not None and current_decision != "pull_back":
+    if severe_injury is not None and current_decision != "pull_back" and not today_is_support_filler:
         recommendation = _severe_injury_recommendation(severe_injury, training_day)
 
     return build_command_view(
         current_training_day=training_day,
         plan=resolved_plan,
         recommendation=recommendation,
+        injury_hold_exempt=today_is_support_filler,
         completion=today_completion,
         next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
         session_scope=session_relation or "none",

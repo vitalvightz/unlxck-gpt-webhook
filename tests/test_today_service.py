@@ -1254,6 +1254,52 @@ class TestCommandView:
         assert view.today.recommendation_state == "pull_back"
         assert "severe injury" in (view.today.recommendation_reason or "").lower()
 
+    def _cue_card_structured_plan(self):
+        return {"weeks": [{"phase_label": "SPP", "days": [{
+            "date": "2026-06-18", "day_type": "skill", "phase_label": "SPP",
+            "countdown_label": "D-11",
+            "sessions": [{
+                "session_id": "2026-06-18-cue", "session_type": "support_insert",
+                "category": "support_insert", "support_insert_category": "tactical",
+                "title": "Tactical Cue Card", "objective": "distil one clean in-fight cue",
+                "stress_class": "support", "governance": {"meaningful_stress": False},
+                "blocks": [{"type": "mindset", "title": "Write one cue"}],
+            }],
+            "today_card": {"headline": "Tactical Cue Card"},
+        }]}]}
+
+    def test_severe_injury_does_not_block_a_safe_filler_session(self):
+        # A neck injury cannot stop you writing a mental cue card. Today's low-cost
+        # support/filler session is exempt from the injury hold: not stopped, and
+        # the command view flags it so the UI never blocks it.
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = self._cue_card_structured_plan()
+        store.create_injury_flag(
+            ATHLETE,
+            {"source": "intake", "plan_id": PLAN, "body_area": "neck",
+             "description": "neck nerve pinch", "severity": "severe", "status": "open"},
+        )
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=now)
+        assert view.today.injury_hold_exempt is True
+        assert view.today.decision_tier != "stop"
+        assert "session blocked" not in (view.today.recommendation_reason or "").lower()
+
+    def test_filler_session_is_completable_despite_severe_injury(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = self._cue_card_structured_plan()
+        store.create_injury_flag(
+            ATHLETE,
+            {"source": "intake", "plan_id": PLAN, "body_area": "neck",
+             "description": "neck nerve pinch", "severity": "severe", "status": "open"},
+        )
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        row = upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="",
+            payload={"plan_id": PLAN, "session_id": "2026-06-18-cue", "status": "done"}, now=now,
+        )
+        assert row["status"] == "done"
+
     def test_new_injury_refreshes_existing_readiness_before_high_risk_session(self):
         store = _store_with_plan()
         structured_plan = _combined_contact_and_app_structured_plan()
