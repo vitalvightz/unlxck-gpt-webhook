@@ -289,10 +289,19 @@ function TodayReadinessStrip({
   const injuryLabel = openInjuryCount
     ? `${openInjuryCount} active injur${openInjuryCount === 1 ? "y" : "ies"}`
     : "No active injuries";
+  // Status-dot tones: pending (amber, pulsing) = needs the athlete's action,
+  // clear (green) = handled, risk (red, pulsing) = open injuries. The session
+  // cell reads pending while in progress and clear once any completion is
+  // logged (done / modified / skipped all count as "logged for today").
+  const sessionLogged =
+    completionStatus === "done" ||
+    completionStatus === "modified" ||
+    completionStatus === "skipped";
+  const sessionTone = sessionLogged ? "clear" : completionStatus === "started" ? "pending" : undefined;
 
   return (
     <dl className="today-readiness-strip" aria-label="Today command status">
-      <div>
+      <div data-tone={needsCheckin ? "pending" : "clear"}>
         <dt>Check-in</dt>
         <dd>{needsCheckin ? "Due" : "Logged"}</dd>
       </div>
@@ -300,7 +309,7 @@ function TodayReadinessStrip({
         <dt>Injury</dt>
         <dd>{injuryLabel}</dd>
       </div>
-      <div>
+      <div data-tone={sessionTone}>
         <dt>Session</dt>
         <dd>{getCompletionLabel(completionStatus)}</dd>
       </div>

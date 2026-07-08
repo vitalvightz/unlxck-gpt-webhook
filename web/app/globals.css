@@ -792,6 +792,9 @@ select:focus-visible {
   cursor: pointer;
   font-weight: 600;
   letter-spacing: 0.01em;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast), box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .cta {
@@ -1809,6 +1812,9 @@ html[data-theme="light"] .overview-next-session-blocked {
 
 .overview-pending-pill,
 .today-pending-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex: 0 0 auto;
   padding: 2px 8px;
   border-radius: 999px;
@@ -1820,6 +1826,34 @@ html[data-theme="light"] .overview-next-session-blocked {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+/* Breathing dot marks the pill as a live "waiting on you" state. */
+.overview-pending-pill::before,
+.today-pending-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: today-status-dot-pulse 2s ease-in-out infinite;
+}
+
+html[data-theme="light"] .overview-pending-pill,
+html[data-theme="light"] .today-pending-pill {
+  border-color: color-mix(in srgb, var(--progress-gold, #96713b) 42%, transparent);
+  background: color-mix(in srgb, var(--progress-gold, #96713b) 12%, white);
+  color: var(--progress-gold, #96713b);
+}
+
+html[data-theme="light"] .overview-caution-label,
+html[data-theme="light"] .today-caution-label {
+  color: var(--progress-gold, #96713b);
+}
+
+html[data-theme="light"] .overview-caution-row,
+html[data-theme="light"] .today-caution-row {
+  background: color-mix(in srgb, var(--progress-gold, #96713b) 8%, white);
 }
 
 .overview-caution-row,
@@ -2251,6 +2285,8 @@ html[data-theme="light"] .overview-risk-strongest {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--progress-gold), #eed6a8);
+  box-shadow: 0 0 10px rgba(214, 175, 106, 0.35);
+  transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .overview-progress-helper {
@@ -5467,6 +5503,50 @@ button.mobile-step-rail-item {
   color: #8fd9a8;
 }
 
+/* Live status dots: green = handled, amber (pulsing) = needs the athlete's
+   action, red (pulsing) = open injury risk. Copy always carries the meaning —
+   the dot is a glanceable accent, never the only signal. */
+.today-readiness-strip [data-tone] dd::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+
+.today-readiness-strip [data-tone="clear"] dd::before {
+  background: #2bb56e;
+  box-shadow: 0 0 8px rgba(43, 181, 110, 0.5);
+}
+
+.today-readiness-strip [data-tone="pending"] dd::before {
+  background: #e6c27d;
+  box-shadow: 0 0 8px rgba(230, 194, 125, 0.5);
+  animation: today-status-dot-pulse 2s ease-in-out infinite;
+}
+
+.today-readiness-strip [data-tone="pending"] dd {
+  color: #e6c27d;
+}
+
+.today-readiness-strip [data-tone="risk"] dd::before {
+  background: #e23a4c;
+  box-shadow: 0 0 8px rgba(226, 58, 76, 0.55);
+  animation: today-status-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes today-status-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
 /* Light theme: the strip's cells are hardcoded dark above, which renders as an
    unreadable dark band on the light background. Re-tone the surface, border and
    the "clear" accent so the strip reads on light. */
@@ -5481,6 +5561,25 @@ html[data-theme="light"] .today-readiness-strip div {
 
 html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
   color: var(--success-ink);
+}
+
+html[data-theme="light"] .today-readiness-strip [data-tone="pending"] dd {
+  color: var(--progress-gold, #96713b);
+}
+
+html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd::before {
+  background: var(--success-ink, #1f7a44);
+  box-shadow: none;
+}
+
+html[data-theme="light"] .today-readiness-strip [data-tone="pending"] dd::before {
+  background: var(--progress-gold, #96713b);
+  box-shadow: none;
+}
+
+html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
+  background: var(--brand-red);
+  box-shadow: none;
 }
 
 .today-card {
@@ -5546,6 +5645,18 @@ html[data-theme="light"] .today-readiness-strip [data-tone="clear"] dd {
   border-left-width: 3px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.025);
+  animation: today-banner-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes today-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .today-decision-body {
@@ -5783,12 +5894,28 @@ html[data-theme="light"] .today-terminal-status {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
+    box-shadow 160ms ease, transform 120ms ease;
 }
 
-.today-segment-active {
+.today-segment:hover:not(:disabled):not(.today-segment-active) {
   border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
   color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.today-segment:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Selected segment carries the brand indicator — same red gradient as the
+   fatigue LevelSlider so every picker on Today speaks one visual language. */
+.today-segment-active {
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--brand-red), var(--brand-red-hover));
+  color: #ffffff;
+  box-shadow: 0 2px 12px rgba(181, 18, 43, 0.38);
 }
 
 .today-segment:disabled {
@@ -5820,12 +5947,46 @@ html[data-theme="light"] .today-terminal-status {
   padding-top: 12px;
 }
 
+/* Each red flag reads as a tappable chip, not a bare checkbox row — the whole
+   surface toggles, hover invites, and a checked flag tints red. */
 .today-flag-option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
   font-size: 14px;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.today-flag-option:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.today-flag-option input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand-red);
+  cursor: pointer;
+}
+
+.today-flag-option:has(input:checked) {
+  border-color: rgba(219, 47, 64, 0.45);
+  background: rgba(219, 47, 64, 0.1);
+  color: var(--text-primary);
+}
+
+.today-flag-option:has(input:focus-visible) {
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.18);
 }
 
 .today-primary-action {
@@ -6439,6 +6600,23 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 
   .effort-slider[data-empty="true"] .effort-slider-thumb {
     animation: none;
+  }
+
+  .today-decision-banner,
+  .today-readiness-strip [data-tone] dd::before,
+  .overview-pending-pill::before,
+  .today-pending-pill::before {
+    animation: none;
+  }
+
+  .today-segment,
+  .overview-progress-fill {
+    transition: none;
+  }
+
+  .today-segment:hover:not(:disabled):not(.today-segment-active),
+  .today-segment:active:not(:disabled) {
+    transform: none;
   }
 }
 
@@ -12989,6 +13167,26 @@ html[data-theme="light"] .today-decision-banner[data-tone="green"] {
   background: color-mix(in srgb, var(--success-ink) 8%, white);
 }
 
+/* Tone chips inside the banner: the dark theme's pale tint text washes out on
+   the light background, so re-ink them with the theme's dark tone colours. */
+html[data-theme="light"] .today-decision-banner[data-tone="red"] .today-decision-icon {
+  border-color: color-mix(in srgb, var(--brand-red) 32%, transparent);
+  background: color-mix(in srgb, var(--brand-red) 12%, white);
+  color: var(--danger-ink, #8e2d2f);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="amber"] .today-decision-icon {
+  border-color: color-mix(in srgb, var(--progress-gold) 40%, transparent);
+  background: color-mix(in srgb, var(--progress-gold) 14%, white);
+  color: var(--progress-gold, #96713b);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="green"] .today-decision-icon {
+  border-color: color-mix(in srgb, var(--success-ink) 32%, transparent);
+  background: color-mix(in srgb, var(--success-ink) 10%, white);
+  color: var(--success-ink, #1f7a44);
+}
+
 html[data-theme="light"] .today-risk-item[data-tone="info"] {
   border-color: rgba(73, 105, 141, 0.18);
   border-left-color: #49698d;
@@ -13002,7 +13200,7 @@ html[data-theme="light"] .overview-risk-more {
   background: rgba(255, 255, 255, 0.74);
 }
 
-html[data-theme="light"] .today-segment:hover,
+html[data-theme="light"] .today-segment:hover:not(.today-segment-active),
 html[data-theme="light"] .today-risk-more:hover,
 html[data-theme="light"] .today-risk-more:focus-visible,
 html[data-theme="light"] .overview-risk-more:hover,
@@ -13011,9 +13209,28 @@ html[data-theme="light"] .overview-risk-more:focus-visible {
   background: rgba(255, 255, 255, 0.92);
 }
 
+/* Active segment keeps the brand gradient in light mode (brand tokens are
+   re-toned per theme) — matches the LevelSlider indicator. */
 html[data-theme="light"] .today-segment-active {
-  border-color: rgba(146, 43, 45, 0.22);
-  background: rgba(146, 43, 45, 0.08);
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--brand-red), var(--brand-red-hover));
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(146, 43, 45, 0.3);
+}
+
+html[data-theme="light"] .today-flag-option {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme="light"] .today-flag-option:hover {
+  border-color: rgba(146, 43, 45, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+html[data-theme="light"] .today-flag-option:has(input:checked) {
+  border-color: color-mix(in srgb, var(--brand-red) 32%, transparent);
+  background: color-mix(in srgb, var(--brand-red) 8%, white);
 }
 
 html[data-theme="light"] .today-session-summary > div,
