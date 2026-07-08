@@ -313,7 +313,7 @@ def _parse_iso_day(value: Any) -> date | None:
         return None
 
 
-def _days_before(training_day: str, row_day: str) -> int | None:
+def _days_before(training_day: str | date, row_day: str | date) -> int | None:
     """Whole days ``row_day`` sits before ``training_day`` (0 = same day), or None
     when either date is missing/unparseable."""
     today = _parse_iso_day(training_day)
