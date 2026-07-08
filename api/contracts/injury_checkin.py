@@ -196,6 +196,33 @@ def _has_scored_body_location(canonical_location: str) -> bool:
     return any(word not in _LOCATION_SIDE_WORDS for word in canonical_location.lower().split())
 
 
+# Lazily-built, module-level caches of the normalized body-location vocabulary.
+# The location map is the same object on every call, so its derived phrase/token
+# sets are computed once on first use and reused thereafter — this keeps the
+# deferred import cheap while making per-label lookups O(1).
+_KNOWN_LOCATION_PHRASES: set[str] | None = None
+_KNOWN_LOCATION_TOKENS: set[str] | None = None
+
+
+def _location_vocabulary(location_map: Mapping[str, str]) -> tuple[set[str], set[str]]:
+    """Return the cached (phrases, tokens) vocabulary, building it on first use."""
+    global _KNOWN_LOCATION_PHRASES, _KNOWN_LOCATION_TOKENS
+    if _KNOWN_LOCATION_PHRASES is None or _KNOWN_LOCATION_TOKENS is None:
+        phrases = {
+            re.sub(r"[_/-]+", " ", str(phrase).lower()).strip()
+            for phrase in (*location_map.keys(), *location_map.values())
+            if str(phrase).strip()
+        }
+        # Body-map combined labels and common singulars that the scorer may route to
+        # another region but should still display cleanly as typed.
+        phrases.update({"head", "head neck", "rib"})
+        tokens: set[str] = set()
+        for phrase in phrases:
+            tokens.update(phrase.split())
+        _KNOWN_LOCATION_PHRASES, _KNOWN_LOCATION_TOKENS = phrases, tokens
+    return _KNOWN_LOCATION_PHRASES, _KNOWN_LOCATION_TOKENS
+
+
 def _looks_like_location_only(location: str, location_map: Mapping[str, str]) -> bool:
     """True when cleaned no-condition text is only body-location words."""
     normalized = re.sub(r"[_/-]+", " ", location.lower())
@@ -203,20 +230,10 @@ def _looks_like_location_only(location: str, location_map: Mapping[str, str]) ->
     if not normalized:
         return False
 
-    known_phrases = {
-        re.sub(r"[_/-]+", " ", str(phrase).lower()).strip()
-        for phrase in (*location_map.keys(), *location_map.values())
-        if str(phrase).strip()
-    }
-    # Body-map combined labels and common singulars that the scorer may route to
-    # another region but should still display cleanly as typed.
-    known_phrases.update({"head", "head neck", "rib"})
+    known_phrases, known_tokens = _location_vocabulary(location_map)
     if normalized in known_phrases:
         return True
 
-    known_tokens: set[str] = set()
-    for phrase in known_phrases:
-        known_tokens.update(phrase.split())
     return all(word in known_tokens for word in normalized.split())
 
 
