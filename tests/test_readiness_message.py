@@ -133,6 +133,29 @@ def test_green_copy_never_claims_clear_while_injured():
     _assert_card_shape(adj)
 
 
+def test_green_copy_uses_location_when_injury_condition_is_unrecognized():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="good", body="normal", pain="none"),
+        ReadinessContext(
+            today_session=_session(title="Recovery mobility"),
+            open_injuries=[
+                {
+                    "status": "open",
+                    "severity": "mild",
+                    "body_area": "left shoulder tngling i dont know why",
+                    "description": "left shoulder tngling i dont know why",
+                }
+            ],
+        ),
+    )
+
+    assert adj.decision == "train_as_planned"
+    assert "protect your Left shoulder today" in adj.reason
+    assert "tngling" not in adj.reason
+    assert "i dont know why" not in adj.reason
+    _assert_card_shape(adj)
+
+
 def test_new_high_exposure_session_terms_classify_as_high():
     for title in (
         "Heavy bag rounds",
