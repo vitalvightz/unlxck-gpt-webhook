@@ -15763,10 +15763,14 @@ html[data-theme="light"] .loading-operational-item {
 .sp-countdown {
   font-family: var(--font-mono);
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
+/* The weekday date is the glanceable anchor ("which day is this?"), so it reads
+   a step clearer than a raw muted string — paired with the red D- countdown. */
 .sp-day-date {
-  color: var(--text-muted);
-  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 .sp-session-day-labels {
   margin-bottom: 6px;

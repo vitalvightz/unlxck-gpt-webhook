@@ -43,6 +43,7 @@ import {
   type Completion,
 } from "@/lib/camp-map";
 import { useTrainingDay } from "@/lib/use-training-day";
+import { formatAppDate } from "@/lib/date-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
@@ -284,7 +285,7 @@ export function SessionCard({
           {countdown || date ? (
             <div className="sp-day-labels sp-session-day-labels">
               {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
-              {date ? <span className="sp-day-date">{date}</span> : null}
+              {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
           <h4 className="sp-session-title">{title}</h4>
@@ -387,7 +388,7 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
           {countdown || date ? (
             <div className="sp-day-labels sp-session-day-labels">
               {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
-              {date ? <span className="sp-day-date">{date}</span> : null}
+              {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
           <h4 className="sp-session-title">{title}</h4>
