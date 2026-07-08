@@ -26,7 +26,7 @@ class TestNormalRules:
         assert decision.decision == "modify"
         assert decision.reason.splitlines() == [
             "Session reduced.",
-            "Poor sleep means your body has less room to recover today.",
+            "One warning source is showing: poor sleep. Poor sleep means your body has less room to recover today.",
             "Cut 1 round and do not add extra conditioning.",
         ]
 
@@ -96,7 +96,7 @@ class TestPhaseBias:
         )
         assert decision.decision == "pull_back"
         assert "Pull back today." in decision.reason
-        assert "Several warnings are showing" in decision.reason
+        assert "Multiple warning sources are showing" in decision.reason
         assert "Skip combat work" in decision.reason
         assert "Keep sharp work only" not in decision.reason
         assert "Remove 1 set" not in decision.reason
@@ -115,14 +115,14 @@ class TestPhaseBias:
             replace(CLEAN, sleep="poor", body="flat", pain="manageable", phase="GPP")
         )
         assert decision.decision == "pull_back"
-        assert "Several warnings are showing" in decision.reason
+        assert "Multiple warning sources are showing" in decision.reason
 
     def test_poor_flat_manageable_in_spp_pulls_back_from_pain_stack(self):
         decision = evaluate_checkin(
             replace(CLEAN, sleep="poor", body="flat", pain="manageable", phase="SPP")
         )
         assert decision.decision == "pull_back"
-        assert "Several warnings are showing" in decision.reason
+        assert "Multiple warning sources are showing" in decision.reason
 
     def test_phase_bias_never_makes_less_conservative(self):
         # GPP must not upgrade a modify back to train_as_planned.

@@ -498,7 +498,7 @@ class TestCheckinSubmit:
         assert row["recommendation_state"] == "modify"
         assert row["recommendation_reason"].splitlines() == [
             "Session reduced.",
-            "Poor sleep means your body has less room to recover today.",
+            "One warning source is showing: poor sleep. Poor sleep means your body has less room to recover today.",
             "Cut 1 round and do not add extra conditioning.",
         ]
         assert "poor_sleep" in row["recommendation_triggers"]

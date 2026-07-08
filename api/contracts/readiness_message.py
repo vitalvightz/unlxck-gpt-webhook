@@ -98,6 +98,23 @@ _MEDIUM_RISK_TERMS = (
     "drill",
 )
 
+_WARNING_SOURCE_LABELS: dict[str, str] = {
+    "poor_sleep": "poor sleep",
+    "poor_sleep_3_day_streak": "poor sleep for 3 days",
+    "flat_body": "flat body",
+    "flat_body_3_day_streak": "flat body for 3 days",
+    "manageable_pain": "manageable pain",
+    "pain_3_day_streak": "pain for 3 days",
+    "pain_worsening_trend": "worsening pain",
+    "recent_hard_load_plus_poor_today": "recent hard load plus poor check-in",
+    "repeated_poor_readiness": "repeated poor check-ins",
+    "tracked_injury_high_risk_session": "active injury",
+    "recent_hard_session": "recent hard session",
+    "taper_poor_readiness": "taper plus poor check-in",
+    "reintegration_poor_readiness": "return phase plus poor check-in",
+    "fight_week": "fight week",
+}
+
 
 @dataclass(frozen=True)
 class ReadinessCheckin:
@@ -818,6 +835,10 @@ def _has_pain_warning(warnings: Sequence[str]) -> bool:
     return bool({"manageable_pain", "pain_3_day_streak", "pain_worsening_trend"} & set(warnings))
 
 
+def _warning_source_labels(warnings: Sequence[str]) -> tuple[str, ...]:
+    return tuple(_WARNING_SOURCE_LABELS.get(warning, warning.replace("_", " ")) for warning in warnings)
+
+
 def _specific_soft_warning_message(
     warning: str,
     *,
@@ -946,32 +967,27 @@ def _soft_warning_message(
             return (
                 "pull_back",
                 "Pull back today.",
-                "Several warnings are showing, so your body is not ready for hard combat work.",
+                f"Multiple warning sources are showing: {' + '.join(_warning_source_labels(warnings))}. Hard combat work should be reduced today.",
                 "Skip combat work and use recovery or light mobility instead.",
             )
         return (
             "modify",
             "Session reduced.",
-            "Several warnings are showing, so today needs a safer dose.",
+            f"Multiple warning sources are showing: {' + '.join(_warning_source_labels(warnings))}. Today needs a safer dose.",
             "Cut rounds, cap intensity, and remove conditioning.",
         )
-
-    if "taper_poor_readiness" in warnings:
-        return _specific_soft_warning_message("taper_poor_readiness", session_risk=session_risk)
-
-    if "reintegration_poor_readiness" in warnings:
-        return _specific_soft_warning_message("reintegration_poor_readiness", session_risk=session_risk)
 
     if warning_count == 2:
         return (
             "modify",
             "Session reduced.",
-            "More than one warning is showing, so hard combat work needs to be reduced today.",
+            f"Multiple warning sources are showing: {' + '.join(_warning_source_labels(warnings))}. Hard combat work should be reduced today.",
             "Keep rounds controlled. Skip sparring, hard rounds, and conditioning finishers.",
         )
 
     if warning_count == 1:
-        return _specific_soft_warning_message(warnings[0], session_risk=session_risk)
+        decision, title, reason, action = _specific_soft_warning_message(warnings[0], session_risk=session_risk)
+        return decision, title, f"One warning source is showing: {_warning_source_labels(warnings)[0]}. {reason}", action
 
     if fight_week:
         return (
