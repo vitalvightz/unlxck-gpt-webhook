@@ -6,21 +6,29 @@
 // (no locale-inserted comma after the weekday) regardless of the viewer.
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_PREFIX_PATTERN = /^(\d{4}-\d{2}-\d{2})(?:[T\s]|$)/;
 
 /**
  * Parse a date-only ISO string (`YYYY-MM-DD`) or a full timestamp.
  *
- * Date-only values are anchored at noon UTC so the rendered weekday/day never
- * shifts backward across a timezone boundary (the off-by-one trap). Full
- * timestamps are parsed as-is and rendered in the viewer's local timezone.
+ * Date-only displays are anchored at noon UTC so the rendered weekday/day never
+ * shifts backward across a timezone boundary (the off-by-one trap). When a caller
+ * uses `formatAppDate` with a timestamp-shaped value, we still use the first
+ * `YYYY-MM-DD` part as a date-only value for hydration-safe rendering. Full
+ * timestamps remain parsed as-is when `formatAppDateTime` needs the time.
  */
-function parseAppDate(value: string): { date: Date; dateOnly: boolean } | null {
+function parseAppDate(value: string, withTime: boolean): { date: Date; dateOnly: boolean } | null {
   const normalized = value.trim();
   if (!normalized) {
     return null;
   }
-  const dateOnly = DATE_ONLY_PATTERN.test(normalized);
-  const date = new Date(dateOnly ? `${normalized}T12:00:00Z` : normalized.replace(" ", "T"));
+  const dateOnlyValue = DATE_ONLY_PATTERN.test(normalized)
+    ? normalized
+    : !withTime
+      ? DATE_PREFIX_PATTERN.exec(normalized)?.[1]
+      : undefined;
+  const dateOnly = Boolean(dateOnlyValue);
+  const date = new Date(dateOnly ? `${dateOnlyValue}T12:00:00Z` : normalized.replace(" ", "T"));
   if (Number.isNaN(date.getTime())) {
     return null;
   }
@@ -52,7 +60,7 @@ function getFormatter(withTime: boolean, dateOnly: boolean): Intl.DateTimeFormat
 
 function render(value: string | null | undefined, withTime: boolean): string {
   const raw = String(value ?? "");
-  const parsed = parseAppDate(raw);
+  const parsed = parseAppDate(raw, withTime);
   if (!parsed) {
     return raw;
   }
