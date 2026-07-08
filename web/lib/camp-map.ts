@@ -106,6 +106,79 @@ export function resolvePlanProgress(
   return { weekCount: weeks.length, currentWeekPos, currentDayDate, dLabel };
 }
 
+export type CampProgress = {
+  /** 0-100 timeline completion from camp start to fight day. */
+  pct: number;
+  /** "Week 6 of 8", or null when the week count is unknown. */
+  weekLabel: string | null;
+  /** "D-7" style countdown for today, or null. */
+  dLabel: string | null;
+};
+
+/** Local-midnight ms for a plain "YYYY-MM-DD", parsed at noon to dodge DST/TZ edges. */
+function isoToMs(iso: string | null): number | null {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso.slice(0, 10))) {
+    return null;
+  }
+  const ms = new Date(`${iso.slice(0, 10)}T12:00:00`).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/**
+ * Camp timeline progress for a glanceable "how far through camp" bar, shared by
+ * Today and Overview so the two can never disagree. Progress is a pure timeline
+ * measure — today's position between the first scheduled day (camp start) and
+ * fight day — so it stays stable even when today doesn't match a scheduled day
+ * (e.g. a rest/preview day). Returns null when there isn't enough of a plan to
+ * draw a meaningful bar, so callers can simply hide it.
+ */
+export function getCampProgress(
+  plan: StructuredPlan | null | undefined,
+  today: Date | null,
+): CampProgress | null {
+  const weeks = getWeeks(plan);
+  if (!weeks.length || !today) {
+    return null;
+  }
+
+  // Camp span: earliest scheduled day → fight day (falling back to the last
+  // scheduled day when the event date is missing).
+  const dayMsValues: number[] = [];
+  weeks.forEach((week) => {
+    getDays(week).forEach((day) => {
+      const ms = isoToMs(dayISO(day));
+      if (ms !== null) {
+        dayMsValues.push(ms);
+      }
+    });
+  });
+  if (!dayMsValues.length) {
+    return null;
+  }
+  const startMs = Math.min(...dayMsValues);
+  const eventIso =
+    cleanText(plan?.event_context?.fight_date) || cleanText(plan?.event_context?.match_date);
+  const endMs = isoToMs(eventIso) ?? Math.max(...dayMsValues);
+  const todayMs = today.getTime();
+
+  const span = endMs - startMs;
+  const pct = span > 0 ? Math.max(0, Math.min(100, ((todayMs - startMs) / span) * 100)) : 0;
+
+  const progress = resolvePlanProgress(plan, today);
+  const weekCount = progress.weekCount;
+  // Prefer the exact matched week; otherwise estimate from the timeline so a
+  // rest/preview day still reads a sensible "Week X of Y".
+  const currentWeek =
+    progress.currentWeekPos != null
+      ? progress.currentWeekPos + 1
+      : weekCount
+        ? Math.min(weekCount, Math.max(1, Math.ceil((pct / 100) * weekCount)))
+        : null;
+  const weekLabel = weekCount && currentWeek ? `Week ${currentWeek} of ${weekCount}` : null;
+
+  return { pct, weekLabel, dLabel: progress.dLabel };
+}
+
 /** "D-28" derived from the event date minus today, or null when unavailable. */
 export function deriveCountdownLabel(
   plan: StructuredPlan | null | undefined,

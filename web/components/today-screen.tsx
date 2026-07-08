@@ -10,6 +10,7 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
+import { CampProgressBar } from "@/components/camp-progress-bar";
 import { CustomSelect } from "@/components/custom-select";
 import { Skeleton } from "@/components/skeleton";
 import {
@@ -1293,6 +1294,7 @@ function SessionCard({
 export function TodayScreen() {
   const { session } = useAppSession();
   const token = session?.access_token ?? null;
+  const trainingDay = useTrainingDay();
   const [state, setState] = useState<TodayCommandView | null>(null);
   const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1413,6 +1415,7 @@ export function TodayScreen() {
             </Link>
           </div>
         </div>
+        <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="today" />
         <TodayReadinessStrip
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}
