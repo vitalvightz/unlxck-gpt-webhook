@@ -6558,7 +6558,7 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 /* Tighten easing while actively dragging so the thumb tracks the finger. */
 .effort-slider-input:active ~ .effort-slider-track .effort-slider-thumb,
 .effort-slider-input:active ~ .effort-slider-track .effort-slider-fill {
-  transition-duration: 80ms;
+  transition-duration: 0s;
 }
 
 .effort-slider-input:active ~ .effort-slider-track .effort-slider-thumb {
