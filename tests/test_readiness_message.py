@@ -273,6 +273,39 @@ def test_adjacent_checkins_still_form_a_streak():
     assert "poor_sleep_3_day_streak" in adj.triggers
 
 
+def test_streak_requires_consecutive_calendar_days():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat", pain="manageable"),
+        ReadinessContext(
+            training_day="2026-06-18",
+            recent_checkins=[
+                {"training_day": "2026-06-17", "sleep": "poor", "body": "flat", "pain": "manageable"},
+                {"training_day": "2026-06-15", "sleep": "poor", "body": "flat", "pain": "manageable"},
+            ],
+            today_session=_session(title="Technical skill drilling"),
+        ),
+    )
+    assert "poor_sleep_3_day_streak" not in adj.triggers
+    assert "flat_body_3_day_streak" not in adj.triggers
+    assert "pain_3_day_streak" not in adj.triggers
+    assert "poor_sleep" in adj.triggers
+
+
+def test_unparseable_training_day_preserves_best_effort_streak():
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(
+            training_day="not-a-date",
+            recent_checkins=[
+                {"training_day": "2026-06-17", "sleep": "poor"},
+                {"training_day": "2026-06-15", "sleep": "poor"},
+            ],
+            today_session=_session(title="Technical skill drilling"),
+        ),
+    )
+    assert "poor_sleep_3_day_streak" in adj.triggers
+
+
 def test_recent_hard_load_ignores_stale_sessions():
     adj = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),

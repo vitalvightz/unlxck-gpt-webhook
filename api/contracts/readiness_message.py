@@ -391,9 +391,19 @@ def _three_day_streak(
     prior_rows: Sequence[Mapping[str, Any]],
     key: str,
     allowed_values: set[str],
+    *,
+    training_day: str | date,
 ) -> bool:
     if checkin_value not in allowed_values or len(prior_rows) < 2:
         return False
+    today = _parse_iso_day(training_day)
+    if today is not None:
+        prior_deltas = {
+            _days_before(today, _row_training_day(row))
+            for row in prior_rows[:2]
+        }
+        if prior_deltas != {1, 2}:
+            return False
     return all(_row_value(row, key) in allowed_values for row in prior_rows[:2])
 
 
@@ -722,9 +732,27 @@ def _collect_soft_warnings(
     recent_hard_count = _recent_hard_session_count(context)
     recent_hard = checkin.previous_session == "very_hard" or recent_hard_count >= 2
     tracked_injury = checkin.active_injury == "stable" or bool(context.open_injuries)
-    poor_sleep_streak = _three_day_streak(checkin.sleep, prior_rows, "sleep", {"poor"})
-    flat_body_streak = _three_day_streak(checkin.body, prior_rows, "body", {"flat"})
-    pain_streak = _three_day_streak(checkin.pain, prior_rows, "pain", {"manageable", "high"})
+    poor_sleep_streak = _three_day_streak(
+        checkin.sleep,
+        prior_rows,
+        "sleep",
+        {"poor"},
+        training_day=context.training_day,
+    )
+    flat_body_streak = _three_day_streak(
+        checkin.body,
+        prior_rows,
+        "body",
+        {"flat"},
+        training_day=context.training_day,
+    )
+    pain_streak = _three_day_streak(
+        checkin.pain,
+        prior_rows,
+        "pain",
+        {"manageable", "high"},
+        training_day=context.training_day,
+    )
     pain_worsening = _pain_worsening_trend(checkin, prior_rows)
 
     if poor:
