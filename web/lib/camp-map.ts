@@ -115,12 +115,12 @@ export type CampProgress = {
   dLabel: string | null;
 };
 
-/** Local-midnight ms for a plain "YYYY-MM-DD", parsed at noon to dodge DST/TZ edges. */
+/** Local-midnight ms for a plain "YYYY-MM-DD", parsed at midnight to align with today's normalized training day. */
 function isoToMs(iso: string | null): number | null {
-  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso.slice(0, 10))) {
+  if (!iso || !/^\\d{4}-\\d{2}-\\d{2}$/.test(iso.slice(0, 10))) {
     return null;
   }
-  const ms = new Date(`${iso.slice(0, 10)}T12:00:00`).getTime();
+  const ms = new Date(`${iso.slice(0, 10)}T00:00:00`).getTime();
   return Number.isNaN(ms) ? null : ms;
 }
 
