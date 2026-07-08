@@ -61,7 +61,7 @@ export function EffortSlider({
       }}
     >
       <div className="effort-slider-readout" aria-hidden="true">
-        <span key={descriptor} className="effort-slider-descriptor">
+        <span className="effort-slider-descriptor">
           {descriptor}
         </span>
       </div>
