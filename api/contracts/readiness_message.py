@@ -305,6 +305,8 @@ _SESSION_RECENCY_WINDOW_DAYS = 4
 
 
 def _parse_iso_day(value: Any) -> date | None:
+    if isinstance(value, date):
+        return value
     try:
         return date.fromisoformat(_clean(value)[:10])
     except ValueError:
