@@ -45,18 +45,27 @@ export function EffortSlider({
   // When unset, park the thumb in the middle but render it muted so it
   // never reads as a committed answer.
   const current = value ?? Math.ceil(EFFORT_STEPS / 2);
-  const fillPct = ((current - 1) / (EFFORT_STEPS - 1)) * 100;
+  const fraction = (current - 1) / (EFFORT_STEPS - 1);
   const descriptor = isSet ? EFFORT_DESCRIPTORS[current] : "Drag to rate effort";
 
+  // The native range input stays on top (invisible) for pointer + keyboard
+  // + screen-reader behaviour; the visible track, fill, ticks and thumb are
+  // custom-rendered underneath so their motion can be eased in CSS.
   return (
-    <div className="effort-slider" data-empty={isSet ? undefined : "true"}>
+    <div
+      className="effort-slider"
+      data-empty={isSet ? undefined : "true"}
+      style={{
+        ["--effort-fill" as string]: `${fraction * 100}%`,
+        ["--effort-intensity" as string]: fraction,
+      }}
+    >
       <div className="effort-slider-readout" aria-hidden="true">
-        <span className="effort-slider-descriptor">{descriptor}</span>
+        <span className="effort-slider-descriptor">
+          {descriptor}
+        </span>
       </div>
-      <div
-        className="effort-slider-track-wrap"
-        style={{ ["--effort-fill" as string]: `${fillPct}%` }}
-      >
+      <div className="effort-slider-track-wrap">
         <input
           id={sliderId}
           className="effort-slider-input"
@@ -77,6 +86,22 @@ export function EffortSlider({
             }
           }}
         />
+        <div className="effort-slider-track" aria-hidden="true">
+          <div className="effort-slider-fill" />
+          <div className="effort-slider-ticks">
+            {Array.from({ length: EFFORT_STEPS }, (_, index) => (
+              <span
+                key={index}
+                className="effort-slider-tick"
+                data-lit={isSet && index < current ? "true" : undefined}
+                style={{
+                  ["--tick-pos" as string]: `${(index / (EFFORT_STEPS - 1)) * 100}%`,
+                }}
+              />
+            ))}
+          </div>
+          <span className="effort-slider-thumb" />
+        </div>
       </div>
       <div className="effort-slider-anchors" aria-hidden="true">
         <span>Very Light</span>
