@@ -423,13 +423,13 @@ def _pain_worsening_trend(checkin: ReadinessCheckin, prior_rows: Sequence[Mappin
 
 def _recent_hard_session_count(context: ReadinessContext) -> int:
     training_day = _clean(context.training_day)
-    windowed = _parse_iso_day(training_day) is not None
+    today_date = _parse_iso_day(training_day)
     count = 0
     for row in context.recent_sessions[:3]:
-        if windowed:
+        if today_date is not None:
             # Only count hard sessions from the recent window — a hard session weeks
             # ago is not "recent load".
-            delta = _days_before(training_day, _clean(row.get("training_day")))
+            delta = _days_before(today_date, _clean(row.get("training_day")))
             if delta is None or not (0 <= delta <= _SESSION_RECENCY_WINDOW_DAYS):
                 continue
         try:
