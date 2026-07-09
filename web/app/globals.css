@@ -10525,42 +10525,89 @@ html[data-theme="light"] .injury-card-state {
 }
 
 .body-map-zone {
-  fill: color-mix(in srgb, var(--surface) 86%, transparent);
-  stroke: rgba(186, 190, 200, 0.32);
+  transition: fill 0.15s, stroke 0.15s, r 0.15s;
+}
+
+/* Muscles read as soft anatomical areas: a wide translucent fill with barely
+   any outline, sized/tilted to follow the muscle. */
+.body-map-zone-muscle {
+  fill: rgba(186, 190, 200, 0.11);
+  stroke: rgba(186, 190, 200, 0.16);
   stroke-width: 1;
-  transition: fill 0.15s, stroke 0.15s, transform 0.15s;
 }
 
-.body-map-zone:hover,
-.body-map-zone-hover {
+.body-map-zone-muscle:hover,
+.body-map-zone-muscle.body-map-zone-hover {
   fill: rgba(181, 18, 43, 0.2);
-  stroke: rgba(181, 18, 43, 0.58);
-  transform: scale(1.02);
+  stroke: rgba(181, 18, 43, 0.5);
 }
 
-.body-map-zone-used {
+/* Joints read as precise points: a small crisp ring. The tap target is a
+   separate invisible full-size hit circle, so precision is only visual. */
+.body-map-zone-hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.body-map-zone-joint {
+  fill: color-mix(in srgb, var(--surface) 92%, transparent);
+  stroke: rgba(186, 190, 200, 0.62);
+  stroke-width: 1.5;
+}
+
+.body-map-zone-joint:hover,
+.body-map-zone-joint.body-map-zone-hover {
+  r: 6px;
+  fill: rgba(181, 18, 43, 0.3);
+  stroke: rgba(181, 18, 43, 0.85);
+}
+
+.body-map-zone-muscle.body-map-zone-used {
   fill: rgba(181, 18, 43, 0.3);
   stroke: rgba(181, 18, 43, 0.65);
   stroke-width: 1.5;
 }
 
-.body-map-zone-group-used.body-map-zone-severity-low .body-map-zone {
-  fill: rgba(245, 197, 24, 0.28);
-  stroke: rgba(245, 197, 24, 0.65);
+.body-map-zone-joint.body-map-zone-used {
+  r: 5.5px;
+  fill: var(--brand-red);
+  stroke: rgba(181, 18, 43, 0.55);
+  stroke-width: 2;
+}
+
+.body-map-zone-group-used.body-map-zone-severity-low .body-map-zone-muscle {
+  fill: rgba(245, 197, 24, 0.26);
+  stroke: rgba(245, 197, 24, 0.6);
   stroke-width: 1.5;
 }
 
-.body-map-zone-group-used.body-map-zone-severity-moderate .body-map-zone {
-  fill: rgba(231, 96, 38, 0.32);
-  stroke: rgba(231, 96, 38, 0.7);
+.body-map-zone-group-used.body-map-zone-severity-moderate .body-map-zone-muscle {
+  fill: rgba(231, 96, 38, 0.3);
+  stroke: rgba(231, 96, 38, 0.65);
   stroke-width: 1.5;
 }
 
-.body-map-zone-group-used.body-map-zone-severity-high .body-map-zone {
-  fill: rgba(181, 18, 43, 0.45);
+.body-map-zone-group-used.body-map-zone-severity-high .body-map-zone-muscle {
+  fill: rgba(181, 18, 43, 0.42);
   stroke: rgba(181, 18, 43, 0.85);
   stroke-width: 2;
   filter: drop-shadow(0 0 5px rgba(181, 18, 43, 0.35));
+}
+
+.body-map-zone-group-used.body-map-zone-severity-low .body-map-zone-joint {
+  fill: #f5c518;
+  stroke: rgba(245, 197, 24, 0.5);
+}
+
+.body-map-zone-group-used.body-map-zone-severity-moderate .body-map-zone-joint {
+  fill: #e76026;
+  stroke: rgba(231, 96, 38, 0.5);
+}
+
+.body-map-zone-group-used.body-map-zone-severity-high .body-map-zone-joint {
+  fill: var(--brand-red);
+  stroke: rgba(181, 18, 43, 0.55);
+  filter: drop-shadow(0 0 5px rgba(181, 18, 43, 0.45));
 }
 
 .body-map-zone-group-used.body-map-zone-severity-low .body-map-zone-dot {
@@ -10619,7 +10666,19 @@ html[data-theme="light"] .injury-card-state {
   font-size: 0.76rem;
   color: var(--text-muted);
   line-height: 1.4;
-  min-height: 1.4em;
+  min-height: 1.7em;
+}
+
+.body-map-hint-zone {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .body-map-legend {
@@ -10873,20 +10932,35 @@ html[data-theme="light"] .body-map-panel {
   background: rgba(98, 77, 69, 0.025);
 }
 
-html[data-theme="light"] .body-map-zone {
-  fill: rgba(120, 110, 102, 0.05);
-  stroke: rgba(120, 110, 102, 0.24);
+html[data-theme="light"] .body-map-zone-muscle {
+  fill: rgba(120, 110, 102, 0.08);
+  stroke: rgba(120, 110, 102, 0.14);
 }
 
-html[data-theme="light"] .body-map-zone:hover,
-html[data-theme="light"] .body-map-zone-hover {
+html[data-theme="light"] .body-map-zone-joint {
+  stroke: rgba(120, 110, 102, 0.5);
+}
+
+html[data-theme="light"] .body-map-zone-muscle:hover,
+html[data-theme="light"] .body-map-zone-muscle.body-map-zone-hover {
   fill: rgba(146, 43, 45, 0.1);
   stroke: rgba(146, 43, 45, 0.3);
 }
 
-html[data-theme="light"] .body-map-zone-used {
+html[data-theme="light"] .body-map-zone-joint:hover,
+html[data-theme="light"] .body-map-zone-joint.body-map-zone-hover {
+  fill: rgba(146, 43, 45, 0.15);
+  stroke: rgba(146, 43, 45, 0.55);
+}
+
+html[data-theme="light"] .body-map-zone-muscle.body-map-zone-used {
   fill: rgba(146, 43, 45, 0.18);
   stroke: rgba(146, 43, 45, 0.5);
+}
+
+html[data-theme="light"] .body-map-hint-zone {
+  background: rgba(98, 77, 69, 0.06);
+  border-color: rgba(98, 77, 69, 0.12);
 }
 
 html[data-theme="light"] .body-map-zone-dot {

@@ -19,6 +19,9 @@ type Zone = {
   label: string;
   cx: number;
   cy: number;
+  // Tap/hit radius. Muscles draw at their rx/ry instead; joints draw a small
+  // precise point but keep this full radius as an invisible hit circle so
+  // phone tap targets stay large.
   r: number;
   // Which anatomy layer the zone belongs to. "muscle" zones show on the
   // Muscles layer, "joint" zones on the Joints & bones layer, and "both"
@@ -26,6 +29,14 @@ type Zone = {
   // rendered regardless of the active layer so a selection can never vanish
   // behind the toggle.
   layer: "muscle" | "joint" | "both";
+  // Forces a render style regardless of the active layer (the head is always
+  // a soft region — a tiny "joint point" head would read wrong).
+  kind?: "muscle" | "joint";
+  // Soft-ellipse dimensions used when the zone renders muscle-style. `rot`
+  // tilts the ellipse (degrees, clockwise) so arm muscles follow the limb.
+  rx?: number;
+  ry?: number;
+  rot?: number;
 };
 
 // Anatomical "Left"/"Right" refer to the figure's own side. Screen position must
@@ -46,31 +57,31 @@ type Zone = {
 // resolves — bicep, forearm, groin, ribs, hand, foot, traps, tricep, Achilles
 // are all known locations.
 const FRONT_ZONES: Record<string, Zone> = {
-  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both" },
-  l_shoulder: { label: "Left shoulder", cx: 124, cy: 68, r: 13, layer: "both" },
-  r_shoulder: { label: "Right shoulder", cx: 56, cy: 68, r: 13, layer: "both" },
-  chest: { label: "Chest", cx: 90, cy: 88, r: 14, layer: "muscle" },
-  l_bicep: { label: "Left bicep", cx: 133, cy: 94, r: 10, layer: "muscle" },
-  r_bicep: { label: "Right bicep", cx: 47, cy: 94, r: 10, layer: "muscle" },
+  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both", kind: "muscle", rx: 13, ry: 15 },
+  l_shoulder: { label: "Left shoulder", cx: 124, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: 20 },
+  r_shoulder: { label: "Right shoulder", cx: 56, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: -20 },
+  chest: { label: "Chest", cx: 90, cy: 88, r: 14, layer: "muscle", rx: 20, ry: 11 },
+  l_bicep: { label: "Left bicep", cx: 133, cy: 94, r: 10, layer: "muscle", rx: 6.5, ry: 12, rot: -19 },
+  r_bicep: { label: "Right bicep", cx: 47, cy: 94, r: 10, layer: "muscle", rx: 6.5, ry: 12, rot: 19 },
   ribs: { label: "Ribs", cx: 90, cy: 106, r: 11, layer: "joint" },
   l_elbow: { label: "Left elbow", cx: 141, cy: 118, r: 10, layer: "joint" },
   r_elbow: { label: "Right elbow", cx: 39, cy: 118, r: 10, layer: "joint" },
-  core: { label: "Core", cx: 90, cy: 122, r: 14, layer: "muscle" },
-  l_forearm: { label: "Left forearm", cx: 146, cy: 137, r: 9, layer: "muscle" },
-  r_forearm: { label: "Right forearm", cx: 34, cy: 137, r: 9, layer: "muscle" },
+  core: { label: "Core", cx: 90, cy: 122, r: 14, layer: "muscle", rx: 13, ry: 15 },
+  l_forearm: { label: "Left forearm", cx: 146, cy: 137, r: 9, layer: "muscle", rx: 6, ry: 12, rot: -15 },
+  r_forearm: { label: "Right forearm", cx: 34, cy: 137, r: 9, layer: "muscle", rx: 6, ry: 12, rot: 15 },
   l_wrist: { label: "Left wrist", cx: 151, cy: 156, r: 9, layer: "joint" },
   r_wrist: { label: "Right wrist", cx: 29, cy: 156, r: 9, layer: "joint" },
   l_hip: { label: "Left hip", cx: 110, cy: 155, r: 12, layer: "joint" },
   r_hip: { label: "Right hip", cx: 70, cy: 155, r: 12, layer: "joint" },
-  groin: { label: "Groin", cx: 90, cy: 168, r: 9, layer: "muscle" },
+  groin: { label: "Groin", cx: 90, cy: 168, r: 9, layer: "muscle", rx: 10, ry: 7 },
   l_hand: { label: "Left hand", cx: 159, cy: 181, r: 9, layer: "joint" },
   r_hand: { label: "Right hand", cx: 21, cy: 181, r: 9, layer: "joint" },
-  l_quad: { label: "Left quad", cx: 105, cy: 190, r: 12, layer: "muscle" },
-  r_quad: { label: "Right quad", cx: 75, cy: 190, r: 12, layer: "muscle" },
+  l_quad: { label: "Left quad", cx: 105, cy: 190, r: 12, layer: "muscle", rx: 9, ry: 17 },
+  r_quad: { label: "Right quad", cx: 75, cy: 190, r: 12, layer: "muscle", rx: 9, ry: 17 },
   l_knee: { label: "Left knee", cx: 105, cy: 220, r: 10, layer: "joint" },
   r_knee: { label: "Right knee", cx: 75, cy: 220, r: 10, layer: "joint" },
-  l_shin: { label: "Left shin", cx: 105, cy: 252, r: 10, layer: "both" },
-  r_shin: { label: "Right shin", cx: 75, cy: 252, r: 10, layer: "both" },
+  l_shin: { label: "Left shin", cx: 105, cy: 252, r: 10, layer: "both", rx: 6, ry: 16 },
+  r_shin: { label: "Right shin", cx: 75, cy: 252, r: 10, layer: "both", rx: 6, ry: 16 },
   l_ankle: { label: "Left ankle", cx: 105, cy: 282, r: 9, layer: "joint" },
   r_ankle: { label: "Right ankle", cx: 75, cy: 282, r: 9, layer: "joint" },
   l_foot: { label: "Left foot", cx: 114, cy: 300, r: 9, layer: "joint" },
@@ -81,37 +92,41 @@ const FRONT_ZONES: Record<string, Zone> = {
 // every "Left" zone takes the lower cx and every "Right" zone the higher cx —
 // the opposite of FRONT_ZONES — while the anatomical labels stay the same.
 const BACK_ZONES: Record<string, Zone> = {
-  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both" },
-  traps: { label: "Traps", cx: 90, cy: 58, r: 9, layer: "muscle" },
-  l_shoulder: { label: "Left shoulder", cx: 56, cy: 68, r: 13, layer: "both" },
-  r_shoulder: { label: "Right shoulder", cx: 124, cy: 68, r: 13, layer: "both" },
-  upper_back: { label: "Upper back", cx: 90, cy: 90, r: 13, layer: "both" },
-  l_tricep: { label: "Left tricep", cx: 47, cy: 94, r: 10, layer: "muscle" },
-  r_tricep: { label: "Right tricep", cx: 133, cy: 94, r: 10, layer: "muscle" },
+  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both", kind: "muscle", rx: 13, ry: 15 },
+  traps: { label: "Traps", cx: 90, cy: 58, r: 9, layer: "muscle", rx: 13, ry: 6.5 },
+  l_shoulder: { label: "Left shoulder", cx: 56, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: -20 },
+  r_shoulder: { label: "Right shoulder", cx: 124, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: 20 },
+  upper_back: { label: "Upper back", cx: 90, cy: 90, r: 13, layer: "both", rx: 15, ry: 12 },
+  l_tricep: { label: "Left tricep", cx: 47, cy: 94, r: 10, layer: "muscle", rx: 6.5, ry: 12, rot: 19 },
+  r_tricep: { label: "Right tricep", cx: 133, cy: 94, r: 10, layer: "muscle", rx: 6.5, ry: 12, rot: -19 },
   l_elbow: { label: "Left elbow", cx: 39, cy: 118, r: 10, layer: "joint" },
   r_elbow: { label: "Right elbow", cx: 141, cy: 118, r: 10, layer: "joint" },
-  lower_back: { label: "Lower back", cx: 90, cy: 126, r: 14, layer: "both" },
-  l_forearm: { label: "Left forearm", cx: 34, cy: 137, r: 9, layer: "muscle" },
-  r_forearm: { label: "Right forearm", cx: 146, cy: 137, r: 9, layer: "muscle" },
+  lower_back: { label: "Lower back", cx: 90, cy: 126, r: 14, layer: "both", rx: 12, ry: 10 },
+  l_forearm: { label: "Left forearm", cx: 34, cy: 137, r: 9, layer: "muscle", rx: 6, ry: 12, rot: 15 },
+  r_forearm: { label: "Right forearm", cx: 146, cy: 137, r: 9, layer: "muscle", rx: 6, ry: 12, rot: -15 },
   l_wrist: { label: "Left wrist", cx: 29, cy: 156, r: 9, layer: "joint" },
   r_wrist: { label: "Right wrist", cx: 151, cy: 156, r: 9, layer: "joint" },
   l_hip: { label: "Left hip", cx: 70, cy: 150, r: 11, layer: "joint" },
   r_hip: { label: "Right hip", cx: 110, cy: 150, r: 11, layer: "joint" },
-  l_glute: { label: "Left glute", cx: 70, cy: 158, r: 12, layer: "muscle" },
-  r_glute: { label: "Right glute", cx: 110, cy: 158, r: 12, layer: "muscle" },
+  l_glute: { label: "Left glute", cx: 70, cy: 158, r: 12, layer: "muscle", rx: 9.5, ry: 8 },
+  r_glute: { label: "Right glute", cx: 110, cy: 158, r: 12, layer: "muscle", rx: 9.5, ry: 8 },
   l_hand: { label: "Left hand", cx: 21, cy: 181, r: 9, layer: "joint" },
   r_hand: { label: "Right hand", cx: 159, cy: 181, r: 9, layer: "joint" },
-  l_ham: { label: "Left hamstring", cx: 75, cy: 190, r: 12, layer: "muscle" },
-  r_ham: { label: "Right hamstring", cx: 105, cy: 190, r: 12, layer: "muscle" },
+  l_ham: { label: "Left hamstring", cx: 75, cy: 190, r: 12, layer: "muscle", rx: 9, ry: 16 },
+  r_ham: { label: "Right hamstring", cx: 105, cy: 190, r: 12, layer: "muscle", rx: 9, ry: 16 },
   l_knee: { label: "Left knee", cx: 75, cy: 220, r: 10, layer: "joint" },
   r_knee: { label: "Right knee", cx: 105, cy: 220, r: 10, layer: "joint" },
-  l_calf: { label: "Left calf", cx: 75, cy: 252, r: 10, layer: "muscle" },
-  r_calf: { label: "Right calf", cx: 105, cy: 252, r: 10, layer: "muscle" },
+  l_calf: { label: "Left calf", cx: 75, cy: 252, r: 10, layer: "muscle", rx: 6.5, ry: 14 },
+  r_calf: { label: "Right calf", cx: 105, cy: 252, r: 10, layer: "muscle", rx: 6.5, ry: 14 },
   l_achilles: { label: "Left Achilles", cx: 75, cy: 264, r: 8, layer: "joint" },
   r_achilles: { label: "Right Achilles", cx: 105, cy: 264, r: 8, layer: "joint" },
   l_ankle: { label: "Left ankle", cx: 75, cy: 283, r: 9, layer: "joint" },
   r_ankle: { label: "Right ankle", cx: 105, cy: 283, r: 9, layer: "joint" },
 };
+
+// Radius of the visible point drawn for joint-style zones. The tap target is
+// the zone's full (invisible) hit radius, not this dot.
+const JOINT_POINT_RADIUS = 4.5;
 
 // Half of the body outline (the viewer-left side, x < 90). The full figure is
 // this path plus a mirrored <use> across the vertical centre line x=90, which
@@ -253,8 +268,21 @@ function BodySvg({
           if (!isUsed && zone.layer !== "both" && zone.layer !== layer) {
             return null;
           }
+          // Muscles render as soft anatomical ellipses; joints as small
+          // precise points. "both" zones follow the active layer's style
+          // (delt vs shoulder joint) unless the zone forces a kind.
+          const styleKind: BodyMapLayer =
+            zone.kind ?? (zone.layer === "both" ? layer : zone.layer);
           const isHover = hoverKey === key;
           const ariaLabel = buildZoneAriaLabel(zone.label, selection);
+          const zoneClass = [
+            "body-map-zone",
+            styleKind === "muscle" ? "body-map-zone-muscle" : "body-map-zone-joint",
+            isUsed ? "body-map-zone-used" : "",
+            isHover ? "body-map-zone-hover" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
 
           const handleKey = (event: KeyboardEvent<SVGGElement>) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -284,20 +312,40 @@ function BodySvg({
               onClick={() => onZoneSelect(key, zone.label)}
               onKeyDown={handleKey}
             >
-              <circle
-                cx={zone.cx}
-                cy={zone.cy}
-                r={zone.r}
-                className={`body-map-zone ${isUsed ? "body-map-zone-used" : ""} ${isHover ? "body-map-zone-hover" : ""}`}
-              />
-              {isUsed ? (
-                <circle
-                  cx={zone.cx}
-                  cy={zone.cy}
-                  r={3}
-                  className="body-map-zone-dot"
-                />
-              ) : null}
+              {styleKind === "muscle" ? (
+                <>
+                  <ellipse
+                    cx={zone.cx}
+                    cy={zone.cy}
+                    rx={zone.rx ?? zone.r}
+                    ry={zone.ry ?? zone.r}
+                    transform={
+                      zone.rot ? `rotate(${zone.rot} ${zone.cx} ${zone.cy})` : undefined
+                    }
+                    className={zoneClass}
+                  />
+                  {isUsed ? (
+                    <circle cx={zone.cx} cy={zone.cy} r={3} className="body-map-zone-dot" />
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  {/* Invisible hit circle keeps the tap target full-size while
+                      the visible joint point stays small and precise. */}
+                  <circle
+                    cx={zone.cx}
+                    cy={zone.cy}
+                    r={Math.max(zone.r, 10)}
+                    className="body-map-zone-hit"
+                  />
+                  <circle
+                    cx={zone.cx}
+                    cy={zone.cy}
+                    r={JOINT_POINT_RADIUS}
+                    className={zoneClass}
+                  />
+                </>
+              )}
             </g>
           );
         })}
@@ -389,12 +437,15 @@ export function BodyMap({
         </button>
       </div>
       <p className="body-map-hint" aria-live="polite">
-        {hoverLabel ||
-          (hasAnyMarked
-            ? "Tap another zone, or tap the marked zone again to raise severity."
-            : layer === "muscle"
-              ? "Tap where it hurts — switch to Joints & bones for knees, hands or ribs."
-              : "Tap where it hurts — switch to Muscles for quads, hamstrings or calves.")}
+        {hoverLabel ? (
+          <span className="body-map-hint-zone">{hoverLabel}</span>
+        ) : hasAnyMarked ? (
+          "Tap another zone, or tap the marked zone again to raise severity."
+        ) : layer === "muscle" ? (
+          "Tap where it hurts — switch to Joints & bones for knees, hands or ribs."
+        ) : (
+          "Tap where it hurts — switch to Muscles for quads, hamstrings or calves."
+        )}
       </p>
       {hasAnyMarked ? (
         <ul className="body-map-legend" aria-label="Severity colour key">
