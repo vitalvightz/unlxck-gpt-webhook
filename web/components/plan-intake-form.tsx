@@ -2422,7 +2422,7 @@ export function PlanIntakeForm() {
                     <label htmlFor="technicalStyle">Technical Style</label>
                     <CustomSelect
                       id="technicalStyle"
-                      value={form.athlete.technical_style[0] ?? ""}
+                      value={form.athlete.technical_style?.[0] ?? ""}
                       options={TECHNICAL_STYLE_OPTIONS}
                       placeholder="Select technical style"
                       includeEmptyOption
