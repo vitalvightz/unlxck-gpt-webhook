@@ -109,6 +109,41 @@ def test_generate_recovery_block_layers_age_fatigue_phase_and_cut_guidance():
     assert "**Severe Weight Cut Recovery Warning:**" in block
 
 
+def test_generate_nutrition_block_handles_missing_weight():
+    # Quick Build never collects body weight, so the athlete model carries
+    # weight=None. Regression: 1.7 * None crashed Stage 1 inside the
+    # nutrition module. The block must fall back to the 70 kg default.
+    block = generate_nutrition_block(
+        flags={
+            "phase": "GPP",
+            "fatigue": "low",
+            "weight": None,
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+        }
+    )
+
+    assert "Protein intake: 1.7-2.2 g/kg -> 119.0-154.0 g/day" in block
+
+
+def test_generate_recovery_block_handles_missing_age():
+    # Quick Build never collects age, so the athlete model carries age=None.
+    # Regression: int(None) crashed Stage 1 inside the recovery module.
+    block = generate_recovery_block(
+        {
+            "phase": "GPP",
+            "fatigue": "low",
+            "age": None,
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "days_until_fight": 42,
+        }
+    )
+
+    assert "**Core Recovery Strategies:**" in block
+    assert "**Age-Specific Adjustments:**" not in block
+
+
 def test_parse_weight_value_returns_zero_for_blank_or_invalid_inputs():
     assert parse_weight_value(None) == 0.0
     assert parse_weight_value("") == 0.0

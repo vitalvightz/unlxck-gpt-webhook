@@ -135,7 +135,7 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
 def generate_nutrition_block(*, flags: dict) -> str:
     nutrition_block = "\nNutrition Module\n"
 
-    weight = flags.get("weight", 70)
+    weight = float(flags.get("weight", 70) or 70)
     phase = flags.get("phase", "GPP").upper()
     fatigue = flags.get("fatigue", "low").lower()
     weight_cut_risk = flags.get("weight_cut_risk", False)
