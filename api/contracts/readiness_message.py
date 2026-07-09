@@ -106,12 +106,12 @@ _WARNING_SOURCE_LABELS: dict[str, str] = {
     "manageable_pain": "manageable pain",
     "pain_3_day_streak": "pain for 3 days",
     "pain_worsening_trend": "worsening pain",
-    "recent_hard_load_plus_poor_today": "recent hard load plus poor check-in",
+    "recent_hard_load_plus_poor_today": "a heavy recent training load",
     "repeated_poor_readiness": "repeated poor check-ins",
-    "tracked_injury_high_risk_session": "active injury",
-    "recent_hard_session": "recent hard session",
-    "taper_poor_readiness": "taper plus poor check-in",
-    "reintegration_poor_readiness": "return phase plus poor check-in",
+    "tracked_injury_high_risk_session": "an active injury",
+    "recent_hard_session": "a recent hard session",
+    "taper_poor_readiness": "the taper phase",
+    "reintegration_poor_readiness": "the return phase",
     "fight_week": "fight week",
 }
 
@@ -835,8 +835,29 @@ def _has_pain_warning(warnings: Sequence[str]) -> bool:
     return bool({"manageable_pain", "pain_3_day_streak", "pain_worsening_trend"} & set(warnings))
 
 
+def _filter_warnings(warnings: Sequence[str]) -> list[str]:
+    """Drop labels fully covered by a stronger co-occurring signal so the athlete
+    never reads the same thing twice in one sentence. The message tier keys off the
+    filtered count too, so a pair that collapses to one label never claims to be
+    "multiple"."""
+    display = list(warnings)
+    if "recent_hard_load_plus_poor_today" in display and "recent_hard_session" in display:
+        display.remove("recent_hard_session")
+    if "pain_worsening_trend" in display and "pain_3_day_streak" in display:
+        display.remove("pain_3_day_streak")
+    return display
+
+
 def _warning_source_labels(warnings: Sequence[str]) -> tuple[str, ...]:
-    return tuple(_WARNING_SOURCE_LABELS.get(warning, warning.replace("_", " ")) for warning in warnings)
+    display = _filter_warnings(warnings)
+    return tuple(_WARNING_SOURCE_LABELS.get(warning, warning.replace("_", " ")) for warning in display)
+
+
+def _join_warning_labels(warnings: Sequence[str]) -> str:
+    labels = _warning_source_labels(warnings)
+    if len(labels) <= 2:
+        return " and ".join(labels)
+    return f"{', '.join(labels[:-1])}, and {labels[-1]}"
 
 
 def _specific_soft_warning_message(
@@ -880,7 +901,7 @@ def _specific_soft_warning_message(
         return (
             "modify",
             "Session reduced.",
-            "Your recent training load was high and today's check-in is poor.",
+            "Your recent training load was high, and today's check-in is poor.",
             "Keep rounds controlled and remove tiring extras.",
         )
 
@@ -907,7 +928,7 @@ def _specific_soft_warning_message(
         reason = "Manageable pain means the area needs protection today."
         action = "Avoid painful shots, clinch positions, impact, and hard conditioning."
         if session_risk == "high":
-            reason = "Manageable pain before contact work needs protection today."
+            reason = "Manageable pain before contact work means the area needs extra protection today."
             action = "Skip sparring, clinch pressure, hard bag work, and conditioning."
         return "modify", "Load reduced.", reason, action
 
@@ -961,19 +982,23 @@ def _soft_warning_message(
     phase: str,
     fight_week: bool,
 ) -> tuple[RecommendationDecision, str, str, str]:
+    # Count off the filtered set so a pair that collapses to one display label
+    # (e.g. worsening pain absorbing the pain streak) drops to the single-warning
+    # message instead of claiming "multiple" and then listing one.
+    warnings = _filter_warnings(warnings)
     warning_count = len(warnings)
     if warning_count >= 3:
         if session_risk == "high" or _has_pain_warning(warnings) or phase in {"TAPER", "REINTEGRATION"} or fight_week:
             return (
                 "pull_back",
                 "Pull back today.",
-                f"Multiple warning sources are showing: {' + '.join(_warning_source_labels(warnings))}. Hard combat work should be reduced today.",
+                f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Hard combat work should be reduced today.",
                 "Skip combat work and use recovery or light mobility instead.",
             )
         return (
             "modify",
             "Session reduced.",
-            f"Multiple warning sources are showing: {' + '.join(_warning_source_labels(warnings))}. Today needs a safer dose.",
+            f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Today needs a safer dose.",
             "Cut rounds, cap intensity, and remove conditioning.",
         )
 
@@ -981,13 +1006,12 @@ def _soft_warning_message(
         return (
             "modify",
             "Session reduced.",
-            f"Multiple warning sources are showing: {' + '.join(_warning_source_labels(warnings))}. Hard combat work should be reduced today.",
-            "Keep rounds controlled. Skip sparring, hard rounds, and conditioning finishers.",
+            f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Hard combat work should be reduced today.",
+            "Skip sparring, hard rounds, and conditioning finishers, and keep the remaining rounds controlled.",
         )
 
     if warning_count == 1:
-        decision, title, reason, action = _specific_soft_warning_message(warnings[0], session_risk=session_risk)
-        return decision, title, f"One warning source is showing: {_warning_source_labels(warnings)[0]}. {reason}", action
+        return _specific_soft_warning_message(warnings[0], session_risk=session_risk)
 
     if fight_week:
         return (
@@ -1008,7 +1032,7 @@ def _soft_warning_message(
     return (
         "train_as_planned",
         "Full session.",
-        "Your sleep, body, and pain check are clear today.",
+        "Your sleep, body, and pain checks are all clear today.",
         "Run the planned work and keep the rounds clean.",
     )
 
@@ -1148,7 +1172,7 @@ def build_readiness_adjustment(
         green_label = _first_active_open_injury_label(context)
         if green_label:
             title = "Train around it."
-            reason = f"Your sleep, body, and pain check are clear — just protect your {green_label} today."
+            reason = f"Your sleep, body, and pain checks are all clear — just protect your {green_label} today."
             action = "Run the planned work, keep the area clean, and stop if it flares."
 
     triggers = list(soft_warnings.triggers)

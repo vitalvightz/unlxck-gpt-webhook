@@ -3,6 +3,7 @@
 from api.contracts.readiness_message import (
     ReadinessCheckin,
     ReadinessContext,
+    _soft_warning_message,
     build_readiness_adjustment,
     classify_session_risk,
     is_support_session,
@@ -129,7 +130,7 @@ def test_green_copy_never_claims_clear_while_injured():
     adj = _decision("Recovery mobility", [_injury(None, "mild", label="knuckle graze")])
     assert adj.decision == "train_as_planned"
     assert "knuckle graze" in adj.reason
-    assert adj.reason != "Your sleep, body, and pain check are clear today."
+    assert adj.reason != "Your sleep, body, and pain checks are all clear today."
     _assert_card_shape(adj)
 
 
@@ -417,8 +418,8 @@ def test_poor_sleep_plus_flat_body_stacks_two_warnings():
 
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
-    assert "Multiple warning sources are showing" in adjustment.reason
-    assert "poor sleep + flat body" in adjustment.reason
+    assert "Multiple warning signs are showing" in adjustment.reason
+    assert "poor sleep and flat body" in adjustment.reason
     assert "sparring" in adjustment.action
     assert "hard rounds" in adjustment.action
     assert "conditioning finishers" in adjustment.action
@@ -435,7 +436,7 @@ def test_hard_sparring_only_has_no_warning_sources_or_modify_card():
 
     assert adjustment.decision == "train_as_planned"
     assert "Warning sources:" not in adjustment.message
-    assert "Multiple warning sources are showing" not in adjustment.message
+    assert "Multiple warning signs are showing" not in adjustment.message
     assert "session_risk_high" in adjustment.triggers
     _assert_card_shape(adjustment)
 
@@ -487,11 +488,11 @@ def test_resetting_checkin_clears_stale_warning_state():
     )
 
     assert poor.decision == "modify"
-    assert "Multiple warning sources are showing" in poor.reason
+    assert "Multiple warning signs are showing" in poor.reason
     assert reset.decision == "train_as_planned"
     assert "poor_sleep" not in reset.triggers
     assert "flat_body" not in reset.triggers
-    assert "Multiple warning sources are showing" not in reset.message
+    assert "Multiple warning signs are showing" not in reset.message
     _assert_card_shape(poor)
     _assert_card_shape(reset)
 
@@ -503,8 +504,8 @@ def test_one_manageable_pain_warning_does_not_claim_multiple_sources():
     )
 
     assert adjustment.decision == "modify"
-    assert "One warning source is showing: manageable pain." in adjustment.reason
-    assert "Multiple warning sources are showing" not in adjustment.message
+    assert "Manageable pain means the area needs protection today." in adjustment.reason
+    assert "Multiple warning signs are showing" not in adjustment.message
     _assert_card_shape(adjustment)
 
 
@@ -515,7 +516,7 @@ def test_hidden_context_warning_is_surfaced_in_source_list():
     )
 
     assert adjustment.decision == "modify"
-    assert "Multiple warning sources are showing: poor sleep + taper plus poor check-in." in adjustment.reason
+    assert "Multiple warning signs are showing: poor sleep and the taper phase." in adjustment.reason
     assert "taper_poor_readiness" in adjustment.triggers
     _assert_card_shape(adjustment)
 
@@ -542,7 +543,7 @@ def test_taper_poor_flat_manageable_pain_pulls_back_without_modify_copy():
 
     assert adjustment.decision == "pull_back"
     assert "Pull back today." in adjustment.message
-    assert "Multiple warning sources are showing" in adjustment.message
+    assert "Multiple warning signs are showing" in adjustment.message
     assert "Skip combat work" in adjustment.message
     assert "Keep sharp work only" not in adjustment.message
     assert "Remove 1 set" not in adjustment.message
@@ -564,7 +565,7 @@ def test_repeated_poor_readiness_adds_stronger_warning():
     )
 
     assert adjustment.decision == "modify"
-    assert "Multiple warning sources are showing" in adjustment.reason
+    assert "Multiple warning signs are showing" in adjustment.reason
     assert "Skip sparring, hard rounds, and conditioning finishers" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "repeated_poor_readiness" in adjustment.triggers
@@ -737,7 +738,7 @@ def test_three_soft_warnings_pull_back_before_high_risk_combat_work():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "Multiple warning sources are showing" in adjustment.reason
+    assert "Multiple warning signs are showing" in adjustment.reason
     assert "Skip combat work" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "flat_body" in adjustment.triggers
@@ -764,7 +765,7 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
     )
 
     assert adjustment.decision == "modify"
-    assert "Multiple warning sources are showing" in adjustment.reason
+    assert "Multiple warning signs are showing" in adjustment.reason
     assert "Cut rounds, cap intensity, and remove conditioning" in adjustment.action
     assert "poor_sleep_3_day_streak" in adjustment.triggers
     assert "flat_body_3_day_streak" in adjustment.triggers
@@ -780,8 +781,8 @@ def test_poor_sleep_in_taper_uses_taper_specific_copy():
 
     assert adjustment.decision == "modify"
     assert "taper_poor_readiness" in adjustment.triggers
-    assert "poor sleep + taper plus poor check-in" in adjustment.reason
-    assert "Multiple warning sources are showing" in adjustment.message
+    assert "poor sleep and the taper phase" in adjustment.reason
+    assert "Multiple warning signs are showing" in adjustment.message
     _assert_card_shape(adjustment)
 
 
@@ -793,8 +794,8 @@ def test_flat_body_in_reintegration_uses_reintegration_specific_copy():
 
     assert adjustment.decision == "modify"
     assert "reintegration_poor_readiness" in adjustment.triggers
-    assert "flat body + return phase plus poor check-in" in adjustment.reason
-    assert "Multiple warning sources are showing" in adjustment.message
+    assert "flat body and the return phase" in adjustment.reason
+    assert "Multiple warning signs are showing" in adjustment.message
     _assert_card_shape(adjustment)
 
 
@@ -805,7 +806,7 @@ def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "Multiple warning sources are showing" in adjustment.message
+    assert "Multiple warning signs are showing" in adjustment.message
     assert "Skip combat work" in adjustment.message
     _assert_card_shape(adjustment)
 
@@ -977,3 +978,23 @@ def test_readiness_messages_do_not_use_old_general_training_terms():
         message = build_readiness_adjustment(checkin, context).message
         for phrase in banned:
             assert phrase not in message
+
+
+def test_collapsing_warning_pair_does_not_claim_multiple_sources():
+    # A pair where one label is fully absorbed by a stronger co-occurring signal
+    # must NOT tier as "multiple" and then list a single source. It should fall
+    # through to the surviving warning's specific single-source message.
+    for warnings in (
+        ("pain_worsening_trend", "pain_3_day_streak"),
+        ("recent_hard_load_plus_poor_today", "recent_hard_session"),
+    ):
+        _, _, reason, _ = _soft_warning_message(
+            warnings, session_risk="medium", phase="SPP", fight_week=False
+        )
+        assert "Multiple warning signs are showing" not in reason
+
+    # A genuine two-source pair still reads as multiple.
+    _, _, reason, _ = _soft_warning_message(
+        ("poor_sleep", "flat_body"), session_risk="medium", phase="GPP", fight_week=False
+    )
+    assert "Multiple warning signs are showing: poor sleep and flat body." in reason
