@@ -135,7 +135,8 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
 def generate_nutrition_block(*, flags: dict) -> str:
     nutrition_block = "\nNutrition Module\n"
 
-    weight = flags.get("weight", 70)
+    from .weight_cut import parse_weight_value
+    weight = parse_weight_value(flags.get("weight")) or 70.0
     phase = flags.get("phase", "GPP").upper()
     fatigue = flags.get("fatigue", "low").lower()
     weight_cut_risk = flags.get("weight_cut_risk", False)

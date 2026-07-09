@@ -165,7 +165,10 @@ def compute_recovery_plan(training_context: dict) -> dict:
 def generate_recovery_block(training_context: dict) -> str:
     phase = training_context["phase"]
     fatigue = training_context["fatigue"]
-    age = int(training_context.get("age", 0))
+    try:
+        age = int(float(training_context.get("age") or 0))
+    except (ValueError, TypeError):
+        age = 0
     taper_week = phase == "TAPER"
     weight_cut_risk = training_context.get("weight_cut_risk", False)
     weight_cut_pct = float(training_context.get("weight_cut_pct", 0.0) or 0.0)
