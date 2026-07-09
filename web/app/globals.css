@@ -9706,17 +9706,32 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   margin: 4px 0 0;
 }
 
-.field-span-full {
-  grid-column: 1 / -1;
-}
-
 .onboarding-profile-grid,
+.onboarding-profile-core-grid,
+.onboarding-profile-detail-grid,
 .onboarding-fight-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.onboarding-profile-detail-grid {
+  align-items: start;
+  gap: 18px 16px;
+}
+
+.field-span-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1400px) {
+  .onboarding-step-layout-profile {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .onboarding-profile-grid,
+  .onboarding-profile-core-grid,
+  .onboarding-profile-detail-grid,
   .onboarding-fight-grid {
     grid-template-columns: 1fr;
   }
@@ -9750,18 +9765,26 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   }
 
   .onboarding-profile-grid,
+  .onboarding-profile-core-grid,
+  .onboarding-profile-detail-grid,
   .onboarding-fight-grid {
     gap: 14px 16px;
   }
 
   .onboarding-profile-grid .field,
+  .onboarding-profile-core-grid .field,
+  .onboarding-profile-detail-grid .field,
   .onboarding-fight-grid .field {
     gap: 8px;
   }
 
   .onboarding-profile-grid .field input,
+  .onboarding-profile-core-grid .field input,
+  .onboarding-profile-detail-grid .field input,
   .onboarding-fight-grid .field input,
   .onboarding-profile-grid .custom-select-trigger,
+  .onboarding-profile-core-grid .custom-select-trigger,
+  .onboarding-profile-detail-grid .custom-select-trigger,
   .onboarding-fight-grid .custom-select-trigger {
     min-height: 48px;
   }

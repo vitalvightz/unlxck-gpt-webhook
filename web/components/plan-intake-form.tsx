@@ -2392,7 +2392,7 @@ export function PlanIntakeForm() {
         />
 
         {currentStep === 0 ? (
-          <div className="step-layout onboarding-step-layout">
+          <div className="step-layout onboarding-step-layout onboarding-step-layout-profile">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               {refiningFromQuickBuild ? (
                 <p className="quick-build-refine-notice" role="status">
@@ -2405,7 +2405,7 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">Core athlete details</h2>
                 </div>
                 <p className="muted">Only your name and technical style are required here. Everything else is optional.</p>
-                <div className="form-grid onboarding-profile-grid">
+                <div className="form-grid onboarding-profile-core-grid">
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
                     <input
@@ -2442,7 +2442,7 @@ export function PlanIntakeForm() {
                 title="Add more detail"
                 hint="Body stats, stance, target weight, tactical style, status, and record. Not required to generate a plan."
               >
-                <div className="form-grid onboarding-profile-grid">
+                <div className="form-grid onboarding-profile-detail-grid">
                   <div className="field">
                     <label htmlFor="sex">Sex</label>
                     <CustomSelect
@@ -2506,7 +2506,7 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateAthlete("professional_status", value)}
                     />
                   </div>
-                  <div className={`field${invalidFieldId === "record" || recordHasError ? " field-invalid" : ""}`}>
+                  <div className={`field field-span-full${invalidFieldId === "record" || recordHasError ? " field-invalid" : ""}`}>
                     <label htmlFor="record">Record</label>
                     <input
                       id="record"

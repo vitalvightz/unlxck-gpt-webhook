@@ -1199,10 +1199,12 @@ function SessionCard({
               <p>{duration}</p>
             </div>
           ) : null}
-          <div>
-            <p className="today-detail-label">Status</p>
-            <p>{isNextSessionPreview ? "Pending — requires fresh check-in" : getCompletionLabel(status)}</p>
-          </div>
+          {!isNextSessionPreview ? (
+            <div>
+              <p className="today-detail-label">Status</p>
+              <p>{getCompletionLabel(status)}</p>
+            </div>
+          ) : null}
         </div>
       )}
       {isNextSessionPreview && !safeSession ? (
