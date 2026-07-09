@@ -480,12 +480,13 @@ function QuickBuildFormInner() {
         // until the athlete overrides it, so most athletes never touch the field.
         const trackedFrequency = (dayCount: number) =>
           Math.max(1, Math.min(dayCount, WEEKLY_FREQUENCY_OPTIONS.length));
+        const currentFrequency = current.weekly_training_frequency ?? 1;
         const wasTrackingDays =
           current.training_availability.length === 0 ||
-          current.weekly_training_frequency === trackedFrequency(current.training_availability.length);
+          currentFrequency === trackedFrequency(current.training_availability.length);
         const nextFrequency = wasTrackingDays
           ? trackedFrequency(nextValues.length)
-          : Math.min(current.weekly_training_frequency, Math.max(nextValues.length, 1));
+          : Math.min(currentFrequency, Math.max(nextValues.length, 1));
         return {
           ...current,
           training_availability: nextValues,
