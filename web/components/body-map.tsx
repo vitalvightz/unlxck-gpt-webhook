@@ -3,6 +3,7 @@
 import { useState, type KeyboardEvent } from "react";
 
 export type BodyMapSide = "front" | "back";
+export type BodyMapLayer = "muscle" | "joint";
 export type BodyMapSeverity = "low" | "moderate" | "high";
 
 export type BodyMapSelection = {
@@ -19,6 +20,12 @@ type Zone = {
   cx: number;
   cy: number;
   r: number;
+  // Which anatomy layer the zone belongs to. "muscle" zones show on the
+  // Muscles layer, "joint" zones on the Joints & bones layer, and "both"
+  // zones (head, shoulders, shins, spine) on either. A marked zone is always
+  // rendered regardless of the active layer so a selection can never vanish
+  // behind the toggle.
+  layer: "muscle" | "joint" | "both";
 };
 
 // Anatomical "Left"/"Right" refer to the figure's own side. Screen position must
@@ -33,59 +40,118 @@ type Zone = {
 //
 // This keeps "tap the side you feel it on" intuitive while the label stays
 // anatomically correct on both views.
+//
+// Zone labels double as the injury's free-text area, so every label must be a
+// phrase the shared injury location vocabulary (fightcamp LOCATION_MAP)
+// resolves — bicep, forearm, groin, ribs, hand, foot, traps, tricep, Achilles
+// are all known locations.
 const FRONT_ZONES: Record<string, Zone> = {
-  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16 },
-  l_shoulder: { label: "Left shoulder", cx: 124, cy: 68, r: 13 },
-  r_shoulder: { label: "Right shoulder", cx: 56, cy: 68, r: 13 },
-  chest: { label: "Chest", cx: 90, cy: 88, r: 14 },
-  l_elbow: { label: "Left elbow", cx: 142, cy: 118, r: 10 },
-  r_elbow: { label: "Right elbow", cx: 38, cy: 118, r: 10 },
-  core: { label: "Core", cx: 90, cy: 120, r: 14 },
-  l_wrist: { label: "Left wrist", cx: 156, cy: 155, r: 9 },
-  r_wrist: { label: "Right wrist", cx: 24, cy: 155, r: 9 },
-  l_hip: { label: "Left hip", cx: 110, cy: 155, r: 12 },
-  r_hip: { label: "Right hip", cx: 70, cy: 155, r: 12 },
-  l_quad: { label: "Left quad", cx: 108, cy: 190, r: 12 },
-  r_quad: { label: "Right quad", cx: 72, cy: 190, r: 12 },
-  l_knee: { label: "Left knee", cx: 106, cy: 220, r: 10 },
-  r_knee: { label: "Right knee", cx: 74, cy: 220, r: 10 },
-  l_shin: { label: "Left shin", cx: 106, cy: 252, r: 10 },
-  r_shin: { label: "Right shin", cx: 74, cy: 252, r: 10 },
-  l_ankle: { label: "Left ankle", cx: 108, cy: 282, r: 9 },
-  r_ankle: { label: "Right ankle", cx: 72, cy: 282, r: 9 },
+  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both" },
+  l_shoulder: { label: "Left shoulder", cx: 124, cy: 68, r: 13, layer: "both" },
+  r_shoulder: { label: "Right shoulder", cx: 56, cy: 68, r: 13, layer: "both" },
+  chest: { label: "Chest", cx: 90, cy: 88, r: 14, layer: "muscle" },
+  l_bicep: { label: "Left bicep", cx: 133, cy: 94, r: 10, layer: "muscle" },
+  r_bicep: { label: "Right bicep", cx: 47, cy: 94, r: 10, layer: "muscle" },
+  ribs: { label: "Ribs", cx: 90, cy: 106, r: 11, layer: "joint" },
+  l_elbow: { label: "Left elbow", cx: 141, cy: 118, r: 10, layer: "joint" },
+  r_elbow: { label: "Right elbow", cx: 39, cy: 118, r: 10, layer: "joint" },
+  core: { label: "Core", cx: 90, cy: 122, r: 14, layer: "muscle" },
+  l_forearm: { label: "Left forearm", cx: 146, cy: 137, r: 9, layer: "muscle" },
+  r_forearm: { label: "Right forearm", cx: 34, cy: 137, r: 9, layer: "muscle" },
+  l_wrist: { label: "Left wrist", cx: 151, cy: 156, r: 9, layer: "joint" },
+  r_wrist: { label: "Right wrist", cx: 29, cy: 156, r: 9, layer: "joint" },
+  l_hip: { label: "Left hip", cx: 110, cy: 155, r: 12, layer: "joint" },
+  r_hip: { label: "Right hip", cx: 70, cy: 155, r: 12, layer: "joint" },
+  groin: { label: "Groin", cx: 90, cy: 168, r: 9, layer: "muscle" },
+  l_hand: { label: "Left hand", cx: 159, cy: 181, r: 9, layer: "joint" },
+  r_hand: { label: "Right hand", cx: 21, cy: 181, r: 9, layer: "joint" },
+  l_quad: { label: "Left quad", cx: 105, cy: 190, r: 12, layer: "muscle" },
+  r_quad: { label: "Right quad", cx: 75, cy: 190, r: 12, layer: "muscle" },
+  l_knee: { label: "Left knee", cx: 105, cy: 220, r: 10, layer: "joint" },
+  r_knee: { label: "Right knee", cx: 75, cy: 220, r: 10, layer: "joint" },
+  l_shin: { label: "Left shin", cx: 105, cy: 252, r: 10, layer: "both" },
+  r_shin: { label: "Right shin", cx: 75, cy: 252, r: 10, layer: "both" },
+  l_ankle: { label: "Left ankle", cx: 105, cy: 282, r: 9, layer: "joint" },
+  r_ankle: { label: "Right ankle", cx: 75, cy: 282, r: 9, layer: "joint" },
+  l_foot: { label: "Left foot", cx: 114, cy: 300, r: 9, layer: "joint" },
+  r_foot: { label: "Right foot", cx: 66, cy: 300, r: 9, layer: "joint" },
 };
 
 // Back view is NOT a mirror: the athlete's left sits on the viewer's left. So
 // every "Left" zone takes the lower cx and every "Right" zone the higher cx —
 // the opposite of FRONT_ZONES — while the anatomical labels stay the same.
 const BACK_ZONES: Record<string, Zone> = {
-  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16 },
-  l_shoulder: { label: "Left shoulder", cx: 56, cy: 68, r: 13 },
-  r_shoulder: { label: "Right shoulder", cx: 124, cy: 68, r: 13 },
-  upper_back: { label: "Upper back", cx: 90, cy: 88, r: 14 },
-  l_elbow: { label: "Left elbow", cx: 38, cy: 118, r: 10 },
-  r_elbow: { label: "Right elbow", cx: 142, cy: 118, r: 10 },
-  lower_back: { label: "Lower back", cx: 90, cy: 125, r: 14 },
-  l_wrist: { label: "Left wrist", cx: 24, cy: 155, r: 9 },
-  r_wrist: { label: "Right wrist", cx: 156, cy: 155, r: 9 },
-  l_glute: { label: "Left glute", cx: 70, cy: 155, r: 12 },
-  r_glute: { label: "Right glute", cx: 110, cy: 155, r: 12 },
-  l_ham: { label: "Left hamstring", cx: 72, cy: 190, r: 12 },
-  r_ham: { label: "Right hamstring", cx: 108, cy: 190, r: 12 },
-  l_knee: { label: "Left knee", cx: 74, cy: 220, r: 10 },
-  r_knee: { label: "Right knee", cx: 106, cy: 220, r: 10 },
-  l_calf: { label: "Left calf", cx: 74, cy: 252, r: 10 },
-  r_calf: { label: "Right calf", cx: 106, cy: 252, r: 10 },
-  l_ankle: { label: "Left ankle", cx: 72, cy: 282, r: 9 },
-  r_ankle: { label: "Right ankle", cx: 108, cy: 282, r: 9 },
+  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both" },
+  traps: { label: "Traps", cx: 90, cy: 58, r: 9, layer: "muscle" },
+  l_shoulder: { label: "Left shoulder", cx: 56, cy: 68, r: 13, layer: "both" },
+  r_shoulder: { label: "Right shoulder", cx: 124, cy: 68, r: 13, layer: "both" },
+  upper_back: { label: "Upper back", cx: 90, cy: 90, r: 13, layer: "both" },
+  l_tricep: { label: "Left tricep", cx: 47, cy: 94, r: 10, layer: "muscle" },
+  r_tricep: { label: "Right tricep", cx: 133, cy: 94, r: 10, layer: "muscle" },
+  l_elbow: { label: "Left elbow", cx: 39, cy: 118, r: 10, layer: "joint" },
+  r_elbow: { label: "Right elbow", cx: 141, cy: 118, r: 10, layer: "joint" },
+  lower_back: { label: "Lower back", cx: 90, cy: 126, r: 14, layer: "both" },
+  l_forearm: { label: "Left forearm", cx: 34, cy: 137, r: 9, layer: "muscle" },
+  r_forearm: { label: "Right forearm", cx: 146, cy: 137, r: 9, layer: "muscle" },
+  l_wrist: { label: "Left wrist", cx: 29, cy: 156, r: 9, layer: "joint" },
+  r_wrist: { label: "Right wrist", cx: 151, cy: 156, r: 9, layer: "joint" },
+  l_hip: { label: "Left hip", cx: 70, cy: 150, r: 11, layer: "joint" },
+  r_hip: { label: "Right hip", cx: 110, cy: 150, r: 11, layer: "joint" },
+  l_glute: { label: "Left glute", cx: 70, cy: 158, r: 12, layer: "muscle" },
+  r_glute: { label: "Right glute", cx: 110, cy: 158, r: 12, layer: "muscle" },
+  l_hand: { label: "Left hand", cx: 21, cy: 181, r: 9, layer: "joint" },
+  r_hand: { label: "Right hand", cx: 159, cy: 181, r: 9, layer: "joint" },
+  l_ham: { label: "Left hamstring", cx: 75, cy: 190, r: 12, layer: "muscle" },
+  r_ham: { label: "Right hamstring", cx: 105, cy: 190, r: 12, layer: "muscle" },
+  l_knee: { label: "Left knee", cx: 75, cy: 220, r: 10, layer: "joint" },
+  r_knee: { label: "Right knee", cx: 105, cy: 220, r: 10, layer: "joint" },
+  l_calf: { label: "Left calf", cx: 75, cy: 252, r: 10, layer: "muscle" },
+  r_calf: { label: "Right calf", cx: 105, cy: 252, r: 10, layer: "muscle" },
+  l_achilles: { label: "Left Achilles", cx: 75, cy: 264, r: 8, layer: "joint" },
+  r_achilles: { label: "Right Achilles", cx: 105, cy: 264, r: 8, layer: "joint" },
+  l_ankle: { label: "Left ankle", cx: 75, cy: 283, r: 9, layer: "joint" },
+  r_ankle: { label: "Right ankle", cx: 105, cy: 283, r: 9, layer: "joint" },
 };
 
-const SILHOUETTE_PATH = [
-  "M76 41 C62 48,52 58,50 72 L46 100 Q44 112,38 122 L26 148 Q22 156,26 160",
-  "M104 41 C118 48,128 58,130 72 L134 100 Q136 112,142 122 L154 148 Q158 156,154 160",
-  "M76 41 Q72 50,70 62 L68 100 Q66 130,68 148 L70 168 Q72 180,74 195 L76 220 Q76 240,74 260 L72 280 Q70 292,66 298",
-  "M104 41 Q108 50,110 62 L112 100 Q114 130,112 148 L110 168 Q108 180,106 195 L104 220 Q104 240,106 260 L108 280 Q110 292,114 298",
-  "M70 148 Q90 156,110 148",
+// Half of the body outline (the viewer-left side, x < 90). The full figure is
+// this path plus a mirrored <use> across the vertical centre line x=90, which
+// guarantees the silhouette stays symmetric. The path is deliberately left
+// open: the fill auto-closes it straight up the centre line (so the torso
+// fills solid) while the stroke skips that closing edge, avoiding a visible
+// seam down the middle of the figure.
+const SILHOUETTE_HALF = [
+  "M90 34 L84 35",
+  "C83.6 40 83 44 79 47",
+  "C68 51 57 55 52.5 62",
+  "C46.5 68 43.5 76 42.5 84",
+  "C41.5 95 39.5 106 37.5 117",
+  "C35.5 124 33.5 131 31.5 138",
+  "C29.5 146 27.5 152 25.5 159",
+  "C23.5 166 21.5 172 20.5 178",
+  "C19.5 184 20.5 190 23.5 191",
+  "C26.5 192 28.5 188 29.5 183",
+  "C31 176 32 170 34 163",
+  "C36 155 38 147 40 139",
+  "C42 131 44 124 46 117",
+  "C48 108 50 98 52.5 90",
+  "C53.5 86 55 83 57 81",
+  "C58 92 59 102 60 112",
+  "C61 121 61.5 128 62.5 136",
+  "C63.5 144 61.5 150 60.5 157",
+  "C59.5 166 60.5 174 62.5 182",
+  "C64.5 193 65.5 204 66.5 214",
+  "C66.5 222 65.5 229 66.5 236",
+  "C67.5 246 66.5 256 68.5 266",
+  "C69.5 274 69.5 281 70.5 287",
+  "C70.5 293 68.5 297 64.5 300",
+  "C61 303 61 307 65 308",
+  "L80 308",
+  "C83 307 84 302 84 297",
+  "C83.5 288 82.5 278 82.5 268",
+  "C81.5 257 82.5 246 83.5 237",
+  "C84.5 229 84.5 222 85.5 214",
+  "C86.5 203 87.5 193 88.5 184",
+  "C89.5 178 90 174 90 171",
 ].join(" ");
 
 const SEVERITY_LABELS: Record<BodyMapSeverity, string> = {
@@ -93,6 +159,11 @@ const SEVERITY_LABELS: Record<BodyMapSeverity, string> = {
   moderate: "moderate severity",
   high: "high severity",
 };
+
+const LAYER_OPTIONS: Array<{ value: BodyMapLayer; label: string }> = [
+  { value: "muscle", label: "Muscles" },
+  { value: "joint", label: "Joints & bones" },
+];
 
 function findSelectionForZone(
   selections: BodyMapSelection[],
@@ -133,12 +204,14 @@ function buildZoneAriaLabel(
 
 function BodySvg({
   side,
+  layer,
   selections,
   onZoneSelect,
   hoverKey,
   setHoverKey,
 }: {
   side: BodyMapSide;
+  layer: BodyMapLayer;
   selections: BodyMapSelection[];
   onZoneSelect: (zone: string, label: string) => void;
   hoverKey: string | null;
@@ -147,7 +220,7 @@ function BodySvg({
   const zones = side === "front" ? FRONT_ZONES : BACK_ZONES;
   const sideLabel = side === "front" ? "Front" : "Back";
   const gradientId = `body-map-silhouette-gradient-${side}`;
-  const filterId = `body-map-soft-glow-${side}`;
+  const halfId = `body-map-silhouette-half-${side}`;
 
   return (
     <div className={`body-map-svg-wrap body-map-svg-wrap-${side}`} data-side={side}>
@@ -155,26 +228,31 @@ function BodySvg({
         {sideLabel}
       </p>
       <svg
-        viewBox="0 0 180 300"
+        viewBox="0 0 180 316"
         role="group"
         aria-label={`${sideLabel} body map for injury selection`}
       >
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.05" />
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
+            <stop offset="55%" stopColor="currentColor" stopOpacity="0.09" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0.04" />
           </linearGradient>
-          <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="0" stdDeviation="1.6" floodColor="currentColor" floodOpacity="0.2" />
-          </filter>
         </defs>
-        <g className="body-map-silhouette" style={{ fill: `url(#${gradientId})`, filter: `url(#${filterId})` }}>
-          <ellipse cx={90} cy={24} rx={14} ry={17} />
-          <path d={SILHOUETTE_PATH} />
+        <g className="body-map-silhouette" style={{ fill: `url(#${gradientId})` }}>
+          <ellipse cx={90} cy={21} rx={13} ry={16} />
+          <path id={halfId} d={SILHOUETTE_HALF} />
+          {/* Mirror of the half outline across x=90 keeps the figure symmetric. */}
+          <use href={`#${halfId}`} transform="scale(-1 1) translate(-180 0)" />
         </g>
         {Object.entries(zones).map(([key, zone]) => {
           const selection = findSelectionForZone(selections, key, zone.label);
           const isUsed = Boolean(selection);
+          // Zones outside the active layer stay hidden unless already marked,
+          // so switching layers can never hide a selection.
+          if (!isUsed && zone.layer !== "both" && zone.layer !== layer) {
+            return null;
+          }
           const isHover = hoverKey === key;
           const ariaLabel = buildZoneAriaLabel(zone.label, selection);
 
@@ -242,6 +320,7 @@ export function BodyMap({
   onSideChange,
 }: BodyMapProps) {
   const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [layer, setLayer] = useState<BodyMapLayer>("muscle");
   const activeZones = side === "front" ? FRONT_ZONES : BACK_ZONES;
   const hoverLabel = hoverKey ? activeZones[hoverKey]?.label ?? "" : "";
   const hasAnyMarked = selections.some((entry) => entry.label.trim());
@@ -249,9 +328,28 @@ export function BodyMap({
   return (
     <div className="body-map-panel" data-active-side={side}>
       <p className="body-map-title">Add injury area</p>
+      <div
+        className="body-map-toggle body-map-layer-toggle"
+        role="tablist"
+        aria-label="Body map layer"
+      >
+        {LAYER_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="tab"
+            aria-selected={layer === option.value}
+            className={`body-map-toggle-btn ${layer === option.value ? "body-map-toggle-btn-active" : ""}`}
+            onClick={() => setLayer(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
       <div className="body-map-svg-stack">
         <BodySvg
           side="front"
+          layer={layer}
           selections={selections}
           onZoneSelect={onZoneSelect}
           hoverKey={hoverKey}
@@ -259,18 +357,23 @@ export function BodyMap({
         />
         <BodySvg
           side="back"
+          layer={layer}
           selections={selections}
           onZoneSelect={onZoneSelect}
           hoverKey={hoverKey}
           setHoverKey={setHoverKey}
         />
       </div>
-      <div className="body-map-side-toggle" role="tablist" aria-label="Body map side">
+      <div
+        className="body-map-toggle body-map-side-toggle"
+        role="tablist"
+        aria-label="Body map side"
+      >
         <button
           type="button"
           role="tab"
           aria-selected={side === "front"}
-          className={`body-map-side-btn ${side === "front" ? "body-map-side-btn-active" : ""}`}
+          className={`body-map-toggle-btn ${side === "front" ? "body-map-toggle-btn-active" : ""}`}
           onClick={() => onSideChange("front")}
         >
           Front
@@ -279,7 +382,7 @@ export function BodyMap({
           type="button"
           role="tab"
           aria-selected={side === "back"}
-          className={`body-map-side-btn ${side === "back" ? "body-map-side-btn-active" : ""}`}
+          className={`body-map-toggle-btn ${side === "back" ? "body-map-toggle-btn-active" : ""}`}
           onClick={() => onSideChange("back")}
         >
           Back
@@ -289,7 +392,9 @@ export function BodyMap({
         {hoverLabel ||
           (hasAnyMarked
             ? "Tap another zone, or tap the marked zone again to raise severity."
-            : "Tap a zone, or type the area manually in a card.")}
+            : layer === "muscle"
+              ? "Tap where it hurts — switch to Joints & bones for knees, hands or ribs."
+              : "Tap where it hurts — switch to Muscles for quads, hamstrings or calves.")}
       </p>
       {hasAnyMarked ? (
         <ul className="body-map-legend" aria-label="Severity colour key">

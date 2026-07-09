@@ -635,6 +635,16 @@ def test_free_text_injury_fallback_still_parses_without_guided_injury():
         ("Left glute", "glute"),
         ("Right quad", "quads"),
         ("Core", "core"),
+        # Zones added with the muscles / joints & bones body-map layers.
+        ("Left bicep", "biceps"),
+        ("Right tricep", "triceps"),
+        ("Left forearm", "forearm"),
+        ("Left hand", "hand"),
+        ("Groin", "groin"),
+        ("Traps", "upper back"),
+        ("Left Achilles", "achilles"),
+        ("Left foot", "foot"),
+        ("Ribs", "chest"),
     ],
 )
 def test_body_map_area_labels_map_to_backend_canonical_locations(body_map_area: str, expected_canonical: str):
