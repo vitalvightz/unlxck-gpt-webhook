@@ -369,8 +369,9 @@ export function BodyMap({
 }: BodyMapProps) {
   const [hoverKey, setHoverKey] = useState<string | null>(null);
   const [layer, setLayer] = useState<BodyMapLayer>("muscle");
-  const activeZones = side === "front" ? FRONT_ZONES : BACK_ZONES;
-  const hoverLabel = hoverKey ? activeZones[hoverKey]?.label ?? "" : "";
+  const hoverLabel = hoverKey
+    ? FRONT_ZONES[hoverKey]?.label ?? BACK_ZONES[hoverKey]?.label ?? ""
+    : "";
   const hasAnyMarked = selections.some((entry) => entry.label.trim());
 
   return (
