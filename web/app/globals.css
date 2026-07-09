@@ -10550,7 +10550,7 @@ html[data-theme="light"] .injury-card-state {
 }
 
 .body-map-zone-joint {
-  fill: color-mix(in srgb, var(--surface) 92%, transparent);
+  fill: color-mix(in srgb, var(--bg-surface) 92%, transparent);
   stroke: rgba(186, 190, 200, 0.62);
   stroke-width: 1.5;
 }
