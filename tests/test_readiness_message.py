@@ -3,6 +3,7 @@
 from api.contracts.readiness_message import (
     ReadinessCheckin,
     ReadinessContext,
+    _soft_warning_message,
     build_readiness_adjustment,
     classify_session_risk,
     is_support_session,
@@ -977,3 +978,23 @@ def test_readiness_messages_do_not_use_old_general_training_terms():
         message = build_readiness_adjustment(checkin, context).message
         for phrase in banned:
             assert phrase not in message
+
+
+def test_collapsing_warning_pair_does_not_claim_multiple_sources():
+    # A pair where one label is fully absorbed by a stronger co-occurring signal
+    # must NOT tier as "multiple" and then list a single source. It should fall
+    # through to the surviving warning's specific single-source message.
+    for warnings in (
+        ("pain_worsening_trend", "pain_3_day_streak"),
+        ("recent_hard_load_plus_poor_today", "recent_hard_session"),
+    ):
+        _, _, reason, _ = _soft_warning_message(
+            warnings, session_risk="medium", phase="SPP", fight_week=False
+        )
+        assert "Multiple warning signs are showing" not in reason
+
+    # A genuine two-source pair still reads as multiple.
+    _, _, reason, _ = _soft_warning_message(
+        ("poor_sleep", "flat_body"), session_risk="medium", phase="GPP", fight_week=False
+    )
+    assert "Multiple warning signs are showing: poor sleep and flat body." in reason

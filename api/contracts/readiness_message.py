@@ -835,14 +835,21 @@ def _has_pain_warning(warnings: Sequence[str]) -> bool:
     return bool({"manageable_pain", "pain_3_day_streak", "pain_worsening_trend"} & set(warnings))
 
 
-def _warning_source_labels(warnings: Sequence[str]) -> tuple[str, ...]:
+def _filter_warnings(warnings: Sequence[str]) -> list[str]:
+    """Drop labels fully covered by a stronger co-occurring signal so the athlete
+    never reads the same thing twice in one sentence. The message tier keys off the
+    filtered count too, so a pair that collapses to one label never claims to be
+    "multiple"."""
     display = list(warnings)
-    # Drop labels fully covered by a stronger co-occurring signal so the athlete
-    # never reads the same thing twice in one sentence.
     if "recent_hard_load_plus_poor_today" in display and "recent_hard_session" in display:
         display.remove("recent_hard_session")
     if "pain_worsening_trend" in display and "pain_3_day_streak" in display:
         display.remove("pain_3_day_streak")
+    return display
+
+
+def _warning_source_labels(warnings: Sequence[str]) -> tuple[str, ...]:
+    display = _filter_warnings(warnings)
     return tuple(_WARNING_SOURCE_LABELS.get(warning, warning.replace("_", " ")) for warning in display)
 
 
@@ -975,6 +982,10 @@ def _soft_warning_message(
     phase: str,
     fight_week: bool,
 ) -> tuple[RecommendationDecision, str, str, str]:
+    # Count off the filtered set so a pair that collapses to one display label
+    # (e.g. worsening pain absorbing the pain streak) drops to the single-warning
+    # message instead of claiming "multiple" and then listing one.
+    warnings = _filter_warnings(warnings)
     warning_count = len(warnings)
     if warning_count >= 3:
         if session_risk == "high" or _has_pain_warning(warnings) or phase in {"TAPER", "REINTEGRATION"} or fight_week:
