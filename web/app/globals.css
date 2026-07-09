@@ -1005,8 +1005,62 @@ select:focus-visible {
   margin: 0;
 }
 
-.quick-build-starters .checkbox-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.quick-build-starters-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.quick-build-starters-copy .muted {
+  margin: 0;
+  font-size: 12px;
+}
+
+.quick-build-starter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.quick-build-starter-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-base), background var(--transition-base), transform var(--transition-base);
+}
+
+.quick-build-starter-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.quick-build-starter-card:focus-visible {
+  outline: 2px solid var(--progress-gold);
+  outline-offset: 2px;
+}
+
+.quick-build-starter-card-active {
+  border-color: rgba(181, 18, 43, 0.5);
+  background: var(--brand-red-soft);
+  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.35);
+}
+
+.quick-build-starter-card-label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.quick-build-starter-card-detail {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .quick-build-guide-header {
@@ -7926,8 +7980,9 @@ html[data-theme="light"] .today-injury-confirm-cancel {
     border-radius: 18px;
   }
 
-  .quick-build-starters .checkbox-grid {
-    grid-template-columns: 1fr;
+  .quick-build-starter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .quick-build-guide-header {
@@ -15412,6 +15467,21 @@ html[data-theme="light"] .quick-build-guide {
 html[data-theme="light"] .quick-build-starters {
   border-color: rgba(98, 77, 69, 0.08);
   background: linear-gradient(180deg, rgba(255, 252, 248, 0.96), rgba(255, 244, 237, 0.96));
+}
+
+html[data-theme="light"] .quick-build-starter-card {
+  border-color: rgba(98, 77, 69, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="light"] .quick-build-starter-card:hover {
+  border-color: rgba(98, 77, 69, 0.28);
+}
+
+html[data-theme="light"] .quick-build-starter-card-active {
+  border-color: rgba(146, 43, 45, 0.45);
+  background: var(--brand-red-soft);
+  box-shadow: inset 0 0 0 1px rgba(146, 43, 45, 0.3);
 }
 
 html[data-theme="light"] .quick-build-guide-track {

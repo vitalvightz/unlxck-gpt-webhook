@@ -2404,6 +2404,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Identity</p>
                   <h2 className="form-section-title">Core athlete details</h2>
                 </div>
+                <p className="muted">Only your name and technical style are required here. Everything else is optional.</p>
                 <div className="form-grid onboarding-profile-grid">
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
@@ -2417,6 +2418,31 @@ export function PlanIntakeForm() {
                       required
                     />
                   </div>
+                  <div className={`field${invalidFieldId === "technicalStyle" ? " field-invalid" : ""}`}>
+                    <label htmlFor="technicalStyle">Technical Style</label>
+                    <CustomSelect
+                      id="technicalStyle"
+                      value={form.athlete.technical_style?.[0] ?? ""}
+                      options={TECHNICAL_STYLE_OPTIONS}
+                      placeholder="Select technical style"
+                      includeEmptyOption
+                      invalid={invalidFieldId === "technicalStyle"}
+                      describedBy={invalidFieldId === "technicalStyle" ? "technicalStyle-error" : undefined}
+                      onChange={(value) => updateAthlete("technical_style", value ? [value] : [])}
+                    />
+                    <p className="muted">Technical style = your sport or rule set.</p>
+                    {invalidFieldId === "technicalStyle" && error ? (
+                      <p id="technicalStyle-error" className="error-text" role="alert">{error}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+
+              <OptionalDetails
+                title="Add more detail"
+                hint="Body stats, stance, target weight, tactical style, status, and record. Not required to generate a plan."
+              >
+                <div className="form-grid onboarding-profile-grid">
                   <div className="field">
                     <label htmlFor="sex">Sex</label>
                     <CustomSelect
@@ -2441,7 +2467,7 @@ export function PlanIntakeForm() {
                     <label htmlFor="heightCm">Height (cm)</label>
                     <input id="heightCm" type="number" min="0" step="1" inputMode="numeric" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
                   </div>
-                  <div className="field field-span-full">
+                  <div className="field">
                     <label htmlFor="stance">Stance</label>
                     <CustomSelect
                       id="stance"
@@ -2452,40 +2478,6 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateAthlete("stance", value)}
                     />
                   </div>
-                </div>
-              </article>
-
-              <article className="step-card">
-                <div className="form-section-header">
-                  <p className="kicker">Competitive profile</p>
-                  <h2 className="form-section-title">Style</h2>
-                </div>
-                <div className="form-grid onboarding-profile-grid">
-                  <div className={`field field-span-full${invalidFieldId === "technicalStyle" ? " field-invalid" : ""}`}>
-                    <label htmlFor="technicalStyle">Technical Style</label>
-                    <CustomSelect
-                      id="technicalStyle"
-                      value={form.athlete.technical_style[0] ?? ""}
-                      options={TECHNICAL_STYLE_OPTIONS}
-                      placeholder="Select technical style"
-                      includeEmptyOption
-                      invalid={invalidFieldId === "technicalStyle"}
-                      describedBy={invalidFieldId === "technicalStyle" ? "technicalStyle-error" : undefined}
-                      onChange={(value) => updateAthlete("technical_style", value ? [value] : [])}
-                    />
-                    <p className="muted">Technical style = your sport or rule set.</p>
-                    {invalidFieldId === "technicalStyle" && error ? (
-                      <p id="technicalStyle-error" className="error-text" role="alert">{error}</p>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-
-              <OptionalDetails
-                title="Add more detail"
-                hint="Target weight, tactical style, status, and record. Not required to generate a plan."
-              >
-                <div className="form-grid onboarding-profile-grid">
                   <div className="field">
                     <label htmlFor="targetWeightKg">Target weight (kg)</label>
                     <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />

@@ -380,15 +380,13 @@ function QuickBuildFormInner() {
       )?.key ?? null,
     [activeEquipmentPreset, activeFocusPreset, activeTrainingPreset],
   );
-  const starterPresetOptions: IntakeOption[] = useMemo(() => {
+  const availableStarters = useMemo(() => {
     const availableFocusKeys = new Set(
       availableFocusPresets
         .filter((entry) => !entry.disabledReason)
         .map((entry) => entry.preset.key),
     );
-    return QUICK_BUILD_STARTERS
-      .filter((starter) => availableFocusKeys.has(starter.focusPreset))
-      .map((starter) => presetToOption(starter));
+    return QUICK_BUILD_STARTERS.filter((starter) => availableFocusKeys.has(starter.focusPreset));
   }, [availableFocusPresets]);
 
   const trainingPresetOptions: IntakeOption[] = useMemo(
@@ -478,16 +476,23 @@ function QuickBuildFormInner() {
       const nextValues = toggleListValue(current[key], value);
       if (key === "training_availability") {
         const isRemoving = current.training_availability.includes(value) && !nextValues.includes(value);
-        const cappedFrequency = nextValues.length > 0
-          ? (current.weekly_training_frequency > nextValues.length ? nextValues.length : current.weekly_training_frequency)
-          : 1;
+        // Sessions per week follows the day count (one session per training day)
+        // until the athlete overrides it, so most athletes never touch the field.
+        const trackedFrequency = (dayCount: number) =>
+          Math.max(1, Math.min(dayCount, WEEKLY_FREQUENCY_OPTIONS.length));
+        const wasTrackingDays =
+          current.training_availability.length === 0 ||
+          current.weekly_training_frequency === trackedFrequency(current.training_availability.length);
+        const nextFrequency = wasTrackingDays
+          ? trackedFrequency(nextValues.length)
+          : Math.min(current.weekly_training_frequency, Math.max(nextValues.length, 1));
         return {
           ...current,
           training_availability: nextValues,
           hard_sparring_days: isRemoving
             ? current.hard_sparring_days.filter((day) => day !== value)
             : current.hard_sparring_days,
-          weekly_training_frequency: cappedFrequency,
+          weekly_training_frequency: nextFrequency,
         };
       }
       return { ...current, [key]: nextValues };
@@ -646,13 +651,12 @@ function QuickBuildFormInner() {
     }));
   }
 
-  function handleStarterSelect(key: string) {
-    if (!key) {
+  function handleStarterCardClick(starter: QuickBuildStarter) {
+    if (activeStarterPreset === starter.key) {
       clearStarterPreset();
       return;
     }
-    const starter = QUICK_BUILD_STARTERS.find((entry) => entry.key === key);
-    if (starter) applyStarterPreset(starter);
+    applyStarterPreset(starter);
   }
 
   function handleTrainingPresetSelect(key: string) {
@@ -777,14 +781,30 @@ function QuickBuildFormInner() {
       <QuickBuildGuide steps={quickBuildGuideSteps} />
 
       <section className="quick-build-starters" aria-label="Starter setups">
-        <PresetSelect
-          id="qb-starter-setup"
-          label="Starter setups"
-          placeholder="Select starter setup"
-          options={starterPresetOptions}
-          activeKey={activeStarterPreset}
-          onSelect={handleStarterSelect}
-        />
+        <div className="quick-build-starters-copy">
+          <span className="checkbox-group-label">One-tap starters</span>
+          <p className="muted">
+            Tap a starter to fill your schedule, equipment, and focus in one go. Adjust anything below, or tap again to
+            clear.
+          </p>
+        </div>
+        <div className="quick-build-starter-grid">
+          {availableStarters.map((starter) => {
+            const active = activeStarterPreset === starter.key;
+            return (
+              <button
+                key={starter.key}
+                type="button"
+                className={`quick-build-starter-card ${active ? "quick-build-starter-card-active" : ""}`.trim()}
+                aria-pressed={active}
+                onClick={() => handleStarterCardClick(starter)}
+              >
+                <span className="quick-build-starter-card-label">{starter.label}</span>
+                <span className="quick-build-starter-card-detail">{starter.description}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <article className="step-card">
@@ -941,6 +961,7 @@ function QuickBuildFormInner() {
             disabled={sessionsSelectDisabled}
             onChange={(value) => patch("weekly_training_frequency", Number(value) || 1)}
           />
+          <p className="muted">Matches your training days automatically. Lower it if some days should stay light.</p>
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>
