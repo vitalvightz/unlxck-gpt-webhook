@@ -24,6 +24,9 @@
       }
     ],
     "paths": {
+      "@/lib/today": [
+        "./lib/today-authoritative"
+      ],
       "@/*": [
         "./*"
       ]
