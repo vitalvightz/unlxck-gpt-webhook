@@ -10,12 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from api.models import (
     InjuryFlagRecord,
     LandingResponse,
     ProfileRecord,
+    SessionCompletionRecordResponse,
     SessionCompletionRequest,
     SessionCompletionResponse,
     TodayCheckinRecord,
@@ -91,6 +92,32 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         return TodayInjuryCheckinResponse(
             open_injuries=[InjuryFlagRecord(**row) for row in result.get("open_injuries", [])],
         )
+
+    @router.get(
+        "/api/today/session-completions",
+        response_model=list[SessionCompletionRecordResponse],
+    )
+    def list_session_completion_history(
+        limit: int = Query(default=30, ge=1, le=200),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> list[SessionCompletionRecordResponse]:
+        # History is System B only (session_completions). The legacy
+        # session_logs table has no web UI and stays out of this view.
+        rows = store.list_session_completions(profile.athlete_id, limit=limit)
+        return [SessionCompletionRecordResponse(**row) for row in rows]
+
+    @router.get(
+        "/api/today/checkins",
+        response_model=list[TodayCheckinRecord],
+    )
+    def list_checkin_history(
+        limit: int = Query(default=30, ge=1, le=200),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> list[TodayCheckinRecord]:
+        rows = store.list_today_checkins(profile.athlete_id, limit=limit)
+        return [_checkin_record(row) for row in rows]
 
     @router.get("/api/today", response_model=CommandView)
     def get_today_state(

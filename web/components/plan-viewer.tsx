@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -12,13 +12,16 @@ import {
   archivePlan,
   getActivePlan,
   getPlan,
+  getPlanCompletions,
   getToday,
   isRetryableApiFailure,
   rejectApprovedPlan,
   renamePlan,
   setActivePlan,
   submitManualStage2,
+  submitTodaySessionCompletion,
 } from "@/lib/api";
+import { formatAppDate } from "@/lib/date-format";
 import {
   ACTIVE_PLAN_OVERLAP_MESSAGE,
   type ActivePlanOverlapAction,
@@ -29,6 +32,7 @@ import {
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
+import { SessionCompletionForm } from "@/components/session-completion-form";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
@@ -43,7 +47,14 @@ import {
   buildBlockedWhy,
   type BlockedInjuryContextSummary,
 } from "@/lib/triage-block-reasons";
-import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
+import type {
+  PlanAdvisory,
+  PlanDetail,
+  StructuredDay,
+  StructuredSession,
+  TodaySessionCompletionRecord,
+  UserRole,
+} from "@/lib/types";
 import {
   PROFILE_REFRESH_FAILED_ATHLETE_NOTICE,
   planHasProfileRefreshFailed,
@@ -1701,6 +1712,15 @@ function AdminArtifactSection({
   );
 }
 
+/** Short human title for the retro-log panel heading. */
+function cleanTitleForRetroTarget(session: StructuredSession): string {
+  return (
+    (session.title || "").trim() ||
+    (session.session_type || "").trim().replace(/[_-]+/g, " ") ||
+    "Session"
+  );
+}
+
 export function PlanViewer({
   plan,
   accessToken,
@@ -1867,6 +1887,19 @@ export function PlanViewer({
   // We mirror that here so the camp map highlights the next session instead of
   // keeping the finished day under the "Today" badge (matching Overview/Today).
   const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
+  // Live logging state for this plan's cards: real completion rows plus the
+  // server-authoritative training day (drives Missed + the retro-log window).
+  const [planCompletions, setPlanCompletions] = useState<TodaySessionCompletionRecord[] | null>(null);
+  const [serverTrainingDay, setServerTrainingDay] = useState<string | null>(null);
+  const [retroTarget, setRetroTarget] = useState<{
+    day: StructuredDay;
+    session: StructuredSession;
+    sessionId: string;
+  } | null>(null);
+  const [retroSubmitting, setRetroSubmitting] = useState(false);
+  const [retroError, setRetroError] = useState<string | null>(null);
+  const [retroSavedMessage, setRetroSavedMessage] = useState<string | null>(null);
+  const completionsRequestSeq = useRef(0);
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [showActiveConflict, setShowActiveConflict] = useState(false);
@@ -1982,6 +2015,47 @@ export function PlanViewer({
       cancelled = true;
     };
   }, [accessToken, canManagePlan, plan.plan_id]);
+
+  // Live completions for this plan's cards. Same guard as the command-view
+  // fetch below: the rows are the viewer's own logging, so an admin opening
+  // another athlete's plan simply sees no live status overlay.
+  const refreshCompletions = useCallback(() => {
+    if (!accessToken || !canManagePlan) {
+      return;
+    }
+    // Sequence guard: this is also called imperatively after a retro-log, so a
+    // slow response from an earlier plan/viewer state must never overwrite a
+    // newer one. (React 18 makes a post-unmount setState a no-op, so no
+    // unmount cleanup is needed.)
+    const seq = ++completionsRequestSeq.current;
+    getPlanCompletions(accessToken, plan.plan_id)
+      .then((response) => {
+        if (seq === completionsRequestSeq.current) {
+          setPlanCompletions(response.completions);
+          setServerTrainingDay(response.current_training_day || null);
+        }
+      })
+      .catch(() => {
+        // No live overlay on failure — the plan stays fully readable.
+      });
+  }, [accessToken, canManagePlan, plan.plan_id]);
+
+  useEffect(() => {
+    // Drop the previous plan's rows before fetching so a plan switch never
+    // renders one plan's logging over another plan's cards.
+    setPlanCompletions(null);
+    setServerTrainingDay(null);
+    refreshCompletions();
+  }, [refreshCompletions]);
+
+  const handleRetroLog = useCallback(
+    (day: StructuredDay, session: StructuredSession, sessionId: string) => {
+      setRetroError(null);
+      setRetroSavedMessage(null);
+      setRetroTarget({ day, session, sessionId });
+    },
+    [],
+  );
 
   // Resolve the next-session focus for the camp map. The command view is the
   // viewer's own (server-scoped to their athlete id), so we only apply it when it
@@ -2800,13 +2874,80 @@ export function PlanViewer({
                 </div>
               ) : null}
               {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
-                <StructuredPlanRenderer
-                  plan={plan.outputs.structured_plan}
-                  focusDay={nextSessionFocusDate}
-                  currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
-                  createdAt={plan.created_at}
-                  planStatus={plan.status}
-                />
+                <>
+                  {retroSavedMessage ? (
+                    <div className="loading-status-strip" role="status">
+                      {retroSavedMessage}
+                    </div>
+                  ) : null}
+                  {retroTarget ? (
+                    <section className="support-panel sp-retro-log-panel">
+                      <div className="form-section-header">
+                        <p className="kicker">Log past session</p>
+                        <h3 className="form-section-title">
+                          {cleanTitleForRetroTarget(retroTarget.session)} —{" "}
+                          {formatAppDate(String(retroTarget.day.date || "").slice(0, 10))}
+                        </h3>
+                        <p className="muted">
+                          Back-fill how this session actually went. Sessions can be logged up to 7
+                          days after their scheduled day.
+                        </p>
+                      </div>
+                      {retroError ? (
+                        <div className="error-banner" role="alert">
+                          {retroError}
+                        </div>
+                      ) : null}
+                      <SessionCompletionForm
+                        key={retroTarget.sessionId}
+                        intent={null}
+                        showStatusPicker
+                        isSubmitting={retroSubmitting}
+                        onCancel={() => setRetroTarget(null)}
+                        onSubmit={async (status, details) => {
+                          if (!accessToken) {
+                            return;
+                          }
+                          setRetroSubmitting(true);
+                          setRetroError(null);
+                          try {
+                            await submitTodaySessionCompletion(accessToken, {
+                              plan_id: plan.plan_id,
+                              session_id: retroTarget.sessionId,
+                              status,
+                              training_day: String(retroTarget.day.date || "").slice(0, 10),
+                              session_rpe: details.sessionRpe,
+                              pain_after: details.painAfter,
+                              modification_reason: details.modificationReason,
+                              notes: details.notes,
+                            });
+                            setRetroTarget(null);
+                            setRetroSavedMessage("Session logged.");
+                            refreshCompletions();
+                          } catch (error) {
+                            setRetroError(
+                              error instanceof Error ? error.message : "Unable to log this session.",
+                            );
+                          } finally {
+                            setRetroSubmitting(false);
+                          }
+                        }}
+                      />
+                    </section>
+                  ) : null}
+                  <StructuredPlanRenderer
+                    plan={plan.outputs.structured_plan}
+                    focusDay={nextSessionFocusDate}
+                    currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
+                    createdAt={plan.created_at}
+                    planStatus={plan.status}
+                    completions={planCompletions}
+                    currentTrainingDayIso={serverTrainingDay}
+                    onLogSession={
+                      canManagePlan && !archivedPreview && !isViewerAdmin ? handleRetroLog : undefined
+                    }
+                  />
+                </>
               ) : (
                 <>
                   {isAwaitingStructuredUpgrade ? <StructuredPlanUpgradingNotice /> : null}

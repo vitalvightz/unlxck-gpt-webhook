@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 import uuid
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 
-from api.models import PlanDetail, PlanRenameRequest, PlanSummary, ProfileRecord, WeeklySchedule
+from api.contracts.training_day import resolve_training_day_str
+from api.models import (
+    PlanCompletionsResponse,
+    PlanDetail,
+    PlanRenameRequest,
+    PlanSummary,
+    ProfileRecord,
+    SessionCompletionRecordResponse,
+    WeeklySchedule,
+)
 from api.plan_mappers import (
     _is_archived_plan,
     _is_triage_blocked_plan,
@@ -83,6 +93,25 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             plan_row,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
+        )
+
+    @router.get("/api/plans/{plan_id}/completions", response_model=PlanCompletionsResponse)
+    def get_plan_completions(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+        plan_row: dict[str, Any] = Depends(require_plan_row),
+    ) -> PlanCompletionsResponse:
+        # Completions are athlete-owned rows; even an admin viewing another
+        # athlete's plan sees that athlete's logging only via admin surfaces,
+        # so this endpoint always reads the caller's own rows.
+        rows = store.list_plan_session_completions(
+            profile.athlete_id, str(plan_row.get("id") or "")
+        )
+        return PlanCompletionsResponse(
+            completions=[SessionCompletionRecordResponse(**row) for row in rows],
+            current_training_day=resolve_training_day_str(
+                datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+            ),
         )
 
     @router.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)

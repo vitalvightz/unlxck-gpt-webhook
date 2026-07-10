@@ -1007,6 +1007,10 @@ export type TodaySessionCompletionRequest = {
   plan_id: string;
   session_id: string;
   status: TodayCompletionStatus;
+  /** Omitted for the Today flow (server resolves the athlete-local day). A
+   * retro-log passes the explicit past day; the server enforces the 7-day
+   * back-fill window. */
+  training_day?: string | null;
   session_rpe?: number | null;
   pain_after?: number | null;
   modification_reason?: string;
@@ -1016,6 +1020,58 @@ export type TodaySessionCompletionRequest = {
 export type TodaySessionCompletionResponse = {
   completion_status: TodayCompletionStatus;
   landing_session_state: "none" | "resume" | "completed";
+};
+
+/** One stored session-completion row (mirrors SessionCompletionRecordResponse). */
+export type TodaySessionCompletionRecord = {
+  id: string;
+  athlete_id: string;
+  plan_id: string;
+  session_id: string;
+  training_day: string;
+  status: TodayCompletionStatus;
+  session_rpe?: number | null;
+  pain_after?: number | null;
+  modification_reason?: string;
+  notes?: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+/** One stored Today check-in row (mirrors TodayCheckinRecord on the API). */
+export type TodayCheckinHistoryRecord = {
+  id: string;
+  athlete_id: string;
+  plan_id: string;
+  training_day: string;
+  athlete_timezone?: string;
+  sleep: TodayCheckinSleep;
+  body: TodayCheckinBody;
+  pain: TodayCheckinPain;
+  phase: TodayCheckinPhase;
+  active_injury?: TodayActiveInjury;
+  previous_session?: TodayPreviousSession;
+  sharp_pain?: boolean;
+  instability?: boolean;
+  swelling?: boolean;
+  neurological_symptoms?: boolean;
+  illness_symptoms?: boolean;
+  cannot_warm_into_movement?: boolean;
+  worse_next_day_pain?: boolean;
+  recommendation_state: Exclude<TodayRecommendationState, "not_checked_in">;
+  recommendation_reason?: string;
+  recommendation_triggers?: string[];
+  created_at?: string;
+  updated_at?: string;
+};
+
+/** Live completion rows for one plan plus the server-authoritative current
+ * training day (used to gate the retro-log window in the plan viewer). */
+export type PlanCompletionsResponse = {
+  completions: TodaySessionCompletionRecord[];
+  current_training_day: string;
 };
 
 export type TodayInjuryCheckinStatus = "ongoing" | "improving" | "worse" | "resolved";

@@ -516,6 +516,78 @@ def _completion_session_is_support(
     return is_support_session(entry)
 
 
+# How many days back a session may still be logged after the fact. Mirrors
+# RETRO_LOG_WINDOW_DAYS in web/lib/camp-map.ts.
+RETRO_LOG_WINDOW_DAYS = 7
+
+
+def _validate_retro_log_day(
+    plan_row: Mapping[str, Any],
+    *,
+    requested_day: str,
+    today: str,
+    status_value: str,
+    session_id: str,
+) -> None:
+    """Reject an explicit past ``training_day`` outside the back-fill contract.
+
+    Retro logs must be terminal (a past session has no start/resume lifecycle),
+    inside the 7-day window, and — for structured plans — target a session that
+    was actually scheduled on that day.
+    """
+    try:
+        requested = date.fromisoformat(requested_day)
+        today_date = date.fromisoformat(today)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="training_day must be a YYYY-MM-DD date",
+        )
+    if requested > today_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="training_day cannot be in the future",
+        )
+    if (today_date - requested).days > RETRO_LOG_WINDOW_DAYS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Sessions can only be back-filled within {RETRO_LOG_WINDOW_DAYS} days.",
+        )
+    if status_value not in TERMINAL_COMPLETION_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A past session can only be logged as done, modified, or skipped.",
+        )
+
+    # Structured plans know exactly which sessions each day carried; the
+    # requested day+session must match one. Legacy plans without structured
+    # weeks stay permissive, matching the normal Today flow.
+    weeks = _structured_plan_weeks(plan_row)
+    if not weeks:
+        return
+    for week in weeks:
+        for day in _iter_mapping_items(week.get("days")):
+            if _clean_text(day.get("date"))[:10] != requested_day:
+                continue
+            explicit_ids = {
+                _clean_text(candidate.get("session_id"))
+                for candidate in _iter_mapping_items(day.get("sessions"))
+                if _clean_text(candidate.get("session_id"))
+            }
+            entry = _structured_session_entry_for_day(day, week=week)
+            entry_id = _clean_text(entry.get("session_id")) if entry else ""
+            if session_id in explicit_ids or (entry_id and session_id == entry_id):
+                return
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="That session is not scheduled on the requested day.",
+            )
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="The requested day is not part of this plan.",
+    )
+
+
 def upsert_session_completion(
     store: AppStore,
     *,
@@ -528,7 +600,9 @@ def upsert_session_completion(
 
     The server computes ``training_day`` and stamps ``started_at`` /
     ``completed_at`` from the status transition; the contract's field rules are
-    enforced before anything is written.
+    enforced before anything is written. An explicit past ``training_day`` in
+    the payload is a retro-log (7-day back-fill window, terminal statuses only,
+    session must be scheduled on that day).
     """
     plan_id = str(payload.get("plan_id") or "").strip()
     session_id = str(payload.get("session_id") or "").strip()
@@ -544,18 +618,33 @@ def upsert_session_completion(
     if plan_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
-    training_day = resolve_training_day(athlete_timezone, now=now)
+    today = resolve_training_day(athlete_timezone, now=now)
     now_iso = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
     status_value = str(payload.get("status") or "not_started")
+
+    requested_day = str(payload.get("training_day") or "").strip()
+    is_retro_log = bool(requested_day) and requested_day != today
+    if is_retro_log:
+        _validate_retro_log_day(
+            plan_row,
+            requested_day=requested_day,
+            today=today,
+            status_value=status_value,
+            session_id=session_id,
+        )
+    training_day = requested_day or today
 
     # Server-side safety hold: an active severe injury blocks actually training
     # this session (start / done / modified) — not just in the UI. Skipping or
     # reverting to not-started stays allowed so the athlete can still log that
     # they backed off. Mirrors the Today/Overview injury hold. A low-cost support /
     # filler session (mental cue, breathing/mobility reset) is exempt — it is the
-    # safe work the hold itself prescribes.
-    if status_value in _TRAINING_COMPLETION_STATUSES and not _completion_session_is_support(
-        plan_row, training_day, session_id
+    # safe work the hold itself prescribes. Retro-logs are exempt too: they
+    # record training that already happened, so today's injury cannot block them.
+    if (
+        not is_retro_log
+        and status_value in _TRAINING_COMPLETION_STATUSES
+        and not _completion_session_is_support(plan_row, training_day, session_id)
     ):
         severe = _active_severe_injury(_open_injury_flags(store, athlete_id))
         if severe is not None:

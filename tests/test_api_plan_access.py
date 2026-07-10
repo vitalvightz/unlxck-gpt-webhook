@@ -1053,3 +1053,77 @@ def test_admin_generation_jobs_normalizes_legacy_ready_status():
     )
     assert response.status_code == 200
     assert response.json()[0]["status"] == "completed"
+
+
+def test_plan_completions_returns_own_rows_and_current_training_day():
+    client, store, _ = _build_client()
+    store.ensure_profile(client.app.state.auth_service.users_by_token["athlete-token"])
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    other_plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_y",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    store.upsert_session_completion(
+        "athlete-1",
+        {
+            "plan_id": plan["id"],
+            "session_id": "s1",
+            "training_day": "2026-06-01",
+            "status": "done",
+            "session_rpe": 8,
+            "started_at": "2026-06-01T10:00:00+00:00",
+            "completed_at": "2026-06-01T11:00:00+00:00",
+        },
+    )
+    # A row on a different plan must not leak into this plan's view.
+    store.upsert_session_completion(
+        "athlete-1",
+        {
+            "plan_id": other_plan["id"],
+            "session_id": "sx",
+            "training_day": "2026-06-02",
+            "status": "skipped",
+            "modification_reason": "travel",
+        },
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}/completions",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert [row["session_id"] for row in body["completions"]] == ["s1"]
+    assert body["completions"][0]["status"] == "done"
+    assert body["completions"][0]["session_rpe"] == 8
+    # Server-authoritative athlete-local day, ISO formatted.
+    assert len(body["current_training_day"]) == 10
+
+
+def test_plan_completions_rejects_another_athletes_plan():
+    client, store, _ = _build_client()
+    other_user = AuthenticatedUser(
+        user_id="athlete-2",
+        email="other@example.com",
+        full_name="Other Athlete",
+        metadata={},
+    )
+    store.ensure_profile(other_user)
+    plan = store.create_plan(
+        athlete_id="athlete-2",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    response = client.get(
+        f"/api/plans/{plan['id']}/completions",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert response.status_code == 403

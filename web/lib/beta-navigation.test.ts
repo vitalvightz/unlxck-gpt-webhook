@@ -34,11 +34,16 @@ test("bottom nav never links to the standalone Nutrition route", () => {
   );
 });
 
-test("side menu exposes Overview, Today, Plan, Intake, Settings", () => {
+test("side menu exposes Overview, Today, Plan, History, Intake, Settings", () => {
   assert.deepEqual(
     SIDE_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "Intake", "Settings"],
+    ["Overview", "Today", "Plan", "History", "Intake", "Settings"],
   );
+});
+
+test("History routes to the history page", () => {
+  const historyItem = SIDE_NAV_ITEMS.find((item) => item.label === "History");
+  assert.equal(historyItem?.href, "/history");
 });
 
 test("side menu no longer exposes standalone Nutrition", () => {

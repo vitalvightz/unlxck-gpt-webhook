@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   classifySessionlessDay,
@@ -34,13 +34,20 @@ import {
   weekLabel,
 } from "@/lib/structured-plan";
 import {
+  buildCompletionIndex,
+  canRetroLog,
+  completionForSession,
+  completionSessionId,
   dayCompletion,
+  getSessionDisplayStatus,
   resolveNextPlanFocusDay,
   resolvePlanProgress,
   weekCompletion,
   weekLoadProxy,
   weekSessionSummary,
   type Completion,
+  type CompletionIndex,
+  type SessionDisplayStatus,
 } from "@/lib/camp-map";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { formatAppDate } from "@/lib/date-format";
@@ -56,7 +63,17 @@ import type {
   StructuredPlan,
   StructuredSession,
   StructuredWeek,
+  TodaySessionCompletionRecord,
 } from "@/lib/types";
+
+/** Live logging info CampDayCard resolves per session and hands to SessionCard:
+ * the display status (tone + label), the stored row (for RPE/reason lines) and
+ * the retro-log hook when the session is still loggable. */
+export type SessionCompletionInfo = {
+  display: SessionDisplayStatus;
+  completion?: TodaySessionCompletionRecord;
+  onLog?: () => void;
+};
 
 const titleize = formatPlanLabel;
 
@@ -236,6 +253,7 @@ export function SessionCard({
   day,
   defaultOpenBlocks,
   showDayContext = true,
+  completionInfo,
 }: {
   session: StructuredSession;
   day?: StructuredDay;
@@ -244,6 +262,9 @@ export function SessionCard({
    * the parent day card instead, so the same information does not repeat inside
    * every session. */
   showDayContext?: boolean;
+  /** Live logged status for this session (plan viewer only). Absent on
+   * surfaces without completion data (e.g. the Today screen's embedded card). */
+  completionInfo?: SessionCompletionInfo;
 }) {
   const detailsId = useId();
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
@@ -294,8 +315,34 @@ export function SessionCard({
         <div className="sp-session-meta">
           {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
+          {completionInfo?.display.label ? (
+            <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
+              {completionInfo.display.label}
+            </span>
+          ) : null}
         </div>
       </header>
+
+      {completionInfo?.completion &&
+      (completionInfo.completion.session_rpe != null || completionInfo.completion.modification_reason) ? (
+        <p className="sp-session-log-meta">
+          {completionInfo.completion.session_rpe != null
+            ? `RPE ${completionInfo.completion.session_rpe}/10`
+            : null}
+          {completionInfo.completion.session_rpe != null && completionInfo.completion.modification_reason
+            ? " · "
+            : null}
+          {completionInfo.completion.modification_reason
+            ? `Reason: ${completionInfo.completion.modification_reason}`
+            : null}
+        </p>
+      ) : null}
+
+      {completionInfo?.onLog ? (
+        <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>
+          Log this session
+        </button>
+      ) : null}
 
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
@@ -520,6 +567,9 @@ export function CampDayCard({
   isCurrent,
   currentLabel = "Today",
   defaultOpen,
+  completionIndex,
+  currentTrainingDayIso,
+  onLogSession,
 }: {
   day: StructuredDay;
   isCurrent?: boolean;
@@ -527,6 +577,13 @@ export function CampDayCard({
    * the view has advanced past a logged today's session. */
   currentLabel?: string;
   defaultOpen?: boolean;
+  /** Live completion rows keyed by training_day|session_id. When present the
+   * session cards show real done/modified/skipped/missed status. */
+  completionIndex?: CompletionIndex;
+  /** Server-authoritative athlete-local day (drives Missed + the retro window). */
+  currentTrainingDayIso?: string | null;
+  /** Opens the retro-log form for a past, still-loggable session. */
+  onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
   const userToggledOpen = useRef(false);
@@ -541,8 +598,30 @@ export function CampDayCard({
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
-  const completion = dayCompletion(day);
+  const completion = dayCompletion(day, completionIndex);
   const sessionCount = sessions.length;
+  const dayIso = date ? date.slice(0, 10) : null;
+
+  const completionInfoFor = (session: StructuredSession): SessionCompletionInfo | undefined => {
+    if (!completionIndex) {
+      return undefined;
+    }
+    const record = completionForSession(completionIndex, day, session);
+    const sessionId = completionSessionId(day, session);
+    // A session with no completion identity (id-less secondary) stays neutral.
+    if (!sessionId) {
+      return undefined;
+    }
+    const display = getSessionDisplayStatus(record, dayIso, currentTrainingDayIso ?? null);
+    const terminal = display.state === "done" || display.state === "modified" || display.state === "skipped";
+    const canLog =
+      Boolean(onLogSession) && !terminal && canRetroLog(dayIso, currentTrainingDayIso ?? null);
+    return {
+      display,
+      completion: record,
+      onLog: canLog ? () => onLogSession?.(day, session, sessionId) : undefined,
+    };
+  };
 
   return (
     <details
@@ -589,6 +668,7 @@ export function CampDayCard({
                 day={index === 0 ? day : undefined}
                 defaultOpenBlocks={isCurrent}
                 showDayContext={false}
+                completionInfo={completionInfoFor(session)}
               />
             ))}
           </div>
@@ -942,16 +1022,18 @@ function WeekStrip({
   selectedPos,
   currentPos,
   onSelect,
+  completionIndex,
 }: {
   weeks: StructuredWeek[];
   selectedPos: number;
   currentPos: number | null;
   onSelect: (pos: number) => void;
+  completionIndex?: CompletionIndex;
 }) {
   return (
     <nav className="cm-week-strip" aria-label="Camp weeks">
       {weeks.map((week, pos) => {
-        const completion = weekCompletion(week);
+        const completion = weekCompletion(week, completionIndex);
         const phase = cleanText(week.phase_label);
         const index = typeof week.week_index === "number" ? week.week_index : pos + 1;
         const selected = pos === selectedPos;
@@ -985,9 +1067,15 @@ function WeekStrip({
 /** The selected week's countdown/dates, load proxy and completion.
  *  The week goal is already shown in the heading via weekLabel, and the phase is
  *  already visible in the week pill, so this overview avoids repeating it. */
-function WeekOverview({ week }: { week: StructuredWeek }) {
+function WeekOverview({
+  week,
+  completionIndex,
+}: {
+  week: StructuredWeek;
+  completionIndex?: CompletionIndex;
+}) {
   const load = weekLoadProxy(week);
-  const completion = weekCompletion(week);
+  const completion = weekCompletion(week, completionIndex);
   const sessionSummary = weekSessionSummary(week);
   const countdownStart = cleanText(week.countdown_start);
   const countdownEnd = cleanText(week.countdown_end);
@@ -1048,6 +1136,9 @@ export function StructuredPlanRenderer({
   today,
   focusDay,
   currentDayLabel = "Today",
+  completions,
+  currentTrainingDayIso,
+  onLogSession,
 }: {
   plan: StructuredPlan;
   today?: Date;
@@ -1062,8 +1153,20 @@ export function StructuredPlanRenderer({
   /** Badge text for the highlighted day. Callers pass "Next session" alongside
    * `focusDay` so the advanced day is not mislabelled "Today". */
   currentDayLabel?: string;
+  /** Live completion rows from /api/plans/{id}/completions. When present the
+   * day cards colour every session from real logging instead of the static
+   * generation-time statuses. */
+  completions?: readonly TodaySessionCompletionRecord[] | null;
+  /** Server-authoritative athlete-local training day (YYYY-MM-DD). */
+  currentTrainingDayIso?: string | null;
+  /** Opens the retro-log flow for a past, still-loggable session. */
+  onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
   const weeks = getWeeks(plan);
+  const completionIndex = useMemo(
+    () => (completions ? buildCompletionIndex(completions) : undefined),
+    [completions],
+  );
 
   // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
   // and the Today tab can never disagree on the current day.
@@ -1112,9 +1215,12 @@ export function StructuredPlanRenderer({
             selectedPos={safePos}
             currentPos={calendarProgress.currentWeekPos}
             onSelect={handleSelectWeek}
+            completionIndex={completionIndex}
           />
 
-          {selectedWeek ? <WeekOverview week={selectedWeek} /> : null}
+          {selectedWeek ? (
+            <WeekOverview week={selectedWeek} completionIndex={completionIndex} />
+          ) : null}
 
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
@@ -1130,6 +1236,9 @@ export function StructuredPlanRenderer({
                     isCurrent={isCurrent}
                     currentLabel={currentDayLabel}
                     defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}
+                    completionIndex={completionIndex}
+                    currentTrainingDayIso={currentTrainingDayIso}
+                    onLogSession={onLogSession}
                   />
                 );
               })

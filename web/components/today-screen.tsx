@@ -19,7 +19,10 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { useToast } from "@/components/toast-provider";
-import { EffortSlider, FaceScale } from "@/components/rating-controls";
+import {
+  SessionCompletionForm,
+  type CompletionIntent,
+} from "@/components/session-completion-form";
 import { SafetyNote } from "@/components/safety-note";
 import { TODAY_RED_FLAG_SAFETY } from "@/lib/safety-copy";
 import {
@@ -43,8 +46,6 @@ import {
   TODAY_EMPTY_TITLE,
   buildTodayCheckinPayload,
   canCompleteTodaySession,
-  completionRequiresModificationReason,
-  completionRequiresReviewFields,
   getCompletionLabel,
   getDecisionTier,
   getInjuryOverrideBanner,
@@ -134,7 +135,6 @@ type TodaySafetyFlags = {
   worse_next_day_pain: boolean;
 };
 
-type CompletionIntent = Extract<TodayCompletionStatus, "done" | "modified" | "skipped"> | null;
 
 function formatTrainingDay(value: string | null | undefined): string {
   if (!value) {
@@ -793,106 +793,6 @@ function InjuryCheckinCard({
   );
 }
 
-function CompletionForm({
-  intent,
-  isSubmitting,
-  onCancel,
-  onSubmit,
-}: {
-  intent: CompletionIntent;
-  isSubmitting: boolean;
-  onCancel: () => void;
-  onSubmit: (payload: {
-    sessionRpe: number | null;
-    painAfter: number | null;
-    modificationReason: string;
-    notes: string;
-  }) => Promise<void>;
-}) {
-  const [sessionRpe, setSessionRpe] = useState<number | null>(null);
-  const [painAfter, setPainAfter] = useState<number | null>(null);
-  const [modificationReason, setModificationReason] = useState("");
-  const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  if (!intent) {
-    return null;
-  }
-
-  const activeIntent = intent;
-  const needsReviewFields = completionRequiresReviewFields(activeIntent);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    if (completionRequiresModificationReason(activeIntent) && !modificationReason.trim()) {
-      setError("Modified sessions need a reason.");
-      return;
-    }
-    if (needsReviewFields && (sessionRpe === null || painAfter === null)) {
-      setError("Add session RPE and pain-after before saving.");
-      return;
-    }
-    await onSubmit({
-      sessionRpe,
-      painAfter,
-      modificationReason: modificationReason.trim(),
-      notes: notes.trim(),
-    });
-  }
-
-  return (
-    <form className="today-completion-form" onSubmit={handleSubmit}>
-      {needsReviewFields ? (
-        <div className="today-completion-fields">
-          <div className="field">
-            <span>Session effort</span>
-            <EffortSlider
-              id="today-session-rpe"
-              ariaLabel="Session effort"
-              value={sessionRpe}
-              onChange={setSessionRpe}
-            />
-          </div>
-          <div className="field">
-            <span>Pain after</span>
-            <FaceScale value={painAfter} onChange={setPainAfter} />
-          </div>
-        </div>
-      ) : null}
-      {completionRequiresModificationReason(activeIntent) ? (
-        <label className="field" htmlFor="today-modification-reason">
-          <span>Modification reason</span>
-          <input
-            id="today-modification-reason"
-            value={modificationReason}
-            maxLength={2000}
-            onChange={(event) => setModificationReason(event.target.value)}
-          />
-        </label>
-      ) : null}
-      <label className="field" htmlFor="today-session-notes">
-        <span>Notes {intent === "skipped" ? "(optional)" : ""}</span>
-        <input
-          id="today-session-notes"
-          value={notes}
-          maxLength={2000}
-          onChange={(event) => setNotes(event.target.value)}
-        />
-      </label>
-      {error ? <p className="today-inline-error" role="alert">{error}</p> : null}
-      <div className="today-action-row">
-        <button type="submit" className="cta" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : `Save ${getCompletionLabel(intent).toLowerCase()}`}
-        </button>
-        <button type="button" className="ghost-button" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
-}
-
 /**
  * Compact train/modify/pull-back banner shown above today's blocks once the
  * athlete has checked in. Returns null before check-in. It frames the original
@@ -1275,12 +1175,13 @@ function SessionCard({
       ) : null}
 
       {canCompleteSession ? (
-        <CompletionForm
+        <SessionCompletionForm
+          key={intent ?? "closed"}
           intent={intent}
           isSubmitting={isSubmitting}
           onCancel={() => setIntent(null)}
-          onSubmit={(details) =>
-            saveCompletion(intent ?? "skipped", {
+          onSubmit={(nextStatus, details) =>
+            saveCompletion(nextStatus, {
               sessionRpe: details.sessionRpe,
               painAfter: details.painAfter,
               modificationReason: details.modificationReason,
@@ -1411,6 +1312,9 @@ export function TodayScreen() {
           <div className="today-hero-actions">
             <Link href={`/plans/${activePlan.id}`} className="secondary-button">
               View full plan
+            </Link>
+            <Link href="/history" className="ghost-button">
+              View history
             </Link>
             <Link href="/" className="ghost-button">
               Overview

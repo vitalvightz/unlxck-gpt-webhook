@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
@@ -1921,8 +1922,13 @@ class SessionCompletionRequest(BaseModel):
     plan_id: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
     status: CompletionStatus
+    # Omitted for the normal Today flow (the server resolves the athlete-local
+    # training day). A retro-log passes an explicit past day; the service
+    # enforces the back-fill window and terminal-status rule.
+    training_day: str | None = None
     session_rpe: int | None = Field(default=None, ge=1, le=10)
     pain_after: int | None = Field(default=None, ge=0, le=10)
+    # Carries the required explanation for both modified and skipped sessions.
     modification_reason: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
     notes: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
 
@@ -1930,6 +1936,20 @@ class SessionCompletionRequest(BaseModel):
     @classmethod
     def clean_text(cls, value: Any) -> str:
         return str(value or "").strip()
+
+    @field_validator("training_day")
+    @classmethod
+    def validate_training_day(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        try:
+            date.fromisoformat(cleaned)
+        except ValueError as exc:
+            raise ValueError("training_day must be a YYYY-MM-DD date") from exc
+        return cleaned
 
 
 class SessionCompletionRecordResponse(BaseModel):
@@ -1953,6 +1973,15 @@ class SessionCompletionResponse(BaseModel):
     completion: SessionCompletionRecordResponse
     completion_status: CompletionStatus
     landing_session_state: LandingSessionState
+
+
+class PlanCompletionsResponse(BaseModel):
+    """Live completion rows for one plan. ``current_training_day`` is the
+    server-authoritative athlete-local day the viewer uses to derive missed
+    sessions and gate the retro-log window."""
+
+    completions: list[SessionCompletionRecordResponse]
+    current_training_day: str
 
 
 class LandingResponse(BaseModel):

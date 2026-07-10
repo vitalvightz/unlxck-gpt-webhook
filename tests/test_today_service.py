@@ -1703,10 +1703,21 @@ class TestSessionCompletion:
     def test_skipped_is_allowed(self):
         store = _store_with_plan()
         row = upsert_session_completion(
-            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="skipped")
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=self._payload(status="skipped", modification_reason="travel day"),
         )
         assert row["status"] == "skipped"
         assert completion_landing_state(completion_status_of(row)) == "completed"
+
+    def test_skipped_requires_a_reason(self):
+        store = _store_with_plan()
+        with pytest.raises(HTTPException) as exc:
+            upsert_session_completion(
+                store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="skipped")
+            )
+        assert exc.value.status_code == 422
 
     def _add_severe_injury(self, store, *, status: str = "open"):
         store.create_injury_flag(
@@ -1750,7 +1761,10 @@ class TestSessionCompletion:
         store = _store_with_plan()
         self._add_severe_injury(store)
         row = upsert_session_completion(
-            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="skipped")
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=self._payload(status="skipped", modification_reason="injury hold"),
         )
         assert row["status"] == "skipped"
 
@@ -1892,3 +1906,136 @@ class TestScanForwardForNextTraining:
         entry = {"weekday": "Wed", "calendar_date": None, "effective_load": "hard"}
         result = self._scan([], [entry], training_date=date(2026, 6, 20))
         assert result is entry
+
+
+class TestRetroLogCompletion:
+    """Explicit past training_day = 7-day back-fill (retro-log) contract."""
+
+    NOW = datetime(2026, 6, 19, 12, 0, tzinfo=timezone.utc)  # training day 2026-06-19
+
+    def _payload(self, **overrides) -> dict:
+        base = {"plan_id": PLAN, "session_id": "sess-1", "status": "done"}
+        return {**base, **overrides}
+
+    def _upsert(self, store, **overrides):
+        return upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=self._payload(**overrides),
+            now=self.NOW,
+        )
+
+    def _structured_store(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = {
+            "weeks": [
+                {
+                    "days": [
+                        {
+                            "date": "2026-06-16",
+                            "sessions": [{"session_id": "sess-1", "title": "Lower power", "blocks": []}],
+                        },
+                        {
+                            "date": "2026-06-17",
+                            "sessions": [{"title": "Untitled primary", "blocks": []}],
+                        },
+                    ]
+                }
+            ]
+        }
+        return store
+
+    def test_retro_done_persists_requested_training_day(self):
+        store = _store_with_plan()
+        row = self._upsert(store, training_day="2026-06-16", session_rpe=7)
+        assert row["training_day"] == "2026-06-16"
+        assert row["status"] == "done"
+        assert row["completed_at"]
+
+    def test_todays_date_in_training_day_behaves_like_the_normal_flow(self):
+        store = _store_with_plan()
+        row = self._upsert(store, training_day="2026-06-19", status="started")
+        assert row["training_day"] == "2026-06-19"
+        assert row["status"] == "started"
+
+    def test_future_training_day_is_rejected(self):
+        store = _store_with_plan()
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store, training_day="2026-06-20")
+        assert exc.value.status_code == 422
+        assert "future" in exc.value.detail
+
+    def test_older_than_window_is_rejected(self):
+        store = _store_with_plan()
+        # 2026-06-12 is exactly 7 days back — allowed; 2026-06-11 is not.
+        row = self._upsert(store, training_day="2026-06-12")
+        assert row["training_day"] == "2026-06-12"
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store, training_day="2026-06-11")
+        assert exc.value.status_code == 422
+
+    def test_past_day_rejects_non_terminal_statuses(self):
+        store = _store_with_plan()
+        for bad_status in ("started", "not_started"):
+            with pytest.raises(HTTPException) as exc:
+                self._upsert(store, training_day="2026-06-16", status=bad_status)
+            assert exc.value.status_code == 422
+
+    def test_retro_log_bypasses_the_severe_injury_hold(self):
+        # The injury hold protects today's training; a retro-log records what
+        # already happened, so it must not be blocked.
+        store = _store_with_plan()
+        store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "checkin",
+                "plan_id": PLAN,
+                "body_area": "chest",
+                "description": "chest bruise",
+                "severity": "severe",
+                "status": "open",
+            },
+        )
+        row = self._upsert(store, training_day="2026-06-16")
+        assert row["status"] == "done"
+        # The same status logged for today stays blocked.
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store)
+        assert exc.value.status_code == 409
+
+    def test_structured_plan_rejects_days_outside_the_plan(self):
+        store = self._structured_store()
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store, training_day="2026-06-15")
+        assert exc.value.status_code == 422
+        assert "not part of this plan" in exc.value.detail
+
+    def test_structured_plan_rejects_sessions_not_scheduled_that_day(self):
+        store = self._structured_store()
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store, training_day="2026-06-16", session_id="sess-9")
+        assert exc.value.status_code == 422
+        assert "not scheduled" in exc.value.detail
+
+    def test_structured_plan_accepts_the_scheduled_session(self):
+        store = self._structured_store()
+        row = self._upsert(store, training_day="2026-06-16")
+        assert row["training_day"] == "2026-06-16"
+
+    def test_structured_plan_accepts_the_day_date_fallback_id(self):
+        # An id-less primary session logs under the day-date session id,
+        # mirroring _structured_session_entry_for_day.
+        store = self._structured_store()
+        row = self._upsert(store, training_day="2026-06-17", session_id="2026-06-17")
+        assert row["session_id"] == "2026-06-17"
+
+    def test_skipped_retro_log_still_requires_a_reason(self):
+        store = _store_with_plan()
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store, training_day="2026-06-16", status="skipped")
+        assert exc.value.status_code == 422
+        row = self._upsert(
+            store, training_day="2026-06-16", status="skipped", modification_reason="was travelling"
+        )
+        assert row["status"] == "skipped"

@@ -19,6 +19,7 @@ import type {
   MeResponse,
   NutritionWorkspaceState,
   NutritionWorkspaceUpdateRequest,
+  PlanCompletionsResponse,
   PlanDetail,
   PlanRequest,
   PlanSummary,
@@ -26,11 +27,13 @@ import type {
   SessionLogRecord,
   SessionLogRequest,
   SessionLogResponse,
+  TodayCheckinHistoryRecord,
   TodayCheckinRequest,
   TodayCheckinResponse,
   TodayCommandView,
   TodayInjuryCheckinRequest,
   TodayInjuryCheckinResponse,
+  TodaySessionCompletionRecord,
   TodaySessionCompletionRequest,
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
@@ -629,6 +632,14 @@ export function getPlan(token: string, planId: string): Promise<PlanDetail> {
   );
 }
 
+export function getPlanCompletions(token: string, planId: string): Promise<PlanCompletionsResponse> {
+  return withTransientRetries(() =>
+    readJson<PlanCompletionsResponse>(`/api/plans/${encodeURIComponent(planId)}/completions`, {
+      token,
+    }),
+  );
+}
+
 export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
   return withTransientRetries(() =>
     readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, {
@@ -1088,6 +1099,26 @@ export function submitTodaySessionCompletion(
     token,
     body: JSON.stringify(payload),
   });
+}
+
+export function listSessionCompletionHistory(
+  token: string,
+  limit = 60,
+): Promise<TodaySessionCompletionRecord[]> {
+  return withTransientRetries(() =>
+    readJson<TodaySessionCompletionRecord[]>(`/api/today/session-completions?limit=${limit}`, {
+      token,
+    }),
+  );
+}
+
+export function listTodayCheckinHistory(
+  token: string,
+  limit = 60,
+): Promise<TodayCheckinHistoryRecord[]> {
+  return withTransientRetries(() =>
+    readJson<TodayCheckinHistoryRecord[]>(`/api/today/checkins?limit=${limit}`, { token }),
+  );
 }
 
 export function submitTodayInjuryCheckin(

@@ -62,8 +62,15 @@ class TestRequiredFields:
         assert rec.modification_reason == "swapped to recovery"
 
     def test_skipped_record_is_allowed_without_timestamps(self):
-        rec = _record(status="skipped")
+        rec = _record(status="skipped", modification_reason="travel day")
         assert rec.status == "skipped"
+        assert rec.started_at is None and rec.completed_at is None
+
+    def test_skipped_requires_a_reason(self):
+        with pytest.raises(ValidationError):
+            _record(status="skipped")
+        with pytest.raises(ValidationError):
+            _record(status="skipped", modification_reason="   ")
 
 
 class TestLandingState:
