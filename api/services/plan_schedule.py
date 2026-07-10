@@ -32,7 +32,7 @@ def latest_visible_plan_row(store: AppStore, athlete_id: str) -> dict[str, Any] 
     return next(iter(_visible_plans_for_athlete(store.list_user_plans(athlete_id))), None)
 
 
-def weekly_schedule_or_none(plan_row: dict[str, Any], *, week_index: int) -> WeeklySchedule | None:
+def weekly_schedule_or_none(plan_row: Mapping[str, Any], *, week_index: int) -> WeeklySchedule | None:
     try:
         return _map_weekly_schedule(plan_row, week_index=week_index)
     except HTTPException:
