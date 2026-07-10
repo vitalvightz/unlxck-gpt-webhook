@@ -1,0 +1,447 @@
+"""Route-level fail-safe boundary for Today readiness and session execution.
+
+This is the thin HTTP-facing boundary. It does NOT invent readiness semantics:
+all status/severity/typed-signal decisions are delegated to the single canonical
+authority, :mod:`api.services.readiness_failsafe`. The boundary only adds the
+route-level protections the pure service cannot express on its own:
+
+* **Check-in** — delegated straight to ``today_service.submit_today_checkin``,
+  which already fails closed and emits the canonical typed signal (a failed
+  safety read can never persist ``train_as_planned``; unavailable injury/schedule
+  context becomes ``pull_back``). No second decision layer here.
+* **Session completion** — blocks *current-session execution* (started / done /
+  modified) with a retryable ``503`` when active injury state cannot be verified.
+* **Injury reconciliation** — refuses to run when open injury flags cannot be
+  read, so a failed read never masquerades as an empty injury set (which would
+  create duplicates or clear real injuries).
+* **Command view** — revokes/softens a STALE stored green recommendation when
+  live safety context cannot be verified, using the canonical fail-safe floor.
+
+The public functions mirror ``api.services.today_service`` so the router imports
+one module without changing API contracts.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Mapping
+
+from fastapi import HTTPException, status
+
+from api.contracts.command_view import CommandView, make_risk, sort_risk_watch
+from api.contracts.injury_checkin import injury_consequence_tier
+from api.contracts.readiness_message import ReadinessAdjustment
+from api.services import today_service as _today_service
+from api.services.readiness_failsafe import (
+    ReadinessContextStatus,
+    apply_context_failsafe,
+    status_from_components,
+)
+from api.store import AppStore
+
+logger = logging.getLogger(__name__)
+
+_CURRENT_SESSION_EXECUTION_STATUSES = frozenset({"started", "done", "modified"})
+
+# A neutral "green" adjustment fed to the canonical floor when a STORED
+# recommendation reads clean but live context cannot be verified. The floor
+# rewrites it to the degraded (modify) or unavailable (pull_back) copy.
+_GREEN_BASE_ADJUSTMENT = ReadinessAdjustment(
+    decision="train_as_planned",
+    title="",
+    reason="",
+    action="",
+)
+
+_COMMAND_VIEW_REMINDER = "Safety context is unavailable, so hard training is not cleared."
+
+
+@dataclass
+class ReadinessContextHealth:
+    """Tracks which safety-critical reads failed, by store-method component.
+
+    Status/severity is not decided here — :func:`status_from_components` maps the
+    recorded components onto the canonical status vocabulary, so there is exactly
+    one place that decides complete / degraded / unavailable.
+    """
+
+    failures: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def status(self) -> str:
+        return status_from_components(self.components).status
+
+    @property
+    def context_status(self) -> ReadinessContextStatus:
+        return status_from_components(self.components)
+
+    @property
+    def components(self) -> tuple[str, ...]:
+        return tuple(sorted(self.failures))
+
+    def record(self, component: str, exc: BaseException) -> None:
+        if component in self.failures:
+            return
+        self.failures[component] = type(exc).__name__
+        logger.error(
+            "Readiness context load failed: component=%s error_type=%s",
+            component,
+            type(exc).__name__,
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
+        try:
+            import sentry_sdk
+
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("readiness_context_component", component)
+                scope.set_tag("readiness_context_status", self.status)
+                scope.set_level("error")
+                sentry_sdk.capture_exception(exc)
+        except Exception:
+            # Observability must not become another availability dependency.
+            logger.debug("Unable to report readiness context failure to Sentry", exc_info=True)
+
+
+class _ReadinessTrackingStore:
+    """Proxy critical reads, preserving failures instead of converting them to
+    healthy-looking empty data."""
+
+    def __init__(
+        self,
+        store: AppStore,
+        health: ReadinessContextHealth,
+        *,
+        cache_injury_flags: bool = False,
+    ):
+        self._store = store
+        self.health = health
+        self.last_plan: Mapping[str, Any] | None = None
+        self._cache_injury_flags = cache_injury_flags
+        self._injury_flags_cache: list[dict[str, Any]] | None = None
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._store, name)
+
+    def _call_list(
+        self,
+        component: str,
+        method_name: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
+        method = getattr(self._store, method_name, None)
+        if not callable(method):
+            self.health.record(
+                component,
+                RuntimeError(f"required store method {method_name} is unavailable"),
+            )
+            return []
+        try:
+            return [dict(row) for row in (method(*args, **kwargs) or [])]
+        except Exception as exc:
+            self.health.record(component, exc)
+            return []
+
+    def list_today_checkins(
+        self,
+        athlete_id: str,
+        *,
+        limit: int = 14,
+    ) -> list[dict[str, Any]]:
+        return self._call_list("recent_checkins", "list_today_checkins", athlete_id, limit=limit)
+
+    def list_session_completions(
+        self,
+        athlete_id: str,
+        *,
+        limit: int = 30,
+    ) -> list[dict[str, Any]]:
+        return self._call_list(
+            "recent_sessions", "list_session_completions", athlete_id, limit=limit
+        )
+
+    def list_injury_flags(
+        self,
+        athlete_id: str,
+        *,
+        statuses: tuple = ("open", "monitoring"),
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        if self._cache_injury_flags and self._injury_flags_cache is not None:
+            return [dict(row) for row in self._injury_flags_cache[:limit]]
+
+        rows = self._call_list(
+            "injury_flags", "list_injury_flags", athlete_id, statuses=statuses, limit=limit
+        )
+        if self._cache_injury_flags and not self.health.failures:
+            self._injury_flags_cache = [dict(row) for row in rows]
+        for row in rows:
+            if str(row.get("status") or "") not in {"open", "monitoring"}:
+                continue
+            if row.get("consequence") not in (None, ""):
+                continue
+            try:
+                injury_consequence_tier(
+                    row.get("body_area"),
+                    row.get("description"),
+                    severity=row.get("severity"),
+                )
+            except Exception as exc:
+                self.health.record("injury_classification", exc)
+                break
+        return rows
+
+    def get_intake(self, intake_id: str) -> Mapping[str, Any] | None:
+        method = getattr(self._store, "get_intake", None)
+        if not callable(method):
+            self.health.record(
+                "intake",
+                RuntimeError("required store method get_intake is unavailable"),
+            )
+            return None
+        try:
+            row = method(intake_id)
+        except Exception as exc:
+            self.health.record("intake", exc)
+            return None
+        if row is None:
+            self.health.record(
+                "intake",
+                LookupError("active plan references an intake row that was not found"),
+            )
+        return row
+
+    def get_plan_for_athlete(
+        self,
+        plan_id: str,
+        athlete_id: str,
+    ) -> Mapping[str, Any] | None:
+        # This is the ownership-authority read, not optional readiness context.
+        # Let failures abort the request; returning None would misreport an outage
+        # as "plan not found" and could bypass the intended ownership distinction.
+        row = self._store.get_plan_for_athlete(plan_id, athlete_id)
+        if row:
+            self.last_plan = row
+        return row
+
+
+def _legacy_plan_has_schedule_source(plan_row: Mapping[str, Any]) -> bool:
+    brief = plan_row.get("planning_brief")
+    if not isinstance(brief, Mapping):
+        return False
+    role_map = brief.get("weekly_role_map")
+    return isinstance(role_map, Mapping) and bool(role_map.get("weeks"))
+
+
+def _probe_schedule(
+    plan_row: Mapping[str, Any] | None,
+    training_day: str,
+    health: ReadinessContextHealth,
+) -> None:
+    """Record parser/resolver failures without treating a legitimate rest day as failure."""
+
+    if not plan_row:
+        return
+
+    try:
+        structured_weeks = _today_service._structured_plan_weeks(plan_row)
+    except Exception as exc:
+        health.record("schedule", exc)
+        return
+
+    if structured_weeks:
+        try:
+            # A clean ``None`` is a legitimate rest day. Only parser failure is UNKNOWN.
+            _today_service._structured_today_session_entry(plan_row, training_day)
+        except Exception as exc:
+            health.record("schedule", exc)
+        return
+
+    if not _legacy_plan_has_schedule_source(plan_row):
+        return
+
+    try:
+        (
+            _latest_visible_plan_row,
+            parse_iso_date,
+            resolve_current_week,
+            resolve_today_and_next,
+            _weekly_schedule_or_none,
+        ) = _today_service._plan_schedule_helpers()
+        training_date = parse_iso_date(training_day)
+        if training_date is None:
+            raise ValueError("training day could not be parsed")
+        _week_index, week = resolve_current_week(plan_row, today=training_date)
+        resolve_today_and_next(week, today=training_date)
+    except Exception as exc:
+        health.record("schedule", exc)
+
+
+def _status_warning(context_status: ReadinessContextStatus) -> str:
+    codes = ", ".join(context_status.reason_codes)
+    return f"readiness_context_status={context_status.status}; reason_codes={codes}"
+
+
+def _raise_execution_unavailable() -> None:
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            "Safety context is temporarily unavailable, so this session cannot be "
+            "started or completed. Retry when injury status can be verified."
+        ),
+        headers={"Retry-After": "30"},
+    )
+
+
+def _injury_flags_readable(store: AppStore, athlete_id: str) -> bool:
+    """True when the athlete's open injury flags can be read right now.
+
+    A failed read must NOT be treated as an empty injury set — the caller uses
+    this to hard-block (retryable 503) rather than silently proceed on unknown
+    injury state.
+    """
+    health = ReadinessContextHealth()
+    method = getattr(store, "list_injury_flags", None)
+    if not callable(method):
+        health.record(
+            "injury_flags",
+            RuntimeError("required store method list_injury_flags is unavailable"),
+        )
+        return False
+    try:
+        method(athlete_id, statuses=("open", "monitoring"))
+    except Exception as exc:
+        health.record("injury_flags", exc)
+        return False
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Check-in and landing: the canonical service already fails closed and emits the
+# typed signal, so the boundary is a straight pass-through (single authority).
+# ---------------------------------------------------------------------------
+submit_today_checkin = _today_service.submit_today_checkin
+resolve_today_landing = _today_service.resolve_today_landing
+
+
+def upsert_session_completion(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str | None,
+    payload: Mapping[str, Any],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Block current-session execution when active injury state cannot be verified."""
+
+    completion_status = str(payload.get("status") or "not_started")
+    current_day = _today_service.resolve_training_day(athlete_timezone, now=now)
+    requested_day = str(payload.get("training_day") or "").strip()
+    is_retro_log = bool(requested_day) and requested_day != current_day
+
+    # Retro logs record training that already happened, and skip / not-started do
+    # not execute a session, so neither needs a live injury snapshot.
+    if completion_status in _CURRENT_SESSION_EXECUTION_STATUSES and not is_retro_log:
+        if not _injury_flags_readable(store, athlete_id):
+            _raise_execution_unavailable()
+
+    return _today_service.upsert_session_completion(
+        store,
+        athlete_id=athlete_id,
+        athlete_timezone=athlete_timezone,
+        payload=payload,
+        now=now,
+    )
+
+
+def submit_today_injury_checkin(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    payload: Mapping[str, Any],
+    athlete_timezone: str | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Reconcile injuries, refusing to run when open flags cannot be read.
+
+    Reconciliation needs the existing open flags for identity. A failed read must
+    not masquerade as an empty set (which would create duplicate injuries or clear
+    real ones), so this returns a retryable 503 instead. The refreshed readiness
+    recommendation is failed-safe by ``today_service`` itself.
+    """
+    if not _injury_flags_readable(store, athlete_id):
+        _raise_execution_unavailable()
+
+    return _today_service.submit_today_injury_checkin(
+        store,
+        athlete_id=athlete_id,
+        payload=payload,
+        athlete_timezone=athlete_timezone,
+        now=now,
+    )
+
+
+def _apply_fail_safe_to_command_view(
+    view: CommandView,
+    health: ReadinessContextHealth,
+) -> CommandView:
+    context_status = health.context_status
+    if context_status.is_complete:
+        return view
+
+    # Structured, machine-readable signals only — never prose the UI must parse.
+    warning = _status_warning(context_status)
+    if warning not in view.today.warnings:
+        view.today.warnings.append(warning)
+    for code in context_status.reason_codes:
+        token = f"reason_code:{code}"
+        if token not in view.today.warnings:
+            view.today.warnings.append(token)
+
+    # Only a STALE green recommendation needs revoking; an already-conservative
+    # stored state is preserved.
+    if str(view.today.recommendation_state) != "train_as_planned":
+        return view
+
+    floored = apply_context_failsafe(_GREEN_BASE_ADJUSTMENT, context_status)
+    view.today.recommendation_state = floored.decision
+    view.today.recommendation_reason = floored.message
+    # Map the canonical decision onto the command view's decision tier: degraded
+    # softens to MODIFY, unavailable holds at PULL BACK.
+    view.today.decision_tier = "pull_back" if floored.decision == "pull_back" else "modify"
+    reminder = make_risk("reminder", text=_COMMAND_VIEW_REMINDER)
+    view.risk_watch = sort_risk_watch([*view.risk_watch, reminder])
+    return view
+
+
+def build_today_command_view(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str | None,
+    now: datetime | None = None,
+) -> CommandView:
+    """Build Today while preserving UNKNOWN safety context as a conservative state."""
+
+    health = ReadinessContextHealth()
+    tracked = _ReadinessTrackingStore(store, health)
+    view = _today_service.build_today_command_view(
+        tracked,
+        athlete_id=athlete_id,
+        athlete_timezone=athlete_timezone,
+        now=now,
+    )
+    _probe_schedule(tracked.last_plan, view.today.training_day, health)
+    return _apply_fail_safe_to_command_view(view, health)
+
+
+__all__ = [
+    "ReadinessContextHealth",
+    "build_today_command_view",
+    "resolve_today_landing",
+    "submit_today_checkin",
+    "submit_today_injury_checkin",
+    "upsert_session_completion",
+]

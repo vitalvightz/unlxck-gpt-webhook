@@ -27,7 +27,7 @@ from api.models import (
 )
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
-from api.services.readiness_fail_safe import (
+from api.services.today_readiness_boundary import (
     build_today_command_view,
     resolve_today_landing,
     submit_today_checkin,
