@@ -22,6 +22,12 @@ begin
 end;
 $$;
 
+-- Retained for backend/service-role introspection and historical migrations
+-- only. It intentionally trusts profiles.role = 'admin' alone, so it must NOT be
+-- used in any browser-facing RLS policy or mutation guard: the env allowlist
+-- (UNLXCK_ADMIN_EMAILS) is the real admin kill-switch and lives only in the
+-- backend, so cross-athlete access is granted exclusively via service-role
+-- endpoints. See migration 20260710120000_revoke_client_admin_cross_athlete_rls.sql.
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -85,6 +91,12 @@ create table if not exists public.profiles (
 );
 
 
+-- Role and username changes must flow through the service-role backend (which
+-- records the admin audit trail and enforces the username-change policy). There
+-- is deliberately no is_admin() bypass here: a stale DB-role admin whose email
+-- was removed from UNLXCK_ADMIN_EMAILS must not be able to self-escalate or
+-- bypass the username policy directly from the browser. See migration
+-- 20260710120000_revoke_client_admin_cross_athlete_rls.sql.
 create or replace function public.prevent_self_role_escalation()
 returns trigger
 language plpgsql
@@ -92,10 +104,10 @@ security definer
 set search_path = public
 as $$
 begin
-  if auth.role() <> 'service_role' and not public.is_admin() then
+  if auth.role() <> 'service_role' then
     if (tg_op = 'INSERT' and new.role <> 'athlete')
       or (tg_op = 'UPDATE' and new.role is distinct from old.role) then
-      raise exception 'Only admins can change profile roles.';
+      raise exception 'Only the backend service role can change profile roles.';
     end if;
   end if;
 
@@ -110,7 +122,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if auth.role() <> 'service_role' and not public.is_admin() then
+  if auth.role() <> 'service_role' then
     if new.username is distinct from old.username
       or new.username_change_history is distinct from old.username_change_history then
       raise exception 'Use the username change endpoint.';
@@ -1030,18 +1042,23 @@ alter table public.plans enable row level security;
 alter table public.generation_jobs enable row level security;
 alter table public.plan_generation_rate_limits enable row level security;
 
+-- Own-rows-only for browser/anon clients. Cross-athlete admin reads go through
+-- the FastAPI service-role endpoints (which enforce the env allowlist), never
+-- through client RLS — so public.is_admin() no longer appears here.
 drop policy if exists "profiles_self_or_admin_select" on public.profiles;
-create policy "profiles_self_or_admin_select" on public.profiles
-for select using (auth.uid() = id or public.is_admin());
+drop policy if exists "profiles_self_select" on public.profiles;
+create policy "profiles_self_select" on public.profiles
+for select using (auth.uid() = id);
 
 drop policy if exists "profiles_self_update" on public.profiles;
 create policy "profiles_self_update" on public.profiles
-for update using (auth.uid() = id or public.is_admin())
-with check (auth.uid() = id or public.is_admin());
+for update using (auth.uid() = id)
+with check (auth.uid() = id);
 
 drop policy if exists "intakes_self_or_admin_select" on public.athlete_intakes;
-create policy "intakes_self_or_admin_select" on public.athlete_intakes
-for select using (athlete_id = auth.uid() or public.is_admin());
+drop policy if exists "intakes_self_select" on public.athlete_intakes;
+create policy "intakes_self_select" on public.athlete_intakes
+for select using (athlete_id = auth.uid());
 
 -- athlete_intakes: authenticated browser clients may read their own records,
 -- but writes must go through FastAPI/service-role business logic.
@@ -1053,8 +1070,9 @@ drop policy if exists "athlete_intakes_self_or_admin_update" on public.athlete_i
 drop policy if exists "athlete_intakes_self_or_admin_delete" on public.athlete_intakes;
 
 drop policy if exists "plans_self_or_admin_select" on public.plans;
-create policy "plans_self_or_admin_select" on public.plans
-for select using (athlete_id = auth.uid() or public.is_admin());
+drop policy if exists "plans_self_select" on public.plans;
+create policy "plans_self_select" on public.plans
+for select using (athlete_id = auth.uid());
 
 -- plans: authenticated browser clients may read their own plans,
 -- but writes must go through FastAPI/service-role business logic.
@@ -1063,8 +1081,9 @@ drop policy if exists "plans_self_or_admin_update" on public.plans;
 drop policy if exists "plans_self_or_admin_delete" on public.plans;
 
 drop policy if exists "generation_jobs_self_or_admin_select" on public.generation_jobs;
-create policy "generation_jobs_self_or_admin_select" on public.generation_jobs
-for select using (athlete_id = auth.uid() or public.is_admin());
+drop policy if exists "generation_jobs_self_select" on public.generation_jobs;
+create policy "generation_jobs_self_select" on public.generation_jobs
+for select using (athlete_id = auth.uid());
 
 -- generation_jobs: authenticated browser clients may read their own jobs,
 -- but writes must go through FastAPI/service-role business logic.
@@ -1095,13 +1114,17 @@ create index if not exists admin_role_audit_created_at_idx
 
 alter table public.admin_role_audit enable row level security;
 
+-- Admin-only table: no browser access at all. The backend reads it via
+-- service_role (which bypasses RLS), so a permanently-false policy plus the
+-- revoked authenticated grant keeps every browser client out — including a
+-- stale DB-role admin — while the service-role admin endpoints keep working.
 drop policy if exists "admin_role_audit_admin_select" on public.admin_role_audit;
-create policy "admin_role_audit_admin_select" on public.admin_role_audit
-for select using (public.is_admin());
+drop policy if exists "admin_role_audit_no_client_select" on public.admin_role_audit;
+create policy "admin_role_audit_no_client_select" on public.admin_role_audit
+for select using (false);
 
 revoke all on public.admin_role_audit from anon;
-revoke insert, update, delete on public.admin_role_audit from authenticated;
-grant select on public.admin_role_audit to authenticated;
+revoke all on public.admin_role_audit from authenticated;
 grant all on public.admin_role_audit to service_role;
 
 -- Atomic admin role change + audit (see migration
@@ -1382,25 +1405,29 @@ alter table public.injury_flags enable row level security;
 alter table public.adaptation_notes enable row level security;
 alter table public.admin_reviews enable row level security;
 
+-- Own-rows-only for browser/anon clients; cross-athlete admin access is
+-- service-role only (see is_admin() note above).
 drop policy if exists "daily_checkins_owner_select" on public.daily_checkins;
 create policy "daily_checkins_owner_select" on public.daily_checkins
-for select using (athlete_id = auth.uid() or public.is_admin());
+for select using (athlete_id = auth.uid());
 
 drop policy if exists "session_logs_owner_select" on public.session_logs;
 create policy "session_logs_owner_select" on public.session_logs
-for select using (athlete_id = auth.uid() or public.is_admin());
+for select using (athlete_id = auth.uid());
 
 drop policy if exists "injury_flags_owner_select" on public.injury_flags;
 create policy "injury_flags_owner_select" on public.injury_flags
-for select using (athlete_id = auth.uid() or public.is_admin());
+for select using (athlete_id = auth.uid());
 
 drop policy if exists "adaptation_notes_owner_select" on public.adaptation_notes;
 create policy "adaptation_notes_owner_select" on public.adaptation_notes
-for select using (athlete_id = auth.uid() or public.is_admin());
+for select using (athlete_id = auth.uid());
 
+-- Admin-only table: no browser access at all (service_role bypasses RLS).
 drop policy if exists "admin_reviews_admin_select" on public.admin_reviews;
-create policy "admin_reviews_admin_select" on public.admin_reviews
-for select using (public.is_admin());
+drop policy if exists "admin_reviews_no_client_select" on public.admin_reviews;
+create policy "admin_reviews_no_client_select" on public.admin_reviews
+for select using (false);
 
 revoke all on public.daily_checkins from anon;
 revoke all on public.session_logs from anon;
@@ -1412,13 +1439,12 @@ revoke insert, update, delete on public.daily_checkins from authenticated;
 revoke insert, update, delete on public.session_logs from authenticated;
 revoke insert, update, delete on public.injury_flags from authenticated;
 revoke insert, update, delete on public.adaptation_notes from authenticated;
-revoke insert, update, delete on public.admin_reviews from authenticated;
+revoke all on public.admin_reviews from authenticated;
 
 grant select on public.daily_checkins to authenticated;
 grant select on public.session_logs to authenticated;
 grant select on public.injury_flags to authenticated;
 grant select on public.adaptation_notes to authenticated;
-grant select on public.admin_reviews to authenticated;
 
 grant all on public.daily_checkins to service_role;
 grant all on public.session_logs to service_role;
@@ -1500,13 +1526,15 @@ create trigger set_session_completions_updated_at
 alter table public.today_checkins enable row level security;
 alter table public.session_completions enable row level security;
 
+-- Own-rows-only for browser/anon clients; cross-athlete admin access is
+-- service-role only (see is_admin() note above).
 drop policy if exists "today_checkins_owner_select" on public.today_checkins;
 create policy "today_checkins_owner_select" on public.today_checkins
-for select using (athlete_id = auth.uid() or public.is_admin());
+for select using (athlete_id = auth.uid());
 
 drop policy if exists "session_completions_owner_select" on public.session_completions;
 create policy "session_completions_owner_select" on public.session_completions
-for select using (athlete_id = auth.uid() or public.is_admin());
+for select using (athlete_id = auth.uid());
 
 revoke all on public.today_checkins from anon;
 revoke all on public.session_completions from anon;

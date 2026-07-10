@@ -15,6 +15,7 @@ message engine.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import date, datetime, timezone
@@ -49,6 +50,19 @@ from api.contracts.readiness_message import (
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
 from api.services.active_plan import resolve_active_plan
+from api.services.readiness_failsafe import (
+    CHECKINS_UNAVAILABLE,
+    COMPLETIONS_UNAVAILABLE,
+    INJURY_CONTEXT_UNAVAILABLE,
+    INTAKE_UNAVAILABLE,
+    SESSION_UNAVAILABLE,
+    ContextStatusBuilder,
+    ReadinessContextStatus,
+    apply_context_failsafe,
+    build_readiness_signal,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def _plan_schedule_helpers():
@@ -195,24 +209,33 @@ def _same_day_checkin_warnings(
     return [TODAY_CHECKIN_WARNING] if has_same_day_checkin else []
 
 
-def _safe_recent_today_checkins(store: AppStore, athlete_id: str, *, limit: int = 4) -> list[dict[str, Any]]:
+def _checked_recent_today_checkins(
+    store: AppStore, athlete_id: str, *, limit: int = 4
+) -> tuple[list[dict[str, Any]], bool]:
+    """Return ``(rows, ok)``. ``ok`` is False only when the read RAISED — a
+    genuinely empty history (or a minimal test double without the method) is a
+    healthy ``ok=True`` case. A raised read must not look like "no history"."""
     lister = getattr(store, "list_today_checkins", None)
     if not callable(lister):
-        return []
+        return [], True
     try:
-        return list(lister(athlete_id, limit=limit) or [])
+        return list(lister(athlete_id, limit=limit) or []), True
     except Exception:
-        return []
+        logger.exception("[today] recent_checkins_read_failed athlete_id=%s", athlete_id)
+        return [], False
 
 
-def _safe_recent_session_completions(store: AppStore, athlete_id: str, *, limit: int = 3) -> list[dict[str, Any]]:
+def _checked_recent_session_completions(
+    store: AppStore, athlete_id: str, *, limit: int = 3
+) -> tuple[list[dict[str, Any]], bool]:
     lister = getattr(store, "list_session_completions", None)
     if not callable(lister):
-        return []
+        return [], True
     try:
-        return list(lister(athlete_id, limit=limit) or [])
+        return list(lister(athlete_id, limit=limit) or []), True
     except Exception:
-        return []
+        logger.exception("[today] recent_completions_read_failed athlete_id=%s", athlete_id)
+        return [], False
 
 
 def _entry_mapping_for_readiness(entry: Any) -> dict[str, Any]:
@@ -236,7 +259,11 @@ def _entry_mapping_for_readiness(entry: Any) -> dict[str, Any]:
     return {key: getattr(entry, key) for key in keys if getattr(entry, key, None) not in (None, "")}
 
 
-def _today_session_for_readiness(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any]:
+def _resolve_today_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any]:
+    """Resolve today's session mapping for readiness. MAY RAISE on malformed plan
+    data — callers decide whether that is a best-effort skip or a degraded-context
+    signal. An empty ``{}`` means "no scheduled session today" (a rest day), which
+    is a normal, non-failure result."""
     structured_entry = _structured_today_session_entry(plan_row, training_day)
     if structured_entry:
         return dict(structured_entry)
@@ -251,64 +278,81 @@ def _today_session_for_readiness(plan_row: Mapping[str, Any], training_day: str)
     training_date = _parse_iso_date(training_day)
     if training_date is None:
         return {}
-    try:
-        _week_index, week = _resolve_current_week(plan_row, today=training_date)
-        today_entry, _next_entry = _resolve_today_and_next(week, today=training_date)
-    except Exception:
-        return {}
+    _week_index, week = _resolve_current_week(plan_row, today=training_date)
+    today_entry, _next_entry = _resolve_today_and_next(week, today=training_date)
     if not _has_scheduled_day_content(today_entry):
         return {}
     return _entry_mapping_for_readiness(today_entry)
 
 
-def _intake_payload_for_readiness(store: AppStore, plan_row: Mapping[str, Any]) -> Mapping[str, Any]:
-    intake_id = str(plan_row.get("intake_id") or "").strip()
-    getter = getattr(store, "get_intake", None)
-    if not intake_id or not callable(getter):
-        return {}
+def _today_session_for_readiness(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any]:
+    """Best-effort today's-session resolution (display/completion callers). A
+    malformed plan degrades to ``{}`` and never crashes the caller."""
     try:
-        return _intake_payload_from_row(getter(intake_id))
+        return _resolve_today_session_entry(plan_row, training_day)
     except Exception:
         return {}
 
 
-def _readiness_context_for_today(
-    store: AppStore,
-    *,
-    athlete_id: str,
-    plan_row: Mapping[str, Any],
-    training_day: str,
-    phase: str,
-    open_injuries: Sequence[Mapping[str, Any]] | None = None,
-) -> ReadinessContext:
-    resolved_injuries = (
-        open_injuries if open_injuries is not None else _open_injury_flags(store, athlete_id)
-    )
-    return ReadinessContext(
-        training_day=training_day,
-        phase=phase,
-        today_session=_today_session_for_readiness(plan_row, training_day),
-        active_plan=plan_row,
-        intake=_intake_payload_for_readiness(store, plan_row),
-        # Attach the coarse consequence tier so the readiness engine can scale the
-        # decision by injury TYPE (head/neck, structural, rib, tendon, joint), not
-        # severity alone. Single chokepoint for every readiness computation.
-        open_injuries=_with_injury_consequence(resolved_injuries),
-        recent_checkins=_safe_recent_today_checkins(store, athlete_id),
-        recent_sessions=_safe_recent_session_completions(store, athlete_id),
-    )
+def _checked_today_session_for_readiness(
+    plan_row: Mapping[str, Any], training_day: str
+) -> tuple[dict[str, Any], bool]:
+    """Readiness-path today's-session resolution. Returns ``(entry, ok)`` where
+    ``ok=False`` marks a resolution FAILURE (degraded context) so a session whose
+    risk we cannot classify never silently reads as a safe/rest day."""
+    try:
+        return _resolve_today_session_entry(plan_row, training_day), True
+    except Exception:
+        logger.exception("[today] session_resolution_failed training_day=%s", training_day)
+        return {}, False
 
 
-def _with_injury_consequence(
+def _checked_intake_payload_for_readiness(
+    store: AppStore, plan_row: Mapping[str, Any]
+) -> tuple[Mapping[str, Any], bool]:
+    """Return ``(intake_payload, ok)``. A missing ``intake_id`` / absent store
+    method is a normal ``ok=True`` empty result; only a RAISED read marks intake
+    context unavailable (degraded)."""
+    intake_id = str(plan_row.get("intake_id") or "").strip()
+    getter = getattr(store, "get_intake", None)
+    if not intake_id or not callable(getter):
+        return {}, True
+    try:
+        return _intake_payload_from_row(getter(intake_id)), True
+    except Exception:
+        logger.exception("[today] intake_read_failed intake_id=%s", intake_id)
+        return {}, False
+
+
+def _checked_open_injury_flags(
+    store: AppStore, athlete_id: str
+) -> tuple[list[dict[str, Any]], bool]:
+    """Return ``(open_flags, ok)``. Injury state is the most safety-critical
+    input, so a RAISED read is a hard signal (``ok=False``) — we cannot rule out a
+    severe injury, and an empty list must not be assumed. A minimal test double
+    without the method is a normal ``ok=True`` empty case."""
+    lister = getattr(store, "list_injury_flags", None)
+    if not callable(lister):
+        return [], True
+    try:
+        return [dict(flag) for flag in (lister(athlete_id, statuses=("open", "monitoring")) or [])], True
+    except Exception:
+        logger.exception("[today] injury_flags_read_failed athlete_id=%s", athlete_id)
+        return [], False
+
+
+def _checked_with_injury_consequence(
     injuries: Sequence[Mapping[str, Any]],
-) -> tuple[dict[str, Any], ...]:
-    """Return the open injuries with a ``consequence`` tier attached (best-effort).
+) -> tuple[tuple[dict[str, Any], ...], bool]:
+    """Attach the coarse ``consequence`` tier to each open injury.
 
-    Classification reuses the shared taxonomy via ``injury_consequence_tier``; a
-    transient scorer failure must never crash Today, so it degrades to ``None``
-    (minor) for that injury rather than raising.
+    Returns ``(enriched, ok)``. ``ok=False`` when the classifier RAISED for a
+    present injury — we then cannot grade its consequence (head/neck vs. tendon),
+    which is safety-critical, so the caller treats the context as unavailable
+    rather than silently scoring the injury as minor.
     """
     enriched: list[dict[str, Any]] = []
+    ok = True
     for injury in injuries or []:
         row = dict(injury)
         if "consequence" not in row:
@@ -319,9 +363,103 @@ def _with_injury_consequence(
                     severity=row.get("severity"),
                 )
             except Exception:
+                logger.exception("[today] injury_consequence_classification_failed")
                 row["consequence"] = None
+                ok = False
         enriched.append(row)
-    return tuple(enriched)
+    return tuple(enriched), ok
+
+
+def _readiness_context_and_status(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_row: Mapping[str, Any],
+    training_day: str,
+    phase: str,
+    open_injuries: Sequence[Mapping[str, Any]] | None = None,
+) -> tuple[ReadinessContext, ReadinessContextStatus]:
+    """Assemble the readiness context AND track which safety reads failed.
+
+    Every failed safety-critical read contributes a structured reason code so the
+    fail-safe floor (see ``apply_context_failsafe``) can keep a missing read from
+    ever being interpreted as readiness. When ``open_injuries`` is supplied by the
+    caller (already read upstream) the flag read is skipped, but the consequence
+    classification is still verified.
+    """
+    builder = ContextStatusBuilder()
+
+    if open_injuries is not None:
+        resolved_injuries: list[dict[str, Any]] = [dict(flag) for flag in open_injuries]
+    else:
+        resolved_injuries, injuries_ok = _checked_open_injury_flags(store, athlete_id)
+        if not injuries_ok:
+            builder.add(INJURY_CONTEXT_UNAVAILABLE)
+
+    # Attach the coarse consequence tier so the readiness engine can scale the
+    # decision by injury TYPE (head/neck, structural, rib, tendon, joint), not
+    # severity alone. A classification failure for a present injury is treated as
+    # unavailable context (conservative), never as a minor injury.
+    enriched_injuries, classify_ok = _checked_with_injury_consequence(resolved_injuries)
+    if not classify_ok:
+        builder.add(INJURY_CONTEXT_UNAVAILABLE)
+
+    today_session, session_ok = _checked_today_session_for_readiness(plan_row, training_day)
+    if not session_ok:
+        builder.add(SESSION_UNAVAILABLE)
+
+    intake, intake_ok = _checked_intake_payload_for_readiness(store, plan_row)
+    if not intake_ok:
+        builder.add(INTAKE_UNAVAILABLE)
+
+    recent_checkins, checkins_ok = _checked_recent_today_checkins(store, athlete_id)
+    if not checkins_ok:
+        builder.add(CHECKINS_UNAVAILABLE)
+
+    recent_sessions, completions_ok = _checked_recent_session_completions(store, athlete_id)
+    if not completions_ok:
+        builder.add(COMPLETIONS_UNAVAILABLE)
+
+    context = ReadinessContext(
+        training_day=training_day,
+        phase=phase,
+        today_session=today_session,
+        active_plan=plan_row,
+        intake=intake,
+        open_injuries=enriched_injuries,
+        recent_checkins=recent_checkins,
+        recent_sessions=recent_sessions,
+    )
+    return context, builder.build()
+
+
+def _readiness_decision_with_failsafe(
+    store: AppStore,
+    *,
+    checkin: ReadinessCheckin,
+    athlete_id: str,
+    plan_row: Mapping[str, Any],
+    training_day: str,
+    phase: str,
+    open_injuries: Sequence[Mapping[str, Any]] | None = None,
+) -> tuple[ReadinessAdjustment, ReadinessContextStatus]:
+    """Compute the readiness decision and floor it by context completeness.
+
+    This is the single safety chokepoint: it assembles the status-tracked
+    context, runs the deterministic engine, then applies the fail-safe floor so a
+    degraded/unavailable context can never yield ``train_as_planned``.
+    """
+    context, status = _readiness_context_and_status(
+        store,
+        athlete_id=athlete_id,
+        plan_row=plan_row,
+        training_day=training_day,
+        phase=phase,
+        open_injuries=open_injuries,
+    )
+    adjustment = build_readiness_adjustment(checkin, context)
+    adjustment = apply_context_failsafe(adjustment, status)
+    return adjustment, status
 
 
 def _recommendation_fields_from_decision(
@@ -366,23 +504,25 @@ def _refresh_today_recommendation_after_injury_change(
     # today.") consistent across both entry points.
     has_active_severe = _active_severe_injury(open_injuries) is not None
     active_injury_override = "worse" if (injury_reported_worse or has_active_severe) else None
-    decision = build_readiness_adjustment(
-        _stored_readiness_checkin_from(today_checkin, active_injury_override=active_injury_override),
-        _readiness_context_for_today(
-            store,
-            athlete_id=athlete_id,
-            plan_row=plan_row,
-            training_day=training_day,
-            phase=str(today_checkin.get("phase") or plan_row.get("phase") or ""),
-            open_injuries=open_injuries,
+    decision, context_status = _readiness_decision_with_failsafe(
+        store,
+        checkin=_stored_readiness_checkin_from(
+            today_checkin, active_injury_override=active_injury_override
         ),
+        athlete_id=athlete_id,
+        plan_row=plan_row,
+        training_day=training_day,
+        phase=str(today_checkin.get("phase") or plan_row.get("phase") or ""),
+        open_injuries=open_injuries,
     )
-    return dict(
+    refreshed = dict(
         store.upsert_today_checkin(
             athlete_id,
             _recommendation_fields_from_decision(checkin_row=today_checkin, decision=decision),
         )
     )
+    refreshed["readiness_signal"] = build_readiness_signal(decision, context_status).to_dict()
+    return refreshed
 
 
 def submit_today_checkin(
@@ -418,15 +558,13 @@ def submit_today_checkin(
         training_day=training_day,
         include_current_plan=True,
     )
-    decision = build_readiness_adjustment(
-        _readiness_checkin_from(payload),
-        _readiness_context_for_today(
-            store,
-            athlete_id=athlete_id,
-            plan_row=plan_row,
-            training_day=training_day,
-            phase=str(payload.get("phase") or plan_row.get("phase") or ""),
-        ),
+    decision, context_status = _readiness_decision_with_failsafe(
+        store,
+        checkin=_readiness_checkin_from(payload),
+        athlete_id=athlete_id,
+        plan_row=plan_row,
+        training_day=training_day,
+        phase=str(payload.get("phase") or plan_row.get("phase") or ""),
     )
 
     fields: dict[str, Any] = {
@@ -434,6 +572,8 @@ def submit_today_checkin(
         "training_day": training_day,
         "athlete_timezone": athlete_timezone or "",
         # Server-computed recommendation — never trust a client-supplied value.
+        # ``decision`` is already floored by the context fail-safe, so a failed
+        # safety read cannot persist as ``train_as_planned``.
         "recommendation_state": decision.decision,
         "recommendation_reason": decision.message,
         "recommendation_triggers": list(decision.triggers),
@@ -443,6 +583,8 @@ def submit_today_checkin(
 
     row = dict(store.upsert_today_checkin(athlete_id, fields))
     row["warnings"] = warnings
+    # Backend-owned typed safety signal (additive; see readiness_failsafe).
+    row["readiness_signal"] = build_readiness_signal(decision, context_status).to_dict()
     return row
 
 

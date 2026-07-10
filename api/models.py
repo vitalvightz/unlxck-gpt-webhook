@@ -1916,6 +1916,24 @@ class TodayCheckinResponse(BaseModel):
     recommendation_reason: str = ""
     triggers: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    # Backend-owned typed safety contract (additive; the fields above are
+    # unchanged). The frontend keys safety behaviour off these machine-typed
+    # fields instead of parsing recommendation prose, so a copy change can never
+    # change safety behaviour. See api/services/readiness_failsafe.py.
+    #   decision        — train_as_planned | modify | pull_back (same as state).
+    #   decision_tier   — clear | caution | stop.
+    #   display_state   — ready | modify | hold | unavailable.
+    #   reason_codes    — structured codes (context failures first, then triggers).
+    #   blocks_training — authoritative "training is blocked" flag.
+    decision: str = ""
+    decision_tier: str = ""
+    display_state: str = ""
+    reason_codes: list[str] = Field(default_factory=list)
+    title: str = ""
+    detail: str = ""
+    action: str = ""
+    safety: str = ""
+    blocks_training: bool = False
 
 
 class SessionCompletionRequest(BaseModel):

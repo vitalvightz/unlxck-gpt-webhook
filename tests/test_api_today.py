@@ -434,3 +434,45 @@ class TestLanding:
         body = client.get("/api/today/landing", headers=ATHLETE).json()
         assert body["target"] == "today"
         assert body["row"] == 5
+
+
+class TestTypedSafetyContract:
+    """P3: the response carries backend-owned typed safety fields alongside the
+    existing shape, so the frontend never infers safety from prose."""
+
+    def test_normal_readiness_typed_fields(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        body = client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body()).json()
+        assert body["decision"] == "train_as_planned"
+        assert body["decision_tier"] == "clear"
+        assert body["display_state"] == "ready"
+        assert body["blocks_training"] is False
+        # Copy fields are present and typed separately from the joined prose.
+        assert body["title"]
+        assert isinstance(body["reason_codes"], list)
+
+    def test_severe_injury_typed_fields_block_training(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        # pain=high is a hard readiness stop (pull_back) with complete context.
+        body = client.post(
+            "/api/today/checkin", headers=ATHLETE, json=_checkin_body(pain="high")
+        ).json()
+        assert body["recommendation_state"] == "pull_back"
+        assert body["decision"] == "pull_back"
+        assert body["decision_tier"] == "stop"
+        assert body["display_state"] == "hold"
+        assert body["blocks_training"] is True
+
+    def test_typed_contract_is_backward_compatible(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        body = client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body()).json()
+        # Existing fields are untouched.
+        assert "recommendation_state" in body
+        assert "recommendation_reason" in body
+        assert "triggers" in body
+        assert "warnings" in body
+        # The typed decision agrees with the legacy state field.
+        assert body["decision"] == body["recommendation_state"]

@@ -173,7 +173,10 @@ def test_schema_guards_against_self_role_escalation():
     assert "tg_op = 'UPDATE'" in function_section
     assert "new.role is distinct from old.role" in function_section
     assert "before insert or update on public.profiles" in schema
-    assert "Only admins can change profile roles." in schema
+    assert "Only the backend service role can change profile roles." in schema
+    # The kill-switch: no is_admin() bypass, so a stale DB-role admin whose email
+    # was pulled from UNLXCK_ADMIN_EMAILS cannot self-escalate from the browser.
+    assert "public.is_admin()" not in function_section
 
 
 def test_profiles_table_declares_username_check_constraints():
@@ -229,7 +232,9 @@ def test_prevent_username_policy_bypass_function_exists():
     assert "security definer" in function_section
     assert "set search_path = public" in function_section
     assert "auth.role() <> 'service_role'" in function_section
-    assert "public.is_admin()" in function_section
+    # No is_admin() bypass: username changes must flow through the service-role
+    # endpoint, so a stale DB-role admin cannot rewrite usernames from the browser.
+    assert "public.is_admin()" not in function_section
     assert "new.username is distinct from old.username" in function_section
     assert (
         "new.username_change_history is distinct from old.username_change_history"
@@ -272,13 +277,14 @@ def test_direct_non_admin_username_update_is_blocked_by_schema():
     assert function_match is not None
     function_section = function_match.group(0)
 
-    # A non-service-role, non-admin update touching username or its history must raise.
+    # Any non-service-role update touching username or its history must raise —
+    # there is no admin bypass, so the guard keys only off the service role.
     guard_match = re.search(
-        r"if\s+auth\.role\(\)\s*<>\s*'service_role'\s+and\s+not\s+public\.is_admin\(\)\s+then\s+if\s+new\.username\s+is\s+distinct\s+from\s+old\.username\s+or\s+new\.username_change_history\s+is\s+distinct\s+from\s+old\.username_change_history\s+then\s+raise\s+exception\s+'Use the username change endpoint\.';",
+        r"if\s+auth\.role\(\)\s*<>\s*'service_role'\s+then\s+if\s+new\.username\s+is\s+distinct\s+from\s+old\.username\s+or\s+new\.username_change_history\s+is\s+distinct\s+from\s+old\.username_change_history\s+then\s+raise\s+exception\s+'Use the username change endpoint\.';",
         function_section,
         re.IGNORECASE | re.DOTALL,
     )
-    assert guard_match is not None, "non-admin username/history update must raise"
+    assert guard_match is not None, "non-service-role username/history update must raise"
 
 
 def test_schema_blocks_direct_critical_table_mutations():
@@ -301,12 +307,20 @@ def test_schema_blocks_direct_critical_table_mutations():
         assert f'drop policy if exists "{policy}"' in schema
         assert f'create policy "{policy}"' not in schema
 
+    # SELECT is now own-rows-only (renamed from the misleading "*_self_or_admin"),
+    # and the old admin-inclusive policies are gone.
+    for policy in (
+        "intakes_self_select",
+        "plans_self_select",
+        "generation_jobs_self_select",
+    ):
+        assert f'create policy "{policy}"' in schema
     for policy in (
         "intakes_self_or_admin_select",
         "plans_self_or_admin_select",
         "generation_jobs_self_or_admin_select",
     ):
-        assert f'create policy "{policy}"' in schema
+        assert f'create policy "{policy}"' not in schema
 
 
 def test_critical_table_rls_hardening_migration_drops_direct_mutation_policies():
