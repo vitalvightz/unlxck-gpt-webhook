@@ -305,13 +305,14 @@ def _patch_persisted_recommendation(
     current_state = str(row.get("recommendation_state") or "")
     patched = dict(row)
     warnings = [str(item) for item in (patched.get("warnings") or [])]
+    if not health.failures:
+        patched["warnings"] = warnings
+        return patched
+
     warning = _status_warning(health)
     if warning not in warnings:
         warnings.append(warning)
     patched["warnings"] = warnings
-
-    if not health.failures:
-        return patched
 
     if current_state == "train_as_planned":
         decision = _fail_safe_decision(
