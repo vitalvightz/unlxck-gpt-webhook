@@ -36,6 +36,31 @@ def test_nutrition_targets_match_generator_formulas():
     assert "coach_gated" not in targets
 
 
+def test_missing_weight_yields_relative_only_targets():
+    # Quick Build never collects bodyweight. Unknown weight must reduce
+    # specificity: keep per-kg coefficients, mark the module
+    # personalisation_limited, and never invent a 70 kg athlete or absolute
+    # grams/millilitres.
+    for phase in ("GPP", "SPP", "TAPER"):
+        targets = compute_nutrition_targets(flags={"weight": None, "phase": phase})
+        assert targets["weight_kg"] is None, phase
+        assert targets["personalisation_limited"] is True, phase
+        assert targets["personalisation_limited_reason"] == "missing_bodyweight"
+        assert "provide bodyweight" in json.dumps(targets).lower()
+        for macro in ("protein_g_per_day", "carbs_g_per_day", "fats_g_per_day",
+                      "hydration_ml_per_day"):
+            assert targets[macro]["min"] is None, (phase, macro)
+            assert targets[macro]["max"] is None, (phase, macro)
+    # Relative coefficients are retained so guidance stays useful.
+    gpp = compute_nutrition_targets(flags={"weight": None, "phase": "GPP"})
+    assert gpp["protein_g_per_day"]["per_kg"] == [1.6, 2.0]
+    assert gpp["hydration_ml_per_day"]["per_kg_l"] == [0.03, 0.04]
+    # A known weight keeps exact targets and is explicitly not limited.
+    known = compute_nutrition_targets(flags={"weight": 80, "phase": "GPP"})
+    assert known["personalisation_limited"] is False
+    assert known["weight_kg"] == 80.0
+
+
 def test_taper_macros_use_consistent_schema():
     # TAPER macros must use the same machine-readable shape as other phases:
     # every macro carries min/max/per_kg/note (even when some are None).

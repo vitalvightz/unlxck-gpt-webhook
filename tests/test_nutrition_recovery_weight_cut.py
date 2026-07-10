@@ -112,7 +112,9 @@ def test_generate_recovery_block_layers_age_fatigue_phase_and_cut_guidance():
 def test_generate_nutrition_block_handles_missing_weight():
     # Quick Build never collects body weight, so the athlete model carries
     # weight=None. Regression: 1.7 * None crashed Stage 1 inside the
-    # nutrition module. The block must fall back to the 70 kg default.
+    # nutrition module. Missing weight must reduce specificity — per-kg
+    # guidance only — never fabricate a 70 kg athlete and compute absolute
+    # grams/millilitres from it.
     block = generate_nutrition_block(
         flags={
             "phase": "GPP",
@@ -123,7 +125,55 @@ def test_generate_nutrition_block_handles_missing_weight():
         }
     )
 
-    assert "Protein intake: 1.7-2.2 g/kg -> 119.0-154.0 g/day" in block
+    assert "Personalisation limited: bodyweight not provided" in block
+    assert "Protein intake: 1.7-2.2 g/kg" in block
+    assert "exact daily targets need your bodyweight" in block
+    # No fabricated absolute targets anywhere (would be 70 kg-derived).
+    assert "g/day" not in block
+    assert "ml/day" not in block
+    assert "119.0" not in block
+
+
+def test_generate_nutrition_block_never_emits_coach_gated_dosing():
+    # The athlete-facing markdown layer must carry risk bands, supervision
+    # requirements, and general recovery priorities only. Exact acute-cut and
+    # supplement dosing is coach/medical-gated (compute_nutrition_targets
+    # nests it under coach_gated) and must never render here.
+    # NOTE: generic per-kg fueling coefficients (e.g. "~0.3 g/kg protein" in
+    # meal timing) are athlete-safe by the authority model; only the acute-cut
+    # and supplement dosing markers below are gated.
+    sentinel_tokens = (
+        "magnesium", "taurine", "bicarbonate", "mmol", "150%", "refeed",
+        "8-12 g/kg", "500-700 mg", "0.6-0.9 l",
+    )
+    for phase in ("GPP", "SPP", "TAPER"):
+        for weight in (70, None):
+            block = generate_nutrition_block(
+                flags={
+                    "phase": phase,
+                    "weight": weight,
+                    "fatigue": "high",
+                    "weight_cut_risk": True,
+                    "weight_cut_pct": 6.5,
+                    "days_until_fight": 10,
+                }
+            ).lower()
+            for token in sentinel_tokens:
+                assert token not in block, f"{token!r} leaked in {phase} block"
+
+    block = generate_nutrition_block(
+        flags={
+            "phase": "TAPER",
+            "weight": 70,
+            "fatigue": "high",
+            "weight_cut_risk": True,
+            "weight_cut_pct": 6.5,
+            "days_until_fight": 10,
+        }
+    )
+    assert "**Weight Cut Protocol Triggered:**" in block
+    assert "risk band SEVERE" in block
+    assert "requires qualified coach/medical supervision" in block
 
 
 def test_generate_recovery_block_handles_missing_age():

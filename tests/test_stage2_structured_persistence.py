@@ -507,6 +507,40 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
     assert debug["errors"]
 
 
+def test_finalize_holds_plan_when_card_blocked_by_safety_audit(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    # Blocking safety findings (coach_gated leakage / deterministic conflict /
+    # audit crash) must block publication outright: the card is discarded AND the
+    # plan is held for review — it must not quietly publish via the plan_text
+    # fallback while the findings stand.
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
+    import api.structured_plan_generation as generation_module
+
+    monkeypatch.setattr(
+        generation_module,
+        "audit_structured_plan",
+        lambda *_a, **_k: [
+            "LEAKAGE: coach_gated dosing token 'bicarbonate' surfaced athlete-facing"
+        ],
+    )
+    client = _FakeClient(
+        [_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))]
+    )
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["structured_plan"] is None  # blocked card is never persisted
+    debug = result["stage2_validator_report"]["structured_plan"]
+    assert debug["status"] == "blocked_by_safety_audit"
+    assert any(error.startswith("LEAKAGE") for error in debug["errors"])
+    # Held for admin review even though the Stage 2 validator report itself has
+    # no release blockers.
+    assert result["status"] == "held_for_review"
+
+
 def test_finalize_accumulates_structured_call_costs(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)

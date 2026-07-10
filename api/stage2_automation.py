@@ -463,6 +463,14 @@ def _structured_response_format() -> dict[str, Any] | None:
     return None
 
 
+def _structured_attempt_status(result: dict[str, Any]) -> str:
+    """The recorded structured-plan attempt status on a Stage 2 result, or ''."""
+    report = result.get("stage2_validator_report")
+    debug = report.get("structured_plan") if isinstance(report, dict) else None
+    status = debug.get("status") if isinstance(debug, dict) else None
+    return str(status or "")
+
+
 def _record_structured_outcome(
     result: dict[str, Any], outcome: StructuredPlanOutcome
 ) -> dict[str, Any]:
@@ -955,12 +963,18 @@ class OpenAIStage2Automator:
 
         # Structured-card conversion is best-effort. It may hold a plan that
         # still has release blockers, but a clean validator report falls back to
-        # the raw Stage 2 plan instead of creating admin review work.
+        # the raw Stage 2 plan instead of creating admin review work. Exception:
+        # a card blocked by the safety audit (coach_gated leakage / deterministic
+        # conflict / audit crash) ALWAYS holds for review — publication must not
+        # proceed on the plan_text fallback while the safety findings stand.
         if (
             _structured_plan_enabled()
             and is_athlete_displayable_plan_status(result.get("status"))
             and not has_clean_structured_card(result)
-            and _stage2_report_blocks_release(result.get("stage2_validator_report"))
+            and (
+                _structured_attempt_status(result) == "blocked_by_safety_audit"
+                or _stage2_report_blocks_release(result.get("stage2_validator_report"))
+            )
         ):
             logger.warning(
                 "[stage2] no clean structured card and release blockers remain; holding for review"
@@ -1092,7 +1106,10 @@ class OpenAIStage2Automator:
         first_outcome = build_structured_plan_outcome(
             first_json, raw_markdown=final_plan_text, computed_support=computed_support
         )
-        if first_outcome.status == "valid":
+        # A safety-blocked card is terminal: it was schema-valid, so the repair
+        # path would re-validate the same JSON and hit the same blocking
+        # findings — never spend the repair call on it.
+        if first_outcome.status in ("valid", "blocked_by_safety_audit"):
             return self._reconcile_coach_led(first_outcome, planning_brief), costs
 
         # The repair retry is the second sequential model call (the dominant cost

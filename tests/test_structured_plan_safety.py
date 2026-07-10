@@ -1,9 +1,11 @@
 """Tests for the deterministic-first authority + safety audits (PR-5).
 
-The audits are debug-only: they surface coach_gated leakage, computed_support vs
-structured_plan conflicts, and duplicate rendered strings as warnings. They must
-never mutate the plan, never resolve conflicts, and never change the plan
-status / lifecycle / fallback behaviour.
+The audits surface coach_gated leakage, computed_support vs structured_plan
+conflicts, and duplicate rendered strings as prefixed findings. Findings are
+severity-classified: LEAKAGE / CONFLICT / AUDIT_ERROR block the structured card
+(``blocked_by_safety_audit`` — the card is discarded and never published);
+DUPLICATE findings stay advisory warnings. The audits must never mutate the
+plan and never resolve conflicts themselves.
 """
 from __future__ import annotations
 
@@ -196,7 +198,8 @@ def test_audit_does_not_mutate_inputs():
 
 
 def test_outcome_surfaces_warnings_without_changing_status():
-    # A schema-valid plan still validates; the audit only adds debug warnings.
+    # A schema-valid plan with no blocking findings still validates; advisory
+    # findings only land in debug warnings.
     support = _support()
     plan = _valid_plan()
     outcome = build_structured_plan_outcome(
@@ -206,6 +209,95 @@ def test_outcome_surfaces_warnings_without_changing_status():
     debug = outcome.as_debug()
     assert "warnings" in debug
     assert isinstance(debug["warnings"], list)
+
+
+# --- severity classification + publication blocking --------------------------
+
+
+def test_finding_severity_classification():
+    from api.structured_plan_safety import is_blocking_finding, split_findings
+
+    findings = [
+        "LEAKAGE: coach_gated text surfaced athlete-facing: 'x'",
+        "CONFLICT: protein_g_per_day stated (300.0, 300.0) contradicts computed_support",
+        "AUDIT_ERROR: safety audit crashed (ValueError) — treating card as unpublishable",
+        "DUPLICATE: session mindset_anchor identical to day mindset_anchor on 2026-07-01",
+    ]
+    assert [is_blocking_finding(f) for f in findings] == [True, True, True, False]
+    blocking, warnings = split_findings(findings)
+    assert len(blocking) == 3
+    assert warnings == [findings[3]]
+
+
+def test_leaking_valid_card_is_blocked_and_discarded():
+    # A schema-valid card that copies coach_gated dosing into an athlete-facing
+    # field must NOT be marked valid: it is blocked and never persisted.
+    support = _support(weight_cut_risk=True, weight_cut_pct=7.0, fatigue="high")
+    gated = support["nutrition"]["by_phase"]["TAPER"]["coach_gated"]["acute_cut_protocol"]
+    plan = _valid_plan()
+    plan["nutrition"]["summary"] = f"Pre-fight buffer: {gated['bicarbonate_g_per_kg']}"
+
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=support
+    )
+
+    assert outcome.status == "blocked_by_safety_audit"
+    assert outcome.structured_plan is None
+    assert any(w.startswith("LEAKAGE") for w in outcome.errors), outcome.errors
+
+
+def test_conflicting_valid_card_is_blocked():
+    support = _support()  # protein envelope ~112-175 g/day for 70kg
+    plan = _valid_plan()
+    plan["nutrition"]["summary"] = "Protein: 300 g/day."
+
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=support
+    )
+
+    assert outcome.status == "blocked_by_safety_audit"
+    assert outcome.structured_plan is None
+    assert any(w.startswith("CONFLICT") for w in outcome.errors), outcome.errors
+
+
+def test_duplicate_only_findings_do_not_block(monkeypatch):
+    # DUPLICATE findings are advisory: the card stays valid, findings land in
+    # warnings only.
+    import api.structured_plan_generation as generation
+
+    monkeypatch.setattr(
+        generation,
+        "audit_structured_plan",
+        lambda *_args, **_kwargs: ["DUPLICATE: today_card.nutrition_summary duplicates plan nutrition.summary on 2026-06-01"],
+    )
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=_support()
+    )
+    assert outcome.status == "valid"
+    assert outcome.structured_plan is not None
+    assert any(w.startswith("DUPLICATE") for w in outcome.warnings)
+
+
+def test_audit_crash_is_blocking_not_silently_clean(monkeypatch):
+    # A crash inside the audit must not read as "no findings" — the card is in
+    # an unknown safety state and must be blocked.
+    import api.structured_plan_safety as safety
+
+    def _boom(*_args, **_kwargs):
+        raise ValueError("audit exploded")
+
+    monkeypatch.setattr(safety, "detect_duplicate_rendered_strings", _boom)
+
+    findings = safety.audit_structured_plan(_plan(), _support())
+    assert findings and findings[0].startswith("AUDIT_ERROR"), findings
+
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=_support()
+    )
+    assert outcome.status == "blocked_by_safety_audit"
+    assert outcome.structured_plan is None
 
 
 def test_prompt_keeps_valid_session_anchor_instead_of_omitting():
@@ -272,6 +364,10 @@ def test_athlete_safe_support_falls_back_to_none_when_empty():
 def test_outcome_injects_deterministic_support_without_leaking_coach_gated():
     support = _support(weight_cut_risk=True, weight_cut_pct=7.0, fatigue="high")
     source_plan = _valid_plan()
+    # Align the card's stated risk with the computed severe band — understating
+    # it is now a blocking CONFLICT (covered elsewhere) and would discard the
+    # card before this test can inspect the injected projection.
+    source_plan["nutrition"]["weight_cut_warning"]["risk_level"] = "red"
     outcome = build_structured_plan_outcome(
         source_plan, raw_markdown=_faithful_source(source_plan), computed_support=support
     )
