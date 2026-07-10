@@ -64,6 +64,9 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=request_body.model_dump(),
         )
         record = _checkin_record(row)
+        # Backend-owned typed safety signal (additive to the response). Defaults
+        # keep the field set stable even if the signal is ever absent.
+        signal = row.get("readiness_signal") or {}
         return TodayCheckinResponse(
             checkin=record,
             training_day=record.training_day,
@@ -71,6 +74,15 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             recommendation_reason=record.recommendation_reason,
             triggers=record.recommendation_triggers,
             warnings=[str(warning) for warning in row.get("warnings", [])],
+            decision=str(signal.get("decision") or record.recommendation_state),
+            decision_tier=str(signal.get("decision_tier") or ""),
+            display_state=str(signal.get("display_state") or ""),
+            reason_codes=[str(code) for code in signal.get("reason_codes", [])],
+            title=str(signal.get("title") or ""),
+            detail=str(signal.get("detail") or ""),
+            action=str(signal.get("action") or ""),
+            safety=str(signal.get("safety") or ""),
+            blocks_training=bool(signal.get("blocks_training", False)),
         )
 
     @router.post(

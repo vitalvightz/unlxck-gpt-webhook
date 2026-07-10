@@ -80,8 +80,10 @@ def test_schema_contains_required_role_and_username_security_triggers():
     assert role_guard is not None
     role_guard_text = role_guard.group(0)
     assert "auth.role() <> 'service_role'" in role_guard_text
-    assert "not public.is_admin()" in role_guard_text
-    assert "Only admins can change profile roles." in role_guard_text
+    # No is_admin() bypass: role changes are service-role-only so a stale DB-role
+    # admin (email removed from UNLXCK_ADMIN_EMAILS) cannot self-escalate.
+    assert "not public.is_admin()" not in role_guard_text
+    assert "Only the backend service role can change profile roles." in role_guard_text
 
     assert "username text unique" in schema
     assert "username_change_history jsonb not null default '[]'::jsonb" in schema
@@ -112,9 +114,19 @@ def test_schema_blocks_direct_critical_table_mutation_rls_policies():
         assert f'drop policy if exists "{policy}"' in schema
         assert f'create policy "{policy}"' not in schema
 
+    # SELECT is own-rows-only now (renamed from the misleading "*_self_or_admin");
+    # the admin-inclusive names are gone and no is_admin() cross-athlete grant
+    # survives in a live policy clause.
+    for policy in (
+        "plans_self_select",
+        "intakes_self_select",
+        "generation_jobs_self_select",
+    ):
+        assert f'create policy "{policy}"' in schema
     for policy in (
         "plans_self_or_admin_select",
         "intakes_self_or_admin_select",
         "generation_jobs_self_or_admin_select",
     ):
-        assert f'create policy "{policy}"' in schema
+        assert f'create policy "{policy}"' not in schema
+    assert "or public.is_admin()" not in schema
