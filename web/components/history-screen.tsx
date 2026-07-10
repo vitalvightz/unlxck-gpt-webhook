@@ -193,6 +193,15 @@ export function HistoryScreen() {
   });
   const [injuries, setInjuries] = useState<TabData<InjuryFlagRecord>>({ rows: null, error: null });
 
+  // The cache is keyed to the signed-in token: if it changes (sign-out /
+  // different account), drop every tab so one user's history can never be
+  // shown to another.
+  useEffect(() => {
+    setSessions({ rows: null, error: null });
+    setCheckins({ rows: null, error: null });
+    setInjuries({ rows: null, error: null });
+  }, [token]);
+
   // Lazy per-tab fetch: each tab loads on first open and is cached for the
   // rest of the visit.
   useEffect(() => {

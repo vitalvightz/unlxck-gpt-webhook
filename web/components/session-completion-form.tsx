@@ -131,20 +131,22 @@ export function SessionCompletionForm({
       {needsReason && activeIntent ? (
         <label className="field" htmlFor={`${fieldId}-reason`}>
           <span>{getCompletionReasonLabel(activeIntent)}</span>
-          <input
+          <textarea
             id={`${fieldId}-reason`}
             value={modificationReason}
             maxLength={2000}
+            rows={2}
             onChange={(event) => setModificationReason(event.target.value)}
           />
         </label>
       ) : null}
       <label className="field" htmlFor={`${fieldId}-notes`}>
         <span>Notes (optional)</span>
-        <input
+        <textarea
           id={`${fieldId}-notes`}
           value={notes}
           maxLength={2000}
+          rows={2}
           onChange={(event) => setNotes(event.target.value)}
         />
       </label>

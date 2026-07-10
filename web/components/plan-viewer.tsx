@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -1899,6 +1899,7 @@ export function PlanViewer({
   const [retroSubmitting, setRetroSubmitting] = useState(false);
   const [retroError, setRetroError] = useState<string | null>(null);
   const [retroSavedMessage, setRetroSavedMessage] = useState<string | null>(null);
+  const completionsRequestSeq = useRef(0);
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [showActiveConflict, setShowActiveConflict] = useState(false);
@@ -2022,10 +2023,14 @@ export function PlanViewer({
     if (!accessToken || !canManagePlan) {
       return;
     }
-    let cancelled = false;
+    // Sequence guard: this is also called imperatively after a retro-log, so a
+    // slow response from an earlier plan/viewer state must never overwrite a
+    // newer one. (React 18 makes a post-unmount setState a no-op, so no
+    // unmount cleanup is needed.)
+    const seq = ++completionsRequestSeq.current;
     getPlanCompletions(accessToken, plan.plan_id)
       .then((response) => {
-        if (!cancelled) {
+        if (seq === completionsRequestSeq.current) {
           setPlanCompletions(response.completions);
           setServerTrainingDay(response.current_training_day || null);
         }
@@ -2033,12 +2038,15 @@ export function PlanViewer({
       .catch(() => {
         // No live overlay on failure — the plan stays fully readable.
       });
-    return () => {
-      cancelled = true;
-    };
   }, [accessToken, canManagePlan, plan.plan_id]);
 
-  useEffect(() => refreshCompletions(), [refreshCompletions]);
+  useEffect(() => {
+    // Drop the previous plan's rows before fetching so a plan switch never
+    // renders one plan's logging over another plan's cards.
+    setPlanCompletions(null);
+    setServerTrainingDay(null);
+    refreshCompletions();
+  }, [refreshCompletions]);
 
   const handleRetroLog = useCallback(
     (day: StructuredDay, session: StructuredSession, sessionId: string) => {
