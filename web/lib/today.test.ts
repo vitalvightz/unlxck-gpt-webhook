@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 import {
   TODAY_EMPTY_TEXT,
@@ -481,7 +481,7 @@ test("submit completion calls the Today completion endpoint", async () => {
 });
 
 test("Today session card uses short preview wording and Next session label", () => {
-  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../components/today/today-session-panel.tsx", import.meta.url), "utf8");
 
   assert.equal(source.includes('kicker: "Next session"'), true);
   assert.equal(source.includes('kicker: "Next scheduled session"'), false);
@@ -539,13 +539,13 @@ test("Today resolves today's blocks from the shared current-day resolver", () =>
   // resolved through the SAME shared resolver Plan Detail uses (resolveCurrentDay
   // + the client-mounted 04:00 training-day hook) so the two screens can never
   // disagree on the current day/session.
-  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../components/today/today-session-panel.tsx", import.meta.url), "utf8");
   assert.equal(source.includes("resolveCurrentDay"), true);
   assert.equal(source.includes("useTrainingDay"), true);
 });
 
 test("Today uses structured titles only for actual structured today sessions", () => {
-  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../components/today/today-session-panel.tsx", import.meta.url), "utf8");
   assert.equal(
     source.includes("const sessionTitle = hasResolvedDaySessions"),
     true,
@@ -580,9 +580,13 @@ test("Today renders only today's session, never the full camp map", () => {
   // Today must scope to today's day only. It reuses the per-session camp-map
   // cards but must NOT mount the full StructuredPlanRenderer (command header,
   // week strip, every day) — that belongs to Plan Detail (/plans/[planId]).
-  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
-  assert.equal(source.includes("StructuredPlanRenderer"), false);
-  assert.equal(source.includes("WeekStrip"), false);
+  const todayDir = new URL("../components/today/", import.meta.url);
+  const sources = [
+    readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8"),
+    ...readdirSync(todayDir).map((name) => readFileSync(new URL(name, todayDir), "utf8")),
+  ].join("\n");
+  assert.equal(sources.includes("StructuredPlanRenderer"), false);
+  assert.equal(sources.includes("WeekStrip"), false);
 });
 
 test("Today's View full plan action routes to the plan detail camp map", () => {

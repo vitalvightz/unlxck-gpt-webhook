@@ -1,0 +1,486 @@
+"use client";
+
+import { useState } from "react";
+
+import {
+  SessionCompletionForm,
+  type CompletionIntent,
+} from "@/components/session-completion-form";
+import {
+  DaySessionContext,
+  SessionCard as StructuredSessionCard,
+  SessionlessDayCard,
+} from "@/components/structured-plan-renderer";
+import { TodayDecisionPanel } from "@/components/today/today-decision-panel";
+import { formatTrainingDay } from "@/components/today/format";
+import { useToast } from "@/components/toast-provider";
+import { submitTodaySessionCompletion } from "@/lib/api";
+import {
+  resolveCurrentDay,
+  sessionIdentity,
+  type CurrentDayResolution,
+} from "@/lib/camp-map";
+import { humanizeIfRawEnum } from "@/lib/plan-labels";
+import { useTrainingDay } from "@/lib/use-training-day";
+import {
+  canCompleteTodaySession,
+  getCompletionLabel,
+  getInjuryOverrideBanner,
+  getSafeSessionView,
+  getSessionFocus,
+  getSessionTitle,
+  getTodayDecisionBanner,
+  isHardCombatSession,
+  isSessionToday,
+  hasTodaySession,
+  resolveDecisionTier,
+  resolveSessionFocusDate,
+  type SafeSessionView,
+} from "@/lib/today";
+import type {
+  StructuredPlan,
+  TodayCommandView,
+  TodayCompletionStatus,
+  TodaySession,
+} from "@/lib/types";
+
+function formatSessionDate(session: TodaySession): string {
+  const dayText = session.weekday_with_label || session.weekday;
+  const countdown =
+    typeof session.d_day === "number" ? `D-${Math.abs(session.d_day)}` : session.day_label;
+  // The canonical date already carries the short weekday, so only fall back to
+  // the raw weekday token when there's no calendar date to format.
+  const dayPart = session.calendar_date ? formatTrainingDay(session.calendar_date) : dayText;
+  const hasCountdownInDayPart = Boolean(dayPart && countdown && dayPart.includes(countdown));
+  const parts = [dayPart, hasCountdownInDayPart ? null : countdown].filter(Boolean);
+  return parts.length ? parts.join(" / ") : "Athlete-local training day";
+}
+
+function getSessionDuration(session: TodaySession): string | null {
+  if (typeof session.estimated_duration === "string" && session.estimated_duration.trim()) {
+    return session.estimated_duration.trim();
+  }
+  if (typeof session.estimated_duration === "number" && Number.isFinite(session.estimated_duration)) {
+    return `${session.estimated_duration} min`;
+  }
+  if (typeof session.duration_minutes === "number" && Number.isFinite(session.duration_minutes)) {
+    return `${session.duration_minutes} min`;
+  }
+  if (session.planned_duration?.display) {
+    return session.planned_duration.display;
+  }
+  if (typeof session.planned_duration?.value === "number") {
+    return `${session.planned_duration.value} ${session.planned_duration.unit || "min"}`;
+  }
+  return null;
+}
+
+function textValue(value: string | null | undefined): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
+  const session = current.sessions[0];
+  const card = current.day?.today_card;
+  return (
+    textValue(session?.title) ||
+    textValue(card?.headline) ||
+    humanizeIfRawEnum(textValue(session?.session_type))
+  );
+}
+
+function getSessionRelationCopy(
+  session: TodaySession,
+  completionStatus: TodayCompletionStatus,
+): {
+  kicker: string;
+  status: string;
+  helper: string;
+} {
+  // The backend owns "today vs next" via session_relation, so trust it rather
+  // than re-deriving it from the structured plan — that mismatch is what left the
+  // card stuck on the completed day while the header already read "Next session".
+  if (session.session_relation === "next") {
+    const loggedToday =
+      completionStatus === "done" ||
+      completionStatus === "modified" ||
+      completionStatus === "skipped";
+    return {
+      kicker: "Next session",
+      status: "Preview",
+      helper: loggedToday
+        ? "Today's session is logged, so this shows your next session."
+        : "Today has no matched training card, so this shows the next available plan day.",
+    };
+  }
+  return {
+    kicker: "Today's session",
+    status: "Live today",
+    helper: "Matched from the active plan by the athlete-local training day.",
+  };
+}
+
+/**
+ * The recovery/mobility-only card shown in place of the scheduled blocks when
+ * today is a STOP — Today never displays hard combat as available under a stop.
+ */
+function SafeSessionCard({ view }: { view: SafeSessionView }) {
+  return (
+    <div className="today-safe-session" data-tone="red">
+      <p className="today-safe-session-eyebrow">{view.eyebrow}</p>
+      <p className="today-safe-session-title">{view.title}</p>
+      <p className="today-safe-session-detail">{view.detail}</p>
+      <div className="today-safe-session-lists">
+        <div className="today-safe-list" data-kind="allowed">
+          <p className="today-safe-list-label">Allowed</p>
+          <ul>{view.allowed.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+        <div className="today-safe-list" data-kind="blocked">
+          <p className="today-safe-list-label">Blocked</p>
+          <ul>{view.blocked.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Today's exact blocks, resolved from the active plan's structured_plan via the
+ * same shared resolver and the same SessionCard component Plan Detail renders.
+ * This guarantees Today and Plan Detail agree on the current day, its sessions
+ * and their counts — Today simply scopes the view to today's day only (no week
+ * strip, no other days, no full camp map).
+ */
+function TodaySessionBlocks({
+  planId,
+  current,
+}: {
+  planId?: string;
+  current: CurrentDayResolution;
+}) {
+  if (!current.inRange || !current.day) {
+    return null;
+  }
+  if (current.sessions.length === 0) {
+    return (
+      <div className="today-blocks">
+        <SessionlessDayCard day={current.day} />
+      </div>
+    );
+  }
+  return (
+    <div className="today-blocks">
+      <DaySessionContext day={current.day} />
+      {current.sessions.map((session, index) => (
+        <StructuredSessionCard
+          key={sessionIdentity({
+            planId,
+            weekPos: current.weekPos ?? 0,
+            dayPos: current.dayPos ?? 0,
+            sessionPos: index,
+            week: current.week,
+            day: current.day,
+            session,
+          })}
+          session={session}
+          day={index === 0 ? current.day ?? undefined : undefined}
+          defaultOpenBlocks
+          showDayContext={false}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The session card: today's (or the next) session with its structured blocks,
+ * the decision banner framing it, and the start/complete lifecycle actions.
+ */
+export function TodaySessionPanel({
+  state,
+  structuredPlan,
+  token,
+  onRefresh,
+}: {
+  state: TodayCommandView;
+  structuredPlan: StructuredPlan | null;
+  token: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const { showToast } = useToast();
+  const [intent, setIntent] = useState<CompletionIntent>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const session = state.today.next_session;
+  const status = state.today.completion_status;
+  const duration = getSessionDuration(session);
+  const hasSession = hasTodaySession(session);
+  // Resolve today's day/session from the structured plan through the shared
+  // 04:00 rollover, exactly as Plan Detail does. These blocks — not the backend
+  // session summary — are the "what exact blocks apply today" answer. The
+  // training day comes from the client-mounted hook (SSR-safe, null until mount)
+  // and is resolved on every render so a long-lived tab follows the rollover
+  // instead of sticking on a memoized day.
+  const trainingDay = useTrainingDay();
+  // Center the structured blocks on whatever the backend command view targets:
+  // today's day in the normal case, or the NEXT scheduled session's day once
+  // today is logged / carries no app card (session_relation === "next"). Resolving
+  // by that target day — not the bare calendar day — stops the card from sticking
+  // on the finished session while the header has already advanced to "Next
+  // session", which is exactly how Overview already behaves.
+  const focusDate = resolveSessionFocusDate(trainingDay, session);
+  const current = resolveCurrentDay(structuredPlan, focusDate);
+  const showStructuredBlocks = current.inRange && Boolean(current.day);
+  const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
+  const isNextSessionPreview = session.session_relation === "next";
+  const isRecommendationPreview = isNextSessionPreview || !hasSession;
+  const relationCopy = getSessionRelationCopy(session, status);
+  const recommendationState = state.today.recommendation_state;
+  const dailyDecisionBanner = getTodayDecisionBanner(recommendationState, state.today.recommendation_reason, {
+    isPreview: isRecommendationPreview,
+  });
+  // A severe active injury is the highest-priority constraint for today and must
+  // lead the card, superseding the daily readiness adjustment (which stays in
+  // data/history). When there is no severe injury this is null and the normal
+  // daily decision banner is shown.
+  const injuryOverride = getInjuryOverrideBanner(state, getSessionTitle(session));
+  const decisionBanner = injuryOverride ?? dailyDecisionBanner;
+  const decisionBlocksTraining = Boolean(decisionBanner?.blocksTraining);
+  const decisionTier = resolveDecisionTier(state.today, decisionBanner);
+  const sessionIsToday = isSessionToday(session, state.today.session_scope);
+  // STOP + the scheduled session is today: show the recovery/mobility safe
+  // session in place of the real blocks so Today never displays hard combat as
+  // available under a stop. Future sessions stay visible but read as pending.
+  const safeSession =
+    decisionTier === "stop" && hasSession && sessionIsToday ? getSafeSessionView(getSessionTitle(session)) : null;
+  const nextIsHardCombat = isHardCombatSession(session);
+  // Gate completion on the scope-aware "is this today" check, not just the
+  // session_relation stamp: a session that reaches the card without an explicit
+  // session_relation but whose scope is not "today" must still read as pending,
+  // never completable.
+  const canCompleteSession =
+    canCompleteTodaySession(session) && sessionIsToday && !decisionBlocksTraining;
+  // Tint the session card to match today's decision (green/amber/red) so the page
+  // reads at a glance instead of being a wall of identical dark cards. Neutral
+  // (not-checked-in) carries no tone — the card stays default until check-in.
+  const cardTone =
+    decisionBanner?.tone === "green" ||
+    decisionBanner?.tone === "amber" ||
+    decisionBanner?.tone === "red"
+      ? decisionBanner.tone
+      : undefined;
+  const terminalStatusCopy = injuryOverride
+    ? "Held by an active severe injury. Clear it (or get it medically cleared) in the injury check-in above — marking it easing does not lift the hold, and this is not a load-reduced session."
+    : decisionBlocksTraining
+      ? "Follow the recommendation above. Do not start this session from Today."
+      : isNextSessionPreview
+        ? "Preview only. Completion opens on the matched training day."
+        : "Session details available, but completion is unavailable for this entry.";
+
+  async function saveCompletion(
+    nextStatus: TodayCompletionStatus,
+    details: {
+      sessionRpe?: number | null;
+      painAfter?: number | null;
+      modificationReason?: string;
+      notes?: string;
+    } = {},
+  ) {
+    if (!state.active_plan.id || !session.session_id || isSubmitting) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await submitTodaySessionCompletion(token, {
+        plan_id: state.active_plan.id,
+        session_id: session.session_id,
+        status: nextStatus,
+        session_rpe: details.sessionRpe ?? null,
+        pain_after: details.painAfter ?? null,
+        modification_reason: details.modificationReason ?? "",
+        notes: details.notes ?? "",
+      });
+      setIntent(null);
+      showToast(getCompletionLabel(nextStatus), { tone: "success" });
+      await onRefresh();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Session update failed.", { tone: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (!hasSession) {
+    return (
+      <section
+        id="today-session"
+        className="today-card today-session-card"
+        data-tone={cardTone}
+        aria-labelledby="today-session-heading"
+      >
+        <div className="today-card-head">
+          <div>
+            <p className="kicker">Today&apos;s session</p>
+            {/* training_day is always present in the initial payload, so headline
+                it unconditionally — gating on the async-loaded structuredPlan
+                caused a flash from "No session scheduled" to the date on load. */}
+            <h2 id="today-session-heading">
+              {formatTrainingDay(state.today.training_day)}
+            </h2>
+          </div>
+        </div>
+        <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
+        {showStructuredBlocks ? (
+          <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
+        ) : (
+          <p className="muted">No active plan card matched today. Use View full plan to find the next training target.</p>
+        )}
+      </section>
+    );
+  }
+
+  const sessionTitle = hasResolvedDaySessions
+    ? getStructuredTodaySessionTitle(current) || getSessionTitle(session)
+    : getSessionTitle(session);
+  // Avoid the "Today's session / Today's session" stutter: when the session has
+  // no real name and falls back to the generic title that already matches the
+  // kicker, headline the training day instead so the eyebrow and heading differ.
+  const headline =
+    sessionTitle.trim().toLowerCase() === "today's session" ||
+    sessionTitle.trim().toLowerCase() === relationCopy.kicker.trim().toLowerCase()
+      ? formatSessionDate(session)
+      : sessionTitle;
+
+  return (
+    <section
+      id="today-session"
+      className="today-card today-session-card"
+      data-tone={cardTone}
+      aria-labelledby="today-session-heading"
+    >
+      <div className="today-card-head">
+        <div>
+          <p className="kicker">{relationCopy.kicker}</p>
+          <h2 id="today-session-heading">{headline}</h2>
+        </div>
+      </div>
+      <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
+      {safeSession ? (
+        <SafeSessionCard view={safeSession} />
+      ) : showStructuredBlocks ? (
+        <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
+      ) : (
+        <div className="today-session-summary">
+          <div>
+            <p className="today-detail-label">Day</p>
+            <p>{formatSessionDate(session)}</p>
+          </div>
+          <div>
+            <p className="today-detail-label">Focus</p>
+            <p>{getSessionFocus(session)}</p>
+          </div>
+          {session.coach_led_contact ? (
+            <div>
+              <p className="today-detail-label">Coach contact</p>
+              <p>{session.coach_led_contact}</p>
+            </div>
+          ) : null}
+          {duration ? (
+            <div>
+              <p className="today-detail-label">Duration</p>
+              <p>{duration}</p>
+            </div>
+          ) : null}
+          {!isNextSessionPreview ? (
+            <div>
+              <p className="today-detail-label">Status</p>
+              <p>{getCompletionLabel(status)}</p>
+            </div>
+          ) : null}
+        </div>
+      )}
+      {isNextSessionPreview && !safeSession ? (
+        <div className="today-next-planned-note">
+          <p className="today-pending-line">
+            <span className="today-pending-pill">Pending</span>
+            Requires a fresh check-in before clearance.
+          </p>
+          {nextIsHardCombat ? (
+            <div className="today-caution-row">
+              <span className="today-caution-label">Caution</span>
+              <span className="today-caution-text">
+                Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!canCompleteSession ? (
+        <div className="today-terminal-block">
+          <p className="today-terminal-status" data-tone={decisionBlocksTraining ? "blocked" : "neutral"}>
+            {terminalStatusCopy}
+          </p>
+          {injuryOverride ? (
+            <a href="#today-injury" className="secondary-button today-terminal-action">
+              Open injury check-in
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+
+      {canCompleteSession && status === "not_started" ? (
+        <div className="today-action-row today-sticky-actions">
+          <button type="button" className="cta" onClick={() => void saveCompletion("started")} disabled={isSubmitting}>
+            Start session
+          </button>
+          <button type="button" className="ghost-button" onClick={() => setIntent("skipped")} disabled={isSubmitting}>
+            Mark skipped
+          </button>
+        </div>
+      ) : null}
+
+      {canCompleteSession && status === "started" ? (
+        <div className="today-action-row today-sticky-actions">
+          <button
+            type="button"
+            className="cta"
+            onClick={() => showToast("Session is in progress.", { tone: "info" })}
+            disabled={isSubmitting}
+          >
+            Resume session
+          </button>
+          <button type="button" className="secondary-button" onClick={() => setIntent("done")} disabled={isSubmitting}>
+            Mark done
+          </button>
+          <button type="button" className="secondary-button" onClick={() => setIntent("modified")} disabled={isSubmitting}>
+            Mark modified
+          </button>
+          <button type="button" className="ghost-button" onClick={() => setIntent("skipped")} disabled={isSubmitting}>
+            Mark skipped
+          </button>
+        </div>
+      ) : null}
+
+      {canCompleteSession && (status === "done" || status === "modified" || status === "skipped") ? (
+        <p className="today-terminal-status">{getCompletionLabel(status)}</p>
+      ) : null}
+
+      {canCompleteSession ? (
+        <SessionCompletionForm
+          key={intent ?? "closed"}
+          intent={intent}
+          isSubmitting={isSubmitting}
+          onCancel={() => setIntent(null)}
+          onSubmit={(nextStatus, details) =>
+            saveCompletion(nextStatus, {
+              sessionRpe: details.sessionRpe,
+              painAfter: details.painAfter,
+              modificationReason: details.modificationReason,
+              notes: details.notes,
+            })
+          }
+        />
+      ) : null}
+    </section>
+  );
+}

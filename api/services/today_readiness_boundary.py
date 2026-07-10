@@ -34,6 +34,11 @@ from api.contracts.command_view import CommandView, make_risk, sort_risk_watch
 from api.contracts.injury_checkin import injury_consequence_tier
 from api.contracts.readiness_message import ReadinessAdjustment
 from api.services import today_service as _today_service
+from api.services.plan_schedule import (
+    parse_iso_date,
+    resolve_current_week,
+    resolve_today_and_next,
+)
 from api.services.readiness_failsafe import (
     ReadinessContextStatus,
     apply_context_failsafe,
@@ -263,13 +268,6 @@ def _probe_schedule(
         return
 
     try:
-        (
-            _latest_visible_plan_row,
-            parse_iso_date,
-            resolve_current_week,
-            resolve_today_and_next,
-            _weekly_schedule_or_none,
-        ) = _today_service._plan_schedule_helpers()
         training_date = parse_iso_date(training_day)
         if training_date is None:
             raise ValueError("training day could not be parsed")
