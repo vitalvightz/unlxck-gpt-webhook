@@ -28,6 +28,7 @@ export const SIDE_NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Overview", meta: "Camp status" },
   { href: "/today", label: "Today", meta: "Check-in and session log" },
   { href: "/plans", label: "Plan", meta: "Active and saved plans" },
+  { href: "/history", label: "History", meta: "Sessions, check-ins, injuries" },
   { href: "/onboarding", label: "Intake", meta: "Profile and camp setup" },
   { href: "/settings", label: "Settings", meta: "Athlete profile" },
 ] as const;

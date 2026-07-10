@@ -51,6 +51,9 @@ class SessionCompletionRecord(BaseModel):
     status: CompletionStatus = "not_started"
     session_rpe: int | None = Field(default=None, ge=1, le=10)
     pain_after: int | None = Field(default=None, ge=0, le=10)
+    # Required (non-empty) for both ``modified`` and ``skipped`` — every
+    # non-completed session carries an explanation. Write-time rule only:
+    # stored rows are never re-validated on read.
     modification_reason: str = ""
     notes: str = ""
     started_at: str | None = None
@@ -64,6 +67,8 @@ class SessionCompletionRecord(BaseModel):
             raise ValueError(f"{self.status} completion requires completed_at")
         if self.status == "modified" and not self.modification_reason.strip():
             raise ValueError("modified completion requires a modification_reason")
+        if self.status == "skipped" and not self.modification_reason.strip():
+            raise ValueError("skipped completion requires a reason")
         return self
 
     @property

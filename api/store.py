@@ -461,6 +461,10 @@ class AppStore(Protocol):
         self, athlete_id: str, *, limit: int = 30
     ) -> list[dict[str, Any]]: ...
 
+    def list_plan_session_completions(
+        self, athlete_id: str, plan_id: str, *, limit: int = 500
+    ) -> list[dict[str, Any]]: ...
+
     def list_today_checkins(
         self, athlete_id: str, *, limit: int = 14
     ) -> list[dict[str, Any]]: ...
@@ -4292,6 +4296,22 @@ class SupabaseAppStore:
             self.client.table("session_completions")
             .select("*")
             .eq("athlete_id", athlete_id)
+            .order("training_day", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def list_plan_session_completions(
+        self, athlete_id: str, plan_id: str, *, limit: int = 500
+    ) -> list[dict[str, Any]]:
+        """All completions for one plan (newest training day first) so the plan
+        viewer can colour every session card from real logging."""
+        response = (
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("plan_id", plan_id)
             .order("training_day", desc=True)
             .limit(limit)
             .execute()

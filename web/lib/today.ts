@@ -522,7 +522,17 @@ export function completionRequiresReviewFields(status: TodayCompletionStatus): b
 }
 
 export function completionRequiresModificationReason(status: TodayCompletionStatus): boolean {
-  return status === "modified";
+  return status === "modified" || status === "skipped";
+}
+
+export function getCompletionReasonLabel(status: TodayCompletionStatus): string {
+  return status === "skipped" ? "Reason for skipping" : "Modification reason";
+}
+
+export function getCompletionReasonError(status: TodayCompletionStatus): string {
+  return status === "skipped"
+    ? "Skipped sessions need a reason."
+    : "Modified sessions need a reason.";
 }
 
 export function buildTodayCheckinPayload(params: {

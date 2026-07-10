@@ -5,6 +5,8 @@ upsert, the normalized command view, and the landing endpoint. Uses the
 in-process FakeStore via the shared test client.
 """
 
+from datetime import date, timedelta
+
 from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -160,9 +162,41 @@ class TestSessionCompletion:
     def test_skipped_completion(self):
         client, store, _ = _build_client()
         _seed_plan(store)
-        body = self._post(client, status="skipped").json()
+        body = self._post(client, status="skipped", modification_reason="travel day").json()
         assert body["completion_status"] == "skipped"
         assert body["landing_session_state"] == "completed"
+
+    def test_skipped_without_reason_is_rejected(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        assert self._post(client, status="skipped").status_code == 422
+
+    def test_retro_training_day_is_accepted_and_persisted(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        # Resolve the server's current training day from a normal completion,
+        # then back-fill the day before it.
+        today = self._post(client, status="started").json()["completion"]["training_day"]
+        yesterday = (date.fromisoformat(today) - timedelta(days=1)).isoformat()
+        resp = self._post(
+            client, status="done", training_day=yesterday, session_id="s-past", session_rpe=6
+        )
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["completion"]["training_day"] == yesterday
+        assert body["completion"]["status"] == "done"
+
+    def test_retro_training_day_rejects_malformed_dates(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        assert self._post(client, status="done", training_day="not-a-date").status_code == 422
+
+    def test_retro_training_day_rejects_past_non_terminal_status(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        today = self._post(client, status="started").json()["completion"]["training_day"]
+        yesterday = (date.fromisoformat(today) - timedelta(days=1)).isoformat()
+        assert self._post(client, status="started", training_day=yesterday).status_code == 422
 
     def test_duplicate_completion_upserts_single_row(self):
         client, store, _ = _build_client()
@@ -203,6 +237,80 @@ class TestTodayState:
         store.plans[PLAN_ID]["planning_brief"] = _taper_planning_brief()
         body = client.get("/api/today", headers=ATHLETE).json()
         assert body["active_plan"]["phase"] == "TAPER"
+
+
+class TestHistoryEndpoints:
+    def _seed_completion(self, store, *, session_id: str, training_day: str, status: str = "done"):
+        store.upsert_session_completion(
+            "athlete-1",
+            {
+                "plan_id": PLAN_ID,
+                "session_id": session_id,
+                "training_day": training_day,
+                "status": status,
+                "session_rpe": 7,
+                "pain_after": 1,
+                "modification_reason": "reason" if status in {"modified", "skipped"} else "",
+                "notes": "",
+                "started_at": f"{training_day}T10:00:00+00:00",
+                "completed_at": f"{training_day}T11:00:00+00:00",
+            },
+        )
+
+    def test_session_completion_history_is_newest_first(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        self._seed_completion(store, session_id="s1", training_day="2026-06-01")
+        self._seed_completion(store, session_id="s2", training_day="2026-06-03")
+        self._seed_completion(store, session_id="s3", training_day="2026-06-02", status="skipped")
+        body = client.get("/api/today/session-completions", headers=ATHLETE).json()
+        assert [row["training_day"] for row in body] == ["2026-06-03", "2026-06-02", "2026-06-01"]
+        assert body[1]["status"] == "skipped"
+        assert body[0]["session_rpe"] == 7
+
+    def test_session_completion_history_respects_limit(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        for day in ("2026-06-01", "2026-06-02", "2026-06-03"):
+            self._seed_completion(store, session_id=f"s-{day}", training_day=day)
+        body = client.get("/api/today/session-completions?limit=2", headers=ATHLETE).json()
+        assert len(body) == 2
+        assert client.get("/api/today/session-completions?limit=0", headers=ATHLETE).status_code == 422
+        assert client.get("/api/today/session-completions?limit=999", headers=ATHLETE).status_code == 422
+
+    def test_session_completion_history_requires_auth(self):
+        client, _store, _ = _build_client()
+        assert client.get("/api/today/session-completions").status_code in (401, 403)
+
+    def test_session_completion_history_is_scoped_to_the_athlete(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        store.upsert_session_completion(
+            "someone-else",
+            {
+                "plan_id": OTHER_PLAN,
+                "session_id": "sx",
+                "training_day": "2026-06-01",
+                "status": "done",
+                "started_at": "2026-06-01T10:00:00+00:00",
+                "completed_at": "2026-06-01T11:00:00+00:00",
+            },
+        )
+        assert client.get("/api/today/session-completions", headers=ATHLETE).json() == []
+
+    def test_checkin_history_is_newest_first(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body(sleep="poor"))
+        body = client.get("/api/today/checkins", headers=ATHLETE).json()
+        assert len(body) == 1
+        assert body[0]["sleep"] == "poor"
+        assert body[0]["recommendation_state"] == "modify"
+        assert isinstance(body[0]["recommendation_triggers"], list)
+
+    def test_checkin_history_requires_auth(self):
+        client, _store, _ = _build_client()
+        assert client.get("/api/today/checkins").status_code in (401, 403)
 
 
 class TestInjuryCheckin:

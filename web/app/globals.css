@@ -16646,3 +16646,138 @@ html[data-theme="light"] .loading-operational-item {
     display: inline;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   History page (sessions / check-ins / injuries) + shared status badge tones.
+   Tones follow the app contract: green = done/positive, amber = modified /
+   caution, red = skipped / missed / risk, neutral = pending or upcoming.
+--------------------------------------------------------------------------- */
+
+.history-screen {
+  display: grid;
+  gap: 20px;
+}
+
+.history-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.history-tab {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-alt);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.history-tab-active {
+  border-color: var(--border-active);
+  background: var(--brand-red-soft);
+  color: var(--text-primary);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.history-row {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-support);
+  background: var(--bg-surface-alt);
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.history-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.history-row-date {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.history-badges {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.history-row-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.history-row-note {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+/* Status badge tones — shared by history rows and plan-card session status. */
+.history-status-badge[data-tone="green"],
+.sp-status-tag[data-tone="green"] {
+  background: var(--success-soft);
+  border-color: rgba(39, 174, 96, 0.4);
+  color: var(--success-ink);
+}
+
+.history-status-badge[data-tone="amber"],
+.sp-status-tag[data-tone="amber"] {
+  background: var(--progress-gold-soft);
+  border-color: var(--progress-gold-border);
+  color: var(--progress-gold);
+}
+
+.history-status-badge[data-tone="red"],
+.sp-status-tag[data-tone="red"] {
+  background: var(--danger-soft);
+  border-color: rgba(255, 141, 161, 0.32);
+  color: var(--danger-ink);
+}
+
+.history-status-badge[data-tone="neutral"],
+.sp-status-tag[data-tone="neutral"] {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .history-status-badge[data-tone="neutral"],
+html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
+  background: rgba(15, 18, 24, 0.05);
+  border-color: rgba(15, 18, 24, 0.1);
+  color: var(--text-secondary);
+}
+
+/* Logged RPE/reason line + retro-log affordance on plan session cards. */
+.sp-session-log-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.sp-log-session {
+  justify-self: start;
+  align-self: start;
+}
+
+.sp-retro-log-panel {
+  display: grid;
+  gap: 14px;
+}

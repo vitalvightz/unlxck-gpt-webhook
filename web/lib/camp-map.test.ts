@@ -2,6 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildCompletionIndex,
+  canRetroLog,
+  completionForSession,
+  completionSessionId,
   dayCompletion,
   deriveCountdownLabel,
   findDayByISO,
@@ -10,13 +14,15 @@ import {
   resolveNextPlanFocusDay,
   resolvePlanProgress,
   resolveTrainingDay,
+  getSessionDisplayStatus,
+  primarySessionOf,
   sessionIdentity,
   toISODate,
   weekCompletion,
   weekLoadProxy,
   weekSessionSummary,
 } from "./camp-map.ts";
-import type { StructuredPlan } from "@/lib/types";
+import type { StructuredPlan, TodaySessionCompletionRecord } from "@/lib/types";
 
 function campPlan(): StructuredPlan {
   return {
@@ -442,4 +448,108 @@ test("sessionIdentity keys the day portion on the parent day's date", () => {
     }),
     "plan-1|2026-06-19|abc",
   );
+});
+
+// ---------------------------------------------------------------------------
+// Live completion merge (plan-card status from /api/plans/{id}/completions)
+// ---------------------------------------------------------------------------
+
+function completionRow(overrides: Partial<TodaySessionCompletionRecord> = {}): TodaySessionCompletionRecord {
+  return {
+    id: "cmp-1",
+    athlete_id: "a1",
+    plan_id: "p1",
+    session_id: "s1",
+    training_day: "2026-06-18",
+    status: "done",
+    ...overrides,
+  };
+}
+
+test("buildCompletionIndex keys rows by training_day|session_id", () => {
+  const index = buildCompletionIndex([
+    completionRow(),
+    completionRow({ id: "cmp-2", session_id: "s2", status: "skipped" }),
+  ]);
+  const day = campPlan().weeks![0]!.days![0]!;
+  assert.equal(completionForSession(index, day, day.sessions![0]!)?.status, "done");
+  assert.equal(completionForSession(index, day, day.sessions![1]!)?.status, "skipped");
+});
+
+test("completionForSession falls back to the day date for the id-less primary session", () => {
+  // Mirrors the backend `session_id = session.session_id || day_date` rule.
+  const day = {
+    date: "2026-06-20",
+    sessions: [{ title: "Untitled primary", blocks: [] }, { title: "Secondary, also id-less" }],
+  };
+  const index = buildCompletionIndex([
+    completionRow({ session_id: "2026-06-20", training_day: "2026-06-20" }),
+  ]);
+  assert.equal(completionForSession(index, day, day.sessions![0]!)?.status, "done");
+  // A secondary id-less session has no completion identity — never matched.
+  assert.equal(completionForSession(index, day, day.sessions![1]!), undefined);
+});
+
+test("primary session is the first session with executable blocks", () => {
+  const day = {
+    date: "2026-06-20",
+    sessions: [
+      { title: "Coach-led contact" },
+      { title: "App session", blocks: [{ block_id: "b1" }] },
+    ],
+  };
+  assert.equal(primarySessionOf(day)?.title, "App session");
+  assert.equal(completionSessionId(day, day.sessions![1]!), "2026-06-20");
+  assert.equal(completionSessionId(day, day.sessions![0]!), null);
+});
+
+test("getSessionDisplayStatus maps logged statuses to the tone contract", () => {
+  assert.deepEqual(getSessionDisplayStatus(completionRow(), "2026-06-18", "2026-06-19"), {
+    state: "done",
+    tone: "green",
+    label: "Done",
+  });
+  assert.equal(getSessionDisplayStatus(completionRow({ status: "modified" }), "2026-06-18", "2026-06-19").tone, "amber");
+  assert.equal(getSessionDisplayStatus(completionRow({ status: "skipped" }), "2026-06-18", "2026-06-19").tone, "red");
+});
+
+test("a past day with no terminal log reads as Missed — including started-only", () => {
+  assert.deepEqual(getSessionDisplayStatus(undefined, "2026-06-18", "2026-06-19"), {
+    state: "missed",
+    tone: "red",
+    label: "Missed",
+  });
+  assert.equal(
+    getSessionDisplayStatus(completionRow({ status: "started" }), "2026-06-18", "2026-06-19").state,
+    "missed",
+  );
+});
+
+test("today and future days without logs stay neutral", () => {
+  assert.equal(getSessionDisplayStatus(undefined, "2026-06-19", "2026-06-19").state, "pending");
+  assert.equal(getSessionDisplayStatus(undefined, "2026-06-20", "2026-06-19").state, "upcoming");
+  assert.equal(getSessionDisplayStatus(undefined, "2026-06-20", "2026-06-19").tone, "neutral");
+  // Without a server day nothing can be called missed.
+  assert.equal(getSessionDisplayStatus(undefined, "2026-06-18", null).state, "upcoming");
+});
+
+test("canRetroLog allows past days inside the 7-day window only", () => {
+  assert.equal(canRetroLog("2026-06-18", "2026-06-19"), true);
+  assert.equal(canRetroLog("2026-06-12", "2026-06-19"), true);
+  assert.equal(canRetroLog("2026-06-11", "2026-06-19"), false);
+  assert.equal(canRetroLog("2026-06-19", "2026-06-19"), false);
+  assert.equal(canRetroLog("2026-06-20", "2026-06-19"), false);
+  assert.equal(canRetroLog(null, "2026-06-19"), false);
+});
+
+test("dayCompletion counts live done and modified rows when an index is supplied", () => {
+  const plan = campPlan();
+  const day = plan.weeks![0]!.days![0]!;
+  const index = buildCompletionIndex([
+    completionRow({ session_id: "s1", status: "modified" }),
+    completionRow({ id: "cmp-2", session_id: "s2", status: "skipped" }),
+  ]);
+  assert.deepEqual(dayCompletion(day, index), { done: 1, total: 2 });
+  // Static plan JSON still works without an index (generation-time statuses).
+  assert.deepEqual(dayCompletion(day), { done: 1, total: 2 });
 });

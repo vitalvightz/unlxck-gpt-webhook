@@ -7,6 +7,7 @@ import { formatPlanLabel } from "./plan-labels.ts";
 import {
   cleanText,
   classifySessionlessDay,
+  getBlocks,
   getDays,
   getDisplayableRedFlags,
   getPlanNotes,
@@ -19,6 +20,7 @@ import type {
   StructuredPlan,
   StructuredSession,
   StructuredWeek,
+  TodaySessionCompletionRecord,
 } from "@/lib/types";
 
 /** Local-calendar ISO date (YYYY-MM-DD) for a Date, matching day.date strings. */
@@ -209,23 +211,168 @@ export type Completion = { done: number; total: number };
 const TERMINAL_SESSION_COMPLETION_STATUSES = new Set(["done", "modified", "skipped"]);
 
 /** Sessions marked done over total sessions across all of a week's days. */
-export function weekCompletion(week: StructuredWeek | null | undefined): Completion {
+export function weekCompletion(
+  week: StructuredWeek | null | undefined,
+  index?: CompletionIndex,
+): Completion {
   return getDays(week).reduce<Completion>(
     (acc, day) => {
-      const dayDone = dayCompletion(day);
+      const dayDone = dayCompletion(day, index);
       return { done: acc.done + dayDone.done, total: acc.total + dayDone.total };
     },
     { done: 0, total: 0 },
   );
 }
 
-/** Sessions marked done over total sessions for a single day. */
-export function dayCompletion(day: StructuredDay | null | undefined): Completion {
+/** Sessions marked done over total sessions for a single day. When a live
+ * completion index is supplied, real logged statuses win over the static
+ * `completion_status` baked into the plan JSON at generation time (always
+ * "not_started"), so the tag can actually light up. */
+export function dayCompletion(
+  day: StructuredDay | null | undefined,
+  index?: CompletionIndex,
+): Completion {
   const sessions = getSessions(day);
-  const done = sessions.filter(
-    (session) => cleanText(session.completion_status)?.toLowerCase() === "done",
-  ).length;
+  const done = sessions.filter((session) => {
+    const live = index ? completionForSession(index, day, session) : undefined;
+    const status = live?.status ?? cleanText(session.completion_status)?.toLowerCase();
+    return status === "done" || status === "modified";
+  }).length;
   return { done, total: sessions.length };
+}
+
+// ---------------------------------------------------------------------------
+// Live session-completion merge: index rows from /api/plans/{id}/completions
+// and resolve each plan card's real status (done/modified/skipped/missed).
+// ---------------------------------------------------------------------------
+
+export type CompletionIndex = Map<string, TodaySessionCompletionRecord>;
+
+const completionKey = (trainingDay: string, sessionId: string): string =>
+  `${trainingDay}|${sessionId}`;
+
+/** Index completion rows by `training_day|session_id` for O(1) card lookups. */
+export function buildCompletionIndex(
+  rows: readonly TodaySessionCompletionRecord[] | null | undefined,
+): CompletionIndex {
+  const index: CompletionIndex = new Map();
+  for (const row of rows ?? []) {
+    const day = cleanText(row.training_day)?.slice(0, 10);
+    const sessionId = cleanText(row.session_id);
+    if (day && sessionId) {
+      index.set(completionKey(day, sessionId), row);
+    }
+  }
+  return index;
+}
+
+/** The day's primary (loggable) session, mirroring the backend's
+ * `_select_structured_primary_session`: first session with executable blocks,
+ * else the first session. */
+export function primarySessionOf(
+  day: StructuredDay | null | undefined,
+): StructuredSession | null {
+  const sessions = getSessions(day);
+  if (sessions.length === 0) {
+    return null;
+  }
+  return sessions.find((session) => getBlocks(session).length > 0) ?? sessions[0];
+}
+
+/**
+ * The backend id a completion row would carry for this session, or null when
+ * the session can never be logged. Mirrors the server fallback
+ * `session_id = session.session_id || day_date` — which applies to the day's
+ * primary session only; a secondary id-less session has no completion identity.
+ */
+export function completionSessionId(
+  day: StructuredDay | null | undefined,
+  session: StructuredSession | null | undefined,
+): string | null {
+  const explicit = cleanText(session?.session_id);
+  if (explicit) {
+    return explicit;
+  }
+  const iso = dayISO(day);
+  if (!iso) {
+    return null;
+  }
+  return session == null || session === primarySessionOf(day) ? iso : null;
+}
+
+/** The live completion row for one plan-card session, if any. */
+export function completionForSession(
+  index: CompletionIndex,
+  day: StructuredDay | null | undefined,
+  session: StructuredSession | null | undefined,
+): TodaySessionCompletionRecord | undefined {
+  const iso = dayISO(day);
+  const sessionId = completionSessionId(day, session);
+  if (!iso || !sessionId) {
+    return undefined;
+  }
+  return index.get(completionKey(iso, sessionId));
+}
+
+export type SessionDisplayState =
+  | "done"
+  | "modified"
+  | "skipped"
+  | "missed"
+  | "pending"
+  | "upcoming";
+
+export type SessionDisplayStatus = {
+  state: SessionDisplayState;
+  /** green = done, amber = modified, red = skipped/missed, neutral otherwise. */
+  tone: "green" | "amber" | "red" | "neutral";
+  label: string;
+};
+
+/**
+ * Resolve what a plan card should show for a session given its live completion
+ * row (if any) and the server-authoritative current training day. A past day
+ * with no terminal log — including one only ever `started` — reads as Missed.
+ */
+export function getSessionDisplayStatus(
+  completion: TodaySessionCompletionRecord | undefined,
+  dayIso: string | null,
+  currentDayIso: string | null,
+): SessionDisplayStatus {
+  const status = completion?.status;
+  if (status === "done") {
+    return { state: "done", tone: "green", label: "Done" };
+  }
+  if (status === "modified") {
+    return { state: "modified", tone: "amber", label: "Modified" };
+  }
+  if (status === "skipped") {
+    return { state: "skipped", tone: "red", label: "Skipped" };
+  }
+  const isPast = Boolean(dayIso && currentDayIso && dayIso < currentDayIso);
+  if (isPast) {
+    return { state: "missed", tone: "red", label: "Missed" };
+  }
+  return dayIso && currentDayIso && dayIso === currentDayIso
+    ? { state: "pending", tone: "neutral", label: "" }
+    : { state: "upcoming", tone: "neutral", label: "" };
+}
+
+/** How many days back a session may still be logged after the fact. */
+export const RETRO_LOG_WINDOW_DAYS = 7;
+
+/** True when a past day is still inside the retro-log back-fill window. */
+export function canRetroLog(dayIso: string | null, currentDayIso: string | null): boolean {
+  if (!dayIso || !currentDayIso || dayIso >= currentDayIso) {
+    return false;
+  }
+  const day = new Date(`${dayIso}T12:00:00`);
+  const current = new Date(`${currentDayIso}T12:00:00`);
+  if (Number.isNaN(day.getTime()) || Number.isNaN(current.getTime())) {
+    return false;
+  }
+  const diffDays = Math.round((current.getTime() - day.getTime()) / (24 * 60 * 60 * 1000));
+  return diffDays <= RETRO_LOG_WINDOW_DAYS;
 }
 
 function isSessionTerminal(session: StructuredSession | null | undefined): boolean {
