@@ -31,15 +31,20 @@ from api.models import (
     SessionLogRecord,
     SessionLogRequest,
     SessionLogResponse,
-    WeeklyDayEntry,
     WeeklySchedule,
 )
-from api.plan_mappers import _map_plan_summary, _map_weekly_schedule, _visible_plans_for_athlete
+from api.plan_mappers import _map_plan_summary
 from api.readiness import (
     AdaptationDecision,
     compute_readiness_summary,
     evaluate_checkin_adaptations,
     evaluate_session_log_adaptations,
+)
+from api.services.plan_schedule import (
+    latest_visible_plan_row,
+    parse_iso_date,
+    resolve_current_week,
+    resolve_today_and_next,
 )
 from api.store import AppStore
 
@@ -49,13 +54,6 @@ COMPLETION_WINDOW_DAYS = 7
 
 def _today_utc() -> date:
     return datetime.now(timezone.utc).date()
-
-
-def _parse_iso_date(value: Any) -> date | None:
-    try:
-        return date.fromisoformat(str(value or "").strip()[:10])
-    except (ValueError, AttributeError):
-        return None
 
 
 def _map_checkin(row: dict[str, Any]) -> DailyCheckinRecord:
@@ -140,107 +138,13 @@ def _map_admin_review(row: dict[str, Any], *, athlete_email: str = "", athlete_n
     )
 
 
-def _latest_visible_plan_row(store: AppStore, athlete_id: str) -> dict[str, Any] | None:
-    return next(iter(_visible_plans_for_athlete(store.list_user_plans(athlete_id))), None)
-
-
-def _weekly_schedule_or_none(plan_row: dict[str, Any], *, week_index: int) -> WeeklySchedule | None:
-    try:
-        return _map_weekly_schedule(plan_row, week_index=week_index)
-    except HTTPException:
-        return None
-
-
-def _resolve_current_week(plan_row: dict[str, Any], *, today: date) -> tuple[int | None, WeeklySchedule | None]:
-    """Find the schedule week containing today.
-
-    Prefers calendar dates (set when a fight date exists); falls back to weeks
-    elapsed since the plan was created for open-ended camps.
-    """
-    first_week = _weekly_schedule_or_none(plan_row, week_index=0)
-    if first_week is None:
-        return None, None
-    week_count = max(1, first_week.week_count)
-
-    candidate = first_week
-    for index in range(week_count):
-        week = candidate if index == 0 else _weekly_schedule_or_none(plan_row, week_index=index)
-        if week is None:
-            break
-        dated = [d for d in week.days if d.calendar_date]
-        if dated:
-            dates = [_parse_iso_date(d.calendar_date) for d in dated]
-            dates = [d for d in dates if d is not None]
-            if dates and min(dates) <= today <= max(dates):
-                return index, week
-        else:
-            # No calendar dates anywhere — fall back to elapsed weeks.
-            created = _parse_iso_date(plan_row.get("created_at"))
-            elapsed_weeks = ((today - created).days // 7) if created else 0
-            fallback_index = min(max(0, elapsed_weeks), week_count - 1)
-            fallback_week = (
-                week if fallback_index == index else _weekly_schedule_or_none(plan_row, week_index=fallback_index)
-            )
-            return (fallback_index, fallback_week) if fallback_week else (index, week)
-    # Dated plan but today is outside every week (camp over or not started):
-    # clamp to the nearest end.
-    last_week = _weekly_schedule_or_none(plan_row, week_index=week_count - 1)
-    if last_week is not None:
-        last_dates = [_parse_iso_date(d.calendar_date) for d in last_week.days if d.calendar_date]
-        last_dates = [d for d in last_dates if d is not None]
-        if last_dates and today > max(last_dates):
-            return week_count - 1, last_week
-    return 0, first_week
-
-
-_WEEKDAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-
-
-def _has_scheduled_day_content(entry: WeeklyDayEntry) -> bool:
-    effective_load = str(entry.effective_load or "").strip().lower()
-    if effective_load in {"none", "off", "rest"}:
-        return False
-    return bool(effective_load != "" or entry.status or entry.coach_note)
-
-
-def _resolve_today_and_next(week: WeeklySchedule | None, *, today: date) -> tuple[WeeklyDayEntry | None, WeeklyDayEntry | None]:
-    if week is None or not week.days:
-        return None, None
-    today_entry: WeeklyDayEntry | None = None
-    today_index: int | None = None
-    for index, entry in enumerate(week.days):
-        entry_date = _parse_iso_date(entry.calendar_date) if entry.calendar_date else None
-        if entry_date == today or (entry_date is None and entry.weekday == _WEEKDAY_NAMES[today.weekday()]):
-            today_entry = entry
-            today_index = index
-            break
-    next_entry: WeeklyDayEntry | None = None
-    future_dated_entries: list[tuple[date, WeeklyDayEntry]] = []
-    for entry in week.days:
-        if not _has_scheduled_day_content(entry):
-            continue
-        entry_date = _parse_iso_date(entry.calendar_date) if entry.calendar_date else None
-        if entry_date is not None and entry_date > today:
-            future_dated_entries.append((entry_date, entry))
-    if future_dated_entries:
-        future_dated_entries.sort(key=lambda item: item[0])
-        return today_entry, future_dated_entries[0][1]
-
-    if today_index is not None:
-        for entry in week.days[today_index + 1:]:
-            if _has_scheduled_day_content(entry):
-                next_entry = entry
-                break
-    return today_entry, next_entry
-
-
 def _completion_stats(
     *, checkins: list[dict[str, Any]], session_logs: list[dict[str, Any]], today: date
 ) -> DashboardCompletionStats:
     cutoff = today - timedelta(days=COMPLETION_WINDOW_DAYS - 1)
 
     def _in_window(value: Any) -> bool:
-        parsed = _parse_iso_date(value)
+        parsed = parse_iso_date(value)
         return parsed is not None and cutoff <= parsed <= today
 
     window_logs = [log for log in session_logs if _in_window(log.get("session_date"))]
@@ -314,12 +218,12 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
         store: AppStore = Depends(get_store),
     ) -> AthleteDashboardState:
         today = _today_utc()
-        plan_row = _latest_visible_plan_row(store, profile.athlete_id)
+        plan_row = latest_visible_plan_row(store, profile.athlete_id)
         week_index: int | None = None
         week: WeeklySchedule | None = None
         if plan_row is not None:
-            week_index, week = _resolve_current_week(plan_row, today=today)
-        today_entry, next_entry = _resolve_today_and_next(week, today=today)
+            week_index, week = resolve_current_week(plan_row, today=today)
+        today_entry, next_entry = resolve_today_and_next(week, today=today)
 
         checkins = store.list_daily_checkins(profile.athlete_id, limit=14)
         session_logs = store.list_session_logs(profile.athlete_id, limit=RECENT_SESSION_LOG_WINDOW)
@@ -354,7 +258,7 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
         store: AppStore = Depends(get_store),
     ) -> DailyCheckinResponse:
         checkin_date = request_body.checkin_date or _today_utc().isoformat()
-        plan_row = _latest_visible_plan_row(store, profile.athlete_id)
+        plan_row = latest_visible_plan_row(store, profile.athlete_id)
         plan_id = str(plan_row["id"]) if plan_row else None
 
         open_flags = store.list_injury_flags(profile.athlete_id, statuses=("open",))
@@ -440,7 +344,7 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
             plan_id = request_body.plan_id
         else:
-            latest = _latest_visible_plan_row(store, profile.athlete_id)
+            latest = latest_visible_plan_row(store, profile.athlete_id)
             plan_id = str(latest["id"]) if latest else None
 
         log_row = store.create_session_log(
@@ -484,7 +388,7 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> InjuryFlagRecord:
-        plan_row = _latest_visible_plan_row(store, profile.athlete_id)
+        plan_row = latest_visible_plan_row(store, profile.athlete_id)
         flag_row = store.create_injury_flag(
             profile.athlete_id,
             {

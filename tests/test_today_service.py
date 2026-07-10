@@ -7,14 +7,16 @@ deterministic without a live clock or database.
 
 from datetime import date, datetime, timedelta, timezone
 from types import MappingProxyType, SimpleNamespace
+from unittest import mock
 from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi import HTTPException
 
 from api.models import WeeklyDayEntry, WeeklySchedule
-from api.routes.daily import _resolve_today_and_next
+from api.services.plan_schedule import resolve_today_and_next
 from api.contracts.completion import completion_landing_state, completion_status_of
+from api.services import today_service as today_service_module
 from api.services.today_service import (
     _scan_forward_for_next_training,
     build_today_command_view,
@@ -383,7 +385,7 @@ class TestDailyScheduleResolver:
             ],
         )
 
-        today_entry, next_entry = _resolve_today_and_next(week, today=date(2026, 6, 23))
+        today_entry, next_entry = resolve_today_and_next(week, today=date(2026, 6, 23))
 
         assert today_entry is not None
         assert today_entry.calendar_date == "2026-06-23"
@@ -1863,24 +1865,20 @@ class TestScanForwardForNextTraining:
     def _week(days):
         return SimpleNamespace(week_count=2, days=days)
 
-    @staticmethod
-    def _parse(value):
-        try:
-            return date.fromisoformat(str(value))
-        except (TypeError, ValueError):
-            return None
-
     def _scan(self, current_days, later_days, training_date):
         current = self._week(current_days)
         later = self._week(later_days)
-        return _scan_forward_for_next_training(
-            {"id": PLAN},
-            week=current,
-            week_index=0,
-            training_date=training_date,
-            weekly_schedule_or_none=lambda _row, *, week_index: later if week_index == 1 else None,
-            parse_iso_date=self._parse,
-        )
+        with mock.patch.object(
+            today_service_module,
+            "weekly_schedule_or_none",
+            lambda _row, *, week_index: later if week_index == 1 else None,
+        ):
+            return _scan_forward_for_next_training(
+                {"id": PLAN},
+                week=current,
+                week_index=0,
+                training_date=training_date,
+            )
 
     def test_dict_entry_skips_past_dated_session(self):
         # A later week whose only training day is dated on/before today must be
