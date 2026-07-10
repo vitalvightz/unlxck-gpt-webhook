@@ -1,0 +1,132 @@
+name: Apply PR 2026 review fix
+
+on:
+  push:
+    branches:
+      - claude/card-structure-session-fallback-sh8yzi
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'chore: apply PR 2026 review fixes'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/card-structure-session-fallback-sh8yzi
+          fetch-depth: 0
+
+      - name: Apply focused classifier fix and tests
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          source_path = Path("api/services/today_service.py")
+          source = source_path.read_text(encoding="utf-8")
+
+          regex_block = re.compile(
+              r'_STRUCTURED_TRAINING_HEADLINE_RE = re\.compile\(\n.*?'
+              r'_STRUCTURED_COACH_CONTACT_RE = re\.compile\(',
+              re.S,
+          )
+          replacement = '''_STRUCTURED_TRAINING_HEADLINE_RE = re.compile(
+              r"\\b(coach|spar|technical|boxing|pad\\s?work|pads|mitts?|skill|primer|"
+              r"strength|conditioning|mobility|reset|fight\\s+day|protocol|"
+              r"rhythm|flush|breath(?:ing)?|downshift|(?:easy|recovery)\\s+walk|"
+              r"visuali[sz](?:e|ation)|cue\\s+card|mindset\\s+(?:reset|work))\\b",
+              re.I,
+          )
+          # A structured today_card always has a headline, including motivational
+          # and advisory copy. Headline-only days therefore need affirmative work
+          # vocabulary; unknown non-rest copy must not become a fake session.
+          _STRUCTURED_REST_HEADLINE_RE = re.compile(
+              r"^(?:full\\s+|complete\\s+|total\\s+)?(?:rest|off|no\\s+training|day\\s+off|travel)\\b",
+              re.I,
+          )
+          _STRUCTURED_COACH_CONTACT_RE = re.compile('''
+          source, count = regex_block.subn(lambda _: replacement, source, count=1)
+          if count != 1:
+              raise RuntimeError(f"expected one headline regex block, replaced {count}")
+
+          old_classifier = '''        is_training_headline = bool(headline) and (
+              _STRUCTURED_TRAINING_HEADLINE_RE.search(headline) is not None
+              or not _STRUCTURED_REST_HEADLINE_RE.search(headline)
+          )'''
+          new_classifier = '''        is_training_headline = (
+              bool(headline)
+              and _STRUCTURED_REST_HEADLINE_RE.search(headline) is None
+              and _STRUCTURED_TRAINING_HEADLINE_RE.search(headline) is not None
+          )'''
+          if source.count(old_classifier) != 1:
+              raise RuntimeError("headline classifier target was not unique")
+          source = source.replace(old_classifier, new_classifier, 1)
+          source_path.write_text(source, encoding="utf-8")
+
+          test_path = Path("tests/test_today_filler_headline_classification.py")
+          test_path.write_text(
+              '''from api.services import today_service as today_service_module
+
+
+DAY = "2026-07-10"
+WEEK = {"phase_label": "TAPER"}
+
+
+def _headline_only_entry(headline: str, *, day_type: str = "rest"):
+    return today_service_module._structured_session_entry_for_day(
+        {
+            "date": DAY,
+            "countdown_label": "D-19",
+            "day_type": day_type,
+            "today_card": {"headline": headline},
+            "sessions": [],
+        },
+        week=WEEK,
+    )
+
+
+def test_advisory_headlines_do_not_become_fake_rest_day_sessions():
+    for headline in (
+        "Protect the body today",
+        "Recovery is the priority",
+        "Stay patient and refuel",
+        "Rest day — mobility optional",
+        "No training today — breathing only",
+    ):
+        assert _headline_only_entry(headline) is None, headline
+
+
+def test_explicit_support_headlines_still_surface_on_rest_days():
+    for headline in (
+        "Rhythm flush",
+        "Breathing downshift",
+        "Easy walk and visualisation",
+        "Mindset reset",
+    ):
+        entry = _headline_only_entry(headline)
+        assert entry is not None, headline
+        assert entry["title"] == headline
+        assert entry["effective_load"] == "reduced"
+
+
+def test_unknown_headline_without_session_stays_non_training():
+    assert _headline_only_entry("Protect freshness", day_type="recovery") is None
+''',
+              encoding="utf-8",
+          )
+          PY
+
+          python -m compileall -q api/services/today_service.py tests/test_today_filler_headline_classification.py
+          rm .github/workflows/pr-2026-review-fix.yml
+
+      - name: Commit patch to PR branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/services/today_service.py tests/test_today_filler_headline_classification.py .github/workflows/pr-2026-review-fix.yml
+          git commit -m "Fix headline-only filler classification"
+          git push origin HEAD:claude/card-structure-session-fallback-sh8yzi
