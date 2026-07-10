@@ -12,14 +12,21 @@ type BannerOptions = {
   isPreview?: boolean;
 };
 
-const DISPLAY_BY_DECISION: Partial<Record<TodayRecommendationState, TodayDecisionDisplayState>> = {
+type AuthoritativeDisplayState = Extract<
+  TodayDecisionDisplayState,
+  "go" | "adjust" | "pull_back" | "preview"
+>;
+
+const DISPLAY_BY_DECISION: Partial<
+  Record<TodayRecommendationState, Exclude<AuthoritativeDisplayState, "preview">>
+> = {
   train_as_planned: "go",
   modify: "adjust",
   pull_back: "pull_back",
 };
 
 const CHIP_BY_DISPLAY: Record<
-  "go" | "adjust" | "pull_back" | "preview",
+  AuthoritativeDisplayState,
   TodayDecisionBanner["chip"]
 > = {
   go: "GO",
@@ -29,7 +36,7 @@ const CHIP_BY_DISPLAY: Record<
 };
 
 const TONE_BY_DISPLAY: Record<
-  "go" | "adjust" | "pull_back" | "preview",
+  AuthoritativeDisplayState,
   TodayDecisionTone
 > = {
   go: "green",
