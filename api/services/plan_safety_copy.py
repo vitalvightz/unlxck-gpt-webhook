@@ -38,8 +38,8 @@ def clarify_restricted_training_hold(plan: PlanDetail) -> PlanDetail:
         subtext=_RESTRICTED_HOLD_SUBTEXT,
         stage2_skipped=safety.stage2_skipped,
         clinician_clearance_required=safety.clinician_clearance_required,
-        matched_high_risk_categories=list(safety.matched_high_risk_categories),
-        red_flags=list(safety.red_flags),
+        matched_high_risk_categories=list(safety.matched_high_risk_categories) if safety.matched_high_risk_categories is not None else None,
+        red_flags=list(safety.red_flags) if safety.red_flags is not None else None,
         sparring_risk_band=safety.sparring_risk_band,
         next_steps=list(_RESTRICTED_HOLD_NEXT_STEPS),
     )
