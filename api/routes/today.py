@@ -1,6 +1,6 @@
 """Block 4 Today/Overview API surface.
 
-Thin HTTP wrappers over ``api/services/today_service.py``. The server owns the
+Thin HTTP wrappers over the fail-safe Today service boundary. The server owns the
 training-day calculation and the recommendation; endpoints never trust a
 client-supplied recommendation and never mutate the saved plan. This is the
 non-UI backend integration — no Today UI is built here.
@@ -27,7 +27,7 @@ from api.models import (
 )
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
-from api.services.today_service import (
+from api.services.readiness_fail_safe import (
     build_today_command_view,
     resolve_today_landing,
     submit_today_checkin,
