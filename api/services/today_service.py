@@ -1073,7 +1073,7 @@ def _structured_session_entry_for_day(
     else:
         headline = _clean_text(today_card.get("headline"))
         is_training_headline = bool(headline) and (
-            bool(_STRUCTURED_TRAINING_HEADLINE_RE.search(headline))
+            _STRUCTURED_TRAINING_HEADLINE_RE.search(headline) is not None
             or not _STRUCTURED_REST_HEADLINE_RE.search(headline)
         )
         if not is_training_headline:
