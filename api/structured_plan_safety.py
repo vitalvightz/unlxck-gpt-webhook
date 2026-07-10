@@ -438,7 +438,9 @@ def audit_structured_plan(structured_plan: dict, computed_support: dict | None =
         findings.extend(detect_duplicate_rendered_strings(structured_plan))
         return findings
     except Exception as exc:
+        import logging
+        logging.getLogger(__name__).exception("Safety audit crashed")
         return [
-            f"{AUDIT_ERROR}: safety audit crashed ({type(exc).__name__}) — "
+            f"{AUDIT_ERROR}: safety audit crashed ({type(exc).__name__}: {exc}) — "
             "treating card as unpublishable"
         ]
