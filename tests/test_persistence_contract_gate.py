@@ -92,6 +92,33 @@ def test_visible_plan_with_blank_week_is_rescued_by_clean_card():
     assert not any(code == "plan_contract_review_required" for code, _ in events)
 
 
+def test_blocked_by_safety_audit_card_is_not_clean_and_cannot_rescue():
+    # A card blocked by the safety audit (coach_gated leakage / deterministic
+    # conflict / audit crash) must never count as a clean card, so it can never
+    # rescue a plan past review routing.
+    from api.structured_plan_generation import has_clean_structured_card
+
+    blocked_fields = {
+        "structured_plan": {"plan_metadata": {"ok": True}},
+        "stage2_validator_report": {
+            "structured_plan": {"status": "blocked_by_safety_audit"}
+        },
+    }
+    assert has_clean_structured_card(blocked_fields) is False
+
+    emit, events = _emit_collector()
+    result = _apply_plan_contract_validation(
+        _result("ready", [{"phase": "camp"}], **blocked_fields),  # blank week => drift
+        fight_date=FIGHT_DATE,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=emit,
+    )
+    assert result["status"] == "review_required"
+    assert not any(code == "plan_contract_structured_card_rescue" for code, _ in events)
+    assert any(code == "plan_contract_review_required" for code, _ in events)
+
+
 def test_empty_plan_text_is_not_rescued_even_with_card():
     # An empty body is unrecoverable output integrity; the card cannot vouch for
     # it, so the plan is still routed to review.

@@ -255,7 +255,7 @@ def generate_recovery_block(training_context: dict) -> str:
             recovery_block += [
                 "- Cut >6% -> elevate recovery urgency",
                 "- Add 2 float tank or Epsom salt baths in fight week",
-                "- Emphasize post-weigh-in refeed: fluids, high-GI carbs",
+                "- Emphasize post-weigh-in refuelling: fluids, high-GI carbs",
                 "- Monitor mood, sleep, and hydration hourly post-weigh-in",
                 "- Consider medical supervision if possible",
             ]

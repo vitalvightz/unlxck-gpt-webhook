@@ -26,7 +26,7 @@ from typing import Any, Callable, Literal, get_args
 
 from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_faithfulness import check_structured_faithfulness
-from .structured_plan_safety import athlete_safe_support, audit_structured_plan
+from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -52,11 +52,15 @@ from .structured_plan_models import (
 )
 
 # Admin/debug status describing what happened to the structured-plan attempt.
+# ``blocked_by_safety_audit`` means the card was schema-valid but carried
+# blocking safety findings (LEAKAGE/CONFLICT/AUDIT_ERROR) — it is discarded and
+# the plan is held for review, never published on the card's authority.
 StructuredPlanStatus = Literal[
     "not_attempted",
     "valid",
     "repair_attempted_valid",
     "invalid_fallback_used",
+    "blocked_by_safety_audit",
 ]
 
 # Biometric / wearable-style keys the structured plan must never carry. Readiness
@@ -1461,9 +1465,31 @@ def build_structured_plan_outcome(
        :func:`repair_structured_plan_once`; success → ``repair_attempted_valid``,
        otherwise ``invalid_fallback_used``.
 
+    A schema-valid card is then safety-audited: blocking findings
+    (LEAKAGE/CONFLICT/AUDIT_ERROR) yield ``blocked_by_safety_audit`` with the
+    card discarded, so a leaking or contradictory card can never be persisted or
+    trusted for publication. DUPLICATE findings stay advisory warnings.
+
     Never raises: a malformed payload degrades to ``invalid_fallback_used`` so the
     raw ``plan_text`` flow keeps working.
     """
+
+    def _audited_outcome(
+        status: StructuredPlanStatus, plan_dict: dict[str, Any], schema_version: str | None
+    ) -> StructuredPlanOutcome:
+        blocking, advisory = split_findings(audit_structured_plan(plan_dict, computed_support))
+        if blocking:
+            return StructuredPlanOutcome(
+                status="blocked_by_safety_audit",
+                errors=blocking,
+                warnings=advisory,
+            )
+        return StructuredPlanOutcome(
+            status=status,
+            structured_plan=plan_dict,
+            schema_version=schema_version,
+            warnings=advisory,
+        )
 
     if raw_data is None:
         return StructuredPlanOutcome(status="not_attempted")
@@ -1479,12 +1505,7 @@ def build_structured_plan_outcome(
                 status="invalid_fallback_used",
                 errors=[f"faithfulness: {issue}" for issue in unfaithful],
             )
-        return StructuredPlanOutcome(
-            status="valid",
-            structured_plan=plan_dict,
-            schema_version=first.plan.schema_version,
-            warnings=audit_structured_plan(plan_dict, computed_support),
-        )
+        return _audited_outcome("valid", plan_dict, first.plan.schema_version)
 
     if repair_fn is None:
         return StructuredPlanOutcome(
@@ -1508,11 +1529,8 @@ def build_structured_plan_outcome(
                 status="invalid_fallback_used",
                 errors=[f"faithfulness: {issue}" for issue in unfaithful],
             )
-        return StructuredPlanOutcome(
-            status="repair_attempted_valid",
-            structured_plan=plan_dict,
-            schema_version=repaired.plan.schema_version,
-            warnings=audit_structured_plan(plan_dict, computed_support),
+        return _audited_outcome(
+            "repair_attempted_valid", plan_dict, repaired.plan.schema_version
         )
     return StructuredPlanOutcome(
         status="invalid_fallback_used",

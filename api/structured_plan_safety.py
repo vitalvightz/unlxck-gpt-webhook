@@ -10,30 +10,56 @@ Authority model (deterministic-first):
 * ``coach_gated`` content (acute weight-cut + supplement dosing) must never be
   athlete-facing.
 
-These helpers are DEBUG-ONLY. They never mutate the plan and never resolve a
-conflict; they only surface leakage / conflicts / duplicates as warning strings
-so regressions are visible in the structured debug metadata. Conflict resolution
-stays with the deterministic layer, never here and never the frontend.
+These helpers never mutate the plan and never resolve a conflict; they surface
+leakage / conflicts / duplicates as prefixed finding strings. Findings are
+severity-classified: ``LEAKAGE`` / ``CONFLICT`` / ``AUDIT_ERROR`` findings BLOCK
+the structured card from publication (see
+:func:`api.structured_plan_generation.build_structured_plan_outcome`), while
+``DUPLICATE`` findings are advisory warnings recorded in debug metadata only.
+Conflict resolution stays with the deterministic layer, never here and never
+the frontend.
 """
 from __future__ import annotations
 
 import re
 from typing import Any
 
-# Warning prefixes so findings are greppable in debug metadata.
+# Finding prefixes so findings are greppable in debug metadata.
 LEAKAGE = "LEAKAGE"
 CONFLICT = "CONFLICT"
 DUPLICATE = "DUPLICATE"
+AUDIT_ERROR = "AUDIT_ERROR"
+
+# Severity: these prefixes block the structured card from publication. DUPLICATE
+# (and anything unrecognized) stays a warning. AUDIT_ERROR is blocking because a
+# crashed audit means the card is in an UNKNOWN safety state, not a clean one.
+BLOCKING_FINDING_PREFIXES: tuple[str, ...] = (LEAKAGE, CONFLICT, AUDIT_ERROR)
+
+
+def is_blocking_finding(finding: str) -> bool:
+    """Whether a finding string carries publication-blocking severity."""
+    return str(finding).startswith(tuple(f"{p}:" for p in BLOCKING_FINDING_PREFIXES))
+
+
+def split_findings(findings: list[str]) -> tuple[list[str], list[str]]:
+    """Split audit findings into ``(blocking, warning_only)`` by severity."""
+    blocking = [f for f in findings if is_blocking_finding(f)]
+    warnings = [f for f in findings if not is_blocking_finding(f)]
+    return blocking, warnings
+
 
 # High-signal coach/medical dosing tokens. Only flagged when they actually
 # appear in the computed_support ``coach_gated`` payload (so generic plan wording
-# is never falsely flagged), then matched against athlete-facing text.
+# is never falsely flagged), then matched against athlete-facing text. A generic
+# ``g/kg`` pattern is deliberately NOT a sentinel: per-kg macro coefficients
+# (e.g. "1.6-2.2 g/kg") are athlete-safe by the authority model and would match
+# the gated blob on every active cut, blocking legitimate plans.
 _SENTINEL_TOKEN_RES = {
     "bicarbonate": re.compile(r"\bbicarbonate\b", re.I),
     "magnesium": re.compile(r"\bmagnesium\b", re.I),
     "taurine": re.compile(r"\btaurine\b", re.I),
     "mmol": re.compile(r"\bmmol\b", re.I),
-    "g/kg": re.compile(r"\d+(?:\.\d+)?\s*g\s*/\s*kg", re.I),
+    "150%": re.compile(r"150\s*%"),
     "refeed": re.compile(r"\brefeed\b", re.I),
 }
 
@@ -399,9 +425,11 @@ def detect_computed_support_conflicts(structured_plan: dict, computed_support: d
 
 
 def audit_structured_plan(structured_plan: dict, computed_support: dict | None = None) -> list[str]:
-    """Run all debug-only safety audits, returning prefixed warning strings.
+    """Run all safety audits, returning prefixed finding strings.
 
-    Empty list means clean. Never raises (auditing must never break the plan).
+    Empty list means clean. Never raises — but a crash inside the audit is NOT
+    clean: it returns a blocking ``AUDIT_ERROR`` finding, because an unaudited
+    card is in an unknown safety state and must not publish as if verified.
     """
     try:
         findings: list[str] = []
@@ -409,5 +437,8 @@ def audit_structured_plan(structured_plan: dict, computed_support: dict | None =
         findings.extend(detect_computed_support_conflicts(structured_plan, computed_support))
         findings.extend(detect_duplicate_rendered_strings(structured_plan))
         return findings
-    except Exception:  # auditing is best-effort and must never block a plan
-        return []
+    except Exception as exc:
+        return [
+            f"{AUDIT_ERROR}: safety audit crashed ({type(exc).__name__}) — "
+            "treating card as unpublishable"
+        ]
