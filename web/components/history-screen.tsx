@@ -203,7 +203,11 @@ export function HistoryScreen() {
   }, [token]);
 
   // Lazy per-tab fetch: each tab loads on first open and is cached for the
-  // rest of the visit.
+  // rest of the visit. The tab states are dependencies on purpose: the
+  // token-change reset above lands one render later than this effect's first
+  // pass, so the effect must re-run when a cache flips back to null or the
+  // reset would strand the tab on its loading skeleton forever. A tab that
+  // already has rows or an error is left alone, so this cannot loop.
   useEffect(() => {
     if (!token) {
       return;
@@ -215,7 +219,7 @@ export function HistoryScreen() {
       fetcher: () => Promise<T[]>,
       set: (data: TabData<T>) => void,
     ) => {
-      if (current.rows !== null) {
+      if (current.rows !== null || current.error !== null) {
         return;
       }
       try {
@@ -240,8 +244,7 @@ export function HistoryScreen() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch is keyed on tab/token only; TabData objects are the cache being written.
-  }, [tab, token]);
+  }, [tab, token, sessions, checkins, injuries]);
 
   const active =
     tab === "sessions" ? sessions : tab === "checkins" ? checkins : injuries;
