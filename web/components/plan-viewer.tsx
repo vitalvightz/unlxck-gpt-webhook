@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -12,16 +12,13 @@ import {
   archivePlan,
   getActivePlan,
   getPlan,
-  getPlanCompletions,
   getToday,
   isRetryableApiFailure,
   rejectApprovedPlan,
   renamePlan,
   setActivePlan,
   submitManualStage2,
-  submitTodaySessionCompletion,
 } from "@/lib/api";
-import { formatAppDate } from "@/lib/date-format";
 import {
   ACTIVE_PLAN_OVERLAP_MESSAGE,
   type ActivePlanOverlapAction,
@@ -32,7 +29,6 @@ import {
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
-import { SessionCompletionForm } from "@/components/session-completion-form";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
@@ -50,9 +46,11 @@ import {
 import type {
   PlanAdvisory,
   PlanDetail,
+  StructuredBlock,
   StructuredDay,
+  StructuredPlan,
   StructuredSession,
-  TodaySessionCompletionRecord,
+  StructuredWeek,
   UserRole,
 } from "@/lib/types";
 import {
@@ -67,11 +65,9 @@ const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
 const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
 // Background structuring can take up to ~2 minutes for a full camp. We never make
-// the athlete wait for it: the template card (parsed from plan_text) is shown
-// immediately, and we poll quietly in the background to swap in the richer
-// structured card the moment it lands. The poll window covers the backend Stage 2
-// conversion timeout (UNLXCK_STAGE2_TIMEOUT_SECONDS, default 210s) plus a small
-// buffer; once it elapses we simply stop polling and the template card stays.
+// the athlete wait for it: plan_text is deterministically adapted into the full
+// structured renderer immediately. Polling only swaps in the richer saved payload
+// when it lands. The window covers the backend conversion timeout plus a buffer.
 const STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS = 220_000;
 const STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS = 5 * 60_000;
 
@@ -91,11 +87,10 @@ export function isPlanReleasedToAthlete(
 }
 
 /**
- * Decide whether a freshly published plan is still expecting its richer
- * structured card to land in the background. When true, the athlete is shown the
- * template card (parsed from plan_text) right away while we poll quietly and swap
- * in the structured card once it arrives — there is no waiting screen and no
- * "fallback" notice. We only await an upgrade for plans that can still produce
+ * Decide whether a freshly published plan is still expecting its richer saved
+ * structured payload to land in the background. The enhanced renderer is already
+ * active from plan_text; polling only adds server-derived metadata when available.
+ * We only await an upgrade for plans that can still produce
  * one. We never await for:
  *  - legacy/old plans (created outside the recent-plan window), which may simply
  *    never have a structured_plan,
@@ -141,15 +136,13 @@ export function isRecentlyCreatedPlan(
 /**
  * Whether the background upgrade poll should run for this plan.
  *
- * Unlike the visible "enhancing" hint (shouldAwaitStructuredPlanUpgrade), this is
- * deliberately NOT gated on plan recency. A published plan that is still missing
+ * This is deliberately NOT gated on plan recency. A published plan still missing
  * its structured card should keep trying to pick one up whenever its view is
  * open — including an older plan whose card was only built later (e.g. after a
  * held blocker cleared or a backfill ran), which the 5-minute recency gate would
- * otherwise leave stuck on the template card until a manual reload. The
+ * otherwise leave on the deterministic payload until a manual reload. The
  * mount-scoped poll window (pollWindowExpired) still bounds the cost so we never
- * poll a legacy cardless plan forever, and the swap happens silently for
- * non-recent plans (no misleading hint).
+ * poll a cardless plan forever, and the swap happens silently.
  */
 export function shouldPollForStructuredPlanUpgrade(params: {
   hasPublishedPlan: boolean;
@@ -773,177 +766,266 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
   return groups;
 }
 
-function PlanTextNotesCard({ notes }: { notes: PlanTextNotes }) {
-  return (
-    <section className="sp-card sp-active-notes legacy-plan-notes">
-      <p className="sp-eyebrow">{notes.title}</p>
-      {notes.lines.map((line, index) => (
-        <p key={`${notes.title}-${index}`} className="sp-block-purpose">
-          {line}
-        </p>
-      ))}
-    </section>
-  );
+function countdownDays(value: string | null): number | null {
+  const match = value?.match(/^D-(\d+)$/i);
+  if (!match) {
+    return null;
+  }
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-function PlanTextBlockCard({ block }: { block: PlanTextBlock }) {
-  return (
-    <div className="sp-block">
-      <div className="sp-block-head">
-        <span className="sp-block-title">{block.name}</span>
-        {block.tag ? <span className="sp-tag">{block.tag}</span> : null}
-      </div>
-      {block.dose ? (
-        <div className="sp-block-stats">
-          <span className="sp-stat">
-            <span className="sp-stat-label">Dose</span>
-            {block.dose}
-          </span>
-        </div>
-      ) : null}
-      {block.details.map((detail, index) =>
-        detail.label ? (
-          <p key={`${block.name}-${index}`} className="sp-block-aside">
-            <span className="sp-stat-label">{detail.label}</span>
-            {detail.text}
-          </p>
-        ) : (
-          <p key={`${block.name}-${index}`} className="sp-block-purpose">
-            {detail.text}
-          </p>
-        ),
-      )}
-    </div>
-  );
+function dateFromCountdown(
+  fightDate: string | null | undefined,
+  countdown: string | null,
+): string | null {
+  const match = fightDate?.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const days = countdownDays(countdown);
+  if (!match || days === null) {
+    return null;
+  }
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
 }
 
-function PlanTextSessionCard({ session }: { session: PlanTextSession }) {
-  return (
-    <article className="sp-session legacy-plan-card">
-      <header className="sp-session-head">
-        <div>
-          {session.countdown || session.weekday ? (
-            <div className="sp-day-labels sp-session-day-labels">
-              {session.countdown ? (
-                <span className="sp-countdown sp-accent">{session.countdown}</span>
-              ) : null}
-              {session.weekday ? <span className="sp-day-date">{session.weekday}</span> : null}
-            </div>
-          ) : null}
-          <h4 className="sp-session-title">{session.title}</h4>
-          {session.objective ? <p className="sp-session-objective">{session.objective}</p> : null}
-        </div>
-      </header>
-      {session.coachNote ? <p className="sp-today-note">{session.coachNote}</p> : null}
-      {session.blocks.length ? (
-        <div className="sp-blocks">
-          {session.blocks.map((block, index) => (
-            <PlanTextBlockCard key={`${block.name}-${index}`} block={block} />
-          ))}
-        </div>
-      ) : null}
-      {session.notes.map((note, index) => (
-        <p key={`note-${index}`} className="sp-block-purpose">
-          {note}
-        </p>
-      ))}
-    </article>
-  );
+function detailText(block: PlanTextBlock, labels: string[]): string[] {
+  const wanted = new Set(labels.map((label) => label.toLowerCase()));
+  return block.details
+    .filter((detail) => detail.label && wanted.has(detail.label.toLowerCase()))
+    .map((detail) => detail.text);
 }
 
-function PlanTextWeekSection({ week, defaultOpen }: { week: PlanTextWeek; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <details className="sp-week" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary className="sp-week-summary">
-        <span className="sp-week-title">{week.title}</span>
-        {week.phase ? <span className="sp-tag sp-accent">{week.phase}</span> : null}
-      </summary>
-      <div className="sp-week-body">
-        {week.sessions.length ? (
-          week.sessions.map((session, index) => (
-            <PlanTextSessionCard key={`${session.countdown}-${index}`} session={session} />
-          ))
-        ) : (
-          <p className="sp-muted">No sessions scheduled.</p>
-        )}
-      </div>
-    </details>
-  );
+function inferBlockType(block: PlanTextBlock): string {
+  const value = `${block.tag || ""} ${block.name}`.toLowerCase();
+  if (/rehab|prehab|mobility|activation|warm-?up|cool-?down|reset|recovery/.test(value)) {
+    return "rehab";
+  }
+  if (/condition|aerobic|anaerobic|bike|run|sprint|interval/.test(value)) {
+    return "conditioning";
+  }
+  if (/strength|power|throw|jump|plyo|lift/.test(value)) {
+    return "strength_power";
+  }
+  if (/skill|technical|tactical|shadowbox|footwork|cue card|film|watch/.test(value)) {
+    return "skill";
+  }
+  return block.tag?.toLowerCase().replace(/\s+/g, "_") || "training";
 }
 
-function PlanTextCards({ text }: { text: string }) {
-  const groups = parsePlanText(text);
+function inferSessionType(session: PlanTextSession): string {
+  const blocks = session.blocks
+    .map((block) => `${block.tag || ""} ${block.name}`)
+    .join(" ");
+  const value = `${session.title} ${blocks}`.toLowerCase();
+  if (/spar|coach-led|boxing|grappling|wrestling|muay thai|kickbox/.test(value)) {
+    return "skill";
+  }
+  if (/recover|reset|mobility|breath|rest/.test(value)) {
+    return "recovery";
+  }
+  if (/condition|aerobic|anaerobic|bike|run|sprint|interval/.test(value)) {
+    return "conditioning";
+  }
+  if (/strength|power|throw|jump|plyo|lift/.test(value)) {
+    return "strength_power";
+  }
+  if (/tactical|technical|skill|shadowbox|footwork|cue|film|watch|visuali/.test(value)) {
+    return "skill";
+  }
+  return "mixed";
+}
 
-  if (!groups.length) {
-    return (
-      <section className="sp-root legacy-plan-root">
-        <article className="sp-session legacy-plan-card">
-          <header className="sp-session-head">
-            <div>
-              <p className="sp-eyebrow">Saved plan</p>
-              <h4 className="sp-session-title">No plan cards available</h4>
-            </div>
-          </header>
-          <p className="sp-session-objective">This saved plan does not contain athlete-facing plan content.</p>
-        </article>
-      </section>
+function toStructuredBlock(block: PlanTextBlock, index: number): StructuredBlock {
+  const purpose = detailText(block, ["Purpose", "Why"]).join(" ") || null;
+  const progression = detailText(block, ["Progress"]).join(" ") || null;
+  const regressions = detailText(block, ["Regress", "Regression", "Easier"]);
+  const substitutions = detailText(block, ["Swap", "Swaps"]);
+  const mappedLabels = new Set([
+    "purpose",
+    "why",
+    "progress",
+    "regress",
+    "regression",
+    "easier",
+    "swap",
+    "swaps",
+  ]);
+  const coachingCues = block.details
+    .filter((detail) => !detail.label || !mappedLabels.has(detail.label.toLowerCase()))
+    .map((detail) => (detail.label ? `${detail.label}: ${detail.text}` : detail.text));
+
+  return {
+    block_id: `text-block-${index + 1}`,
+    block_type: inferBlockType(block),
+    display_name: block.name,
+    order_index: index,
+    load: block.dose ? { display: block.dose } : null,
+    purpose,
+    coaching_cues: coachingCues,
+    regression_options: regressions,
+    substitutions,
+    progression_rule: progression,
+  };
+}
+
+function toStructuredSession(session: PlanTextSession, index: number): StructuredSession {
+  const notes = session.notes.join(" ").trim();
+  const objective = [session.objective, notes].filter(Boolean).join(" ") || null;
+  return {
+    session_id: `text-session-${index + 1}`,
+    session_type: inferSessionType(session),
+    title: session.title,
+    objective,
+    blocks: session.blocks.map(toStructuredBlock),
+  };
+}
+
+function toStructuredDays(
+  sessions: PlanTextSession[],
+  fightDate: string | null | undefined,
+  phase: string | null,
+): StructuredDay[] {
+  const grouped = new Map<string, PlanTextSession[]>();
+  sessions.forEach((session, index) => {
+    const key = session.countdown || `session-${index + 1}`;
+    grouped.set(key, [...(grouped.get(key) || []), session]);
+  });
+
+  return [...grouped.values()].map((daySessions, dayIndex) => {
+    const countdown = daySessions[0]?.countdown || null;
+    const coachLed = daySessions.find((session) => session.coachNote);
+    const appSessions = daySessions.filter(
+      (session) => session !== coachLed || session.blocks.length > 0,
     );
+    const coachOnly = Boolean(coachLed && appSessions.length === 0);
+    return {
+      date: dateFromCountdown(fightDate, countdown),
+      countdown_label: countdown,
+      phase_label: phase,
+      day_type: "moderate",
+      today_card: coachLed
+        ? {
+            headline: coachOnly ? coachLed.title : null,
+            coach_led_contact: coachOnly ? null : coachLed.coachNote || coachLed.title,
+          }
+        : null,
+      sessions: coachOnly
+        ? []
+        : appSessions.map((session, sessionIndex) =>
+            toStructuredSession(session, dayIndex * 100 + sessionIndex),
+          ),
+    };
+  });
+}
+
+function weekIndex(value: string, fallback: number): number {
+  const match = value.match(/\bWeek\s+(\d+)\b/i);
+  return match ? Number.parseInt(match[1], 10) : fallback;
+}
+
+function toStructuredWeek(
+  week: PlanTextWeek,
+  index: number,
+  fightDate: string | null | undefined,
+): StructuredWeek {
+  const days = toStructuredDays(week.sessions, fightDate, week.phase);
+  const dates = days
+    .map((day) => day.date)
+    .filter((date): date is string => Boolean(date))
+    .sort();
+  const countdowns = days
+    .map((day) => day.countdown_label)
+    .filter((countdown): countdown is string => Boolean(countdown));
+  return {
+    week_id: `text-week-${index + 1}`,
+    week_index: weekIndex(week.title, index + 1),
+    phase_label: week.phase,
+    week_goal: week.title,
+    start_date: dates[0] || null,
+    end_date: dates[dates.length - 1] || null,
+    countdown_start: countdowns[0] || null,
+    countdown_end: countdowns[countdowns.length - 1] || null,
+    days,
+  };
+}
+
+function noteCategory(title: string): string {
+  const normalized = title.toLowerCase();
+  if (normalized.includes("injur") || normalized.includes("safety")) return "injury";
+  if (normalized.includes("nutrition") || normalized.includes("weight")) return "nutrition";
+  if (normalized.includes("recover")) return "recovery";
+  return "general";
+}
+
+/**
+ * Adapt approved plan_text into the full structured renderer without another
+ * model call. Every field comes from the saved athlete-facing text, so a missing
+ * server-side structured payload can never force the legacy renderer.
+ */
+export function buildStructuredPlanFromText(
+  rawText: string,
+  fightDate?: string | null,
+): StructuredPlan {
+  const groups = parsePlanText(rawText);
+  const notes = groups
+    .filter((group): group is PlanTextNotes => group.kind === "notes")
+    .filter((group) => group.lines.length > 0)
+    .map((group) => ({
+      category: noteCategory(group.title),
+      label: group.title,
+      text: group.lines.join(" "),
+    }));
+  const explicitWeeks = groups.filter(
+    (group): group is PlanTextWeek => group.kind === "week",
+  );
+  const looseSessions = groups.filter(
+    (group): group is PlanTextSession => group.kind === "session",
+  );
+  const weekGroups = [...explicitWeeks];
+  if (looseSessions.length > 0) {
+    weekGroups.push({
+      kind: "week",
+      title: explicitWeeks.length > 0 ? `Week ${explicitWeeks.length + 1}` : "Week 1",
+      phase: null,
+      sessions: looseSessions,
+    });
+  }
+  if (weekGroups.length === 0) {
+    weekGroups.push({ kind: "week", title: "Week 1", phase: null, sessions: [] });
   }
 
-  const firstWeekIndex = groups.findIndex((group) => group.kind === "week");
-  return (
-    <section className="sp-root legacy-plan-root" aria-label="Saved plan cards">
-      <header className="sp-header legacy-plan-header">
-        <p className="sp-eyebrow">Saved plan</p>
-        <h3 className="sp-title">Training plan</h3>
-      </header>
-      <div className="legacy-plan-card-stack">
-        {groups.map((group, index) => {
-          if (group.kind === "notes") {
-            return <PlanTextNotesCard key={`notes-${index}`} notes={group} />;
-          }
-          if (group.kind === "week") {
-            return (
-              <PlanTextWeekSection
-                key={`week-${index}`}
-                week={group}
-                defaultOpen={index === firstWeekIndex}
-              />
-            );
-          }
-          return <PlanTextSessionCard key={`session-${index}`} session={group} />;
-        })}
-      </div>
-    </section>
-  );
+  return {
+    schema_version: "text-adapter.v1",
+    plan_metadata: { title: "Fight Camp", plan_type: "fight_camp", status: "ready" },
+    event_context: fightDate ? { fight_date: fightDate } : null,
+    plan_notes: notes,
+    weeks: weekGroups.map((week, index) => toStructuredWeek(week, index, fightDate)),
+    raw_markdown_fallback: rawText,
+  };
 }
 
-// Shown above the template card while the richer structured card is still being
-// built in the background. It is intentionally a light, positive hint — the plan
-// is already usable below, and the view upgrades itself the moment the card
-// lands. This is NOT a fallback/error state, so it never blocks or replaces the
-// plan content.
-function StructuredPlanUpgradingNotice() {
+function TextStructuredPlanRenderer({
+  text,
+  fightDate,
+  focusDay,
+  currentDayLabel,
+}: {
+  text: string;
+  fightDate?: string | null;
+  focusDay?: Date;
+  currentDayLabel: string;
+}) {
+  const adaptedPlan = useMemo(
+    () => buildStructuredPlanFromText(text, fightDate),
+    [fightDate, text],
+  );
   return (
-    <div className="quick-build-refine-banner" role="status" aria-live="polite">
-      <div className="quick-build-refine-banner__body">
-        <p className="quick-build-refine-banner__kicker">
-          Enhancing your plan view
-          <span className="loading-title-dots" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-        </p>
-        <h2 className="quick-build-refine-banner__title">Your plan is ready below</h2>
-        <p className="quick-build-refine-banner__copy">
-          We&apos;re building the full structured card in the background. Your plan is shown below
-          now and this view will upgrade to the richer card automatically — no need to wait or
-          refresh.
-        </p>
-      </div>
-    </div>
+    <StructuredPlanRenderer
+      plan={adaptedPlan}
+      focusDay={focusDay}
+      currentDayLabel={currentDayLabel}
+    />
   );
 }
 
@@ -953,8 +1035,8 @@ export type StructuredCardDebug = { status: string; errors: string[] };
  * The structured-card conversion outcome recorded on the plan's validator report
  * ({status, errors}; see api/stage2_automation._record_structured_outcome).
  *
- * Returned for ANY recorded status because the only place this is shown is over
- * the plan_text fallback (card not rendering), where each status is diagnostic:
+ * Returned for any recorded status because this is shown when the richer saved
+ * payload is missing, where each status is diagnostic:
  *  - `invalid_fallback_used` → the converted card was rejected (faithfulness /
  *    schema drift) so no card was persisted,
  *  - `valid` / `repair_attempted_valid` → a card WAS built and validated but is
@@ -988,21 +1070,19 @@ export function readStructuredCardDebug(
 }
 
 /**
- * Admin-only explainer shown over the plan_text fallback so the reason a
- * structured card is missing is visible instead of the card silently
- * disappearing. Messaging differs by recorded status: a rejected conversion
- * lists the drift reasons; a `valid` status here means the card was built but
- * lost (the athlete is still on the fallback).
+ * Admin-only explainer for a missing saved structured payload. The athlete still
+ * gets the enhanced renderer through the deterministic plan_text adapter; this
+ * diagnostic explains why the richer server payload was unavailable.
  */
 function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
   const wasBuilt = debug.status === "valid" || debug.status === "repair_attempted_valid";
   const notAttempted = debug.status === "not_attempted";
-  const heading = wasBuilt ? "Structured card built but not shown" : "Structured card not built";
+  const heading = wasBuilt ? "Saved structured payload not loaded" : "Saved structured payload missing";
   const copy = wasBuilt
-    ? "A structured card was built and validated for this plan, but it is not the card showing — it was most likely overwritten on a later write or no longer decodes at read time, so the athlete is on the text fallback."
+    ? "A structured payload was built and validated but is no longer available at read time. The athlete still sees the enhanced renderer built deterministically from the saved plan text."
     : notAttempted
-      ? "Structured generation never ran for this plan, so the athlete is on the text fallback."
-      : "The athlete is seeing the text fallback because the converted structured card was rejected, so no card was saved. Approving the plan does not rebuild it; the reasons below show how the card drifted from the saved plan text.";
+      ? "Server-side structured generation never ran for this plan. The athlete still sees the enhanced renderer built deterministically from the saved plan text."
+      : "The converted server payload was rejected, so it was not saved. The athlete still sees the enhanced renderer from the saved plan text; the reasons below explain why the richer payload was rejected.";
   return (
     <section className="support-panel" role="status">
       <div className="form-section-header">
@@ -1712,15 +1792,6 @@ function AdminArtifactSection({
   );
 }
 
-/** Short human title for the retro-log panel heading. */
-function cleanTitleForRetroTarget(session: StructuredSession): string {
-  return (
-    (session.title || "").trim() ||
-    (session.session_type || "").trim().replace(/[_-]+/g, " ") ||
-    "Session"
-  );
-}
-
 export function PlanViewer({
   plan,
   accessToken,
@@ -1887,19 +1958,6 @@ export function PlanViewer({
   // We mirror that here so the camp map highlights the next session instead of
   // keeping the finished day under the "Today" badge (matching Overview/Today).
   const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
-  // Live logging state for this plan's cards: real completion rows plus the
-  // server-authoritative training day (drives Missed + the retro-log window).
-  const [planCompletions, setPlanCompletions] = useState<TodaySessionCompletionRecord[] | null>(null);
-  const [serverTrainingDay, setServerTrainingDay] = useState<string | null>(null);
-  const [retroTarget, setRetroTarget] = useState<{
-    day: StructuredDay;
-    session: StructuredSession;
-    sessionId: string;
-  } | null>(null);
-  const [retroSubmitting, setRetroSubmitting] = useState(false);
-  const [retroError, setRetroError] = useState<string | null>(null);
-  const [retroSavedMessage, setRetroSavedMessage] = useState<string | null>(null);
-  const completionsRequestSeq = useRef(0);
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [showActiveConflict, setShowActiveConflict] = useState(false);
@@ -1908,9 +1966,8 @@ export function PlanViewer({
   >(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
-  // Plans whose background structured-card poll window has elapsed. We stop
-  // polling for these and drop the "enhancing" hint; the template card stays as
-  // the final view (no fallback/error notice).
+  // Plans whose background structured-payload poll window has elapsed. The
+  // deterministic enhanced renderer remains the final view when polling stops.
   const [pollExpiredPlans, setPollExpiredPlans] = useState<Record<string, boolean>>({});
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
@@ -1972,9 +2029,8 @@ export function PlanViewer({
   });
   const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
   const isRecentPlan = isRecentlyCreatedPlan(plan);
-  // True while the template card is up and we're still polling for the richer
-  // structured card to land. Drives the lightweight "enhancing" hint and the
-  // background poll; never holds back the plan content.
+  // True while the deterministic enhanced renderer is active and we are still
+  // polling for the richer saved payload. Never holds back plan content.
   const isAwaitingStructuredUpgrade = shouldAwaitStructuredPlanUpgrade({
     hasPublishedPlan,
     hasStructuredPlan: hasStructuredAthletePlan,
@@ -1983,9 +2039,9 @@ export function PlanViewer({
     isRecentPlan,
     isTriageBlocked,
   });
-  // Admin-only: why this published plan is still on the plan_text fallback. Only
-  // shown once we are no longer expecting a live upgrade, so a card that is still
-  // building does not flash a stale rejection reason.
+  // Admin-only: why the richer saved payload is missing. Only shown once we are
+  // no longer expecting a live upgrade, so an in-flight build does not flash a
+  // stale rejection reason.
   const structuredCardDebug = isAwaitingStructuredUpgrade ? null : readStructuredCardDebug(plan);
 
   useEffect(() => {
@@ -2015,47 +2071,6 @@ export function PlanViewer({
       cancelled = true;
     };
   }, [accessToken, canManagePlan, plan.plan_id]);
-
-  // Live completions for this plan's cards. Same guard as the command-view
-  // fetch below: the rows are the viewer's own logging, so an admin opening
-  // another athlete's plan simply sees no live status overlay.
-  const refreshCompletions = useCallback(() => {
-    if (!accessToken || !canManagePlan) {
-      return;
-    }
-    // Sequence guard: this is also called imperatively after a retro-log, so a
-    // slow response from an earlier plan/viewer state must never overwrite a
-    // newer one. (React 18 makes a post-unmount setState a no-op, so no
-    // unmount cleanup is needed.)
-    const seq = ++completionsRequestSeq.current;
-    getPlanCompletions(accessToken, plan.plan_id)
-      .then((response) => {
-        if (seq === completionsRequestSeq.current) {
-          setPlanCompletions(response.completions);
-          setServerTrainingDay(response.current_training_day || null);
-        }
-      })
-      .catch(() => {
-        // No live overlay on failure — the plan stays fully readable.
-      });
-  }, [accessToken, canManagePlan, plan.plan_id]);
-
-  useEffect(() => {
-    // Drop the previous plan's rows before fetching so a plan switch never
-    // renders one plan's logging over another plan's cards.
-    setPlanCompletions(null);
-    setServerTrainingDay(null);
-    refreshCompletions();
-  }, [refreshCompletions]);
-
-  const handleRetroLog = useCallback(
-    (day: StructuredDay, session: StructuredSession, sessionId: string) => {
-      setRetroError(null);
-      setRetroSavedMessage(null);
-      setRetroTarget({ day, session, sessionId });
-    },
-    [],
-  );
 
   // Resolve the next-session focus for the camp map. The command view is the
   // viewer's own (server-scoped to their athlete id), so we only apply it when it
@@ -2104,10 +2119,9 @@ export function PlanViewer({
     );
   }, [plan.plan_id, handoffText, retryText, plan.admin_outputs?.final_plan_text]);
 
-  // Background upgrade poll: the template card is already on screen, so this just
-  // watches for the richer structured card to finish building server-side and
-  // swaps it in. It never blocks the view; when the poll window elapses we simply
-  // stop and leave the template card in place. Runs for any open published plan
+  // Background upgrade poll: the enhanced renderer is already on screen, so this
+  // only watches for the richer saved payload and swaps it in. It never blocks
+  // the view. Runs for any open published plan
   // still missing its card (not only recent ones) so an older plan whose card
   // lands later upgrades without a manual reload; the window below bounds the cost.
   useEffect(() => {
@@ -2132,8 +2146,8 @@ export function PlanViewer({
       try {
         const refreshedPlan = await getPlan(accessToken, plan.plan_id);
         // Only swap the view once the actual structured card exists — mirror the
-        // exact gate the renderer uses (hasStructuredAthletePlan) so we never call
-        // onPlanUpdated for a refresh that would still fall back to plan_text.
+        // exact gate for the saved payload so we only replace the deterministic
+        // adapter once richer structure is genuinely available.
         if (
           !cancelled &&
           shouldRenderStructuredPlan(refreshedPlan.outputs) &&
@@ -2142,8 +2156,8 @@ export function PlanViewer({
           onPlanUpdated?.(refreshedPlan);
         }
       } catch {
-        // Transient fetch failure — the template card stays up and the next tick
-        // retries until the structured card lands or the poll window elapses.
+        // Transient fetch failure: the deterministic enhanced renderer stays up
+        // and the next tick retries until the payload lands or polling expires.
       }
     };
 
@@ -2874,87 +2888,24 @@ export function PlanViewer({
                 </div>
               ) : null}
               {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
-                <>
-                  {retroSavedMessage ? (
-                    <div className="loading-status-strip" role="status">
-                      {retroSavedMessage}
-                    </div>
-                  ) : null}
-                  {retroTarget ? (
-                    <section className="support-panel sp-retro-log-panel">
-                      <div className="form-section-header">
-                        <p className="kicker">Log past session</p>
-                        <h3 className="form-section-title">
-                          {cleanTitleForRetroTarget(retroTarget.session)} —{" "}
-                          {formatAppDate(String(retroTarget.day.date || "").slice(0, 10))}
-                        </h3>
-                        <p className="muted">
-                          Back-fill how this session actually went. Sessions can be logged up to 7
-                          days after their scheduled day.
-                        </p>
-                      </div>
-                      {retroError ? (
-                        <div className="error-banner" role="alert">
-                          {retroError}
-                        </div>
-                      ) : null}
-                      <SessionCompletionForm
-                        key={retroTarget.sessionId}
-                        intent={null}
-                        showStatusPicker
-                        isSubmitting={retroSubmitting}
-                        onCancel={() => setRetroTarget(null)}
-                        onSubmit={async (status, details) => {
-                          if (!accessToken) {
-                            return;
-                          }
-                          setRetroSubmitting(true);
-                          setRetroError(null);
-                          try {
-                            await submitTodaySessionCompletion(accessToken, {
-                              plan_id: plan.plan_id,
-                              session_id: retroTarget.sessionId,
-                              status,
-                              training_day: String(retroTarget.day.date || "").slice(0, 10),
-                              session_rpe: details.sessionRpe,
-                              pain_after: details.painAfter,
-                              modification_reason: details.modificationReason,
-                              notes: details.notes,
-                            });
-                            setRetroTarget(null);
-                            setRetroSavedMessage("Session logged.");
-                            refreshCompletions();
-                          } catch (error) {
-                            setRetroError(
-                              error instanceof Error ? error.message : "Unable to log this session.",
-                            );
-                          } finally {
-                            setRetroSubmitting(false);
-                          }
-                        }}
-                      />
-                    </section>
-                  ) : null}
-                  <StructuredPlanRenderer
-                    plan={plan.outputs.structured_plan}
-                    focusDay={nextSessionFocusDate}
-                    currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
-                    createdAt={plan.created_at}
-                    planStatus={plan.status}
-                    completions={planCompletions}
-                    currentTrainingDayIso={serverTrainingDay}
-                    onLogSession={
-                      canManagePlan && !archivedPreview && !isViewerAdmin ? handleRetroLog : undefined
-                    }
-                  />
-                </>
+                <StructuredPlanRenderer
+                  plan={plan.outputs.structured_plan}
+                  focusDay={nextSessionFocusDate}
+                  currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
+                  createdAt={plan.created_at}
+                  planStatus={plan.status}
+                />
               ) : (
                 <>
-                  {isAwaitingStructuredUpgrade ? <StructuredPlanUpgradingNotice /> : null}
                   {canUseAdminOutputs && structuredCardDebug ? (
                     <StructuredCardDiagnostic debug={structuredCardDebug} />
                   ) : null}
-                  <PlanTextCards text={athletePlanText} />
+                  <TextStructuredPlanRenderer
+                    text={athletePlanText}
+                    fightDate={plan.fight_date}
+                    focusDay={nextSessionFocusDate}
+                    currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
+                  />
                 </>
               )}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
