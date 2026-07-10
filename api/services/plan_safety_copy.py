@@ -28,7 +28,7 @@ def clarify_restricted_training_hold(plan: PlanDetail) -> PlanDetail:
     """
 
     safety = plan.safety_state
-    if safety.state != "restricted_rehab_only":
+    if not safety or safety.state != "restricted_rehab_only":
         return plan
 
     clarified = PlanSafetyState(
