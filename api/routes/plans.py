@@ -25,6 +25,7 @@ from api.plan_mappers import (
     _map_plan_summary,
     _map_weekly_schedule,
 )
+from api.services.plan_safety_copy import clarify_restricted_training_hold
 from api.store import AppStore, is_effective_admin_profile
 from api.services.active_plan import resolve_active_plan, set_active_plan
 
@@ -35,6 +36,30 @@ class PlanActivationRequest(BaseModel):
 
 def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRouter:
     router = APIRouter()
+    # Kept in the factory signature for compatibility with create_app wiring.
+    # Athlete plan reads below are deliberately scoped by owner instead of using
+    # the legacy raw-id dependency, so another athlete's UUID resolves as 404.
+    _ = require_plan_row
+
+    def _read_plan_for_viewer(
+        plan_id: str,
+        *,
+        profile: ProfileRecord,
+        store: AppStore,
+    ) -> dict[str, Any]:
+        try:
+            uuid.UUID(plan_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
+        if is_effective_admin_profile(profile, store):
+            plan_row = store.get_plan(plan_id)
+        else:
+            plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
+
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return plan_row
 
     @router.get("/api/plans/latest", response_model=PlanDetail)
     def get_latest_plan(
@@ -45,11 +70,12 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         is_admin = is_effective_admin_profile(profile, store)
-        return _map_plan_detail(
+        detail = _map_plan_detail(
             plan_row,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
         )
+        return clarify_restricted_training_hold(detail)
 
     @router.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
     def get_latest_weekly_schedule(
@@ -84,23 +110,26 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
 
     @router.get("/api/plans/{plan_id}", response_model=PlanDetail)
     def get_plan(
-        plan_row: dict[str, Any] = Depends(require_plan_row),
+        plan_id: str,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
+        plan_row = _read_plan_for_viewer(plan_id, profile=profile, store=store)
         is_admin = is_effective_admin_profile(profile, store)
-        return _map_plan_detail(
+        detail = _map_plan_detail(
             plan_row,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
         )
+        return clarify_restricted_training_hold(detail)
 
     @router.get("/api/plans/{plan_id}/completions", response_model=PlanCompletionsResponse)
     def get_plan_completions(
+        plan_id: str,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
-        plan_row: dict[str, Any] = Depends(require_plan_row),
     ) -> PlanCompletionsResponse:
+        plan_row = _read_plan_for_viewer(plan_id, profile=profile, store=store)
         # Completions are athlete-owned rows; even an admin viewing another
         # athlete's plan sees that athlete's logging only via admin surfaces,
         # so this endpoint always reads the caller's own rows.
@@ -116,11 +145,12 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
 
     @router.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
     def get_plan_weekly_schedule(
+        plan_id: str,
         week_index: int = Query(0, ge=0),
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
-        plan_row: dict[str, Any] = Depends(require_plan_row),
     ) -> WeeklySchedule:
+        plan_row = _read_plan_for_viewer(plan_id, profile=profile, store=store)
         if not is_effective_admin_profile(profile, store) and _is_archived_plan(plan_row):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="weekly schedule not found")
         return _map_weekly_schedule(plan_row, week_index=week_index)
@@ -169,11 +199,12 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             if not plan_row or _is_archived_plan(plan_row):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
             updated = store.rename_plan_for_athlete(plan_id, profile.athlete_id, update.plan_name)
-        return _map_plan_detail(
+        detail = _map_plan_detail(
             updated,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, plan_id),
         )
+        return clarify_restricted_training_hold(detail)
 
     @router.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
     def archive_user_plan(

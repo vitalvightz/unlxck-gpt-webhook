@@ -11,7 +11,10 @@ plan. Archiving makes a plan ineligible; the resolver will not return it, and it
 falls back to the next eligible plan only through the same explicit fallback
 rule. Deleted or unavailable active plans are treated the same. Overlapping saved
 or draft plans are allowed, but activating an overlapping second plan requires an
-explicit pause or replacement choice. When several ready plans exist, ordering is
+explicit pause or replacement choice. ``pause`` preserves the previous plan row
+unchanged and switches the single active pointer to the selected plan, allowing
+the previous plan to be reactivated later. ``replace`` switches the pointer and
+archives the previous plan. When several ready plans exist, ordering is
 deterministic: explicit active first, otherwise latest eligible by ``created_at``
 then id. Eligible statuses are ``ready`` and
 ``publishable_with_flags``. Generated, review, hold, failed, archived, missing,
@@ -270,6 +273,11 @@ def set_active_plan(
     setter = getattr(store, "set_active_plan_id", None)
     if not callable(setter):
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="explicit active plan storage is unavailable")
+    if overlapping_active and normalized_action == "pause":
+        # The active pointer is the pause state. Preserve the previous plan row
+        # unchanged so it remains available for deliberate reactivation later.
+        setter(athlete_id, plan_id)
+        return plan
     if overlapping_active and normalized_action == "replace":
         archiver = getattr(store, "archive_plan_for_athlete", None)
         if not callable(archiver):
