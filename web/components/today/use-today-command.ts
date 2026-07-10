@@ -16,15 +16,15 @@ import type { PlanDetail, StructuredPlan, TodayCommandView } from "@/lib/types";
  * "Today misses my sessions" gap.
  */
 export function resolveTodayStructuredPlan(detail: PlanDetail): StructuredPlan | null {
-  const saved = detail.outputs?.structured_plan;
+  const saved = detail?.outputs?.structured_plan;
   if (saved && shouldRenderStructuredPlan(detail.outputs)) {
     return saved;
   }
-  const planText = detail.outputs?.plan_text?.trim();
+  const planText = detail?.outputs?.plan_text?.trim();
   if (!planText) {
     return null;
   }
-  return buildStructuredPlanFromText(planText, detail.fight_date);
+  return buildStructuredPlanFromText(planText, detail?.fight_date);
 }
 
 export type TodayCommand = {
