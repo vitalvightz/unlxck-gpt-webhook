@@ -857,6 +857,65 @@ def test_should_prewarm_review_plan_row_gates_on_approvable_held_status():
     assert should_prewarm_review_plan_row({"status": "review_required"}) is False
 
 
+def test_should_prewarm_review_plan_row_ignores_not_attempted_debug():
+    """A recorded ``not_attempted`` outcome must not block pre-warm.
+
+    Held plans routinely carry {status: not_attempted} in their validator report
+    (the worker records it because a held plan is not displayable). Treating that
+    record as "already attempted" disabled pre-warm for exactly the plans it
+    exists to serve, so every admin approval paid the slow inline conversion.
+    """
+    row = {
+        "id": "p1",
+        "status": "held_for_review",
+        "stage2_validator_report": {"structured_plan": {"status": "not_attempted"}},
+    }
+    assert should_prewarm_review_plan_row(row) is True
+
+    # A conversion that actually RAN (any terminal status) still skips pre-warm.
+    for status in ("valid", "repair_attempted_valid", "invalid_fallback_used", "blocked_by_safety_audit"):
+        row = {
+            "id": "p1",
+            "status": "held_for_review",
+            "stage2_validator_report": {"structured_plan": {"status": status}},
+        }
+        assert should_prewarm_review_plan_row(row) is False, status
+
+
+def test_attempt_structured_plan_records_reason_when_converter_unavailable(monkeypatch):
+    """An automator without a converter must say WHY the card was not built.
+
+    A DisabledStage2Automator (e.g. missing OPENAI_API_KEY in the process doing
+    approvals) previously recorded a bare ``not_attempted`` — every plan silently
+    stayed on the markdown fallback with an unexplained admin diagnostic.
+    """
+    from api.stage2_automation import DisabledStage2Automator, attempt_structured_plan_for_result
+
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    result = {
+        "status": "ready",
+        "final_plan_text": "# approved plan",
+        "stage2_validator_report": {},
+        "structured_plan": None,
+    }
+    automator = DisabledStage2Automator(reason="OPENAI_API_KEY is required for automated Stage 2 finalization.")
+
+    updated, costs = asyncio.run(
+        attempt_structured_plan_for_result(
+            result,
+            planning_brief={},
+            automator=automator,
+            source="admin_stage2",
+        )
+    )
+
+    assert costs == []
+    debug = updated["stage2_validator_report"]["structured_plan"]
+    assert debug["status"] == "not_attempted"
+    assert debug["errors"], "the diagnostic must carry the unavailability reason"
+    assert "OPENAI_API_KEY" in debug["errors"][0]
+
+
 def test_admin_approve_attaches_structured_card_inline(monkeypatch):
     """Approval ships the live card when it converts within the time budget.
 

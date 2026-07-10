@@ -678,6 +678,121 @@ class TestRecommendationValidity:
         assert view.today.recommendation_reason is None
 
 
+class TestStructuredFillerDayResolution:
+    """Filler/support days must resolve as sessions, not vanish as rest days.
+
+    Athletes reported Today only ever surfacing sparring/strength days: a
+    recovery filler scheduled on a ``rest``/``travel`` day_type was zeroed to
+    effective_load "none" and dropped, and a headline-only filler day
+    ("Rhythm flush") failed the old sparring-vocabulary allowlist.
+    """
+
+    NOW = datetime(2026, 7, 10, 12, 0, tzinfo=timezone.utc)
+    DAY = "2026-07-10"
+
+    def _plan_row(self, day: dict) -> dict:
+        return {
+            "id": PLAN,
+            "athlete_id": ATHLETE,
+            "status": "ready",
+            "structured_plan": {"weeks": [{"phase_label": "TAPER", "days": [day]}]},
+        }
+
+    def test_filler_session_on_rest_day_type_still_resolves(self):
+        entry = today_service_module._structured_today_session_entry(
+            self._plan_row(
+                {
+                    "date": self.DAY,
+                    "countdown_label": "D-19",
+                    "day_type": "rest",
+                    "today_card": {"headline": "Rhythm flush"},
+                    "sessions": [
+                        {
+                            "session_id": "2026-07-10-flush",
+                            "session_type": "recovery",
+                            "title": "Rhythm flush",
+                            "objective": "Easy fight-pace touches without building fatigue.",
+                            "blocks": [],
+                        }
+                    ],
+                }
+            ),
+            self.DAY,
+        )
+        assert entry is not None
+        assert entry["title"] == "Rhythm flush"
+        # A day that schedules work is never load "none" — that made
+        # has_scheduled_day_content() drop it from Today entirely.
+        assert entry["effective_load"] == "reduced"
+        from api.services.plan_schedule import has_scheduled_day_content
+
+        assert has_scheduled_day_content(entry) is True
+
+    def test_headline_only_filler_day_resolves_as_session(self):
+        entry = today_service_module._structured_today_session_entry(
+            self._plan_row(
+                {
+                    "date": self.DAY,
+                    "countdown_label": "D-19",
+                    "day_type": "recovery",
+                    "today_card": {"headline": "Rhythm flush"},
+                    "sessions": [],
+                }
+            ),
+            self.DAY,
+        )
+        assert entry is not None
+        assert entry["title"] == "Rhythm flush"
+
+    def test_headline_only_rest_day_stays_rest(self):
+        for headline in ("Rest day.", "Full rest", "Off day", "Travel day", "No training today"):
+            entry = today_service_module._structured_today_session_entry(
+                self._plan_row(
+                    {
+                        "date": self.DAY,
+                        "countdown_label": "D-19",
+                        "day_type": "rest",
+                        "today_card": {"headline": headline},
+                        "sessions": [],
+                    }
+                ),
+                self.DAY,
+            )
+            assert entry is None, headline
+
+    def test_command_view_surfaces_filler_day_as_today_session(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = {
+            "weeks": [
+                {
+                    "phase_label": "TAPER",
+                    "days": [
+                        {
+                            "date": self.DAY,
+                            "countdown_label": "D-19",
+                            "day_type": "rest",
+                            "today_card": {"headline": "Rhythm flush"},
+                            "sessions": [
+                                {
+                                    "session_id": "2026-07-10-flush",
+                                    "session_type": "recovery",
+                                    "title": "Rhythm flush",
+                                    "objective": "Easy movement, no fatigue.",
+                                    "blocks": [],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW
+        )
+        assert view.today.next_session.get("title") == "Rhythm flush"
+        assert view.today.session_scope == "today"
+
+
 class TestCommandView:
     def test_no_active_plan_returns_intake_cta(self):
         store = FakeStore()  # no plan seeded

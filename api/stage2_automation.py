@@ -513,10 +513,28 @@ async def attempt_structured_plan_for_result(
         _record_structured_outcome(result, StructuredPlanOutcome(status="not_attempted"))
         return result, []
     # The automator must expose the conversion method (OpenAIStage2Automator).
-    # A disabled/auxiliary automator simply skips, keeping plan_text the source.
+    # A disabled/auxiliary automator skips, keeping plan_text the source — but
+    # this plan WAS eligible, so record why the conversion could not run: a bare
+    # "not_attempted" here previously left admins staring at an unexplained
+    # missing card while every plan silently stayed on the markdown fallback.
     converter = getattr(automator, "_attempt_structured_plan", None)
     if converter is None:
-        _record_structured_outcome(result, StructuredPlanOutcome(status="not_attempted"))
+        reason = str(getattr(automator, "reason", "") or "").strip() or (
+            f"Stage 2 automator {type(automator).__name__} cannot convert structured plans."
+        )
+        logger.warning(
+            "[stage2] structured_plan skipped: converter unavailable source=%s automator=%s reason=%s",
+            source,
+            type(automator).__name__,
+            reason,
+        )
+        _record_structured_outcome(
+            result,
+            StructuredPlanOutcome(
+                status="not_attempted",
+                errors=[f"structured conversion unavailable: {reason}"],
+            ),
+        )
         return result, []
     outcome, costs = await converter(
         final_plan_text=str(result.get("final_plan_text") or result.get("plan_text") or ""),
