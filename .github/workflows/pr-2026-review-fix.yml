@@ -1,15 +1,16 @@
 name: Apply PR 2026 review fix
 
 on:
-  push:
-    branches:
-      - claude/card-structure-session-fallback-sh8yzi
+  pull_request:
+    types: [synchronize]
+    branches: [Main]
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.event.pull_request.number == 2026
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
