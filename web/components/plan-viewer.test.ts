@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import {
+  buildStructuredPlanFromText,
   parsePlanText,
   splitLabeledSegments,
   buildReviewSummary,
@@ -704,4 +705,68 @@ test("a block-group sub-heading tags only its own session and does not bleed int
   // The next session starts with no inherited tag.
   assert.equal(second.blocks[0].name, "Easy Assault Bike");
   assert.equal(second.blocks[0].tag, null);
+});
+
+test("missing saved structure is adapted into the full structured renderer contract", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "Lead notes",
+      "- Protect freshness through the bridge window.",
+      "",
+      "TAPER - Week 1 (D-21 to D-15) - Sharpen",
+      "D-21 (Thursday) - Power Transfer Touch",
+      "Why: preserve punch speed without soreness.",
+      "Band-Resisted Jab-Cross Primer - 4 x 4 reps; RPE 7.",
+      "Purpose: transfer force into the jab-cross. Progress: add one set. Stop: stop if technique breaks.",
+    ].join("\n"),
+    "2026-07-23",
+  );
+
+  assert.equal(plan.schema_version, "text-adapter.v1");
+  assert.equal(plan.raw_markdown_fallback?.includes("Power Transfer Touch"), true);
+  assert.equal(plan.plan_notes?.[0]?.text, "Protect freshness through the bridge window.");
+  assert.equal(plan.weeks?.length, 1);
+
+  const week = plan.weeks?.[0];
+  assert.equal(week?.phase_label, "TAPER");
+  assert.equal(week?.week_index, 1);
+  assert.equal(week?.days?.[0]?.date, "2026-07-02");
+  assert.equal(week?.days?.[0]?.countdown_label, "D-21");
+
+  const session = week?.days?.[0]?.sessions?.[0];
+  assert.equal(session?.title, "Power Transfer Touch");
+  assert.equal(session?.objective, "preserve punch speed without soreness.");
+  assert.equal(session?.session_type, "strength_power");
+  assert.equal(session?.blocks?.[0]?.display_name, "Band-Resisted Jab-Cross Primer");
+  assert.equal(session?.blocks?.[0]?.load?.display, "4 x 4 reps; RPE 7.");
+  assert.equal(session?.blocks?.[0]?.purpose, "transfer force into the jab-cross.");
+  assert.equal(session?.blocks?.[0]?.progression_rule, "add one set.");
+  assert.deepEqual(session?.blocks?.[0]?.coaching_cues, ["Stop: stop if technique breaks."]);
+});
+
+test("coach-only plan text remains a visible enhanced day card", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "SPP - Week 2",
+      "D-16 (Tuesday) - Coach-led boxing - technical only",
+      "No app S&C today. Keep freshness priority.",
+    ].join("\n"),
+    "2026-07-23",
+  );
+
+  const day = plan.weeks?.[0]?.days?.[0];
+  assert.equal(day?.date, "2026-07-07");
+  assert.equal(day?.today_card?.headline, "Coach-led boxing - technical only");
+  assert.deepEqual(day?.sessions, []);
+});
+
+test("the no-payload branch mounts StructuredPlanRenderer instead of legacy cards", () => {
+  const adapterComponent = PLAN_VIEWER_SOURCE.slice(
+    PLAN_VIEWER_SOURCE.indexOf("function TextStructuredPlanRenderer"),
+    PLAN_VIEWER_SOURCE.indexOf("export type StructuredCardDebug"),
+  );
+
+  assert.equal(adapterComponent.includes("<StructuredPlanRenderer"), true);
+  assert.equal(adapterComponent.includes("legacy-plan-root"), false);
+  assert.equal(adapterComponent.includes("legacy-plan-card-stack"), false);
 });
