@@ -210,6 +210,9 @@ class _ReadinessTrackingStore:
         plan_id: str,
         athlete_id: str,
     ) -> Mapping[str, Any] | None:
+        # This is the ownership-authority read, not optional readiness context.
+        # Let failures abort the request; returning None would misreport an outage
+        # as "plan not found" and could bypass the intended ownership distinction.
         row = self._store.get_plan_for_athlete(plan_id, athlete_id)
         if row:
             self.last_plan = row
@@ -458,21 +461,20 @@ def upsert_session_completion(
 
     if completion_status in _CURRENT_SESSION_EXECUTION_STATUSES and not is_retro_log:
         health = ReadinessContextHealth()
-        tracked = _ReadinessTrackingStore(
+        completion_store = _ReadinessTrackingStore(
             store,
             health,
             cache_injury_flags=True,
         )
-        tracked.list_injury_flags(
+        completion_store.list_injury_flags(
             athlete_id,
             statuses=("open", "monitoring"),
         )
         if health.failures:
             _raise_execution_unavailable(health)
+    else:
+        completion_store = store
 
-    completion_store = tracked if (
-        completion_status in _CURRENT_SESSION_EXECUTION_STATUSES and not is_retro_log
-    ) else store
     return _today_service.upsert_session_completion(
         completion_store,
         athlete_id=athlete_id,
@@ -493,6 +495,8 @@ def submit_today_injury_checkin(
     """Reconcile injuries and fail-safe any refreshed readiness recommendation."""
 
     health = ReadinessContextHealth()
+    # Deliberately do not cache injury flags here: the underlying service reads
+    # once before reconciliation and again after its writes to return fresh state.
     tracked = _ReadinessTrackingStore(store, health)
 
     # The reconciliation needs the existing flags for identity. Do not allow a
