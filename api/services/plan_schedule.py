@@ -39,7 +39,7 @@ def weekly_schedule_or_none(plan_row: Mapping[str, Any], *, week_index: int) -> 
         return None
 
 
-def resolve_current_week(plan_row: dict[str, Any], *, today: date) -> tuple[int | None, WeeklySchedule | None]:
+def resolve_current_week(plan_row: Mapping[str, Any], *, today: date) -> tuple[int | None, WeeklySchedule | None]:
     """Find the schedule week containing today.
 
     Prefers calendar dates (set when a fight date exists); falls back to weeks
