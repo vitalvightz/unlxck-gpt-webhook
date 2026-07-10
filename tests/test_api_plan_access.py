@@ -82,7 +82,7 @@ def test_athlete_cannot_read_another_athlete_plan():
         headers={"Authorization": "Bearer athlete-token"},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_athlete_can_read_weekly_schedule_for_their_plan_and_latest_plan():
@@ -154,7 +154,7 @@ def test_athlete_cannot_read_another_athlete_weekly_schedule():
         headers={"Authorization": "Bearer other-token"},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_weekly_schedule_returns_404_for_plan_without_weekly_role_map():
@@ -1126,4 +1126,4 @@ def test_plan_completions_rejects_another_athletes_plan():
         f"/api/plans/{plan['id']}/completions",
         headers={"Authorization": "Bearer athlete-token"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
