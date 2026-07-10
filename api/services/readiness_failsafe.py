@@ -22,7 +22,7 @@ The module is pure (no I/O) so it is trivially testable.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Iterable, Literal
 
 from api.contracts.readiness_message import ReadinessAdjustment
 
@@ -30,6 +30,9 @@ ContextStatus = Literal["complete", "degraded", "unavailable"]
 
 # Structured reason codes surfaced to the client (and logs). ``context_unavailable``
 # is the umbrella code attached whenever the overall status is ``unavailable``.
+# This is the ONE canonical reason-code vocabulary — the route boundary maps its
+# internal component names (recent_checkins, schedule, ...) onto these before any
+# status/signal is built (see ``reason_code_for_component``).
 CONTEXT_UNAVAILABLE = "context_unavailable"
 CHECKINS_UNAVAILABLE = "checkins_unavailable"
 COMPLETIONS_UNAVAILABLE = "completions_unavailable"
@@ -37,14 +40,36 @@ INTAKE_UNAVAILABLE = "intake_unavailable"
 SESSION_UNAVAILABLE = "session_unavailable"
 INJURY_CONTEXT_UNAVAILABLE = "injury_context_unavailable"
 
-# Injury state is the single most safety-critical input: if we cannot read the
-# athlete's injury flags, or cannot classify a present injury's consequence tier,
-# we cannot rule out a severe / high-consequence injury, so the whole context is
-# treated as UNAVAILABLE (a conservative hold). Everything else degrades.
-_UNAVAILABLE_REASONS = frozenset({INJURY_CONTEXT_UNAVAILABLE})
-_DEGRADED_REASONS = frozenset(
-    {CHECKINS_UNAVAILABLE, COMPLETIONS_UNAVAILABLE, INTAKE_UNAVAILABLE, SESSION_UNAVAILABLE}
-)
+# Reasons that escalate the whole context to UNAVAILABLE (a conservative
+# ``pull_back`` hold), rather than merely DEGRADED (``modify``):
+#   * injury flags / classification — we cannot rule out a severe / high-
+#     consequence injury, so training must not be cleared;
+#   * scheduled-session resolution — if the session's risk cannot be known for
+#     the current training day, we cannot grade exposure, so we hold conservatively
+#     (deliberate choice: schedule failure is UNAVAILABLE, not degraded).
+# Everything else (recent check-ins, completions, intake) only degrades.
+_UNAVAILABLE_REASONS = frozenset({INJURY_CONTEXT_UNAVAILABLE, SESSION_UNAVAILABLE})
+
+# Route-boundary component name -> canonical reason code. The boundary tracks
+# failures by the store method that broke; this maps each onto the single
+# canonical vocabulary so status and the typed signal are built one way only.
+_COMPONENT_REASON_CODES: dict[str, str] = {
+    "recent_checkins": CHECKINS_UNAVAILABLE,
+    "recent_sessions": COMPLETIONS_UNAVAILABLE,
+    "injury_flags": INJURY_CONTEXT_UNAVAILABLE,
+    "injury_classification": INJURY_CONTEXT_UNAVAILABLE,
+    "schedule": SESSION_UNAVAILABLE,
+    "intake": INTAKE_UNAVAILABLE,
+}
+
+
+def reason_code_for_component(component: str) -> str:
+    """Map a boundary component name onto the canonical reason code.
+
+    Unknown components fall back to the umbrella ``context_unavailable`` so a new
+    failure source can never silently drop to a non-conservative status.
+    """
+    return _COMPONENT_REASON_CODES.get(component, CONTEXT_UNAVAILABLE)
 
 
 @dataclass(frozen=True)
@@ -89,6 +114,20 @@ class ContextStatusBuilder:
         if status == "unavailable" and CONTEXT_UNAVAILABLE not in codes:
             codes.insert(0, CONTEXT_UNAVAILABLE)
         return ReadinessContextStatus(status=status, reason_codes=tuple(codes))
+
+
+def status_from_components(components: Iterable[str]) -> ReadinessContextStatus:
+    """Build a canonical :class:`ReadinessContextStatus` from route-boundary
+    component names (``recent_checkins``, ``injury_flags``, ``schedule``, ...).
+
+    This is the single bridge from the boundary's per-read failure tracking to
+    the canonical status/reason-code vocabulary, so both the check-in path and
+    the route boundary resolve status and severity the same way.
+    """
+    builder = ContextStatusBuilder()
+    for component in components:
+        builder.add(reason_code_for_component(component))
+    return builder.build()
 
 
 # ---------------------------------------------------------------------------
