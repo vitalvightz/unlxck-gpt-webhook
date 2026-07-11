@@ -336,6 +336,11 @@ _DURATION_UNIT_ALIASES = {
 
 _COUNTDOWN_RE = re.compile(r"^[Dd]\s*([+-]?\d+)$")
 _MEASURED_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]+)\s*$")
+# A bare numeric range with an optional unit ("90-120 sec", "5–6"). group(2) is
+# the upper bound; group(3) the unit token (may be empty → field default unit).
+_MEASURED_RANGE_RE = re.compile(
+    r"^\s*([0-9]+(?:\.[0-9]+)?)\s*[-–—]\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]*)\s*$"
+)
 # First number or numeric range in a string. group(2) is the upper bound of a
 # range ("7-8" → 8) and is ``None`` for a lone number ("7" → group(1) = 7).
 _NUMBER_RANGE_RE = re.compile(r"(\d+(?:\.\d+)?)(?:\s*[-–—]\s*(\d+(?:\.\d+)?))?")
@@ -523,6 +528,18 @@ def _normalize_load(value: Any) -> dict[str, Any] | None:
     return None
 
 
+def _alias_measured_unit(raw_unit: Any, default_unit: str) -> str:
+    """Alias a unit token within the field's dimension; default when unreadable."""
+    text = _coerce_str(raw_unit).strip().lower()
+    if not text:
+        return default_unit
+    if default_unit in _TIME_UNITS:
+        return _DURATION_UNIT_ALIASES.get(text, text)
+    if default_unit == "meters":
+        return _DISTANCE_UNIT_ALIASES.get(text, text)
+    return text
+
+
 def _normalize_measured(value: Any, default_unit: str = "seconds") -> dict[str, Any] | None:
     """Coerce a measured value into ``{"value", "unit"}``.
 
@@ -536,7 +553,29 @@ def _normalize_measured(value: Any, default_unit: str = "seconds") -> dict[str, 
     if value is None:
         return None
     if isinstance(value, dict):
-        return value
+        # The model frequently writes plan ranges into the dict form —
+        # {"value": "90-120", "unit": "sec"} or {"unit": "seconds"} with no
+        # value at all — and MeasuredValue requires a float ``value``, so an
+        # untouched pass-through failed the WHOLE card on a formatting slip
+        # (every rest/duration range in the plan text became "Field required").
+        # Coerce the number (a range reads its upper bound, matching the effort
+        # convention — more rest is safer, and the top of a written range is
+        # still what the plan says), alias the unit, and drop the optional
+        # field entirely when no number can be read rather than rejecting the card.
+        raw_value = value.get("value")
+        if isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool):
+            number = float(raw_value)
+        else:
+            number = _coerce_float(raw_value)
+            if number is None:
+                # Some outputs carry the quantity only as display text.
+                number = _coerce_float(value.get("display"))
+        if number is None:
+            return None
+        return {
+            "value": number,
+            "unit": _alias_measured_unit(value.get("unit"), default_unit),
+        }
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return {"value": float(value), "unit": default_unit}
     if isinstance(value, str):
@@ -549,14 +588,18 @@ def _normalize_measured(value: Any, default_unit: str = "seconds") -> dict[str, 
             pass
         match = _MEASURED_RE.match(text)
         if match:
-            raw_unit = match.group(2).strip().lower()
-            if default_unit in _TIME_UNITS:
-                unit = _DURATION_UNIT_ALIASES.get(raw_unit, raw_unit)
-            elif default_unit == "meters":
-                unit = _DISTANCE_UNIT_ALIASES.get(raw_unit, raw_unit)
-            else:
-                unit = raw_unit
-            return {"value": float(match.group(1)), "unit": unit}
+            return {
+                "value": float(match.group(1)),
+                "unit": _alias_measured_unit(match.group(2), default_unit),
+            }
+        # A pure range string ("90-120 sec", "5–6") reads its upper bound, the
+        # same convention the dict branch and effort coercion use.
+        range_match = _MEASURED_RANGE_RE.match(text)
+        if range_match:
+            return {
+                "value": float(range_match.group(2)),
+                "unit": _alias_measured_unit(range_match.group(3), default_unit),
+            }
     return None
 
 
