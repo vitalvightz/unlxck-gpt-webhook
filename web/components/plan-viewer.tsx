@@ -1551,14 +1551,15 @@ export function PlanViewer({
     if (shouldRenderStructuredPlan(updatedPlan.outputs)) {
       return; // card shipped inline with the approval — nothing to await
     }
-    setJustApprovedPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
+    setJustApprovedPlans((prev) => ({ ...prev, [updatedPlan.plan_id]: true }));
     setPollExpiredPlans((prev) => {
-      if (!prev[plan.plan_id]) {
+      if (!prev[updatedPlan.plan_id]) {
         return prev;
       }
       const next = { ...prev };
-      delete next[plan.plan_id];
+      delete next[updatedPlan.plan_id];
       return next;
+    });
     });
   }
 
