@@ -1283,6 +1283,12 @@ export function PlanViewer({
   // Plans whose background structured-payload poll window has elapsed. The
   // deterministic enhanced renderer remains the final view when polling stops.
   const [pollExpiredPlans, setPollExpiredPlans] = useState<Record<string, boolean>>({});
+  // Plans approved during THIS session whose card is still building. The
+  // created_at recency gate below never fires for an older held plan that was
+  // just approved, so without this the admin immediately saw the "payload
+  // missing" diagnostic while the background conversion was still in flight —
+  // with no hint that anything was happening.
+  const [justApprovedPlans, setJustApprovedPlans] = useState<Record<string, boolean>>({});
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1342,7 +1348,10 @@ export function PlanViewer({
     },
   });
   const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
-  const isRecentPlan = isRecentlyCreatedPlan(plan);
+  // "Recent" covers a freshly created plan (created_at) OR an older plan the
+  // admin approved in this session — both are moments a card build is in flight.
+  const isRecentPlan =
+    isRecentlyCreatedPlan(plan) || Boolean(justApprovedPlans[plan.plan_id]);
   // True while the deterministic enhanced renderer is active and we are still
   // polling for the richer saved payload. Never holds back plan content.
   const isAwaitingStructuredUpgrade = shouldAwaitStructuredPlanUpgrade({
@@ -1536,6 +1545,23 @@ export function PlanViewer({
     }
   }
 
+  /** After an approval whose card is still missing, enter the visible
+   * "building" state and restart the upgrade poll window for this plan. */
+  function markApprovalAwaitingCard(updatedPlan: PlanDetail) {
+    if (shouldRenderStructuredPlan(updatedPlan.outputs)) {
+      return; // card shipped inline with the approval — nothing to await
+    }
+    setJustApprovedPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
+    setPollExpiredPlans((prev) => {
+      if (!prev[plan.plan_id]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[plan.plan_id];
+      return next;
+    });
+  }
+
   async function handleApproveForRelease() {
     if (!accessToken) {
       setApproveError("Admin session missing. Please sign in again.");
@@ -1556,6 +1582,7 @@ export function PlanViewer({
       const updatedPlan = await approvePlanForRelease(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
       setApproveMessage(getApprovalSuccessMessage(updatedPlan));
+      markApprovalAwaitingCard(updatedPlan);
     } catch (error) {
       // Approval persists server-side before any slow post-processing, so a
       // network/timeout failure is often a false negative: the plan may already
@@ -1567,6 +1594,7 @@ export function PlanViewer({
       if (recoveredPlan) {
         onPlanUpdated?.(recoveredPlan);
         setApproveMessage(getApprovalSuccessMessage(recoveredPlan));
+        markApprovalAwaitingCard(recoveredPlan);
         return;
       }
       setApproveError(
@@ -2211,6 +2239,19 @@ export function PlanViewer({
                 />
               ) : (
                 <>
+                  {canUseAdminOutputs && isAwaitingStructuredUpgrade ? (
+                    <section className="support-panel" role="status">
+                      <div className="form-section-header">
+                        <p className="kicker">Enhanced card</p>
+                        <h3>Building the enhanced card…</h3>
+                      </div>
+                      <p className="muted">
+                        Server-side structured generation is running in the background. This page
+                        checks automatically and swaps the full card in when it lands — the plan
+                        below stays live in the meantime.
+                      </p>
+                    </section>
+                  ) : null}
                   {canUseAdminOutputs && structuredCardDebug ? (
                     <StructuredCardDiagnostic debug={structuredCardDebug} />
                   ) : null}
