@@ -1,8 +1,13 @@
+import pytest
+
 from fightcamp.stage2_payload import (
     _late_fight_assignment_is_unsafe,
     build_planning_brief,
 )
-from fightcamp.stage2_validator import validate_stage2_output
+from fightcamp.stage2_validator import (
+    _late_fight_line_is_exercise_like,
+    validate_stage2_output,
+)
 
 
 def _brief_with_scheduled_allowed_exercises() -> dict:
@@ -285,6 +290,87 @@ def test_d1_never_receives_loaded_strength_exercise():
         _re.IGNORECASE,
     )
     assert not [name for name in allowed.get("D-1", []) if danger.search(name)]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # Rationale / "Why today" annotations (word after the label + a colon).
+        "Why today: prepare ankles before the punch speed touch.",
+        # Regression / stop annotations in the order actually rendered by the
+        # generator, including a parenthetical qualifier before the colon.
+        "Regression/stop: if you can't finish notes in 12 min, stop and keep only the top two cues.",
+        "Regression/stop: if unclear after 8 min, pick the simplest cue and stop.",
+        "Regression/stop (D-13+ rule — regressions/stop only): Replace with 3 x 6 shadow punch accelerations if med-ball causes soreness; stop if any delayed DOMS appears.",
+        "Regression/stop (D-13+ rule): shorten to 2 sets x 4 each side if any soreness; stop if balance fails on >2 reps.",
+        "Progression/regression/stop: hold the cue if it feels clean, otherwise stop.",
+        # Dose-carrying annotation labels are not new exercise selections.
+        "Duration: 5-8 min.",
+        "Prescription: 3 x 6.",
+        "Intensity: RPE 5-6.",
+        # Cue-writing tasks are tactical/mental notes, not exercises.
+        "Write one clear cue only (entry / exit / counter / guard reaction / foot position) — 5–8 min.",
+        "Session: 5–8 min — write one fight cue (entry, exit, counter, foot position, or guard reaction). Keep it <8 words.",
+    ],
+)
+def test_annotation_and_instruction_lines_are_not_exercise_selections(line):
+    # These lines carry dose tokens ("12 min", "3 x 6", "5–8 min") but are
+    # annotations / tactical tasks, not rendered exercises. They must not be
+    # read as unapproved exercise selections.
+    assert _late_fight_line_is_exercise_like(line) is False
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Reactive Shuffle Repeats - 3 x 6 sec",
+        "Short pallof-style anti-rotation hold: 2 x 8–10 sec each side (light), RPE 2–3.",
+        "Mystery Power Drill - 2 x 3",
+    ],
+)
+def test_genuine_exercise_lines_are_still_detected(line):
+    # The annotation carve-outs must not swallow real exercise selections.
+    assert _late_fight_line_is_exercise_like(line) is True
+
+
+def test_annotation_lines_do_not_raise_unapproved_exercise_blocker():
+    brief = _brief_with_scheduled_allowed_exercises()
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-6 (Monday) — Fight-speed primer
+        - Reactive Shuffle Repeats - 3 x 6 sec
+        - Why today: prepare ankles before the punch speed touch.
+        - Regression/stop: if unclear after 8 min, pick the simplest cue and stop.
+        - Duration: 5-8 min.
+        - Write one clear cue only (entry / exit / counter / guard reaction / foot position) — 5–8 min.
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_unapproved_exercise_rendered" not in warning_codes
+
+
+def test_unapproved_exercise_is_flagged_but_no_longer_hard_blocks_the_plan():
+    from fightcamp.stage2_policy import is_hard_stage2_blocker
+
+    brief = _brief_with_scheduled_allowed_exercises()
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-3 - Freshness reset
+        - Mystery Power Drill - 2 x 3
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    # The finding is still surfaced (so the generator can prefer allowlisted
+    # work)...
+    assert "late_fight_unapproved_exercise_rendered" in warning_codes
+    # ...but it is no longer a hard blocker, so it does not hold the plan.
+    assert not is_hard_stage2_blocker("late_fight_unapproved_exercise_rendered")
 
 
 def test_valid_late_fight_output_using_each_days_allowed_exercises_passes():
