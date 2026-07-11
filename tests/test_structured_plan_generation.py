@@ -1111,6 +1111,55 @@ def test_normalize_measured_unparseable_returns_none():
     assert _normalize_measured(None, "seconds") is None
 
 
+def test_normalize_measured_coerces_dict_with_string_range_value():
+    """The exact live failure: plan ranges written into the dict form.
+
+    "full recovery 90–120 sec" came back as {"value": "90-120", "unit": "sec"}
+    and the untouched pass-through failed MeasuredValue (value must be float),
+    rejecting the whole card. A range reads its upper bound (effort convention;
+    more rest is safer) and the unit is aliased within the field's dimension.
+    """
+    assert _normalize_measured({"value": "90-120", "unit": "sec"}, "seconds") == {
+        "value": 120.0,
+        "unit": "seconds",
+    }
+    assert _normalize_measured({"value": "5–6", "unit": "s"}, "seconds") == {
+        "value": 6.0,
+        "unit": "seconds",
+    }
+    assert _normalize_measured({"value": 45, "unit": "min"}, "minutes") == {
+        "value": 45.0,
+        "unit": "minutes",
+    }
+
+
+def test_normalize_measured_dict_without_readable_value_is_dropped():
+    # No number anywhere → drop the optional field instead of failing the card.
+    assert _normalize_measured({"unit": "seconds"}, "seconds") is None
+    assert _normalize_measured({"value": None, "unit": "seconds"}, "seconds") is None
+    assert _normalize_measured({"value": "as needed", "unit": "seconds"}, "seconds") is None
+
+
+def test_normalize_measured_dict_reads_value_from_display_text():
+    assert _normalize_measured({"unit": "sec", "display": "90-120 sec"}, "seconds") == {
+        "value": 120.0,
+        "unit": "seconds",
+    }
+
+
+def test_normalize_measured_dict_missing_unit_gets_field_default():
+    assert _normalize_measured({"value": 90}, "seconds") == {
+        "value": 90.0,
+        "unit": "seconds",
+    }
+
+
+def test_normalize_measured_parses_bare_range_strings():
+    assert _normalize_measured("90-120 sec", "seconds") == {"value": 120.0, "unit": "seconds"}
+    assert _normalize_measured("60–90", "seconds") == {"value": 90.0, "unit": "seconds"}
+    assert _normalize_measured("45-60 s", "seconds") == {"value": 60.0, "unit": "seconds"}
+
+
 def test_block_measured_defaults_follow_bank_conventions():
     block = normalize_structured_plan_candidate(
         {
