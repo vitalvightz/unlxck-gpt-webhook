@@ -196,6 +196,19 @@ def _assert_non_publishable_retry(review: dict, code: str) -> None:
     assert code in _blocking_codes(review)
 
 
+def _assert_soft_review_flag(review: dict, code: str) -> None:
+    # Rendering an exercise outside a countdown day's curated allowlist is a
+    # soft review flag, not a hard blocker: it is surfaced for review but does
+    # not hold the plan or force a retry.
+    assert code not in _blocking_codes(review)
+    warning_codes = {
+        warning["code"] for warning in review["validator_report"].get("warnings", [])
+    }
+    assert code in warning_codes
+    assert review["validator_report"]["is_publishable"] is True
+    assert review["needs_retry"] is False
+
+
 def test_review_stage2_output_treats_countdown_banded_lockout_as_blocking():
     planning_brief = _stage1_result_fixture()["planning_brief"]
     planning_brief["late_fight_plan_spec"] = {
@@ -214,7 +227,10 @@ def test_review_stage2_output_treats_countdown_banded_lockout_as_blocking():
     _assert_non_publishable_retry(review, "late_fight_countdown_blocked_drill")
 
 
-def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_blocking():
+def test_review_stage2_output_still_blocks_d13_band_resisted_drill_via_dedicated_check():
+    # Downgrading late_fight_unapproved_exercise_rendered must not weaken the
+    # dedicated safety checks: a banded late-fight drill is still hard-blocked
+    # by late_fight_countdown_blocked_drill.
     planning_brief = _stage1_result_fixture()["planning_brief"]
     planning_brief["late_fight_plan_spec"] = {
         "days_out_bucket": "D-13",
@@ -229,10 +245,16 @@ def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_blocking(
         """,
     )
 
-    _assert_non_publishable_retry(review, "late_fight_unapproved_exercise_rendered")
+    blocking = _blocking_codes(review)
+    assert "late_fight_unapproved_exercise_rendered" not in blocking
+    assert "late_fight_countdown_blocked_drill" in blocking
+    assert review["validator_report"]["is_publishable"] is False
 
 
-def test_review_stage2_output_retries_when_d3_renders_sandbag_shouldering():
+def test_review_stage2_output_still_blocks_d3_sandbag_shouldering_via_forbidden_window():
+    # Sandbag shouldering in the freshness window stays hard-blocked by
+    # late_fight_window_forbidden_exercise even though the generic
+    # unapproved-exercise catch-all is now a soft review flag.
     review = review_stage2_output(
         planning_brief=_late_fight_review_brief("D-3", ["Mobility Reset Flow", "Breathing Reset"]),
         final_plan_text="""
@@ -244,7 +266,10 @@ def test_review_stage2_output_retries_when_d3_renders_sandbag_shouldering():
         """,
     )
 
-    _assert_non_publishable_retry(review, "late_fight_unapproved_exercise_rendered")
+    blocking = _blocking_codes(review)
+    assert "late_fight_unapproved_exercise_rendered" not in blocking
+    assert "late_fight_window_forbidden_exercise" in blocking
+    assert review["validator_report"]["is_publishable"] is False
 
 
 def test_review_stage2_output_retries_when_d1_renders_med_ball_punch_throw():
@@ -263,7 +288,7 @@ def test_review_stage2_output_retries_when_d1_renders_med_ball_punch_throw():
     assert "late_fight_window_forbidden_exercise" in _blocking_codes(review)
 
 
-def test_review_stage2_output_retries_when_d3_renders_unallowed_exercise():
+def test_review_stage2_output_flags_but_does_not_retry_on_d3_unallowed_exercise():
     review = review_stage2_output(
         planning_brief=_late_fight_review_brief("D-3", ["Mobility Reset Flow", "Breathing Reset"]),
         final_plan_text="""
@@ -275,7 +300,7 @@ def test_review_stage2_output_retries_when_d3_renders_unallowed_exercise():
         """,
     )
 
-    _assert_non_publishable_retry(review, "late_fight_unapproved_exercise_rendered")
+    _assert_soft_review_flag(review, "late_fight_unapproved_exercise_rendered")
 
 
 def test_review_stage2_output_retries_when_d1_renders_countdown_blocked_drill():
