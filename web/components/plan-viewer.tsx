@@ -501,18 +501,30 @@ function buildStructuredCardDiagnostic(
   };
 }
 
-function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
+function StructuredCardDiagnostic({
+  debug,
+  hasSavedCard,
+}: {
+  debug: StructuredCardDebug;
+  /** A previously saved card is still rendering (e.g. a failed REBUILD kept the
+   * prior good card), so the athlete-facing fallback copy must not claim the
+   * text renderer is showing. */
+  hasSavedCard?: boolean;
+}) {
   const wasBuilt = debug.status === "valid" || debug.status === "repair_attempted_valid";
   const notAttempted = debug.status === "not_attempted";
   const buildDidNotComplete = debug.status === "failed";
   const heading = wasBuilt ? "Saved structured payload not loaded" : "Saved structured payload missing";
+  const athleteViewSentence = hasSavedCard
+    ? "The athlete still sees the previously saved enhanced card."
+    : "The athlete still sees the enhanced renderer built deterministically from the saved plan text.";
   const copy = wasBuilt
-    ? "A structured payload was built and validated but is no longer available at read time. The athlete still sees the enhanced renderer built deterministically from the saved plan text."
+    ? `A structured payload was built and validated but is no longer available at read time. ${athleteViewSentence}`
     : notAttempted
-      ? "Server-side structured generation never ran for this plan. The athlete still sees the enhanced renderer built deterministically from the saved plan text."
+      ? `Server-side structured generation never ran for this plan. ${athleteViewSentence}`
       : buildDidNotComplete
-        ? "The latest structured-card build did not complete. The athlete still sees the enhanced renderer from the saved plan text; the reasons below explain what stopped the saved payload from landing."
-      : "The converted server payload was rejected, so it was not saved. The athlete still sees the enhanced renderer from the saved plan text; the reasons below explain why the richer payload was rejected.";
+        ? `The latest structured-card build did not complete. ${athleteViewSentence} The reasons below explain what stopped a new payload from landing.`
+      : `The converted server payload was rejected, so it was not saved. ${athleteViewSentence} The reasons below explain why the richer payload was rejected.`;
   return (
     <section className="support-panel" role="status">
       <div className="form-section-header">
@@ -2444,7 +2456,10 @@ export function PlanViewer({
                     </section>
                   ) : null}
                   {isViewerAdmin && structuredCardDebug ? (
-                    <StructuredCardDiagnostic debug={structuredCardDebug} />
+                    <StructuredCardDiagnostic
+                      debug={structuredCardDebug}
+                      hasSavedCard={hasStructuredAthletePlan}
+                    />
                   ) : null}
                   <TextStructuredPlanRenderer
                     text={athletePlanText}
