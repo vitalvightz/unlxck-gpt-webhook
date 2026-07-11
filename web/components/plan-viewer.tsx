@@ -14,6 +14,7 @@ import {
   getPlan,
   getToday,
   isRetryableApiFailure,
+  rebuildStructuredPlan,
   rejectApprovedPlan,
   renamePlan,
   setActivePlan,
@@ -52,6 +53,8 @@ import type {
   PlanAdvisory,
   PlanDetail,
   StructuredBlock,
+  StructuredCardLifecycleState,
+  StructuredCardState,
   StructuredDay,
   StructuredPlan,
   StructuredSession,
@@ -154,22 +157,21 @@ export function isRecentlyCreatedPlan(
  * Whether the background upgrade poll should run for this plan.
  *
  * This is deliberately NOT gated on plan recency. A published plan still missing
- * its structured card should keep trying to pick one up whenever its view is
- * open — including an older plan whose card was only built later (e.g. after a
- * held blocker cleared or a backfill ran), which the 5-minute recency gate would
- * otherwise leave on the deterministic payload until a manual reload. The
- * mount-scoped poll window (pollWindowExpired) still bounds the cost so we never
- * poll a cardless plan forever, and the swap happens silently.
+ * its structured card keeps trying to pick one up whenever its view is open. An
+ * admin-held plan also polls while its authoritative server state says building,
+ * so retry progress cannot freeze until reload. The mount-scoped poll window
+ * still bounds the cost, and triage-blocked plans remain excluded.
  */
 export function shouldPollForStructuredPlanUpgrade(params: {
   hasPublishedPlan: boolean;
   hasStructuredPlan: boolean;
   pollWindowExpired: boolean;
   hasAccessToken: boolean;
+  isServerBuilding?: boolean;
   isTriageBlocked?: boolean;
 }): boolean {
   return (
-    params.hasPublishedPlan &&
+    (params.hasPublishedPlan || params.isServerBuilding === true) &&
     !params.hasStructuredPlan &&
     !params.pollWindowExpired &&
     params.hasAccessToken &&
@@ -345,6 +347,95 @@ function TextStructuredPlanRenderer({
 
 export type StructuredCardDebug = { status: string; errors: string[] };
 
+const STRUCTURED_CARD_LIFECYCLE_STATES = new Set<StructuredCardLifecycleState>([
+  "live",
+  "building",
+  "failed",
+  "not_attempted",
+  "none",
+]);
+
+const STRUCTURED_CARD_STATUS_LABELS: Record<StructuredCardLifecycleState, string> = {
+  live: "Enhanced card live",
+  building: "Enhanced card building",
+  failed: "Enhanced card failed",
+  not_attempted: "Enhanced card not attempted",
+  none: "Enhanced card no record",
+};
+
+/**
+ * PlanDetail should always include a server-derived lifecycle record. This
+ * defensive boundary keeps the admin chip explicit during rolling deployments
+ * or when a malformed legacy response is encountered: it falls back to "none"
+ * instead of silently disappearing.
+ */
+export function normalizeStructuredCardState(
+  value: StructuredCardState | null | undefined,
+): StructuredCardState {
+  const record = value && typeof value === "object" ? value : null;
+  const state =
+    record && STRUCTURED_CARD_LIFECYCLE_STATES.has(record.state)
+      ? record.state
+      : "none";
+  const reasons = Array.isArray(record?.reasons)
+    ? record.reasons
+        .map((reason) => (reason != null ? String(reason).trim() : ""))
+        .filter(Boolean)
+    : [];
+  const schemaVersion =
+    typeof record?.schema_version === "string" && record.schema_version.trim()
+      ? record.schema_version.trim()
+      : null;
+  const attemptStartedAt =
+    typeof record?.attempt_started_at === "string" && record.attempt_started_at.trim()
+      ? record.attempt_started_at.trim()
+      : null;
+
+  return {
+    state,
+    reasons,
+    schema_version: schemaVersion,
+    attempt_started_at: attemptStartedAt,
+  };
+}
+
+export function canRebuildEnhancedCard(
+  cardState: StructuredCardState | null | undefined,
+): boolean {
+  const normalized = normalizeStructuredCardState(cardState);
+  return normalized.state === "failed" || normalized.state === "not_attempted";
+}
+
+export function StructuredCardStatusChip({
+  cardState,
+}: {
+  cardState: StructuredCardState | null | undefined;
+}) {
+  const normalized = normalizeStructuredCardState(cardState);
+  const label = STRUCTURED_CARD_STATUS_LABELS[normalized.state];
+  const schemaVersion =
+    normalized.state === "live" ? normalized.schema_version?.trim() || null : null;
+  const accessibleLabel = schemaVersion ? `${label}, ${schemaVersion}` : label;
+  const detail = normalized.reasons.length
+    ? `${accessibleLabel}: ${normalized.reasons.join("; ")}`
+    : accessibleLabel;
+
+  return (
+    <span
+      className={`badge structured-card-status-chip structured-card-status-${normalized.state}`}
+      data-state={normalized.state}
+      aria-label={accessibleLabel}
+      title={detail}
+    >
+      <span className="structured-card-status-dot" aria-hidden="true" />
+      <span>{label}</span>
+      {schemaVersion ? (
+        <span className="structured-card-schema-version">{schemaVersion}</span>
+      ) : null}
+    </span>
+  );
+}
+
 /**
  * The structured-card conversion outcome recorded on the plan's validator report
  * ({status, errors}; see api/stage2_automation._record_structured_outcome).
@@ -388,14 +479,39 @@ export function readStructuredCardDebug(
  * gets the enhanced renderer through the deterministic plan_text adapter; this
  * diagnostic explains why the richer server payload was unavailable.
  */
+function buildStructuredCardDiagnostic(
+  cardState: StructuredCardState,
+  debug: StructuredCardDebug | null,
+): StructuredCardDebug | null {
+  if (cardState.state === "building" || cardState.state === "live") {
+    return null;
+  }
+  const hasServerDiagnostic =
+    cardState.state === "failed" || cardState.state === "not_attempted";
+  if (!debug && !hasServerDiagnostic) {
+    return null;
+  }
+  const errors = Array.from(
+    new Set([...(cardState.reasons || []), ...(debug?.errors || [])]),
+  );
+  return {
+    status:
+      debug?.status || (cardState.state === "not_attempted" ? "not_attempted" : "failed"),
+    errors,
+  };
+}
+
 function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
   const wasBuilt = debug.status === "valid" || debug.status === "repair_attempted_valid";
   const notAttempted = debug.status === "not_attempted";
+  const buildDidNotComplete = debug.status === "failed";
   const heading = wasBuilt ? "Saved structured payload not loaded" : "Saved structured payload missing";
   const copy = wasBuilt
     ? "A structured payload was built and validated but is no longer available at read time. The athlete still sees the enhanced renderer built deterministically from the saved plan text."
     : notAttempted
       ? "Server-side structured generation never ran for this plan. The athlete still sees the enhanced renderer built deterministically from the saved plan text."
+      : buildDidNotComplete
+        ? "The latest structured-card build did not complete. The athlete still sees the enhanced renderer from the saved plan text; the reasons below explain what stopped the saved payload from landing."
       : "The converted server payload was rejected, so it was not saved. The athlete still sees the enhanced renderer from the saved plan text; the reasons below explain why the richer payload was rejected.";
   return (
     <section className="support-panel" role="status">
@@ -1132,6 +1248,9 @@ export function PlanViewer({
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
   const hasStructuredAthletePlan =
     shouldRenderStructuredPlan(plan.outputs) && Boolean(plan.outputs.structured_plan);
+  const structuredCardState = normalizeStructuredCardState(plan.structured_card_state);
+  const structuredCardStateKey = JSON.stringify(structuredCardState);
+  const canRebuildStructuredCard = canRebuildEnhancedCard(structuredCardState);
 
   const injuryTriage = readInjuryTriage(plan);
   const rawTriageMode = readRawTriageMode(plan);
@@ -1256,6 +1375,9 @@ export function PlanViewer({
   const [approvePending, setApprovePending] = useState(false);
   const [approveMessage, setApproveMessage] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [structuredCardRebuildPending, setStructuredCardRebuildPending] = useState(false);
+  const [structuredCardRebuildMessage, setStructuredCardRebuildMessage] = useState<string | null>(null);
+  const [structuredCardRebuildError, setStructuredCardRebuildError] = useState<string | null>(null);
   const [resumeReason, setResumeReason] = useState("");
   const [resumePending, setResumePending] = useState(false);
   const [resumeMessage, setResumeMessage] = useState<string | null>(null);
@@ -1283,12 +1405,6 @@ export function PlanViewer({
   // Plans whose background structured-payload poll window has elapsed. The
   // deterministic enhanced renderer remains the final view when polling stops.
   const [pollExpiredPlans, setPollExpiredPlans] = useState<Record<string, boolean>>({});
-  // Plans approved during THIS session whose card is still building. The
-  // created_at recency gate below never fires for an older held plan that was
-  // just approved, so without this the admin immediately saw the "payload
-  // missing" diagnostic while the background conversion was still in flight —
-  // with no hint that anything was happening.
-  const [justApprovedPlans, setJustApprovedPlans] = useState<Record<string, boolean>>({});
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1348,24 +1464,12 @@ export function PlanViewer({
     },
   });
   const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
-  // "Recent" covers a freshly created plan (created_at) OR an older plan the
-  // admin approved in this session — both are moments a card build is in flight.
-  const isRecentPlan =
-    isRecentlyCreatedPlan(plan) || Boolean(justApprovedPlans[plan.plan_id]);
-  // True while the deterministic enhanced renderer is active and we are still
-  // polling for the richer saved payload. Never holds back plan content.
-  const isAwaitingStructuredUpgrade = shouldAwaitStructuredPlanUpgrade({
-    hasPublishedPlan,
-    hasStructuredPlan: hasStructuredAthletePlan,
-    pollWindowExpired: structuredPlanPollExpired,
-    hasAccessToken: Boolean(accessToken),
-    isRecentPlan,
-    isTriageBlocked,
-  });
-  // Admin-only: why the richer saved payload is missing. Only shown once we are
-  // no longer expecting a live upgrade, so an in-flight build does not flash a
-  // stale rejection reason.
-  const structuredCardDebug = isAwaitingStructuredUpgrade ? null : readStructuredCardDebug(plan);
+  // The server field is authoritative after reload. Old failure details are
+  // hidden only while a newer attempt is actively building.
+  const structuredCardDebug = buildStructuredCardDiagnostic(
+    structuredCardState,
+    readStructuredCardDebug(plan),
+  );
 
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
@@ -1443,10 +1547,9 @@ export function PlanViewer({
   }, [plan.plan_id, handoffText, retryText, plan.admin_outputs?.final_plan_text]);
 
   // Background upgrade poll: the enhanced renderer is already on screen, so this
-  // only watches for the richer saved payload and swaps it in. It never blocks
-  // the view. Runs for any open published plan
-  // still missing its card (not only recent ones) so an older plan whose card
-  // lands later upgrades without a manual reload; the window below bounds the cost.
+  // watches both the server lifecycle and the richer saved payload. It never
+  // blocks the view. Runs for any open published plan still missing its card, or
+  // for an admin-held plan whose server lifecycle says a build is active.
   useEffect(() => {
     if (
       !shouldPollForStructuredPlanUpgrade({
@@ -1454,6 +1557,8 @@ export function PlanViewer({
         hasStructuredPlan: hasStructuredAthletePlan,
         pollWindowExpired: structuredPlanPollExpired,
         hasAccessToken: Boolean(accessToken),
+        isServerBuilding:
+          isViewerAdmin && structuredCardState.state === "building",
         isTriageBlocked,
       })
     ) {
@@ -1468,13 +1573,16 @@ export function PlanViewer({
       }
       try {
         const refreshedPlan = await getPlan(accessToken, plan.plan_id);
-        // Only swap the view once the actual structured card exists — mirror the
-        // exact gate for the saved payload so we only replace the deterministic
-        // adapter once richer structure is genuinely available.
+        const refreshedStateKey = JSON.stringify(
+          normalizeStructuredCardState(refreshedPlan.structured_card_state),
+        );
+        // Keep the chip current when a build fails or completes, and only swap
+        // the actual plan renderer once the richer saved payload exists.
         if (
           !cancelled &&
-          shouldRenderStructuredPlan(refreshedPlan.outputs) &&
-          Boolean(refreshedPlan.outputs.structured_plan)
+          (refreshedStateKey !== structuredCardStateKey ||
+            (shouldRenderStructuredPlan(refreshedPlan.outputs) &&
+              Boolean(refreshedPlan.outputs.structured_plan)))
         ) {
           onPlanUpdated?.(refreshedPlan);
         }
@@ -1501,8 +1609,11 @@ export function PlanViewer({
     hasPublishedPlan,
     hasStructuredAthletePlan,
     isTriageBlocked,
+    isViewerAdmin,
     onPlanUpdated,
     plan.plan_id,
+    structuredCardState.state,
+    structuredCardStateKey,
     structuredPlanPollExpired,
   ]);
 
@@ -1545,13 +1656,12 @@ export function PlanViewer({
     }
   }
 
-  /** After an approval whose card is still missing, enter the visible
-   * "building" state and restart the upgrade poll window for this plan. */
-  function markApprovalAwaitingCard(updatedPlan: PlanDetail) {
+  /** After an approval whose card is still missing, restart the lifecycle poll.
+   * The visible building state itself comes from PlanDetail, never this session. */
+  function restartStructuredPlanPolling(updatedPlan: PlanDetail) {
     if (shouldRenderStructuredPlan(updatedPlan.outputs)) {
       return; // card shipped inline with the approval — nothing to await
     }
-    setJustApprovedPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
     setPollExpiredPlans((prev) => {
       if (!prev[plan.plan_id]) {
         return prev;
@@ -1582,7 +1692,7 @@ export function PlanViewer({
       const updatedPlan = await approvePlanForRelease(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
       setApproveMessage(getApprovalSuccessMessage(updatedPlan));
-      markApprovalAwaitingCard(updatedPlan);
+      restartStructuredPlanPolling(updatedPlan);
     } catch (error) {
       // Approval persists server-side before any slow post-processing, so a
       // network/timeout failure is often a false negative: the plan may already
@@ -1594,7 +1704,7 @@ export function PlanViewer({
       if (recoveredPlan) {
         onPlanUpdated?.(recoveredPlan);
         setApproveMessage(getApprovalSuccessMessage(recoveredPlan));
-        markApprovalAwaitingCard(recoveredPlan);
+        restartStructuredPlanPolling(recoveredPlan);
         return;
       }
       setApproveError(
@@ -1602,6 +1712,52 @@ export function PlanViewer({
       );
     } finally {
       setApprovePending(false);
+    }
+  }
+
+  async function handleRebuildStructuredCard() {
+    if (!accessToken) {
+      setStructuredCardRebuildError("Admin session missing. Please sign in again.");
+      return;
+    }
+    if (!canRebuildStructuredCard) {
+      setStructuredCardRebuildError(
+        "Enhanced cards can only be rebuilt after a failed or not-attempted conversion.",
+      );
+      return;
+    }
+
+    setStructuredCardRebuildPending(true);
+    setStructuredCardRebuildError(null);
+    setStructuredCardRebuildMessage(null);
+
+    try {
+      const result = await rebuildStructuredPlan(accessToken, plan.plan_id);
+      restartStructuredPlanPolling(plan);
+
+      // The endpoint stamps the server-side attempt marker before returning.
+      // Pull it immediately so the chip moves to Building without waiting for
+      // the next interval; the existing poll then follows it to Live or Failed.
+      try {
+        const refreshedPlan = await getPlan(accessToken, result.plan_id || plan.plan_id);
+        onPlanUpdated?.(refreshedPlan);
+      } catch {
+        // The rebuild was accepted even if this immediate refresh is transiently
+        // unavailable. The bounded background poll and a route refresh recover it.
+      }
+
+      setStructuredCardRebuildMessage(
+        result.queued
+          ? "Enhanced card rebuild queued. Status updates automatically."
+          : "No new rebuild was queued; current server status refreshed.",
+      );
+      router.refresh();
+    } catch (error) {
+      setStructuredCardRebuildError(
+        error instanceof Error ? error.message : "Unable to rebuild the enhanced card.",
+      );
+    } finally {
+      setStructuredCardRebuildPending(false);
     }
   }
 
@@ -2159,10 +2315,10 @@ export function PlanViewer({
           {/* The validation status/badge is operational metadata. Athletes go
               straight into the camp map (which carries its own header); admins
               and any not-yet-published/triage state still see the status. */}
-          {canUseAdminOutputs || !hasPublishedPlan || isTriageBlocked ? (
+          {isViewerAdmin || canUseAdminOutputs || !hasPublishedPlan || isTriageBlocked ? (
             <div className="plan-header-row">
               <div>
-                <p className="kicker">{canUseAdminOutputs ? "Athlete Plan" : "Your plan"}</p>
+                <p className="kicker">{isViewerAdmin ? "Athlete Plan" : "Your plan"}</p>
                 <h2>
                   {isTriageBlocked
                     ? blockedTitle
@@ -2173,25 +2329,60 @@ export function PlanViewer({
                       : "Pending finalization"}
                 </h2>
               </div>
-              <span
-                className={`badge ${
-                  isTriageBlocked
-                    ? injuryTriage?.mode === "medical_hold"
-                      ? "issue-badge-error"
-                      : ""
+              <div className="plan-header-badges">
+                <span
+                  className={`badge ${
+                    isTriageBlocked
+                      ? injuryTriage?.mode === "medical_hold"
+                        ? "issue-badge-error"
+                        : ""
+                      : hasPublishedPlan
+                        ? "status-badge-success"
+                        : "status-badge-neutral"
+                  }`}
+                >
+                  {isTriageBlocked
+                    ? blockedTitle
+                    : plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                      ? "Resume pending"
                     : hasPublishedPlan
-                      ? "status-badge-success"
-                      : "status-badge-neutral"
-                }`}
+                      ? "Validated"
+                      : "Review required"}
+                </span>
+                {isViewerAdmin ? (
+                  <StructuredCardStatusChip cardState={structuredCardState} />
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {isViewerAdmin ? (
+            <div className="structured-card-admin-controls">
+              <button
+                type="button"
+                className="ghost-button structured-card-rebuild-button"
+                onClick={handleRebuildStructuredCard}
+                disabled={structuredCardRebuildPending || !canRebuildStructuredCard}
+                aria-describedby={`structured-card-rebuild-note-${plan.plan_id}`}
               >
-                {isTriageBlocked
-                  ? blockedTitle
-                  : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                    ? "Resume pending"
-                  : hasPublishedPlan
-                    ? "Validated"
-                    : "Review required"}
-              </span>
+                {structuredCardRebuildPending ? "Rebuilding…" : "Rebuild enhanced card"}
+              </button>
+              <p
+                id={`structured-card-rebuild-note-${plan.plan_id}`}
+                className="structured-card-rebuild-note"
+              >
+                Rebuild reruns conversion and every safety check. It cannot override a safety block.
+              </p>
+              {structuredCardRebuildMessage ? (
+                <div className="success-banner" role="status">
+                  {structuredCardRebuildMessage}
+                </div>
+              ) : null}
+              {structuredCardRebuildError ? (
+                <div className="error-banner" role="alert">
+                  {structuredCardRebuildError}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -2239,7 +2430,7 @@ export function PlanViewer({
                 />
               ) : (
                 <>
-                  {canUseAdminOutputs && isAwaitingStructuredUpgrade ? (
+                  {isViewerAdmin && structuredCardState.state === "building" ? (
                     <section className="support-panel" role="status">
                       <div className="form-section-header">
                         <p className="kicker">Enhanced card</p>
@@ -2252,7 +2443,7 @@ export function PlanViewer({
                       </p>
                     </section>
                   ) : null}
-                  {canUseAdminOutputs && structuredCardDebug ? (
+                  {isViewerAdmin && structuredCardDebug ? (
                     <StructuredCardDiagnostic debug={structuredCardDebug} />
                   ) : null}
                   <TextStructuredPlanRenderer

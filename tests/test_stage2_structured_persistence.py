@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -24,14 +25,20 @@ import api.services.admin_stage2_service as admin_stage2_service
 from api.plan_mappers import _map_plan_detail
 from api.services.admin_stage2_service import (
     _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS,
+    _admin_approved_result,
     _approval_structured_budget_seconds,
     approve_review_required_plan,
     backfill_structured_plans,
     list_structured_plan_backfill_candidates,
     prewarm_structured_plan,
+    prepare_structured_plan_rebuild,
     run_structured_plan_post_processing,
     should_prewarm_review_plan_row,
     submit_manual_stage2,
+)
+from api.structured_card_lifecycle import (
+    STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY,
+    has_fresh_structured_card_attempt,
 )
 from api.stage2_automation import (
     OpenAIStage2Automator,
@@ -628,6 +635,40 @@ def test_helper_attaches_structured_on_displayable_result(monkeypatch):
     assert out["stage2_validator_report"]["structured_plan"]["status"] == "valid"
 
 
+def test_helper_marks_worker_result_in_flight_then_clears_on_terminal_outcome(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    result = {"status": "ready", "final_plan_text": "# final plan", "stage2_validator_report": {}}
+
+    async def _exercise() -> None:
+        started = asyncio.Event()
+        finish = asyncio.Event()
+
+        class _BlockingAutomator(_StructuredAutomator):
+            async def _attempt_structured_plan(self, **kwargs):
+                started.set()
+                await finish.wait()
+                return await super()._attempt_structured_plan(**kwargs)
+
+        automator = _BlockingAutomator(_valid_outcome())
+        task = asyncio.create_task(
+            attempt_structured_plan_for_result(
+                result,
+                planning_brief={},
+                automator=automator,
+                source="worker",
+            )
+        )
+        await started.wait()
+        assert STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY in result["stage2_validator_report"]
+        finish.set()
+        await task
+
+    asyncio.run(_exercise())
+
+    assert STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in result["stage2_validator_report"]
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+
+
 def test_helper_attaches_for_publishable_with_flags(monkeypatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     automator = _StructuredAutomator(_valid_outcome())
@@ -718,6 +759,15 @@ def test_approval_budget_honours_finite_positive_override(monkeypatch):
     assert _approval_structured_budget_seconds() == 12.5
 
 
+def test_structured_card_attempt_is_stale_at_exactly_twenty_five_minutes():
+    now = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
+    report = {
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY: (now - timedelta(minutes=25)).isoformat()
+    }
+
+    assert has_fresh_structured_card_attempt(report, now=now) is False
+
+
 # ---------------------------------------------------------------------------
 # Pre-warm: build the held plan's card before approval so approval is instant
 # ---------------------------------------------------------------------------
@@ -740,6 +790,30 @@ def test_prewarm_builds_and_persists_card_for_held_plan(monkeypatch):
     # The card was converted from the approved/final text.
     assert automator.calls[0]["final_plan_text"] == "# approved plan"
     assert automator.calls[0]["source"] == "admin_prewarm"
+    assert STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in row["stage2_validator_report"]
+
+
+def test_prewarm_persists_build_marker_before_model_call(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    marker_seen: list[str] = []
+
+    class _InspectingAutomator(_StructuredAutomator):
+        async def _attempt_structured_plan(self, **kwargs):
+            report = store.plans[plan_id]["stage2_validator_report"]
+            marker_seen.append(str(report.get(STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY) or ""))
+            return await super()._attempt_structured_plan(**kwargs)
+
+    asyncio.run(
+        prewarm_structured_plan(
+            plan_id=plan_id,
+            store=store,
+            stage2=_InspectingAutomator(_valid_outcome("# approved plan")),
+        )
+    )
+
+    assert marker_seen and marker_seen[0]
 
 
 def test_prewarm_is_noop_when_card_already_present(monkeypatch):
@@ -916,6 +990,54 @@ def test_attempt_structured_plan_records_reason_when_converter_unavailable(monke
     assert "OPENAI_API_KEY" in debug["errors"][0]
 
 
+def test_admin_approval_revalidation_preserves_structured_debug_and_build_marker(monkeypatch):
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    row = store.plans[plan_id]
+    row["planning_brief"] = {"schema_version": "planning_brief.v1"}
+    row["stage2_validator_report"] = {
+        "structured_plan": {
+            "status": "invalid_fallback_used",
+            "errors": ["bad shape"],
+        },
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY: "2026-07-11T10:00:00+00:00",
+    }
+
+    monkeypatch.setattr(
+        "fightcamp.stage2_pipeline.review_stage2_output",
+        lambda **_kwargs: {"validator_report": {"errors": [], "warnings": []}},
+    )
+
+    result = _admin_approved_result(row)
+
+    report = result["stage2_validator_report"]
+    assert report["structured_plan"] == row["stage2_validator_report"]["structured_plan"]
+    assert report[STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY] == "2026-07-11T10:00:00+00:00"
+
+
+def test_admin_approval_write_does_not_drop_prior_structured_debug(monkeypatch):
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    row = store.plans[plan_id]
+    row["planning_brief"] = {"schema_version": "planning_brief.v1"}
+    row["stage2_validator_report"] = {
+        "structured_plan": {
+            "status": "invalid_fallback_used",
+            "errors": ["bad shape"],
+        }
+    }
+    monkeypatch.setattr(
+        "fightcamp.stage2_pipeline.review_stage2_output",
+        lambda **_kwargs: {"validator_report": {"errors": [], "warnings": []}},
+    )
+
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+
+    debug = store.plans[plan_id]["stage2_validator_report"]["structured_plan"]
+    assert debug["status"] == "invalid_fallback_used"
+    assert debug["errors"] == ["bad shape"]
+
+
 def test_admin_approve_attaches_structured_card_inline(monkeypatch):
     """Approval ships the live card when it converts within the time budget.
 
@@ -964,6 +1086,13 @@ def test_admin_approve_falls_back_to_text_when_inline_card_times_out(monkeypatch
     assert detail.outputs.plan_text == "# approved plan"
     assert detail.outputs.structured_plan is None
     assert store.plans[plan_id].get("structured_plan") is None
+    # The timeout is not a blank/unknown state: approval persists the in-flight
+    # marker that the deferred background conversion will finish (or that will
+    # age into an explicit stale-build failure after the lifecycle timeout).
+    assert (
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY
+        in store.plans[plan_id]["stage2_validator_report"]
+    )
 
 
 def test_admin_stage2_service_wraps_sync_store_calls_in_to_thread(monkeypatch):
@@ -1072,6 +1201,111 @@ def test_structured_post_processing_converts_when_inline_was_skipped(monkeypatch
     assert store.plans[plan_id]["schema_version"] == SCHEMA_VERSION
     assert store.plans[plan_id]["status"] == "ready"
     assert store.plans[plan_id]["plan_text"] == "# approved plan"
+
+
+def test_structured_post_processing_persists_marker_before_conversion_and_clears_it(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+    marker_seen: list[str] = []
+
+    class _InspectingAutomator(_StructuredAutomator):
+        async def _attempt_structured_plan(self, **kwargs):
+            report = store.plans[plan_id]["stage2_validator_report"]
+            marker_seen.append(str(report.get(STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY) or ""))
+            return await super()._attempt_structured_plan(**kwargs)
+
+    asyncio.run(
+        run_structured_plan_post_processing(
+            plan_id=plan_id,
+            store=store,
+            stage2=_InspectingAutomator(_valid_outcome("# approved plan")),
+        )
+    )
+
+    assert marker_seen and marker_seen[0]
+    assert (
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY
+        not in store.plans[plan_id]["stage2_validator_report"]
+    )
+
+
+def test_structured_post_processing_uses_exact_source_text_for_narrow_write_guard(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+    store.plans[plan_id]["final_plan_text"] = "# approved plan\n"
+    store.plans[plan_id]["plan_text"] = "# approved plan\n"
+
+    asyncio.run(
+        run_structured_plan_post_processing(
+            plan_id=plan_id,
+            store=store,
+            stage2=_StructuredAutomator(
+                StructuredPlanOutcome(status="invalid_fallback_used", errors=["bad shape"])
+            ),
+        )
+    )
+
+    report = store.plans[plan_id]["stage2_validator_report"]
+    assert report["structured_plan"]["status"] == "invalid_fallback_used"
+    assert STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in report
+
+
+def test_explicit_rebuild_retries_held_safety_failure_without_releasing_plan(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    store.plans[plan_id]["stage2_validator_report"] = {
+        "structured_plan": {
+            "status": "blocked_by_safety_audit",
+            "errors": ["deterministic safety conflict"],
+        }
+    }
+
+    decision = asyncio.run(prepare_structured_plan_rebuild(plan_id=plan_id, store=store))
+    blocked = StructuredPlanOutcome(
+        status="blocked_by_safety_audit",
+        errors=["deterministic safety conflict remains"],
+    )
+    asyncio.run(
+        run_structured_plan_post_processing(
+            plan_id=plan_id,
+            store=store,
+            stage2=_StructuredAutomator(blocked),
+            continue_existing_attempt=True,
+            rebuild=True,
+        )
+    )
+
+    row = store.plans[plan_id]
+    assert decision == {"queued": True, "plan_id": plan_id}
+    assert row["status"] == "held_for_review"
+    assert row["plan_text"] == ""
+    assert row.get("structured_plan") is None
+    assert row["stage2_validator_report"]["structured_plan"]["status"] == "blocked_by_safety_audit"
+    assert STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in row["stage2_validator_report"]
+
+
+def test_explicit_rebuild_requeues_a_stale_build_marker(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    stale = "2020-01-01T00:00:00Z"
+    store.plans[plan_id]["stage2_validator_report"] = {
+        "structured_plan": {"status": "not_attempted", "errors": ["worker stopped"]},
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY: stale,
+    }
+
+    decision = asyncio.run(prepare_structured_plan_rebuild(plan_id=plan_id, store=store))
+
+    assert decision == {"queued": True, "plan_id": plan_id}
+    marker = store.plans[plan_id]["stage2_validator_report"][
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY
+    ]
+    assert marker != stale
 
 
 def test_structured_post_processing_skips_when_card_already_present(monkeypatch):

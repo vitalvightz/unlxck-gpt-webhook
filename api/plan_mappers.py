@@ -26,15 +26,28 @@ from .models import (
     PlanSafetyState,
     PlanSummary,
     ProfileRecord,
+    StructuredCardState,
     USERNAME_CHANGE_WINDOW_DAYS,
     USERNAME_MAX_CHANGES_PER_WINDOW,
     UsernameRateLimitInfo,
     WeeklySchedule,
 )
 from .store import AppStore
+from .structured_card_lifecycle import (
+    STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY,
+    STRUCTURED_CARD_BUILD_STALE_AFTER,
+    parse_structured_card_attempt_started_at,
+)
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 
 logger = logging.getLogger(__name__)
+
+_CLEAN_STRUCTURED_CARD_STATUSES = frozenset({"valid", "repair_attempted_valid"})
+_FAILED_STRUCTURED_CARD_STATUSES = frozenset(
+    {"invalid_fallback_used", "blocked_by_safety_audit"}
+)
+_STALE_STRUCTURED_CARD_REASON = "Enhanced card build did not complete."
+_MISSING_SAVED_CARD_REASON = "Saved enhanced card is unavailable."
 
 _REVIEW_CODE_LABELS = {
     "calendar_spine_fight_day_protocol_violation": "fight-day protocol timing needs review",
@@ -362,6 +375,154 @@ def _lookup_plan_source(store: AppStore, plan_id: str) -> str | None:
     return value if value in _ALLOWED_PLAN_SOURCES else None
 
 
+def _structured_card_reason_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, dict):
+        for key in ("message", "reason", "detail", "error", "code"):
+            text = _structured_card_reason_text(value.get(key))
+            if text:
+                return text
+        try:
+            return json.dumps(value, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            return str(value)
+    text = str(value).strip()
+    return text or None
+
+
+def _structured_card_reason_list(value: Any) -> list[str]:
+    values = value if isinstance(value, (list, tuple)) else [value]
+    reasons: list[str] = []
+    for item in values:
+        text = _structured_card_reason_text(item)
+        if text and text not in reasons:
+            reasons.append(text)
+    return reasons
+
+
+def _merge_structured_card_reasons(*groups: list[str]) -> list[str]:
+    merged: list[str] = []
+    for group in groups:
+        for reason in group:
+            if reason not in merged:
+                merged.append(reason)
+    return merged
+
+
+def _derive_structured_card_state(
+    row: dict[str, Any],
+    *,
+    structured_plan: StructuredTrainingPlan | None,
+    structured_schema_version: str | None,
+    now: datetime | None = None,
+) -> StructuredCardState:
+    report = row.get("stage2_validator_report")
+    report = report if isinstance(report, dict) else {}
+    debug = report.get("structured_plan")
+    debug = debug if isinstance(debug, dict) else {}
+    debug_status = str(debug.get("status") or "").strip()
+
+    error_reasons = _structured_card_reason_list(debug.get("errors"))
+    warning_reasons = _structured_card_reason_list(debug.get("warnings"))
+    recorded_reasons = _structured_card_reason_list(debug.get("reason"))
+    reasons = _merge_structured_card_reasons(
+        error_reasons,
+        warning_reasons,
+        recorded_reasons,
+    )
+
+    raw_schema_version = structured_schema_version or debug.get("schema_version")
+    schema_version = (
+        str(raw_schema_version).strip() if raw_schema_version is not None else None
+    ) or None
+
+    raw_attempt_started_at = report.get(STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY)
+    attempt_at = parse_structured_card_attempt_started_at(raw_attempt_started_at)
+    attempt_started_at: str | None = None
+    if attempt_at is not None:
+        attempt_started_at = (
+            raw_attempt_started_at.strip()
+            if isinstance(raw_attempt_started_at, str)
+            else attempt_at.isoformat()
+        )
+
+    if structured_plan is not None and debug_status in _CLEAN_STRUCTURED_CARD_STATUSES:
+        return StructuredCardState(
+            state="live",
+            reasons=reasons,
+            schema_version=schema_version,
+            attempt_started_at=attempt_started_at,
+        )
+
+    if attempt_at is not None:
+        current_time = now or datetime.now(timezone.utc)
+        if current_time.tzinfo is None:
+            current_time = current_time.replace(tzinfo=timezone.utc)
+        else:
+            current_time = current_time.astimezone(timezone.utc)
+        if current_time - attempt_at < STRUCTURED_CARD_BUILD_STALE_AFTER:
+            return StructuredCardState(
+                state="building",
+                reasons=[],
+                schema_version=schema_version,
+                attempt_started_at=attempt_started_at,
+            )
+        stale_reasons = _merge_structured_card_reasons(
+            [_STALE_STRUCTURED_CARD_REASON],
+            reasons,
+        )
+        if debug_status in _CLEAN_STRUCTURED_CARD_STATUSES:
+            stale_reasons = _merge_structured_card_reasons(
+                stale_reasons,
+                [_MISSING_SAVED_CARD_REASON],
+            )
+        return StructuredCardState(
+            state="failed",
+            reasons=stale_reasons,
+            schema_version=schema_version,
+            attempt_started_at=attempt_started_at,
+        )
+
+    if debug_status in _CLEAN_STRUCTURED_CARD_STATUSES:
+        return StructuredCardState(
+            state="failed",
+            reasons=_merge_structured_card_reasons(
+                [_MISSING_SAVED_CARD_REASON],
+                reasons,
+            ),
+            schema_version=schema_version,
+        )
+
+    if debug_status in _FAILED_STRUCTURED_CARD_STATUSES:
+        if not reasons:
+            reasons = [
+                "Enhanced card was blocked by the safety audit."
+                if debug_status == "blocked_by_safety_audit"
+                else "Enhanced card validation failed."
+            ]
+        return StructuredCardState(
+            state="failed",
+            reasons=reasons,
+            schema_version=schema_version,
+        )
+
+    if debug_status == "not_attempted":
+        return StructuredCardState(
+            state="failed" if error_reasons else "not_attempted",
+            reasons=reasons,
+            schema_version=schema_version,
+        )
+
+    return StructuredCardState(
+        state="none",
+        reasons=reasons,
+        schema_version=schema_version,
+    )
+
+
 def _map_plan_detail(
     row: dict[str, Any],
     *,
@@ -404,6 +565,11 @@ def _map_plan_detail(
             schema_version=structured_schema_version,
         ),
         safety_state=_map_plan_safety_state(row),
+        structured_card_state=_derive_structured_card_state(
+            row,
+            structured_plan=structured_plan,
+            structured_schema_version=structured_schema_version,
+        ),
         advisories=build_plan_advisories(planning_brief=planning_brief),
         plan_source=plan_source,
         profile_refresh_failed=bool(

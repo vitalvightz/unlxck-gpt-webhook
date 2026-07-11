@@ -1,9 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   buildStructuredPlanFromText,
+  canRebuildEnhancedCard,
   parsePlanText,
   splitLabeledSegments,
   buildReviewSummary,
@@ -20,10 +23,11 @@ import {
   shouldAwaitStructuredPlanUpgrade,
   shouldPollForStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
+  StructuredCardStatusChip,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
 import { HARD_STAGE2_BLOCKER_CODES } from "@/lib/stage2-policy";
-import type { PlanDetail } from "@/lib/types";
+import type { PlanDetail, StructuredCardState } from "@/lib/types";
 
 const PLAN_VIEWER_SOURCE = readFileSync(new URL("./plan-viewer.tsx", import.meta.url), "utf8");
 
@@ -33,6 +37,76 @@ function makePlan(overrides: { status?: string; planText?: string }): PlanDetail
     outputs: { plan_text: overrides.planText ?? "# Plan body" },
   } as unknown as PlanDetail;
 }
+
+const STRUCTURED_CARD_CHIP_CASES: Array<{
+  cardState: StructuredCardState;
+  label: string;
+}> = [
+  {
+    cardState: { state: "live", reasons: [], schema_version: "structured-plan.v2" },
+    label: "Enhanced card live",
+  },
+  {
+    cardState: { state: "building", reasons: [], attempt_started_at: "2026-07-11T10:00:00Z" },
+    label: "Enhanced card building",
+  },
+  {
+    cardState: { state: "failed", reasons: ["build did not complete"] },
+    label: "Enhanced card failed",
+  },
+  {
+    cardState: { state: "not_attempted", reasons: ["converter unavailable"] },
+    label: "Enhanced card not attempted",
+  },
+  {
+    cardState: { state: "none", reasons: [] },
+    label: "Enhanced card no record",
+  },
+];
+
+for (const { cardState, label } of STRUCTURED_CARD_CHIP_CASES) {
+  test(`structured-card admin chip renders the ${cardState.state} state`, () => {
+    const html = renderToStaticMarkup(
+      createElement(StructuredCardStatusChip, { cardState }),
+    );
+
+    assert.match(html, new RegExp(`data-state="${cardState.state}"`));
+    assert.match(html, new RegExp(label));
+    assert.ok(html.includes("structured-card-status-chip"));
+  });
+}
+
+test("live structured-card chip renders its schema version compactly", () => {
+  const html = renderToStaticMarkup(
+    createElement(StructuredCardStatusChip, {
+      cardState: {
+        state: "live",
+        reasons: [],
+        schema_version: "structured-plan.v2",
+      },
+    }),
+  );
+
+  assert.match(html, /structured-card-schema-version/);
+  assert.match(html, /structured-plan\.v2/);
+});
+
+test("structured-card chip never renders blank when the lifecycle field is absent", () => {
+  const html = renderToStaticMarkup(
+    createElement(StructuredCardStatusChip, { cardState: undefined }),
+  );
+
+  assert.match(html, /data-state="none"/);
+  assert.match(html, /Enhanced card no record/);
+});
+
+test("enhanced-card rebuild is enabled only for failed and not-attempted states", () => {
+  assert.equal(canRebuildEnhancedCard({ state: "failed", reasons: [] }), true);
+  assert.equal(canRebuildEnhancedCard({ state: "not_attempted", reasons: [] }), true);
+  assert.equal(canRebuildEnhancedCard({ state: "building", reasons: [] }), false);
+  assert.equal(canRebuildEnhancedCard({ state: "live", reasons: [] }), false);
+  assert.equal(canRebuildEnhancedCard({ state: "none", reasons: [] }), false);
+});
 
 test("triage_resume_approved with empty validator report and restricted rehab stub is not publishable", () => {
   const hasStub = hasBlockedTriageStubText(
@@ -346,6 +420,30 @@ test("the upgrade poll keeps running for an older published plan still missing i
       hasStructuredPlan: false,
       pollWindowExpired: false,
       hasAccessToken: true,
+      isTriageBlocked: true,
+    }),
+    false,
+  );
+});
+
+test("an admin-held plan polls while its server-authoritative card state is building", () => {
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: false,
+      hasStructuredPlan: false,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+      isServerBuilding: true,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: false,
+      hasStructuredPlan: false,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+      isServerBuilding: true,
       isTriageBlocked: true,
     }),
     false,
