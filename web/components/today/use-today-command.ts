@@ -2,8 +2,30 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { buildStructuredPlanFromText } from "@/components/plan-viewer";
 import { getPlan, getToday } from "@/lib/api";
-import type { StructuredPlan, TodayCommandView } from "@/lib/types";
+import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
+import type { PlanDetail, StructuredPlan, TodayCommandView } from "@/lib/types";
+
+/**
+ * The plan Today renders blocks from: the saved server card when present,
+ * otherwise the SAME deterministic plan_text adapter Plan Detail falls back to.
+ * Without this fallback, a plan whose structured payload was never built left
+ * Today with no session blocks at all (only the backend's sparring-day summary)
+ * while Plan Detail happily showed the full week — the athlete-visible
+ * "Today misses my sessions" gap.
+ */
+export function resolveTodayStructuredPlan(detail: PlanDetail): StructuredPlan | null {
+  const saved = detail?.outputs?.structured_plan;
+  if (saved && shouldRenderStructuredPlan(detail.outputs)) {
+    return saved;
+  }
+  const planText = detail?.outputs?.plan_text?.trim();
+  if (!planText) {
+    return null;
+  }
+  return buildStructuredPlanFromText(planText, detail?.fight_date);
+}
 
 export type TodayCommand = {
   state: TodayCommandView | null;
@@ -56,7 +78,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
     getPlan(token, activePlanId)
       .then((detail) => {
         if (!cancelled) {
-          setStructuredPlan(detail.outputs?.structured_plan ?? null);
+          setStructuredPlan(resolveTodayStructuredPlan(detail));
         }
       })
       .catch(() => {

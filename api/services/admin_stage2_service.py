@@ -51,9 +51,15 @@ def should_prewarm_review_plan_row(row: Any) -> bool:
         return False
     if not str(row.get("id") or "").strip():
         return False
-    # Avoid scheduling redundant background tasks if the structured plan has already been attempted or generated
+    # Avoid scheduling redundant background tasks when a conversion already RAN
+    # for this plan. A recorded ``not_attempted`` means the opposite — held plans
+    # always carry one (the worker records it when the plan is not displayable),
+    # so treating its mere presence as "already attempted" disabled pre-warm for
+    # exactly the plans it exists to serve.
     report = row.get("stage2_validator_report")
-    if isinstance(report, dict) and "structured_plan" in report:
+    debug = report.get("structured_plan") if isinstance(report, dict) else None
+    debug_status = str(debug.get("status") or "").strip() if isinstance(debug, dict) else ""
+    if debug_status and debug_status != "not_attempted":
         return False
     return str(row.get("status") or "").strip().lower() in _PREWARMABLE_REVIEW_STATUSES
 
@@ -455,7 +461,14 @@ async def run_structured_plan_post_processing(
             report = {}
         structured_debug = report.get("structured_plan")
         debug_status = structured_debug.get("status") if isinstance(structured_debug, dict) else None
-        should_persist_debug = debug_status not in {None, "not_attempted"}
+        debug_errors = (
+            structured_debug.get("errors") if isinstance(structured_debug, dict) else None
+        )
+        # A bare gate-skip (already converted / not displayable) stays unpersisted,
+        # but a not_attempted that CARRIES errors means the conversion could not
+        # run (converter unavailable, crash) — persist it so the admin diagnostic
+        # explains the missing card instead of showing a stale, reasonless state.
+        should_persist_debug = debug_status not in {None, "not_attempted"} or bool(debug_errors)
         if result.get("structured_plan") is not None or should_persist_debug:
             await asyncio.to_thread(
                 store.update_plan_structured_artifacts,

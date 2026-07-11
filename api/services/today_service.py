@@ -966,6 +966,15 @@ _STRUCTURED_TRAINING_HEADLINE_RE = re.compile(
     r"strength|conditioning|recovery|mobility|reset|fight\s+day|protocol)\b",
     re.I,
 )
+# Headlines that mean "nothing is scheduled today". A day with no session
+# objects and a headline like these stays a rest day; anything else with real
+# copy ("Rhythm flush", "Breathing downshift") is a scheduled filler session —
+# the old allowlist above silently dropped those, so Today only ever surfaced
+# sparring/strength days and never the low-cost support work between them.
+_STRUCTURED_REST_HEADLINE_RE = re.compile(
+    r"^(?:full\s+|complete\s+|total\s+)?(?:rest|off|no\s+training|day\s+off|travel)\b",
+    re.I,
+)
 _STRUCTURED_COACH_CONTACT_RE = re.compile(
     r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
     re.I,
@@ -1063,7 +1072,11 @@ def _structured_session_entry_for_day(
         session = dict(first_session)
     else:
         headline = _clean_text(today_card.get("headline"))
-        if not headline or not _STRUCTURED_TRAINING_HEADLINE_RE.search(headline):
+        is_training_headline = bool(headline) and (
+            _STRUCTURED_TRAINING_HEADLINE_RE.search(headline) is not None
+            or not _STRUCTURED_REST_HEADLINE_RE.search(headline)
+        )
+        if not is_training_headline:
             return None
         session = {
             "session_id": day_date,
@@ -1086,6 +1099,14 @@ def _structured_session_entry_for_day(
     except ValueError:
         weekday = ""
 
+    # The day-level load comes from day_type, but a rest/travel day_type must not
+    # zero out a day that actually schedules work: recovery fillers (breathing,
+    # mobility, mental cues) are routinely placed on "rest" days, and mapping the
+    # whole entry to "none" made has_scheduled_day_content() drop them from Today.
+    effective_load = _structured_effective_load(day.get("day_type"))
+    if effective_load == "none":
+        effective_load = "reduced"
+
     return {
         **session,
         "calendar_date": day_date,
@@ -1095,7 +1116,7 @@ def _structured_session_entry_for_day(
         "title": title,
         "status": _clean_text(session.get("session_type")) or "scheduled_session",
         "coach_note": objective,
-        "effective_load": _structured_effective_load(day.get("day_type")),
+        "effective_load": effective_load,
         "phase": _normalized_structured_phase(day.get("phase_label"))
         or _normalized_structured_phase(week.get("phase_label")),
         "session_id": session_id,

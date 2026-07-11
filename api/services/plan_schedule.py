@@ -9,6 +9,7 @@ neither side needs a lazy route import to share the logic.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Any, Mapping
 
@@ -19,6 +20,24 @@ from api.plan_mappers import _map_weekly_schedule, _visible_plans_for_athlete
 from api.store import AppStore
 
 _WEEKDAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+# Structured cards always carry a headline, including motivational and advisory
+# copy. A synthetic ``scheduled_session`` (the Today service's representation of
+# a headline-only day) therefore needs affirmative work language before it can
+# count as scheduled training. Explicit session objects use their real
+# ``session_type`` and bypass this headline gate.
+_STRUCTURED_REST_HEADLINE_RE = re.compile(
+    r"^(?:full\s+|complete\s+|total\s+)?(?:rest|off|no\s+training|day\s+off|travel)\b",
+    re.I,
+)
+_STRUCTURED_WORK_HEADLINE_RE = re.compile(
+    r"\b(coach|spar|technical|boxing|pad\s?work|pads|mitts?|skill|primer|"
+    r"strength|conditioning|mobility|reset|fight\s+day|protocol|rhythm|flush|"
+    r"breath(?:ing)?|downshift|(?:easy|recovery)\s+walk|visuali[sz](?:e|ation)|"
+    r"cue\s+card|mindset\s+(?:reset|work)|movement\s+quality|shadowbox|footwork|"
+    r"tactical\s+(?:watch|review)|film\s+(?:review|study))\b",
+    re.I,
+)
 
 
 def parse_iso_date(value: Any) -> date | None:
@@ -81,6 +100,22 @@ def resolve_current_week(plan_row: Mapping[str, Any], *, today: date) -> tuple[i
     return 0, first_week
 
 
+def _headline_only_entry_is_scheduled(*, status: Any, title: Any) -> bool:
+    """Validate the Today service's synthetic headline-only session entry.
+
+    ``scheduled_session`` means no structured session object existed and the
+    entry was inferred from ``today_card.headline``. Unknown prose is not enough
+    evidence of prescribed work: an explicit support/training phrase is required,
+    and a rest/off prefix always wins even if later text mentions mobility.
+    """
+    if str(status or "").strip().lower() != "scheduled_session":
+        return True
+    headline = str(title or "").strip()
+    if not headline or _STRUCTURED_REST_HEADLINE_RE.search(headline):
+        return False
+    return _STRUCTURED_WORK_HEADLINE_RE.search(headline) is not None
+
+
 def has_scheduled_day_content(entry: Any) -> bool:
     """True when a day entry carries real training (not a rest/off day).
 
@@ -91,12 +126,16 @@ def has_scheduled_day_content(entry: Any) -> bool:
         return False
     if isinstance(entry, Mapping):
         status = entry.get("status")
+        title = entry.get("title")
         coach_note = entry.get("coach_note")
         effective_load = entry.get("effective_load")
     else:
         status = getattr(entry, "status", None)
+        title = getattr(entry, "title", None)
         coach_note = getattr(entry, "coach_note", None)
         effective_load = getattr(entry, "effective_load", None)
+    if not _headline_only_entry_is_scheduled(status=status, title=title):
+        return False
     if isinstance(effective_load, str):
         effective_load = effective_load.strip().lower()
     if effective_load in {"none", "off", "rest"}:
