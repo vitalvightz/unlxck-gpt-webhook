@@ -51,6 +51,7 @@ from .services.admin_stage2_service import (
     backfill_structured_plans as backfill_structured_plans_service,
     list_structured_plan_backfill_candidates as list_structured_plan_backfill_candidates_service,
     prewarm_structured_plan as prewarm_structured_plan_service,
+    prepare_structured_plan_rebuild as prepare_structured_plan_rebuild_service,
     run_structured_plan_post_processing as run_structured_plan_post_processing_service,
     should_prewarm_review_plan_row,
     submit_manual_stage2 as submit_manual_stage2_service,
@@ -1119,8 +1120,29 @@ def create_app(
             plan_id=plan_id,
             store=store,
             stage2=stage2,
+            continue_existing_attempt=True,
         )
         return detail
+
+    @app.post("/api/admin/plans/{plan_id}/structured-plan/rebuild", status_code=202)
+    async def rebuild_structured_plan(
+        plan_id: str,
+        background_tasks: BackgroundTasks,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        stage2: Any = Depends(get_required_stage2_automator),
+    ) -> dict[str, Any]:
+        decision = await prepare_structured_plan_rebuild_service(plan_id=plan_id, store=store)
+        if decision["queued"]:
+            background_tasks.add_task(
+                run_structured_plan_post_processing_service,
+                plan_id=plan_id,
+                store=store,
+                stage2=stage2,
+                continue_existing_attempt=True,
+                rebuild=True,
+            )
+        return decision
 
     @app.post("/api/admin/plans/structured-plan/backfill", status_code=202)
     async def backfill_structured_plans(

@@ -8,9 +8,23 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, status
 
 from ..models import PlanDetail
-from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
-
-from ..structured_plan_generation import has_clean_structured_card
+from ..plan_mappers import (
+    _decode_structured_plan,
+    _decode_structured_text,
+    _lookup_plan_source,
+    _map_plan_detail,
+)
+from ..state_machine import is_athlete_displayable_plan_status
+from ..structured_card_lifecycle import (
+    STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY,
+    has_fresh_structured_card_attempt,
+    mark_structured_card_attempt_started,
+)
+from ..structured_plan_generation import (
+    StructuredPlanOutcome,
+    has_clean_structured_card,
+    should_attempt_structured_plan,
+)
 from ..store import AppStore
 
 if TYPE_CHECKING:
@@ -57,6 +71,8 @@ def should_prewarm_review_plan_row(row: Any) -> bool:
     # so treating its mere presence as "already attempted" disabled pre-warm for
     # exactly the plans it exists to serve.
     report = row.get("stage2_validator_report")
+    if has_fresh_structured_card_attempt(report):
+        return False
     debug = report.get("structured_plan") if isinstance(report, dict) else None
     debug_status = str(debug.get("status") or "").strip() if isinstance(debug, dict) else ""
     if debug_status and debug_status != "not_attempted":
@@ -73,6 +89,59 @@ def _approval_structured_budget_seconds() -> float:
     # Only a finite, positive budget is usable: inf would make wait_for() block
     # forever and nan compares False, so both fall back to the default.
     return value if 0 < value < float("inf") else _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
+
+
+def _structured_card_source_text(plan: dict[str, Any]) -> str:
+    # This value is also used as the narrow writer's optimistic text guard. Keep
+    # it byte-for-byte identical to the persisted source; trimming here would
+    # silently skip marker/terminal writes for legacy rows with trailing space.
+    return str(plan.get("final_plan_text") or plan.get("plan_text") or "")
+
+
+def _has_live_structured_card(plan: dict[str, Any]) -> bool:
+    """Require both a clean outcome and a card that still decodes today."""
+
+    if not has_clean_structured_card(plan):
+        return False
+    decoded, _schema_version = _decode_structured_plan(
+        plan.get("structured_plan"),
+        raw_markdown=_structured_card_source_text(plan),
+    )
+    return decoded is not None
+
+
+def _structured_card_rebuild_status_is_eligible(plan: dict[str, Any]) -> bool:
+    plan_status = str(plan.get("status") or "").strip().lower()
+    return is_athlete_displayable_plan_status(plan_status) or plan_status in _PREWARMABLE_REVIEW_STATUSES
+
+
+async def _persist_structured_card_attempt_started(
+    *,
+    plan_id: str,
+    store: AppStore,
+    plan_row: dict[str, Any],
+    result: dict[str, Any],
+    source_text: str,
+) -> dict[str, Any]:
+    """Persist an in-flight marker without touching plan lifecycle/text fields."""
+
+    mark_structured_card_attempt_started(result)
+    report = result.get("stage2_validator_report")
+    if not isinstance(report, dict):  # defensive; marker helper always normalizes
+        report = {}
+        result["stage2_validator_report"] = report
+    updated = await asyncio.to_thread(
+        store.update_plan_structured_artifacts,
+        plan_id,
+        # Preserve a pre-existing artifact while updating only its lifecycle
+        # report. Passing the same artifact also avoids the writer's intentional
+        # "do not overwrite an existing card with None" race guard.
+        structured_plan=plan_row.get("structured_plan"),
+        schema_version=plan_row.get("schema_version"),
+        stage2_validator_report=report,
+        expected_final_plan_text=source_text,
+    )
+    return dict(updated) if isinstance(updated, dict) else {}
 
 
 async def _attach_structured_plan(
@@ -104,10 +173,53 @@ async def _attach_structured_plan(
     return result
 
 
+async def _attach_structured_plan_rebuild(
+    result: dict[str, Any],
+    plan_row: dict[str, Any],
+    *,
+    stage2: Stage2Automator | None,
+) -> dict[str, Any]:
+    """Re-run the audited converter without changing the plan's held/live status.
+
+    The canonical trigger intentionally excludes held rows and any row that
+    already has an artifact. An explicit admin rebuild may retry those rows, but
+    it still calls the same ``_attempt_structured_plan`` implementation used by
+    pre-warm/worker conversion, including its deterministic safety audit. This
+    helper only attaches the conversion outcome; persistence remains narrow and
+    never releases a held plan.
+    """
+
+    if stage2 is None:
+        return result
+    from ..stage2_automation import _record_structured_outcome
+
+    converter = getattr(stage2, "_attempt_structured_plan", None)
+    if converter is None:
+        reason = str(getattr(stage2, "reason", "") or "").strip() or (
+            f"Stage 2 automator {type(stage2).__name__} cannot convert structured plans."
+        )
+        return _record_structured_outcome(
+            result,
+            StructuredPlanOutcome(
+                status="not_attempted",
+                errors=[f"structured conversion unavailable: {reason}"],
+            ),
+        )
+
+    planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
+    outcome, _costs = await converter(
+        final_plan_text=_structured_card_source_text(result),
+        planning_brief=planning_brief,
+        source="admin_rebuild",
+    )
+    return _record_structured_outcome(result, outcome)
+
+
 async def _attach_structured_plan_within_budget(
     result: dict[str, Any],
     plan_row: dict[str, Any],
     *,
+    store: AppStore,
     stage2: Stage2Automator | None,
 ) -> dict[str, Any]:
     """Attempt the structured card inline, but never let it stall the approval.
@@ -129,6 +241,24 @@ async def _attach_structured_plan_within_budget(
     if reused is not None:
         logger.info("inline structured-plan reused pre-warmed card for plan_id=%s", plan_row.get("id"))
         return reused
+    plan_id = str(plan_row.get("id") or "").strip()
+    source_text = _structured_card_source_text(plan_row)
+    if plan_id and _structured_card_source_text(result).strip():
+        try:
+            await _persist_structured_card_attempt_started(
+                plan_id=plan_id,
+                store=store,
+                plan_row=plan_row,
+                result=result,
+                source_text=source_text,
+            )
+        except Exception:  # noqa: BLE001 - lifecycle diagnostics must not block approval
+            # ``result`` still carries the marker, so the guarded approval write
+            # below can persist it even if this best-effort narrow write failed.
+            logger.exception(
+                "inline structured-plan marker persistence failed for plan_id=%s",
+                plan_id,
+            )
     budget = _approval_structured_budget_seconds()
     try:
         return await asyncio.wait_for(
@@ -166,7 +296,7 @@ def _reuse_prewarmed_structured_card(
 
     if not _structured_plan_enabled():
         return None
-    if not has_clean_structured_card(plan_row):
+    if not _has_live_structured_card(plan_row):
         return None
     approved_text = str(result.get("final_plan_text") or result.get("plan_text") or "").strip()
     card_source_text = str(
@@ -229,22 +359,29 @@ async def prewarm_structured_plan(
             return
         if plan_row.get("structured_plan"):
             return  # already converted (or pre-warmed) — nothing to do
-        source_text = str(
-            plan_row.get("final_plan_text") or plan_row.get("plan_text") or ""
-        ).strip()
-        if not source_text:
+        source_text = _structured_card_source_text(plan_row)
+        if not source_text.strip():
             return
         planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
+        attempt_result: dict[str, Any] = {
+            "stage2_validator_report": plan_row.get("stage2_validator_report"),
+        }
+        await _persist_structured_card_attempt_started(
+            plan_id=plan_id,
+            store=store,
+            plan_row=plan_row,
+            result=attempt_result,
+            source_text=source_text,
+        )
         outcome, _costs = await converter(
             final_plan_text=source_text,
             planning_brief=planning_brief,
             source="admin_prewarm",
         )
-        if outcome.structured_plan is None:
-            return
-        report = plan_row.get("stage2_validator_report")
-        report = dict(report) if isinstance(report, dict) else {}
-        report["structured_plan"] = outcome.as_debug()
+        from ..stage2_automation import _record_structured_outcome
+
+        _record_structured_outcome(attempt_result, outcome)
+        report = attempt_result["stage2_validator_report"]
         await asyncio.to_thread(
             store.update_plan_structured_artifacts,
             plan_id,
@@ -312,12 +449,22 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
             detail="No saved Stage 2 or draft text is available to approve.",
         )
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
-    validator_report = plan_row.get("stage2_validator_report") or {}
+    prior_report = plan_row.get("stage2_validator_report")
+    prior_report = dict(prior_report) if isinstance(prior_report, dict) else {}
+    validator_report = dict(prior_report)
     if planning_brief:
         from fightcamp.stage2_pipeline import review_stage2_output
 
         review = review_stage2_output(planning_brief=planning_brief, final_plan_text=approved_text)
-        validator_report = review["validator_report"]
+        fresh_report = review.get("validator_report")
+        validator_report = dict(fresh_report) if isinstance(fresh_report, dict) else {}
+        # Revalidation intentionally rebuilds the Stage 2 report, but the
+        # structured-card lifecycle is an independent projection. Carry its
+        # terminal debug and/or in-flight marker across approval so the admin UI
+        # never goes blank between the release write and background completion.
+        for key in ("structured_plan", STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY):
+            if key in prior_report:
+                validator_report[key] = prior_report[key]
     return {
         "status": "ready",
         "plan_text": approved_text,
@@ -382,7 +529,12 @@ async def approve_review_required_plan(
     plan_row = dict(plan_row)
 
     result = _admin_approved_result(plan_row)
-    result = await _attach_structured_plan_within_budget(result, plan_row, stage2=stage2)
+    result = await _attach_structured_plan_within_budget(
+        result,
+        plan_row,
+        store=store,
+        stage2=stage2,
+    )
     updated = await asyncio.to_thread(
         store.update_plan_stage2_if_unchanged, plan_id, result, plan_row
     )
@@ -394,11 +546,68 @@ async def approve_review_required_plan(
     )
 
 
+async def prepare_structured_plan_rebuild(
+    *,
+    plan_id: str,
+    store: AppStore,
+) -> dict[str, Any]:
+    """Reserve one explicit admin rebuild and persist its durable marker."""
+
+    plan_row = await asyncio.to_thread(store.get_plan, plan_id)
+    if not plan_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+    plan_row = dict(plan_row)
+    if _has_live_structured_card(plan_row):
+        return {"queued": False, "plan_id": plan_id}
+
+    report = plan_row.get("stage2_validator_report")
+    if has_fresh_structured_card_attempt(report):
+        return {"queued": False, "plan_id": plan_id}
+
+    from ..stage2_automation import _structured_plan_enabled
+
+    if not _structured_plan_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Structured-card generation is disabled.",
+        )
+    if not _structured_card_rebuild_status_is_eligible(plan_row):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This plan is not eligible for an enhanced-card rebuild.",
+        )
+    source_text = _structured_card_source_text(plan_row)
+    if not source_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No final plan text is available to rebuild the enhanced card.",
+        )
+
+    attempt_result = {"stage2_validator_report": report}
+    updated = await _persist_structured_card_attempt_started(
+        plan_id=plan_id,
+        store=store,
+        plan_row=plan_row,
+        result=attempt_result,
+        source_text=source_text,
+    )
+    if not has_fresh_structured_card_attempt(updated.get("stage2_validator_report")):
+        if _has_live_structured_card(updated):
+            return {"queued": False, "plan_id": plan_id}
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Plan changed while the enhanced-card rebuild was being queued; reload and try again.",
+        )
+    return {"queued": True, "plan_id": plan_id}
+
+
 async def run_structured_plan_post_processing(
     *,
     plan_id: str,
     store: AppStore,
     stage2: Stage2Automator | None = None,
+    continue_existing_attempt: bool = False,
+    rebuild: bool = False,
 ) -> None:
     """Best-effort, non-blocking structured-plan conversion for an approved plan.
 
@@ -431,6 +640,22 @@ async def run_structured_plan_post_processing(
         validator_report = plan_row.get("stage2_validator_report")
         if not isinstance(validator_report, dict):
             validator_report = {}
+        if has_fresh_structured_card_attempt(validator_report) and not continue_existing_attempt:
+            return
+
+        from ..stage2_automation import _structured_plan_enabled
+
+        if rebuild:
+            can_attempt = (
+                _structured_plan_enabled()
+                and _structured_card_rebuild_status_is_eligible(plan_row)
+                and bool(_structured_card_source_text(plan_row).strip())
+                and not _has_live_structured_card(plan_row)
+            )
+        else:
+            can_attempt = should_attempt_structured_plan(plan_row, _structured_plan_enabled())
+        if not can_attempt:
+            return
         result = {
             "status": str(plan_row.get("status") or ""),
             "plan_text": str(plan_row.get("plan_text") or ""),
@@ -452,13 +677,26 @@ async def run_structured_plan_post_processing(
         conversion_source_text = str(
             result.get("final_plan_text") or result.get("plan_text") or ""
         )
-        result = await _attach_structured_plan(result, plan_row, stage2=stage2)
+        await _persist_structured_card_attempt_started(
+            plan_id=plan_id,
+            store=store,
+            plan_row=plan_row,
+            result=result,
+            source_text=conversion_source_text,
+        )
+        if rebuild:
+            result = await _attach_structured_plan_rebuild(result, plan_row, stage2=stage2)
+        else:
+            result = await _attach_structured_plan(result, plan_row, stage2=stage2)
         # Persist successful cards, and also persist a failed/skipped structured
         # debug result when conversion actually ran. This keeps athlete-visible
         # text untouched while making missed enhanced cards diagnosable.
         report = result.get("stage2_validator_report")
         if not isinstance(report, dict):
             report = {}
+        if rebuild and result.get("structured_plan") is None and plan_row.get("structured_plan") is not None:
+            result["structured_plan"] = plan_row.get("structured_plan")
+            result["schema_version"] = plan_row.get("schema_version")
         structured_debug = report.get("structured_plan")
         debug_status = structured_debug.get("status") if isinstance(structured_debug, dict) else None
         debug_errors = (
@@ -469,7 +707,8 @@ async def run_structured_plan_post_processing(
         # run (converter unavailable, crash) — persist it so the admin diagnostic
         # explains the missing card instead of showing a stale, reasonless state.
         should_persist_debug = debug_status not in {None, "not_attempted"} or bool(debug_errors)
-        if result.get("structured_plan") is not None or should_persist_debug:
+        attempt_finished = STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in report
+        if result.get("structured_plan") is not None or should_persist_debug or attempt_finished:
             await asyncio.to_thread(
                 store.update_plan_structured_artifacts,
                 plan_id,

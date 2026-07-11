@@ -373,6 +373,106 @@ select:focus-visible {
   color: var(--danger-ink);
 }
 
+.plan-header-badges {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.structured-card-status-chip {
+  gap: 7px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(8, 10, 13, 0.78);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.structured-card-status-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.035);
+}
+
+.structured-card-status-live {
+  border-color: rgba(125, 226, 168, 0.24);
+  background: rgba(39, 174, 96, 0.1);
+  color: #7de2a8;
+}
+
+.structured-card-status-building {
+  border-color: rgba(255, 215, 130, 0.26);
+  background: rgba(255, 215, 130, 0.08);
+  color: #ffd782;
+}
+
+.structured-card-status-failed {
+  border-color: rgba(255, 141, 161, 0.32);
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
+
+.structured-card-status-not_attempted {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+.structured-card-status-none {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-muted);
+}
+
+.structured-card-schema-version {
+  margin-left: 1px;
+  padding-left: 7px;
+  border-left: 1px solid currentColor;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  opacity: 0.72;
+}
+
+.structured-card-admin-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-left-color: rgba(181, 18, 43, 0.54);
+  border-radius: var(--radius-support);
+  background: linear-gradient(90deg, rgba(181, 18, 43, 0.055), rgba(8, 10, 13, 0.48) 42%);
+}
+
+.structured-card-rebuild-button {
+  min-height: 38px;
+  flex: none;
+}
+
+.structured-card-rebuild-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  transform: none;
+}
+
+.structured-card-rebuild-note {
+  flex: 1 1 280px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.structured-card-admin-controls > .success-banner,
+.structured-card-admin-controls > .error-banner {
+  flex-basis: 100%;
+  width: 100%;
+}
+
 .sidebar-nav,
 .sidebar-auth,
 .sidebar-footer {
@@ -11947,6 +12047,37 @@ html[data-theme="light"] .status-badge-success {
   color: #1a7a42;
 }
 
+html[data-theme="light"] .badge.structured-card-status-live {
+  background: rgba(39, 174, 96, 0.1);
+  border-color: rgba(39, 174, 96, 0.22);
+  color: #1a7a42;
+}
+
+html[data-theme="light"] .badge.structured-card-status-building {
+  background: rgba(177, 125, 54, 0.12);
+  border-color: rgba(177, 125, 54, 0.24);
+  color: #815716;
+}
+
+html[data-theme="light"] .badge.structured-card-status-failed {
+  background: rgba(163, 21, 45, 0.08);
+  border-color: rgba(163, 21, 45, 0.2);
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .badge.structured-card-status-not_attempted,
+html[data-theme="light"] .badge.structured-card-status-none {
+  background: rgba(88, 62, 58, 0.05);
+  border-color: rgba(88, 62, 58, 0.1);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .structured-card-admin-controls {
+  border-color: rgba(88, 62, 58, 0.1);
+  border-left-color: rgba(163, 21, 45, 0.38);
+  background: linear-gradient(90deg, rgba(163, 21, 45, 0.055), rgba(255, 255, 255, 0.58) 42%);
+}
+
 html[data-theme="light"] .sidebar-role-admin,
 html[data-theme="light"] .badge {
   background: rgba(163, 21, 45, 0.08);
@@ -16495,10 +16626,15 @@ html[data-theme="light"] .loading-operational-item {
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding: 2px 2px 8px;
-  scrollbar-width: thin;
+  padding: 2px;
+  scrollbar-width: none;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
   -webkit-overflow-scrolling: touch;
+}
+
+.cm-week-strip::-webkit-scrollbar {
+  display: none;
 }
 
 .cm-week-pill {
@@ -16576,7 +16712,18 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 .cm-week-overview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
   margin-top: 4px;
+}
+
+.cm-week-overview-stats .sp-stat {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
+  background: var(--bg-stat);
 }
 
 /* Day cards */
@@ -16663,6 +16810,10 @@ html[data-theme="light"] .loading-operational-item {
 @media (max-width: 720px) {
   .cm-week-pill {
     min-width: 84px;
+  }
+
+  .cm-week-overview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

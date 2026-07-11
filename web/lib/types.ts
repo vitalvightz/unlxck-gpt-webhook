@@ -586,11 +586,26 @@ export type AdminPlanOutputs = {
   stage2_attempt_count: number;
 };
 
+export type StructuredCardLifecycleState =
+  | "live"
+  | "building"
+  | "failed"
+  | "not_attempted"
+  | "none";
+
+export type StructuredCardState = {
+  state: StructuredCardLifecycleState;
+  reasons: string[];
+  schema_version?: string | null;
+  attempt_started_at?: string | null;
+};
+
 export type PlanDetail = PlanSummary & {
   outputs: PlanOutputs;
   advisories: PlanAdvisory[];
   latest_intake?: PlanRequest | null;
   admin_outputs?: AdminPlanOutputs | null;
+  structured_card_state: StructuredCardState;
   plan_source?: string | null;
   // True when the stored profile could not be refreshed during generation, so
   // this plan was built from the submitted intake and the saved profile may be

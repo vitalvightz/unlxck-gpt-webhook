@@ -15,6 +15,10 @@ from fightcamp.stage2_policy import (
 )
 
 from .state_machine import is_athlete_displayable_plan_status
+from .structured_card_lifecycle import (
+    clear_structured_card_attempt_started,
+    mark_structured_card_attempt_started,
+)
 from .structured_plan_generation import (
     StructuredPlanOutcome,
     build_structured_plan_outcome,
@@ -482,11 +486,17 @@ def _record_structured_outcome(
     a ``structured_plan`` key so admins can see them without new storage.
     """
 
+    # Every outcome passed here is terminal, including ``not_attempted``. Clear
+    # any durable/in-memory building marker before recording the final debug so a
+    # completed conversion can never remain stuck in the building state.
+    clear_structured_card_attempt_started(result)
     result["structured_plan"] = outcome.structured_plan
     result["schema_version"] = outcome.schema_version
     report = result.get("stage2_validator_report")
-    if isinstance(report, dict):
-        report["structured_plan"] = outcome.as_debug()
+    if not isinstance(report, dict):
+        report = {}
+        result["stage2_validator_report"] = report
+    report["structured_plan"] = outcome.as_debug()
     return result
 
 
@@ -536,6 +546,11 @@ async def attempt_structured_plan_for_result(
             ),
         )
         return result, []
+    # The worker result is not persisted until finalization completes, but it
+    # still carries the same lifecycle marker as existing-row conversions. This
+    # keeps the canonical result contract consistent and guarantees that any
+    # terminal outcome recorded below clears the marker.
+    mark_structured_card_attempt_started(result)
     outcome, costs = await converter(
         final_plan_text=str(result.get("final_plan_text") or result.get("plan_text") or ""),
         planning_brief=planning_brief,

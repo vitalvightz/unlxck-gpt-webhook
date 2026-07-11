@@ -942,6 +942,28 @@ export type StructuredPlanBackfillResult = {
   plan_ids: string[];
 };
 
+export type StructuredPlanRebuildResult = {
+  queued: boolean;
+  plan_id: string;
+};
+
+/**
+ * Re-run structured-card conversion for one plan. The backend owns
+ * idempotency and reapplies every normal validation and safety gate.
+ */
+export function rebuildStructuredPlan(
+  token: string,
+  planId: string,
+): Promise<StructuredPlanRebuildResult> {
+  return readJson<StructuredPlanRebuildResult>(
+    `/api/admin/plans/${encodeURIComponent(planId)}/structured-plan/rebuild`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
 /**
  * Trigger a background backfill that re-runs structured-plan conversion for
  * athlete-displayable plans that have no structured card yet (legacy plans

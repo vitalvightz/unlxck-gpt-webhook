@@ -25,6 +25,7 @@ from support import (
     finalized_result,
     stage1_result,
 )
+from test_structured_plan_models import _valid_plan
 
 
 def _old_iso(seconds: int = 3600) -> str:
@@ -701,6 +702,132 @@ def test_admin_can_approve_review_required_plan_for_release():
     assert body["status"] == "ready"
     assert body["outputs"]["plan_text"] == "# Held Stage 2 Output"
     assert body["admin_outputs"]["stage2_status"] == "admin_review_approved"
+
+
+def test_structured_card_rebuild_requires_admin_and_is_idempotent_while_building(
+    monkeypatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    client, store, _ = _build_client()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            structured_plan=None,
+            stage2_validator_report={
+                "structured_plan": {
+                    "status": "invalid_fallback_used",
+                    "errors": ["bad shape"],
+                }
+            },
+        ),
+    )
+    background_calls: list[dict] = []
+
+    async def _capture_background(**kwargs):
+        background_calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "api.app.run_structured_plan_post_processing_service",
+        _capture_background,
+    )
+
+    forbidden = client.post(
+        f"/api/admin/plans/{plan['id']}/structured-plan/rebuild",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    first = client.post(
+        f"/api/admin/plans/{plan['id']}/structured-plan/rebuild",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    second = client.post(
+        f"/api/admin/plans/{plan['id']}/structured-plan/rebuild",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert forbidden.status_code == 403
+    assert first.status_code == 202
+    assert first.json() == {"queued": True, "plan_id": plan["id"]}
+    assert second.status_code == 202
+    assert second.json() == {"queued": False, "plan_id": plan["id"]}
+    assert len(background_calls) == 1
+    assert background_calls[0]["rebuild"] is True
+    assert background_calls[0]["continue_existing_attempt"] is True
+    assert store.plans[plan["id"]]["stage2_validator_report"].get(
+        "structured_card_attempt_started_at"
+    )
+
+
+def test_structured_card_rebuild_is_noop_when_clean_card_is_live(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    client, store, _ = _build_client()
+    structured_plan = _valid_plan()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            structured_plan=structured_plan,
+            schema_version=structured_plan["schema_version"],
+            stage2_validator_report={"structured_plan": {"status": "valid"}},
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/structured-plan/rebuild",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 202
+    assert response.json() == {"queued": False, "plan_id": plan["id"]}
+
+
+def test_structured_card_rebuild_queues_when_claimed_live_card_no_longer_decodes(
+    monkeypatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    client, store, _ = _build_client()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            structured_plan={"plan_metadata": "not-an-object"},
+            schema_version="structured_training_plan.v1",
+            stage2_validator_report={"structured_plan": {"status": "valid"}},
+        ),
+    )
+    background_calls: list[dict] = []
+
+    async def _capture_background(**kwargs):
+        background_calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "api.app.run_structured_plan_post_processing_service",
+        _capture_background,
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/structured-plan/rebuild",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 202
+    assert response.json() == {"queued": True, "plan_id": plan["id"]}
+    assert len(background_calls) == 1
+
+
+def test_structured_card_rebuild_returns_not_found_for_unknown_plan(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    client, _store, _ = _build_client()
+
+    response = client.post(
+        "/api/admin/plans/missing/structured-plan/rebuild",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 404
 
 
 def test_admin_can_reject_approved_plan_back_to_review():

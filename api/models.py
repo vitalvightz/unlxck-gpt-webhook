@@ -1414,6 +1414,13 @@ class PlanSafetyState(BaseModel):
     next_steps: list[str] = Field(default_factory=list)
 
 
+class StructuredCardState(BaseModel):
+    state: Literal["live", "building", "failed", "not_attempted", "none"] = "none"
+    reasons: list[str] = Field(default_factory=list)
+    schema_version: str | None = None
+    attempt_started_at: str | None = None
+
+
 class PlanAdvisory(BaseModel):
     kind: Literal["sparring_adjustment"]
     action: Literal["deload", "convert"]
@@ -1483,6 +1490,7 @@ class AdminPlanOutputs(BaseModel):
 class PlanDetail(PlanSummary):
     outputs: PlanOutputs
     safety_state: PlanSafetyState
+    structured_card_state: StructuredCardState = Field(default_factory=StructuredCardState)
     advisories: list[PlanAdvisory] = Field(default_factory=list)
     admin_outputs: AdminPlanOutputs | None = None
     plan_source: str | None = None

@@ -640,6 +640,30 @@ function weekIndex(value: string, fallback: number): number {
   return match ? Number.parseInt(match[1], 10) : fallback;
 }
 
+// Week headings carry navigation metadata as well as the actual coaching goal,
+// for example "Week 1 (D-53 to D-47) — Restore structural tolerance". The
+// renderer already supplies "Week N", so only the meaningful trailing focus
+// belongs in week_goal. Keeping the metadata here caused visible labels such as
+// "Week 1 — Week 1 (D-53...)" and made synthetic fallback weeks read
+// "Week 2 — Week 1".
+function weekGoal(value: string, phase: string | null): string | null {
+  let goal = value
+    .replace(/^\s*Week\s+\d+\b/i, "")
+    .replace(/^\s*\(\s*D-?\d+\s*(?:to|through|[-–—→])\s*D-?\d+\s*\)/i, "")
+    .replace(/^\s*[-–—:|]+\s*/, "")
+    .trim();
+
+  if (phase) {
+    const escapedPhase = phase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    goal = goal
+      .replace(new RegExp(`^${escapedPhase}\\b`, "i"), "")
+      .replace(/^\s*[-–—:|]+\s*/, "")
+      .trim();
+  }
+
+  return goal || null;
+}
+
 function toStructuredWeek(
   week: PlanTextWeek,
   index: number,
@@ -657,7 +681,7 @@ function toStructuredWeek(
     week_id: `text-week-${index + 1}`,
     week_index: weekIndex(week.title, index + 1),
     phase_label: week.phase,
-    week_goal: week.title,
+    week_goal: weekGoal(week.title, week.phase),
     start_date: dates[0] || null,
     end_date: dates[dates.length - 1] || null,
     countdown_start: countdowns[0] || null,
