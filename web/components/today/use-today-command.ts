@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { buildStructuredPlanFromText } from "@/components/plan-viewer";
 import { getPlan, getToday } from "@/lib/api";
+import { buildStructuredPlanFromText } from "@/lib/plan-text-adapter";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import type { PlanDetail, StructuredPlan, TodayCommandView } from "@/lib/types";
 
