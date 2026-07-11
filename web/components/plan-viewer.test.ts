@@ -828,6 +828,7 @@ test("missing saved structure is adapted into the full structured renderer contr
   const week = plan.weeks?.[0];
   assert.equal(week?.phase_label, "TAPER");
   assert.equal(week?.week_index, 1);
+  assert.equal(week?.week_goal, "Sharpen");
   assert.equal(week?.days?.[0]?.date, "2026-07-02");
   assert.equal(week?.days?.[0]?.countdown_label, "D-21");
 
@@ -840,6 +841,20 @@ test("missing saved structure is adapted into the full structured renderer contr
   assert.equal(session?.blocks?.[0]?.purpose, "transfer force into the jab-cross.");
   assert.equal(session?.blocks?.[0]?.progression_rule, "add one set.");
   assert.deepEqual(session?.blocks?.[0]?.coaching_cues, ["Stop: stop if technique breaks."]);
+});
+
+test("fallback week goals omit duplicated week and countdown metadata", () => {
+  const explicit = buildStructuredPlanFromText(
+    [
+      "GPP — Week 1 (D-53 to D-47) — Restore structural tolerance and rhythm",
+      "D-53 (Monday) — Aerobic support",
+    ].join("\n"),
+  );
+  assert.equal(explicit.weeks?.[0]?.week_goal, "Restore structural tolerance and rhythm");
+
+  const synthetic = buildStructuredPlanFromText("D-20 (Tuesday) — Conditioning");
+  assert.equal(synthetic.weeks?.[0]?.week_index, 1);
+  assert.equal(synthetic.weeks?.[0]?.week_goal, null);
 });
 
 test("coach-only plan text remains a visible enhanced day card", () => {

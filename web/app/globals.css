@@ -16626,10 +16626,15 @@ html[data-theme="light"] .loading-operational-item {
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding: 2px 2px 8px;
-  scrollbar-width: thin;
+  padding: 2px;
+  scrollbar-width: none;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
   -webkit-overflow-scrolling: touch;
+}
+
+.cm-week-strip::-webkit-scrollbar {
+  display: none;
 }
 
 .cm-week-pill {
@@ -16707,7 +16712,18 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 .cm-week-overview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
   margin-top: 4px;
+}
+
+.cm-week-overview-stats .sp-stat {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
+  background: var(--bg-stat);
 }
 
 /* Day cards */
@@ -16794,6 +16810,10 @@ html[data-theme="light"] .loading-operational-item {
 @media (max-width: 720px) {
   .cm-week-pill {
     min-width: 84px;
+  }
+
+  .cm-week-overview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
