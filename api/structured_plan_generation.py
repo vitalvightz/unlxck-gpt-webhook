@@ -562,21 +562,20 @@ def _normalize_measured(value: Any, default_unit: str = "seconds") -> dict[str, 
         # convention — more rest is safer, and the top of a written range is
         # still what the plan says), alias the unit, and drop the optional
         # field entirely when no number can be read rather than rejecting the card.
-        out = dict(value)
-        raw_value = out.get("value")
+        raw_value = value.get("value")
         if isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool):
-            number: float | None = float(raw_value)
+            number = float(raw_value)
         else:
             number = _coerce_float(raw_value)
             if number is None:
                 # Some outputs carry the quantity only as display text.
-                number = _coerce_float(out.get("display"))
+                number = _coerce_float(value.get("display"))
         if number is None:
             return None
-        out["value"] = number
-        out["unit"] = _alias_measured_unit(out.get("unit"), default_unit)
-        out.pop("display", None)  # not part of MeasuredValue
-        return out
+        return {
+            "value": number,
+            "unit": _alias_measured_unit(value.get("unit"), default_unit),
+        }
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return {"value": float(value), "unit": default_unit}
     if isinstance(value, str):
