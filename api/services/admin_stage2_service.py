@@ -91,6 +91,28 @@ def _approval_structured_budget_seconds() -> float:
     return value if 0 < value < float("inf") else _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
 
 
+def _inline_approval_card_conversion_enabled() -> bool:
+    """Whether approval runs a FRESH structured-card conversion inline.
+
+    OFF by default. A pre-warmed card that matches the approved text is still
+    reused instantly (no model call) regardless of this flag — this only governs
+    the *fresh* conversion attempted when no reusable card exists. For the
+    configured model that conversion regularly runs for minutes, so the inline
+    attempt almost always burns its budget and times out, and the background
+    :func:`run_structured_plan_post_processing` task (scheduled after every
+    approval) then runs a *second* full conversion — roughly 1.5x the cost and
+    latency for no user-visible gain now that the admin UI shows a live
+    "building" state and polls the card in. Leaving it off means one conversion
+    per approval. Set ``UNLXCK_STAGE2_INLINE_APPROVAL_CARD`` truthy to restore
+    the inline fresh attempt (e.g. if a faster model makes it land in-budget).
+    """
+
+    raw = os.getenv("UNLXCK_STAGE2_INLINE_APPROVAL_CARD")
+    if raw is None:
+        return False  # unset → default off (defer the single conversion)
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _structured_card_source_text(plan: dict[str, Any]) -> str:
     # This value is also used as the narrow writer's optimistic text guard. Keep
     # it byte-for-byte identical to the persisted source; trimming here would
@@ -243,6 +265,10 @@ async def _attach_structured_plan_within_budget(
         return reused
     plan_id = str(plan_row.get("id") or "").strip()
     source_text = _structured_card_source_text(plan_row)
+    # Persist the durable in-flight marker regardless of whether the inline fresh
+    # conversion runs: the admin UI reads it as "building", and the startup
+    # self-heal sweep uses it to re-queue a plan whose background build was
+    # orphaned by a deploy/restart.
     if plan_id and _structured_card_source_text(result).strip():
         try:
             await _persist_structured_card_attempt_started(
@@ -259,6 +285,12 @@ async def _attach_structured_plan_within_budget(
                 "inline structured-plan marker persistence failed for plan_id=%s",
                 plan_id,
             )
+    # By default we do NOT run a fresh conversion inline: it near-always times out
+    # for the configured model and the deferred background task then redoes the
+    # whole conversion. Deferring the single conversion to that task keeps approval
+    # to one model call while the "building" chip + poll reveal the card.
+    if not _inline_approval_card_conversion_enabled():
+        return result
     budget = _approval_structured_budget_seconds()
     try:
         return await asyncio.wait_for(
@@ -762,3 +794,64 @@ async def backfill_structured_plans(
             await run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=stage2)
         except Exception:  # noqa: BLE001 - one bad plan must not abort the backfill
             logger.exception("structured plan backfill failed for plan_id=%s", plan_id)
+
+
+async def self_heal_orphaned_structured_cards(
+    *,
+    store: AppStore,
+    stage2: Stage2Automator | None = None,
+    limit: int = 25,
+) -> int:
+    """Re-queue structured-card builds orphaned by a process restart/deploy.
+
+    A conversion stamps a durable in-flight marker that is cleared only on a
+    terminal outcome. If the process running the deferred background build dies
+    mid-flight (a deploy swap is the common cause), the plan is left with the
+    marker and no card — the admin UI shows "building", then "failed". Run once at
+    startup, this finds those orphaned plans and re-runs the single deferred
+    conversion through :func:`run_structured_plan_post_processing`
+    (``continue_existing_attempt=True`` so it proceeds past the freshness guard).
+
+    Best-effort and idempotent: the re-queue short-circuits a plan that already
+    has a card or is no longer eligible, and persistence stays on the narrow
+    structured-artifacts writer with the source-text guard. Never raises; returns
+    the number of plans re-queued. The Stage 2 automator is built lazily and ONLY
+    when there is orphaned work, so a clean startup pays neither the lookup's
+    conversion cost nor the OpenAI Stage 2 import.
+    """
+
+    try:
+        rows = await asyncio.to_thread(
+            store.list_plans_with_orphaned_structured_card_attempt, limit=limit
+        )
+    except Exception:  # noqa: BLE001 - self-heal must never crash startup
+        logger.exception("structured-card self-heal: candidate lookup failed")
+        return 0
+    plan_ids = [
+        plan_id
+        for row in rows
+        if isinstance(row, dict) and (plan_id := str(row.get("id") or "").strip())
+    ]
+    if not plan_ids:
+        return 0
+    if stage2 is None:
+        from ..stage2_automation import build_default_stage2_automator
+
+        stage2 = build_default_stage2_automator()
+    logger.info(
+        "structured-card self-heal: re-queuing %s orphaned build(s)", len(plan_ids)
+    )
+    healed = 0
+    for plan_id in plan_ids:
+        try:
+            await run_structured_plan_post_processing(
+                plan_id=plan_id,
+                store=store,
+                stage2=stage2,
+                continue_existing_attempt=True,
+            )
+            healed += 1
+        except Exception:  # noqa: BLE001 - one bad plan must not abort the sweep
+            logger.exception("structured-card self-heal failed for plan_id=%s", plan_id)
+    logger.info("structured-card self-heal: re-queued %s orphaned build(s)", healed)
+    return healed

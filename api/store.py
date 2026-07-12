@@ -417,6 +417,10 @@ class AppStore(Protocol):
 
     def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
 
+    def list_plans_with_orphaned_structured_card_attempt(
+        self, *, limit: int = 25
+    ) -> list[dict[str, Any]]: ...
+
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
     ) -> list[dict[str, Any]]: ...
@@ -4066,6 +4070,38 @@ class SupabaseAppStore:
             .select("id, status, created_at")
             .in_("status", list(ATHLETE_DISPLAYABLE_PLAN_STATUSES))
             .is_("structured_plan", "null")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute(),
+        )
+        return [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+
+    def list_plans_with_orphaned_structured_card_attempt(
+        self, *, limit: int = 25
+    ) -> list[dict[str, Any]]:
+        """Displayable plans with an in-flight card marker but no saved card.
+
+        A structured-card conversion stamps a durable
+        ``stage2_validator_report.structured_card_attempt_started_at`` marker that
+        is cleared only on a terminal outcome. When the process running the
+        background build dies mid-flight (e.g. a deploy swap terminates the web
+        instance), the plan is left carrying that marker with ``structured_plan``
+        still NULL — the admin UI shows "building" and then degrades to "failed".
+        This finds those orphaned rows so the startup self-heal can re-queue the
+        single deferred conversion. Marker age is intentionally not filtered: a
+        stale orphan is exactly the stuck state we want to recover.
+        """
+        response = self._run_with_transient_retry(
+            operation=f"list_plans_with_orphaned_structured_card_attempt limit={limit}",
+            fn=lambda: self.client.table("plans")
+            .select("id, status, created_at")
+            .in_("status", list(ATHLETE_DISPLAYABLE_PLAN_STATUSES))
+            .is_("structured_plan", "null")
+            .filter(
+                "stage2_validator_report->>structured_card_attempt_started_at",
+                "not.is",
+                "null",
+            )
             .order("created_at", desc=True)
             .limit(limit)
             .execute(),

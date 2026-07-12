@@ -1273,6 +1273,25 @@ class FakeStore:
         rows.sort(key=lambda row: row.get("created_at") or "", reverse=True)
         return rows[:limit]
 
+    def list_plans_with_orphaned_structured_card_attempt(self, *, limit: int = 25) -> list[dict]:
+        from api.structured_card_lifecycle import STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY
+
+        displayable = {"ready", "publishable_with_flags"}
+        rows = []
+        for plan in self.plans.values():
+            if str(plan.get("status") or "").strip().lower() not in displayable:
+                continue
+            if plan.get("structured_plan") is not None:
+                continue
+            report = plan.get("stage2_validator_report")
+            if not isinstance(report, dict):
+                continue
+            if not str(report.get(STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY) or "").strip():
+                continue
+            rows.append(dict(plan))
+        rows.sort(key=lambda row: row.get("created_at") or "", reverse=True)
+        return rows[:limit]
+
     def list_admin_athletes(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
         for profile in self.profiles.values():

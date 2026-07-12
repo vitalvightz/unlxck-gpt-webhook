@@ -33,6 +33,7 @@ from api.services.admin_stage2_service import (
     prewarm_structured_plan,
     prepare_structured_plan_rebuild,
     run_structured_plan_post_processing,
+    self_heal_orphaned_structured_cards,
     should_prewarm_review_plan_row,
     submit_manual_stage2,
 )
@@ -899,6 +900,9 @@ def test_approval_does_not_reuse_card_built_from_different_text(monkeypatch):
     fresh conversion must run instead of shipping it.
     """
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    # Exercise the inline conversion path so "reuse refused → fresh conversion"
+    # is observable within the approval call itself.
+    monkeypatch.setenv("UNLXCK_STAGE2_INLINE_APPROVAL_CARD", "1")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
     row = store.plans[plan_id]
@@ -1038,14 +1042,47 @@ def test_admin_approval_write_does_not_drop_prior_structured_debug(monkeypatch):
     assert debug["errors"] == ["bad shape"]
 
 
-def test_admin_approve_attaches_structured_card_inline(monkeypatch):
-    """Approval ships the live card when it converts within the time budget.
+def test_admin_approve_defers_conversion_to_background_by_default(monkeypatch):
+    """By default approval runs NO fresh conversion inline — one call, deferred.
 
-    The card is the preferred output: a fast inline conversion is attached to
-    the approval response (and persisted) so the athlete sees the structured
-    card immediately, with plan_text retained as the raw-markdown fallback.
+    The inline fresh conversion near-always times out for the configured model and
+    the background task then redoes the whole conversion (~1.5x cost). With the
+    inline attempt off (default), approval persists only the durable in-flight
+    marker and releases; the deferred background task does the single conversion.
     """
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.delenv("UNLXCK_STAGE2_INLINE_APPROVAL_CARD", raising=False)
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
+    )
+
+    assert detail.status == "ready"
+    assert detail.outputs.plan_text == "# approved plan"  # raw fallback retained
+    # No inline model call was made; the card comes from the deferred task.
+    assert automator.calls == []
+    assert detail.outputs.structured_plan is None
+    assert store.plans[plan_id].get("structured_plan") is None
+    # But the durable "building" marker IS persisted so the admin UI shows the
+    # in-flight state and the self-heal sweep can recover an orphaned build.
+    assert (
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY
+        in store.plans[plan_id]["stage2_validator_report"]
+    )
+
+
+def test_admin_approve_attaches_structured_card_inline(monkeypatch):
+    """With the inline flag on, approval ships the live card when it is fast.
+
+    A fast inline conversion is attached to the approval response (and persisted)
+    so the athlete sees the structured card immediately, with plan_text retained
+    as the raw-markdown fallback. Off by default; opt in per env.
+    """
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_INLINE_APPROVAL_CARD", "1")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
     automator = _StructuredAutomator(_valid_outcome("# approved plan"))
@@ -1066,6 +1103,7 @@ def test_admin_approve_attaches_structured_card_inline(monkeypatch):
 def test_admin_approve_falls_back_to_text_when_inline_card_times_out(monkeypatch):
     """A slow inline conversion must not stall approval - text releases instantly."""
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_INLINE_APPROVAL_CARD", "1")
     monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "0.01")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
@@ -1311,6 +1349,7 @@ def test_explicit_rebuild_requeues_a_stale_build_marker(monkeypatch):
 def test_structured_post_processing_skips_when_card_already_present(monkeypatch):
     """Once a card exists (e.g. from the inline approval), the fallback is a no-op."""
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_INLINE_APPROVAL_CARD", "1")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
 
@@ -1657,6 +1696,118 @@ def test_backfill_is_noop_without_automator():
     asyncio.run(backfill_structured_plans(store=store, stage2=None, plan_ids=["needs-card"]))
 
     assert store.plans["needs-card"]["structured_plan"] is None
+
+
+# ---------------------------------------------------------------------------
+# Startup self-heal: recover card builds orphaned by a deploy/restart
+# ---------------------------------------------------------------------------
+
+
+def _seed_orphaned_build(store: FakeStore, *, plan_id: str) -> str:
+    """A released plan carrying an in-flight marker but no card (build orphaned)."""
+    _seed_released_plan(store, plan_id=plan_id)
+    store.plans[plan_id]["stage2_validator_report"] = {
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY: _now()
+    }
+    return plan_id
+
+
+def test_orphaned_query_selects_only_displayable_carded_marker_rows():
+    store = FakeStore()
+    _seed_orphaned_build(store, plan_id="orphaned")  # ready + marker + no card -> hit
+    _seed_released_plan(store, plan_id="no-marker")  # ready, no marker -> skip
+    _seed_released_plan(
+        store, plan_id="carded", structured={"weeks": []}
+    )  # has a card -> skip
+    _seed_held_plan(store, plan_id="held")  # not displayable -> skip
+    # A held plan that also carries a marker is still not displayable -> skip.
+    store.plans["held"]["stage2_validator_report"] = {
+        STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY: _now()
+    }
+
+    rows = store.list_plans_with_orphaned_structured_card_attempt(limit=25)
+
+    assert [row["id"] for row in rows] == ["orphaned"]
+
+
+def test_self_heal_requeues_orphaned_build(monkeypatch):
+    """A build orphaned by a restart is re-queued and finishes on the next boot."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_orphaned_build(store, plan_id="orphaned")
+    automator = _StructuredAutomator(_valid_outcome("# released plan"))
+
+    healed = asyncio.run(
+        self_heal_orphaned_structured_cards(store=store, stage2=automator)
+    )
+
+    assert healed == 1
+    assert len(automator.calls) == 1
+    row = store.plans[plan_id]
+    assert row["structured_plan"] is not None
+    assert row["schema_version"] == SCHEMA_VERSION
+    # The terminal outcome cleared the in-flight marker, so the plan is no longer
+    # stuck "building".
+    assert STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in row["stage2_validator_report"]
+
+
+def test_self_heal_ignores_plans_without_an_orphaned_marker(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="no-marker")  # healthy: no marker, no card
+    automator = _StructuredAutomator(_valid_outcome("# released plan"))
+
+    healed = asyncio.run(
+        self_heal_orphaned_structured_cards(store=store, stage2=automator)
+    )
+
+    # A plain cardless plan is backfill's job, not self-heal's — no marker means
+    # no interrupted build to recover, so it is left untouched.
+    assert healed == 0
+    assert automator.calls == []
+    assert store.plans["no-marker"].get("structured_plan") is None
+
+
+def test_self_heal_noop_when_no_orphans(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="carded", structured={"weeks": []})
+    automator = _StructuredAutomator(_valid_outcome())
+
+    healed = asyncio.run(
+        self_heal_orphaned_structured_cards(store=store, stage2=automator)
+    )
+
+    assert healed == 0
+    assert automator.calls == []
+
+
+def test_self_heal_survives_a_bad_plan_and_continues(monkeypatch):
+    """One failing re-queue must not abort the rest of the sweep."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    _seed_orphaned_build(store, plan_id="bad")
+    _seed_orphaned_build(store, plan_id="good")
+    automator = _StructuredAutomator(_valid_outcome("# released plan"))
+
+    original = admin_stage2_service.run_structured_plan_post_processing
+
+    async def _flaky(*, plan_id, **kwargs):
+        if plan_id == "bad":
+            raise RuntimeError("boom")
+        return await original(plan_id=plan_id, **kwargs)
+
+    monkeypatch.setattr(
+        admin_stage2_service, "run_structured_plan_post_processing", _flaky
+    )
+
+    healed = asyncio.run(
+        self_heal_orphaned_structured_cards(store=store, stage2=automator)
+    )
+
+    # "bad" raised but was counted as attempted; "good" still converted.
+    assert healed == 1
+    assert store.plans["good"]["structured_plan"] is not None
 
 
 # ---------------------------------------------------------------------------

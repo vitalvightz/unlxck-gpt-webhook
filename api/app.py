@@ -436,6 +436,22 @@ def _log_admin_count_on_startup(store: AppStore) -> None:
         logger.info("[admin] startup_admin_count=%s", admin_count)
 
 
+async def _self_heal_structured_cards_on_startup(store: AppStore) -> None:
+    """Detached startup task: recover card builds orphaned by a prior restart.
+
+    Best-effort — never blocks readiness and never crashes the process. See
+    :func:`api.services.admin_stage2_service.self_heal_orphaned_structured_cards`.
+    """
+    try:
+        from .services.admin_stage2_service import self_heal_orphaned_structured_cards
+
+        await self_heal_orphaned_structured_cards(store=store)
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # pragma: no cover - startup recovery must not crash boot
+        logger.exception("[stage2] structured-card self-heal task failed")
+
+
 def create_app(
     *,
     store: AppStore,
@@ -448,7 +464,7 @@ def create_app(
     configure_logging()
 
     @asynccontextmanager
-    async def _app_lifespan(_: FastAPI):
+    async def _app_lifespan(app_instance: FastAPI):
         # Bank priming loads the strength/conditioning/rehab exercise banks into
         # memory for the Stage 1 planner. That is worker-side work; a web service
         # that only creates jobs neither needs the banks resident nor should pay
@@ -459,7 +475,16 @@ def create_app(
 
             await asyncio.to_thread(prime_plan_banks, logger=logger)
         await asyncio.to_thread(_log_admin_count_on_startup, store)
-        yield
+        # Recover structured-card builds orphaned by a prior deploy/restart. Runs
+        # detached so it never blocks readiness; it queries first and only builds
+        # the Stage 2 automator when there is actually orphaned work, so a clean
+        # startup pays nothing.
+        heal_task = asyncio.create_task(_self_heal_structured_cards_on_startup(store))
+        app_instance.state.structured_card_self_heal_task = heal_task
+        try:
+            yield
+        finally:
+            heal_task.cancel()
 
     app = FastAPI(
         title="UNLXCK Fight Camp API",
