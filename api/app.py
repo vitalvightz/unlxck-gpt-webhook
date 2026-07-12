@@ -19,7 +19,7 @@ from fightcamp.logging_utils import bind_log_context, clear_log_context, configu
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .errors import generation_already_in_flight_error
-from .request_body_guard import RequestBodySizeLimitMiddleware
+from .request_body_guard import RequestBodySizeLimitMiddleware, normalize_request_path
 from .environment import (
     apply_production_environment_defaults,
     should_default_to_production,
@@ -541,9 +541,10 @@ def create_app(
                 declared = int(content_length)
             except ValueError:
                 declared = -1
+            request_path = normalize_request_path(request.url.path)
             request_limit = (
                 feedback_multipart_limit
-                if request.url.path == "/api/feedback/global"
+                if request_path == "/api/feedback/global"
                 else MAX_REQUEST_BODY_BYTES
             )
             if declared > request_limit:

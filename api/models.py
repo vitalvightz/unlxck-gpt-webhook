@@ -1377,6 +1377,18 @@ class ProfileRecord(BaseModel):
     created_at: str
     updated_at: str
 
+    @property
+    def profile_id(self) -> str:
+        """Canonical ``profiles(id)`` value.
+
+        ``athlete_id`` is the legacy response-field name and contains the
+        profile primary key for every role, including admins and coaches.
+        Server-only features should use this semantic alias when the submitter
+        is not necessarily an athlete.
+        """
+
+        return self.athlete_id
+
 
 class PlanSummary(BaseModel):
     plan_id: str

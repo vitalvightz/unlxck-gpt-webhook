@@ -17102,8 +17102,8 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 
 .feedback-unsafe {
   flex-basis: 100%;
-  justify-self: start;
-  max-width: max-content;
+  width: 100%;
+  max-width: none;
   border-color: color-mix(in srgb, var(--brand-red) 65%, var(--border-strong));
   color: var(--danger-ink);
 }
@@ -17116,7 +17116,6 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 }
 
 .feedback-chip {
-  min-height: 40px;
   padding: 8px 13px;
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
@@ -17164,7 +17163,6 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 }
 
 .feedback-link {
-  min-height: 40px;
   padding: 6px 0;
   border: 0;
   background: transparent;
@@ -17194,6 +17192,48 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   margin-top: 4px;
 }
 
+.feedback-attachment-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-support);
+  background: var(--bg-surface);
+}
+
+.feedback-attachment-preview img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: var(--radius-btn);
+  background: var(--bg-app);
+}
+
+.feedback-attachment-meta,
+.feedback-attachment-meta > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.feedback-attachment-meta {
+  justify-content: space-between;
+}
+
+.feedback-attachment-meta > span {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.feedback-attachment-meta strong {
+  max-width: min(100%, 420px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .feedback-card {
     padding: 16px;
@@ -17211,5 +17251,14 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 
   .feedback-category-grid {
     grid-template-columns: 1fr;
+  }
+
+  .feedback-attachment-meta {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .feedback-attachment-meta .ghost-button {
+    width: 100%;
   }
 }

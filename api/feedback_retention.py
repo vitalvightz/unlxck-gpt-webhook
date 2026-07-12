@@ -52,9 +52,35 @@ def _purge_rows(store: AppStore, rows: list[dict]) -> CleanupResult:
     return CleanupResult(deleted=deleted, failed=failed)
 
 
-def cleanup_expired_screenshots(store: AppStore, *, batch_size: int = 100) -> CleanupResult:
-    rows = store.list_expired_feedback_screenshots(limit=max(1, min(batch_size, 500)))
-    return _purge_rows(store, rows)
+def cleanup_expired_screenshots(
+    store: AppStore,
+    *,
+    batch_size: int = 100,
+    max_per_run: int = 1000,
+) -> CleanupResult:
+    """Process expired screenshots in bounded batches.
+
+    Stop immediately on a failed batch so its database references remain
+    available for the next retry. ``max_per_run`` prevents an unexpectedly
+    large backlog from monopolising a cron worker indefinitely.
+    """
+
+    batch_limit = max(1, min(batch_size, 500))
+    run_limit = max(1, max_per_run)
+    total = CleanupResult()
+    while total.deleted + total.failed < run_limit:
+        remaining = run_limit - total.deleted - total.failed
+        rows = store.list_expired_feedback_screenshots(limit=min(batch_limit, remaining))
+        if not rows:
+            return total
+        result = _purge_rows(store, rows)
+        total = CleanupResult(
+            deleted=total.deleted + result.deleted,
+            failed=total.failed + result.failed,
+        )
+        if result.failed or not result.deleted:
+            return total
+    return total
 
 
 def cleanup_profile_screenshots(
@@ -80,10 +106,15 @@ def cleanup_profile_screenshots(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Delete expired beta-feedback screenshots")
     parser.add_argument("--batch-size", type=int, default=100)
+    parser.add_argument("--max-per-run", type=int, default=1000)
     args = parser.parse_args(argv)
     store = SupabaseAppStore.from_env()
     try:
-        result = cleanup_expired_screenshots(store, batch_size=args.batch_size)
+        result = cleanup_expired_screenshots(
+            store,
+            batch_size=args.batch_size,
+            max_per_run=args.max_per_run,
+        )
     except Exception as exc:
         logger.error(
             "[feedback_cleanup] failed operation=list_expired error_class=%s",

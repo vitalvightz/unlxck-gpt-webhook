@@ -19,6 +19,13 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 logger = logging.getLogger("api")
 
 
+def normalize_request_path(value: object) -> str:
+    """Normalize non-root request paths for path-specific body limits."""
+
+    path = str(value or "")
+    return path.rstrip("/") if path != "/" and path.endswith("/") else path
+
+
 class _RequestBodyTooLarge(BaseException):
     """Internal signal that the streamed body crossed the configured ceiling.
 
@@ -48,7 +55,8 @@ class RequestBodySizeLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        request_limit = self.path_limits.get(str(scope.get("path") or ""), self.max_body_bytes)
+        path = normalize_request_path(scope.get("path"))
+        request_limit = self.path_limits.get(path, self.max_body_bytes)
         body_seen = 0
         response_started = False
 

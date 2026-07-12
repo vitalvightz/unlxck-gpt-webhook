@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 import { submitGlobalFeedback } from "@/lib/api";
 import type { GlobalFeedbackRequest } from "@/lib/types";
@@ -12,14 +13,38 @@ const CATEGORIES: Array<{ value: GlobalFeedbackRequest["category"]; label: strin
   { value: "general_feedback", label: "General feedback" },
 ];
 
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
+}
+
 export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
   const [category, setCategory] = useState<GlobalFeedbackRequest["category"]>("bug_report");
   const [description, setDescription] = useState("");
   const [contactAllowed, setContactAllowed] = useState(false);
   const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function selectScreenshot(file: File | null) {
+    setScreenshot(file);
+    setPreviewUrl(file ? URL.createObjectURL(file) : null);
+  }
+
+  function removeScreenshot() {
+    setScreenshot(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +60,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         screenshot,
       });
       setDescription("");
-      setScreenshot(null);
+      removeScreenshot();
       setContactAllowed(false);
       setMessage("Feedback sent. Thank you.");
       form.reset();
@@ -76,10 +101,11 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
       <div className="field">
         <label htmlFor="global-feedback-screenshot">Optional screenshot</label>
         <input
+          ref={fileInputRef}
           id="global-feedback-screenshot"
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          onChange={(event) => setScreenshot(event.target.files?.[0] ?? null)}
+          onChange={(event) => selectScreenshot(event.target.files?.[0] ?? null)}
         />
         <p className="feedback-privacy-copy">
           Avoid uploading screenshots containing private messages, contact details, payment information, or unrelated health information.
@@ -87,6 +113,26 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         <p className="feedback-privacy-copy">
           Sanitisation removes metadata. It does not remove sensitive information visible inside the image.
         </p>
+        {screenshot && previewUrl ? (
+          <div className="feedback-attachment-preview">
+            <Image
+              src={previewUrl}
+              alt="Selected screenshot preview"
+              width={640}
+              height={360}
+              unoptimized
+            />
+            <div className="feedback-attachment-meta">
+              <span>
+                <strong>{screenshot.name}</strong>
+                <span className="muted">{formatFileSize(screenshot.size)}</span>
+              </span>
+              <button type="button" className="ghost-button" onClick={removeScreenshot}>
+                Remove image
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
       <label className="settings-toggle-row feedback-contact-row">
         <span>

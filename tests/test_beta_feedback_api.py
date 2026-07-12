@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
@@ -9,6 +10,7 @@ from PIL import Image
 
 from api.services.today_service import resolve_training_day
 from api.services.feedback_service import report_limit_per_hour, screenshot_limit_per_hour
+from api.routes import feedback as feedback_routes
 from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -17,7 +19,13 @@ PLAN_ID = "11111111-1111-1111-1111-111111111111"
 OTHER_PLAN_ID = "22222222-2222-2222-2222-222222222222"
 
 
-def _seed_plan(store, *, plan_id: str = PLAN_ID, athlete_id: str = "athlete-1") -> None:
+def _seed_plan(
+    store,
+    *,
+    plan_id: str = PLAN_ID,
+    athlete_id: str = "athlete-1",
+    **overrides,
+) -> None:
     store.plans[plan_id] = {
         "id": plan_id,
         "athlete_id": athlete_id,
@@ -25,6 +33,7 @@ def _seed_plan(store, *, plan_id: str = PLAN_ID, athlete_id: str = "athlete-1") 
         "status": "ready",
         "plan_text": "Released plan",
         "created_at": datetime.now(timezone.utc).isoformat(),
+        **overrides,
     }
 
 
@@ -69,12 +78,13 @@ def test_plan_feedback_is_athlete_only_owned_and_idempotent():
     second = client.put(
         f"/api/plans/{PLAN_ID}/feedback",
         headers=ATHLETE,
-        json={"response": "yes"},
+        json={"response": "yes", "comment": "stale client complaint"},
     )
     assert second.status_code == 200
     assert len(store.beta_feedback) == 1
     assert store.beta_feedback[0]["response"] == "yes"
     assert store.beta_feedback[0]["reason"] is None
+    assert store.beta_feedback[0]["comment"] == ""
 
     assert client.get(f"/api/plans/{PLAN_ID}/feedback", headers=ADMIN).status_code == 403
     _seed_plan(store, plan_id=OTHER_PLAN_ID, athlete_id="other-athlete")
@@ -108,6 +118,65 @@ def test_contextual_enums_and_forbidden_client_context_are_rejected():
     assert not store.beta_feedback
 
 
+@pytest.mark.parametrize(
+    "plan_overrides",
+    [
+        {"status": "generated", "plan_text": "Draft plan"},
+        {"status": "ready", "plan_text": ""},
+    ],
+)
+def test_plan_feedback_rejects_unreleased_or_incomplete_plans(plan_overrides: dict):
+    client, store, _ = _build_client()
+    _seed_plan(store, **plan_overrides)
+    get_response = client.get(f"/api/plans/{PLAN_ID}/feedback", headers=ATHLETE)
+    put_response = client.put(
+        f"/api/plans/{PLAN_ID}/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+    assert get_response.status_code == 409
+    assert put_response.status_code == 409
+    assert not store.beta_feedback
+
+
+def test_plan_feedback_snapshots_real_nested_intake_shape():
+    client, store, _ = _build_client()
+    intake_id = "intake-nested"
+    _seed_plan(store, intake_id=intake_id)
+    store.intakes["athlete-1"] = [
+        {
+            "id": intake_id,
+            "athlete_id": "athlete-1",
+            "injuries": "wrong flattened value",
+            "intake": {
+                "fatigue_level": "high",
+                "injuries": "left shoulder restriction",
+                "guided_injury": {"body_area": "shoulder", "severity": "moderate"},
+                "guided_injuries": [{"body_area": "knee", "severity": "low"}],
+                "training_restriction_level": "moderate",
+                "training_availability": ["Monday", "Thursday"],
+                "phase_override": "SPP",
+            },
+        }
+    ]
+    response = client.put(
+        f"/api/plans/{PLAN_ID}/feedback",
+        headers=ATHLETE,
+        json={"response": "no", "reason": "injury_restrictions_wrong"},
+    )
+    assert response.status_code == 200
+    snapshot = store.beta_feedback[-1]["injury_snapshot"]["intake"]
+    assert snapshot == {
+        "fatigue_level": "high",
+        "injuries": "left shoulder restriction",
+        "guided_injury": {"body_area": "shoulder", "severity": "moderate"},
+        "guided_injuries": [{"body_area": "knee", "severity": "low"}],
+        "training_restriction_level": "moderate",
+        "training_availability": ["Monday", "Thursday"],
+        "phase_override": "SPP",
+    }
+
+
 def test_today_unsafe_feedback_is_server_derived_and_does_not_mutate_programme():
     client, store, _ = _build_client()
     _seed_today(store)
@@ -126,6 +195,21 @@ def test_today_unsafe_feedback_is_server_derived_and_does_not_mutate_programme()
     assert row["readiness_snapshot"]["pain"] == "none"
     assert store.plans[PLAN_ID] == original_plan
     assert store.today_checkins["athlete-1"][0] == original_checkin
+
+
+def test_today_feedback_rejects_checkin_without_generated_recommendation():
+    client, store, _ = _build_client()
+    _seed_today(store)
+    store.today_checkins["athlete-1"][0]["recommendation_state"] = ""
+    get_response = client.get("/api/today/feedback", headers=ATHLETE)
+    put_response = client.put(
+        "/api/today/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+    assert get_response.status_code == 409
+    assert put_response.status_code == 409
+    assert not store.beta_feedback
 
 
 @pytest.mark.parametrize(
@@ -247,6 +331,48 @@ def test_global_screenshot_is_sanitised_private_and_rate_limited(monkeypatch):
     assert second.json()["detail"]["code"] == "screenshot_rate_limited"
 
 
+def test_global_feedback_service_runs_off_the_async_api_thread(monkeypatch):
+    observed_threads: list[str] = []
+    original = feedback_routes.submit_global_feedback
+
+    def capture_thread(*args, **kwargs):
+        observed_threads.append(threading.current_thread().name)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(feedback_routes, "submit_global_feedback", capture_thread)
+    client, _store, _ = _build_client()
+    response = client.post(
+        "/api/feedback/global",
+        headers=ATHLETE,
+        data={"category": "bug_report"},
+    )
+    assert response.status_code == 201
+    assert observed_threads
+    assert any("worker" in name.lower() for name in observed_threads)
+
+
+def test_ambiguous_upload_failure_triggers_best_effort_object_cleanup():
+    client, store, _ = _build_client()
+    image = Image.new("RGB", (24, 16), "red")
+    raw = io.BytesIO()
+    image.save(raw, format="PNG")
+
+    def upload_then_timeout(path: str, data: bytes, mime: str) -> None:
+        store.feedback_screenshots[path] = (data, mime)
+        raise RuntimeError("ambiguous storage timeout")
+
+    store.upload_feedback_screenshot = upload_then_timeout
+    response = client.post(
+        "/api/feedback/global",
+        headers=ATHLETE,
+        data={"category": "bug_report"},
+        files={"screenshot": ("screen.png", raw.getvalue(), "image/png")},
+    )
+    assert response.status_code == 500
+    assert not store.feedback_screenshots
+    assert not store.beta_feedback
+
+
 def test_malformed_upload_within_file_limit_claims_slots_before_decode(monkeypatch):
     monkeypatch.setenv("FEEDBACK_REPORT_LIMIT_PER_HOUR", "1")
     monkeypatch.setenv("FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR", "1")
@@ -266,6 +392,18 @@ def test_malformed_upload_within_file_limit_claims_slots_before_decode(monkeypat
     )
     assert second.status_code == 429
     assert second.json()["detail"]["code"] == "feedback_rate_limited"
+
+
+def test_trailing_slash_uses_feedback_multipart_body_limit():
+    client, _store, _ = _build_client()
+    response = client.post(
+        "/api/feedback/global/",
+        headers=ATHLETE,
+        data={"category": "bug_report"},
+        files={"screenshot": ("large.png", b"x" * (1024 * 1024 + 64 * 1024), "image/png")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 307
 
 
 def test_report_rate_limit_can_be_disabled(monkeypatch):

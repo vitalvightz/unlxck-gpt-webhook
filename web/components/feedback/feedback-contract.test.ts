@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 import {
   UNSAFE_GUIDANCE,
+  buildContextualFeedbackPayload,
   shouldShowUnsafeGuidance,
 } from "./contextual-feedback";
 
@@ -54,4 +55,28 @@ test("global attachment privacy copy is explicit and adjacent to the control", (
     /Sanitisation removes metadata\. It does not remove sensitive information visible inside the image\./,
   );
   assert.ok(GLOBAL_SOURCE.indexOf("global-feedback-screenshot") < GLOBAL_SOURCE.indexOf("Avoid uploading"));
+});
+
+test("changing a negative response to yes clears its reason and complaint", () => {
+  const negative = buildContextualFeedbackPayload("no", "too_hard", "Volume was too high");
+  assert.deepEqual(negative, {
+    response: "no",
+    reason: "too_hard",
+    comment: "Volume was too high",
+  });
+
+  const revised = buildContextualFeedbackPayload("yes", negative.reason ?? null, negative.comment ?? "");
+  assert.deepEqual(revised, {
+    response: "yes",
+    reason: null,
+    comment: "",
+  });
+});
+
+test("global attachment control includes preview details and explicit removal", () => {
+  assert.match(GLOBAL_SOURCE, /URL\.createObjectURL/);
+  assert.match(GLOBAL_SOURCE, /URL\.revokeObjectURL/);
+  assert.match(GLOBAL_SOURCE, /Selected screenshot preview/);
+  assert.match(GLOBAL_SOURCE, /Remove image/);
+  assert.match(GLOBAL_SOURCE, /fileInputRef\.current\.value = ""/);
 });

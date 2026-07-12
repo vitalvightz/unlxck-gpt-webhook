@@ -7,6 +7,7 @@ from typing import Annotated, Callable, TypeVar
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from api.feedback_images import MAX_SCREENSHOT_BYTES, ScreenshotValidationError
 from api.models import (
@@ -157,13 +158,20 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
             raw_screenshot = await screenshot.read(MAX_SCREENSHOT_BYTES + 1)
             await screenshot.close()
         try:
-            return _invoke_feedback_route(
+            return await run_in_threadpool(
+                _invoke_feedback_route,
                 request,
                 surface="global",
                 category=payload.category,
                 priority="safety" if payload.category == "safety_issue" else "normal",
                 screenshot_present=raw_screenshot is not None,
-                operation=lambda: submit_global_feedback(store, profile, payload, request, raw_screenshot),
+                operation=lambda: submit_global_feedback(
+                    store,
+                    profile,
+                    payload,
+                    request,
+                    raw_screenshot,
+                ),
             )
         except ScreenshotValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None

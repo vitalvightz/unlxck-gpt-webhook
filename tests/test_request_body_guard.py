@@ -9,17 +9,17 @@ from __future__ import annotations
 
 import asyncio
 
-from api.request_body_guard import RequestBodySizeLimitMiddleware
+from api.request_body_guard import RequestBodySizeLimitMiddleware, normalize_request_path
 
 
 def _run(coro):
     return asyncio.run(coro)
 
 
-async def _drive(middleware, body_chunks):
+async def _drive(middleware, body_chunks, *, path="/api/plans/generate"):
     """Send ``body_chunks`` through ``middleware`` and capture the response start."""
 
-    scope = {"type": "http", "method": "POST", "path": "/api/plans/generate"}
+    scope = {"type": "http", "method": "POST", "path": path}
     chunks = list(body_chunks)
     inner_called = {"value": False}
 
@@ -85,3 +85,26 @@ def test_non_http_scope_is_passed_through_untouched():
 
     _run(middleware({"type": "lifespan"}, receive, send))
     assert seen["value"] is True
+
+
+def test_path_specific_limit_accepts_a_trailing_slash():
+    middleware = RequestBodySizeLimitMiddleware(
+        None,
+        max_body_bytes=10,
+        path_limits={"/api/feedback/global": 100},
+    )
+    sent, inner_called = _run(
+        _drive(
+            middleware,
+            [b"a" * 20],
+            path="/api/feedback/global/",
+        )
+    )
+    assert inner_called is True
+    start = next(message for message in sent if message["type"] == "http.response.start")
+    assert start["status"] == 200
+
+
+def test_request_path_normalization_preserves_root():
+    assert normalize_request_path("/") == "/"
+    assert normalize_request_path("/api/feedback/global/") == "/api/feedback/global"

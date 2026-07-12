@@ -8,7 +8,11 @@ import {
   putPlanFeedback,
   putTodayFeedback,
 } from "@/lib/api";
-import type { FeedbackRecord, FeedbackResponseValue } from "@/lib/types";
+import type {
+  ContextualFeedbackRequest,
+  FeedbackRecord,
+  FeedbackResponseValue,
+} from "@/lib/types";
 
 const PLAN_REASONS = [
   ["Too hard", "too_hard"],
@@ -37,6 +41,18 @@ export function shouldShowUnsafeGuidance(
   savedResponse: FeedbackResponseValue | null | undefined,
 ): boolean {
   return choice === "unsafe" || savedResponse === "unsafe";
+}
+
+export function buildContextualFeedbackPayload(
+  response: FeedbackResponseValue,
+  selectedReason: string | null,
+  comment: string,
+): ContextualFeedbackRequest {
+  return {
+    response,
+    reason: response === "no" ? selectedReason : null,
+    comment: response === "yes" ? "" : comment,
+  };
 }
 
 function ThumbIcon({ down = false }: Readonly<{ down?: boolean }>) {
@@ -98,11 +114,7 @@ export function ContextualFeedback({
     if ((response === "no" || response === "unsafe") && submitting) return;
     setSubmitting(true);
     setError(null);
-    const payload = {
-      response,
-      reason: response === "no" ? selectedReason : null,
-      comment,
-    };
+    const payload = buildContextualFeedbackPayload(response, selectedReason, comment);
     try {
       const saved = isPlan && planId
         ? await putPlanFeedback(token, planId, payload)

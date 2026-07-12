@@ -87,7 +87,7 @@ Manual run:
 python -m api.feedback_retention
 ```
 
-The command reads expired references in bounded batches, deletes each object through the Storage API, and clears the database path only after Storage confirms the delete request. Failed rows remain unchanged and are retried by the next run. A non-zero exit means at least one object should be retried.
+The command reads expired references in bounded batches, continuing until the backlog is empty, a deletion fails, or the default 1,000-object per-run safety cap is reached. Override the cap with `--max-per-run` during a managed backlog drain. It deletes each object through the Storage API and clears the database path only after Storage confirms the delete request. Failed rows remain unchanged and are retried by the next run. A non-zero exit means at least one object should be retried.
 
 Verify the cron after deployment:
 

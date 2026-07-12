@@ -7,7 +7,7 @@ from tests.support import FakeStore
 
 
 def _row(profile_id: str, *, expired: bool) -> dict:
-    feedback_id = f"feedback-{len(profile_id)}-{expired}"
+    feedback_id = f"feedback-{profile_id}-{expired}"
     path = f"{profile_id}/{feedback_id}.png"
     return {
         "id": feedback_id,
@@ -65,3 +65,27 @@ def test_failed_storage_delete_leaves_reference_for_retry():
     assert result.deleted == 0
     assert row["screenshot_path"] == original_path
     assert row["screenshot_deleted_at"] is None
+
+
+def test_retention_continues_across_multiple_batches():
+    store = FakeStore()
+    for index in range(5):
+        row = _row(f"athlete-{index}", expired=True)
+        store.beta_feedback.append(row)
+        store.feedback_screenshots[row["screenshot_path"]] = (b"png", "image/png")
+
+    result = cleanup_expired_screenshots(store, batch_size=2, max_per_run=10)
+    assert result == type(result)(deleted=5, failed=0)
+    assert not store.feedback_screenshots
+
+
+def test_retention_honours_maximum_per_run():
+    store = FakeStore()
+    for index in range(5):
+        row = _row(f"profile-{index}", expired=True)
+        store.beta_feedback.append(row)
+        store.feedback_screenshots[row["screenshot_path"]] = (b"png", "image/png")
+
+    result = cleanup_expired_screenshots(store, batch_size=2, max_per_run=3)
+    assert result == type(result)(deleted=3, failed=0)
+    assert len(store.feedback_screenshots) == 2
