@@ -296,7 +296,7 @@ def _open_ongoing_weekly_schedule(
                     "effective_load": "hard" if is_hard else "reduced",
                     "status": "hard_as_planned" if is_hard else "coach_led_session",
                     "title": f"{weekday} coach-led {'sparring' if is_hard else 'boxing'}",
-                    "reason": "Coach-owned boxing day from the renewable weekly rhythm.",
+                    "reason": f"Coach-owned {'sparring' if is_hard else 'boxing'} day from the renewable weekly rhythm.",
                 }
             )
         else:
