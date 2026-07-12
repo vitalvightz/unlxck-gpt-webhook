@@ -188,6 +188,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           plan={plan}
           accessToken={session?.access_token ?? null}
           viewerRole={me?.profile.role ?? "athlete"}
+          viewerProfileId={me?.profile.athlete_id ?? null}
           onPlanUpdated={setPlan}
           onPlanDeleted={refreshMe}
         />

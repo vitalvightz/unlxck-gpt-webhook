@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   buildStructuredPlanFromText,
+  canShowContextualPlanFeedback,
   canRebuildEnhancedCard,
   parsePlanText,
   splitLabeledSegments,
@@ -37,6 +38,14 @@ function makePlan(overrides: { status?: string; planText?: string }): PlanDetail
     outputs: { plan_text: overrides.planText ?? "# Plan body" },
   } as unknown as PlanDetail;
 }
+
+test("plan feedback is visible to athletes and only the owning admin", () => {
+  assert.equal(canShowContextualPlanFeedback("athlete", "athlete-1", "athlete-1"), true);
+  assert.equal(canShowContextualPlanFeedback("admin", "admin-1", "admin-1"), true);
+  assert.equal(canShowContextualPlanFeedback("admin", "admin-1", "athlete-1"), false);
+  assert.equal(canShowContextualPlanFeedback("admin", null, "admin-1"), false);
+  assert.equal(canShowContextualPlanFeedback("coach", "coach-1", "coach-1"), false);
+});
 
 const STRUCTURED_CARD_CHIP_CASES: Array<{
   cardState: StructuredCardState;

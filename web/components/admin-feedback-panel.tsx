@@ -51,7 +51,7 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
         <div>
           <p className="kicker">Athlete voice</p>
           <h2>Latest feedback</h2>
-          <p className="muted admin-panel-subtext">Safety reports are shown first. Email alerts are sent separately.</p>
+          <p className="muted admin-panel-subtext">Safety reports are shown first. Email alerts are best-effort.</p>
         </div>
         <span className="badge">{loading ? "Checking" : `${feedback.length} recent`}</span>
       </div>
@@ -78,7 +78,7 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
               <div className="admin-feedback-heading">
                 <div>
                   <p className="kicker">{LABELS[item.category] ?? readable(item.category)}</p>
-                  <h3 className="plan-card-title">{item.submitter_name || item.submitter_email || "Authenticated user"}</h3>
+                  <h3 className="plan-card-title">{item.submitter_name || "Authenticated user"}</h3>
                   <p className="muted">{item.submitter_email || item.submitted_by_profile_id}</p>
                 </div>
                 <span className="badge">{item.priority === "safety" ? "Safety" : readable(item.surface)}</span>

@@ -4620,12 +4620,19 @@ class SupabaseAppStore:
                     "screenshot_path,screenshot_expires_at,created_at,updated_at,"
                     "profiles!beta_feedback_submitted_by_profile_id_fkey(email,full_name)"
                 )
-                .order("priority", desc=True)
                 .order("created_at", desc=True)
-                .limit(max(1, min(limit, 100)))
+                .limit(100)
                 .execute()
             )
-            return getattr(response, "data", None) or []
+            rows = getattr(response, "data", None) or []
+            rows.sort(
+                key=lambda row: (
+                    str(row.get("priority") or "normal") == "safety",
+                    str(row.get("created_at") or ""),
+                ),
+                reverse=True,
+            )
+            return rows[: max(1, min(limit, 100))]
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_feedback_store_error(exc, detail="failed to read admin feedback")
 

@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
+  getPlanFeedback,
+  getTodayFeedback,
   putPlanFeedback,
   putTodayFeedback,
 } from "@/lib/api";
@@ -82,10 +84,31 @@ export function ContextualFeedback({
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
+  const userInteractedRef = useRef(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const isPlan = surface === "plan";
   const reasons = isPlan ? PLAN_REASONS : DAILY_REASONS;
+
+  useEffect(() => {
+    let active = true;
+    const request = isPlan && planId ? getPlanFeedback(token, planId) : getTodayFeedback(token);
+    void request
+      .then((saved) => {
+        if (!active || !saved || userInteractedRef.current) return;
+        setRecord(saved);
+        setChoice(saved.response);
+        setReason(saved.reason);
+        setComment(saved.comment);
+        setEditing(false);
+      })
+      .catch(() => {
+        // Existing-response hydration is optional. Controls stay usable.
+      });
+    return () => {
+      active = false;
+    };
+  }, [isPlan, planId, token]);
 
   async function save(response: FeedbackResponseValue, selectedReason = reason) {
     if (submissionInFlightRef.current) return;
@@ -111,6 +134,7 @@ export function ContextualFeedback({
   }
 
   function choose(nextChoice: FeedbackResponseValue) {
+    userInteractedRef.current = true;
     setChoice(nextChoice);
     setReason(null);
     setEditing(true);
@@ -125,7 +149,14 @@ export function ContextualFeedback({
       {record && !editing ? (
         <div className="feedback-sent-row" role="status">
           <span>Feedback sent</span>
-          <button type="button" className="feedback-link" onClick={() => setEditing(true)}>
+          <button
+            type="button"
+            className="feedback-link"
+            onClick={() => {
+              userInteractedRef.current = true;
+              setEditing(true);
+            }}
+          >
             Change response
           </button>
         </div>

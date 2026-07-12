@@ -20,7 +20,7 @@ RESEND_API_KEY=...
 
 `0` disables the report and screenshot-upload rate limits. Screenshot retention must remain a positive number; `0` falls back to 90 days. Invalid or negative values fall back to the defaults. Changing limits does not require a database migration.
 
-Every saved feedback response is available to authenticated admins at `/admin` through the service-role backend. The same save schedules a background Resend notification to `FEEDBACK_NOTIFICATION_EMAIL`, which defaults to `unlxckedmind@gmail.com`. Configure a verified sender in `FEEDBACK_FROM_EMAIL`; email delivery is skipped safely when the Resend key or sender is absent and never rolls back stored feedback.
+Every saved feedback response is available to authenticated admins at `/admin` through the service-role backend; this feed is the authoritative delivery channel. The same save attempts one best-effort background Resend notification to `FEEDBACK_NOTIFICATION_EMAIL`, which defaults to `unlxckedmind@gmail.com`. Configure a verified sender in `FEEDBACK_FROM_EMAIL`. Email is skipped when the Resend key or sender is absent, and provider failures are logged without retry; neither case rolls back stored feedback.
 
 Athletes and admins may submit contextual feedback only for plans and Today recommendations owned by their own profile. Coaches and gym owners remain limited to global feedback.
 

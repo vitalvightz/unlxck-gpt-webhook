@@ -55,7 +55,9 @@ test("feedback choices use explicit correctly oriented thumb icons", () => {
 
 test("feedback controls render without waiting for the existing-response request", () => {
   assert.doesNotMatch(CONTEXTUAL_SOURCE, /FeedbackLoadState|Loading feedback|Feedback couldn’t load|>\s*Retry\s*</);
-  assert.doesNotMatch(CONTEXTUAL_SOURCE, /getPlanFeedback|getTodayFeedback|useEffect/);
+  assert.match(CONTEXTUAL_SOURCE, /getPlanFeedback|getTodayFeedback/);
+  assert.match(CONTEXTUAL_SOURCE, /userInteractedRef\.current/);
+  assert.match(CONTEXTUAL_SOURCE, /if \(!active \|\| !saved \|\| userInteractedRef\.current\) return/);
   assert.match(CONTEXTUAL_SOURCE, /record && !editing/);
 });
 

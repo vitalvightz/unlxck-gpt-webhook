@@ -1,4 +1,4 @@
-"""Non-blocking operator email notifications for persisted beta feedback."""
+"""Non-blocking, best-effort operator email for persisted beta feedback."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def feedback_notification_recipient() -> str:
 
 
 def send_feedback_notification(record: FeedbackRecord, profile: ProfileRecord) -> None:
-    """Notify operators after persistence; failures never affect the feedback API."""
+    """Attempt one notification after persistence; failures are logged and discarded."""
 
     api_key = os.getenv("RESEND_API_KEY", "").strip()
     sender = os.getenv("FEEDBACK_FROM_EMAIL", "").strip()
