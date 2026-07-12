@@ -15,6 +15,12 @@ _REPAIR_PROMPT_EXCLUDED_CODES = frozenset(
         "true_internal_system_leak",
     }
 )
+_RELEASE_COLLECTION_FIELDS = (
+    "errors",
+    "warnings",
+    "review_flags",
+    "blocking_warnings",
+)
 
 
 @lru_cache(maxsize=1)
@@ -123,7 +129,29 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     athlete-releasable. Admin-review and hard-blocker warnings are promoted to
     ``blocking_warnings``. Any other pre-existing blocking warning is preserved,
     so an unknown blocker fails closed instead of silently reaching an athlete.
+
+    Release-relevant collections must be lists when present. Malformed persisted
+    reports fail closed before policy findings are inspected, preventing a dict,
+    string, or arbitrary object from being treated as an empty warning list.
     """
+
+    malformed_fields = [
+        key
+        for key in _RELEASE_COLLECTION_FIELDS
+        if key in validator_report and not isinstance(validator_report.get(key), list)
+    ]
+    if malformed_fields:
+        return {
+            **validator_report,
+            "quality_review_flags": [],
+            "quality_review_flag_count": 0,
+            "admin_review_blocking_flags": [],
+            "admin_review_blocking_flag_count": 0,
+            "release_policy_malformed_fields": malformed_fields,
+            "release_decision": "hold",
+            "is_athlete_releasable": False,
+            "is_publishable": False,
+        }
 
     quality_findings = athlete_release_with_flags_findings(validator_report)
     admin_findings = admin_review_blocking_findings(validator_report)
