@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { StructuredPlanRenderer } from "./structured-plan-renderer";
-import type { StructuredPlan } from "@/lib/types";
+import { SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
+import type { StructuredPlan, StructuredSession } from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
   return text.split(needle).length - 1;
@@ -206,6 +206,59 @@ test("surfaces rehab summary while keeping full rehab details collapsed", () => 
   assert.equal(html.includes("Full rest between holds"), false);
   assert.equal(html.includes("Easy Assault Bike"), false);
   assert.equal(html.includes("Show more (2 blocks)"), true);
+});
+
+test("does not duplicate a rehab insert as a summary once the blocks are expanded", () => {
+  // With the full blocks open, every rehab insert renders in full below, so the
+  // compact Rehab / Mobility summary must not ALSO print — no two cards for one
+  // insert.
+  const session = {
+    session_id: "ses-1",
+    session_type: "conditioning",
+    title: "Aerobic + rehab",
+    blocks: [
+      { block_id: "bike", block_type: "conditioning", display_name: "Easy Assault Bike" },
+      {
+        block_id: "rehab",
+        block_type: "rehab",
+        display_name: "Neutral-Grip Isometric Holds",
+        sets: 2,
+        reps: "12-15 s",
+        coaching_cues: ["Full rest between holds"],
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  // Full rehab block (with its detail) shows exactly once; the summary eyebrow
+  // is gone.
+  assert.equal(html.includes("Neutral-Grip Isometric Holds"), true);
+  assert.equal(html.includes("Full rest between holds"), true);
+  assert.equal(html.includes("Rehab / Mobility"), false);
+});
+
+test("labels a stop rule stored in progression_rule as Stop rule, not Progress", () => {
+  const session = {
+    session_id: "ses-1",
+    session_type: "strength_power",
+    title: "Band-Resisted Straight Punch",
+    blocks: [
+      {
+        block_id: "punch",
+        block_type: "power",
+        display_name: "Band-Resisted Straight Punch",
+        sets: 2,
+        reps: "6-8",
+        progression_rule: "Stop the set if ankle pain increases or punch speed drops.",
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes("Stop rule"), true);
+  assert.equal(html.includes("Stop the set if ankle pain increases"), true);
 });
 
 test("renders fallback safety card from active notes when red flag rules are absent", () => {

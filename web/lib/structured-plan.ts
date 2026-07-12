@@ -310,6 +310,26 @@ export function getCoachingCues(block: StructuredBlock | null | undefined): stri
   return getStringList(block?.coaching_cues);
 }
 
+// A stop rule reads like "Stop on sharp pain." / "Stop the set if punch speed
+// drops" / "stop if the ankle flares". The conversion model frequently drops
+// these into a block's `progression_rule` (its only free-text "what to do"
+// field), so the renderer must not label a stop rule as "Progress" — that told
+// the athlete to ADVANCE on a safety cue. Detect the stop-rule shape so it can
+// be labelled correctly.
+const STOP_RULE_RE = /^\s*stop\b|\bstop (?:the set|on|if|when|immediately)\b/i;
+
+/** Whether a `progression_rule` string is really a stop/safety rule. */
+export function isStopRuleText(text: string | null | undefined): boolean {
+  const clean = cleanText(text);
+  return clean !== null && STOP_RULE_RE.test(clean);
+}
+
+/** The label a block's `progression_rule` should render under: a stop rule is
+ * surfaced as "Stop rule", genuine progression stays "Progress". */
+export function progressionRuleLabel(text: string | null | undefined): "Progress" | "Stop rule" {
+  return isStopRuleText(text) ? "Stop rule" : "Progress";
+}
+
 /** A clean list of non-empty strings from a possibly-null/non-array value. */
 export function getStringList(value: string[] | null | undefined): string[] {
   return safeArray(value)
