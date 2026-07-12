@@ -652,7 +652,7 @@ function toStructuredDays(
 ): StructuredDay[] {
   const grouped = new Map<string, PlanTextSession[]>();
   sessions.forEach((session, index) => {
-    const key = session.countdown || session.weekday?.toLowerCase() || `session-${index + 1}`;
+    const key = session.countdown || shortWeekday(session.weekday)?.toLowerCase() || "session-" + (index + 1);
     grouped.set(key, [...(grouped.get(key) || []), session]);
   });
 
