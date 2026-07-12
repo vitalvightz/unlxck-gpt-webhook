@@ -1449,6 +1449,7 @@ class PlanAdvisory(BaseModel):
 
 class WeeklyDayEntry(BaseModel):
     weekday: Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    title: str = ""
     sparring_day_class: SparringDayClass = "none"
     effective_load: EffectiveLoad = "none"
     status: str = ""

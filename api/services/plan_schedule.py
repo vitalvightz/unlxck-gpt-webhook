@@ -173,4 +173,24 @@ def resolve_today_and_next(
             if has_scheduled_day_content(entry):
                 next_entry = entry
                 break
+    if next_entry is None:
+        # Renewable open plans have weekday-only entries. If no scheduled day
+        # remains later in this list (for example Sunday before Monday training),
+        # wrap to the nearest future recurring weekday. Dated fight camps already
+        # returned through ``future_dated_entries`` above.
+        today_weekday_index = today.weekday()
+        recurring_candidates: list[tuple[int, WeeklyDayEntry]] = []
+        for entry in week.days:
+            if not has_scheduled_day_content(entry) or entry.calendar_date:
+                continue
+            try:
+                entry_weekday_index = _WEEKDAY_NAMES.index(entry.weekday)
+            except ValueError:
+                continue
+            offset = (entry_weekday_index - today_weekday_index) % 7
+            if offset > 0:
+                recurring_candidates.append((offset, entry))
+        if recurring_candidates:
+            recurring_candidates.sort(key=lambda item: item[0])
+            next_entry = recurring_candidates[0][1]
     return today_entry, next_entry

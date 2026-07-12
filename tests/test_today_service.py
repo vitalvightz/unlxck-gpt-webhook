@@ -393,6 +393,35 @@ class TestDailyScheduleResolver:
         assert next_entry.weekday == "Fri"
         assert next_entry.calendar_date == "2026-06-26"
 
+    def test_undated_open_schedule_returns_next_recurring_weekday(self):
+        week = WeeklySchedule(
+            plan_id=PLAN,
+            week_index=0,
+            week_count=4,
+            phase="GPP",
+            days=[
+                WeeklyDayEntry(
+                    weekday="Mon",
+                    title="Mon training",
+                    effective_load="reduced",
+                    status="open_plan_session",
+                ),
+                WeeklyDayEntry(
+                    weekday="Wed",
+                    title="Wed coach-led sparring",
+                    effective_load="hard",
+                    status="hard_as_planned",
+                ),
+            ],
+        )
+
+        today_entry, next_entry = resolve_today_and_next(week, today=date(2026, 7, 12))
+
+        assert today_entry is None
+        assert next_entry is not None
+        assert next_entry.weekday == "Mon"
+        assert next_entry.title == "Mon training"
+
 
 def _multi_week_taper_brief() -> dict:
     """A two-week taper where each week has a single training day.
@@ -1500,6 +1529,38 @@ class TestCommandView:
             now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
         )
         assert view.active_plan.get("phase") == "TAPER"
+
+    def test_open_plan_template_surfaces_next_session_and_checkin_phase(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = {
+            "open_plan_spec": {
+                "plan_type": "open_ongoing_system",
+                "weekly_template": {
+                    "training_days": ["Monday", "Wednesday", "Friday", "Saturday", "Tuesday"],
+                    "hard_sparring_days": ["Wednesday", "Friday"],
+                },
+                "development_block": {
+                    "week_1": "Baseline",
+                    "week_2": "Progress",
+                    "week_3": "Highest controlled week",
+                    "week_4": "Deload and reassess",
+                },
+            },
+            "stage1_selection_summary": {"current_phase": "GPP"},
+        }
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 7, 12, 0, tzinfo=timezone.utc),
+        )
+
+        assert view.active_plan.get("phase") == "GPP"
+        assert view.today.session_scope == "next"
+        assert view.today.next_session["weekday"] == "Mon"
+        assert view.today.next_session["title"] == "Mon training"
+        assert view.today.next_session["session_id"] == "Mon"
 
     def test_today_session_uses_current_plan_day(self):
         store = _store_with_plan()
