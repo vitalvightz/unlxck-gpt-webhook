@@ -441,7 +441,7 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     }
 
     const cleanLine = stripPlanMarkup(line);
-    if (/^(?:Weekly Rhythm|Session Cards)$/i.test(cleanLine)) {
+    if (/^(?:Weekly Rhythm|Session Cards):?$/i.test(cleanLine)) {
       allowWeekdayOnlySessions = true;
       currentSession = null;
       currentWeek = null;
