@@ -5,10 +5,14 @@ import {
   classifySessionlessDay,
   getCoachLedContactView,
   cleanText,
+  finitePositiveNumber,
   formatBlockLoad,
+  formatEffort,
+  isNonFiniteNumericToken,
   formatMacroRange,
   formatMeasured,
   formatWeightCutBand,
+  macroLine,
   getActiveNotesExcludingRedFlags,
   getBlocks,
   getCoachingCues,
@@ -25,6 +29,8 @@ import {
   hasDeterministicNutrition,
   hasDeterministicRecovery,
   hasNutrition,
+  isDeEmphasisedWeightCutSafety,
+  isProminentRedFlagSeverity,
   isStopRuleText,
   isTimeLikeReps,
   nutritionPhaseRows,
@@ -773,4 +779,274 @@ test("splitMindsetLines returns empty secondary for simplified mindset", () => {
   const { primary, secondary } = splitMindsetLines({ intent: "Go" });
   assert.deepEqual(primary.map((line) => line.label), ["Intent"]);
   assert.deepEqual(secondary, []);
+});
+
+// --- audit fixes: rest-day classification, measures, weight-cut de-emphasis ---
+
+test("a rest/recovery day_type with an unclassified headline stays a rest day", () => {
+  // "Full rest and mobility" carries no combat/coach vocabulary, so a rest
+  // day_type keeps it a rest day rather than a generic "scheduled" day.
+  const rest = classifySessionlessDay({
+    day_type: "rest",
+    today_card: { headline: "Full rest and mobility" },
+  } as never);
+  assert.equal(rest.kind, "rest");
+  assert.equal(rest.title, "Full rest and mobility");
+
+  const recovery = classifySessionlessDay({
+    day_type: "recovery",
+    today_card: { headline: "Easy reset and stretch" },
+  } as never);
+  assert.equal(recovery.kind, "rest");
+});
+
+test("a headline naming real coach/combat work overrides a rest day_type", () => {
+  // day_type only rescues an UNCLASSIFIED headline; explicit combat wins.
+  assert.equal(
+    classifySessionlessDay({ day_type: "rest", today_card: { headline: "Hard sparring" } } as never)
+      .kind,
+    "sparring",
+  );
+  assert.equal(
+    classifySessionlessDay({
+      day_type: "recovery",
+      today_card: { headline: "Coach-led boxing session" },
+    } as never).kind,
+    "coach_led",
+  );
+});
+
+test("formatMeasured rejects non-finite and negative values", () => {
+  assert.equal(formatMeasured({ value: Number.NaN, unit: "seconds" } as never), null);
+  assert.equal(formatMeasured({ value: Number.POSITIVE_INFINITY, unit: "seconds" } as never), null);
+  assert.equal(formatMeasured({ value: -30, unit: "seconds" } as never), null);
+  assert.equal(formatMeasured({ value: 30, unit: "seconds" }), "30 seconds");
+  assert.equal(formatMeasured({ value: 0, unit: "seconds" }), "0 seconds");
+});
+
+test("time-like reps without a separate duration are labelled Duration, not Volume", () => {
+  const timeReps = selectBlockMetric({ display_name: "Hold", sets: 5, reps: "30 seconds" } as never);
+  assert.deepEqual(timeReps[0], { label: "Duration", value: "5 × 30 seconds" });
+  // A genuine rep count still reads as Volume.
+  const repCount = selectBlockMetric({ display_name: "Squat", sets: 3, reps: "8" } as never);
+  assert.deepEqual(repCount[0], { label: "Volume", value: "3 × 8" });
+});
+
+// --- numeric validation: no NaN / Infinity / negative ever reaches the UI ----
+
+test("finitePositiveNumber accepts only finite positive numbers", () => {
+  for (const good of [1, 0.5, 12, 1e6]) {
+    assert.equal(finitePositiveNumber(good), true, `${good} should pass`);
+  }
+  for (const bad of [0, -1, -0.5, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, "3", null, undefined, {}]) {
+    assert.equal(finitePositiveNumber(bad as never), false, `${String(bad)} should fail`);
+  }
+});
+
+test("selectBlockMetric drops malformed numeric sets / reps / rounds", () => {
+  // Malformed reps-as-number never render as "NaN"/"Infinity"/"-5".
+  for (const reps of [Number.NaN, Number.POSITIVE_INFINITY, -5, 0]) {
+    const m = selectBlockMetric({ display_name: "Squat", sets: 3, reps } as never);
+    assert.equal(
+      m.some((x) => x.label === "Volume"),
+      false,
+      `reps ${String(reps)} should not produce a Volume line`,
+    );
+  }
+  // Bare non-positive numeric-string reps are dropped too; a range survives.
+  assert.deepEqual(selectBlockMetric({ display_name: "Squat", sets: 3, reps: "-5" } as never), []);
+  assert.deepEqual(selectBlockMetric({ display_name: "Squat", sets: 3, reps: "0" } as never), []);
+  assert.deepEqual(selectBlockMetric({ display_name: "Squat", reps: "4-6" } as never)[0], {
+    label: "Volume",
+    value: "4-6",
+  });
+  // A malformed sets multiplier is omitted, but a valid rep count still shows.
+  const badSets = selectBlockMetric({ display_name: "Squat", sets: Number.NaN, reps: "8" } as never);
+  assert.deepEqual(badSets[0], { label: "Volume", value: "8" });
+  const infSets = selectBlockMetric({
+    display_name: "Squat",
+    sets: Number.POSITIVE_INFINITY,
+    reps: "8",
+  } as never);
+  assert.deepEqual(infSets[0], { label: "Volume", value: "8" });
+  // Malformed rounds never render a Rounds line.
+  for (const rounds of [Number.NaN, Number.POSITIVE_INFINITY, -3, 0]) {
+    const m = selectBlockMetric({ display_name: "Circuit", rounds } as never);
+    assert.equal(m.some((x) => x.label === "Rounds"), false, `rounds ${String(rounds)} should be dropped`);
+  }
+  assert.deepEqual(selectBlockMetric({ display_name: "Circuit", rounds: 4 } as never), [
+    { label: "Rounds", value: "4" },
+  ]);
+});
+
+test("formatMeasured and formatEffort reject non-finite numbers", () => {
+  assert.equal(formatMeasured({ value: Number.NaN, unit: "m" } as never), null);
+  assert.equal(formatMeasured({ value: Number.POSITIVE_INFINITY, unit: "m" } as never), null);
+  assert.equal(formatMeasured({ value: -1, unit: "m" } as never), null);
+  // Effort: a non-finite numeric value is dropped rather than printed as "RPE NaN".
+  assert.equal(formatEffort({ effort: { method: "RPE", value: Number.NaN } } as never), "RPE");
+  assert.equal(formatEffort({ effort: { method: "RPE", value: Number.POSITIVE_INFINITY } } as never), "RPE");
+  assert.equal(formatEffort({ effort: { method: "RPE", value: 7 } } as never), "RPE 7");
+  // A non-numeric effort value still passes through.
+  assert.equal(formatEffort({ effort: { method: "Intent", value: "max" } } as never), "Intent max");
+});
+
+test("macro ranges reject NaN / Infinity / negative values", () => {
+  assert.equal(formatMacroRange({ min: Number.NaN, max: 140 } as never, "g/day"), "up to 140 g/day");
+  assert.equal(
+    formatMacroRange({ min: 100, max: Number.POSITIVE_INFINITY } as never, "g/day"),
+    "from 100 g/day",
+  );
+  assert.equal(formatMacroRange({ min: -50, max: -10 } as never, "g/day"), null);
+  assert.equal(formatMacroRange({ min: Number.NaN, max: Number.NaN } as never, "g/day"), null);
+  assert.equal(formatMacroRange({ min: 112, max: 140 } as never, "g/day"), "112–140 g/day");
+  // macroLine keeps the note when the numeric range is dropped as malformed.
+  assert.equal(macroLine({ min: Number.NaN, note: "steady" } as never, "g/day"), "steady");
+});
+
+test("recovery sleep hours reject NaN and non-positive values", () => {
+  assert.equal(recoveryPhaseView({ sleep_hours_target: [Number.NaN, 9] } as never).sleep, "9 h/night");
+  assert.equal(recoveryPhaseView({ sleep_hours_target: [Number.NaN, Number.NaN] } as never).sleep, null);
+  assert.equal(recoveryPhaseView({ sleep_hours_target: [0, -2] } as never).sleep, null);
+  assert.equal(recoveryPhaseView({ sleep_hours_target: [8, 9] } as never).sleep, "8–9 h/night");
+});
+
+test("weekLabel ignores a non-finite week_index", () => {
+  assert.equal(weekLabel({ week_index: Number.NaN } as never), "Week");
+  assert.equal(weekLabel({ week_index: Number.POSITIVE_INFINITY } as never), "Week");
+  assert.equal(weekLabel({ week_index: 3 } as never), "Week 3");
+});
+
+test("isNonFiniteNumericToken flags bare non-finite spellings, not ranges or times", () => {
+  for (const token of [
+    "NaN",
+    "nan",
+    "Infinity",
+    "infinity",
+    "+Infinity",
+    "-Infinity",
+    "+NaN",
+    "-nan",
+    "  Infinity  ",
+  ]) {
+    assert.equal(isNonFiniteNumericToken(token), true, `${token} should be flagged`);
+  }
+  for (const ok of ["4-6", "8", "30 seconds", "30s", "12-15 s", "Infinity reps", "RPE 7", "", "0"]) {
+    assert.equal(isNonFiniteNumericToken(ok), false, `${ok} should NOT be flagged`);
+  }
+});
+
+test("malformed numeric string tokens never render as reps / effort / load", () => {
+  // reps as a non-finite string token → no Volume line at all.
+  for (const reps of ["NaN", "Infinity", "+Infinity", "-Infinity"]) {
+    const m = selectBlockMetric({ display_name: "Squat", sets: 3, reps } as never);
+    assert.equal(
+      m.some((x) => x.label === "Volume"),
+      false,
+      `reps "${reps}" should not render a Volume line`,
+    );
+  }
+  // Valid ranges and time strings are preserved.
+  assert.deepEqual(selectBlockMetric({ display_name: "Squat", sets: 3, reps: "4-6" } as never)[0], {
+    label: "Volume",
+    value: "3 × 4-6",
+  });
+  assert.deepEqual(selectBlockMetric({ display_name: "Hold", sets: 5, reps: "30 seconds" } as never)[0], {
+    label: "Duration",
+    value: "5 × 30 seconds",
+  });
+  // effort value as a non-finite string token → method only, never "RPE NaN".
+  for (const value of ["NaN", "Infinity", "+Infinity", "-Infinity"]) {
+    assert.equal(formatEffort({ effort: { method: "RPE", value } } as never), "RPE");
+  }
+  assert.equal(formatEffort({ effort: { method: "RPE", value: "6-7" } } as never), "RPE 6-7");
+  // load display as a non-finite string token → hidden.
+  for (const display of ["NaN", "Infinity", "-Infinity"]) {
+    assert.equal(formatBlockLoad({ display } as never), null);
+  }
+  assert.equal(formatBlockLoad({ display: "70% 1RM" } as never), "70% 1RM");
+});
+
+const WEIGHT_CUT_TEXT = "If weight-cut symptoms worsen (dizziness), stop and escalate to medical.";
+
+function planWithRiskBand(riskBand: string) {
+  return {
+    deterministic_support: {
+      nutrition: { by_phase: { TAPER: { weight_cut: { risk_band: riskBand } } } },
+    },
+  } as never;
+}
+
+test("weight-cut symptom safety is de-emphasised ONLY when risk is explicitly below moderate", () => {
+  // Explicitly below moderate → shown but softened.
+  for (const band of ["low", "mild", "none", "inactive"]) {
+    assert.equal(
+      isDeEmphasisedWeightCutSafety(planWithRiskBand(band), WEIGHT_CUT_TEXT),
+      true,
+      `risk "${band}" should de-emphasise`,
+    );
+  }
+  // Moderate and every synonym at that rank must render at full weight.
+  for (const band of ["moderate", "medium", "amber", "elevated"]) {
+    assert.equal(
+      isDeEmphasisedWeightCutSafety(planWithRiskBand(band), WEIGHT_CUT_TEXT),
+      false,
+      `risk "${band}" must not de-emphasise`,
+    );
+  }
+  // Above moderate is always full weight.
+  for (const band of ["high", "severe", "red", "critical", "extreme", "aggressive"]) {
+    assert.equal(
+      isDeEmphasisedWeightCutSafety(planWithRiskBand(band), WEIGHT_CUT_TEXT),
+      false,
+      `risk "${band}" must not de-emphasise`,
+    );
+  }
+});
+
+test("weight-cut de-emphasis never fires on missing or unknown risk data", () => {
+  // No plan / no deterministic support → risk unknown → never faded.
+  assert.equal(isDeEmphasisedWeightCutSafety(null, WEIGHT_CUT_TEXT), false);
+  assert.equal(isDeEmphasisedWeightCutSafety({} as never, WEIGHT_CUT_TEXT), false);
+  assert.equal(isDeEmphasisedWeightCutSafety(planWithRiskBand(""), WEIGHT_CUT_TEXT), false);
+  // An unrecognised band token is treated as unknown, not as low.
+  assert.equal(isDeEmphasisedWeightCutSafety(planWithRiskBand("banana"), WEIGHT_CUT_TEXT), false);
+  // A single at-or-above-moderate band anywhere pins the whole plan to full weight,
+  // even when another phase reads low.
+  const mixed = {
+    deterministic_support: {
+      nutrition: {
+        by_phase: {
+          GPP: { weight_cut: { risk_band: "low" } },
+          TAPER: { weight_cut: { risk_band: "high" } },
+        },
+      },
+    },
+  } as never;
+  assert.equal(isDeEmphasisedWeightCutSafety(mixed, WEIGHT_CUT_TEXT), false);
+});
+
+test("an explicit prominent severity overrides weight-cut de-emphasis even below moderate", () => {
+  const low = planWithRiskBand("low");
+  for (const severity of ["red", "critical", "high", "severe", "extreme"]) {
+    assert.equal(
+      isDeEmphasisedWeightCutSafety(low, WEIGHT_CUT_TEXT, severity),
+      false,
+      `severity "${severity}" must override de-emphasis`,
+    );
+    assert.equal(isProminentRedFlagSeverity(severity), true);
+  }
+  // A non-prominent (or absent) severity leaves the low-risk de-emphasis intact.
+  assert.equal(isDeEmphasisedWeightCutSafety(low, WEIGHT_CUT_TEXT, "amber"), true);
+  assert.equal(isDeEmphasisedWeightCutSafety(low, WEIGHT_CUT_TEXT, undefined), true);
+  assert.equal(isProminentRedFlagSeverity("amber"), false);
+  assert.equal(isProminentRedFlagSeverity(null), false);
+});
+
+test("weight-cut de-emphasis only applies to weight-cut symptom lines", () => {
+  const low = planWithRiskBand("low");
+  // Not a weight-cut symptom line at all → never de-emphasised.
+  assert.equal(isDeEmphasisedWeightCutSafety(low, "Stop on sharp knee pain."), false);
+  assert.equal(isDeEmphasisedWeightCutSafety(low, null), false);
+  assert.equal(isDeEmphasisedWeightCutSafety(low, "   "), false);
 });

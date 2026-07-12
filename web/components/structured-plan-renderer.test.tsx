@@ -56,8 +56,10 @@ test("structured renderer uses one session card and hides detail blocks until ex
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(countOccurrences(html, "Freshness Reset"), 1);
-  assert.equal(html.includes("Morning intro duplicate"), false);
-  assert.equal(html.includes("Duplicate intro intent"), false);
+  assert.equal(html.includes("Morning intro duplicate"), false); // headline not shown on session days
+  // The DAY mindset renders once at day level (distinct from the session's own
+  // mindset, which renders on the session card).
+  assert.equal(html.includes("Duplicate intro intent"), true);
   assert.equal(html.includes("Breathing reset"), false);
   assert.equal(html.includes("MORE"), false);
   assert.equal(html.includes("LESS"), false);
@@ -68,14 +70,17 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Do not render anchor"), false);
 });
 
-// Builds a single-session day where the session-level and day-card mindsets can
-// be varied independently, exercising the SessionCard mindset fallback.
+// Builds a day whose day-card mindset and per-session mindsets can be varied
+// independently. Each entry in `sessionMindsets` becomes one session; `undefined`
+// omits the session's mindset_anchor, an object supplies one. This exercises the
+// rule that the DAY mindset renders exactly once at day level while SESSION
+// mindsets render only on the sessions that define their own.
 function mindsetPlan({
-  sessionMindset,
   dayCardMindset,
+  sessionMindsets,
 }: {
-  sessionMindset?: unknown;
   dayCardMindset?: unknown;
+  sessionMindsets: unknown[];
 }): StructuredPlan {
   return {
     schema_version: "1.0",
@@ -94,15 +99,13 @@ function mindsetPlan({
               readiness_status: "train_as_planned",
               ...(dayCardMindset !== undefined ? { mindset_anchor: dayCardMindset } : {}),
             },
-            sessions: [
-              {
-                session_id: "ses-1",
-                session_type: "sparring",
-                title: "Hard sparring",
-                ...(sessionMindset !== undefined ? { mindset_anchor: sessionMindset } : {}),
-                blocks: [{ block_id: "blk-1", display_name: "Live rounds" }],
-              },
-            ],
+            sessions: sessionMindsets.map((sessionMindset, index) => ({
+              session_id: `ses-${index + 1}`,
+              session_type: "sparring",
+              title: `Session ${index + 1}`,
+              ...(sessionMindset !== undefined ? { mindset_anchor: sessionMindset } : {}),
+              blocks: [{ block_id: `blk-${index + 1}`, display_name: "Live rounds" }],
+            })),
           },
         ],
       },
@@ -110,55 +113,91 @@ function mindsetPlan({
   } as StructuredPlan;
 }
 
-test("session card falls back to the day card mindset when the session has none", () => {
+// Each rendered MindsetAnchorCard emits exactly one `sp-mindset-list`, so its
+// count is the number of distinct mindset cards on screen.
+function mindsetCardCount(html: string): number {
+  return countOccurrences(html, "sp-mindset-list");
+}
+
+test("mindset scenario 1: day mindset only renders once at day level", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={mindsetPlan({
-        dayCardMindset: { intent: "Day card mindset intent", focus_cue: "Day card focus cue" },
+        dayCardMindset: { intent: "Day-only intent", focus_cue: "Day-only focus" },
+        sessionMindsets: [undefined],
       })}
     />,
   );
 
-  assert.equal(html.includes("Day card mindset intent"), true);
-  assert.equal(html.includes("Day card focus cue"), true);
+  assert.equal(mindsetCardCount(html), 1);
+  assert.equal(countOccurrences(html, "Day-only intent"), 1);
+  assert.equal(html.includes("Day-only focus"), true);
 });
 
-test("session card falls back when the session mindset has no displayable content", () => {
+test("mindset scenario 2: session mindset only renders on its session card", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={mindsetPlan({
-        sessionMindset: {},
-        dayCardMindset: { intent: "Day card mindset intent", focus_cue: "Day card focus cue" },
+        sessionMindsets: [{ intent: "Session-only intent", focus_cue: "Session-only focus" }],
       })}
     />,
   );
 
-  assert.equal(html.includes("Day card mindset intent"), true);
-  assert.equal(html.includes("Day card focus cue"), true);
+  assert.equal(mindsetCardCount(html), 1);
+  assert.equal(html.includes("Session-only intent"), true);
+  assert.equal(html.includes("Session-only focus"), true);
 });
 
-test("session card prefers its own mindset when it has displayable content", () => {
+test("mindset scenario 3: day mindset plus all sessions having their own", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={mindsetPlan({
-        sessionMindset: { intent: "Session mindset intent", focus_cue: "Session focus cue" },
-        dayCardMindset: { intent: "Day card mindset intent", focus_cue: "Day card focus cue" },
+        dayCardMindset: { intent: "Day intent", focus_cue: "Day focus" },
+        sessionMindsets: [
+          { intent: "Session A intent", focus_cue: "Session A focus" },
+          { intent: "Session B intent", focus_cue: "Session B focus" },
+        ],
       })}
     />,
   );
 
-  assert.equal(html.includes("Session mindset intent"), true);
-  assert.equal(html.includes("Session focus cue"), true);
-  assert.equal(html.includes("Day card mindset intent"), false);
-  assert.equal(html.includes("Day card focus cue"), false);
+  // One day-level card + one per session = three cards total.
+  assert.equal(mindsetCardCount(html), 3);
+  // The day mindset renders exactly once, not duplicated into each session.
+  assert.equal(countOccurrences(html, "Day intent"), 1);
+  assert.equal(html.includes("Session A intent"), true);
+  assert.equal(html.includes("Session B intent"), true);
 });
 
-test("session card renders no mindset block when both mindsets are blank", () => {
+test("mindset scenario 4: day mindset plus mixed sessions (only some have their own)", () => {
   const html = renderToStaticMarkup(
-    <StructuredPlanRenderer plan={mindsetPlan({ sessionMindset: {}, dayCardMindset: {} })} />,
+    <StructuredPlanRenderer
+      plan={mindsetPlan({
+        dayCardMindset: { intent: "Day intent", focus_cue: "Day focus" },
+        sessionMindsets: [
+          { intent: "Owning session intent", focus_cue: "Owning session focus" },
+          undefined,
+        ],
+      })}
+    />,
   );
 
-  assert.equal(html.includes("Mindset"), false);
+  // One day-level card + one for the session that owns a mindset = two cards.
+  // The session without its own mindset shows none (no day-mindset duplication).
+  assert.equal(mindsetCardCount(html), 2);
+  assert.equal(countOccurrences(html, "Day intent"), 1);
+  assert.equal(html.includes("Owning session intent"), true);
+});
+
+test("mindset scenario 5: no mindset anywhere renders no mindset block", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={mindsetPlan({ dayCardMindset: {}, sessionMindsets: [{}, undefined] })}
+    />,
+  );
+
+  assert.equal(mindsetCardCount(html), 0);
+  assert.equal(html.includes(">Mindset<"), false);
 });
 
 test("surfaces rehab summary while keeping full rehab details collapsed", () => {
@@ -236,6 +275,73 @@ test("does not duplicate a rehab insert as a summary once the blocks are expande
   assert.equal(html.includes("Neutral-Grip Isometric Holds"), true);
   assert.equal(html.includes("Full rest between holds"), true);
   assert.equal(html.includes("Rehab / Mobility"), false);
+});
+
+test("a malformed numeric payload never renders NaN / Infinity in the card", () => {
+  // Every numeric field is deliberately malformed. The block detail is expanded
+  // so the block renders in full, and the plan carries malformed macros, sleep
+  // hours and week_index too — none of which may reach the DOM as text.
+  const session = {
+    session_id: "ses-1",
+    session_type: "strength_power",
+    title: "Malformed metrics",
+    blocks: [
+      {
+        block_id: "b1",
+        display_name: "Bad numbers",
+        sets: Number.NaN,
+        reps: Number.POSITIVE_INFINITY,
+        rounds: -3,
+        effort: { method: "RPE", value: Number.NaN },
+        duration: { value: Number.NaN, unit: "seconds" },
+        distance: { value: Number.POSITIVE_INFINITY, unit: "m" },
+      },
+      {
+        // Malformed numeric STRING tokens must be stripped too, not just numbers.
+        block_id: "b2",
+        display_name: "Bad string numbers",
+        sets: 3,
+        reps: "Infinity",
+        effort: { method: "RPE", value: "NaN" },
+        load: { display: "-Infinity" },
+      },
+    ],
+  } as unknown as StructuredSession;
+  const sessionHtml = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+  assert.equal(sessionHtml.includes("NaN"), false);
+  assert.equal(sessionHtml.includes("Infinity"), false);
+
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    deterministic_support: {
+      nutrition: {
+        by_phase: {
+          GPP: {
+            protein_g_per_day: { min: Number.NaN, max: Number.POSITIVE_INFINITY },
+            carbs_g_per_day: { min: -100, max: -50 },
+          },
+        },
+      },
+      recovery: { by_phase: { GPP: { sleep_hours_target: [Number.NaN, -2] } } },
+    },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: Number.NaN,
+        phase_label: "GPP",
+        days: [{ date: "2026-06-17", day_type: "low", sessions: [session] }],
+      },
+    ],
+  } as unknown as StructuredPlan;
+  const planHtml = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 17)} />,
+  );
+  assert.equal(planHtml.includes("NaN"), false);
+  assert.equal(planHtml.includes("Infinity"), false);
+  // The week strip falls back to a positional label rather than "WNaN".
+  assert.equal(planHtml.includes("WNaN"), false);
+  assert.equal(planHtml.includes("W1"), true);
 });
 
 test("labels a stop rule stored in progression_rule as Stop rule, not Progress", () => {
@@ -337,12 +443,13 @@ test("collapses deterministic nutrition and recovery into a support section at t
   // The week strip exposes both weeks as pills.
   assert.equal(html.includes("W1"), true);
   assert.equal(html.includes("W2"), true);
-  // Support sits in its own collapsed section near the bottom (after the weeks).
-  const supportIndex = html.indexOf("Support");
-  assert.equal(supportIndex > html.indexOf("W2"), true);
+  // Recovery and Nutrition sit in their own collapsed sections near the bottom
+  // (after the weeks), each toggled independently.
   assert.equal(html.includes("Show recovery"), true);
   assert.equal(html.includes("Show nutrition"), true);
-  // Deterministic per-phase content still renders inside the support section.
+  assert.equal(html.indexOf("Show recovery") > html.indexOf("W2"), true);
+  assert.equal(html.indexOf("Show nutrition") > html.indexOf("W2"), true);
+  // Deterministic per-phase content still renders inside the support sections.
   assert.equal(html.includes("General prep"), true);
 });
 
@@ -490,23 +597,14 @@ test("marks the current day and surfaces the camp status + week focus", () => {
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
 
-  // Camp status chips and countdown.
-  assert.equal(html.includes("Week 1 of 1"), true);
+  // Countdown + week focus surface via the week strip / overview.
   assert.equal(html.includes("D-28"), true);
-  // Week focus still surfaces via the week overview.
   assert.equal(html.includes("Convert strength into speed."), true);
-  // The lighter camp-readiness strip leads the plan page with focus, injury
-  // watch and weekly load — but never the exact train/modify/pull back call,
-  // which stays on Today. The day's readiness_status must not leak. Injury watch
-  // is a short cue (watch area + pointer), not the full red-flag sentence.
-  assert.equal(html.includes("sp-readiness"), true);
-  assert.equal(html.includes("Speed conversion"), true);
-  assert.equal(html.includes("Injury watch"), true);
-  assert.equal(html.includes("Achilles — see red flags"), true);
-  assert.equal(html.includes("Weekly load"), true);
+  // The day's readiness_status must never leak the exact train/modify/pull-back
+  // call — that stays on Today.
   assert.equal(html.includes("Train as planned"), false);
   assert.equal(html.includes("train_as_planned"), false);
-  // Current day is flagged.
+  // Current day is flagged, and its completion shows on the day card.
   assert.equal(html.includes("cm-day-current"), true);
   assert.equal(html.includes("1/1 done"), true);
 });
@@ -586,102 +684,12 @@ test("renders the raw markdown fallback collapsed at the bottom", () => {
   assert.equal(html.includes("cm-raw-fallback"), true);
 });
 
-test("uses an athlete-readable camp-map command header, not internal wording", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
-
-  assert.equal(html.includes("Camp map"), true);
-  assert.equal(html.includes("Structured plan"), false);
-});
-
-test("command header prefers the record status over plan_metadata.status", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: {
-      title: "Fight Camp",
-      sport: "boxing",
-      plan_type: "fight_camp",
-      status: "active",
-    },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  const html = renderToStaticMarkup(
-    <StructuredPlanRenderer
-      plan={plan}
-      createdAt="2026-06-11T09:30:00Z"
-      planStatus="held_for_review"
-    />,
-  );
-
-  // The authoritative saved-plan record status wins over the structured-plan
-  // vocabulary, so the review state shows and "Active" does not.
-  assert.equal(html.includes("Awaiting review"), true);
-  assert.equal(html.includes("Active"), false);
-  // A review/hold status must never render with the success tone.
-  assert.equal(html.includes("sp-done"), false);
-  // The generation date is formatted deterministically (timezone-stable, no
-  // Date parsing) so SSR output is identical everywhere.
-  assert.equal(html.includes("Generated 11 Jun 2026"), true);
-});
-
-test("command header tones publishable statuses as success and unsafe ones neutrally", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  const ready = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} planStatus="ready" />);
-  assert.equal(ready.includes("Ready"), true);
-  assert.equal(ready.includes("sp-tag sp-done"), true);
-  // No createdAt prop, so the "Generated …" line is omitted entirely.
-  assert.equal(ready.includes("Generated"), false);
-
-  const flagged = renderToStaticMarkup(
-    <StructuredPlanRenderer plan={plan} planStatus="publishable_with_flags" />,
-  );
-  assert.equal(flagged.includes("sp-tag sp-done"), true);
-
-  // Review / safety-hold / archived states must stay neutral — never success.
-  for (const status of [
-    "review_required",
-    "held_for_review",
-    "needs_review",
-    "triage_blocked",
-    "medical_hold",
-    "restricted_rehab_only",
-    "archived",
-    "generated",
-  ]) {
-    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} planStatus={status} />);
-    assert.equal(html.includes("sp-done"), false);
-  }
-});
-
-test("command header falls back to plan_metadata.status only without a record status", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: {
-      title: "Fight Camp",
-      sport: "boxing",
-      plan_type: "fight_camp",
-      status: "active",
-    },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  // No planStatus prop (preview/test context): the structured status is used,
-  // and structured-vocabulary states stay neutral (not success-toned).
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
-  assert.equal(html.includes("Active"), true);
-  assert.equal(html.includes("sp-done"), false);
-});
+// NOTE: the earlier "command header" tests (a header rendering "Camp map",
+// plan-status colouring, and a "Generated {date}" line from the createdAt /
+// planStatus props) were removed with the camp-map redesign — those props are
+// intentionally not rendered on this plan view (see the prop doc-comments in
+// structured-plan-renderer.tsx). Their tests were deleted rather than kept
+// asserting a removed subsystem.
 
 test("does not leak raw enum tokens for day type or session type", () => {
   const plan = {
@@ -756,14 +764,16 @@ test("does not render day intensity tags on session cards", () => {
   assert.equal(html.includes("Mixed session"), true);
 });
 
-test("hides weight-cut symptom warnings unless risk is above moderate", () => {
-  const basePlan = {
+// Base plan carrying the weight-cut symptom escalation rule/note. `severity` is
+// parameterised so we can prove a prominent severity overrides de-emphasis.
+function weightCutPlan(severity: string): StructuredPlan {
+  return {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
     red_flag_rules: [
       {
         rule_id: "rf-weight",
-        severity: "red",
+        severity,
         display_text:
           "If weight-cut symptoms worsen (lightheadedness), stop non-essential activity and escalate to coach/medical staff.",
       },
@@ -777,32 +787,60 @@ test("hides weight-cut symptom warnings unless risk is above moderate", () => {
     ],
     weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "TAPER", days: [] }],
   } satisfies StructuredPlan;
+}
 
+function withRiskBand(plan: StructuredPlan, riskBand: string): StructuredPlan {
+  return {
+    ...plan,
+    deterministic_support: {
+      nutrition: { by_phase: { TAPER: { weight_cut: { active: true, risk_band: riskBand } } } },
+    },
+  } as StructuredPlan;
+}
+
+test("weight-cut symptom red flag is de-emphasised ONLY when risk is explicitly below moderate", () => {
+  // Low risk + non-prominent severity: shown but softened so it does not lead.
+  const low = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={withRiskBand(weightCutPlan("amber"), "low")} />,
+  );
+  assert.equal(low.includes("weight-cut symptoms worsen"), true);
+  assert.equal(low.includes("sp-redflag-deemphasised"), true);
+  // The redundant duplicate copy in the general Active Notes card stays deduped,
+  // so the escalation sentence renders exactly once (in Red Flags).
+  assert.equal(countOccurrences(low, "stop non-essential activity"), 1);
+});
+
+test("weight-cut symptom red flag is NOT de-emphasised at moderate risk", () => {
+  // Moderate is not BELOW moderate — it must render at full weight.
   const moderate = renderToStaticMarkup(
-    <StructuredPlanRenderer
-      plan={{
-        ...basePlan,
-        deterministic_support: {
-          nutrition: { by_phase: { TAPER: { weight_cut: { active: true, risk_band: "moderate" } } } },
-        },
-      }}
-    />,
+    <StructuredPlanRenderer plan={withRiskBand(weightCutPlan("amber"), "moderate")} />,
   );
-  assert.equal(moderate.includes("weight-cut symptoms worsen"), false);
-  assert.equal(moderate.includes("lightheadedness"), false);
+  assert.equal(moderate.includes("weight-cut symptoms worsen"), true);
+  assert.equal(moderate.includes("sp-redflag-deemphasised"), false);
+});
 
-  const high = renderToStaticMarkup(
-    <StructuredPlanRenderer
-      plan={{
-        ...basePlan,
-        deterministic_support: {
-          nutrition: { by_phase: { TAPER: { weight_cut: { active: true, risk_band: "high" } } } },
-        },
-      }}
-    />,
+test("weight-cut symptom red flag is NOT de-emphasised when risk data is missing", () => {
+  // No deterministic_support at all: risk is unknown, never treated as low.
+  const missing = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={weightCutPlan("amber")} />,
   );
-  assert.equal(high.includes("weight-cut symptoms worsen"), true);
-  assert.equal(countOccurrences(high, "stop non-essential activity"), 1);
+  assert.equal(missing.includes("weight-cut symptoms worsen"), true);
+  assert.equal(missing.includes("sp-redflag-deemphasised"), false);
+});
+
+test("an explicit red/critical severity rule is never de-emphasised, even below moderate risk", () => {
+  // Even at low risk, an explicit high-severity rule overrides de-emphasis.
+  for (const severity of ["red", "critical", "high"]) {
+    const html = renderToStaticMarkup(
+      <StructuredPlanRenderer plan={withRiskBand(weightCutPlan(severity), "low")} />,
+    );
+    assert.equal(html.includes("weight-cut symptoms worsen"), true);
+    assert.equal(
+      html.includes("sp-redflag-deemphasised"),
+      false,
+      `severity "${severity}" must never be faded`,
+    );
+  }
 });
 
 test("a session-less rest day does not render an awkward '0 sessions' tag", () => {

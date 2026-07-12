@@ -16,6 +16,7 @@ import {
   getDisplayableRedFlags,
   getFallbackSafetyNotes,
   getRehabOrMobilityBlocks,
+  isDeEmphasisedWeightCutSafety,
   progressionRuleLabel,
   planNoteLabel,
   formatWeightCutBand,
@@ -97,16 +98,30 @@ function CollapsibleSection({
   title,
   detailLabel,
   defaultOpen,
+  syncKey,
   className,
   children,
 }: {
   title: string;
   detailLabel?: string;
   defaultOpen?: boolean;
+  /** When provided and it CHANGES, the open state re-syncs to `defaultOpen`.
+   * Used to make the support phase follow the selected week: a new week supplies
+   * a new syncKey, so the matching phase opens and the others close, while a
+   * manual toggle is preserved until the next week change. Omit to keep the
+   * mount-only `defaultOpen` behaviour. */
+  syncKey?: string | null;
   className?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
+  // Reset-on-key-change during render (React's recommended pattern): re-open to
+  // the new default when the sync key changes, without an effect or a flash.
+  const [prevSyncKey, setPrevSyncKey] = useState<string | null | undefined>(syncKey);
+  if (syncKey !== undefined && syncKey !== prevSyncKey) {
+    setPrevSyncKey(syncKey);
+    setOpen(Boolean(defaultOpen));
+  }
   const actionTarget = detailLabel || title;
   return (
     <details
@@ -512,8 +527,16 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
   const coachLedContact = getCoachLedContactView(day);
+  // Rule: the DAY mindset renders exactly once, here at the day level, whenever
+  // it exists. Session cards render with showDayContext=false, so they show ONLY
+  // their own session mindset (never the day's) — this avoids both dropping the
+  // day mindset when a session lacks one AND duplicating the day mindset into
+  // every session. A session that defines its own mindset shows that on its card
+  // in addition to this day-level one; they are distinct anchors.
+  const dayMindset = card?.mindset_anchor;
+  const hasDayMindset = getMindsetLines(dayMindset).length > 0;
   const hasDayContext = Boolean(
-    warning || nutrition || weightCut || lightTechnicalContext || coachLedContact,
+    warning || nutrition || weightCut || lightTechnicalContext || coachLedContact || hasDayMindset,
   );
   if (!hasDayContext) {
     return null;
@@ -530,6 +553,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+      {hasDayMindset ? <MindsetAnchorCard anchor={dayMindset} /> : null}
     </div>
   );
 }
@@ -773,8 +797,17 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
       <ul className="sp-redflag-list">
         {rules.length > 0 ? rules.map((rule, index) => {
           const { text, action, severityLabel } = redFlagView(rule);
+          // A weight-cut symptom rule is always shown, but its secondary text is
+          // softened when cut risk is EXPLICITLY below moderate so it does not
+          // lead. An explicit red/critical/high severity is never softened (the
+          // severity is passed so it overrides), and the severity badge itself
+          // always stays full-strength (see the CSS — only text is muted).
+          const deEmphasised = isDeEmphasisedWeightCutSafety(plan, text, rule.severity as string);
           return (
-            <li key={cleanText(rule.rule_id) || `flag-${index}`} className="sp-redflag">
+            <li
+              key={cleanText(rule.rule_id) || `flag-${index}`}
+              className={`sp-redflag${deEmphasised ? " sp-redflag-deemphasised" : ""}`}
+            >
               <div className="sp-redflag-head">
                 <span className="sp-redflag-kicker">Stop signal</span>
                 {severityLabel ? (
@@ -789,15 +822,21 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
               {action ? <p className="sp-muted">{action}</p> : null}
             </li>
           );
-        }) : fallbackNotes.map((note, index) => (
-          <li key={`${note.category}-${index}`} className="sp-redflag">
+        }) : fallbackNotes.map((note, index) => {
+          const deEmphasised = isDeEmphasisedWeightCutSafety(plan, note.text);
+          return (
+          <li
+            key={`${note.category}-${index}`}
+            className={`sp-redflag${deEmphasised ? " sp-redflag-deemphasised" : ""}`}
+          >
             <div className="sp-redflag-head">
               <span className="sp-redflag-kicker">Safety note</span>
               <span className="sp-tag sp-redflag-badge">{planNoteLabel(note)}</span>
             </div>
             <span className="sp-redflag-text">{note.text}</span>
           </li>
-        ))}
+          );
+        })}
       </ul>
       ) : null}
       <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
@@ -874,6 +913,21 @@ type RecoveryPhaseItem = {
   lists: { label: string; items: string[] }[];
 };
 
+/** Index of the support phase matching the viewed week (else the first phase),
+ * so nutrition/recovery open on the phase the athlete is actually looking at. */
+function resolveActiveSupportPhaseIndex(
+  items: { phaseKey: string | null }[],
+  activePhaseKey: string | null,
+): number {
+  if (activePhaseKey) {
+    const match = items.findIndex((item) => item.phaseKey === activePhaseKey);
+    if (match >= 0) {
+      return match;
+    }
+  }
+  return 0;
+}
+
 function getNutritionPhaseItems(plan: StructuredPlan): NutritionPhaseItem[] {
   return getDeterministicNutritionPhases(plan)
     .map(({ phase, entry }: { phase: string; entry: DeterministicNutritionPhase }) => {
@@ -908,9 +962,11 @@ function getRecoveryPhaseItems(plan: StructuredPlan): RecoveryPhaseItem[] {
 function NutritionPhaseCard({
   item,
   defaultOpen,
+  syncKey,
 }: {
   item: NutritionPhaseItem;
   defaultOpen?: boolean;
+  syncKey?: string | null;
 }) {
   const phaseLabel = titleize(item.phase);
   return (
@@ -923,6 +979,7 @@ function NutritionPhaseCard({
         title={phaseLabel}
         detailLabel={`${phaseLabel} nutrition`}
         defaultOpen={defaultOpen}
+        syncKey={syncKey}
         className="sp-nutrition-phase"
       >
         <ul className="sp-kv-list">
@@ -942,9 +999,11 @@ function NutritionPhaseCard({
 function RecoveryPhaseCard({
   item,
   defaultOpen,
+  syncKey,
 }: {
   item: RecoveryPhaseItem;
   defaultOpen?: boolean;
+  syncKey?: string | null;
 }) {
   const phaseLabel = titleize(item.phase);
   return (
@@ -957,6 +1016,7 @@ function RecoveryPhaseCard({
         title={phaseLabel}
         detailLabel={`${phaseLabel} recovery`}
         defaultOpen={defaultOpen}
+        syncKey={syncKey}
         className="sp-recovery-phase"
       >
         <ul className="sp-kv-list">
@@ -982,7 +1042,15 @@ function RecoveryPhaseCard({
 // Owns the full nutrition details. Deterministic Stage 1 macros/hydration/fuel
 // timing win when present; the legacy prose fields are the fallback only. Never
 // renders coach_gated (it is stripped server-side before reaching the frontend).
-export function NutritionCard({ plan }: { plan: StructuredPlan }) {
+export function NutritionCard({
+  plan,
+  activePhaseKey = null,
+}: {
+  plan: StructuredPlan;
+  /** Normalized phase key of the week the athlete is viewing. The matching
+   * phase opens by default so a taper/SPP week does not land on expanded GPP. */
+  activePhaseKey?: string | null;
+}) {
   const items = getNutritionPhaseItems(plan);
   if (items.length === 0 && !hasNutrition(plan)) {
     return null;
@@ -995,10 +1063,16 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
       </section>
     );
   }
+  const openIndex = resolveActiveSupportPhaseIndex(items, activePhaseKey);
   return (
     <div className="sp-phase-support-grid">
       {items.map((item, index) => (
-        <NutritionPhaseCard key={item.phase} item={item} defaultOpen={index === 0} />
+        <NutritionPhaseCard
+          key={item.phase}
+          item={item}
+          defaultOpen={index === openIndex}
+          syncKey={activePhaseKey ?? ""}
+        />
       ))}
     </div>
   );
@@ -1007,15 +1081,27 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
 // Owns recovery detail (sleep / fatigue / phase focus / core actions). Renders
 // deterministic Stage 1 recovery; never coach_gated. Stop/modify/report
 // thresholds stay with RedFlagsCard, so this card does not repeat them.
-export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
+export function RecoveryCard({
+  plan,
+  activePhaseKey = null,
+}: {
+  plan: StructuredPlan;
+  activePhaseKey?: string | null;
+}) {
   const items = getRecoveryPhaseItems(plan);
   if (items.length === 0) {
     return null;
   }
+  const openIndex = resolveActiveSupportPhaseIndex(items, activePhaseKey);
   return (
     <div className="sp-phase-support-grid">
       {items.map((item, index) => (
-        <RecoveryPhaseCard key={item.phase} item={item} defaultOpen={index === 0} />
+        <RecoveryPhaseCard
+          key={item.phase}
+          item={item}
+          defaultOpen={index === openIndex}
+          syncKey={activePhaseKey ?? ""}
+        />
       ))}
     </div>
   );
@@ -1040,7 +1126,10 @@ function WeekStrip({
       {weeks.map((week, pos) => {
         const completion = weekCompletion(week, completionIndex);
         const phase = cleanText(week.phase_label);
-        const index = typeof week.week_index === "number" ? week.week_index : pos + 1;
+        const index =
+          typeof week.week_index === "number" && Number.isFinite(week.week_index)
+            ? week.week_index
+            : pos + 1;
         const selected = pos === selectedPos;
         const current = pos === currentPos;
         return (
@@ -1187,17 +1276,33 @@ export function StructuredPlanRenderer({
     ? resolvePlanProgress(plan, resolvedFocusDay)
     : calendarProgress;
 
+  // `selectedPos` holds ONLY an explicit manual week choice; while it is null the
+  // view auto-follows the plan's current week via the fallback in `effectivePos`
+  // below (so no effect is needed to sync it, and there is no render loop).
   const [selectedPos, setSelectedPos] = useState<number | null>(null);
-  const userSelectedWeek = useRef(false);
 
-  useEffect(() => {
-    if (!userSelectedWeek.current && focusProgress.currentWeekPos != null) {
-      setSelectedPos(focusProgress.currentWeekPos);
-    }
-  }, [focusProgress.currentWeekPos]);
+  // A stable identity for the current plan's week structure. When the component
+  // is handed a different plan without remounting — e.g. the plan viewer swaps an
+  // adapted text plan for the richer structured payload — a retained manual
+  // `selectedPos` could point at a week index from the OLD structure. Reset it
+  // DURING render (React's recommended "reset state on prop change" pattern):
+  // this drops the stale selection before anything renders, so the wrong week is
+  // never briefly shown, with no extra effect/render pass.
+  const weekSignature = useMemo(
+    () =>
+      `${weeks.length}:` +
+      weeks
+        .map((week) => cleanText(week.week_id) || cleanText(week.start_date) || "")
+        .join("|"),
+    [weeks],
+  );
+  const [prevWeekSignature, setPrevWeekSignature] = useState(weekSignature);
+  if (weekSignature !== prevWeekSignature) {
+    setPrevWeekSignature(weekSignature);
+    setSelectedPos(null);
+  }
 
   const handleSelectWeek = (pos: number) => {
-    userSelectedWeek.current = true;
     setSelectedPos(pos);
   };
 
@@ -1210,6 +1315,8 @@ export function StructuredPlanRenderer({
   const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
   const hasRecoverySupport = getRecoveryPhaseItems(plan).length > 0;
   const dayList = selectedWeek ? getDays(selectedWeek) : [];
+  // Open the support phase that matches the week the athlete is viewing.
+  const activeSupportPhaseKey = normalizeSupportPhaseKey(selectedWeek?.phase_label);
 
   return (
     <div className="sp-root cm-root">
@@ -1267,7 +1374,7 @@ export function StructuredPlanRenderer({
           detailLabel="recovery"
           className="cm-support-section"
         >
-          <RecoveryCard plan={plan} />
+          <RecoveryCard plan={plan} activePhaseKey={activeSupportPhaseKey} />
         </CollapsibleSection>
       ) : null}
 
@@ -1277,7 +1384,7 @@ export function StructuredPlanRenderer({
           detailLabel="nutrition"
           className="cm-support-section"
         >
-          <NutritionCard plan={plan} />
+          <NutritionCard plan={plan} activePhaseKey={activeSupportPhaseKey} />
         </CollapsibleSection>
       ) : null}
 

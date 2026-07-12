@@ -7,6 +7,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "test:unit": "node --import tsx --test \"lib/**/*.test.ts\" \"components/**/*.test.ts\" \"components/**/*.test.tsx\"",
     "test:e2e": "playwright test",
     "audit:high": "npm audit --audit-level=high"
   },
@@ -21,12 +22,15 @@
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",
     "@playwright/test": "1.60.0",
+    "@types/jsdom": "^28.0.3",
     "@types/node": "24.12.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/zxcvbn": "4.4.5",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "jsdom": "^25.0.1",
+    "tsx": "^4.23.0",
     "typescript": "5.9.3"
   },
   "engines": {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { canSelectWizardStep } = await import(new URL("./step-navigation.ts", import.meta.url).href);
+import { canSelectWizardStep } from "./step-navigation.ts";
 
 test("allows backward step jumps without re-validating the current step", () => {
   let validationCalls = 0;
