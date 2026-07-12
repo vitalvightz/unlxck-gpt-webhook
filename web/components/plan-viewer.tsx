@@ -340,6 +340,7 @@ function TextStructuredPlanRenderer({
   return (
     <StructuredPlanRenderer
       plan={adaptedPlan}
+      openOngoing={isOpenOngoingPlan(fightDate)}
       focusDay={focusDay}
       currentDayLabel={currentDayLabel}
     />
