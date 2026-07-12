@@ -55,7 +55,7 @@ Plans describe the saved planning result and review/safety state.
 - `ready`: plan is available to the athlete.
 - `review_required`: Stage 2 or admin review must resolve the plan before release.
 - `held_for_review`: explicit admin hold.
-- `publishable_with_flags`: admin has marked the plan publishable with known warnings.
+- `publishable_with_flags`: the plan is athlete-releasable with known low-risk quality warnings and remains visible for asynchronous admin audit.
 - `triage_blocked`: injury triage blocked Stage 2.
 - `medical_hold`: injury triage requires medical clearance before planning proceeds.
 - `restricted_rehab_only`: injury triage allows restricted rehab-only planning.
@@ -91,9 +91,27 @@ What the automated Stage 2 finalizer (`api/stage2_automation.py`) writes, by out
 | Stage 2 outcome | Plan status | `stage2_status` | Generation job status |
 |---|---|---|---|
 | Validator passes (clean) | `ready` | `stage2_pass` | `completed` |
-| Validator passes (non-blocking flags) | `publishable_with_flags` | `stage2_pass` | `completed` |
-| **Validator fails** | **`held_for_review`** | `stage2_failed` | `review_required` |
+| Validator has only allowlisted low-risk quality flags | `publishable_with_flags` | `stage2_pass` | `completed` |
+| Validator has an admin-review blocking context/programme finding | `held_for_review` | `stage2_failed` | `review_required` |
+| **Validator fails on a hard blocker** (safety / output integrity) | **`held_for_review`** | `stage2_failed` | `review_required` |
 | Injury triage blocks Stage 2 | `triage_blocked` (or `medical_hold` / `restricted_rehab_only` / `needs_review`) | unchanged / `""` | `review_required` |
+
+The shared Stage 2 policy has three explicit classes:
+
+- `hard_stage2_blocker_codes`: safety and output-integrity failures;
+- `athlete_release_with_flags_codes`: a narrow allowlist of low-risk clarity findings;
+- `admin_review_blocking_codes`: athlete-context and programme-quality failures that must hold.
+
+Validator errors, hard blockers, admin-review blockers, mixed low-risk/blocking
+reports, and unknown `blocking_warnings` all fail closed to `held_for_review`.
+Only findings in `athlete_release_with_flags_codes` release as
+`publishable_with_flags`. The persisted validator report records the matching
+`release_decision`, `is_athlete_releasable`, and `is_publishable` values so the
+audit state agrees with the saved plan status.
+
+`publishable_with_flags` remains in the admin review surface for asynchronous
+audit. This policy reduces athlete release delay; it does not remove flagged
+plans from the admin queue or claim an equivalent reduction in review volume.
 
 Naming caveat: the helper that builds the failed-validation result is named
 `_review_required_result(...)`, but it sets the **plan** status to

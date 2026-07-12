@@ -8,10 +8,11 @@ from typing import Any, Protocol
 
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
 from fightcamp.stage2_policy import (
-    apply_publish_blocking_review_gate,
+    admin_review_blocking_findings,
+    apply_stage2_release_policy,
+    athlete_release_with_flags_findings,
     is_card_rescuable_soft_code,
     is_hard_stage2_blocker,
-    publish_blocking_review_findings,
 )
 
 from .state_machine import is_athlete_displayable_plan_status
@@ -36,6 +37,7 @@ from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_day
 # The worker maps `held_for_review` to the *job* status `review_required` via
 # api/state_machine.job_status_for_plan_status. See docs/state_machine.md.
 _APP_STATUS_READY = "ready"
+_APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
@@ -47,7 +49,7 @@ _DEFAULT_MAX_OUTPUT_TOKENS = 0
 
 
 def _stage2_report_blocks_release(validator_report: Any) -> bool:
-    """Whether the validator report contains issues that must hold release."""
+    """Whether the explicit Stage 2 release policy requires an admin hold."""
 
     if not isinstance(validator_report, dict):
         return True
@@ -55,24 +57,16 @@ def _stage2_report_blocks_release(validator_report: Any) -> bool:
     errors = validator_report.get("errors") or []
     blocking_warnings = validator_report.get("blocking_warnings") or []
     warnings = validator_report.get("warnings") or []
+    review_flags = validator_report.get("review_flags") or []
     if (
         not isinstance(errors, list)
         or not isinstance(blocking_warnings, list)
         or not isinstance(warnings, list)
+        or not isinstance(review_flags, list)
     ):
         return True
-
-    if errors:
-        return True
-    if publish_blocking_review_findings(validator_report):
-        return True
-    if any(
-        isinstance(warning, dict)
-        and is_hard_stage2_blocker(str(warning.get("code") or ""))
-        for warning in [*blocking_warnings, *(warnings if isinstance(warnings, list) else [])]
-    ):
-        return True
-    return False
+    policy_report = apply_stage2_release_policy(validator_report)
+    return policy_report.get("release_decision") == "hold"
 
 
 def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
@@ -88,13 +82,15 @@ def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
     * ``errors`` and ``blocking_warnings`` are lists;
     * every error/blocking warning is a dict carrying a non-empty string
       ``code``; and
-    * every code is a known card-rescuable code, not safety/output-integrity or
-      publish-blocking coaching quality.
+    * every code is a known card-rescuable code, not safety/output-integrity,
+      admin-review blocking, or an athlete-release quality flag.
     """
 
     if not isinstance(validator_report, dict):
         return False
-    if publish_blocking_review_findings(validator_report):
+    if admin_review_blocking_findings(validator_report):
+        return False
+    if athlete_release_with_flags_findings(validator_report):
         return False
     errors = validator_report.get("errors")
     blocking_warnings = validator_report.get("blocking_warnings") or []
@@ -899,18 +895,18 @@ class OpenAIStage2Automator:
         )
         first_review = {
             **first_review,
-            "validator_report": apply_publish_blocking_review_gate(
-                first_review["validator_report"]
-            ),
+            "validator_report": apply_stage2_release_policy(first_review["validator_report"]),
         }
-        publish_blocking_findings = publish_blocking_review_findings(
-            first_review["validator_report"]
-        )
+        quality_findings = athlete_release_with_flags_findings(first_review["validator_report"])
+        admin_blocking_findings = admin_review_blocking_findings(first_review["validator_report"])
+        release_decision = first_review["validator_report"].get("release_decision")
         logger.info(
-            "[stage2] first_pass review status=%s needs_retry=%s publish_blockers=%s",
+            "[stage2] first_pass review status=%s needs_retry=%s release_decision=%s quality_flags=%s admin_blockers=%s",
             first_review["status"],
             first_review["needs_retry"],
-            len(publish_blocking_findings),
+            release_decision,
+            len(quality_findings),
+            len(admin_blocking_findings),
         )
 
         # A card-rescuable hold is tentatively published so the structured-card
@@ -919,7 +915,7 @@ class OpenAIStage2Automator:
         # gate further down reverts it to a hold. Only gated when structured
         # plans are enabled - otherwise no card can ever rescue it and the
         # tentative publish would just flap back to a hold.
-        if first_review["status"] == "PASS" and not publish_blocking_findings:
+        if release_decision == "publish":
             result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
@@ -930,9 +926,12 @@ class OpenAIStage2Automator:
                 app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
-        elif not _stage2_report_blocks_release(first_review["validator_report"]):
+        elif release_decision == "publish_with_flags":
+            # Only the explicit low-risk allowlist reaches this path. Context,
+            # safety and programme-integrity findings remain held for admin.
             logger.info(
-                "[stage2] first_pass marked non-pass but no release blockers were found; releasing raw plan"
+                "[stage2] first_pass releasing with quality flags count=%s",
+                len(quality_findings),
             )
             result = _approved_result(
                 stage1_result,
@@ -941,7 +940,7 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
-                app_status=_APP_STATUS_READY,
+                app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
                 stage2_cost=first_pass_cost,
             )
         elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
@@ -961,16 +960,9 @@ class OpenAIStage2Automator:
                 stage2_cost=first_pass_cost,
             )
         else:
-            if publish_blocking_findings:
-                logger.warning(
-                    "[stage2] review required after first_pass: publish-blocking quality findings=%s",
-                    ",".join(
-                        str(finding.get("code") or "")
-                        for finding in publish_blocking_findings
-                    ),
-                )
-            else:
-                logger.warning("[stage2] review required after first_pass: automatic retry disabled")
+            logger.warning(
+                "[stage2] review required after first_pass: hard release blockers present; holding for admin review"
+            )
             result = _review_required_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,

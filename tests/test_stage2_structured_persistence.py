@@ -382,15 +382,18 @@ def test_finalize_card_rescuable_blocking_warning_rescued_by_clean_card(monkeypa
     ]
 
 
-def test_finalize_publish_blocking_warning_not_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatch):
+def test_finalize_low_risk_quality_warning_releases_with_flags(monkeypatch: pytest.MonkeyPatch):
+    # An explicitly allowlisted low-risk quality flag does not hold the athlete.
+    # The structured call has no mocked response, so it must fail cleanly and
+    # leave an auditable not_attempted marker instead of masking the release.
     def _warn_review(**_):
         return {
             "status": "WARN",
             "needs_retry": True,
             "validator_report": {
                 "errors": [],
-                "warnings": [{"code": "missing_required_element", "severity": "blocker"}],
-                "blocking_warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "warnings": [{"code": "template_like_session_render", "severity": "blocker"}],
+                "blocking_warnings": [{"code": "template_like_session_render", "severity": "blocker"}],
                 "review_flag_count": 0,
             },
         }
@@ -402,14 +405,15 @@ def test_finalize_publish_blocking_warning_not_rescued_by_clean_card(monkeypatch
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert len(client.responses.calls) == 1
-    assert result["status"] == "held_for_review"
-    assert result["plan_text"] == ""
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# final plan"
     assert result["structured_plan"] is None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
-    assert result["stage2_validator_report"]["publish_blocking_review_flags"] == [
-        {"code": "missing_required_element", "severity": "blocker"}
+    assert result["stage2_validator_report"]["quality_review_flags"] == [
+        {"code": "template_like_session_render", "severity": "blocker"}
     ]
+    assert result["stage2_validator_report"]["release_decision"] == "publish_with_flags"
+    assert result["stage2_validator_report"]["is_publishable"] is True
 
 
 def test_finalize_soft_hold_reverts_to_hold_when_card_invalid(monkeypatch: pytest.MonkeyPatch):

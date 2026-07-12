@@ -585,7 +585,7 @@ def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_
     assert body["admin_outputs"]["stage2_validator_report"]["review_flag_count"] >= 1
 
 
-def test_manual_stage2_submission_holds_publish_blocking_quality_flags():
+def test_manual_stage2_submission_holds_admin_review_blocking_quality_flags():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -639,7 +639,7 @@ def test_manual_stage2_submission_holds_publish_blocking_quality_flags():
     assert body["outputs"]["plan_text"] == ""
     assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
     assert body["admin_outputs"]["stage2_retry_text"]
-    assert body["admin_outputs"]["stage2_validator_report"]["publish_blocking_review_flags"][
+    assert body["admin_outputs"]["stage2_validator_report"]["admin_review_blocking_flags"][
         0
     ]["code"] == "missing_required_element"
 

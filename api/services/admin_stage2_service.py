@@ -431,20 +431,23 @@ async def prewarm_structured_plan(
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
     from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
     from fightcamp.stage2_policy import (
-        apply_publish_blocking_review_gate,
-        publish_blocking_review_findings,
+        apply_stage2_release_policy,
     )
 
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
     review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
-    validator_report = apply_publish_blocking_review_gate(review["validator_report"])
-    publish_blocking_findings = publish_blocking_review_findings(validator_report)
+    validator_report = apply_stage2_release_policy(review["validator_report"])
+    release_decision = validator_report.get("release_decision")
     next_attempt_count = int(plan_row.get("stage2_attempt_count") or 0) + 1
     had_retry_prompt = bool(str(plan_row.get("stage2_retry_text") or "").strip())
 
-    if review["status"] == "PASS" and not publish_blocking_findings:
+    if release_decision in {"publish", "publish_with_flags"}:
         return {
-            "status": "ready",
+            "status": (
+                "publishable_with_flags"
+                if release_decision == "publish_with_flags"
+                else "ready"
+            ),
             "plan_text": final_plan_text,
             "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
             "final_plan_text": final_plan_text,
