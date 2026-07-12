@@ -65,7 +65,7 @@ export function formatBlockLoad(load: LoadPrescription | null | undefined): stri
     return null;
   }
   const display = cleanText(load.display);
-  if (display && !MEANINGLESS_LOAD.has(display.toLowerCase())) {
+  if (display && !MEANINGLESS_LOAD.has(display.toLowerCase()) && !isNonFiniteNumericToken(display)) {
     return display;
   }
   return null;
@@ -81,6 +81,14 @@ export function shouldShowRest(rest: MeasuredValue | null | undefined): boolean 
  * and non-numbers so a malformed numeric payload never reaches the UI. */
 export function finitePositiveNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/** A bare non-finite numeric spelling — "NaN", "Infinity", "+Infinity",
+ * "-Infinity" (case-insensitive) — that must never render. This targets the
+ * STANDALONE token only, so it never touches a valid range like "4-6" or a time
+ * string like "30 seconds" (those carry a dash / units and are not bare tokens). */
+export function isNonFiniteNumericToken(text: string): boolean {
+  return /^[+-]?(nan|infinity)$/i.test(text.trim());
 }
 
 /** "180 seconds" / "45 minutes" / null. Rejects non-finite (NaN/Infinity) and
@@ -140,6 +148,11 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   if (repsText !== null && /^-?\d+(?:\.\d+)?$/.test(repsText) && Number(repsText) <= 0) {
     repsText = null;
   }
+  // A bare non-finite spelling as text ("NaN", "Infinity", "-Infinity") never
+  // renders — a range "4-6" or time "30 seconds" is untouched.
+  if (repsText !== null && isNonFiniteNumericToken(repsText)) {
+    repsText = null;
+  }
   // The set multiplier must be a finite positive number, or it is omitted.
   const sets = finitePositiveNumber(block.sets) ? (block.sets as number) : null;
 
@@ -177,13 +190,15 @@ export function formatEffort(block: StructuredBlock | null | undefined): string 
   }
   const method = cleanText(effort.method);
   // A numeric effort (e.g. RPE 7) must be finite — a NaN/Infinity would otherwise
-  // print "RPE NaN". Non-numeric effort still passes through cleanText.
-  const value =
+  // print "RPE NaN". Non-numeric effort passes through cleanText, but a bare
+  // non-finite spelling as text ("RPE" + "NaN"/"Infinity") is dropped too.
+  const rawValue =
     typeof effort.value === "number"
       ? Number.isFinite(effort.value)
         ? String(effort.value)
         : null
       : cleanText(effort.value as string);
+  const value = rawValue !== null && isNonFiniteNumericToken(rawValue) ? null : rawValue;
   if (method && value) {
     return `${method} ${value}`;
   }

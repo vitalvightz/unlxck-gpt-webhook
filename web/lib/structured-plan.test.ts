@@ -8,6 +8,7 @@ import {
   finitePositiveNumber,
   formatBlockLoad,
   formatEffort,
+  isNonFiniteNumericToken,
   formatMacroRange,
   formatMeasured,
   formatWeightCutBand,
@@ -914,6 +915,56 @@ test("weekLabel ignores a non-finite week_index", () => {
   assert.equal(weekLabel({ week_index: Number.NaN } as never), "Week");
   assert.equal(weekLabel({ week_index: Number.POSITIVE_INFINITY } as never), "Week");
   assert.equal(weekLabel({ week_index: 3 } as never), "Week 3");
+});
+
+test("isNonFiniteNumericToken flags bare non-finite spellings, not ranges or times", () => {
+  for (const token of [
+    "NaN",
+    "nan",
+    "Infinity",
+    "infinity",
+    "+Infinity",
+    "-Infinity",
+    "+NaN",
+    "-nan",
+    "  Infinity  ",
+  ]) {
+    assert.equal(isNonFiniteNumericToken(token), true, `${token} should be flagged`);
+  }
+  for (const ok of ["4-6", "8", "30 seconds", "30s", "12-15 s", "Infinity reps", "RPE 7", "", "0"]) {
+    assert.equal(isNonFiniteNumericToken(ok), false, `${ok} should NOT be flagged`);
+  }
+});
+
+test("malformed numeric string tokens never render as reps / effort / load", () => {
+  // reps as a non-finite string token → no Volume line at all.
+  for (const reps of ["NaN", "Infinity", "+Infinity", "-Infinity"]) {
+    const m = selectBlockMetric({ display_name: "Squat", sets: 3, reps } as never);
+    assert.equal(
+      m.some((x) => x.label === "Volume"),
+      false,
+      `reps "${reps}" should not render a Volume line`,
+    );
+  }
+  // Valid ranges and time strings are preserved.
+  assert.deepEqual(selectBlockMetric({ display_name: "Squat", sets: 3, reps: "4-6" } as never)[0], {
+    label: "Volume",
+    value: "3 × 4-6",
+  });
+  assert.deepEqual(selectBlockMetric({ display_name: "Hold", sets: 5, reps: "30 seconds" } as never)[0], {
+    label: "Duration",
+    value: "5 × 30 seconds",
+  });
+  // effort value as a non-finite string token → method only, never "RPE NaN".
+  for (const value of ["NaN", "Infinity", "+Infinity", "-Infinity"]) {
+    assert.equal(formatEffort({ effort: { method: "RPE", value } } as never), "RPE");
+  }
+  assert.equal(formatEffort({ effort: { method: "RPE", value: "6-7" } } as never), "RPE 6-7");
+  // load display as a non-finite string token → hidden.
+  for (const display of ["NaN", "Infinity", "-Infinity"]) {
+    assert.equal(formatBlockLoad({ display } as never), null);
+  }
+  assert.equal(formatBlockLoad({ display: "70% 1RM" } as never), "70% 1RM");
 });
 
 const WEIGHT_CUT_TEXT = "If weight-cut symptoms worsen (dizziness), stop and escalate to medical.";

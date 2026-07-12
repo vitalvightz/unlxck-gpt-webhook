@@ -296,6 +296,15 @@ test("a malformed numeric payload never renders NaN / Infinity in the card", () 
         duration: { value: Number.NaN, unit: "seconds" },
         distance: { value: Number.POSITIVE_INFINITY, unit: "m" },
       },
+      {
+        // Malformed numeric STRING tokens must be stripped too, not just numbers.
+        block_id: "b2",
+        display_name: "Bad string numbers",
+        sets: 3,
+        reps: "Infinity",
+        effort: { method: "RPE", value: "NaN" },
+        load: { display: "-Infinity" },
+      },
     ],
   } as unknown as StructuredSession;
   const sessionHtml = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
