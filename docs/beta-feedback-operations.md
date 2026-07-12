@@ -14,7 +14,7 @@ FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR=2
 FEEDBACK_SCREENSHOT_RETENTION_DAYS=90
 ```
 
-Positive integers enable a limit, and `0` disables it. Invalid or negative values fall back to the defaults. Changing limits does not require a database migration.
+`0` disables the report and screenshot-upload rate limits. Screenshot retention must remain a positive number; `0` falls back to 90 days. Invalid or negative values fall back to the defaults. Changing limits does not require a database migration.
 
 ## Review recent feedback
 
