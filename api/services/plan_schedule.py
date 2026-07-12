@@ -63,7 +63,10 @@ def _is_open_ongoing_plan(plan_row: Mapping[str, Any]) -> bool:
 
     if parse_iso_date(plan_row.get("fight_date")) is not None:
         return False
-    planning_brief = _decode_structured_text(plan_row.get("planning_brief"))
+    planning_brief_raw = plan_row.get("planning_brief")
+    if not planning_brief_raw:
+        return False
+    planning_brief = _decode_structured_text(planning_brief_raw)
     open_spec = planning_brief.get("open_plan_spec") if isinstance(planning_brief, dict) else None
     return isinstance(open_spec, dict) and open_spec.get("plan_type") == "open_ongoing_system"
 
