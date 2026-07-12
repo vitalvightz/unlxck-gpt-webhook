@@ -44,7 +44,7 @@ import {
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
-import { formatPlanStatus } from "@/lib/plan-format";
+import { formatPlanStatus, isOpenOngoingPlan } from "@/lib/plan-format";
 import {
   buildBlockedInjuryContextSummary,
   buildBlockedWhy,
@@ -340,6 +340,7 @@ function TextStructuredPlanRenderer({
   return (
     <StructuredPlanRenderer
       plan={adaptedPlan}
+      openOngoing={isOpenOngoingPlan(fightDate)}
       focusDay={focusDay}
       currentDayLabel={currentDayLabel}
     />
@@ -1273,7 +1274,8 @@ export function PlanViewer({
     injuryTriage?.mode || rawTriageMode || undefined,
   );
 
-  const planDetailTitle = plan.plan_name?.trim() || "Fight camp";
+  const openOngoing = isOpenOngoingPlan(plan.fight_date);
+  const planDetailTitle = plan.plan_name?.trim() || (openOngoing ? "Open training plan" : "Fight camp");
   const fightDateLabel = plan.fight_date ? `Fight date ${plan.fight_date}` : null;
 
   const blockedTitle =
@@ -2436,6 +2438,7 @@ export function PlanViewer({
               {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
+                  openOngoing={openOngoing}
                   focusDay={nextSessionFocusDate}
                   currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
                   createdAt={plan.created_at}

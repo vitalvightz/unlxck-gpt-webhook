@@ -78,6 +78,7 @@ export type SessionCompletionInfo = {
 };
 
 const titleize = formatPlanLabel;
+const OPEN_BLOCK_WEEK_LABELS = ["Baseline", "Progress", "Peak", "Deload"] as const;
 
 const LIGHT_TECHNICAL_NOTE =
   "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
@@ -966,12 +967,14 @@ function NutritionPhaseCard({
   item,
   defaultOpen,
   syncKey,
+  displayLabel,
 }: {
   item: NutritionPhaseItem;
   defaultOpen?: boolean;
   syncKey?: string | null;
+  displayLabel?: string;
 }) {
-  const phaseLabel = titleize(item.phase);
+  const phaseLabel = displayLabel || titleize(item.phase);
   return (
     <section className="sp-card sp-support-card sp-nutrition">
       <div className="sp-support-head">
@@ -1003,12 +1006,14 @@ function RecoveryPhaseCard({
   item,
   defaultOpen,
   syncKey,
+  displayLabel,
 }: {
   item: RecoveryPhaseItem;
   defaultOpen?: boolean;
   syncKey?: string | null;
+  displayLabel?: string;
 }) {
-  const phaseLabel = titleize(item.phase);
+  const phaseLabel = displayLabel || titleize(item.phase);
   return (
     <section className="sp-card sp-support-card sp-recovery">
       <div className="sp-support-head">
@@ -1048,11 +1053,13 @@ function RecoveryPhaseCard({
 export function NutritionCard({
   plan,
   activePhaseKey = null,
+  openOngoing = false,
 }: {
   plan: StructuredPlan;
   /** Normalized phase key of the week the athlete is viewing. The matching
    * phase opens by default so a taper/SPP week does not land on expanded GPP. */
   activePhaseKey?: string | null;
+  openOngoing?: boolean;
 }) {
   const items = getNutritionPhaseItems(plan);
   if (items.length === 0 && !hasNutrition(plan)) {
@@ -1067,14 +1074,16 @@ export function NutritionCard({
     );
   }
   const openIndex = resolveActiveSupportPhaseIndex(items, activePhaseKey);
+  const visibleItems = openOngoing ? items.slice(openIndex, openIndex + 1) : items;
   return (
     <div className="sp-phase-support-grid">
-      {items.map((item, index) => (
+      {visibleItems.map((item, index) => (
         <NutritionPhaseCard
           key={item.phase}
           item={item}
-          defaultOpen={index === openIndex}
+          defaultOpen={openOngoing || index === openIndex}
           syncKey={activePhaseKey ?? ""}
+          displayLabel={openOngoing ? "Current block" : undefined}
         />
       ))}
     </div>
@@ -1087,23 +1096,27 @@ export function NutritionCard({
 export function RecoveryCard({
   plan,
   activePhaseKey = null,
+  openOngoing = false,
 }: {
   plan: StructuredPlan;
   activePhaseKey?: string | null;
+  openOngoing?: boolean;
 }) {
   const items = getRecoveryPhaseItems(plan);
   if (items.length === 0) {
     return null;
   }
   const openIndex = resolveActiveSupportPhaseIndex(items, activePhaseKey);
+  const visibleItems = openOngoing ? items.slice(openIndex, openIndex + 1) : items;
   return (
     <div className="sp-phase-support-grid">
-      {items.map((item, index) => (
+      {visibleItems.map((item, index) => (
         <RecoveryPhaseCard
           key={item.phase}
           item={item}
-          defaultOpen={index === openIndex}
+          defaultOpen={openOngoing || index === openIndex}
           syncKey={activePhaseKey ?? ""}
+          displayLabel={openOngoing ? "Current block" : undefined}
         />
       ))}
     </div>
@@ -1117,18 +1130,22 @@ function WeekStrip({
   currentPos,
   onSelect,
   completionIndex,
+  openOngoing,
 }: {
   weeks: StructuredWeek[];
   selectedPos: number;
   currentPos: number | null;
   onSelect: (pos: number) => void;
   completionIndex?: CompletionIndex;
+  openOngoing: boolean;
 }) {
   return (
-    <nav className="cm-week-strip" aria-label="Camp weeks">
+    <nav className="cm-week-strip" aria-label={openOngoing ? "Training block weeks" : "Camp weeks"}>
       {weeks.map((week, pos) => {
         const completion = weekCompletion(week, completionIndex);
-        const phase = cleanText(week.phase_label);
+        const phase = openOngoing
+          ? OPEN_BLOCK_WEEK_LABELS[pos] || `Week ${pos + 1}`
+          : cleanText(week.phase_label);
         const index =
           typeof week.week_index === "number" && Number.isFinite(week.week_index)
             ? week.week_index
@@ -1167,11 +1184,13 @@ function WeekStrip({
 function WeekOverview({
   week,
   completionIndex,
+  openOngoing,
 }: {
   week: StructuredWeek;
   completionIndex?: CompletionIndex;
+  openOngoing: boolean;
 }) {
-  const load = weekLoadProxy(week);
+  const load = openOngoing ? null : weekLoadProxy(week);
   const completion = weekCompletion(week, completionIndex);
   const sessionSummary = weekSessionSummary(week);
   const countdownStart = cleanText(week.countdown_start);
@@ -1230,6 +1249,7 @@ function WeekOverview({
 
 export function StructuredPlanRenderer({
   plan,
+  openOngoing = false,
   today,
   focusDay,
   currentDayLabel = "Today",
@@ -1238,6 +1258,8 @@ export function StructuredPlanRenderer({
   onLogSession,
 }: {
   plan: StructuredPlan;
+  /** Renewable four-week plan without a scheduled fight date. */
+  openOngoing?: boolean;
   today?: Date;
   /** Accepted for compatibility with callers, but not rendered on this plan view. */
   createdAt?: string | null;
@@ -1331,10 +1353,15 @@ export function StructuredPlanRenderer({
             currentPos={calendarProgress.currentWeekPos}
             onSelect={handleSelectWeek}
             completionIndex={completionIndex}
+            openOngoing={openOngoing}
           />
 
           {selectedWeek ? (
-            <WeekOverview week={selectedWeek} completionIndex={completionIndex} />
+            <WeekOverview
+              week={selectedWeek}
+              completionIndex={completionIndex}
+              openOngoing={openOngoing}
+            />
           ) : null}
 
           <div className="sp-weeks cm-days">
@@ -1378,7 +1405,11 @@ export function StructuredPlanRenderer({
           detailLabel="recovery"
           className="cm-support-section"
         >
-          <RecoveryCard plan={plan} activePhaseKey={activeSupportPhaseKey} />
+          <RecoveryCard
+            plan={plan}
+            activePhaseKey={activeSupportPhaseKey}
+            openOngoing={openOngoing}
+          />
         </CollapsibleSection>
       ) : null}
 
@@ -1388,7 +1419,11 @@ export function StructuredPlanRenderer({
           detailLabel="nutrition"
           className="cm-support-section"
         >
-          <NutritionCard plan={plan} activePhaseKey={activeSupportPhaseKey} />
+          <NutritionCard
+            plan={plan}
+            activePhaseKey={activeSupportPhaseKey}
+            openOngoing={openOngoing}
+          />
         </CollapsibleSection>
       ) : null}
 

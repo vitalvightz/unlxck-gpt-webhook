@@ -19,7 +19,7 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
-import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
+import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName, isOpenOngoingPlan } from "@/lib/plan-format";
 import {
   getCampDayLabel,
   getInjuryOverrideBanner,
@@ -584,6 +584,7 @@ export default function HomePage() {
     // Today's countdown to the fight, and whether the scheduled session is today
     // (vs a future planned day that must read as pending, not cleared).
     const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
+    const openOngoing = hasActivePlan && isOpenOngoingPlan(activePlan.fight_date);
     const sessionIsToday = isSessionToday(sessionPreview, commandState?.today?.session_scope);
     const nextIsHardCombat = hasNextSession && isHardCombatSession(sessionPreview);
     // STOP + the scheduled session is today -> replace it with a safe session.
@@ -627,13 +628,13 @@ export default function HomePage() {
           <div className="overview-command-grid">
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
-              <h1 className="hero-title">Camp command centre</h1>
-              <p className="overview-command-summary">Today&apos;s training decision, next safe action, and active risk signals from your camp plan.</p>
-              <div className="overview-operational-strip" aria-label="Camp status">
+              <h1 className="hero-title">{openOngoing ? "Training command centre" : "Camp command centre"}</h1>
+              <p className="overview-command-summary">Today&apos;s training decision, next safe action, and active risk signals from your {openOngoing ? "ongoing plan" : "camp plan"}.</p>
+              <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
                 <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Camp day</span><span className="overview-operational-value">{campDay || "Not set"}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
               <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
               {commandError ? (
