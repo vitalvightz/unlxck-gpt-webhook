@@ -382,7 +382,10 @@ def test_finalize_card_rescuable_blocking_warning_rescued_by_clean_card(monkeypa
     ]
 
 
-def test_finalize_publish_blocking_warning_not_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatch):
+def test_finalize_publish_blocking_warning_releases_with_flags(monkeypatch: pytest.MonkeyPatch):
+    # A coaching-quality publish-blocking flag (no hard safety blocker) no longer
+    # holds the plan for an admin. Even without a structured card the plan is
+    # released as publishable_with_flags, with the flag recorded for async review.
     def _warn_review(**_):
         return {
             "status": "WARN",
@@ -402,11 +405,8 @@ def test_finalize_publish_blocking_warning_not_rescued_by_clean_card(monkeypatch
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert len(client.responses.calls) == 1
-    assert result["status"] == "held_for_review"
-    assert result["plan_text"] == ""
-    assert result["structured_plan"] is None
-    assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# final plan"
     assert result["stage2_validator_report"]["publish_blocking_review_flags"] == [
         {"code": "missing_required_element", "severity": "blocker"}
     ]

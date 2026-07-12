@@ -91,9 +91,18 @@ What the automated Stage 2 finalizer (`api/stage2_automation.py`) writes, by out
 | Stage 2 outcome | Plan status | `stage2_status` | Generation job status |
 |---|---|---|---|
 | Validator passes (clean) | `ready` | `stage2_pass` | `completed` |
-| Validator passes (non-blocking flags) | `publishable_with_flags` | `stage2_pass` | `completed` |
-| **Validator fails** | **`held_for_review`** | `stage2_failed` | `review_required` |
+| Validator has only coaching-quality publish-blocking flags (no hard blocker) | `publishable_with_flags` | `stage2_pass` | `completed` |
+| **Validator fails on a hard blocker** (safety / output integrity) | **`held_for_review`** | `stage2_failed` | `review_required` |
 | Injury triage blocks Stage 2 | `triage_blocked` (or `medical_hold` / `restricted_rehab_only` / `needs_review`) | unchanged / `""` | `review_required` |
+
+Only **hard blockers** hold a plan for admin review: the safety / output-integrity
+codes in `hard_stage2_blocker_codes` plus any validator `errors`. Publish-blocking
+**coaching-quality** flags (`publish_blocking_review_flag_codes` — option overload,
+weak anchor, missing required element, etc.) no longer gate the athlete: a plan
+whose only issues are those flags releases as `publishable_with_flags`, which is
+athlete-displayable *and* stays in the admin review surface for async review. This
+is the "beta needs admins less" policy — see `_stage2_report_blocks_release` in
+`api/stage2_automation.py`.
 
 Naming caveat: the helper that builds the failed-validation result is named
 `_review_required_result(...)`, but it sets the **plan** status to

@@ -36,6 +36,7 @@ from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_day
 # The worker maps `held_for_review` to the *job* status `review_required` via
 # api/state_machine.job_status_for_plan_status. See docs/state_machine.md.
 _APP_STATUS_READY = "ready"
+_APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
@@ -47,7 +48,21 @@ _DEFAULT_MAX_OUTPUT_TOKENS = 0
 
 
 def _stage2_report_blocks_release(validator_report: Any) -> bool:
-    """Whether the validator report contains issues that must hold release."""
+    """Whether the validator report contains a HARD blocker that must hold release.
+
+    "Hard blockers" are the safety / output-integrity findings in
+    ``hard_stage2_blocker_codes`` (restriction violations, fight-day protocol
+    breaches, empty/truncated output, etc.) plus any validator ``errors``. These
+    genuinely must not reach an athlete, so they hold the plan for admin review.
+
+    Publish-blocking *coaching-quality* findings (``publish_blocking_review_flag_codes``
+    - option overload, weak anchor, missing required element, and the like) are
+    deliberately NOT treated as release blockers here. They no longer force an
+    admin hold; instead the finalizer downgrades such a plan to
+    ``publishable_with_flags`` so the athlete still receives it while the flags
+    stay visible for async admin review. This keeps the beta flowing without an
+    admin gate on every quality nit. See ``finalize``.
+    """
 
     if not isinstance(validator_report, dict):
         return True
@@ -63,8 +78,6 @@ def _stage2_report_blocks_release(validator_report: Any) -> bool:
         return True
 
     if errors:
-        return True
-    if publish_blocking_review_findings(validator_report):
         return True
     if any(
         isinstance(warning, dict)
@@ -931,8 +944,21 @@ class OpenAIStage2Automator:
                 stage2_cost=first_pass_cost,
             )
         elif not _stage2_report_blocks_release(first_review["validator_report"]):
+            # First pass carries no hard release blockers (safety / output
+            # integrity), so publish it instead of holding for an admin. When only
+            # coaching-quality publish-blocking flags remain, downgrade to
+            # publishable_with_flags: the athlete still gets the plan and the flags
+            # stay visible for async review, but generation is not gated on an
+            # admin. A plan with no such flags releases clean as ready.
+            release_status = (
+                _APP_STATUS_PUBLISHABLE_WITH_FLAGS
+                if publish_blocking_findings
+                else _APP_STATUS_READY
+            )
             logger.info(
-                "[stage2] first_pass marked non-pass but no release blockers were found; releasing raw plan"
+                "[stage2] first_pass has no hard release blockers; releasing status=%s publish_flags=%s",
+                release_status,
+                len(publish_blocking_findings),
             )
             result = _approved_result(
                 stage1_result,
@@ -941,7 +967,7 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
-                app_status=_APP_STATUS_READY,
+                app_status=release_status,
                 stage2_cost=first_pass_cost,
             )
         elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
@@ -961,16 +987,9 @@ class OpenAIStage2Automator:
                 stage2_cost=first_pass_cost,
             )
         else:
-            if publish_blocking_findings:
-                logger.warning(
-                    "[stage2] review required after first_pass: publish-blocking quality findings=%s",
-                    ",".join(
-                        str(finding.get("code") or "")
-                        for finding in publish_blocking_findings
-                    ),
-                )
-            else:
-                logger.warning("[stage2] review required after first_pass: automatic retry disabled")
+            logger.warning(
+                "[stage2] review required after first_pass: hard release blockers present; holding for admin review"
+            )
             result = _review_required_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,

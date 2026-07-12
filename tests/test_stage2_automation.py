@@ -247,7 +247,10 @@ def test_first_pass_pass_with_review_flags_returns_ready(monkeypatch: pytest.Mon
     assert result["plan_text"] == "# final plan with minor flags"
 
 
-def test_first_pass_publish_blocking_review_flags_hold_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_publish_blocking_review_flags_publish_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Coaching-quality publish-blocking flags (no hard safety blocker) must NOT
+    # hold the plan for an admin. The plan is released as publishable_with_flags:
+    # the athlete gets it while the flags stay recorded for async review.
     def _quality_blocked_review(**_: object) -> dict:
         finding = {"code": "missing_required_element", "phase": "SPP"}
         return {
@@ -268,9 +271,10 @@ def test_first_pass_publish_blocking_review_flags_hold_plan(monkeypatch: pytest.
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 1
-    assert result["status"] == "held_for_review"
-    assert result["plan_text"] == ""
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# final plan missing required work"
     assert result["final_plan_text"] == "# final plan missing required work"
+    assert result["stage2_status"] == "stage2_pass"
     assert result["stage2_validator_report"]["publish_blocking_review_flags"] == [
         {"code": "missing_required_element", "phase": "SPP"}
     ]
