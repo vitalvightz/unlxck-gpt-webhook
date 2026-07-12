@@ -28,6 +28,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submissionLockRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -48,6 +49,8 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submissionLockRef.current) return;
+    submissionLockRef.current = true;
     const form = event.currentTarget;
     setSubmitting(true);
     setMessage(null);
@@ -67,6 +70,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Feedback could not be sent. Try again.");
     } finally {
+      submissionLockRef.current = false;
       setSubmitting(false);
     }
   }
