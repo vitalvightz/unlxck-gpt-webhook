@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import {
+  THUMB_PATHS,
   UNSAFE_GUIDANCE,
   buildContextualFeedbackPayload,
   shouldShowUnsafeGuidance,
@@ -43,6 +44,26 @@ test("contextual feedback contains the exact beta questions and reason codes", (
   }
   assert.match(CONTEXTUAL_SOURCE, /Feedback sent/);
   assert.match(CONTEXTUAL_SOURCE, /Change response/);
+});
+
+test("feedback choices use explicit correctly oriented thumb icons", () => {
+  assert.match(THUMB_PATHS.up, /^M7 10v10/);
+  assert.match(THUMB_PATHS.down, /^M7 14V4/);
+  assert.match(CONTEXTUAL_SOURCE, /<ThumbIcon direction="up" \/> Yes/);
+  assert.match(CONTEXTUAL_SOURCE, /<ThumbIcon direction="down" \/> \{isPlan \? "Needs improvement" : "No"\}/);
+});
+
+test("feedback load failures are neutral, retryable, and hide choices", () => {
+  assert.match(CONTEXTUAL_SOURCE, /type FeedbackLoadState = "loading" \| "ready" \| "failed"/);
+  assert.match(CONTEXTUAL_SOURCE, /Feedback couldn’t load\./);
+  assert.match(CONTEXTUAL_SOURCE, />\s*Retry\s*</);
+  assert.ok(CONTEXTUAL_SOURCE.indexOf('loadState !== "ready"') < CONTEXTUAL_SOURCE.indexOf('className="feedback-actions"'));
+  assert.doesNotMatch(CONTEXTUAL_SOURCE, /Feedback is temporarily unavailable/);
+});
+
+test("submission failures remain separate from feedback loading", () => {
+  assert.match(CONTEXTUAL_SOURCE, /setSubmissionError\(saveError instanceof Error/);
+  assert.match(CONTEXTUAL_SOURCE, /submissionError \? <p className="feedback-error" role="alert">/);
 });
 
 test("global attachment privacy copy is explicit and adjacent to the control", () => {

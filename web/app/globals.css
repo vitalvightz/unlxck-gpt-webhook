@@ -17057,7 +17057,8 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 .feedback-actions,
 .feedback-chips,
 .feedback-submit-row,
-.feedback-sent-row {
+.feedback-sent-row,
+.feedback-load-failed {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -17160,6 +17161,12 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 .feedback-sent-row {
   justify-content: space-between;
   font-weight: 700;
+}
+
+.feedback-load-failed {
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .feedback-link {

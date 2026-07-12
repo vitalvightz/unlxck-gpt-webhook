@@ -13,6 +13,14 @@ def test_feedback_schema_uses_profile_identity_and_contextual_uniqueness():
         assert "athlete_id uuid" not in sql.split("create table if not exists public.beta_feedback (", 1)[1].split(");", 1)[0]
 
 
+def test_feedback_priority_constraint_has_no_duplicate_implicit_name():
+    for sql in (SCHEMA, MIGRATION):
+        table = sql.split("create table if not exists public.beta_feedback (", 1)[1].split(");", 1)[0]
+        assert "priority text not null default 'normal'," in table
+        assert "priority text not null default 'normal' check" not in table
+        assert table.count("constraint beta_feedback_priority_check") == 1
+
+
 def test_feedback_tables_are_service_role_only_with_rls():
     for sql in (SCHEMA, MIGRATION):
         assert "alter table public.beta_feedback enable row level security;" in sql
