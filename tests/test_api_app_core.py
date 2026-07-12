@@ -43,6 +43,37 @@ def test_create_app_primes_plan_banks_on_startup(monkeypatch):
     assert calls[0] is app_module.logger
 
 
+def test_create_app_schedules_structured_card_self_heal(monkeypatch):
+    """Startup schedules the orphaned-card self-heal as a detached, cancellable task."""
+    import fightcamp.plan_pipeline as plan_pipeline_module
+
+    monkeypatch.setattr(
+        plan_pipeline_module, "prime_plan_banks", lambda *, logger=None: None
+    )
+
+    async def _fake_self_heal(*, store, **kwargs):
+        return 0
+
+    monkeypatch.setattr(
+        "api.services.admin_stage2_service.self_heal_orphaned_structured_cards",
+        _fake_self_heal,
+    )
+
+    app = create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+        enable_in_process_generation=False,
+    )
+
+    with TestClient(app) as client:
+        task = client.app.state.structured_card_self_heal_task
+        assert task is not None
+
+    # Shutdown cancels the detached task (or it already finished) — never leaked.
+    assert task.cancelled() or task.done()
+
+
 def test_create_app_skips_plan_bank_priming_in_worker_only_mode(monkeypatch):
     calls: list[object] = []
 
