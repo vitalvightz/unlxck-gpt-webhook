@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
-  getPlanFeedback,
-  getTodayFeedback,
   putPlanFeedback,
   putTodayFeedback,
 } from "@/lib/api";
@@ -68,8 +66,6 @@ function ThumbIcon({ direction }: Readonly<{ direction: keyof typeof THUMB_PATHS
   );
 }
 
-type FeedbackLoadState = "loading" | "ready" | "failed";
-
 export function ContextualFeedback({
   token,
   surface,
@@ -84,37 +80,12 @@ export function ContextualFeedback({
   const [reason, setReason] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [editing, setEditing] = useState(false);
-  const [loadState, setLoadState] = useState<FeedbackLoadState>("loading");
-  const [reloadKey, setReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const isPlan = surface === "plan";
   const reasons = isPlan ? PLAN_REASONS : DAILY_REASONS;
-
-  useEffect(() => {
-    let active = true;
-    setLoadState("loading");
-    setSubmissionError(null);
-    const request = isPlan && planId ? getPlanFeedback(token, planId) : getTodayFeedback(token);
-    void request
-      .then((saved) => {
-        if (!active) return;
-        setRecord(saved);
-        setChoice(saved?.response ?? null);
-        setReason(saved?.reason ?? null);
-        setComment(saved?.comment ?? "");
-        setEditing(false);
-        setLoadState("ready");
-      })
-      .catch(() => {
-        if (active) setLoadState("failed");
-      });
-    return () => {
-      active = false;
-    };
-  }, [isPlan, planId, reloadKey, token]);
 
   async function save(response: FeedbackResponseValue, selectedReason = reason) {
     if (submissionInFlightRef.current) return;
@@ -151,23 +122,7 @@ export function ContextualFeedback({
 
   return (
     <section className="feedback-card" aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}>
-      {loadState !== "ready" ? (
-        <>
-          <p className="feedback-question">
-            {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
-          </p>
-          {loadState === "loading" ? (
-            <p className="muted feedback-status" role="status">Loading feedback…</p>
-          ) : (
-            <div className="feedback-load-failed" role="status">
-              <span>Feedback couldn’t load.</span>
-              <button type="button" className="feedback-link" onClick={() => setReloadKey((value) => value + 1)}>
-                Retry
-              </button>
-            </div>
-          )}
-        </>
-      ) : record && !editing ? (
+      {record && !editing ? (
         <div className="feedback-sent-row" role="status">
           <span>Feedback sent</span>
           <button type="button" className="feedback-link" onClick={() => setEditing(true)}>

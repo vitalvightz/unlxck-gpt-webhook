@@ -47,14 +47,12 @@ function savedYesFeedback() {
   };
 }
 
-test("load failure hides choices and Retry restores correctly oriented controls", async () => {
+test("controls render immediately and one Yes click submits without a GET", async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => {
     calls += 1;
-    return calls === 1
-      ? jsonResponse({ detail: "feedback store unavailable" }, 503)
-      : jsonResponse(null);
+    return jsonResponse(savedYesFeedback());
   };
   const { container, root } = mount();
 
@@ -62,22 +60,19 @@ test("load failure hides choices and Retry restores correctly oriented controls"
     await act(async () => {
       root.render(<ContextualFeedback token="test-token" surface="daily_recommendation" />);
     });
-    await settle();
 
-    assert.match(container.textContent ?? "", /Feedback couldn’t load\./);
-    assert.equal(container.querySelectorAll(".feedback-choice").length, 0);
-
-    const retry = container.querySelector<HTMLButtonElement>(".feedback-load-failed button");
-    assert.ok(retry);
-    await act(async () => retry.click());
-    await settle();
-
-    assert.equal(calls, 2);
-    assert.doesNotMatch(container.textContent ?? "", /Feedback couldn’t load\./);
     const choices = Array.from(container.querySelectorAll<HTMLButtonElement>(".feedback-choice"));
     assert.equal(choices.length, 3);
     assert.equal(choices[0]?.querySelector("path")?.getAttribute("d"), THUMB_PATHS.up);
     assert.equal(choices[1]?.querySelector("path")?.getAttribute("d"), THUMB_PATHS.down);
+    assert.doesNotMatch(container.textContent ?? "", /Loading feedback|Feedback couldn’t load|Retry/);
+    assert.equal(calls, 0);
+
+    await act(async () => choices[0]?.click());
+    await settle();
+
+    assert.equal(calls, 1);
+    assert.match(container.textContent ?? "", /Feedback sent/);
   } finally {
     globalThis.fetch = originalFetch;
     cleanup(container, root);
@@ -89,9 +84,7 @@ test("submission failure keeps the feedback controls visible", async () => {
   let calls = 0;
   globalThis.fetch = async () => {
     calls += 1;
-    return calls === 1
-      ? jsonResponse(null)
-      : jsonResponse({ detail: "Feedback could not be sent. Try again." }, 503);
+    return jsonResponse({ detail: "Feedback could not be sent. Try again." }, 503);
   };
   const { container, root } = mount();
 
@@ -108,7 +101,7 @@ test("submission failure keeps the feedback controls visible", async () => {
     await act(async () => yes.click());
     await settle();
 
-    assert.equal(calls, 2);
+    assert.equal(calls, 1);
     assert.match(container.querySelector(".feedback-error")?.textContent ?? "", /Feedback could not be sent/);
     assert.ok(container.querySelector(".feedback-actions"));
   } finally {
@@ -123,7 +116,6 @@ test("rapid Yes clicks create only one submission request", async () => {
   let resolveSubmission: ((response: Response) => void) | undefined;
   globalThis.fetch = async () => {
     calls += 1;
-    if (calls === 1) return jsonResponse(null);
     return await new Promise<Response>((resolve) => {
       resolveSubmission = resolve;
     });
@@ -147,7 +139,7 @@ test("rapid Yes clicks create only one submission request", async () => {
       await Promise.resolve();
     });
 
-    assert.equal(calls, 2);
+    assert.equal(calls, 1);
     assert.ok(resolveSubmission);
 
     await act(async () => {

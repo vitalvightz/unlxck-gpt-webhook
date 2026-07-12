@@ -22,6 +22,8 @@ RESEND_API_KEY=...
 
 Every saved feedback response is available to authenticated admins at `/admin` through the service-role backend. The same save schedules a background Resend notification to `FEEDBACK_NOTIFICATION_EMAIL`, which defaults to `unlxckedmind@gmail.com`. Configure a verified sender in `FEEDBACK_FROM_EMAIL`; email delivery is skipped safely when the Resend key or sender is absent and never rolls back stored feedback.
 
+Athletes and admins may submit contextual feedback only for plans and Today recommendations owned by their own profile. Coaches and gym owners remain limited to global feedback.
+
 Notification emails contain only priority, surface, category, response, reason, screenshot presence, authenticated role, and feedback ID. Comments, contact details, health snapshots, technical context, screenshots, and screenshot paths remain inside the authenticated admin/storage tools.
 
 ## Review recent feedback

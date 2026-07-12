@@ -37,13 +37,13 @@ def _seed_plan(
     }
 
 
-def _seed_today(store) -> None:
-    _seed_plan(store)
-    store.active_plan_ids["athlete-1"] = PLAN_ID
-    store.today_checkins["athlete-1"] = [
+def _seed_today(store, *, athlete_id: str = "athlete-1") -> None:
+    _seed_plan(store, athlete_id=athlete_id)
+    store.active_plan_ids[athlete_id] = PLAN_ID
+    store.today_checkins[athlete_id] = [
         {
             "id": "33333333-3333-3333-3333-333333333333",
-            "athlete_id": "athlete-1",
+            "athlete_id": athlete_id,
             "plan_id": PLAN_ID,
             "training_day": resolve_training_day(""),
             "phase": "GPP",
@@ -59,7 +59,7 @@ def _seed_today(store) -> None:
     ]
 
 
-def test_plan_feedback_is_athlete_only_owned_and_idempotent():
+def test_plan_feedback_is_owned_and_idempotent():
     client, store, _ = _build_client()
     _seed_plan(store)
     first = client.put(
@@ -86,18 +86,55 @@ def test_plan_feedback_is_athlete_only_owned_and_idempotent():
     assert store.beta_feedback[0]["reason"] is None
     assert store.beta_feedback[0]["comment"] == ""
 
-    assert client.get(f"/api/plans/{PLAN_ID}/feedback", headers=ADMIN).status_code == 403
+    assert client.get(f"/api/plans/{PLAN_ID}/feedback", headers=ADMIN).status_code == 404
     _seed_plan(store, plan_id=OTHER_PLAN_ID, athlete_id="other-athlete")
     assert client.get(f"/api/plans/{OTHER_PLAN_ID}/feedback", headers=ATHLETE).status_code == 404
 
 
-@pytest.mark.parametrize("role", ["admin", "coach", "gym_owner"])
-def test_every_non_athlete_role_is_rejected_from_contextual_feedback(role: str):
+@pytest.mark.parametrize("role", ["coach", "gym_owner"])
+def test_non_training_roles_are_rejected_from_contextual_feedback(role: str):
     client, store, _ = _build_client()
     _seed_plan(store)
     store.profiles["athlete-1"]["role"] = role
     response = client.get(f"/api/plans/{PLAN_ID}/feedback", headers=ATHLETE)
     assert response.status_code == 403
+
+
+def test_admin_can_submit_contextual_feedback_for_their_own_plan():
+    client, store, _ = _build_client()
+    _seed_plan(store, athlete_id="admin-1")
+
+    response = client.put(
+        f"/api/plans/{PLAN_ID}/feedback",
+        headers=ADMIN,
+        json={"response": "yes"},
+    )
+
+    assert response.status_code == 200
+    assert store.beta_feedback[-1]["submitted_by_profile_id"] == "admin-1"
+    assert store.beta_feedback[-1]["plan_id"] == PLAN_ID
+
+
+def test_admin_today_feedback_is_saved_and_queued_for_operator_delivery(monkeypatch):
+    delivered: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        feedback_routes,
+        "send_feedback_notification",
+        lambda record, profile: delivered.append((record.id, profile.profile_id)),
+    )
+    client, store, _ = _build_client()
+    _seed_today(store, athlete_id="admin-1")
+
+    response = client.put(
+        "/api/today/feedback",
+        headers=ADMIN,
+        json={"response": "yes"},
+    )
+
+    assert response.status_code == 200
+    assert store.beta_feedback[-1]["submitted_by_profile_id"] == "admin-1"
+    assert store.beta_feedback[-1]["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
+    assert delivered == [(response.json()["id"], "admin-1")]
 
 
 def test_contextual_enums_and_forbidden_client_context_are_rejected():
