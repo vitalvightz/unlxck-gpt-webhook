@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   getPlanFeedback,
@@ -87,6 +87,7 @@ export function ContextualFeedback({
   const [loadState, setLoadState] = useState<FeedbackLoadState>("loading");
   const [reloadKey, setReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const submissionInFlightRef = useRef(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const isPlan = surface === "plan";
@@ -116,7 +117,8 @@ export function ContextualFeedback({
   }, [isPlan, planId, reloadKey, token]);
 
   async function save(response: FeedbackResponseValue, selectedReason = reason) {
-    if ((response === "no" || response === "unsafe") && submitting) return;
+    if (submissionInFlightRef.current) return;
+    submissionInFlightRef.current = true;
     setSubmitting(true);
     setSubmissionError(null);
     const payload = buildContextualFeedbackPayload(response, selectedReason, comment);
@@ -132,6 +134,7 @@ export function ContextualFeedback({
     } catch (saveError) {
       setSubmissionError(saveError instanceof Error ? saveError.message : "Feedback could not be sent. Try again.");
     } finally {
+      submissionInFlightRef.current = false;
       setSubmitting(false);
     }
   }
