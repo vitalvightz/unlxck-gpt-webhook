@@ -584,7 +584,7 @@ export default function HomePage() {
     // Today's countdown to the fight, and whether the scheduled session is today
     // (vs a future planned day that must read as pending, not cleared).
     const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
-    const openOngoing = isOpenOngoingPlan(activePlan.fight_date);
+    const openOngoing = hasActivePlan && isOpenOngoingPlan(activePlan.fight_date);
     const sessionIsToday = isSessionToday(sessionPreview, commandState?.today?.session_scope);
     const nextIsHardCombat = hasNextSession && isHardCombatSession(sessionPreview);
     // STOP + the scheduled session is today -> replace it with a safe session.
