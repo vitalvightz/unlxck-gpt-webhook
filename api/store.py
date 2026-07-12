@@ -12,6 +12,7 @@ from typing import Any, Callable, Protocol
 import httpx
 from fastapi import HTTPException, status
 from postgrest.exceptions import APIError as PostgrestAPIError
+from storage3.exceptions import StorageApiError
 from supabase import Client, ClientOptions, create_client
 
 from .auth import AuthenticatedUser
@@ -117,6 +118,7 @@ _TRANSIENT_SUPABASE_ERRORS = (
     httpx.ReadTimeout,
 )
 _STORE_CLIENT_ERRORS = (PostgrestAPIError, httpx.HTTPError)
+_STORAGE_CLIENT_ERRORS = (PostgrestAPIError, httpx.HTTPError, StorageApiError)
 
 
 class LastAdminError(RuntimeError):
@@ -4665,7 +4667,7 @@ class SupabaseAppStore:
             return url
         except HTTPException:
             raise
-        except _STORE_CLIENT_ERRORS as exc:
+        except _STORAGE_CLIENT_ERRORS as exc:
             self._raise_feedback_store_error(exc, detail="failed to open feedback screenshot")
 
     def claim_feedback_rate_limit(
@@ -4707,7 +4709,7 @@ class SupabaseAppStore:
                 data,
                 {"content-type": mime, "upsert": "false"},
             )
-        except _STORE_CLIENT_ERRORS as exc:
+        except _STORAGE_CLIENT_ERRORS as exc:
             self._raise_feedback_store_error(exc, detail="failed to upload screenshot")
 
     def delete_feedback_screenshots(self, paths: list[str]) -> None:
@@ -4715,7 +4717,7 @@ class SupabaseAppStore:
             return
         try:
             self.client.storage.from_("feedback-screenshots").remove(paths)
-        except _STORE_CLIENT_ERRORS as exc:
+        except _STORAGE_CLIENT_ERRORS as exc:
             self._raise_feedback_store_error(exc, detail="failed to delete screenshot")
 
     def list_expired_feedback_screenshots(self, *, limit: int = 100) -> list[dict[str, Any]]:
