@@ -292,7 +292,6 @@ def _today_context(
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="active plan not found")
     training_day = resolve_training_day(profile.athlete_timezone)
-    _require_plan_feedback_eligible(plan)
     checkin = store.get_feedback_today_checkin(profile.profile_id, plan_id, training_day)
     if not checkin:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="today check-in not found")

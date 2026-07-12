@@ -250,6 +250,34 @@ def test_today_feedback_rejects_checkin_without_generated_recommendation():
 
 
 @pytest.mark.parametrize(
+    "plan_overrides",
+    [
+        {"status": "generated", "plan_text": "Draft plan"},
+        {"status": "archived", "plan_text": "Released historical plan"},
+        {"status": "ready", "plan_text": ""},
+    ],
+)
+def test_today_feedback_accepts_the_recommendation_already_shown_even_if_plan_is_not_feedback_eligible(
+    plan_overrides: dict,
+):
+    client, store, _ = _build_client()
+    _seed_today(store)
+    store.plans[PLAN_ID].update(plan_overrides)
+
+    existing = client.get("/api/today/feedback", headers=ATHLETE)
+    submitted = client.put(
+        "/api/today/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+
+    assert existing.status_code == 200
+    assert existing.json() is None
+    assert submitted.status_code == 200
+    assert store.beta_feedback[-1]["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
+
+
+@pytest.mark.parametrize(
     "reason",
     [
         "too_hard",
