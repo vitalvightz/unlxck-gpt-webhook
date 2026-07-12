@@ -173,11 +173,11 @@ def resolve_today_and_next(
             if has_scheduled_day_content(entry):
                 next_entry = entry
                 break
-    else:
-        # Renewable open plans have weekday-only entries. On an unscheduled day
-        # (for example Sunday before Monday training), choose the nearest future
-        # weekday instead of returning an empty Today card. Dated fight camps
-        # already returned through ``future_dated_entries`` above.
+    if next_entry is None:
+        # Renewable open plans have weekday-only entries. If no scheduled day
+        # remains later in this list (for example Sunday before Monday training),
+        # wrap to the nearest future recurring weekday. Dated fight camps already
+        # returned through ``future_dated_entries`` above.
         today_weekday_index = today.weekday()
         recurring_candidates: list[tuple[int, WeeklyDayEntry]] = []
         for entry in week.days:
