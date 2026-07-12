@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -23,6 +23,7 @@ from .models import (
     MeResponse,
     PlanDetail,
     PlanOutputs,
+    PlanScheduleContext,
     PlanSafetyState,
     PlanSummary,
     ProfileRecord,
@@ -39,6 +40,7 @@ from .structured_card_lifecycle import (
     parse_structured_card_attempt_started_at,
 )
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
+from .services.open_plan_timeline import project_open_structured_plan
 
 logger = logging.getLogger(__name__)
 
@@ -514,6 +516,7 @@ def _map_plan_detail(
     *,
     include_admin: bool,
     plan_source: str | None = None,
+    current_training_day: date | str | None = None,
 ) -> PlanDetail:
     summary = _map_plan_summary(row)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
@@ -538,6 +541,21 @@ def _map_plan_detail(
         row.get("structured_plan"),
         raw_markdown=display_plan_text,
     )
+    structured_payload = (
+        structured_plan.model_dump(mode="json") if structured_plan is not None else {}
+    )
+    projected_payload, raw_schedule_context = project_open_structured_plan(
+        row,
+        structured_payload,
+        current_training_day=current_training_day or datetime.now(timezone.utc).date(),
+    )
+    if structured_plan is not None and projected_payload != structured_payload:
+        projected_result = safe_parse_structured_plan(
+            projected_payload,
+            raw_markdown=display_plan_text or None,
+        )
+        if projected_result.ok and projected_result.plan is not None:
+            structured_plan = projected_result.plan
     report_dict = row.get("stage2_validator_report")
     report_dict = report_dict if isinstance(report_dict, dict) else {}
     structured_debug = report_dict.get("structured_plan")
@@ -558,6 +576,7 @@ def _map_plan_detail(
         ),
         advisories=build_plan_advisories(planning_brief=planning_brief),
         plan_source=plan_source,
+        schedule_context=PlanScheduleContext(**raw_schedule_context),
         profile_refresh_failed=bool(
             (row.get("why_log") if isinstance(row.get("why_log"), dict) else {}).get(
                 PROFILE_REFRESH_FAILED_WHY_LOG_KEY

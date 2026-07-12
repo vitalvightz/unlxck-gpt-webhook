@@ -12,6 +12,7 @@ import {
   archivePlan,
   getActivePlan,
   getPlan,
+  getPlanCompletions,
   getToday,
   isRetryableApiFailure,
   rebuildStructuredPlan,
@@ -53,6 +54,7 @@ import {
 import type {
   PlanAdvisory,
   PlanDetail,
+  PlanCompletionsResponse,
   StructuredBlock,
   StructuredCardLifecycleState,
   StructuredCardState,
@@ -341,11 +343,13 @@ function TextStructuredPlanRenderer({
   fightDate,
   focusDay,
   currentDayLabel,
+  scheduleContext,
 }: {
   text: string;
   fightDate?: string | null;
   focusDay?: Date;
   currentDayLabel: string;
+  scheduleContext?: PlanDetail["schedule_context"];
 }) {
   const adaptedPlan = useMemo(
     () => buildStructuredPlanFromText(text, fightDate),
@@ -357,6 +361,7 @@ function TextStructuredPlanRenderer({
       openOngoing={isOpenOngoingPlan(fightDate)}
       focusDay={focusDay}
       currentDayLabel={currentDayLabel}
+      scheduleContext={scheduleContext}
     />
   );
 }
@@ -1430,6 +1435,7 @@ export function PlanViewer({
   // We mirror that here so the camp map highlights the next session instead of
   // keeping the finished day under the "Today" badge (matching Overview/Today).
   const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
+  const [planCompletions, setPlanCompletions] = useState<PlanCompletionsResponse | null>(null);
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [showActiveConflict, setShowActiveConflict] = useState(false);
@@ -1544,13 +1550,21 @@ export function PlanViewer({
       return;
     }
     let cancelled = false;
-    getToday(accessToken)
-      .then((state) => {
+    const canLoadAthleteCompletions =
+      viewerRole === "athlete" && viewerProfileId === plan.athlete_id;
+    const todayRequest = getToday(accessToken).catch(() => null);
+    const completionsRequest = canLoadAthleteCompletions
+      ? getPlanCompletions(accessToken, plan.plan_id).catch(() => null)
+      : Promise.resolve(null);
+
+    Promise.all([todayRequest, completionsRequest])
+      .then(([state, completions]) => {
         if (cancelled) {
           return;
         }
-        const next = state.today?.next_session;
-        const isThisActivePlan = state.active_plan?.id === plan.plan_id;
+        setPlanCompletions(completions);
+        const next = state?.today?.next_session;
+        const isThisActivePlan = state?.active_plan?.id === plan.plan_id;
         const iso =
           isThisActivePlan && next?.session_relation === "next"
             ? (next.calendar_date || "").slice(0, 10)
@@ -1563,12 +1577,20 @@ export function PlanViewer({
       .catch(() => {
         if (!cancelled) {
           setNextSessionFocusDate(undefined);
+          setPlanCompletions(null);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [accessToken, canManagePlan, plan.plan_id]);
+  }, [
+    accessToken,
+    canManagePlan,
+    plan.athlete_id,
+    plan.plan_id,
+    viewerProfileId,
+    viewerRole,
+  ]);
 
   useEffect(() => {
     setOpenAdminSection(
@@ -2464,6 +2486,12 @@ export function PlanViewer({
                   currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
                   createdAt={plan.created_at}
                   planStatus={plan.status}
+                  scheduleContext={plan.schedule_context}
+                  completions={planCompletions?.completions}
+                  currentTrainingDayIso={
+                    planCompletions?.current_training_day ||
+                    plan.schedule_context?.current_training_day
+                  }
                 />
               ) : (
                 <>
@@ -2491,6 +2519,7 @@ export function PlanViewer({
                     fightDate={plan.fight_date}
                     focusDay={nextSessionFocusDate}
                     currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
+                    scheduleContext={plan.schedule_context}
                   />
                 </>
               )}

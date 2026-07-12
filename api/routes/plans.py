@@ -74,6 +74,9 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             plan_row,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
+            current_training_day=resolve_training_day_str(
+                datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+            ),
         )
         return clarify_restricted_training_hold(detail)
 
@@ -120,6 +123,9 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             plan_row,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
+            current_training_day=resolve_training_day_str(
+                datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+            ),
         )
         return clarify_restricted_training_hold(detail)
 
@@ -203,6 +209,9 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             updated,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, plan_id),
+            current_training_day=resolve_training_day_str(
+                datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+            ),
         )
         return clarify_restricted_training_hold(detail)
 

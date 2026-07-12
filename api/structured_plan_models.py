@@ -344,6 +344,10 @@ class Day(BaseModel):
     """A calendar day in the plan (Section J)."""
 
     date: str
+    # Renewable open plans have no event countdown, so weekday is their stable
+    # template identity. Optional for legacy/datestamped cards; the read adapter
+    # validates and fills it before an open plan is shown to an athlete.
+    weekday: Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] | None = None
     day_type: DayType
     countdown_label: str
     phase_label: PhaseLabel

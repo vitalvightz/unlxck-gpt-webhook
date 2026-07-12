@@ -1447,6 +1447,21 @@ class PlanAdvisory(BaseModel):
     disclaimer: str
 
 
+class PlanScheduleContext(BaseModel):
+    """Read-only timing projection for Plan Detail.
+
+    This is derived from persisted plan inputs; it is not a second scheduling
+    source of truth and does not require a database migration.
+    """
+
+    schedule_mode: Literal["event_countdown", "open_recurring", "static_undated"]
+    projection_status: Literal["not_required", "projected", "unavailable"]
+    anchor_date: str | None = None
+    current_training_day: str | None = None
+    block_number: int | None = None
+    current_week_number: int | None = None
+
+
 class WeeklyDayEntry(BaseModel):
     weekday: Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     title: str = ""
@@ -1507,6 +1522,7 @@ class PlanDetail(PlanSummary):
     advisories: list[PlanAdvisory] = Field(default_factory=list)
     admin_outputs: AdminPlanOutputs | None = None
     plan_source: str | None = None
+    schedule_context: PlanScheduleContext | None = None
     # Athlete-safe signal (not gated behind admin_outputs): true when the stored
     # profile could not be refreshed during generation, so this plan was built
     # from the submitted intake and the saved profile may be stale. Derived from
