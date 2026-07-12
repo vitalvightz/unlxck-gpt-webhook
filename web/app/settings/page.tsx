@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { GlobalFeedback } from "@/components/feedback/global-feedback";
 import { ApiError, changeUsername, updateMe } from "@/lib/api";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
@@ -63,6 +64,7 @@ const ATHLETE_SETTINGS_SECTIONS: SettingsSection[] = [
   { id: "notifications", label: "Notifications" },
   { id: "subscription", label: "Subscription" },
   { id: "privacy", label: "Privacy" },
+  { id: "send-feedback", label: "Send feedback" },
 ];
 
 const ADMIN_SETTINGS_SECTIONS: SettingsSection[] = [
@@ -71,6 +73,7 @@ const ADMIN_SETTINGS_SECTIONS: SettingsSection[] = [
   { id: "coaches-roles", label: "Coaches & Roles" },
   { id: "programme-controls", label: "Programme Controls" },
   { id: "templates-billing", label: "Templates & Billing" },
+  { id: "send-feedback", label: "Send feedback" },
 ];
 
 const APPEARANCE_OPTIONS: Array<{
@@ -918,6 +921,15 @@ export default function SettingsPage() {
           </div>
           <p className="settings-coming-soon">Data export and account deletion controls will be available from Privacy after launch.</p>
         </article>
+
+        <article id="send-feedback" className="step-card settings-card">
+          <div className="form-section-header">
+            <p className="kicker">Beta feedback</p>
+            <h2 className="form-section-title">Send feedback</h2>
+          </div>
+          <p className="muted">Report a bug, request a feature, flag a safety issue, or share general feedback.</p>
+          {session?.access_token ? <GlobalFeedback token={session.access_token} /> : null}
+        </article>
       </div>
     );
   }
@@ -1078,6 +1090,15 @@ export default function SettingsPage() {
             </button>
           </div>
           <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
+        </article>
+
+        <article id="send-feedback" className="step-card settings-card">
+          <div className="form-section-header">
+            <p className="kicker">Beta feedback</p>
+            <h2 className="form-section-title">Send feedback</h2>
+          </div>
+          <p className="muted">Report a bug, request a feature, flag a safety issue, or share general feedback.</p>
+          {session?.access_token ? <GlobalFeedback token={session.access_token} /> : null}
         </article>
       </div>
     );

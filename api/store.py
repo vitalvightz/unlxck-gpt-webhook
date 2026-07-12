@@ -35,6 +35,7 @@ from .models import (
 )
 from .schema_requirements import (
     GENERATION_JOB_STAGE2_COST_COLUMNS,
+    INTAKES_TABLE,
     PLAN_RUNTIME_REQUIRED_COLUMNS,
 )
 from .state_machine import (
@@ -492,6 +493,32 @@ class AppStore(Protocol):
     def count_pending_admin_reviews_for_athlete(self, athlete_id: str) -> int: ...
 
     def resolve_admin_review(self, review_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    # --- secure beta feedback ---
+
+    def get_context_feedback(self, profile_id: str, context_key: str) -> dict[str, Any] | None: ...
+    def get_feedback_plan_for_owner(self, plan_id: str, profile_id: str) -> dict[str, Any] | None: ...
+    def get_feedback_active_plan_id(self, profile_id: str) -> str | None: ...
+    def get_feedback_today_checkin(
+        self, profile_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None: ...
+    def list_feedback_injury_flags(self, profile_id: str, *, limit: int = 20) -> list[dict[str, Any]]: ...
+    def get_feedback_intake(self, intake_id: str) -> dict[str, Any] | None: ...
+    def upsert_context_feedback(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+    def insert_global_feedback(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+    def claim_feedback_rate_limit(
+        self,
+        profile_id: str,
+        *,
+        report_limit: int,
+        screenshot_limit: int,
+        has_screenshot: bool,
+    ) -> tuple[bool, str | None, int]: ...
+    def upload_feedback_screenshot(self, path: str, data: bytes, mime: str) -> None: ...
+    def delete_feedback_screenshots(self, paths: list[str]) -> None: ...
+    def list_expired_feedback_screenshots(self, *, limit: int = 100) -> list[dict[str, Any]]: ...
+    def list_profile_feedback_screenshots(self, profile_id: str, *, limit: int = 100) -> list[dict[str, Any]]: ...
+    def clear_feedback_screenshot(self, feedback_id: str, expected_path: str) -> bool: ...
 
 
 def _encode_structured_text(value: Any) -> str | None:
@@ -4463,3 +4490,216 @@ class SupabaseAppStore:
                 detail="failed to resolve review",
                 exc=exc,
             )
+
+    # ------------------------------------------------------------------
+    # Secure beta feedback
+    # ------------------------------------------------------------------
+
+    def _raise_feedback_store_error(self, exc: Exception, *, detail: str) -> None:
+        transient = self._is_transient_store_error(exc)
+        logger.error(
+            "[feedback_store] failure error_code=feedback_store_failure error_class=%s",
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=(
+                status.HTTP_503_SERVICE_UNAVAILABLE
+                if transient
+                else status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail="store service temporarily unavailable" if transient else detail,
+        ) from exc
+
+    def get_context_feedback(self, profile_id: str, context_key: str) -> dict[str, Any] | None:
+        try:
+            return self._select_first(
+                self.client.table("beta_feedback")
+                .select("*")
+                .eq("submitted_by_profile_id", profile_id)
+                .eq("context_key", context_key)
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read feedback")
+
+    def get_feedback_plan_for_owner(self, plan_id: str, profile_id: str) -> dict[str, Any] | None:
+        try:
+            return self._select_first(
+                self.client.table("plans").select("*").eq("id", plan_id).eq("athlete_id", profile_id)
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read feedback context")
+
+    def get_feedback_active_plan_id(self, profile_id: str) -> str | None:
+        try:
+            row = self._select_first(
+                self.client.table("profiles").select("active_plan_id").eq("id", profile_id)
+            )
+            return str(row.get("active_plan_id") or "").strip() or None if row else None
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read feedback context")
+
+    def get_feedback_today_checkin(
+        self, profile_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None:
+        try:
+            return self._select_first(
+                self.client.table("today_checkins")
+                .select("*")
+                .eq("athlete_id", profile_id)
+                .eq("plan_id", plan_id)
+                .eq("training_day", training_day)
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read feedback context")
+
+    def list_feedback_injury_flags(self, profile_id: str, *, limit: int = 20) -> list[dict[str, Any]]:
+        try:
+            response = (
+                self.client.table("injury_flags")
+                .select("*")
+                .eq("athlete_id", profile_id)
+                .in_("status", ["open", "monitoring"])
+                .order("created_at", desc=True)
+                .limit(max(1, min(limit, 20)))
+                .execute()
+            )
+            return getattr(response, "data", None) or []
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read feedback context")
+
+    def get_feedback_intake(self, intake_id: str) -> dict[str, Any] | None:
+        try:
+            return self._select_first(
+                self.client.table(INTAKES_TABLE).select("*").eq("id", intake_id)
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read feedback context")
+
+    def upsert_context_feedback(self, payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = (
+                self.client.table("beta_feedback")
+                .upsert(payload, on_conflict="submitted_by_profile_id,context_key")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist feedback",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to persist feedback")
+
+    def insert_global_feedback(self, payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = self.client.table("beta_feedback").insert(payload).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist feedback",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to persist feedback")
+
+    def claim_feedback_rate_limit(
+        self,
+        profile_id: str,
+        *,
+        report_limit: int,
+        screenshot_limit: int,
+        has_screenshot: bool,
+    ) -> tuple[bool, str | None, int]:
+        try:
+            response = self.client.rpc(
+                "claim_beta_feedback_rate_limit",
+                {
+                    "p_submitted_by_profile_id": profile_id,
+                    "p_report_limit": report_limit,
+                    "p_screenshot_limit": screenshot_limit,
+                    "p_window_seconds": 3600,
+                    "p_has_screenshot": has_screenshot,
+                },
+            ).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="feedback rate limit unavailable",
+                )
+            row = rows[0]
+            return bool(row.get("allowed")), row.get("blocked_scope"), int(row.get("retry_after_seconds") or 0)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="feedback rate limit unavailable")
+
+    def upload_feedback_screenshot(self, path: str, data: bytes, mime: str) -> None:
+        try:
+            self.client.storage.from_("feedback-screenshots").upload(
+                path,
+                data,
+                {"content-type": mime, "upsert": "false"},
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to upload screenshot")
+
+    def delete_feedback_screenshots(self, paths: list[str]) -> None:
+        if not paths:
+            return
+        try:
+            self.client.storage.from_("feedback-screenshots").remove(paths)
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to delete screenshot")
+
+    def list_expired_feedback_screenshots(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("beta_feedback")
+            .select("id,screenshot_path,screenshot_expires_at")
+            .not_.is_("screenshot_path", "null")
+            .is_("screenshot_deleted_at", "null")
+            .lte("screenshot_expires_at", datetime.now(timezone.utc).isoformat())
+            .order("screenshot_expires_at")
+            .limit(max(1, min(limit, 500)))
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def list_profile_feedback_screenshots(self, profile_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("beta_feedback")
+            .select("id,screenshot_path,screenshot_expires_at")
+            .eq("submitted_by_profile_id", profile_id)
+            .not_.is_("screenshot_path", "null")
+            .order("created_at")
+            .limit(max(1, min(limit, 500)))
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def clear_feedback_screenshot(self, feedback_id: str, expected_path: str) -> bool:
+        response = (
+            self.client.table("beta_feedback")
+            .update(
+                {
+                    "screenshot_path": None,
+                    "screenshot_mime": None,
+                    "screenshot_size_bytes": None,
+                    "screenshot_width": None,
+                    "screenshot_height": None,
+                    "screenshot_expires_at": None,
+                    "screenshot_deleted_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            .eq("id", feedback_id)
+            .eq("screenshot_path", expected_path)
+            .execute()
+        )
+        return bool(getattr(response, "data", None) or [])

@@ -19,6 +19,13 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 logger = logging.getLogger("api")
 
 
+def normalize_request_path(value: object) -> str:
+    """Normalize non-root request paths for path-specific body limits."""
+
+    path = str(value or "")
+    return path.rstrip("/") if path != "/" and path.endswith("/") else path
+
+
 class _RequestBodyTooLarge(BaseException):
     """Internal signal that the streamed body crossed the configured ceiling.
 
@@ -32,15 +39,24 @@ class _RequestBodyTooLarge(BaseException):
 class RequestBodySizeLimitMiddleware:
     """Reject requests whose streamed body exceeds ``max_body_bytes``."""
 
-    def __init__(self, app: ASGIApp, *, max_body_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        max_body_bytes: int,
+        path_limits: dict[str, int] | None = None,
+    ) -> None:
         self.app = app
         self.max_body_bytes = max_body_bytes
+        self.path_limits = path_limits or {}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
+        path = normalize_request_path(scope.get("path"))
+        request_limit = self.path_limits.get(path, self.max_body_bytes)
         body_seen = 0
         response_started = False
 
@@ -49,7 +65,7 @@ class RequestBodySizeLimitMiddleware:
             message = await receive()
             if message["type"] == "http.request":
                 body_seen += len(message.get("body", b""))
-                if body_seen > self.max_body_bytes:
+                if body_seen > request_limit:
                     raise _RequestBodyTooLarge()
             return message
 
@@ -67,7 +83,7 @@ class RequestBodySizeLimitMiddleware:
                 scope.get("method"),
                 scope.get("path"),
                 body_seen,
-                self.max_body_bytes,
+                request_limit,
             )
             if response_started:
                 # The app already began responding despite the oversized body;
