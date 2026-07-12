@@ -208,6 +208,60 @@ def test_unknown_blocking_code_fails_closed() -> None:
     assert report["is_publishable"] is False
 
 
+@pytest.mark.parametrize(
+    "field",
+    ["errors", "warnings", "review_flags", "blocking_warnings"],
+)
+@pytest.mark.parametrize(
+    "malformed_value",
+    [
+        pytest.param({"code": "restriction_violation"}, id="dict"),
+        pytest.param("not-a-list", id="string"),
+        pytest.param(object(), id="object"),
+    ],
+)
+def test_malformed_release_collection_fails_closed(
+    field: str,
+    malformed_value: object,
+) -> None:
+    validator_report: dict[str, object] = {
+        "errors": [],
+        "warnings": [],
+        "review_flags": [],
+        "blocking_warnings": [],
+    }
+    validator_report[field] = malformed_value
+
+    report = stage2_policy.apply_stage2_release_policy(validator_report)
+
+    assert report["release_policy_malformed_fields"] == [field]
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+    assert report["is_publishable"] is False
+
+
+def test_plan_mapper_keeps_malformed_review_required_report_held() -> None:
+    from api.plan_mappers import _map_plan_summary
+
+    summary = _map_plan_summary(
+        {
+            "id": "plan-1",
+            "athlete_id": "athlete-1",
+            "status": "review_required",
+            "stage2_validator_report": {
+                "errors": [],
+                "warnings": [],
+                "review_flags": [],
+                "blocking_warnings": {"code": "restriction_violation"},
+            },
+            "technical_style": [],
+        }
+    )
+
+    assert summary.status == "held_for_review"
+    assert summary.review_reason is not None
+
+
 def test_release_status_matches_validator_publishability() -> None:
     report = stage2_policy.apply_stage2_release_policy(
         {
