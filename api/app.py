@@ -88,6 +88,7 @@ from .generation_job_helpers import (
 )
 from .routes import (
     build_daily_router,
+    build_feedback_router,
     build_generation_jobs_router,
     build_nutrition_router,
     build_plans_router,
@@ -519,7 +520,12 @@ def create_app(
     # Hard ceiling on the actual number of body bytes received, enforced as the
     # body streams in. This backstops the Content-Length check below, which a
     # chunked or mislabelled request can slip past.
-    app.add_middleware(RequestBodySizeLimitMiddleware, max_body_bytes=MAX_REQUEST_BODY_BYTES)
+    feedback_multipart_limit = 5 * 1024 * 1024 + 64 * 1024
+    app.add_middleware(
+        RequestBodySizeLimitMiddleware,
+        max_body_bytes=MAX_REQUEST_BODY_BYTES,
+        path_limits={"/api/feedback/global": feedback_multipart_limit},
+    )
 
     @app.middleware("http")
     async def enforce_request_body_size(request: Request, call_next):
@@ -535,13 +541,18 @@ def create_app(
                 declared = int(content_length)
             except ValueError:
                 declared = -1
-            if declared > MAX_REQUEST_BODY_BYTES:
+            request_limit = (
+                feedback_multipart_limit
+                if request.url.path == "/api/feedback/global"
+                else MAX_REQUEST_BODY_BYTES
+            )
+            if declared > request_limit:
                 logger.warning(
                     "[http] request:body_too_large method=%s path=%s content_length=%s limit=%s",
                     request.method,
                     request.url.path,
                     content_length,
-                    MAX_REQUEST_BODY_BYTES,
+                    request_limit,
                 )
                 return JSONResponse(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -635,7 +646,7 @@ def create_app(
             return JSONResponse(
                 status_code=exc.status_code,
                 content=exc_content,
-                headers={"X-Request-ID": request_id},
+                headers={**(exc.headers or {}), "X-Request-ID": request_id},
             )
         except Exception:
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -672,7 +683,9 @@ def create_app(
             content["code"] = error_code
         if request_id:
             content["request_id"] = request_id
-        headers = {"X-Request-ID": request_id} if request_id else None
+        headers = {**(exc.headers or {})}
+        if request_id:
+            headers["X-Request-ID"] = request_id
         return JSONResponse(status_code=exc.status_code, content=content, headers=headers)
 
     def get_store(request: Request) -> AppStore:
@@ -928,6 +941,12 @@ def create_app(
     )
     app.include_router(
         build_today_router(
+            require_profile=require_profile,
+            get_store=get_store,
+        )
+    )
+    app.include_router(
+        build_feedback_router(
             require_profile=require_profile,
             get_store=get_store,
         )

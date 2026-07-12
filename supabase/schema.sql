@@ -1547,3 +1547,233 @@ grant select on public.session_completions to authenticated;
 
 grant all on public.today_checkins to service_role;
 grant all on public.session_completions to service_role;
+
++-- Secure beta feedback. All application access is server-side through the
+-- service role; there are intentionally no browser-facing RLS policies.
+
+create table if not exists public.beta_feedback (
+  id uuid primary key default gen_random_uuid(),
+  submitted_by_profile_id uuid not null references public.profiles(id) on delete cascade,
+  context_key text not null check (char_length(context_key) between 1 and 180),
+  surface text not null check (surface in ('plan', 'daily_recommendation', 'global')),
+  category text not null check (category in (
+    'plan_usefulness',
+    'recommendation_fit',
+    'recommendation_safety',
+    'bug_report',
+    'feature_request',
+    'safety_issue',
+    'general_feedback'
+  )),
+  response text check (response is null or response in ('yes', 'no', 'unsafe')),
+  reason text,
+  comment text not null default '' check (char_length(comment) <= 500),
+  contact_allowed boolean not null default false,
+  priority text not null default 'normal' check (priority in ('normal', 'safety')),
+  plan_id uuid references public.plans(id) on delete set null,
+  today_checkin_id uuid references public.today_checkins(id) on delete set null,
+  camp_phase text,
+  readiness_snapshot jsonb not null default '{}'::jsonb,
+  injury_snapshot jsonb not null default '{}'::jsonb,
+  app_version text not null,
+  technical_context jsonb not null default '{}'::jsonb,
+  screenshot_path text,
+  screenshot_mime text check (
+    screenshot_mime is null or screenshot_mime in ('image/png', 'image/jpeg', 'image/webp')
+  ),
+  screenshot_size_bytes integer check (
+    screenshot_size_bytes is null or screenshot_size_bytes between 1 and 5242880
+  ),
+  screenshot_width integer check (
+    screenshot_width is null or screenshot_width between 1 and 4096
+  ),
+  screenshot_height integer check (
+    screenshot_height is null or screenshot_height between 1 and 4096
+  ),
+  screenshot_expires_at timestamptz,
+  screenshot_deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint beta_feedback_submitter_context_key unique (submitted_by_profile_id, context_key),
+  constraint beta_feedback_surface_category_check check (
+    (surface = 'plan' and category = 'plan_usefulness')
+    or (surface = 'daily_recommendation' and category in ('recommendation_fit', 'recommendation_safety'))
+    or (surface = 'global' and category in ('bug_report', 'feature_request', 'safety_issue', 'general_feedback'))
+  ),
+  constraint beta_feedback_response_shape_check check (
+    (surface = 'global' and response is null)
+    or (surface = 'plan' and response in ('yes', 'no'))
+    or (surface = 'daily_recommendation' and response in ('yes', 'no', 'unsafe'))
+  ),
+  constraint beta_feedback_reason_check check (
+    (surface = 'global' and reason is null)
+    or (response in ('yes', 'unsafe') and reason is null)
+    or (surface = 'plan' and response = 'no' and (
+      reason is null or reason in (
+        'too_hard', 'too_easy', 'schedule_mismatch', 'injury_restrictions_wrong',
+        'exercises_unsuitable', 'instructions_unclear', 'other'
+      )
+    ))
+    or (surface = 'daily_recommendation' and response = 'no' and (
+      reason is null or reason in (
+        'too_demanding', 'too_cautious', 'pain_or_injury_ignored',
+        'training_mismatch', 'repetitive', 'unclear'
+      )
+    ))
+  ),
+  constraint beta_feedback_priority_check check (
+    (priority = 'safety' and category in ('recommendation_safety', 'safety_issue'))
+    or (priority = 'normal' and category not in ('recommendation_safety', 'safety_issue'))
+  ),
+  constraint beta_feedback_screenshot_shape_check check (
+    (screenshot_path is null and screenshot_mime is null and screenshot_size_bytes is null
+      and screenshot_width is null and screenshot_height is null and screenshot_expires_at is null)
+    or (screenshot_path is not null and screenshot_mime is not null and screenshot_size_bytes is not null
+      and screenshot_width is not null and screenshot_height is not null
+      and screenshot_expires_at is not null and screenshot_deleted_at is null)
+  )
+);
+
+create index if not exists beta_feedback_priority_created_idx
+  on public.beta_feedback (priority desc, created_at desc);
+
+create index if not exists beta_feedback_submitter_created_idx
+  on public.beta_feedback (submitted_by_profile_id, created_at desc);
+
+create index if not exists beta_feedback_screenshot_expiry_idx
+  on public.beta_feedback (screenshot_expires_at)
+  where screenshot_path is not null and screenshot_deleted_at is null;
+
+drop trigger if exists set_beta_feedback_updated_at on public.beta_feedback;
+create trigger set_beta_feedback_updated_at
+  before update on public.beta_feedback
+  for each row execute function public.set_updated_at();
+
+create table if not exists public.beta_feedback_rate_limits (
+  id bigint generated by default as identity primary key,
+  submitted_by_profile_id uuid not null references public.profiles(id) on delete cascade,
+  scope text not null check (scope in ('global_report', 'screenshot')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists beta_feedback_rate_limits_claim_idx
+  on public.beta_feedback_rate_limits (submitted_by_profile_id, scope, created_at desc);
+
+create or replace function public.claim_beta_feedback_rate_limit(
+  p_submitted_by_profile_id uuid,
+  p_report_limit integer,
+  p_screenshot_limit integer,
+  p_window_seconds integer,
+  p_has_screenshot boolean
+)
+returns table (allowed boolean, blocked_scope text, retry_after_seconds integer)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now timestamptz := clock_timestamp();
+  v_cutoff timestamptz;
+  v_count integer;
+  v_oldest timestamptz;
+begin
+  if p_report_limit < 0 or p_screenshot_limit < 0 or p_window_seconds <= 0 then
+    raise exception 'invalid feedback rate-limit configuration';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_submitted_by_profile_id::text, 0));
+  v_cutoff := v_now - make_interval(secs => p_window_seconds);
+
+  delete from public.beta_feedback_rate_limits
+  where submitted_by_profile_id = p_submitted_by_profile_id
+    and created_at < v_cutoff;
+
+  if p_report_limit > 0 then
+    select count(*), min(created_at)
+      into v_count, v_oldest
+    from public.beta_feedback_rate_limits
+    where submitted_by_profile_id = p_submitted_by_profile_id
+      and scope = 'global_report'
+      and created_at >= v_cutoff;
+
+    if v_count >= p_report_limit then
+      return query select false, 'global_report'::text,
+        greatest(1, ceil(extract(epoch from (v_oldest + make_interval(secs => p_window_seconds) - v_now)))::integer);
+      return;
+    end if;
+  end if;
+
+  if p_has_screenshot and p_screenshot_limit > 0 then
+    select count(*), min(created_at)
+      into v_count, v_oldest
+    from public.beta_feedback_rate_limits
+    where submitted_by_profile_id = p_submitted_by_profile_id
+      and scope = 'screenshot'
+      and created_at >= v_cutoff;
+
+    if v_count >= p_screenshot_limit then
+      return query select false, 'screenshot'::text,
+        greatest(1, ceil(extract(epoch from (v_oldest + make_interval(secs => p_window_seconds) - v_now)))::integer);
+      return;
+    end if;
+  end if;
+
+  if p_report_limit > 0 then
+    insert into public.beta_feedback_rate_limits (submitted_by_profile_id, scope, created_at)
+    values (p_submitted_by_profile_id, 'global_report', v_now);
+  end if;
+  if p_has_screenshot and p_screenshot_limit > 0 then
+    insert into public.beta_feedback_rate_limits (submitted_by_profile_id, scope, created_at)
+    values (p_submitted_by_profile_id, 'screenshot', v_now);
+  end if;
+
+  return query select true, null::text, 0;
+end;
+$$;
+
+create or replace function public.guard_profile_feedback_screenshots()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if exists (
+    select 1 from public.beta_feedback
+    where submitted_by_profile_id = old.id and screenshot_path is not null
+  ) then
+    raise exception 'feedback_screenshots_must_be_purged:%', old.id;
+  end if;
+  return old;
+end;
+$$;
+
+drop trigger if exists guard_profile_feedback_screenshots_before_delete on public.profiles;
+create trigger guard_profile_feedback_screenshots_before_delete
+  before delete on public.profiles
+  for each row execute function public.guard_profile_feedback_screenshots();
+
+alter table public.beta_feedback enable row level security;
+alter table public.beta_feedback_rate_limits enable row level security;
+
+revoke all on public.beta_feedback from anon, authenticated;
+revoke all on public.beta_feedback_rate_limits from anon, authenticated;
+revoke all on function public.claim_beta_feedback_rate_limit(uuid, integer, integer, integer, boolean) from public, anon, authenticated;
+revoke all on function public.guard_profile_feedback_screenshots() from public, anon, authenticated;
+
+grant all on public.beta_feedback to service_role;
+grant all on public.beta_feedback_rate_limits to service_role;
+grant usage, select on sequence public.beta_feedback_rate_limits_id_seq to service_role;
+grant execute on function public.claim_beta_feedback_rate_limit(uuid, integer, integer, integer, boolean) to service_role;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'feedback-screenshots',
+  'feedback-screenshots',
+  false,
+  5242880,
+  array['image/png', 'image/jpeg', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;

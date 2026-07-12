@@ -115,6 +115,9 @@ class FakeStore:
         self.injury_flags: dict[str, list[dict]] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
+        self.beta_feedback: list[dict] = []
+        self.feedback_screenshots: dict[str, tuple[bytes, str]] = {}
+        self._feedback_rate_events: dict[tuple[str, str], list[datetime]] = {}
         self.get_admin_athlete_calls = 0
         self.list_admin_athletes_by_ids_calls = 0
         # When True, admin-queue profile enrichment degrades to id-only rows
@@ -1594,6 +1597,116 @@ class FakeStore:
                 row["updated_at"] = _now()
                 return dict(row)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review not found")
+
+    def get_context_feedback(self, profile_id: str, context_key: str) -> dict | None:
+        return next(
+            (
+                dict(row)
+                for row in self.beta_feedback
+                if row["submitted_by_profile_id"] == profile_id and row["context_key"] == context_key
+            ),
+            None,
+        )
+
+    def get_feedback_plan_for_owner(self, plan_id: str, profile_id: str) -> dict | None:
+        return self.get_plan_for_athlete(plan_id, profile_id)
+
+    def get_feedback_active_plan_id(self, profile_id: str) -> str | None:
+        return self.get_active_plan_id(profile_id)
+
+    def get_feedback_today_checkin(
+        self, profile_id: str, plan_id: str, training_day: str
+    ) -> dict | None:
+        return self.get_today_checkin(profile_id, plan_id, training_day)
+
+    def list_feedback_injury_flags(self, profile_id: str, *, limit: int = 20) -> list[dict]:
+        return self.list_injury_flags(profile_id, limit=limit)
+
+    def get_feedback_intake(self, intake_id: str) -> dict | None:
+        return self.get_intake(intake_id)
+
+    def upsert_context_feedback(self, payload: dict) -> dict:
+        for row in self.beta_feedback:
+            if (
+                row["submitted_by_profile_id"] == payload["submitted_by_profile_id"]
+                and row["context_key"] == payload["context_key"]
+            ):
+                row.update(copy.deepcopy(payload))
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {"id": str(uuid4()), **copy.deepcopy(payload), "created_at": _now(), "updated_at": _now()}
+        self.beta_feedback.append(row)
+        return dict(row)
+
+    def insert_global_feedback(self, payload: dict) -> dict:
+        row = {**copy.deepcopy(payload), "created_at": _now(), "updated_at": _now()}
+        self.beta_feedback.append(row)
+        return dict(row)
+
+    def claim_feedback_rate_limit(
+        self,
+        profile_id: str,
+        *,
+        report_limit: int,
+        screenshot_limit: int,
+        has_screenshot: bool,
+    ) -> tuple[bool, str | None, int]:
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=1)
+        with self._generation_job_daily_limit_lock:
+            for scope, limit, active in (
+                ("global_report", report_limit, True),
+                ("screenshot", screenshot_limit, has_screenshot),
+            ):
+                key = (profile_id, scope)
+                events = [event for event in self._feedback_rate_events.get(key, []) if event >= cutoff]
+                self._feedback_rate_events[key] = events
+                if active and limit > 0 and len(events) >= limit:
+                    return False, scope, max(1, math.ceil(3600 - (now - events[0]).total_seconds()))
+            if report_limit > 0:
+                self._feedback_rate_events.setdefault((profile_id, "global_report"), []).append(now)
+            if has_screenshot and screenshot_limit > 0:
+                self._feedback_rate_events.setdefault((profile_id, "screenshot"), []).append(now)
+        return True, None, 0
+
+    def upload_feedback_screenshot(self, path: str, data: bytes, mime: str) -> None:
+        self.feedback_screenshots[path] = (data, mime)
+
+    def delete_feedback_screenshots(self, paths: list[str]) -> None:
+        for path in paths:
+            self.feedback_screenshots.pop(path, None)
+
+    def list_expired_feedback_screenshots(self, *, limit: int = 100) -> list[dict]:
+        now = datetime.now(timezone.utc)
+        rows = []
+        for row in self.beta_feedback:
+            expires = _parse_iso(row.get("screenshot_expires_at"))
+            if row.get("screenshot_path") and expires and expires <= now:
+                rows.append(dict(row))
+        return rows[:limit]
+
+    def list_profile_feedback_screenshots(self, profile_id: str, *, limit: int = 100) -> list[dict]:
+        return [
+            dict(row)
+            for row in self.beta_feedback
+            if row.get("submitted_by_profile_id") == profile_id and row.get("screenshot_path")
+        ][:limit]
+
+    def clear_feedback_screenshot(self, feedback_id: str, expected_path: str) -> bool:
+        for row in self.beta_feedback:
+            if row.get("id") == feedback_id and row.get("screenshot_path") == expected_path:
+                for field_name in (
+                    "screenshot_path",
+                    "screenshot_mime",
+                    "screenshot_size_bytes",
+                    "screenshot_width",
+                    "screenshot_height",
+                    "screenshot_expires_at",
+                ):
+                    row[field_name] = None
+                row["screenshot_deleted_at"] = _now()
+                return True
+        return False
 
 
 class FakeOpenAIStream:

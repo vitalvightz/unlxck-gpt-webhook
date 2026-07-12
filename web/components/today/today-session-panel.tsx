@@ -12,6 +12,7 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { TodayDecisionPanel } from "@/components/today/today-decision-panel";
+import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { formatTrainingDay } from "@/components/today/format";
 import { useToast } from "@/components/toast-provider";
 import { submitTodaySessionCompletion } from "@/lib/api";
@@ -329,6 +330,9 @@ export function TodaySessionPanel({
           </div>
         </div>
         <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
+        {recommendationState !== "not_checked_in" ? (
+          <ContextualFeedback token={token} surface="daily_recommendation" />
+        ) : null}
         {showStructuredBlocks ? (
           <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
         ) : (
@@ -364,6 +368,9 @@ export function TodaySessionPanel({
         </div>
       </div>
       <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
+      {recommendationState !== "not_checked_in" ? (
+        <ContextualFeedback token={token} surface="daily_recommendation" />
+      ) : null}
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (

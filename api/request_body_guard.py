@@ -32,15 +32,23 @@ class _RequestBodyTooLarge(BaseException):
 class RequestBodySizeLimitMiddleware:
     """Reject requests whose streamed body exceeds ``max_body_bytes``."""
 
-    def __init__(self, app: ASGIApp, *, max_body_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        max_body_bytes: int,
+        path_limits: dict[str, int] | None = None,
+    ) -> None:
         self.app = app
         self.max_body_bytes = max_body_bytes
+        self.path_limits = path_limits or {}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
+        request_limit = self.path_limits.get(str(scope.get("path") or ""), self.max_body_bytes)
         body_seen = 0
         response_started = False
 
@@ -49,7 +57,7 @@ class RequestBodySizeLimitMiddleware:
             message = await receive()
             if message["type"] == "http.request":
                 body_seen += len(message.get("body", b""))
-                if body_seen > self.max_body_bytes:
+                if body_seen > request_limit:
                     raise _RequestBodyTooLarge()
             return message
 
@@ -67,7 +75,7 @@ class RequestBodySizeLimitMiddleware:
                 scope.get("method"),
                 scope.get("path"),
                 body_seen,
-                self.max_body_bytes,
+                request_limit,
             )
             if response_started:
                 # The app already began responding despite the oversized body;

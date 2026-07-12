@@ -30,6 +30,7 @@ import {
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
+import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
@@ -2469,6 +2470,9 @@ export function PlanViewer({
                   />
                 </>
               )}
+              {viewerRole === "athlete" && accessToken ? (
+                <ContextualFeedback token={accessToken} surface="plan" planId={plan.plan_id} />
+              ) : null}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}
               {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}

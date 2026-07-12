@@ -5,7 +5,7 @@ import re
 from datetime import date
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from .contracts.checkin_decision import (
     ActiveInjury as CheckinActiveInjury,
@@ -2048,3 +2048,66 @@ class TodayInjuryCheckinRequest(BaseModel):
 
 class TodayInjuryCheckinResponse(BaseModel):
     open_injuries: list[InjuryFlagRecord] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Secure beta feedback
+# ---------------------------------------------------------------------------
+
+FeedbackSurface = Literal["plan", "daily_recommendation", "global"]
+FeedbackCategory = Literal[
+    "plan_usefulness",
+    "recommendation_fit",
+    "recommendation_safety",
+    "bug_report",
+    "feature_request",
+    "safety_issue",
+    "general_feedback",
+]
+FeedbackResponseValue = Literal["yes", "no", "unsafe"]
+FeedbackPriority = Literal["normal", "safety"]
+
+
+class ContextualFeedbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response: FeedbackResponseValue
+    reason: str | None = Field(default=None, max_length=64)
+    comment: str = Field(default="", max_length=500)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def clean_feedback_reason(cls, value: Any) -> str | None:
+        text = str(value or "").strip()
+        return text or None
+
+    @field_validator("comment", mode="before")
+    @classmethod
+    def clean_feedback_comment(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class GlobalFeedbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    category: Literal["bug_report", "feature_request", "safety_issue", "general_feedback"]
+    description: str = Field(default="", max_length=500)
+    contact_allowed: bool = False
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def clean_feedback_description(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class FeedbackRecord(BaseModel):
+    id: str
+    surface: FeedbackSurface
+    category: FeedbackCategory
+    response: FeedbackResponseValue | None = None
+    reason: str | None = None
+    comment: str = ""
+    priority: FeedbackPriority
+    has_screenshot: bool = False
+    created_at: str = ""
+    updated_at: str = ""

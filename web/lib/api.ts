@@ -16,6 +16,9 @@ import type {
   InjuryFlagStatus,
   ManualStage2SubmissionRequest,
   GenerationJobResponse,
+  ContextualFeedbackRequest,
+  FeedbackRecord,
+  GlobalFeedbackRequest,
   MeResponse,
   NutritionWorkspaceState,
   NutritionWorkspaceUpdateRequest,
@@ -225,7 +228,7 @@ type ExecutedRequest = {
 
 async function executeRequest(path: string, init?: ApiRequestInit): Promise<ExecutedRequest> {
   const headers = new Headers(init?.headers ?? {});
-  if (init?.body) {
+  if (init?.body && !(typeof FormData !== "undefined" && init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   if (init?.token) {
@@ -1151,5 +1154,54 @@ export function submitTodayInjuryCheckin(
     method: "POST",
     token,
     body: JSON.stringify(payload),
+  });
+}
+
+export function getPlanFeedback(token: string, planId: string): Promise<FeedbackRecord | null> {
+  return readJson<FeedbackRecord | null>(`/api/plans/${encodeURIComponent(planId)}/feedback`, { token });
+}
+
+export function putPlanFeedback(
+  token: string,
+  planId: string,
+  payload: ContextualFeedbackRequest,
+): Promise<FeedbackRecord> {
+  return readJson<FeedbackRecord>(`/api/plans/${encodeURIComponent(planId)}/feedback`, {
+    method: "PUT",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getTodayFeedback(token: string): Promise<FeedbackRecord | null> {
+  return readJson<FeedbackRecord | null>("/api/today/feedback", { token });
+}
+
+export function putTodayFeedback(
+  token: string,
+  payload: ContextualFeedbackRequest,
+): Promise<FeedbackRecord> {
+  return readJson<FeedbackRecord>("/api/today/feedback", {
+    method: "PUT",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function submitGlobalFeedback(
+  token: string,
+  payload: GlobalFeedbackRequest,
+): Promise<FeedbackRecord> {
+  const form = new FormData();
+  form.set("category", payload.category);
+  form.set("description", payload.description ?? "");
+  form.set("contact_allowed", String(Boolean(payload.contact_allowed)));
+  if (payload.screenshot) {
+    form.set("screenshot", payload.screenshot);
+  }
+  return readJson<FeedbackRecord>("/api/feedback/global", {
+    method: "POST",
+    token,
+    body: form,
   });
 }

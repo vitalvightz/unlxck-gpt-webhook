@@ -1,0 +1,116 @@
+# Beta feedback operations
+
+The beta feedback API uses the Supabase service role only. Do not grant browser access to `beta_feedback`, `beta_feedback_rate_limits`, or the private `feedback-screenshots` bucket.
+
+## Environment
+
+Configure these on the Render API and the Render Cron Job:
+
+```env
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+FEEDBACK_REPORT_LIMIT_PER_HOUR=5
+FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR=2
+FEEDBACK_SCREENSHOT_RETENTION_DAYS=90
+```
+
+Positive integers enable a limit, and `0` disables it. Invalid or negative values fall back to the defaults. Changing limits does not require a database migration.
+
+## Review recent feedback
+
+Run this read-only query in the Supabase SQL editor. It deliberately exposes screenshot paths only to the operator running the query; paths are not public URLs.
+
+```sql
+select
+  f.created_at,
+  f.updated_at,
+  f.priority,
+  f.submitted_by_profile_id as submitter_profile_id,
+  p.email as submitter_email,
+  f.surface,
+  f.category,
+  f.response,
+  f.reason,
+  f.comment,
+  f.contact_allowed,
+  f.plan_id,
+  f.today_checkin_id,
+  f.camp_phase,
+  f.app_version,
+  f.screenshot_path,
+  f.screenshot_expires_at,
+  f.screenshot_deleted_at
+from public.beta_feedback as f
+join public.profiles as p on p.id = f.submitted_by_profile_id
+order by (f.priority = 'safety') desc, f.created_at desc
+limit 200;
+```
+
+Safety-only review:
+
+```sql
+select
+  f.created_at,
+  f.submitted_by_profile_id as submitter_profile_id,
+  p.email as submitter_email,
+  f.surface,
+  f.category,
+  f.response,
+  f.reason,
+  f.comment,
+  f.plan_id,
+  f.today_checkin_id,
+  f.camp_phase,
+  f.app_version,
+  f.screenshot_path,
+  f.screenshot_expires_at
+from public.beta_feedback as f
+join public.profiles as p on p.id = f.submitted_by_profile_id
+where f.priority = 'safety'
+order by f.created_at desc;
+```
+
+Open the private `feedback-screenshots` bucket in the authenticated Supabase dashboard and locate the exact stored path. Never make the bucket public. If automated retrieval is required, create a short-lived signed URL from a trusted service-role process and do not put it in logs or tickets.
+
+## Screenshot retention
+
+Create a Render Cron Job from this repository with:
+
+- Schedule: `30 3 * * *` (03:30 UTC daily)
+- Runtime: the same Python 3.11.14 runtime and production dependencies as the API
+- Command: `python -m api.feedback_retention`
+- Environment: the Supabase service credentials and feedback retention setting above
+
+Manual run:
+
+```powershell
+python -m api.feedback_retention
+```
+
+The command reads expired references in bounded batches, deletes each object through the Storage API, and clears the database path only after Storage confirms the delete request. Failed rows remain unchanged and are retried by the next run. A non-zero exit means at least one object should be retried.
+
+Verify the cron after deployment:
+
+```sql
+select count(*) as overdue_screenshots
+from public.beta_feedback
+where screenshot_path is not null
+  and screenshot_deleted_at is null
+  and screenshot_expires_at <= now();
+```
+
+Supabase Storage objects must be deleted through the Storage API. Direct SQL deletion from `storage.objects` can orphan the underlying file.
+
+## Account deletion
+
+The profile-delete guard rejects deletion while feedback screenshot paths remain. Before the existing profile/auth deletion operation, run:
+
+```powershell
+python tools/purge_feedback_screenshots.py --profile-id <profile-uuid> --confirm
+```
+
+Confirm `failed=0`, then run the existing account deletion. Feedback and rate-limit rows cascade from `submitted_by_profile_id`. Feedback rows otherwise remain until account deletion because the project has no broader feedback-row retention period. Safety rows use the same 90-day screenshot expiry; retaining them longer requires a documented policy change.
+
+## Logging boundaries
+
+Feedback route logs may contain only the request/feedback ID, server-derived surface/category/priority, screenshot presence, stable error code, and exception class. Cleanup logs contain feedback ID and operation only. Never add comments, health snapshots, raw headers, paths, filenames, multipart bodies, or image contents to logs, Sentry tags, or breadcrumbs.

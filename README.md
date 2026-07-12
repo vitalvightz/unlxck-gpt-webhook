@@ -207,7 +207,12 @@ UNLXCK_ADMIN_EMAILS=you@example.com
 APP_CORS_ORIGINS=https://your-production-frontend-domain
 OPENAI_API_KEY=
 APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=5
+FEEDBACK_REPORT_LIMIT_PER_HOUR=5
+FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR=2
+FEEDBACK_SCREENSHOT_RETENTION_DAYS=90
 ```
+
+Secure beta-feedback review, private screenshot retention, the daily Render Cron Job, and account-deletion cleanup are documented in [`docs/beta-feedback-operations.md`](docs/beta-feedback-operations.md).
 
 Admin access uses a **dual gate**: a request is treated as admin only when
 **both** conditions hold —

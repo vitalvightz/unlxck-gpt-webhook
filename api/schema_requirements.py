@@ -56,6 +56,9 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # must fail the deploy gate just like the daily-tracking tables above.
     "today_checkins",
     "session_completions",
+    # Secure beta feedback and its durable, per-profile abuse controls.
+    "beta_feedback",
+    "beta_feedback_rate_limits",
 )
 
 # ---------------------------------------------------------------------------
@@ -303,6 +306,42 @@ REQUIRED_SESSION_COMPLETIONS_COLUMNS: tuple[str, ...] = (
     "updated_at",
 )
 
+REQUIRED_BETA_FEEDBACK_COLUMNS: tuple[str, ...] = (
+    "id",
+    "submitted_by_profile_id",
+    "context_key",
+    "surface",
+    "category",
+    "response",
+    "reason",
+    "comment",
+    "contact_allowed",
+    "priority",
+    "plan_id",
+    "today_checkin_id",
+    "camp_phase",
+    "readiness_snapshot",
+    "injury_snapshot",
+    "app_version",
+    "technical_context",
+    "screenshot_path",
+    "screenshot_mime",
+    "screenshot_size_bytes",
+    "screenshot_width",
+    "screenshot_height",
+    "screenshot_expires_at",
+    "screenshot_deleted_at",
+    "created_at",
+    "updated_at",
+)
+
+REQUIRED_BETA_FEEDBACK_RATE_LIMIT_COLUMNS: tuple[str, ...] = (
+    "id",
+    "submitted_by_profile_id",
+    "scope",
+    "created_at",
+)
+
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "plans": REQUIRED_PLANS_COLUMNS,
@@ -316,6 +355,8 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "admin_reviews": REQUIRED_ADMIN_REVIEWS_COLUMNS,
     "today_checkins": REQUIRED_TODAY_CHECKINS_COLUMNS,
     "session_completions": REQUIRED_SESSION_COMPLETIONS_COLUMNS,
+    "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
+    "beta_feedback_rate_limits": REQUIRED_BETA_FEEDBACK_RATE_LIMIT_COLUMNS,
 }
 
 # ---------------------------------------------------------------------------
@@ -342,6 +383,7 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     # Invoked during AppStore.validate_runtime_schema() at backend startup
     # (api/store.py); a missing lock RPC must fail this check too.
     "public.validate_generation_job_active_lock",
+    "public.claim_beta_feedback_rate_limit",
 )
 
 # ---------------------------------------------------------------------------
@@ -409,6 +451,18 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         label="session_completions athlete/session/training-day uniqueness",
         accepted_names=("session_completions_athlete_session_day_key",),
     ),
+    IndexRequirement(
+        label="beta_feedback submitter/context uniqueness",
+        accepted_names=("beta_feedback_submitter_context_key",),
+    ),
+    IndexRequirement(
+        label="beta_feedback rate-limit claim index",
+        accepted_names=("beta_feedback_rate_limits_claim_idx",),
+    ),
+    IndexRequirement(
+        label="beta_feedback screenshot expiry index",
+        accepted_names=("beta_feedback_screenshot_expiry_idx",),
+    ),
 )
 
 # ---------------------------------------------------------------------------
@@ -429,6 +483,8 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "admin_reviews",
     "today_checkins",
     "session_completions",
+    "beta_feedback",
+    "beta_feedback_rate_limits",
 )
 
 

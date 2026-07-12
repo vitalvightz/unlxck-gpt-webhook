@@ -1106,3 +1106,40 @@ export type TodayInjuryCheckinRequest = {
 export type TodayInjuryCheckinResponse = {
   open_injuries: InjuryFlagRecord[];
 };
+
+export type FeedbackSurface = "plan" | "daily_recommendation" | "global";
+export type FeedbackCategory =
+  | "plan_usefulness"
+  | "recommendation_fit"
+  | "recommendation_safety"
+  | "bug_report"
+  | "feature_request"
+  | "safety_issue"
+  | "general_feedback";
+export type FeedbackResponseValue = "yes" | "no" | "unsafe";
+
+export type FeedbackRecord = {
+  id: string;
+  surface: FeedbackSurface;
+  category: FeedbackCategory;
+  response: FeedbackResponseValue | null;
+  reason: string | null;
+  comment: string;
+  priority: "normal" | "safety";
+  has_screenshot: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContextualFeedbackRequest = {
+  response: FeedbackResponseValue;
+  reason?: string | null;
+  comment?: string;
+};
+
+export type GlobalFeedbackRequest = {
+  category: Extract<FeedbackCategory, "bug_report" | "feature_request" | "safety_issue" | "general_feedback">;
+  description?: string;
+  contact_allowed?: boolean;
+  screenshot?: File | null;
+};
