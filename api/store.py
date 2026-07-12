@@ -507,6 +507,8 @@ class AppStore(Protocol):
     def upsert_context_feedback(self, payload: dict[str, Any]) -> dict[str, Any]: ...
     def insert_global_feedback(self, payload: dict[str, Any]) -> dict[str, Any]: ...
     def list_admin_feedback(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
+    def get_feedback_screenshot_path(self, feedback_id: str) -> str | None: ...
+    def create_feedback_screenshot_signed_url(self, path: str, *, expires_in: int) -> str: ...
     def claim_feedback_rate_limit(
         self,
         profile_id: str,
@@ -4635,6 +4637,36 @@ class SupabaseAppStore:
             return rows[: max(1, min(limit, 100))]
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_feedback_store_error(exc, detail="failed to read admin feedback")
+
+    def get_feedback_screenshot_path(self, feedback_id: str) -> str | None:
+        try:
+            row = self._select_first(
+                self.client.table("beta_feedback")
+                .select("screenshot_path")
+                .eq("id", feedback_id)
+                .gt("screenshot_expires_at", datetime.now(timezone.utc).isoformat())
+            )
+            return str(row.get("screenshot_path") or "").strip() or None if row else None
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read feedback screenshot")
+
+    def create_feedback_screenshot_signed_url(self, path: str, *, expires_in: int) -> str:
+        try:
+            response = self.client.storage.from_("feedback-screenshots").create_signed_url(
+                path,
+                expires_in,
+            )
+            url = str(response.get("signedURL") or response.get("signedUrl") or "").strip()
+            if not url:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="feedback screenshot unavailable",
+                )
+            return url
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to open feedback screenshot")
 
     def claim_feedback_rate_limit(
         self,

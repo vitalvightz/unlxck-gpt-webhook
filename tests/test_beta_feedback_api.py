@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import pytest
 from PIL import Image
 
+from api.services import feedback_service
 from api.services.today_service import resolve_training_day
 from api.services.feedback_service import report_limit_per_hour, screenshot_limit_per_hour
 from api.routes import feedback as feedback_routes
@@ -214,6 +215,45 @@ def test_plan_feedback_snapshots_real_nested_intake_shape():
     }
 
 
+def test_plan_feedback_still_saves_when_optional_health_context_is_unavailable():
+    client, store, _ = _build_client()
+    _seed_plan(store, intake_id="missing-context")
+
+    def unavailable(*_args, **_kwargs):
+        raise RuntimeError("optional context unavailable")
+
+    store.list_feedback_injury_flags = unavailable
+    store.get_feedback_intake = unavailable
+
+    response = client.put(
+        f"/api/plans/{PLAN_ID}/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+
+    assert response.status_code == 200
+    assert store.beta_feedback[-1]["injury_snapshot"] == {"open_flags": [], "intake": {}}
+
+
+def test_plan_feedback_still_saves_when_legacy_phase_context_cannot_be_derived(monkeypatch):
+    client, store, _ = _build_client()
+    _seed_plan(store)
+
+    def unavailable(*_args, **_kwargs):
+        raise ValueError("legacy phase unavailable")
+
+    monkeypatch.setattr(feedback_service, "resolve_current_week", unavailable)
+
+    response = client.put(
+        f"/api/plans/{PLAN_ID}/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+
+    assert response.status_code == 200
+    assert store.beta_feedback[-1]["camp_phase"] is None
+
+
 def test_today_unsafe_feedback_is_server_derived_and_does_not_mutate_programme():
     client, store, _ = _build_client()
     _seed_today(store)
@@ -232,6 +272,25 @@ def test_today_unsafe_feedback_is_server_derived_and_does_not_mutate_programme()
     assert row["readiness_snapshot"]["pain"] == "none"
     assert store.plans[PLAN_ID] == original_plan
     assert store.today_checkins["athlete-1"][0] == original_checkin
+
+
+def test_today_feedback_still_saves_when_optional_injury_context_is_unavailable():
+    client, store, _ = _build_client()
+    _seed_today(store)
+
+    def unavailable(*_args, **_kwargs):
+        raise RuntimeError("optional context unavailable")
+
+    store.list_feedback_injury_flags = unavailable
+
+    response = client.put(
+        "/api/today/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+
+    assert response.status_code == 200
+    assert store.beta_feedback[-1]["injury_snapshot"] == {"open_flags": []}
 
 
 def test_today_feedback_rejects_checkin_without_generated_recommendation():
@@ -346,6 +405,7 @@ def test_global_feedback_accepts_athlete_and_admin_and_derives_identity():
     assert athlete_row["screenshot_path"] is None
     assert "athlete_id" not in athlete_row
 
+    _seed_today(store, athlete_id="admin-1")
     admin = client.post(
         "/api/feedback/global",
         headers=ADMIN,
@@ -354,8 +414,31 @@ def test_global_feedback_accepts_athlete_and_admin_and_derives_identity():
     assert admin.status_code == 201
     admin_row = store.beta_feedback[-1]
     assert admin_row["submitted_by_profile_id"] == "admin-1"
-    assert admin_row["plan_id"] is None
-    assert admin_row["readiness_snapshot"] == {}
+    assert admin_row["plan_id"] == PLAN_ID
+    assert admin_row["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
+    assert admin_row["readiness_snapshot"]["recommendation_state"] == "train_as_planned"
+
+
+def test_global_feedback_still_saves_when_optional_programme_context_is_unavailable():
+    client, store, _ = _build_client()
+
+    def unavailable(*_args, **_kwargs):
+        raise RuntimeError("optional context unavailable")
+
+    store.get_feedback_active_plan_id = unavailable
+    store.list_feedback_injury_flags = unavailable
+
+    response = client.post(
+        "/api/feedback/global",
+        headers=ATHLETE,
+        data={"category": "bug_report", "description": "Settings issue"},
+    )
+
+    assert response.status_code == 201
+    row = store.beta_feedback[-1]
+    assert row["plan_id"] is None
+    assert row["today_checkin_id"] is None
+    assert row["injury_snapshot"] == {"open_flags": []}
 
 
 def test_admin_feedback_feed_is_admin_only_and_safety_first():
@@ -410,6 +493,15 @@ def test_global_screenshot_is_sanitised_private_and_rate_limited(monkeypatch):
     assert mime == "image/jpeg"
     with Image.open(io.BytesIO(stored)) as clean:
         assert clean.getexif() == {}
+
+    screenshot_route = f"/api/admin/feedback/{row['id']}/screenshot"
+    assert client.get(screenshot_route, headers=ATHLETE).status_code == 403
+    admin_access = client.get(screenshot_route, headers=ADMIN)
+    assert admin_access.status_code == 200
+    assert admin_access.json()["expires_in"] == 60
+    assert admin_access.json()["url"].startswith("https://storage.test/signed/")
+    row["screenshot_expires_at"] = "2026-01-01T00:00:00+00:00"
+    assert client.get(screenshot_route, headers=ADMIN).status_code == 404
 
     second = client.post(
         "/api/feedback/global",

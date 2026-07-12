@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { listAdminFeedback } from "@/lib/api";
+import { getAdminFeedbackScreenshot, listAdminFeedback } from "@/lib/api";
 import { formatAppDateTime } from "@/lib/date-format";
 import type { AdminFeedbackRecord } from "@/lib/types";
 
@@ -25,6 +25,22 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({});
+  const [screenshotLoadingId, setScreenshotLoadingId] = useState<string | null>(null);
+  const [screenshotErrorId, setScreenshotErrorId] = useState<string | null>(null);
+
+  async function loadScreenshot(feedbackId: string) {
+    setScreenshotLoadingId(feedbackId);
+    setScreenshotErrorId(null);
+    try {
+      const access = await getAdminFeedbackScreenshot(token, feedbackId);
+      setScreenshotUrls((current) => ({ ...current, [feedbackId]: access.url }));
+    } catch {
+      setScreenshotErrorId(feedbackId);
+    } finally {
+      setScreenshotLoadingId(null);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -93,8 +109,26 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
               <div className="admin-feedback-footer">
                 <span>{formatAppDateTime(item.created_at)}</span>
                 {item.contact_allowed ? <span>Contact permitted</span> : null}
-                {item.has_screenshot ? <span>Private screenshot attached</span> : null}
+                {item.has_screenshot ? (
+                  screenshotUrls[item.id] ? (
+                    <a href={screenshotUrls[item.id]} target="_blank" rel="noreferrer">
+                      Open private screenshot
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      className="feedback-link"
+                      onClick={() => void loadScreenshot(item.id)}
+                      disabled={screenshotLoadingId === item.id}
+                    >
+                      {screenshotLoadingId === item.id ? "Preparing screenshot…" : "View private screenshot"}
+                    </button>
+                  )
+                ) : null}
               </div>
+              {screenshotErrorId === item.id ? (
+                <p className="error-text" role="alert">Screenshot could not be opened. Try again.</p>
+              ) : null}
             </article>
           ))}
         </div>

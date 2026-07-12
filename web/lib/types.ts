@@ -1143,6 +1143,11 @@ export type AdminFeedbackRecord = FeedbackRecord & {
   screenshot_expires_at: string | null;
 };
 
+export type AdminFeedbackScreenshotAccess = {
+  url: string;
+  expires_in: number;
+};
+
 export type ContextualFeedbackRequest = {
   response: FeedbackResponseValue;
   reason?: string | null;

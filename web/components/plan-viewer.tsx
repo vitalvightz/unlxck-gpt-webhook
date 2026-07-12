@@ -2495,7 +2495,12 @@ export function PlanViewer({
                 </>
               )}
               {canSubmitPlanFeedback && accessToken ? (
-                <ContextualFeedback token={accessToken} surface="plan" planId={plan.plan_id} />
+                <ContextualFeedback
+                  key={`plan-feedback-${plan.plan_id}`}
+                  token={accessToken}
+                  surface="plan"
+                  planId={plan.plan_id}
+                />
               ) : null}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}

@@ -2136,3 +2136,8 @@ class AdminFeedbackRecord(FeedbackRecord):
     camp_phase: str | None = None
     app_version: str = ""
     screenshot_expires_at: str | None = None
+
+
+class AdminFeedbackScreenshotAccess(BaseModel):
+    url: str
+    expires_in: int
