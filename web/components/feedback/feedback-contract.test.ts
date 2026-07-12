@@ -11,6 +11,8 @@ import {
 
 const CONTEXTUAL_SOURCE = readFileSync(new URL("./contextual-feedback.tsx", import.meta.url), "utf8");
 const GLOBAL_SOURCE = readFileSync(new URL("./global-feedback.tsx", import.meta.url), "utf8");
+const PLAN_VIEWER_SOURCE = readFileSync(new URL("../plan-viewer.tsx", import.meta.url), "utf8");
+const TODAY_PANEL_SOURCE = readFileSync(new URL("../today/today-session-panel.tsx", import.meta.url), "utf8");
 
 test("unsafe guidance is visible from selection through the saved state", () => {
   assert.equal(shouldShowUnsafeGuidance("unsafe", null), true);
@@ -59,6 +61,14 @@ test("feedback controls render without waiting for the existing-response request
   assert.match(CONTEXTUAL_SOURCE, /userInteractedRef\.current/);
   assert.match(CONTEXTUAL_SOURCE, /if \(!active \|\| !saved \|\| userInteractedRef\.current\) return/);
   assert.match(CONTEXTUAL_SOURCE, /record && !editing/);
+});
+
+test("contextual feedback remounts when its server-owned target changes", () => {
+  assert.match(PLAN_VIEWER_SOURCE, /key={`plan-feedback-\${plan\.plan_id}`}/);
+  assert.match(
+    TODAY_PANEL_SOURCE,
+    /key={`daily-feedback-\${state\.active_plan\?\.id \?\? "none"}-\${state\.today\.training_day}`}/,
+  );
 });
 
 test("submission failures remain separate from feedback loading", () => {

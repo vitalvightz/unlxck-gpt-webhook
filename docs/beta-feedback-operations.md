@@ -80,7 +80,7 @@ where f.priority = 'safety'
 order by f.created_at desc;
 ```
 
-Open the private `feedback-screenshots` bucket in the authenticated Supabase dashboard and locate the exact stored path. Never make the bucket public. If automated retrieval is required, create a short-lived signed URL from a trusted service-role process and do not put it in logs or tickets.
+Authenticated admins can select **View private screenshot** in `/admin`. The backend resolves the stored path, rejects missing or expired objects, and returns a 60-second signed URL; the browser never supplies a path. Operators may also open the private `feedback-screenshots` bucket in the authenticated Supabase dashboard and locate the exact stored path. Never make the bucket public or put signed URLs in logs or tickets.
 
 ## Screenshot retention
 

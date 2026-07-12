@@ -12,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from api.feedback_images import MAX_SCREENSHOT_BYTES, ScreenshotValidationError
 from api.models import (
     AdminFeedbackRecord,
+    AdminFeedbackScreenshotAccess,
     ContextualFeedbackRequest,
     FeedbackRecord,
     GlobalFeedbackRequest,
@@ -219,5 +220,26 @@ def build_feedback_router(*, require_profile, require_admin, get_store) -> APIRo
         store: AppStore = Depends(get_store),
     ) -> list[AdminFeedbackRecord]:
         return [_admin_feedback_record(row) for row in store.list_admin_feedback(limit=limit)]
+
+    @router.get(
+        "/api/admin/feedback/{feedback_id}/screenshot",
+        response_model=AdminFeedbackScreenshotAccess,
+    )
+    def read_admin_feedback_screenshot(
+        feedback_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> AdminFeedbackScreenshotAccess:
+        screenshot_path = store.get_feedback_screenshot_path(feedback_id)
+        if not screenshot_path:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="feedback screenshot not found")
+        expires_in = 60
+        return AdminFeedbackScreenshotAccess(
+            url=store.create_feedback_screenshot_signed_url(
+                screenshot_path,
+                expires_in=expires_in,
+            ),
+            expires_in=expires_in,
+        )
 
     return router

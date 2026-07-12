@@ -1665,6 +1665,18 @@ class FakeStore:
         )
         return rows[: max(1, min(limit, 100))]
 
+    def get_feedback_screenshot_path(self, feedback_id: str) -> str | None:
+        row = next((item for item in self.beta_feedback if item.get("id") == feedback_id), None)
+        if not row or not row.get("screenshot_path"):
+            return None
+        expires_at = str(row.get("screenshot_expires_at") or "")
+        if expires_at and datetime.fromisoformat(expires_at) <= datetime.now(timezone.utc):
+            return None
+        return str(row["screenshot_path"])
+
+    def create_feedback_screenshot_signed_url(self, path: str, *, expires_in: int) -> str:
+        return f"https://storage.test/signed/{path}?expires_in={expires_in}"
+
     def claim_feedback_rate_limit(
         self,
         profile_id: str,

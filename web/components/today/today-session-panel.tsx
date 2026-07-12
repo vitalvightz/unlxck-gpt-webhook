@@ -331,7 +331,11 @@ export function TodaySessionPanel({
         </div>
         <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
         {recommendationState !== "not_checked_in" ? (
-          <ContextualFeedback token={token} surface="daily_recommendation" />
+          <ContextualFeedback
+            key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
+            token={token}
+            surface="daily_recommendation"
+          />
         ) : null}
         {showStructuredBlocks ? (
           <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
@@ -369,7 +373,11 @@ export function TodaySessionPanel({
       </div>
       <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
       {recommendationState !== "not_checked_in" ? (
-        <ContextualFeedback token={token} surface="daily_recommendation" />
+        <ContextualFeedback
+          key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
+          token={token}
+          surface="daily_recommendation"
+        />
       ) : null}
       {safeSession ? (
         <SafeSessionCard view={safeSession} />

@@ -10,7 +10,7 @@ import logging
 import os
 import uuid
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping, TypeVar
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, status
@@ -23,6 +23,7 @@ from api.state_machine import ATHLETE_DISPLAYABLE_PLAN_STATUSES
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 PLAN_REASONS = frozenset(
     {
@@ -189,6 +190,26 @@ def _require_recommendation_feedback_eligible(checkin: Mapping[str, Any]) -> Non
         )
 
 
+def _optional_context(label: str, default: T, operation: Callable[[], T]) -> T:
+    """Read non-authoritative feedback context without blocking persistence."""
+
+    try:
+        return operation()
+    except Exception as exc:
+        logger.warning(
+            "[feedback] context_enrichment_failed field=%s "
+            "error_code=feedback_context_unavailable error_class=%s",
+            label,
+            type(exc).__name__,
+        )
+        return default
+
+
+def _camp_phase(plan: Mapping[str, Any], training_day: str, fallback: Any = "") -> str:
+    _index, week = resolve_current_week(plan, today=date.fromisoformat(training_day))
+    return str(week.phase if week else fallback or "")
+
+
 def _plan_context(store: AppStore, profile: ProfileRecord, plan_id: str) -> tuple[dict[str, Any], str, str]:
     _require_contextual_submitter(profile)
     plan = store.get_feedback_plan_for_owner(plan_id, profile.profile_id)
@@ -196,8 +217,12 @@ def _plan_context(store: AppStore, profile: ProfileRecord, plan_id: str) -> tupl
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
     _require_plan_feedback_eligible(plan)
     training_day = resolve_training_day(profile.athlete_timezone)
-    _index, week = resolve_current_week(plan, today=date.fromisoformat(training_day))
-    return plan, training_day, str(week.phase if week else "")
+    phase = _optional_context(
+        "camp_phase",
+        "",
+        lambda: _camp_phase(plan, training_day),
+    )
+    return plan, training_day, phase
 
 
 def _injury_snapshot(store: AppStore, profile_id: str) -> dict[str, Any]:
@@ -271,8 +296,16 @@ def put_plan_feedback(
             "camp_phase": phase or None,
             "readiness_snapshot": {},
             "injury_snapshot": {
-                **_injury_snapshot(store, profile.profile_id),
-                "intake": _intake_snapshot(store, plan),
+                **_optional_context(
+                    "injury_flags",
+                    {"open_flags": []},
+                    lambda: _injury_snapshot(store, profile.profile_id),
+                ),
+                "intake": _optional_context(
+                    "intake",
+                    {},
+                    lambda: _intake_snapshot(store, plan),
+                ),
             },
             "app_version": app_version(),
             "technical_context": technical_context(request),
@@ -292,13 +325,16 @@ def _today_context(
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="active plan not found")
     training_day = resolve_training_day(profile.athlete_timezone)
-    _require_plan_feedback_eligible(plan)
     checkin = store.get_feedback_today_checkin(profile.profile_id, plan_id, training_day)
     if not checkin:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="today check-in not found")
     _require_recommendation_feedback_eligible(checkin)
-    _index, week = resolve_current_week(plan, today=date.fromisoformat(training_day))
-    return plan, checkin, str(week.phase if week else checkin.get("phase") or "")
+    phase = _optional_context(
+        "camp_phase",
+        str(checkin.get("phase") or ""),
+        lambda: _camp_phase(plan, training_day, checkin.get("phase")),
+    )
+    return plan, checkin, phase
 
 
 def get_today_feedback(store: AppStore, profile: ProfileRecord) -> FeedbackRecord | None:
@@ -332,7 +368,11 @@ def put_today_feedback(
             "readiness_snapshot": {
                 key: checkin.get(key) for key in _READINESS_FIELDS if key in checkin
             },
-            "injury_snapshot": _injury_snapshot(store, profile.profile_id),
+            "injury_snapshot": _optional_context(
+                "injury_flags",
+                {"open_flags": []},
+                lambda: _injury_snapshot(store, profile.profile_id),
+            ),
             "app_version": app_version(),
             "technical_context": technical_context(request),
         }
@@ -361,18 +401,38 @@ def _global_programme_context(
     store: AppStore,
     profile: ProfileRecord,
 ) -> tuple[str | None, str | None, str | None, dict[str, Any], dict[str, Any]]:
-    if profile.role != "athlete":
+    if profile.role not in {"athlete", "admin"}:
         return None, None, None, {}, {}
-    plan_id = store.get_feedback_active_plan_id(profile.profile_id)
+    injuries = _optional_context(
+        "injury_flags",
+        {"open_flags": []},
+        lambda: _injury_snapshot(store, profile.profile_id),
+    )
+    plan_id = _optional_context(
+        "active_plan",
+        None,
+        lambda: store.get_feedback_active_plan_id(profile.profile_id),
+    )
     if not plan_id:
-        return None, None, None, {}, _injury_snapshot(store, profile.profile_id)
-    plan = store.get_feedback_plan_for_owner(plan_id, profile.profile_id)
+        return None, None, None, {}, injuries
+    plan = _optional_context(
+        "plan",
+        None,
+        lambda: store.get_feedback_plan_for_owner(plan_id, profile.profile_id),
+    )
     if not plan:
-        return None, None, None, {}, _injury_snapshot(store, profile.profile_id)
+        return None, None, None, {}, injuries
     training_day = resolve_training_day(profile.athlete_timezone)
-    checkin = store.get_feedback_today_checkin(profile.profile_id, plan_id, training_day)
-    _index, week = resolve_current_week(plan, today=date.fromisoformat(training_day))
-    phase = str(week.phase if week else (checkin or {}).get("phase") or "") or None
+    checkin = _optional_context(
+        "today_checkin",
+        None,
+        lambda: store.get_feedback_today_checkin(profile.profile_id, plan_id, training_day),
+    )
+    phase = _optional_context(
+        "camp_phase",
+        str((checkin or {}).get("phase") or "") or None,
+        lambda: _camp_phase(plan, training_day, (checkin or {}).get("phase")) or None,
+    )
     readiness = (
         {key: checkin.get(key) for key in _READINESS_FIELDS if key in checkin}
         if checkin
@@ -383,7 +443,7 @@ def _global_programme_context(
         str(checkin["id"]) if checkin else None,
         phase,
         readiness,
-        _injury_snapshot(store, profile.profile_id),
+        injuries,
     )
 
 
