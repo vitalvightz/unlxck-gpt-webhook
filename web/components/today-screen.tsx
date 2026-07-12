@@ -13,6 +13,7 @@ import { TodayRiskWatch } from "@/components/today/today-risk-watch";
 import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { useTodayCommand } from "@/components/today/use-today-command";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
+import { isOpenOngoingPlan } from "@/lib/plan-format";
 import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
@@ -98,7 +99,8 @@ export function TodayScreen() {
   const { state, structuredPlan, isLoading, error, refresh } = useTodayCommand(token);
 
   const activePlan = state?.active_plan ?? {};
-  const planTitle = activePlan.name?.trim() || "Active fight camp";
+  const openOngoing = isOpenOngoingPlan(activePlan.fight_date);
+  const planTitle = activePlan.name?.trim() || (openOngoing ? "Open training plan" : "Active fight camp");
   const hasPlan = hasActivePlan(activePlan);
   const showCheckin = state ? shouldShowTodayCheckin(state) : false;
   const trainingDayLabel = useMemo(
@@ -153,8 +155,12 @@ export function TodayScreen() {
             <h1>{planTitle}</h1>
             <p className="muted today-hero-meta">
               {trainingDayLabel}
-              {activePlan.phase ? <span aria-hidden="true"> · </span> : null}
-              {activePlan.phase ? humanizeIfRawEnum(activePlan.phase) : null}
+              {openOngoing || activePlan.phase ? <span aria-hidden="true"> · </span> : null}
+              {openOngoing
+                ? "Ongoing 4-week block"
+                : activePlan.phase
+                  ? humanizeIfRawEnum(activePlan.phase)
+                  : null}
             </p>
           </div>
           <div className="today-hero-actions">

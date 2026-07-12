@@ -16,7 +16,7 @@ from typing import Any, Mapping
 from fastapi import HTTPException
 
 from api.models import WeeklyDayEntry, WeeklySchedule
-from api.plan_mappers import _map_weekly_schedule, _visible_plans_for_athlete
+from api.plan_mappers import _decode_structured_text, _map_weekly_schedule, _visible_plans_for_athlete
 from api.store import AppStore
 
 _WEEKDAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -58,6 +58,16 @@ def weekly_schedule_or_none(plan_row: Mapping[str, Any], *, week_index: int) -> 
         return None
 
 
+def _is_open_ongoing_plan(plan_row: Mapping[str, Any]) -> bool:
+    """True only for the explicit renewable no-fight-date planning contract."""
+
+    if parse_iso_date(plan_row.get("fight_date")) is not None:
+        return False
+    planning_brief = _decode_structured_text(plan_row.get("planning_brief"))
+    open_spec = planning_brief.get("open_plan_spec") if isinstance(planning_brief, dict) else None
+    return isinstance(open_spec, dict) and open_spec.get("plan_type") == "open_ongoing_system"
+
+
 def resolve_current_week(plan_row: Mapping[str, Any], *, today: date) -> tuple[int | None, WeeklySchedule | None]:
     """Find the schedule week containing today.
 
@@ -84,7 +94,13 @@ def resolve_current_week(plan_row: Mapping[str, Any], *, today: date) -> tuple[i
             # No calendar dates anywhere — fall back to elapsed weeks.
             created = parse_iso_date(plan_row.get("created_at"))
             elapsed_weeks = ((today - created).days // 7) if created else 0
-            fallback_index = min(max(0, elapsed_weeks), week_count - 1)
+            if _is_open_ongoing_plan(plan_row):
+                # Open plans are renewable four-week blocks. Until a reassessment
+                # creates an adjusted plan, the safe default is to repeat the
+                # existing block instead of remaining on deload week forever.
+                fallback_index = max(0, elapsed_weeks) % week_count
+            else:
+                fallback_index = min(max(0, elapsed_weeks), week_count - 1)
             fallback_week = (
                 week if fallback_index == index else weekly_schedule_or_none(plan_row, week_index=fallback_index)
             )

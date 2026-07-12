@@ -28,6 +28,10 @@ export function formatPlanFightDate(value?: string | null): string {
   return formatAppDate(value);
 }
 
+export function isOpenOngoingPlan(fightDate?: string | null): boolean {
+  return !fightDate?.trim();
+}
+
 export function getPlanDisplayName(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): string {
   const customName = getCustomPlanName(plan);
   if (customName) {

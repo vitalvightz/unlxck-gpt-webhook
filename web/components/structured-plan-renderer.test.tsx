@@ -70,6 +70,47 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Do not render anchor"), false);
 });
 
+test("open ongoing renderer uses renewable block labels instead of fight-camp phases", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
+    deterministic_support: {
+      nutrition: {
+        by_phase: {
+          GPP: { protein_g_per_day: { min: 140, max: 160 } },
+          SPP: { protein_g_per_day: { min: 150, max: 170 } },
+          TAPER: { protein_g_per_day: { min: 145, max: 165 } },
+        },
+      },
+      recovery: {
+        by_phase: {
+          GPP: { sleep_hours_target: [8, 9] },
+          SPP: { sleep_hours_target: [8, 9] },
+          TAPER: { sleep_hours_target: [8, 9] },
+        },
+      },
+    },
+    weeks: [
+      { week_id: "wk-1", week_index: 1, phase_label: "SPP", week_goal: "Baseline", days: [{ date: "", day_type: "high", sessions: [] }] },
+      { week_id: "wk-2", week_index: 2, phase_label: "SPP", week_goal: "Small progression", days: [] },
+      { week_id: "wk-3", week_index: 3, phase_label: "SPP", week_goal: "Highest controlled week", days: [] },
+      { week_id: "wk-4", week_index: 4, phase_label: "SPP", week_goal: "Deload and reassess", days: [] },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing />);
+
+  assert.equal(html.includes('aria-label="Training block weeks"'), true);
+  for (const label of ["Baseline", "Progress", "Peak", "Deload"]) {
+    assert.equal(html.includes(`cm-week-pill-phase">${label}</span>`), true);
+  }
+  assert.equal(html.includes("Specific prep"), false);
+  assert.equal(html.includes("General prep"), false);
+  assert.equal(html.includes(">Taper<"), false);
+  assert.equal(html.includes(">Load</span>"), false);
+  assert.equal(countOccurrences(html, "Current block"), 6);
+});
+
 // Builds a day whose day-card mindset and per-session mindsets can be varied
 // independently. Each entry in `sessionMindsets` becomes one session; `undefined`
 // omits the session's mindset_anchor, an object supplies one. This exercises the
