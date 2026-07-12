@@ -64,6 +64,50 @@ def test_extract_weekly_schedule_returns_none_for_missing_or_out_of_range_week()
     assert extract_weekly_schedule(_planning_brief(), week_index=-1) is None
 
 
+def test_extract_weekly_schedule_maps_open_ongoing_weekly_template():
+    planning_brief = {
+        "open_plan_spec": {
+            "plan_type": "open_ongoing_system",
+            "weekly_template": {
+                "training_days": ["Monday", "Wednesday", "Friday", "Saturday", "Tuesday"],
+                "hard_sparring_days": ["Wednesday", "Friday"],
+            },
+            "development_block": {
+                "week_1": "Baseline",
+                "week_2": "Progress",
+                "week_3": "Highest controlled week",
+                "week_4": "Deload and reassess",
+            },
+        },
+        "stage1_selection_summary": {"current_phase": "GPP"},
+    }
+
+    schedule = extract_weekly_schedule(planning_brief, week_index=0)
+
+    assert schedule is not None
+    assert schedule["week_count"] == 4
+    assert schedule["phase"] == "GPP"
+    assert schedule["week_label_with_countdown"] == "Development week 1"
+    assert [day["weekday"] for day in schedule["days"]] == [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun",
+    ]
+    monday = schedule["days"][0]
+    wednesday = schedule["days"][2]
+    sunday = schedule["days"][6]
+    assert monday["status"] == "open_plan_session"
+    assert monday["title"] == "Mon training"
+    assert wednesday["effective_load"] == "hard"
+    assert wednesday["title"] == "Wed coach-led sparring"
+    assert sunday["effective_load"] == "none"
+    assert extract_weekly_schedule(planning_brief, week_index=4) is None
+
+
 def test_extract_weekly_schedule_multi_week_brief_keeps_all_weeks_addressable():
     planning_brief = {
         "weekly_role_map": {

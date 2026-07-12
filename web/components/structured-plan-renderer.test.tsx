@@ -493,6 +493,40 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(countOccurrences(html, "Rest day."), 1);
 });
 
+test("uses open-plan headlines instead of repeated blank Day labels", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "GPP",
+        days: [
+          {
+            date: "",
+            day_type: "moderate",
+            today_card: { headline: "Support Strength" },
+            sessions: [{ session_id: "s1", title: "Support Strength", blocks: [] }],
+          },
+          {
+            date: "",
+            day_type: "high",
+            today_card: { headline: "Coach-led boxing" },
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes('<span class="sp-week-title">Support Strength</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title">Coach-led boxing</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title">Day</span>'), false);
+});
+
 test("renders light technical context alongside app sessions in the same day card", () => {
   const plan = {
     schema_version: "1.0",

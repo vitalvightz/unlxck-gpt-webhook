@@ -237,6 +237,90 @@ def _build_calendar_week_from_fight_date(
     return days
 
 
+def _open_ongoing_weekly_schedule(
+    planning_brief: dict[str, Any], *, week_index: int
+) -> dict[str, Any] | None:
+    """Map a renewable open-plan template onto the live weekly schedule.
+
+    Open plans intentionally have no fight date, countdown calendar, or
+    ``weekly_role_map``. Their deterministic source of truth is instead
+    ``open_plan_spec.weekly_template`` plus the four-week development block.
+    Keeping that contract here lets Today/check-ins use the same schedule
+    adapter as dated camps without inventing calendar dates.
+    """
+
+    open_spec = planning_brief.get("open_plan_spec")
+    if not isinstance(open_spec, dict) or open_spec.get("plan_type") != "open_ongoing_system":
+        return None
+    template = open_spec.get("weekly_template")
+    if not isinstance(template, dict):
+        return None
+
+    development_block = open_spec.get("development_block")
+    week_count = len(development_block) if isinstance(development_block, dict) else 4
+    week_count = max(1, week_count)
+    if week_index >= week_count:
+        return None
+
+    training_days = {
+        weekday
+        for value in _clean_list(template.get("training_days"))
+        if (weekday := _normalize_weekday(value)) is not None
+    }
+    hard_sparring_days = {
+        weekday
+        for value in _clean_list(template.get("hard_sparring_days"))
+        if (weekday := _normalize_weekday(value)) is not None
+    }
+    if not training_days:
+        return None
+
+    days = [_empty_day(weekday) for weekday in WEEKDAY_SHORT]
+    for day in days:
+        weekday = day["weekday"]
+        if weekday not in training_days:
+            continue
+        if weekday in hard_sparring_days:
+            day.update(
+                {
+                    "sparring_day_class": "primary_hard",
+                    "effective_load": "hard",
+                    "status": "hard_as_planned",
+                    "title": f"{weekday} coach-led sparring",
+                    "reason": "Coach-owned sparring day from the renewable weekly rhythm.",
+                }
+            )
+        else:
+            day.update(
+                {
+                    "effective_load": "reduced",
+                    "status": "open_plan_session",
+                    "title": f"{weekday} training",
+                    "reason": "Scheduled training day from the renewable weekly rhythm.",
+                }
+            )
+
+    selection_summary = planning_brief.get("stage1_selection_summary")
+    phase = (
+        str(selection_summary.get("current_phase") or "").strip()
+        if isinstance(selection_summary, dict)
+        else ""
+    )
+    return {
+        "week_index": week_index,
+        "week_count": week_count,
+        "phase": phase,
+        "projected_days_until_fight_start": None,
+        "projected_days_until_fight_end": None,
+        "day_label": f"Development week {week_index + 1}",
+        "countdown_range": [],
+        "original_countdown_range": [],
+        "week_countdown_label": "",
+        "week_label_with_countdown": f"Development week {week_index + 1}",
+        "days": days,
+    }
+
+
 def extract_weekly_schedule(
     planning_brief: Any, *, week_index: int = 0, fight_date: Any = None
 ) -> dict[str, Any] | None:
@@ -245,7 +329,7 @@ def extract_weekly_schedule(
 
     weekly_role_map = planning_brief.get("weekly_role_map")
     if not isinstance(weekly_role_map, dict):
-        return None
+        return _open_ongoing_weekly_schedule(planning_brief, week_index=week_index)
 
     weeks = weekly_role_map.get("weeks")
     if not isinstance(weeks, list) or week_index >= len(weeks):

@@ -593,6 +593,7 @@ function CompletionTag({ completion }: { completion: Completion }) {
  */
 export function CampDayCard({
   day,
+  fallbackLabel,
   isCurrent,
   currentLabel = "Today",
   defaultOpen,
@@ -601,6 +602,7 @@ export function CampDayCard({
   onLogSession,
 }: {
   day: StructuredDay;
+  fallbackLabel?: string;
   isCurrent?: boolean;
   /** Badge text for the highlighted day — "Today" normally, "Next session" once
    * the view has advanced past a logged today's session. */
@@ -627,6 +629,7 @@ export function CampDayCard({
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
+  const undatedLabel = cleanText(day.today_card?.headline) || fallbackLabel || "Training day";
   const completion = dayCompletion(day, completionIndex);
   const sessionCount = sessions.length;
   const dayIso = date ? date.slice(0, 10) : null;
@@ -671,7 +674,7 @@ export function CampDayCard({
       >
         <span className="cm-day-head">
           {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
-          <span className="sp-week-title">{weekday || date || "Day"}</span>
+          <span className="sp-week-title">{weekday || date || undatedLabel}</span>
         </span>
 
         <span className="cm-day-meta">
@@ -1345,6 +1348,7 @@ export function StructuredPlanRenderer({
                   <CampDayCard
                     key={cleanText(day.date) || `day-${index}`}
                     day={day}
+                    fallbackLabel={`Training day ${index + 1}`}
                     isCurrent={isCurrent}
                     currentLabel={currentDayLabel}
                     defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}
