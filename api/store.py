@@ -506,6 +506,7 @@ class AppStore(Protocol):
     def get_feedback_intake(self, intake_id: str) -> dict[str, Any] | None: ...
     def upsert_context_feedback(self, payload: dict[str, Any]) -> dict[str, Any]: ...
     def insert_global_feedback(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+    def list_admin_feedback(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
     def claim_feedback_rate_limit(
         self,
         profile_id: str,
@@ -4608,6 +4609,25 @@ class SupabaseAppStore:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_feedback_store_error(exc, detail="failed to persist feedback")
+
+    def list_admin_feedback(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        try:
+            response = (
+                self.client.table("beta_feedback")
+                .select(
+                    "id,submitted_by_profile_id,surface,category,response,reason,comment,"
+                    "contact_allowed,priority,plan_id,today_checkin_id,camp_phase,app_version,"
+                    "screenshot_path,screenshot_expires_at,created_at,updated_at,"
+                    "profiles!beta_feedback_submitted_by_profile_id_fkey(email,full_name)"
+                )
+                .order("priority", desc=True)
+                .order("created_at", desc=True)
+                .limit(max(1, min(limit, 100)))
+                .execute()
+            )
+            return getattr(response, "data", None) or []
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_feedback_store_error(exc, detail="failed to read admin feedback")
 
     def claim_feedback_rate_limit(
         self,

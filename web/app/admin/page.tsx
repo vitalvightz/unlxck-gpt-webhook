@@ -6,6 +6,7 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { AdminFeedbackPanel } from "@/components/admin-feedback-panel";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
   approveAndResumeGenerationFromJob,
@@ -713,6 +714,8 @@ export default function AdminPage() {
             {backfillPending ? "Backfilling..." : "Backfill structured cards"}
           </button>
         </div>
+
+        {token ? <AdminFeedbackPanel token={token} reloadKey={reloadKey} /> : null}
 
         <article className="list-card admin-active-panel">
           <div className="form-section-header">

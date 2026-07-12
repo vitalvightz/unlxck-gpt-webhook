@@ -293,6 +293,32 @@ def test_global_feedback_accepts_athlete_and_admin_and_derives_identity():
     assert admin_row["readiness_snapshot"] == {}
 
 
+def test_admin_feedback_feed_is_admin_only_and_safety_first():
+    client, store, _ = _build_client()
+    _seed_plan(store)
+    normal = client.put(
+        f"/api/plans/{PLAN_ID}/feedback",
+        headers=ATHLETE,
+        json={"response": "no", "reason": "too_hard", "comment": "Reduce volume"},
+    )
+    safety = client.post(
+        "/api/feedback/global",
+        headers=ATHLETE,
+        data={"category": "safety_issue", "description": "Unsafe loading", "contact_allowed": "true"},
+    )
+    assert normal.status_code == 200
+    assert safety.status_code == 201
+
+    assert client.get("/api/admin/feedback", headers=ATHLETE).status_code == 403
+    response = client.get("/api/admin/feedback?limit=20", headers=ADMIN)
+    assert response.status_code == 200
+    rows = response.json()
+    assert [row["priority"] for row in rows] == ["safety", "normal"]
+    assert rows[0]["submitter_email"] == "ari@example.com"
+    assert rows[0]["comment"] == "Unsafe loading"
+    assert rows[0]["contact_allowed"] is True
+
+
 def test_global_screenshot_is_sanitised_private_and_rate_limited(monkeypatch):
     monkeypatch.setenv("FEEDBACK_REPORT_LIMIT_PER_HOUR", "5")
     monkeypatch.setenv("FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR", "1")

@@ -949,6 +949,7 @@ def create_app(
     app.include_router(
         build_feedback_router(
             require_profile=require_profile,
+            require_admin=require_admin,
             get_store=get_store,
         )
     )

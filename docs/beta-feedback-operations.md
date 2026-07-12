@@ -12,9 +12,17 @@ SUPABASE_SERVICE_ROLE_KEY=...
 FEEDBACK_REPORT_LIMIT_PER_HOUR=5
 FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR=2
 FEEDBACK_SCREENSHOT_RETENTION_DAYS=90
+FEEDBACK_NOTIFICATION_EMAIL=unlxckedmind@gmail.com
+FEEDBACK_FROM_EMAIL=Unlxck Feedback <feedback@your-verified-domain.com>
+FEEDBACK_ADMIN_URL=https://your-production-frontend-domain/admin
+RESEND_API_KEY=...
 ```
 
 `0` disables the report and screenshot-upload rate limits. Screenshot retention must remain a positive number; `0` falls back to 90 days. Invalid or negative values fall back to the defaults. Changing limits does not require a database migration.
+
+Every saved feedback response is available to authenticated admins at `/admin` through the service-role backend. The same save schedules a background Resend notification to `FEEDBACK_NOTIFICATION_EMAIL`, which defaults to `unlxckedmind@gmail.com`. Configure a verified sender in `FEEDBACK_FROM_EMAIL`; email delivery is skipped safely when the Resend key or sender is absent and never rolls back stored feedback.
+
+Notification emails contain only priority, surface, category, response, reason, screenshot presence, authenticated role, and feedback ID. Comments, contact details, health snapshots, technical context, screenshots, and screenshot paths remain inside the authenticated admin/storage tools.
 
 ## Review recent feedback
 
