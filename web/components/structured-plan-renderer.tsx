@@ -60,6 +60,7 @@ import type {
   DeterministicNutritionPhase,
   DeterministicRecoveryPhase,
   MindsetAnchor,
+  PlanScheduleContext,
   StructuredBlock,
   StructuredDay,
   StructuredPlan,
@@ -78,7 +79,12 @@ export type SessionCompletionInfo = {
 };
 
 const titleize = formatPlanLabel;
-const OPEN_BLOCK_WEEK_LABELS = ["Baseline", "Progress", "Peak", "Deload"] as const;
+const OPEN_BLOCK_WEEK_LABELS = [
+  "Baseline",
+  "Progress",
+  "Highest controlled",
+  "Deload + reassess",
+] as const;
 
 const LIGHT_TECHNICAL_NOTE =
   "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
@@ -572,6 +578,19 @@ function weekdayLabel(date: string | null): string | null {
   return weekdays[parsed.getDay()];
 }
 
+function openTimelineDayLabel(
+  day: StructuredDay,
+  weekNumber: number,
+  fallbackLabel: string,
+): string {
+  const date = cleanText(day.date);
+  if (date) {
+    return formatAppDate(date).split(" ").slice(0, 3).join(" ").toUpperCase();
+  }
+  const weekday = cleanText(day.weekday)?.toUpperCase();
+  return weekday ? `WEEK ${weekNumber} \u00b7 ${weekday}` : fallbackLabel;
+}
+
 function CompletionTag({ completion }: { completion: Completion }) {
   if (completion.total === 0) {
     return null;
@@ -595,6 +614,8 @@ function CompletionTag({ completion }: { completion: Completion }) {
 export function CampDayCard({
   day,
   fallbackLabel,
+  openOngoing = false,
+  weekNumber = 1,
   isCurrent,
   currentLabel = "Today",
   defaultOpen,
@@ -604,6 +625,8 @@ export function CampDayCard({
 }: {
   day: StructuredDay;
   fallbackLabel?: string;
+  openOngoing?: boolean;
+  weekNumber?: number;
   isCurrent?: boolean;
   /** Badge text for the highlighted day — "Today" normally, "Next session" once
    * the view has advanced past a logged today's session. */
@@ -630,7 +653,9 @@ export function CampDayCard({
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
-  const undatedLabel = cleanText(day.today_card?.headline) || fallbackLabel || "Training day";
+  const timelineLabel = openOngoing
+    ? openTimelineDayLabel(day, weekNumber, fallbackLabel || `Week ${weekNumber} training day`)
+    : weekday || date || fallbackLabel || "Training day";
   const completion = dayCompletion(day, completionIndex);
   const sessionCount = sessions.length;
   const dayIso = date ? date.slice(0, 10) : null;
@@ -675,7 +700,7 @@ export function CampDayCard({
       >
         <span className="cm-day-head">
           {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
-          <span className="sp-week-title">{weekday || date || undatedLabel}</span>
+          <span className="sp-week-title">{timelineLabel}</span>
         </span>
 
         <span className="cm-day-meta">
@@ -1185,10 +1210,12 @@ function WeekOverview({
   week,
   completionIndex,
   openOngoing,
+  scheduleContext,
 }: {
   week: StructuredWeek;
   completionIndex?: CompletionIndex;
   openOngoing: boolean;
+  scheduleContext?: PlanScheduleContext | null;
 }) {
   const load = openOngoing ? null : weekLoadProxy(week);
   const completion = weekCompletion(week, completionIndex);
@@ -1225,12 +1252,15 @@ function WeekOverview({
       value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
     },
   ].filter((row): row is { label: string; value: string } => Boolean(row.value));
+  const heading = openOngoing && scheduleContext?.block_number
+    ? `Block ${scheduleContext.block_number} \u00b7 ${weekLabel(week)}`
+    : weekLabel(week);
 
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
         <p className="sp-eyebrow">Week overview</p>
-        <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
+        <h4 className="sp-redflags-title">{heading}</h4>
       </div>
 
       {rows.length > 0 ? (
@@ -1255,6 +1285,7 @@ export function StructuredPlanRenderer({
   currentDayLabel = "Today",
   completions,
   currentTrainingDayIso,
+  scheduleContext,
   onLogSession,
 }: {
   plan: StructuredPlan;
@@ -1278,6 +1309,9 @@ export function StructuredPlanRenderer({
   completions?: readonly TodaySessionCompletionRecord[] | null;
   /** Server-authoritative athlete-local training day (YYYY-MM-DD). */
   currentTrainingDayIso?: string | null;
+  /** Server-derived timing projection. Open plans use it for block identity and
+   * fail-closed legacy messaging; dated camps keep their existing D-X spine. */
+  scheduleContext?: PlanScheduleContext | null;
   /** Opens the retro-log flow for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
@@ -1290,12 +1324,21 @@ export function StructuredPlanRenderer({
   // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
   // and the Today tab can never disagree on the current day.
   const mountedDay = useTrainingDay();
+  const serverTrainingDay = useMemo(() => {
+    const iso = cleanText(currentTrainingDayIso) || cleanText(scheduleContext?.current_training_day);
+    if (!iso) {
+      return undefined;
+    }
+    const parsed = new Date(`${iso.slice(0, 10)}T12:00:00`);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }, [currentTrainingDayIso, scheduleContext?.current_training_day]);
+  const calendarDay = today ?? serverTrainingDay ?? mountedDay;
 
   // The real calendar training day owns the truthful current week marker.
   // `focusDay` only advances the opened week/day highlight.
-  const calendarProgress = resolvePlanProgress(plan, today ?? mountedDay);
+  const calendarProgress = resolvePlanProgress(plan, calendarDay);
   const resolvedFocusDay = focusDay
-    ? resolveNextPlanFocusDay(plan, today ?? mountedDay, focusDay)
+    ? resolveNextPlanFocusDay(plan, calendarDay, focusDay)
     : undefined;
   const focusProgress = resolvedFocusDay
     ? resolvePlanProgress(plan, resolvedFocusDay)
@@ -1347,6 +1390,15 @@ export function StructuredPlanRenderer({
     <div className="sp-root cm-root">
       {weeks.length > 0 ? (
         <>
+          {openOngoing && scheduleContext?.projection_status === "unavailable" ? (
+            <section className="sp-card cm-schedule-unavailable" role="status">
+              <p className="sp-eyebrow">Schedule unavailable</p>
+              <p className="sp-block-purpose">
+                This legacy plan could not be matched safely to weekdays. Use the original plan
+                below until the schedule is rebuilt.
+              </p>
+            </section>
+          ) : null}
           <WeekStrip
             weeks={weeks}
             selectedPos={safePos}
@@ -1361,6 +1413,7 @@ export function StructuredPlanRenderer({
               week={selectedWeek}
               completionIndex={completionIndex}
               openOngoing={openOngoing}
+              scheduleContext={scheduleContext}
             />
           ) : null}
 
@@ -1376,6 +1429,8 @@ export function StructuredPlanRenderer({
                     key={cleanText(day.date) || `day-${index}`}
                     day={day}
                     fallbackLabel={`Training day ${index + 1}`}
+                    openOngoing={openOngoing}
+                    weekNumber={safePos + 1}
                     isCurrent={isCurrent}
                     currentLabel={currentDayLabel}
                     defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}

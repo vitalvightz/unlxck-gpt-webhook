@@ -57,6 +57,7 @@ from api.services.plan_schedule import (
     resolve_today_and_next,
     weekly_schedule_or_none,
 )
+from api.services.open_plan_timeline import project_open_structured_plan
 from api.services.readiness_failsafe import (
     CHECKINS_UNAVAILABLE,
     COMPLETIONS_UNAVAILABLE,
@@ -679,7 +680,7 @@ def _validate_retro_log_day(
     # Structured plans know exactly which sessions each day carried; the
     # requested day+session must match one. Legacy plans without structured
     # weeks stay permissive, matching the normal Today flow.
-    weeks = _structured_plan_weeks(plan_row)
+    weeks = _structured_plan_weeks(plan_row, training_day=requested_day)
     if not weeks:
         return
     for week in weeks:
@@ -1016,11 +1017,18 @@ def _select_structured_primary_session(sessions: list[Mapping[str, Any]]) -> Map
     return sessions[0]
 
 
-def _structured_plan_weeks(plan_row: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+def _structured_plan_weeks(
+    plan_row: Mapping[str, Any], *, training_day: str | None = None
+) -> list[Mapping[str, Any]]:
     structured_plan = plan_row.get("structured_plan")
     if not isinstance(structured_plan, Mapping):
         return []
-    return _iter_mapping_items(structured_plan.get("weeks"))
+    projected, _context = project_open_structured_plan(
+        plan_row,
+        structured_plan,
+        current_training_day=training_day,
+    )
+    return _iter_mapping_items(projected.get("weeks"))
 
 
 def _normalized_structured_phase(value: Any) -> str:
@@ -1034,7 +1042,7 @@ def _normalized_structured_phase(value: Any) -> str:
 
 
 def _structured_phase_for_day(plan_row: Mapping[str, Any], training_day: str) -> str:
-    for week in _structured_plan_weeks(plan_row):
+    for week in _structured_plan_weeks(plan_row, training_day=training_day):
         if not isinstance(week, Mapping):
             continue
         for day in _iter_mapping_items(week.get("days")):
@@ -1125,7 +1133,7 @@ def _structured_session_entry_for_day(
 
 
 def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
-    for week in _structured_plan_weeks(plan_row):
+    for week in _structured_plan_weeks(plan_row, training_day=training_day):
         for day in _iter_mapping_items(week.get("days")):
             if _clean_text(day.get("date"))[:10] != training_day:
                 continue
@@ -1138,7 +1146,7 @@ def _structured_next_session_entry(plan_row: Mapping[str, Any], training_day: st
     if training_date is None:
         return None
     candidates: list[tuple[date, dict[str, Any]]] = []
-    for week in _structured_plan_weeks(plan_row):
+    for week in _structured_plan_weeks(plan_row, training_day=training_day):
         for day in _iter_mapping_items(week.get("days")):
             day_date = _clean_text(day.get("date"))[:10]
             parsed_day_date = _parse_structured_date(day_date)

@@ -378,6 +378,7 @@ export type StructuredTodayCard = {
 
 export type StructuredDay = {
   date?: string | null;
+  weekday?: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun" | null;
   day_type?: string | null;
   countdown_label?: string | null;
   phase_label?: string | null;
@@ -600,6 +601,15 @@ export type StructuredCardState = {
   attempt_started_at?: string | null;
 };
 
+export type PlanScheduleContext = {
+  schedule_mode: "event_countdown" | "open_recurring" | "static_undated";
+  projection_status: "not_required" | "projected" | "unavailable";
+  anchor_date?: string | null;
+  current_training_day?: string | null;
+  block_number?: number | null;
+  current_week_number?: number | null;
+};
+
 export type PlanDetail = PlanSummary & {
   outputs: PlanOutputs;
   advisories: PlanAdvisory[];
@@ -607,6 +617,7 @@ export type PlanDetail = PlanSummary & {
   admin_outputs?: AdminPlanOutputs | null;
   structured_card_state: StructuredCardState;
   plan_source?: string | null;
+  schedule_context?: PlanScheduleContext | null;
   // True when the stored profile could not be refreshed during generation, so
   // this plan was built from the submitted intake and the saved profile may be
   // stale. Surfaced as a non-blocking notice in the plan viewer.

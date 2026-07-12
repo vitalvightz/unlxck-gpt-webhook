@@ -56,6 +56,8 @@ test("structured renderer uses one session card and hides detail blocks until ex
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(countOccurrences(html, "Freshness Reset"), 1);
+  assert.equal(html.includes('<span class="sp-countdown sp-accent">D-19</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title">Mon</span>'), true);
   assert.equal(html.includes("Morning intro duplicate"), false); // headline not shown on session days
   // The DAY mindset renders once at day level (distinct from the session's own
   // mindset, which renders on the session card).
@@ -101,7 +103,7 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing />);
 
   assert.equal(html.includes('aria-label="Training block weeks"'), true);
-  for (const label of ["Baseline", "Progress", "Peak", "Deload"]) {
+  for (const label of ["Baseline", "Progress", "Highest Controlled", "Deload + Reassess"]) {
     assert.equal(html.includes(`cm-week-pill-phase">${label}</span>`), true);
   }
   assert.equal(html.includes("Specific prep"), false);
@@ -534,7 +536,7 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(countOccurrences(html, "Rest day."), 1);
 });
 
-test("uses open-plan headlines instead of repeated blank Day labels", () => {
+test("open plans keep session categories inside chronological day cards", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
@@ -545,13 +547,15 @@ test("uses open-plan headlines instead of repeated blank Day labels", () => {
         phase_label: "GPP",
         days: [
           {
-            date: "",
+            date: "2026-07-13",
+            weekday: "Mon",
             day_type: "moderate",
             today_card: { headline: "Support Strength" },
             sessions: [{ session_id: "s1", title: "Support Strength", blocks: [] }],
           },
           {
-            date: "",
+            date: "2026-07-15",
+            weekday: "Wed",
             day_type: "high",
             today_card: { headline: "Coach-led boxing" },
             sessions: [],
@@ -561,11 +565,65 @@ test("uses open-plan headlines instead of repeated blank Day labels", () => {
     ],
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      openOngoing
+      today={new Date(2026, 6, 13)}
+      scheduleContext={{
+        schedule_mode: "open_recurring",
+        projection_status: "projected",
+        anchor_date: "2026-07-13",
+        current_training_day: "2026-07-13",
+        block_number: 1,
+        current_week_number: 1,
+      }}
+    />,
+  );
 
-  assert.equal(html.includes('<span class="sp-week-title">Support Strength</span>'), true);
-  assert.equal(html.includes('<span class="sp-week-title">Coach-led boxing</span>'), true);
-  assert.equal(html.includes('<span class="sp-week-title">Day</span>'), false);
+  assert.equal(html.includes('<span class="sp-week-title">MON 13 JUL</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title">WED 15 JUL</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title">Support Strength</span>'), false);
+  assert.equal(html.includes("Support Strength"), true);
+  assert.equal(html.includes("D-"), false);
+  assert.equal(html.includes("Block 1"), true);
+});
+
+test("ambiguous open plans fail closed instead of using category names as dates", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
+    raw_markdown_fallback: "## Weekly Rhythm\nMonday: Support Strength",
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        days: [
+          {
+            date: "",
+            day_type: "moderate",
+            today_card: { headline: "Support Strength" },
+            sessions: [{ session_id: "s1", title: "Support Strength", blocks: [] }],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      openOngoing
+      scheduleContext={{
+        schedule_mode: "open_recurring",
+        projection_status: "unavailable",
+      }}
+    />,
+  );
+
+  assert.equal(html.includes("Schedule unavailable"), true);
+  assert.equal(html.includes('<span class="sp-week-title">Training day 1</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title">Support Strength</span>'), false);
 });
 
 test("renders light technical context alongside app sessions in the same day card", () => {
