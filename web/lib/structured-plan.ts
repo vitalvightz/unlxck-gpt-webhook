@@ -316,7 +316,7 @@ export function getCoachingCues(block: StructuredBlock | null | undefined): stri
 // field), so the renderer must not label a stop rule as "Progress" — that told
 // the athlete to ADVANCE on a safety cue. Detect the stop-rule shape so it can
 // be labelled correctly.
-const STOP_RULE_RE = /^\s*stop\b|\bstop (?:the set|on|if|when|immediately)\b/i;
+const STOP_RULE_RE = /^\s*stop(?!-)\b|(?<!\bdo\snot\s|don't\s|never\s)(?<!-)\bstop (?:the set|on|if|when|immediately)\b/i;
 
 /** Whether a `progression_rule` string is really a stop/safety rule. */
 export function isStopRuleText(text: string | null | undefined): boolean {
