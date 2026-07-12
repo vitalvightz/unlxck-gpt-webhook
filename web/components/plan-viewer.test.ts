@@ -862,6 +862,57 @@ test("missing saved structure is adapted into the full structured renderer contr
   assert.deepEqual(session?.blocks?.[0]?.coaching_cues, ["Stop: stop if technique breaks."]);
 });
 
+test("open-plan text uses its explicit weekday rhythm instead of an unavailable legacy card", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "Weekly Rhythm",
+      "- Monday - Support Strength (programmed)",
+      "- Wednesday - Coach-led boxing (coach-owned)",
+      "  Coach-owned combat session. Keep freshness priority.",
+      "- Friday - Coach-led boxing (coach-owned)",
+      "  Coach-owned combat session. Keep freshness priority.",
+      "- Saturday - Power & Coordination (programmed)",
+      "- Tuesday - Optional technical/light shadow session (athlete/coach choice).",
+      "",
+      "Session Cards",
+      "(Format per session: Objective - Main work - Coach note)",
+      "Monday - Support Strength",
+      "Why: build posterior-chain strength.",
+      "- Main work: Trap Bar Deadlift - 4 x 5 @ RPE 7",
+      "Wednesday - Coach-led boxing - hard sparring",
+      "Coach-owned combat session. Keep freshness priority.",
+      "Friday - Coach-led boxing - hard sparring",
+      "Coach-owned combat session. Keep freshness priority.",
+      "Saturday - Power & Coordination",
+      "Why: add low-damage power.",
+      "- Main work: Medicine Ball Scoop Toss - 4 x 4",
+      "",
+      "4-Week Development Block",
+      "Week 1 - Baseline and technical consistency",
+      "Week 2 - Small progression",
+      "Week 3 - Highest controlled week",
+      "Week 4 - Deload and reassess",
+    ].join("\n"),
+  );
+
+  assert.equal(plan.plan_metadata?.plan_type, "open_ongoing_system");
+  assert.equal(plan.weeks?.length, 4);
+  for (const week of plan.weeks ?? []) {
+    assert.deepEqual(
+      week.days?.map((day) => day.weekday),
+      ["Mon", "Tue", "Wed", "Fri", "Sat"],
+    );
+    assert.ok(week.days?.every((day) => !day.countdown_label));
+  }
+  assert.equal(plan.weeks?.[0]?.days?.[0]?.sessions?.[0]?.title, "Support Strength");
+  assert.equal(
+    plan.weeks?.[0]?.days?.[1]?.sessions?.[0]?.title,
+    "Optional technical/light shadow session (athlete/coach choice).",
+  );
+  assert.deepEqual(plan.weeks?.[0]?.days?.[2]?.sessions, []);
+  assert.equal(plan.weeks?.[0]?.days?.[2]?.today_card?.headline, "Coach-led boxing - hard sparring");
+});
+
 test("fallback week goals omit duplicated week and countdown metadata", () => {
   const explicit = buildStructuredPlanFromText(
     [
@@ -872,6 +923,8 @@ test("fallback week goals omit duplicated week and countdown metadata", () => {
   assert.equal(explicit.weeks?.[0]?.week_goal, "Restore structural tolerance and rhythm");
 
   const synthetic = buildStructuredPlanFromText("D-20 (Tuesday) — Conditioning");
+  assert.equal(synthetic.plan_metadata?.plan_type, "fight_camp");
+  assert.equal(synthetic.weeks?.length, 1);
   assert.equal(synthetic.weeks?.[0]?.week_index, 1);
   assert.equal(synthetic.weeks?.[0]?.week_goal, null);
 });

@@ -355,13 +355,20 @@ function TextStructuredPlanRenderer({
     () => buildStructuredPlanFromText(text, fightDate),
     [fightDate, text],
   );
+  const hasWeekdaySchedule = Boolean(
+    adaptedPlan.weeks?.some((week) => week.days?.some((day) => day.weekday)),
+  );
+  const rendererScheduleContext: PlanDetail["schedule_context"] =
+    hasWeekdaySchedule && scheduleContext?.schedule_mode === "open_recurring"
+      ? { ...scheduleContext, projection_status: "projected" }
+      : scheduleContext;
   return (
     <StructuredPlanRenderer
       plan={adaptedPlan}
       openOngoing={isOpenOngoingPlan(fightDate)}
       focusDay={focusDay}
       currentDayLabel={currentDayLabel}
-      scheduleContext={scheduleContext}
+      scheduleContext={rendererScheduleContext}
     />
   );
 }
@@ -1301,6 +1308,13 @@ export function PlanViewer({
   );
 
   const openOngoing = isOpenOngoingPlan(plan.fight_date);
+  // Some legacy open-plan enhanced cards saved the four week shells but no day
+  // rows. The approved raw text still has an explicit Weekly Rhythm, so use the
+  // deterministic text adapter for those cards instead of displaying an empty
+  // "Schedule unavailable" state.
+  const useSavedStructuredPlan =
+    hasStructuredAthletePlan &&
+    !(openOngoing && plan.schedule_context?.projection_status === "unavailable");
   const planDetailTitle = plan.plan_name?.trim() || (openOngoing ? "Open training plan" : "Fight camp");
   const fightDateLabel = plan.fight_date ? `Fight date ${plan.fight_date}` : null;
 
@@ -2478,7 +2492,7 @@ export function PlanViewer({
                   ) : null}
                 </div>
               ) : null}
-              {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
+              {useSavedStructuredPlan && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
                   openOngoing={openOngoing}
