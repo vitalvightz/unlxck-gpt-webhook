@@ -686,10 +686,16 @@ test("labeled session-level notes keep their label", () => {
   assert.deepEqual(session.notes, ["Note: keep it light today."]);
 });
 
-// TODO(web-test-reconcile): pre-existing stale test(s) below, surfaced when
-// web unit tests were first wired into CI. Skipped to unblock the green gate;
-// reconcile against current behaviour (verify each is stale, not a real
-// regression) in a dedicated follow-up.
+// TODO(web-test-reconcile): DOMAIN DECISION — plan-text dose vs. labelled detail.
+//   File/test: components/plan-viewer.test.ts, "compact labelled late-camp output
+//     parses into clean session blocks".
+//   Current behaviour: parsePlanText splits the trailing "intensity: RPE 6-7."
+//     out of the block dose (the dose becomes "3 x 4-6 reps per side; full
+//     recovery 90-120 s;"), treating "intensity:" as its own labelled segment.
+//   Expected by test: the whole "…; intensity: RPE 6-7." stays inside the dose.
+//   Risk: LOW-MEDIUM — display grouping of an already-parsed block; no data lost.
+//     Whether "intensity:" should be its own detail is a parser-design choice.
+//     Needs an owner call on the intended dose boundary; not changed here.
 test.skip("compact labelled late-camp output parses into clean session blocks", () => {
   const groups = parsePlanText(
     [

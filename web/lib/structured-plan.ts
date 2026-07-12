@@ -76,6 +76,13 @@ export function shouldShowRest(rest: MeasuredValue | null | undefined): boolean 
   return isObject(rest) && typeof rest.value === "number" && rest.value > 0;
 }
 
+/** A finite, strictly-positive number — the guard for any count/multiplier the
+ * renderer prints (sets, reps, rounds). Rejects NaN, ±Infinity, zero, negative
+ * and non-numbers so a malformed numeric payload never reaches the UI. */
+export function finitePositiveNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 /** "180 seconds" / "45 minutes" / null. Rejects non-finite (NaN/Infinity) and
  * negative values — a duration/rest/distance/work measure is never below zero,
  * and a bad number must not leak into the card as "NaN seconds". */
@@ -119,11 +126,23 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   const metrics: BlockMetric[] = [];
 
   const duration = formatMeasured(block.duration);
+  // reps as a NUMBER is only usable when finite and positive, so a malformed
+  // NaN/Infinity/negative count never renders as "NaN"/"Infinity"/"-5".
   const repsRaw = block.reps;
-  const repsText =
-    typeof repsRaw === "number" ? String(repsRaw) : cleanText(repsRaw as string | null);
+  let repsText: string | null =
+    typeof repsRaw === "number"
+      ? finitePositiveNumber(repsRaw)
+        ? String(repsRaw)
+        : null
+      : cleanText(repsRaw as string | null);
+  // A reps STRING that is a bare non-positive number ("-5", "0") is also dropped;
+  // ranges like "4-6" (not a single negative number) are kept.
+  if (repsText !== null && /^-?\d+(?:\.\d+)?$/.test(repsText) && Number(repsText) <= 0) {
+    repsText = null;
+  }
+  // The set multiplier must be a finite positive number, or it is omitted.
+  const sets = finitePositiveNumber(block.sets) ? (block.sets as number) : null;
 
-  const sets = typeof block.sets === "number" && block.sets > 0 ? block.sets : null;
   if ((!repsText || isTimeLikeReps(repsText)) && duration) {
     metrics.push({ label: "Duration", value: duration });
   } else if (repsText && isTimeLikeReps(repsText)) {
@@ -143,7 +162,7 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
     metrics.push({ label: "Distance", value: distance });
   }
 
-  if (typeof block.rounds === "number" && block.rounds > 0) {
+  if (finitePositiveNumber(block.rounds)) {
     metrics.push({ label: "Rounds", value: String(block.rounds) });
   }
 
@@ -157,8 +176,14 @@ export function formatEffort(block: StructuredBlock | null | undefined): string 
     return null;
   }
   const method = cleanText(effort.method);
+  // A numeric effort (e.g. RPE 7) must be finite — a NaN/Infinity would otherwise
+  // print "RPE NaN". Non-numeric effort still passes through cleanText.
   const value =
-    typeof effort.value === "number" ? String(effort.value) : cleanText(effort.value as string);
+    typeof effort.value === "number"
+      ? Number.isFinite(effort.value)
+        ? String(effort.value)
+        : null
+      : cleanText(effort.value as string);
   if (method && value) {
     return `${method} ${value}`;
   }
@@ -473,8 +498,12 @@ export function formatMacroRange(
   if (!isObject(range)) {
     return null;
   }
-  const min = typeof range.min === "number" ? range.min : null;
-  const max = typeof range.max === "number" ? range.max : null;
+  // Reject NaN/Infinity/negative so a malformed macro never prints "NaN g/day"
+  // or a nonsensical negative intake. Zero is allowed (a legitimate "0 g" line).
+  const finiteNonNegative = (n: unknown): n is number =>
+    typeof n === "number" && Number.isFinite(n) && n >= 0;
+  const min = finiteNonNegative(range.min) ? range.min : null;
+  const max = finiteNonNegative(range.max) ? range.max : null;
   if (min != null && max != null) {
     return `${min}–${max} ${unit}`;
   }
@@ -529,35 +558,63 @@ const WEIGHT_CUT_RISK_RANK: Record<string, number> = {
   aggressive: 4,
 };
 
-function weightCutRiskRank(value: unknown): number {
+/** The numeric rank of a risk-band token, or null when the token is missing or
+ * unrecognised — so callers can tell "explicitly none/low" from "unknown / not
+ * provided". Unknown risk is never treated as low. */
+function recognizedWeightCutRiskRank(value: unknown): number | null {
   const token = cleanText(value)?.toLowerCase().replace(/[\s-]+/g, "_");
   if (!token) {
-    return 0;
+    return null;
   }
   if (WEIGHT_CUT_RISK_RANK[token] != null) {
     return WEIGHT_CUT_RISK_RANK[token];
   }
-  return Math.max(
-    ...Object.entries(WEIGHT_CUT_RISK_RANK)
-      .filter(([key]) => token.includes(key))
-      .map(([, rank]) => rank),
-    0,
-  );
+  const matches = Object.entries(WEIGHT_CUT_RISK_RANK)
+    .filter(([key]) => token.includes(key))
+    .map(([, rank]) => rank);
+  return matches.length > 0 ? Math.max(...matches) : null;
 }
 
-function maxWeightCutRiskRank(plan: StructuredPlan | null | undefined): number {
-  const ranks = [weightCutRiskRank(plan?.nutrition?.weight_cut_warning?.risk_level)];
+/** All explicitly-present weight-cut risk-band tokens across the plan's warning
+ * and deterministic phases. Empty when the plan states no risk band at all. */
+function presentWeightCutRiskTokens(plan: StructuredPlan | null | undefined): string[] {
+  const raw: (string | null)[] = [cleanText(plan?.nutrition?.weight_cut_warning?.risk_level)];
   for (const { entry } of getDeterministicNutritionPhases(plan)) {
-    ranks.push(weightCutRiskRank(entry.weight_cut?.risk_band));
+    raw.push(cleanText(entry.weight_cut?.risk_band));
   }
   for (const { entry } of getDeterministicRecoveryPhases(plan)) {
-    ranks.push(weightCutRiskRank(entry.weight_cut?.risk_band));
+    raw.push(cleanText(entry.weight_cut?.risk_band));
   }
-  return Math.max(...ranks, 0);
+  return raw.filter((token): token is string => token !== null);
 }
 
-function hasWeightCutRiskAboveModerate(plan: StructuredPlan | null | undefined): boolean {
-  return maxWeightCutRiskRank(plan) > WEIGHT_CUT_RISK_RANK.moderate;
+/**
+ * Whether the plan's weight-cut risk is EXPLICITLY known to be below moderate
+ * (low / mild / none-inactive). Returns false when risk is missing, unknown /
+ * unrecognised, or moderate-and-above — those must never be de-emphasised. A
+ * single unrecognised or at-or-above-moderate band anywhere pins it to false.
+ */
+function isWeightCutRiskExplicitlyBelowModerate(plan: StructuredPlan | null | undefined): boolean {
+  const tokens = presentWeightCutRiskTokens(plan);
+  if (tokens.length === 0) {
+    return false; // missing / not provided → never de-emphasise
+  }
+  const ranks = tokens.map(recognizedWeightCutRiskRank);
+  if (ranks.some((rank) => rank === null)) {
+    return false; // an unknown band is treated as unknown risk → full weight
+  }
+  const maxRank = Math.max(...(ranks as number[]));
+  return maxRank < WEIGHT_CUT_RISK_RANK.moderate;
+}
+
+// Red-flag severities that must ALWAYS render at full weight — an explicit
+// high/critical safety rule is never faded regardless of computed cut risk.
+const PROMINENT_RED_FLAG_SEVERITIES = new Set(["red", "critical", "high", "severe", "extreme"]);
+
+/** True when a red-flag rule's severity must never be visually de-emphasised. */
+export function isProminentRedFlagSeverity(severity: string | null | undefined): boolean {
+  const token = cleanText(severity)?.toLowerCase();
+  return token != null && PROMINENT_RED_FLAG_SEVERITIES.has(token);
 }
 
 function isWeightCutSymptomEscalationText(text: string): boolean {
@@ -574,28 +631,35 @@ function isWeightCutSymptomEscalationText(text: string): boolean {
   );
 }
 
-function shouldSuppressWeightCutSymptomEscalation(
-  plan: StructuredPlan | null | undefined,
-  text: string,
-): boolean {
-  return isWeightCutSymptomEscalationText(text) && !hasWeightCutRiskAboveModerate(plan);
-}
-
 /**
  * Whether a weight-cut symptom safety line should be visually DE-EMPHASISED —
- * shown, but softened — because the athlete's computed cut risk is below
- * moderate. It is never suppressed: a symptom-based stop/escalate rule ("if you
- * feel dizzy/dehydrated, stop and report") is generically safe advice, and a
- * predicted risk band does not make actual symptoms unimportant. Below moderate
- * risk we only tone it down so it does not lead the card; at/above moderate it
- * renders at full weight. Used by the renderer to pick the softer style.
+ * shown, but softened — because the athlete's computed cut risk is EXPLICITLY
+ * below moderate (low / mild / none). It is never suppressed: a symptom-based
+ * stop/escalate rule ("if you feel dizzy/dehydrated, stop and report") is
+ * generically safe advice, and a predicted risk band does not make actual
+ * symptoms unimportant. De-emphasis is deliberately conservative — it applies
+ * ONLY when:
+ *   - the text is a weight-cut symptom escalation line, AND
+ *   - the plan explicitly states a below-moderate risk band (never on missing,
+ *     unknown, moderate, or higher risk), AND
+ *   - the rule's own severity is not an explicit high/critical signal
+ *     (``severity``, when supplied, overrides any de-emphasis).
+ * Everything else renders at full weight, so a genuinely high-risk or unknown
+ * situation is never faded.
  */
 export function isDeEmphasisedWeightCutSafety(
   plan: StructuredPlan | null | undefined,
   text: string | null | undefined,
+  severity?: string | null,
 ): boolean {
   const clean = cleanText(text);
-  return clean !== null && isWeightCutSymptomEscalationText(clean) && !hasWeightCutRiskAboveModerate(plan);
+  if (clean === null || !isWeightCutSymptomEscalationText(clean)) {
+    return false;
+  }
+  if (isProminentRedFlagSeverity(severity)) {
+    return false; // an explicit red/critical/high rule is never faded
+  }
+  return isWeightCutRiskExplicitlyBelowModerate(plan);
 }
 
 /** The athlete-safe metric rows for one deterministic nutrition phase. */
@@ -635,9 +699,9 @@ export function recoveryPhaseView(entry: DeterministicRecoveryPhase | null | und
   weightCut: { band: string; supervisionRequired: boolean } | null;
 } {
   const e = isObject(entry) ? entry : {};
-  const sleepRange = safeArray(e.sleep_hours_target).filter(
-    (n): n is number => typeof n === "number",
-  );
+  // Sleep hours must be finite and positive: typeof alone lets NaN through
+  // (NaN is a "number"), which would render as "NaN–9 h/night".
+  const sleepRange = safeArray(e.sleep_hours_target).filter(finitePositiveNumber);
   const sleep =
     sleepRange.length === 2
       ? `${sleepRange[0]}–${sleepRange[1]} h/night`
@@ -776,9 +840,11 @@ function normalizeForDup(text: string): string {
 export function getActiveNotesExcludingRedFlags(
   plan: StructuredPlan | null | undefined,
 ): PlanNoteView[] {
-  const notes = getPlanNotes(plan).filter(
-    (note) => !shouldSuppressWeightCutSymptomEscalation(plan, note.text),
-  );
+  // No risk-gated hiding of weight-cut symptom notes here: a symptom-based
+  // safety line is never suppressed by risk band (see isDeEmphasisedWeightCutSafety).
+  // Duplication with the Red Flags card is prevented by the exact-match dedup
+  // below, so a weight-cut note that is NOT already a red flag still shows.
+  const notes = getPlanNotes(plan);
   const flagTexts = getDisplayableRedFlags(plan)
     .map((rule) => cleanText(rule.display_text))
     .filter((text): text is string => text !== null)
@@ -818,7 +884,10 @@ function shortenWeekGoal(goal: string): string {
 
 export function weekLabel(week: StructuredWeek | null | undefined): string {
   const goal = cleanText(week?.week_goal);
-  const index = typeof week?.week_index === "number" ? week.week_index : null;
+  const index =
+    typeof week?.week_index === "number" && Number.isFinite(week.week_index)
+      ? week.week_index
+      : null;
   const base = index != null ? `Week ${index}` : "Week";
   return goal ? `${base} — ${shortenWeekGoal(goal)}` : base;
 }

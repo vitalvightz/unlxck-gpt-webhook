@@ -16351,13 +16351,13 @@ html[data-theme="light"] .loading-operational-item {
 .sp-redflag:last-child {
   border-bottom: 1px solid var(--border-subtle);
 }
-/* A weight-cut symptom rule below moderate cut risk: always shown, but softened
-   (muted text, no accent lift) so it does not lead the card while remaining a
-   tap away. It is never hidden — actual symptoms matter regardless of risk. */
-.sp-redflag-deemphasised {
-  opacity: 0.72;
-}
-.sp-redflag-deemphasised .sp-redflag-text {
+/* A weight-cut symptom rule when cut risk is explicitly below moderate: always
+   shown, but its body text is muted so it does not lead the card while remaining
+   a tap away. It is never hidden — actual symptoms matter regardless of risk —
+   and the SEVERITY BADGE is never faded (no item-level opacity), so the safety
+   signal stays legible. */
+.sp-redflag-deemphasised .sp-redflag-text,
+.sp-redflag-deemphasised .sp-muted {
   color: var(--text-secondary);
 }
 .sp-redflag-text {

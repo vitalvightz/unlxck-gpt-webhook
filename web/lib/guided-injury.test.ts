@@ -7,6 +7,7 @@ import {
   buildGuidedInjuryFields,
   buildGuidedInjurySummaries,
   coerceGuidedInjuryEditState,
+  EMPTY_GUIDED_INJURY,
   getInjuryMismatchContextKey,
   hasGuidedInjuryReviewRisk,
   hasMeaningfulInjuryMismatch,
@@ -74,11 +75,12 @@ test("guided injury state carries the body-map zone key through coerce, normaliz
   assert.ok(!buildAthleteInjuryTexts(hydrated).includes("l_shoulder"));
 });
 
-// TODO(web-test-reconcile): pre-existing stale test(s) below, surfaced when
-// web unit tests were first wired into CI. Skipped to unblock the green gate;
-// reconcile against current behaviour (verify each is stale, not a real
-// regression) in a dedicated follow-up.
-test.skip("coerceGuidedInjuryEditState preserves spaces while typing free-text fields", () => {
+// These reconcile against the current GuidedInjuryState shape: coerce / normalize
+// / parse / hydrate / build all return the COMPLETE state (structured fields
+// added since these tests were written), so the expected objects spread
+// EMPTY_GUIDED_INJURY and override only the fields under test. The behaviour they
+// assert (space handling, trimming, parsing, hydration precedence) is unchanged.
+test("coerceGuidedInjuryEditState preserves spaces while typing free-text fields", () => {
   assert.deepStrictEqual(
     coerceGuidedInjuryEditState({
       area: "hip flexor ",
@@ -87,16 +89,16 @@ test.skip("coerceGuidedInjuryEditState preserves spaces while typing free-text f
       notes: "monitor after pads ",
     }),
     {
+      ...EMPTY_GUIDED_INJURY,
       area: "hip flexor ",
       severity: "moderate",
-      trend: "",
       avoid: "deep knee drive ",
       notes: "monitor after pads ",
     },
   );
 });
 
-test.skip("normalizeGuidedInjuryState still trims persisted free-text values", () => {
+test("normalizeGuidedInjuryState still trims persisted free-text values", () => {
   assert.deepStrictEqual(
     normalizeGuidedInjuryState({
       area: "hip flexor ",
@@ -105,89 +107,80 @@ test.skip("normalizeGuidedInjuryState still trims persisted free-text values", (
       notes: "monitor after pads ",
     }),
     {
+      ...EMPTY_GUIDED_INJURY,
       area: "hip flexor",
       severity: "moderate",
-      trend: "",
       avoid: "deep knee drive",
       notes: "monitor after pads",
     },
   );
 });
 
-test.skip("preserves note sentences that contain periods", () => {
+test("preserves note sentences that contain periods", () => {
   assert.deepStrictEqual(
     parseGuidedInjuryState("Right shoulder. Notes: Range of motion limited. Follow PT exercises daily."),
     {
+      ...EMPTY_GUIDED_INJURY,
       area: "Right shoulder",
-      severity: "",
-      trend: "",
-      avoid: "",
       notes: "Range of motion limited. Follow PT exercises daily",
     },
   );
 });
 
-test.skip("merges multiple avoid phrases into the avoid field", () => {
+test("merges multiple avoid phrases into the avoid field", () => {
   assert.deepStrictEqual(
     parseGuidedInjuryState("Left knee. Avoid: deep squats. Movements to avoid: sprinting."),
     {
+      ...EMPTY_GUIDED_INJURY,
       area: "Left knee",
-      severity: "",
-      trend: "",
       avoid: "deep squats. sprinting",
-      notes: "",
     },
   );
 });
 
-test.skip("keeps dashed anatomical names while still parsing descriptors", () => {
+test("keeps dashed anatomical names while still parsing descriptors", () => {
   assert.deepStrictEqual(
     parseGuidedInjuryState("Hip flexor-iliopsoas – high, worsening. Notes: Monitor soreness."),
     {
+      ...EMPTY_GUIDED_INJURY,
       area: "Hip flexor-iliopsoas",
       severity: "high",
       trend: "worsening",
-      avoid: "",
       notes: "Monitor soreness",
     },
   );
 });
 
-test.skip("captures notes-only text that begins with Notes and includes later sentences", () => {
+test("captures notes-only text that begins with Notes and includes later sentences", () => {
   assert.deepStrictEqual(
     parseGuidedInjuryState("Notes: Chronic inflammation. Monitor swelling after sessions."),
     {
-      area: "",
-      severity: "",
-      trend: "",
-      avoid: "",
+      ...EMPTY_GUIDED_INJURY,
       notes: "Chronic inflammation. Monitor swelling after sessions",
     },
   );
 });
 
-test.skip("normalizes mild severity alias to low", () => {
+test("normalizes mild severity alias to low", () => {
   assert.deepStrictEqual(
     parseGuidedInjuryState("Right knee (mild, stable)"),
     {
+      ...EMPTY_GUIDED_INJURY,
       area: "Right knee",
       severity: "low",
       trend: "stable",
-      avoid: "",
-      notes: "",
     },
   );
 });
 
-test.skip("normalizes severe severity alias to high", () => {
+test("normalizes severe severity alias to high", () => {
   assert.deepStrictEqual(
     parseGuidedInjuryState("Left shoulder (severe, worsening)"),
     {
+      ...EMPTY_GUIDED_INJURY,
       area: "Left shoulder",
       severity: "high",
       trend: "worsening",
-      avoid: "",
-      notes: "",
     },
   );
 });
@@ -214,7 +207,7 @@ test("buildGuidedInjurySummaries joins multiple injury cards in order", () => {
   );
 });
 
-test.skip("hydrateGuidedInjuryStates prefers guided_injuries over legacy injury fields", () => {
+test("hydrateGuidedInjuryStates prefers guided_injuries over legacy injury fields", () => {
   assert.deepStrictEqual(
     hydrateGuidedInjuryStates({
       injuries: "legacy shoulder note",
@@ -236,30 +229,28 @@ test.skip("hydrateGuidedInjuryStates prefers guided_injuries over legacy injury 
     }),
     [
       {
+        ...EMPTY_GUIDED_INJURY,
         area: "Left shoulder",
         severity: "moderate",
         trend: "improving",
-        avoid: "",
-        notes: "",
       },
       {
+        ...EMPTY_GUIDED_INJURY,
         area: "Right heel",
-        severity: "",
-        trend: "",
-        avoid: "",
         notes: "tight after skipping rope",
       },
     ],
   );
 });
 
-test.skip("hydrateGuidedInjuryStates falls back to parsing legacy injuries text", () => {
+test("hydrateGuidedInjuryStates falls back to parsing legacy injuries text", () => {
   assert.deepStrictEqual(
     hydrateGuidedInjuryStates({
       injuries: "Left shoulder (moderate, improving). Avoid: heavy overhead pressing. Notes: surgery history.",
     }),
     [
       {
+        ...EMPTY_GUIDED_INJURY,
         area: "Left shoulder",
         severity: "moderate",
         trend: "improving",
@@ -270,7 +261,7 @@ test.skip("hydrateGuidedInjuryStates falls back to parsing legacy injuries text"
   );
 });
 
-test.skip("buildGuidedInjuryFields mirrors the first card into legacy guided_injury", () => {
+test("buildGuidedInjuryFields mirrors the first card into legacy guided_injury", () => {
   assert.deepStrictEqual(
     buildGuidedInjuryFields([
       {
@@ -291,25 +282,23 @@ test.skip("buildGuidedInjuryFields mirrors the first card into legacy guided_inj
     {
       injuries: "Left shoulder (moderate, improving). Avoid: heavy overhead pressing. Right heel. Notes: tight after roadwork",
       guided_injury: {
+        ...EMPTY_GUIDED_INJURY,
         area: "Left shoulder",
         severity: "moderate",
         trend: "improving",
         avoid: "heavy overhead pressing",
-        notes: "",
       },
       guided_injuries: [
         {
+          ...EMPTY_GUIDED_INJURY,
           area: "Left shoulder",
           severity: "moderate",
           trend: "improving",
           avoid: "heavy overhead pressing",
-          notes: "",
         },
         {
+          ...EMPTY_GUIDED_INJURY,
           area: "Right heel",
-          severity: "",
-          trend: "",
-          avoid: "",
           notes: "tight after roadwork",
         },
       ],

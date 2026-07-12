@@ -68,19 +68,22 @@ test("validateQuickBuildInput rejects more than four hard sparring days", () => 
   assert.equal(errors.hard_sparring_days, "Pick at most 4 hard sparring days.");
 });
 
-// TODO(web-test-reconcile): pre-existing stale test(s) below, surfaced when
-// web unit tests were first wired into CI. Skipped to unblock the green gate;
-// reconcile against current behaviour (verify each is stale, not a real
-// regression) in a dedicated follow-up.
-test.skip("quickBuildToPlanRequest forwards hard sparring days to the plan request", () => {
+// Reconciled: quickBuildToPlanRequest filters hard sparring days against
+// training_availability using the CANONICAL (capitalised) option values, so the
+// fixture must supply capitalised availability — the earlier lowercase fixture
+// mismatched the days and dropped them, which is a test-data bug, not a
+// regression.
+test("quickBuildToPlanRequest forwards hard sparring days to the plan request", () => {
   const input = buildValidInput();
+  input.training_availability = ["Monday", "Wednesday", "Friday"];
   input.hard_sparring_days = ["Monday", "Wednesday"];
   const plan = quickBuildToPlanRequest(input);
   assert.deepEqual(plan.hard_sparring_days, ["Monday", "Wednesday"]);
 });
 
-test.skip("quickBuildToPlanRequest drops hard sparring days that are not training days", () => {
+test("quickBuildToPlanRequest drops hard sparring days that are not training days", () => {
   const input = buildValidInput();
+  input.training_availability = ["Monday", "Wednesday", "Friday"];
   input.hard_sparring_days = ["Monday", "Saturday"];
   const plan = quickBuildToPlanRequest(input);
   assert.deepEqual(plan.hard_sparring_days, ["Monday"]);
@@ -218,6 +221,15 @@ test("validateQuickBuildInput allows open camp focus values", () => {
   assert.equal(errors.weak_areas, undefined);
 });
 
+// TODO(web-test-reconcile): DOMAIN DECISION — focus-cap sizing.
+//   Current behaviour: validateQuickBuildInput returns no `focus_cap` error for
+//     4 focus items (3 key goals + 1 weak area) at ~D-27.
+//   Expected by test: a `focus_cap` string error (4 items exceeds the cap).
+//   These tests encode an older, smaller focus cap; the current days-out policy
+//   appears to permit this selection. Left skipped pending product confirmation
+//   of the intended cap size at this days-out band — do NOT change production cap
+//   logic to force the old assertion. See also
+//   lib/performance-focus-cap.test.ts ("does not flag selections … within cap").
 test.skip("validateQuickBuildInput keeps shared focus cap active with days-out filtering", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = false;
@@ -303,6 +315,8 @@ test("sanitizeQuickBuildFocusByDaysOut does not auto-readd strength when hard sp
   assert.deepEqual(sanitized.weak_areas, ["mobility"]);
 });
 
+// TODO(web-test-reconcile): DOMAIN DECISION — see the focus-cap note above.
+// Same cap-sizing question; skipped pending the same product confirmation.
 test.skip("validateQuickBuildInput blocks generation when focus cap is exceeded", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = false;
