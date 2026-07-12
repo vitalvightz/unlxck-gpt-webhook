@@ -76,9 +76,16 @@ export function shouldShowRest(rest: MeasuredValue | null | undefined): boolean 
   return isObject(rest) && typeof rest.value === "number" && rest.value > 0;
 }
 
-/** "180 seconds" / "45 minutes" / null. */
+/** "180 seconds" / "45 minutes" / null. Rejects non-finite (NaN/Infinity) and
+ * negative values — a duration/rest/distance/work measure is never below zero,
+ * and a bad number must not leak into the card as "NaN seconds". */
 export function formatMeasured(measured: MeasuredValue | null | undefined): string | null {
-  if (!isObject(measured) || typeof measured.value !== "number") {
+  if (
+    !isObject(measured) ||
+    typeof measured.value !== "number" ||
+    !Number.isFinite(measured.value) ||
+    measured.value < 0
+  ) {
     return null;
   }
   const unit = cleanText(measured.unit);
@@ -116,10 +123,16 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   const repsText =
     typeof repsRaw === "number" ? String(repsRaw) : cleanText(repsRaw as string | null);
 
+  const sets = typeof block.sets === "number" && block.sets > 0 ? block.sets : null;
   if ((!repsText || isTimeLikeReps(repsText)) && duration) {
     metrics.push({ label: "Duration", value: duration });
+  } else if (repsText && isTimeLikeReps(repsText)) {
+    // The reps value is itself a duration ("30 seconds") and no separate
+    // duration exists, so it is time, not a rep count — labelling it "Volume"
+    // ("5 × 30 seconds") is semantically wrong. Surface it as Duration, keeping
+    // any sets multiplier for the interval count.
+    metrics.push({ label: "Duration", value: sets ? `${sets} × ${repsText}` : repsText });
   } else if (repsText) {
-    const sets = typeof block.sets === "number" && block.sets > 0 ? block.sets : null;
     metrics.push({ label: "Volume", value: sets ? `${sets} × ${repsText}` : repsText });
   } else if (duration) {
     metrics.push({ label: "Duration", value: duration });
@@ -568,6 +581,23 @@ function shouldSuppressWeightCutSymptomEscalation(
   return isWeightCutSymptomEscalationText(text) && !hasWeightCutRiskAboveModerate(plan);
 }
 
+/**
+ * Whether a weight-cut symptom safety line should be visually DE-EMPHASISED —
+ * shown, but softened — because the athlete's computed cut risk is below
+ * moderate. It is never suppressed: a symptom-based stop/escalate rule ("if you
+ * feel dizzy/dehydrated, stop and report") is generically safe advice, and a
+ * predicted risk band does not make actual symptoms unimportant. Below moderate
+ * risk we only tone it down so it does not lead the card; at/above moderate it
+ * renders at full weight. Used by the renderer to pick the softer style.
+ */
+export function isDeEmphasisedWeightCutSafety(
+  plan: StructuredPlan | null | undefined,
+  text: string | null | undefined,
+): boolean {
+  const clean = cleanText(text);
+  return clean !== null && isWeightCutSymptomEscalationText(clean) && !hasWeightCutRiskAboveModerate(plan);
+}
+
 /** The athlete-safe metric rows for one deterministic nutrition phase. */
 export function nutritionPhaseRows(
   entry: DeterministicNutritionPhase | null | undefined,
@@ -697,13 +727,13 @@ export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteV
     .filter((note): note is PlanNoteView => note !== null);
 }
 
-/** Fallback safety lines from active notes when explicit red-flag rules are absent. */
+/** Fallback safety lines from active notes when explicit red-flag rules are
+ * absent. A weight-cut symptom safety line is ALWAYS surfaced here (it is a
+ * stop/escalate rule); the renderer de-emphasises it below moderate risk rather
+ * than hiding it. */
 export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
   const safetyCategories = new Set(["injury", "weight_cut", "recovery"]);
   return getPlanNotes(plan).filter((note) => {
-    if (shouldSuppressWeightCutSymptomEscalation(plan, note.text)) {
-      return false;
-    }
     if (safetyCategories.has(note.category)) {
       return true;
     }
@@ -711,14 +741,13 @@ export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined):
   });
 }
 
-/** Red-flag rules that have something to display. */
+/** Red-flag rules that have something to display. Explicit symptom-based safety
+ * rules (incl. weight-cut symptom escalation) are never suppressed by risk band
+ * — they always render; the renderer softens the below-moderate ones. */
 export function getDisplayableRedFlags(plan: StructuredPlan | null | undefined) {
   return safeArray(plan?.red_flag_rules)
     .filter(isObject)
-    .filter((rule) => {
-      const text = cleanText(rule.display_text);
-      return Boolean(text && !shouldSuppressWeightCutSymptomEscalation(plan, text));
-    });
+    .filter((rule) => Boolean(cleanText(rule.display_text)));
 }
 
 /** Loose normalization for de-duplicating a note against a red-flag rule:
@@ -735,10 +764,14 @@ function normalizeForDup(text: string): string {
 /**
  * Active notes with any note that merely restates a red-flag rule removed, so
  * the Red Flags card stays the single home for stop/report rules. A note counts
- * as a duplicate when its normalized text contains, or is contained by, a red
- * flag's normalized display_text — this catches the common case where the note
- * is a slightly shorter paraphrase of the flag (e.g. the same escalation rule
- * minus a parenthetical). Notes shorter than the guard length are always kept.
+ * as a duplicate only on EXACT normalized equality with a red flag's normalized
+ * display_text. Substring ("contains / is contained by") matching is
+ * deliberately NOT used here: these are safety notes, and a looser match risks
+ * hiding a note that merely shares wording with a flag but adds its own
+ * instruction. Over-suppressing safety copy is the more dangerous failure, so we
+ * keep the stricter equality check. Notes shorter than the guard length are
+ * always kept. The ``normalizeForDup`` helper still absorbs the common
+ * parenthetical-only difference, which is the case this dedup targets.
  */
 export function getActiveNotesExcludingRedFlags(
   plan: StructuredPlan | null | undefined,
@@ -864,9 +897,18 @@ export function classifySessionlessDay(
   day: StructuredDay | null | undefined,
 ): SessionlessDayView {
   const headline = cleanText(day?.today_card?.headline);
+  const dayType = cleanText(day?.day_type)?.toLowerCase() ?? null;
 
   if (headline) {
     const kind = coachLedKindFromHeadline(headline);
+    // A rest/recovery day_type whose headline does not clearly identify
+    // coach-led combat / sparring / technical work stays a rest day (e.g.
+    // day_type "rest" + "Full rest and mobility"), rather than a generic
+    // "scheduled" day. day_type is only allowed to override an unclassified
+    // headline — a headline that names real combat/coach work always wins.
+    if (kind === "scheduled" && dayType !== null && REST_DAY_TYPES.has(dayType)) {
+      return { kind: "rest", title: headline, tag: null, coachLed: false };
+    }
     return {
       kind,
       title: headline,

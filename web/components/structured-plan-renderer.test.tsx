@@ -337,12 +337,13 @@ test("collapses deterministic nutrition and recovery into a support section at t
   // The week strip exposes both weeks as pills.
   assert.equal(html.includes("W1"), true);
   assert.equal(html.includes("W2"), true);
-  // Support sits in its own collapsed section near the bottom (after the weeks).
-  const supportIndex = html.indexOf("Support");
-  assert.equal(supportIndex > html.indexOf("W2"), true);
+  // Recovery and Nutrition sit in their own collapsed sections near the bottom
+  // (after the weeks), each toggled independently.
   assert.equal(html.includes("Show recovery"), true);
   assert.equal(html.includes("Show nutrition"), true);
-  // Deterministic per-phase content still renders inside the support section.
+  assert.equal(html.indexOf("Show recovery") > html.indexOf("W2"), true);
+  assert.equal(html.indexOf("Show nutrition") > html.indexOf("W2"), true);
+  // Deterministic per-phase content still renders inside the support sections.
   assert.equal(html.includes("General prep"), true);
 });
 
@@ -490,23 +491,14 @@ test("marks the current day and surfaces the camp status + week focus", () => {
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
 
-  // Camp status chips and countdown.
-  assert.equal(html.includes("Week 1 of 1"), true);
+  // Countdown + week focus surface via the week strip / overview.
   assert.equal(html.includes("D-28"), true);
-  // Week focus still surfaces via the week overview.
   assert.equal(html.includes("Convert strength into speed."), true);
-  // The lighter camp-readiness strip leads the plan page with focus, injury
-  // watch and weekly load — but never the exact train/modify/pull back call,
-  // which stays on Today. The day's readiness_status must not leak. Injury watch
-  // is a short cue (watch area + pointer), not the full red-flag sentence.
-  assert.equal(html.includes("sp-readiness"), true);
-  assert.equal(html.includes("Speed conversion"), true);
-  assert.equal(html.includes("Injury watch"), true);
-  assert.equal(html.includes("Achilles — see red flags"), true);
-  assert.equal(html.includes("Weekly load"), true);
+  // The day's readiness_status must never leak the exact train/modify/pull-back
+  // call — that stays on Today.
   assert.equal(html.includes("Train as planned"), false);
   assert.equal(html.includes("train_as_planned"), false);
-  // Current day is flagged.
+  // Current day is flagged, and its completion shows on the day card.
   assert.equal(html.includes("cm-day-current"), true);
   assert.equal(html.includes("1/1 done"), true);
 });
@@ -586,102 +578,12 @@ test("renders the raw markdown fallback collapsed at the bottom", () => {
   assert.equal(html.includes("cm-raw-fallback"), true);
 });
 
-test("uses an athlete-readable camp-map command header, not internal wording", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
-
-  assert.equal(html.includes("Camp map"), true);
-  assert.equal(html.includes("Structured plan"), false);
-});
-
-test("command header prefers the record status over plan_metadata.status", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: {
-      title: "Fight Camp",
-      sport: "boxing",
-      plan_type: "fight_camp",
-      status: "active",
-    },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  const html = renderToStaticMarkup(
-    <StructuredPlanRenderer
-      plan={plan}
-      createdAt="2026-06-11T09:30:00Z"
-      planStatus="held_for_review"
-    />,
-  );
-
-  // The authoritative saved-plan record status wins over the structured-plan
-  // vocabulary, so the review state shows and "Active" does not.
-  assert.equal(html.includes("Awaiting review"), true);
-  assert.equal(html.includes("Active"), false);
-  // A review/hold status must never render with the success tone.
-  assert.equal(html.includes("sp-done"), false);
-  // The generation date is formatted deterministically (timezone-stable, no
-  // Date parsing) so SSR output is identical everywhere.
-  assert.equal(html.includes("Generated 11 Jun 2026"), true);
-});
-
-test("command header tones publishable statuses as success and unsafe ones neutrally", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  const ready = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} planStatus="ready" />);
-  assert.equal(ready.includes("Ready"), true);
-  assert.equal(ready.includes("sp-tag sp-done"), true);
-  // No createdAt prop, so the "Generated …" line is omitted entirely.
-  assert.equal(ready.includes("Generated"), false);
-
-  const flagged = renderToStaticMarkup(
-    <StructuredPlanRenderer plan={plan} planStatus="publishable_with_flags" />,
-  );
-  assert.equal(flagged.includes("sp-tag sp-done"), true);
-
-  // Review / safety-hold / archived states must stay neutral — never success.
-  for (const status of [
-    "review_required",
-    "held_for_review",
-    "needs_review",
-    "triage_blocked",
-    "medical_hold",
-    "restricted_rehab_only",
-    "archived",
-    "generated",
-  ]) {
-    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} planStatus={status} />);
-    assert.equal(html.includes("sp-done"), false);
-  }
-});
-
-test("command header falls back to plan_metadata.status only without a record status", () => {
-  const plan = {
-    schema_version: "1.0",
-    plan_metadata: {
-      title: "Fight Camp",
-      sport: "boxing",
-      plan_type: "fight_camp",
-      status: "active",
-    },
-    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
-  } satisfies StructuredPlan;
-
-  // No planStatus prop (preview/test context): the structured status is used,
-  // and structured-vocabulary states stay neutral (not success-toned).
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
-  assert.equal(html.includes("Active"), true);
-  assert.equal(html.includes("sp-done"), false);
-});
+// NOTE: the earlier "command header" tests (a header rendering "Camp map",
+// plan-status colouring, and a "Generated {date}" line from the createdAt /
+// planStatus props) were removed with the camp-map redesign — those props are
+// intentionally not rendered on this plan view (see the prop doc-comments in
+// structured-plan-renderer.tsx). Their tests were deleted rather than kept
+// asserting a removed subsystem.
 
 test("does not leak raw enum tokens for day type or session type", () => {
   const plan = {
@@ -756,7 +658,7 @@ test("does not render day intensity tags on session cards", () => {
   assert.equal(html.includes("Mixed session"), true);
 });
 
-test("hides weight-cut symptom warnings unless risk is above moderate", () => {
+test("always shows the weight-cut symptom red flag, de-emphasised below moderate risk", () => {
   const basePlan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -788,8 +690,14 @@ test("hides weight-cut symptom warnings unless risk is above moderate", () => {
       }}
     />,
   );
-  assert.equal(moderate.includes("weight-cut symptoms worsen"), false);
-  assert.equal(moderate.includes("lightheadedness"), false);
+  // Below moderate risk: the explicit symptom red flag is STILL shown (a
+  // symptom-based stop/escalate rule is never hidden by a predicted risk band),
+  // just visually de-emphasised so it does not lead the card.
+  assert.equal(moderate.includes("weight-cut symptoms worsen"), true);
+  assert.equal(moderate.includes("sp-redflag-deemphasised"), true);
+  // The redundant duplicate copy in the general Active Notes card stays deduped,
+  // so the escalation sentence renders exactly once (in Red Flags).
+  assert.equal(countOccurrences(moderate, "stop non-essential activity"), 1);
 
   const high = renderToStaticMarkup(
     <StructuredPlanRenderer
@@ -801,7 +709,9 @@ test("hides weight-cut symptom warnings unless risk is above moderate", () => {
       }}
     />,
   );
+  // At/above moderate: shown at full weight (never de-emphasised).
   assert.equal(high.includes("weight-cut symptoms worsen"), true);
+  assert.equal(high.includes("sp-redflag-deemphasised"), false);
   assert.equal(countOccurrences(high, "stop non-essential activity"), 1);
 });
 

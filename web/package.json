@@ -7,6 +7,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "test:unit": "node --import tsx --test \"lib/**/*.test.ts\" \"components/**/*.test.ts\" \"components/**/*.test.tsx\"",
     "test:e2e": "playwright test",
     "audit:high": "npm audit --audit-level=high"
   },
@@ -27,6 +28,7 @@
     "@types/zxcvbn": "4.4.5",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "tsx": "^4.23.0",
     "typescript": "5.9.3"
   },
   "engines": {

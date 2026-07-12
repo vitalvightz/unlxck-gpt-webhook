@@ -25,6 +25,7 @@ import {
   hasDeterministicNutrition,
   hasDeterministicRecovery,
   hasNutrition,
+  isDeEmphasisedWeightCutSafety,
   isStopRuleText,
   isTimeLikeReps,
   nutritionPhaseRows,
@@ -773,4 +774,74 @@ test("splitMindsetLines returns empty secondary for simplified mindset", () => {
   const { primary, secondary } = splitMindsetLines({ intent: "Go" });
   assert.deepEqual(primary.map((line) => line.label), ["Intent"]);
   assert.deepEqual(secondary, []);
+});
+
+// --- audit fixes: rest-day classification, measures, weight-cut de-emphasis ---
+
+test("a rest/recovery day_type with an unclassified headline stays a rest day", () => {
+  // "Full rest and mobility" carries no combat/coach vocabulary, so a rest
+  // day_type keeps it a rest day rather than a generic "scheduled" day.
+  const rest = classifySessionlessDay({
+    day_type: "rest",
+    today_card: { headline: "Full rest and mobility" },
+  } as never);
+  assert.equal(rest.kind, "rest");
+  assert.equal(rest.title, "Full rest and mobility");
+
+  const recovery = classifySessionlessDay({
+    day_type: "recovery",
+    today_card: { headline: "Easy reset and stretch" },
+  } as never);
+  assert.equal(recovery.kind, "rest");
+});
+
+test("a headline naming real coach/combat work overrides a rest day_type", () => {
+  // day_type only rescues an UNCLASSIFIED headline; explicit combat wins.
+  assert.equal(
+    classifySessionlessDay({ day_type: "rest", today_card: { headline: "Hard sparring" } } as never)
+      .kind,
+    "sparring",
+  );
+  assert.equal(
+    classifySessionlessDay({
+      day_type: "recovery",
+      today_card: { headline: "Coach-led boxing session" },
+    } as never).kind,
+    "coach_led",
+  );
+});
+
+test("formatMeasured rejects non-finite and negative values", () => {
+  assert.equal(formatMeasured({ value: Number.NaN, unit: "seconds" } as never), null);
+  assert.equal(formatMeasured({ value: Number.POSITIVE_INFINITY, unit: "seconds" } as never), null);
+  assert.equal(formatMeasured({ value: -30, unit: "seconds" } as never), null);
+  assert.equal(formatMeasured({ value: 30, unit: "seconds" }), "30 seconds");
+  assert.equal(formatMeasured({ value: 0, unit: "seconds" }), "0 seconds");
+});
+
+test("time-like reps without a separate duration are labelled Duration, not Volume", () => {
+  const timeReps = selectBlockMetric({ display_name: "Hold", sets: 5, reps: "30 seconds" } as never);
+  assert.deepEqual(timeReps[0], { label: "Duration", value: "5 × 30 seconds" });
+  // A genuine rep count still reads as Volume.
+  const repCount = selectBlockMetric({ display_name: "Squat", sets: 3, reps: "8" } as never);
+  assert.deepEqual(repCount[0], { label: "Volume", value: "3 × 8" });
+});
+
+test("weight-cut symptom safety is de-emphasised only below moderate cut risk", () => {
+  const text = "If weight-cut symptoms worsen (dizziness), stop and escalate to medical.";
+  const belowModerate = {
+    deterministic_support: {
+      nutrition: { by_phase: { TAPER: { weight_cut: { risk_band: "moderate" } } } },
+    },
+  } as never;
+  const high = {
+    deterministic_support: {
+      nutrition: { by_phase: { TAPER: { weight_cut: { risk_band: "high" } } } },
+    },
+  } as never;
+  assert.equal(isDeEmphasisedWeightCutSafety(belowModerate, text), true);
+  assert.equal(isDeEmphasisedWeightCutSafety(high, text), false);
+  // Not a weight-cut symptom line at all → never de-emphasised.
+  assert.equal(isDeEmphasisedWeightCutSafety(belowModerate, "Stop on sharp knee pain."), false);
+  assert.equal(isDeEmphasisedWeightCutSafety(belowModerate, null), false);
 });
