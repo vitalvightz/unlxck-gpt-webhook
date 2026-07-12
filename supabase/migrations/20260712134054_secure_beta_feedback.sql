@@ -19,7 +19,7 @@ create table if not exists public.beta_feedback (
   reason text,
   comment text not null default '' check (char_length(comment) <= 500),
   contact_allowed boolean not null default false,
-  priority text not null default 'normal' check (priority in ('normal', 'safety')),
+  priority text not null default 'normal',
   plan_id uuid references public.plans(id) on delete set null,
   today_checkin_id uuid references public.today_checkins(id) on delete set null,
   camp_phase text,

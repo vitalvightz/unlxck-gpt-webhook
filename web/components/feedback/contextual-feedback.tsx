@@ -55,16 +55,20 @@ export function buildContextualFeedbackPayload(
   };
 }
 
-function ThumbIcon({ down = false }: Readonly<{ down?: boolean }>) {
+export const THUMB_PATHS = {
+  up: "M7 10v10H3V10h4Zm2 0 3-7c2 0 3 1 3 3v2h4c1.2 0 2 .9 1.8 2l-1.4 8c-.2 1.1-1.2 2-2.4 2H9V10Z",
+  down: "M7 14V4H3v10h4Zm2 0 3 7c2 0 3-1 3-3v-2h4c1.2 0 2-.9 1.8-2l-1.4-8c-.2-1.1-1.2-2-2.4-2H9v10Z",
+} as const;
+
+function ThumbIcon({ direction }: Readonly<{ direction: keyof typeof THUMB_PATHS }>) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-      <path
-        d={down ? "M7 10v10H3V10h4Zm2 0 3-7c2 0 3 1 3 3v2h4c1.2 0 2 .9 1.8 2l-1.4 8c-.2 1.1-1.2 2-2.4 2H9V10Z" : "M7 14V4H3v10h4Zm2 0 3 7c2 0 3-1 3-3v-2h4c1.2 0 2-.9 1.8-2l-1.4-8c-.2-1.1-1.2-2-2.4-2H9v10Z"}
-        fill="currentColor"
-      />
+      <path d={THUMB_PATHS[direction]} fill="currentColor" />
     </svg>
   );
 }
+
+type FeedbackLoadState = "loading" | "ready" | "failed";
 
 export function ContextualFeedback({
   token,
@@ -80,16 +84,18 @@ export function ContextualFeedback({
   const [reason, setReason] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [editing, setEditing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadState, setLoadState] = useState<FeedbackLoadState>("loading");
+  const [reloadKey, setReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const isPlan = surface === "plan";
   const reasons = isPlan ? PLAN_REASONS : DAILY_REASONS;
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    setLoadState("loading");
+    setSubmissionError(null);
     const request = isPlan && planId ? getPlanFeedback(token, planId) : getTodayFeedback(token);
     void request
       .then((saved) => {
@@ -98,22 +104,21 @@ export function ContextualFeedback({
         setChoice(saved?.response ?? null);
         setReason(saved?.reason ?? null);
         setComment(saved?.comment ?? "");
+        setEditing(false);
+        setLoadState("ready");
       })
       .catch(() => {
-        if (active) setError("Feedback is temporarily unavailable. Your plan is unaffected.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+        if (active) setLoadState("failed");
       });
     return () => {
       active = false;
     };
-  }, [isPlan, planId, token]);
+  }, [isPlan, planId, reloadKey, token]);
 
   async function save(response: FeedbackResponseValue, selectedReason = reason) {
     if ((response === "no" || response === "unsafe") && submitting) return;
     setSubmitting(true);
-    setError(null);
+    setSubmissionError(null);
     const payload = buildContextualFeedbackPayload(response, selectedReason, comment);
     try {
       const saved = isPlan && planId
@@ -125,7 +130,7 @@ export function ContextualFeedback({
       setComment(saved.comment);
       setEditing(false);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Feedback could not be sent. Try again.");
+      setSubmissionError(saveError instanceof Error ? saveError.message : "Feedback could not be sent. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -135,7 +140,7 @@ export function ContextualFeedback({
     setChoice(nextChoice);
     setReason(null);
     setEditing(true);
-    setError(null);
+    setSubmissionError(null);
     if (nextChoice === "yes") void save("yes", null);
   }
 
@@ -143,7 +148,23 @@ export function ContextualFeedback({
 
   return (
     <section className="feedback-card" aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}>
-      {record && !editing ? (
+      {loadState !== "ready" ? (
+        <>
+          <p className="feedback-question">
+            {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
+          </p>
+          {loadState === "loading" ? (
+            <p className="muted feedback-status" role="status">Loading feedback…</p>
+          ) : (
+            <div className="feedback-load-failed" role="status">
+              <span>Feedback couldn’t load.</span>
+              <button type="button" className="feedback-link" onClick={() => setReloadKey((value) => value + 1)}>
+                Retry
+              </button>
+            </div>
+          )}
+        </>
+      ) : record && !editing ? (
         <div className="feedback-sent-row" role="status">
           <span>Feedback sent</span>
           <button type="button" className="feedback-link" onClick={() => setEditing(true)}>
@@ -155,40 +176,37 @@ export function ContextualFeedback({
           <p className="feedback-question">
             {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
           </p>
-          {loading ? <p className="muted feedback-status" role="status">Loading feedback…</p> : null}
-          {!loading ? (
-            <div className="feedback-actions" role="group" aria-label="Choose a response">
+          <div className="feedback-actions" role="group" aria-label="Choose a response">
+            <button
+              type="button"
+              className={choice === "yes" ? "feedback-choice is-selected" : "feedback-choice"}
+              onClick={() => choose("yes")}
+              disabled={submitting}
+              aria-pressed={choice === "yes"}
+            >
+              <ThumbIcon direction="up" /> Yes
+            </button>
+            <button
+              type="button"
+              className={choice === "no" ? "feedback-choice is-selected" : "feedback-choice"}
+              onClick={() => choose("no")}
+              disabled={submitting}
+              aria-pressed={choice === "no"}
+            >
+              <ThumbIcon direction="down" /> {isPlan ? "Needs improvement" : "No"}
+            </button>
+            {!isPlan ? (
               <button
                 type="button"
-                className={choice === "yes" ? "feedback-choice is-selected" : "feedback-choice"}
-                onClick={() => choose("yes")}
+                className={choice === "unsafe" ? "feedback-choice feedback-unsafe is-selected" : "feedback-choice feedback-unsafe"}
+                onClick={() => choose("unsafe")}
                 disabled={submitting}
-                aria-pressed={choice === "yes"}
+                aria-pressed={choice === "unsafe"}
               >
-                <ThumbIcon /> Yes
+                This recommendation may be unsafe
               </button>
-              <button
-                type="button"
-                className={choice === "no" ? "feedback-choice is-selected" : "feedback-choice"}
-                onClick={() => choose("no")}
-                disabled={submitting}
-                aria-pressed={choice === "no"}
-              >
-                <ThumbIcon down /> {isPlan ? "Needs improvement" : "No"}
-              </button>
-              {!isPlan ? (
-                <button
-                  type="button"
-                  className={choice === "unsafe" ? "feedback-choice feedback-unsafe is-selected" : "feedback-choice feedback-unsafe"}
-                  onClick={() => choose("unsafe")}
-                  disabled={submitting}
-                  aria-pressed={choice === "unsafe"}
-                >
-                  This recommendation may be unsafe
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
           {choice === "no" ? (
             <div className="feedback-details">
@@ -230,7 +248,7 @@ export function ContextualFeedback({
       )}
 
       {showUnsafe ? <p className="feedback-unsafe-guidance" role="alert">{UNSAFE_GUIDANCE}</p> : null}
-      {error ? <p className="feedback-error" role="alert">{error}</p> : null}
+      {submissionError ? <p className="feedback-error" role="alert">{submissionError}</p> : null}
     </section>
   );
 }
