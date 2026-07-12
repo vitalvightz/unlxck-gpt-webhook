@@ -8,6 +8,10 @@ import pytest
 
 import api.stage2_automation as stage2_module
 from api.stage2_automation import OpenAIStage2Automator, Stage2AutomationError
+from fightcamp.stage2_policy import (
+    ADMIN_REVIEW_BLOCKING_CODES,
+    ATHLETE_RELEASE_WITH_FLAGS_CODES,
+)
 from support import FakeOpenAIClient as FakeClient
 
 
@@ -247,12 +251,13 @@ def test_first_pass_pass_with_review_flags_returns_ready(monkeypatch: pytest.Mon
     assert result["plan_text"] == "# final plan with minor flags"
 
 
-def test_first_pass_publish_blocking_review_flags_publish_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Coaching-quality publish-blocking flags (no hard safety blocker) must NOT
-    # hold the plan for an admin. The plan is released as publishable_with_flags:
-    # the athlete gets it while the flags stay recorded for async review.
-    def _quality_blocked_review(**_: object) -> dict:
-        finding = {"code": "missing_required_element", "phase": "SPP"}
+@pytest.mark.parametrize("code", sorted(ATHLETE_RELEASE_WITH_FLAGS_CODES))
+def test_first_pass_low_risk_quality_codes_publish_with_flags(
+    monkeypatch: pytest.MonkeyPatch,
+    code: str,
+) -> None:
+    def _quality_flagged_review(**_: object) -> dict:
+        finding = {"code": code, "phase": "SPP"}
         return {
             "status": "PASS",
             "needs_retry": False,
@@ -264,20 +269,112 @@ def test_first_pass_publish_blocking_review_flags_publish_with_flags(monkeypatch
             },
         }
 
-    monkeypatch.setattr(stage2_module, "review_stage2_output", _quality_blocked_review)
-    client = FakeClient([_response("# final plan missing required work")])
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _quality_flagged_review)
+    client = FakeClient([_response("# final plan with quality flag")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 1
     assert result["status"] == "publishable_with_flags"
-    assert result["plan_text"] == "# final plan missing required work"
-    assert result["final_plan_text"] == "# final plan missing required work"
+    assert result["plan_text"] == "# final plan with quality flag"
+    assert result["final_plan_text"] == "# final plan with quality flag"
     assert result["stage2_status"] == "stage2_pass"
-    assert result["stage2_validator_report"]["publish_blocking_review_flags"] == [
-        {"code": "missing_required_element", "phase": "SPP"}
+    assert result["stage2_validator_report"]["quality_review_flags"] == [
+        {"code": code, "phase": "SPP"}
     ]
+    assert result["stage2_validator_report"]["release_decision"] == "publish_with_flags"
+    assert result["stage2_validator_report"]["is_athlete_releasable"] is True
+    assert result["stage2_validator_report"]["is_publishable"] is True
+
+
+@pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES))
+def test_first_pass_context_or_programme_codes_hold_for_admin(
+    monkeypatch: pytest.MonkeyPatch,
+    code: str,
+) -> None:
+    finding = {"code": code, "phase": "SPP"}
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {
+                "errors": [],
+                "warnings": [finding],
+                "review_flags": [finding],
+                "review_flag_count": 1,
+            },
+        },
+    )
+    automator = OpenAIStage2Automator(
+        client=FakeClient([_response("# unsafe or incomplete plan")]),
+        model="test-model",
+    )
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["stage2_status"] == "stage2_failed"
+    assert result["stage2_validator_report"]["release_decision"] == "hold"
+    assert result["stage2_validator_report"]["is_athlete_releasable"] is False
+    assert result["stage2_validator_report"]["is_publishable"] is False
+
+
+def test_first_pass_mixed_quality_and_blocking_codes_hold(monkeypatch: pytest.MonkeyPatch) -> None:
+    findings = [{"code": "option_overload"}, {"code": "missing_required_element"}]
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {
+                "errors": [],
+                "warnings": findings,
+                "review_flags": findings,
+                "review_flag_count": 2,
+            },
+        },
+    )
+    automator = OpenAIStage2Automator(client=FakeClient([_response("# mixed plan")]), model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert result["stage2_validator_report"]["quality_review_flags"] == [
+        {"code": "option_overload"}
+    ]
+    assert result["stage2_validator_report"]["admin_review_blocking_flags"] == [
+        {"code": "missing_required_element"}
+    ]
+
+
+def test_first_pass_unknown_blocking_code_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    unknown = {"code": "brand_new_warning_code"}
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "WARN",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [],
+                "warnings": [unknown],
+                "blocking_warnings": [unknown],
+                "review_flags": [],
+            },
+        },
+    )
+    automator = OpenAIStage2Automator(client=FakeClient([_response("# unknown plan")]), model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert result["stage2_validator_report"]["release_decision"] == "hold"
+    assert result["stage2_validator_report"]["is_publishable"] is False
 
 
 def test_first_pass_hard_failure_returns_held_for_review_with_one_provider_call(
@@ -614,10 +711,18 @@ def test_rescuable_true_when_only_card_rescuable_blocking_warnings_present() -> 
     assert _is_rescuable(report) is True
 
 
-def test_rescuable_false_when_publish_blocking_warning_present() -> None:
+def test_rescuable_false_when_admin_review_blocking_warning_present() -> None:
     report = {
         "errors": [],
         "blocking_warnings": [{"code": "missing_required_element"}],
+    }
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_false_when_release_with_flags_warning_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "option_overload"}],
     }
     assert _is_rescuable(report) is False
 

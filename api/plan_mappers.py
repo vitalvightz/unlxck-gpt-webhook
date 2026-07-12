@@ -9,8 +9,8 @@ from typing import Any
 from fastapi import HTTPException, status
 
 from fightcamp.stage2_policy import (
-    is_hard_stage2_blocker,
-    publish_blocking_review_findings,
+    admin_review_blocking_findings,
+    apply_stage2_release_policy,
 )
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
@@ -185,7 +185,7 @@ def _format_review_reason(report: dict[str, Any], *, normalized_status: str) -> 
         )
 
     blocking_labels = _review_finding_labels(
-        [*_finding_list(report.get("blocking_warnings")), *publish_blocking_review_findings(report)]
+        [*_finding_list(report.get("blocking_warnings")), *admin_review_blocking_findings(report)]
     )
     if blocking_labels:
         return (
@@ -205,23 +205,9 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         if not report_exists:
             normalized_status = "held_for_review"
         else:
-            has_errors = bool(report.get("errors"))
-            blocking_warnings = [
-                warning
-                for warning in (report.get("blocking_warnings") or [])
-                if isinstance(warning, dict)
-                and is_hard_stage2_blocker(str(warning.get("code") or ""))
-            ]
-            has_blocking = bool(blocking_warnings) or bool(
-                publish_blocking_review_findings(report)
-            )
-            if not has_blocking:
-                warnings = list(report.get("warnings") or [])
-                has_blocking = any(
-                    is_hard_stage2_blocker(str(w.get("code") or ""))
-                    for w in warnings
-                    if isinstance(w, dict)
-                )
+            policy_report = apply_stage2_release_policy(report)
+            has_errors = bool(policy_report.get("errors"))
+            has_blocking = policy_report.get("release_decision") == "hold"
             has_review_flags = bool(report.get("warnings") or report.get("review_flags"))
             if has_errors or has_blocking:
                 normalized_status = "held_for_review"

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from api import stage2_automation
 from fightcamp import stage2_policy
 
@@ -36,10 +38,16 @@ def test_late_fight_unapproved_exercise_rendered_is_soft_not_hard_blocker() -> N
     assert not stage2_policy.is_hard_stage2_blocker("late_fight_unapproved_exercise_rendered")
 
 
-def test_publish_blocking_review_flag_codes_load_from_shared_json() -> None:
-    assert stage2_policy.PUBLISH_BLOCKING_REVIEW_FLAG_CODES == frozenset(
-        _raw_policy()["publish_blocking_review_flag_codes"]
+def test_release_policy_classes_load_from_shared_json_and_are_disjoint() -> None:
+    assert stage2_policy.ATHLETE_RELEASE_WITH_FLAGS_CODES == frozenset(
+        _raw_policy()["athlete_release_with_flags_codes"]
     )
+    assert stage2_policy.ADMIN_REVIEW_BLOCKING_CODES == frozenset(
+        _raw_policy()["admin_review_blocking_codes"]
+    )
+    assert not stage2_policy.HARD_STAGE2_BLOCKER_CODES & stage2_policy.ATHLETE_RELEASE_WITH_FLAGS_CODES
+    assert not stage2_policy.HARD_STAGE2_BLOCKER_CODES & stage2_policy.ADMIN_REVIEW_BLOCKING_CODES
+    assert not stage2_policy.ATHLETE_RELEASE_WITH_FLAGS_CODES & stage2_policy.ADMIN_REVIEW_BLOCKING_CODES
 
 
 def test_hard_blocker_findings_returns_only_hard_blockers() -> None:
@@ -122,13 +130,111 @@ def test_stage2_hold_rescue_uses_shared_soft_code_list() -> None:
     )
 
 
-def test_publish_blocking_review_findings_dedupes_warning_sources() -> None:
+def test_policy_findings_dedupe_warning_sources() -> None:
     report = {
-        "warnings": [{"code": "missing_required_element", "phase": "SPP"}],
-        "review_flags": [{"code": "missing_required_element", "phase": "SPP"}],
-        "blocking_warnings": [{"code": "generic_filler_phrase"}],
+        "warnings": [{"code": "option_overload", "phase": "SPP"}],
+        "review_flags": [{"code": "option_overload", "phase": "SPP"}],
+        "blocking_warnings": [{"code": "missing_required_element", "phase": "SPP"}],
     }
 
-    assert stage2_policy.publish_blocking_review_findings(report) == [
+    assert stage2_policy.athlete_release_with_flags_findings(report) == [
+        {"code": "option_overload", "phase": "SPP"}
+    ]
+    assert stage2_policy.admin_review_blocking_findings(report) == [
         {"code": "missing_required_element", "phase": "SPP"}
     ]
+
+
+@pytest.mark.parametrize("code", sorted(stage2_policy.ATHLETE_RELEASE_WITH_FLAGS_CODES))
+def test_low_risk_quality_code_releases_with_flags(code: str) -> None:
+    report = stage2_policy.apply_stage2_release_policy(
+        {
+            "errors": [],
+            "warnings": [{"code": code}],
+            "review_flags": [{"code": code}],
+            "blocking_warnings": [{"code": code}],
+        }
+    )
+
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is True
+    assert report["is_publishable"] is True
+    assert report["blocking_warnings"] == []
+    assert report["quality_review_flags"] == [{"code": code}]
+
+
+@pytest.mark.parametrize("code", sorted(stage2_policy.ADMIN_REVIEW_BLOCKING_CODES))
+def test_context_or_programme_failure_holds(code: str) -> None:
+    report = stage2_policy.apply_stage2_release_policy(
+        {"errors": [], "warnings": [{"code": code}], "blocking_warnings": []}
+    )
+
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+    assert report["is_publishable"] is False
+    assert report["admin_review_blocking_flags"] == [{"code": code}]
+
+
+def test_mixed_release_and_blocking_codes_hold() -> None:
+    report = stage2_policy.apply_stage2_release_policy(
+        {
+            "errors": [],
+            "warnings": [
+                {"code": "option_overload"},
+                {"code": "missing_required_element"},
+            ],
+            "blocking_warnings": [],
+        }
+    )
+
+    assert report["release_decision"] == "hold"
+    assert report["is_publishable"] is False
+    assert report["quality_review_flags"] == [{"code": "option_overload"}]
+    assert report["admin_review_blocking_flags"] == [{"code": "missing_required_element"}]
+
+
+def test_unknown_blocking_code_fails_closed() -> None:
+    report = stage2_policy.apply_stage2_release_policy(
+        {
+            "errors": [],
+            "warnings": [],
+            "review_flags": [],
+            "blocking_warnings": [{"code": "brand_new_warning_code"}],
+        }
+    )
+
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+    assert report["is_publishable"] is False
+
+
+def test_release_status_matches_validator_publishability() -> None:
+    report = stage2_policy.apply_stage2_release_policy(
+        {
+            "errors": [],
+            "warnings": [{"code": "template_like_session_render"}],
+            "blocking_warnings": [],
+        }
+    )
+
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_publishable"] is True
+    assert report["is_athlete_releasable"] is True
+
+
+def test_required_athlete_context_failures_are_admin_blocking() -> None:
+    required_blockers = {
+        "high_pressure_weight_cut_underaddressed",
+        "weight_cut_state_contradiction",
+        "missing_weight_cut_acknowledgement",
+        "missing_injury_lead_summary",
+        "missing_required_element",
+        "equipment_incongruent_selection",
+        "unresolved_access_fallback",
+        "late_camp_session_incomplete",
+        "weekly_session_overage",
+        "support_recovery_day_stress_leak",
+    }
+
+    assert required_blockers.issubset(stage2_policy.ADMIN_REVIEW_BLOCKING_CODES)
+    assert not required_blockers & stage2_policy.ATHLETE_RELEASE_WITH_FLAGS_CODES

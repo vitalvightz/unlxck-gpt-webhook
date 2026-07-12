@@ -12,9 +12,14 @@
     "stage2_output_truncated",
     "admin_review_rejected"
   ],
-  "publish_blocking_review_flag_codes": [
-    "anchor_day_identity_overload",
+  "athlete_release_with_flags_codes": [
     "conditional_conditioning_choice",
+    "option_overload",
+    "template_like_session_render",
+    "too_many_fallbacks"
+  ],
+  "admin_review_blocking_codes": [
+    "anchor_day_identity_overload",
     "crowded_week_non_spar_overage",
     "equipment_incongruent_selection",
     "high_pressure_weight_cut_underaddressed",
@@ -24,13 +29,10 @@
     "missing_week_session_role",
     "missing_weight_cut_acknowledgement",
     "missing_weight_cut_lead_summary",
-    "option_overload",
     "phase_section_missing",
     "support_recovery_day_stress_leak",
     "support_takeover_before_anchor",
     "taper_option_overload",
-    "template_like_session_render",
-    "too_many_fallbacks",
     "unresolved_access_fallback",
     "weak_anchor_session",
     "weekly_rhythm_broken",
