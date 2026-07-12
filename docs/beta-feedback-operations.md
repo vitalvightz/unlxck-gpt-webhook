@@ -22,6 +22,8 @@ RESEND_API_KEY=...
 
 Every saved feedback response is available to authenticated admins at `/admin` through the service-role backend; this feed is the authoritative delivery channel. The same save attempts one best-effort background Resend notification to `FEEDBACK_NOTIFICATION_EMAIL`, which defaults to `unlxckedmind@gmail.com`. Configure a verified sender in `FEEDBACK_FROM_EMAIL`. Email is skipped when the Resend key or sender is absent, and provider failures are logged without retry; neither case rolls back stored feedback.
 
+The admin feed shows bounded server-derived submission context: page path, plan/check-in IDs, device/language, selected readiness values, and up to three open-injury summaries without injury descriptions. This context opens automatically when no written comment was supplied. The app never captures a page screenshot automatically; image attachments remain explicit user uploads with the existing privacy warning and sanitisation controls.
+
 Athletes and admins may submit contextual feedback only for plans and Today recommendations owned by their own profile. Coaches and gym owners remain limited to global feedback.
 
 Notification emails contain only priority, surface, category, response, reason, screenshot presence, authenticated role, and feedback ID. Comments, contact details, health snapshots, technical context, screenshots, and screenshot paths remain inside the authenticated admin/storage tools.

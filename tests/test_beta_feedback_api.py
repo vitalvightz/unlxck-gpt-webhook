@@ -467,6 +467,49 @@ def test_admin_feedback_feed_is_admin_only_and_safety_first():
     assert rows[0]["contact_allowed"] is True
 
 
+def test_admin_feedback_feed_summarises_server_context_when_comment_is_empty():
+    client, store, _ = _build_client()
+    _seed_today(store)
+    store.injury_flags["athlete-1"] = [
+        {
+            "id": "injury-1",
+            "athlete_id": "athlete-1",
+            "plan_id": PLAN_ID,
+            "body_area": "left shoulder",
+            "severity": "moderate",
+            "status": "open",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+    ]
+    response = client.put(
+        "/api/today/feedback",
+        headers={
+            **ATHLETE,
+            "referer": "http://testserver/today",
+            "sec-ch-ua": '"Test Browser";v="1"',
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-ch-ua-mobile": "?0",
+            "accept-language": "en-GB",
+        },
+        json={"response": "yes"},
+    )
+    assert response.status_code == 200
+
+    admin_response = client.get("/api/admin/feedback", headers=ADMIN)
+    assert admin_response.status_code == 200
+    row = next(item for item in admin_response.json() if item["id"] == response.json()["id"])
+    assert row["comment"] == ""
+    assert row["page_path"] == "/today"
+    assert row["device_context"] == 'Desktop · Windows · "Test Browser";v="1"'
+    assert row["language"] == "en-GB"
+    assert "Pain: none" in row["readiness_context"]
+    assert "Recommendation State: train_as_planned" in row["readiness_context"]
+    assert row["injury_context"] == ["left shoulder · moderate · open"]
+    assert row["plan_id"] == PLAN_ID
+    assert row["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
+
+
 def test_global_screenshot_is_sanitised_private_and_rate_limited(monkeypatch):
     monkeypatch.setenv("FEEDBACK_REPORT_LIMIT_PER_HOUR", "5")
     monkeypatch.setenv("FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR", "1")

@@ -1151,6 +1151,11 @@ export type AdminFeedbackRecord = FeedbackRecord & {
   today_checkin_id: string | null;
   camp_phase: string | null;
   app_version: string;
+  page_path: string;
+  device_context: string;
+  language: string;
+  readiness_context: string[];
+  injury_context: string[];
   screenshot_expires_at: string | null;
 };
 

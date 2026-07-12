@@ -20,6 +20,39 @@ function readable(value: string | null | undefined): string {
   return value ? value.replaceAll("_", " ") : "Not provided";
 }
 
+function AdminFeedbackContext({ item, expanded }: { item: AdminFeedbackRecord; expanded: boolean }) {
+  const content = (
+    <dl className="admin-feedback-context-grid">
+      {item.page_path ? <div><dt>Page</dt><dd>{item.page_path}</dd></div> : null}
+      {item.plan_id ? <div><dt>Plan ID</dt><dd>{item.plan_id}</dd></div> : null}
+      {item.today_checkin_id ? <div><dt>Check-in ID</dt><dd>{item.today_checkin_id}</dd></div> : null}
+      {item.device_context ? <div><dt>Device</dt><dd>{item.device_context}</dd></div> : null}
+      {item.language ? <div><dt>Language</dt><dd>{item.language}</dd></div> : null}
+      {item.readiness_context.length ? (
+        <div><dt>Readiness used</dt><dd>{item.readiness_context.join(" · ")}</dd></div>
+      ) : null}
+      {item.injury_context.length ? (
+        <div><dt>Open injuries</dt><dd>{item.injury_context.join(" | ")}</dd></div>
+      ) : null}
+    </dl>
+  );
+
+  if (expanded) {
+    return (
+      <section className="admin-feedback-context" aria-label="Submission context">
+        <h4>Submission context</h4>
+        {content}
+      </section>
+    );
+  }
+  return (
+    <details className="admin-feedback-context">
+      <summary>Submission context</summary>
+      {content}
+    </details>
+  );
+}
+
 export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reloadKey: number }) {
   const [feedback, setFeedback] = useState<AdminFeedbackRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,11 +77,12 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
     void listAdminFeedback(token)
       .then((rows) => {
-        if (active) setFeedback(rows);
+        if (active) {
+          setFeedback(rows);
+          setError(null);
+        }
       })
       .catch((loadError: unknown) => {
         if (active) setError(loadError instanceof Error ? loadError.message : "Unable to load feedback.");
@@ -76,7 +110,15 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
       {!loading && error ? (
         <div className="support-panel">
           <p className="error-text">{error}</p>
-          <button type="button" className="ghost-button" onClick={() => setRetryKey((value) => value + 1)}>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              setRetryKey((value) => value + 1);
+            }}
+          >
             Retry feedback
           </button>
         </div>
@@ -105,7 +147,12 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
                 <span>Phase: {item.camp_phase || "Not set"}</span>
                 <span>App: {item.app_version || "Unknown"}</span>
               </div>
-              {item.comment ? <p className="admin-feedback-comment">{item.comment}</p> : null}
+              {item.comment ? (
+                <p className="admin-feedback-comment">{item.comment}</p>
+              ) : (
+                <p className="muted admin-feedback-no-comment">No written comment. Showing captured context.</p>
+              )}
+              <AdminFeedbackContext item={item} expanded={!item.comment} />
               <div className="admin-feedback-footer">
                 <span>{formatAppDateTime(item.created_at)}</span>
                 {item.contact_allowed ? <span>Contact permitted</span> : null}
