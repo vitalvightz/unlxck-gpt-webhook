@@ -449,7 +449,7 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
       currentBlockTag = null;
       continue;
     }
-    if (allowWeekdayOnlySessions && /^4-Week Development Block$/i.test(cleanLine)) {
+    if (allowWeekdayOnlySessions && /^\d+-Week (?:Development )?Block:?$/i.test(cleanLine)) {
       allowWeekdayOnlySessions = false;
       currentSession = null;
       currentWeek = null;
