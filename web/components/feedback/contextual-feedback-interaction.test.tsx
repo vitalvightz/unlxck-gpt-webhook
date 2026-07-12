@@ -32,6 +32,21 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function savedYesFeedback() {
+  return {
+    id: "feedback-1",
+    surface: "plan",
+    category: "plan_usefulness",
+    response: "yes",
+    reason: null,
+    comment: "",
+    priority: "normal",
+    has_screenshot: false,
+    created_at: "2026-07-12T20:00:00Z",
+    updated_at: "2026-07-12T20:00:00Z",
+  };
+}
+
 test("load failure hides choices and Retry restores correctly oriented controls", async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
@@ -54,7 +69,7 @@ test("load failure hides choices and Retry restores correctly oriented controls"
 
     const retry = container.querySelector<HTMLButtonElement>(".feedback-load-failed button");
     assert.ok(retry);
-    await act(async () => retry.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+    await act(async () => retry.click());
     await settle();
 
     assert.equal(calls, 2);
@@ -90,12 +105,58 @@ test("submission failure keeps the feedback controls visible", async () => {
       (button) => button.textContent?.includes("Yes"),
     );
     assert.ok(yes);
-    await act(async () => yes.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+    await act(async () => yes.click());
     await settle();
 
     assert.equal(calls, 2);
     assert.match(container.querySelector(".feedback-error")?.textContent ?? "", /Feedback could not be sent/);
     assert.ok(container.querySelector(".feedback-actions"));
+  } finally {
+    globalThis.fetch = originalFetch;
+    cleanup(container, root);
+  }
+});
+
+test("rapid Yes clicks create only one submission request", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  let resolveSubmission: ((response: Response) => void) | undefined;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls === 1) return jsonResponse(null);
+    return await new Promise<Response>((resolve) => {
+      resolveSubmission = resolve;
+    });
+  };
+  const { container, root } = mount();
+
+  try {
+    await act(async () => {
+      root.render(<ContextualFeedback token="test-token" surface="plan" planId="plan-1" />);
+    });
+    await settle();
+
+    const yes = Array.from(container.querySelectorAll<HTMLButtonElement>(".feedback-choice")).find(
+      (button) => button.textContent?.includes("Yes"),
+    );
+    assert.ok(yes);
+
+    await act(async () => {
+      yes.click();
+      yes.click();
+      await Promise.resolve();
+    });
+
+    assert.equal(calls, 2);
+    assert.ok(resolveSubmission);
+
+    await act(async () => {
+      resolveSubmission?.(jsonResponse(savedYesFeedback()));
+      await Promise.resolve();
+    });
+    await settle();
+
+    assert.match(container.textContent ?? "", /Feedback sent/);
   } finally {
     globalThis.fetch = originalFetch;
     cleanup(container, root);
