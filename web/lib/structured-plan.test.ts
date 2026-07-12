@@ -25,8 +25,10 @@ import {
   hasDeterministicNutrition,
   hasDeterministicRecovery,
   hasNutrition,
+  isStopRuleText,
   isTimeLikeReps,
   nutritionPhaseRows,
+  progressionRuleLabel,
   recoveryPhaseView,
   redFlagView,
   selectBlockMetric,
@@ -162,6 +164,43 @@ test("falls back to plan_text when structured_plan is malformed", () => {
   assert.equal(shouldRenderStructuredPlan({ structured_plan: { weeks: "nope" } as never }), false);
   assert.equal(shouldRenderStructuredPlan({ structured_plan: "raw text" as never }), false);
   assert.equal(shouldRenderStructuredPlan({ structured_plan: [] as never }), false);
+});
+
+// --- progression_rule vs stop rule labelling --------------------------------
+
+test("labels a stop rule in progression_rule as Stop rule, not Progress", () => {
+  // The conversion model routinely drops per-block stop rules into
+  // progression_rule; the renderer must never tell the athlete to ADVANCE on a
+  // safety cue.
+  for (const stop of [
+    "Stop on sharp pain.",
+    "Stop the set if ankle pain increases or punch speed drops across the set.",
+    "stop if the ankle flares",
+    "Stop when burst quality drops 2 reps.",
+    "Stop immediately on dizziness.",
+  ]) {
+    assert.equal(isStopRuleText(stop), true, stop);
+    assert.equal(progressionRuleLabel(stop), "Stop rule", stop);
+  }
+});
+
+test("keeps genuine progression content labelled Progress", () => {
+  for (const progress of [
+    "Add 5 minutes next week once pain-free.",
+    "Progress to single-leg once double-leg is easy.",
+    "Increase band tension when speed holds across all sets.",
+    "The non-stop shop drill advances by tempo.", // "stop" mid-word must not trip it
+  ]) {
+    assert.equal(isStopRuleText(progress), false, progress);
+    assert.equal(progressionRuleLabel(progress), "Progress", progress);
+  }
+});
+
+test("stop-rule detection is safe on null / blank input", () => {
+  assert.equal(isStopRuleText(null), false);
+  assert.equal(isStopRuleText(undefined), false);
+  assert.equal(isStopRuleText("   "), false);
+  assert.equal(progressionRuleLabel(null), "Progress");
 });
 
 // --- defensive selectors: never crash on partial data -----------------------

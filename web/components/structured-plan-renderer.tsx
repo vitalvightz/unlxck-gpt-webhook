@@ -16,6 +16,7 @@ import {
   getDisplayableRedFlags,
   getFallbackSafetyNotes,
   getRehabOrMobilityBlocks,
+  progressionRuleLabel,
   planNoteLabel,
   formatWeightCutBand,
   getDeterministicNutritionPhases,
@@ -217,7 +218,7 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
       ) : null}
       {progression ? (
         <p className="sp-block-aside">
-          <span className="sp-stat-label">Progress</span>
+          <span className="sp-stat-label">{progressionRuleLabel(progression)}</span>
           {progression}
         </p>
       ) : null}
@@ -349,7 +350,11 @@ export function SessionCard({
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
 
       <MindsetAnchorCard anchor={sessionMindset} />
-      <RehabSummary blocks={rehabBlocks} />
+      {/* The rehab/mobility summary is a compact PREVIEW of the inserts shown
+          only while the full blocks are collapsed. Once expanded, every rehab
+          block renders in full below, so keeping the summary too would print the
+          same insert as two separate cards. */}
+      {!showDetails ? <RehabSummary blocks={rehabBlocks} /> : null}
 
       {blocks.length > 0 ? (
         <>
