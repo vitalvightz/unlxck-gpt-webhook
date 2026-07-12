@@ -5,12 +5,13 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Callable, TypeVar
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from api.feedback_images import MAX_SCREENSHOT_BYTES, ScreenshotValidationError
 from api.models import (
+    AdminFeedbackRecord,
     ContextualFeedbackRequest,
     FeedbackRecord,
     GlobalFeedbackRequest,
@@ -23,6 +24,7 @@ from api.services.feedback_service import (
     put_today_feedback,
     submit_global_feedback,
 )
+from api.services.feedback_notifications import send_feedback_notification
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -62,7 +64,32 @@ def _invoke_feedback_route(
         raise
 
 
-def build_feedback_router(*, require_profile, get_store) -> APIRouter:
+def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
+    profile = row.get("profiles") if isinstance(row.get("profiles"), dict) else {}
+    return AdminFeedbackRecord(
+        id=str(row.get("id") or ""),
+        submitted_by_profile_id=str(row.get("submitted_by_profile_id") or ""),
+        submitter_email=str(profile.get("email") or ""),
+        submitter_name=str(profile.get("full_name") or ""),
+        surface=str(row.get("surface") or "global"),
+        category=str(row.get("category") or "general_feedback"),
+        response=row.get("response"),
+        reason=row.get("reason"),
+        comment=str(row.get("comment") or ""),
+        contact_allowed=bool(row.get("contact_allowed")),
+        priority=str(row.get("priority") or "normal"),
+        plan_id=row.get("plan_id"),
+        today_checkin_id=row.get("today_checkin_id"),
+        camp_phase=row.get("camp_phase"),
+        app_version=str(row.get("app_version") or ""),
+        has_screenshot=bool(row.get("screenshot_path")),
+        screenshot_expires_at=row.get("screenshot_expires_at"),
+        created_at=str(row.get("created_at") or ""),
+        updated_at=str(row.get("updated_at") or ""),
+    )
+
+
+def build_feedback_router(*, require_profile, require_admin, get_store) -> APIRouter:
     router = APIRouter(tags=["feedback"])
 
     @router.get("/api/plans/{plan_id}/feedback", response_model=FeedbackRecord | None)
@@ -86,10 +113,11 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
         plan_id: str,
         body: ContextualFeedbackRequest,
         request: Request,
+        background_tasks: BackgroundTasks,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> FeedbackRecord:
-        return _invoke_feedback_route(
+        record = _invoke_feedback_route(
             request,
             surface="plan",
             category="plan_usefulness",
@@ -97,6 +125,8 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
             screenshot_present=False,
             operation=lambda: put_plan_feedback(store, profile, plan_id, body, request),
         )
+        background_tasks.add_task(send_feedback_notification, record, profile)
+        return record
 
     @router.get("/api/today/feedback", response_model=FeedbackRecord | None)
     def read_today_feedback(
@@ -117,11 +147,12 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
     def update_today_feedback(
         body: ContextualFeedbackRequest,
         request: Request,
+        background_tasks: BackgroundTasks,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> FeedbackRecord:
         is_safety = body.response == "unsafe"
-        return _invoke_feedback_route(
+        record = _invoke_feedback_route(
             request,
             surface="daily_recommendation",
             category="recommendation_safety" if is_safety else "recommendation_fit",
@@ -129,6 +160,8 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
             screenshot_present=False,
             operation=lambda: put_today_feedback(store, profile, body, request),
         )
+        background_tasks.add_task(send_feedback_notification, record, profile)
+        return record
 
     @router.post(
         "/api/feedback/global",
@@ -137,6 +170,7 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
     )
     async def create_global_feedback(
         request: Request,
+        background_tasks: BackgroundTasks,
         category: Annotated[str, Form(max_length=40)],
         description: Annotated[str, Form(max_length=500)] = "",
         contact_allowed: Annotated[bool, Form()] = False,
@@ -158,7 +192,7 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
             raw_screenshot = await screenshot.read(MAX_SCREENSHOT_BYTES + 1)
             await screenshot.close()
         try:
-            return await run_in_threadpool(
+            record = await run_in_threadpool(
                 _invoke_feedback_route,
                 request,
                 surface="global",
@@ -173,7 +207,17 @@ def build_feedback_router(*, require_profile, get_store) -> APIRouter:
                     raw_screenshot,
                 ),
             )
+            background_tasks.add_task(send_feedback_notification, record, profile)
+            return record
         except ScreenshotValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    @router.get("/api/admin/feedback", response_model=list[AdminFeedbackRecord])
+    def read_admin_feedback(
+        _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(50, ge=1, le=100),
+        store: AppStore = Depends(get_store),
+    ) -> list[AdminFeedbackRecord]:
+        return [_admin_feedback_record(row) for row in store.list_admin_feedback(limit=limit)]
 
     return router

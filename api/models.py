@@ -2124,3 +2124,15 @@ class FeedbackRecord(BaseModel):
     has_screenshot: bool = False
     created_at: str = ""
     updated_at: str = ""
+
+
+class AdminFeedbackRecord(FeedbackRecord):
+    submitted_by_profile_id: str
+    submitter_email: str = ""
+    submitter_name: str = ""
+    contact_allowed: bool = False
+    plan_id: str | None = None
+    today_checkin_id: str | None = None
+    camp_phase: str | None = None
+    app_version: str = ""
+    screenshot_expires_at: str | None = None

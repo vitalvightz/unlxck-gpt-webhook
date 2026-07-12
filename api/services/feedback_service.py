@@ -165,9 +165,9 @@ def _feedback_record(row: Mapping[str, Any]) -> FeedbackRecord:
     )
 
 
-def _require_athlete(profile: ProfileRecord) -> None:
-    if profile.role != "athlete":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="athlete access required")
+def _require_contextual_submitter(profile: ProfileRecord) -> None:
+    if profile.role not in {"athlete", "admin"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="feedback access required")
 
 
 def _require_plan_feedback_eligible(plan: Mapping[str, Any]) -> None:
@@ -190,7 +190,7 @@ def _require_recommendation_feedback_eligible(checkin: Mapping[str, Any]) -> Non
 
 
 def _plan_context(store: AppStore, profile: ProfileRecord, plan_id: str) -> tuple[dict[str, Any], str, str]:
-    _require_athlete(profile)
+    _require_contextual_submitter(profile)
     plan = store.get_feedback_plan_for_owner(plan_id, profile.profile_id)
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
@@ -284,7 +284,7 @@ def put_plan_feedback(
 def _today_context(
     store: AppStore, profile: ProfileRecord
 ) -> tuple[dict[str, Any], dict[str, Any], str]:
-    _require_athlete(profile)
+    _require_contextual_submitter(profile)
     plan_id = store.get_feedback_active_plan_id(profile.profile_id)
     if not plan_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="active plan not found")

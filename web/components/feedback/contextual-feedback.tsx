@@ -68,8 +68,6 @@ function ThumbIcon({ direction }: Readonly<{ direction: keyof typeof THUMB_PATHS
   );
 }
 
-type FeedbackLoadState = "loading" | "ready" | "failed";
-
 export function ContextualFeedback({
   token,
   surface,
@@ -84,10 +82,9 @@ export function ContextualFeedback({
   const [reason, setReason] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [editing, setEditing] = useState(false);
-  const [loadState, setLoadState] = useState<FeedbackLoadState>("loading");
-  const [reloadKey, setReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
+  const userInteractedRef = useRef(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const isPlan = surface === "plan";
@@ -95,26 +92,23 @@ export function ContextualFeedback({
 
   useEffect(() => {
     let active = true;
-    setLoadState("loading");
-    setSubmissionError(null);
     const request = isPlan && planId ? getPlanFeedback(token, planId) : getTodayFeedback(token);
     void request
       .then((saved) => {
-        if (!active) return;
+        if (!active || !saved || userInteractedRef.current) return;
         setRecord(saved);
-        setChoice(saved?.response ?? null);
-        setReason(saved?.reason ?? null);
-        setComment(saved?.comment ?? "");
+        setChoice(saved.response);
+        setReason(saved.reason);
+        setComment(saved.comment);
         setEditing(false);
-        setLoadState("ready");
       })
       .catch(() => {
-        if (active) setLoadState("failed");
+        // Existing-response hydration is optional. Controls stay usable.
       });
     return () => {
       active = false;
     };
-  }, [isPlan, planId, reloadKey, token]);
+  }, [isPlan, planId, token]);
 
   async function save(response: FeedbackResponseValue, selectedReason = reason) {
     if (submissionInFlightRef.current) return;
@@ -140,6 +134,7 @@ export function ContextualFeedback({
   }
 
   function choose(nextChoice: FeedbackResponseValue) {
+    userInteractedRef.current = true;
     setChoice(nextChoice);
     setReason(null);
     setEditing(true);
@@ -151,26 +146,17 @@ export function ContextualFeedback({
 
   return (
     <section className="feedback-card" aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}>
-      {loadState !== "ready" ? (
-        <>
-          <p className="feedback-question">
-            {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
-          </p>
-          {loadState === "loading" ? (
-            <p className="muted feedback-status" role="status">Loading feedback…</p>
-          ) : (
-            <div className="feedback-load-failed" role="status">
-              <span>Feedback couldn’t load.</span>
-              <button type="button" className="feedback-link" onClick={() => setReloadKey((value) => value + 1)}>
-                Retry
-              </button>
-            </div>
-          )}
-        </>
-      ) : record && !editing ? (
+      {record && !editing ? (
         <div className="feedback-sent-row" role="status">
           <span>Feedback sent</span>
-          <button type="button" className="feedback-link" onClick={() => setEditing(true)}>
+          <button
+            type="button"
+            className="feedback-link"
+            onClick={() => {
+              userInteractedRef.current = true;
+              setEditing(true);
+            }}
+          >
             Change response
           </button>
         </div>

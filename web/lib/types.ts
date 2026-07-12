@@ -1131,6 +1131,18 @@ export type FeedbackRecord = {
   updated_at: string;
 };
 
+export type AdminFeedbackRecord = FeedbackRecord & {
+  submitted_by_profile_id: string;
+  submitter_email: string;
+  submitter_name: string;
+  contact_allowed: boolean;
+  plan_id: string | null;
+  today_checkin_id: string | null;
+  camp_phase: string | null;
+  app_version: string;
+  screenshot_expires_at: string | null;
+};
+
 export type ContextualFeedbackRequest = {
   response: FeedbackResponseValue;
   reason?: string | null;

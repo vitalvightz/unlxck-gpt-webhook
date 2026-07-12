@@ -1643,6 +1643,28 @@ class FakeStore:
         self.beta_feedback.append(row)
         return dict(row)
 
+    def list_admin_feedback(self, *, limit: int = 50) -> list[dict]:
+        rows: list[dict] = []
+        for feedback in self.beta_feedback:
+            profile = self.profiles.get(str(feedback.get("submitted_by_profile_id") or ""), {})
+            rows.append(
+                {
+                    **copy.deepcopy(feedback),
+                    "profiles": {
+                        "email": str(profile.get("email") or ""),
+                        "full_name": str(profile.get("full_name") or ""),
+                    },
+                }
+            )
+        rows.sort(
+            key=lambda row: (
+                str(row.get("priority") or "normal") == "safety",
+                str(row.get("created_at") or ""),
+            ),
+            reverse=True,
+        )
+        return rows[: max(1, min(limit, 100))]
+
     def claim_feedback_rate_limit(
         self,
         profile_id: str,

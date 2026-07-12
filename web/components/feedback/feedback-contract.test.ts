@@ -53,12 +53,12 @@ test("feedback choices use explicit correctly oriented thumb icons", () => {
   assert.match(CONTEXTUAL_SOURCE, /<ThumbIcon direction="down" \/> \{isPlan \? "Needs improvement" : "No"\}/);
 });
 
-test("feedback load failures are neutral, retryable, and hide choices", () => {
-  assert.match(CONTEXTUAL_SOURCE, /type FeedbackLoadState = "loading" \| "ready" \| "failed"/);
-  assert.match(CONTEXTUAL_SOURCE, /Feedback couldn’t load\./);
-  assert.match(CONTEXTUAL_SOURCE, />\s*Retry\s*</);
-  assert.ok(CONTEXTUAL_SOURCE.indexOf('loadState !== "ready"') < CONTEXTUAL_SOURCE.indexOf('className="feedback-actions"'));
-  assert.doesNotMatch(CONTEXTUAL_SOURCE, /Feedback is temporarily unavailable/);
+test("feedback controls render without waiting for the existing-response request", () => {
+  assert.doesNotMatch(CONTEXTUAL_SOURCE, /FeedbackLoadState|Loading feedback|Feedback couldn’t load|>\s*Retry\s*</);
+  assert.match(CONTEXTUAL_SOURCE, /getPlanFeedback|getTodayFeedback/);
+  assert.match(CONTEXTUAL_SOURCE, /userInteractedRef\.current/);
+  assert.match(CONTEXTUAL_SOURCE, /if \(!active \|\| !saved \|\| userInteractedRef\.current\) return/);
+  assert.match(CONTEXTUAL_SOURCE, /record && !editing/);
 });
 
 test("submission failures remain separate from feedback loading", () => {

@@ -107,6 +107,20 @@ export function isPlanReleasedToAthlete(
   return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
 }
 
+export function canShowContextualPlanFeedback(
+  viewerRole: UserRole,
+  viewerProfileId: string | null,
+  planAthleteId: string | null | undefined,
+): boolean {
+  if (viewerRole === "athlete") return true;
+  return Boolean(
+    viewerRole === "admin" &&
+    viewerProfileId &&
+    planAthleteId &&
+    viewerProfileId === planAthleteId,
+  );
+}
+
 /**
  * Decide whether a freshly published plan is still expecting its richer saved
  * structured payload to land in the background. The enhanced renderer is already
@@ -1240,12 +1254,14 @@ export function PlanViewer({
   plan,
   accessToken,
   viewerRole,
+  viewerProfileId,
   onPlanUpdated,
   onPlanDeleted,
 }: {
   plan: PlanDetail;
   accessToken: string | null;
   viewerRole: UserRole;
+  viewerProfileId: string | null;
   onPlanUpdated?: (plan: PlanDetail) => void;
   onPlanDeleted?: () => Promise<void> | void;
 }) {
@@ -1253,6 +1269,11 @@ export function PlanViewer({
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const isViewerAdmin = isAdminRole(viewerRole);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
+  const canSubmitPlanFeedback = canShowContextualPlanFeedback(
+    viewerRole,
+    viewerProfileId,
+    plan.athlete_id,
+  );
   const archivedPreview = isArchivedPlan(plan.status);
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
@@ -2473,7 +2494,7 @@ export function PlanViewer({
                   />
                 </>
               )}
-              {viewerRole === "athlete" && accessToken ? (
+              {canSubmitPlanFeedback && accessToken ? (
                 <ContextualFeedback token={accessToken} surface="plan" planId={plan.plan_id} />
               ) : null}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}

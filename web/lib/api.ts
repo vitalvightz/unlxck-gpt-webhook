@@ -4,6 +4,7 @@ import type {
   AdminAthleteRecord,
   AdminLatestIntakeUpdateRequest,
   AdminGenerationJobDiagnostic,
+  AdminFeedbackRecord,
   AdminPlanSummary,
   AdminReviewRecord,
   AdminReviewResolveRequest,
@@ -1058,6 +1059,12 @@ export function listAdminReviews(
       `/api/admin/reviews?status=${encodeURIComponent(status)}&limit=${limit}`,
       { token },
     ),
+  );
+}
+
+export function listAdminFeedback(token: string, limit = 50): Promise<AdminFeedbackRecord[]> {
+  return withTransientRetries(() =>
+    readJson<AdminFeedbackRecord[]>(`/api/admin/feedback?limit=${limit}`, { token }),
   );
 }
 
