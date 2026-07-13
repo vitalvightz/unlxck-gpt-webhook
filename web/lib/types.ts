@@ -1156,6 +1156,9 @@ export type AdminFeedbackRecord = FeedbackRecord & {
   language: string;
   readiness_context: string[];
   injury_context: string[];
+  readiness_snapshot: Record<string, unknown>;
+  injury_snapshot: Record<string, unknown>;
+  technical_context: Record<string, unknown>;
   screenshot_expires_at: string | null;
 };
 

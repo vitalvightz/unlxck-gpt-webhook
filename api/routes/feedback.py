@@ -31,6 +31,36 @@ from api.store import AppStore
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
+_ADMIN_READINESS_FIELDS = (
+    "sleep",
+    "body",
+    "pain",
+    "active_injury",
+    "previous_session",
+    "sharp_pain",
+    "instability",
+    "swelling",
+    "neurological_symptoms",
+    "illness_symptoms",
+    "cannot_warm_into_movement",
+    "worse_next_day_pain",
+    "recommendation_state",
+)
+_ADMIN_TECHNICAL_FIELDS = (
+    "referer_path",
+    "device_platform",
+    "device_mobile",
+    "browser_brands",
+    "user_agent",
+    "language",
+)
+_ADMIN_INTAKE_FIELDS = (
+    "fatigue_level",
+    "training_restriction_level",
+    "training_availability",
+)
+_ADMIN_INJURY_FLAG_FIELDS = ("id", "body_area", "severity", "status")
+
 
 def _invoke_feedback_route(
     request: Request,
@@ -65,33 +95,26 @@ def _invoke_feedback_route(
         raise
 
 
-def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
-    profile = row.get("profiles") if isinstance(row.get("profiles"), dict) else {}
-    technical = row.get("technical_context") if isinstance(row.get("technical_context"), dict) else {}
-    readiness = row.get("readiness_snapshot") if isinstance(row.get("readiness_snapshot"), dict) else {}
-    injuries = row.get("injury_snapshot") if isinstance(row.get("injury_snapshot"), dict) else {}
-    platform = str(technical.get("device_platform") or "").strip().strip('"')[:80]
-    mobile_hint = str(technical.get("device_mobile") or "").strip()
-    device_kind = "Mobile" if mobile_hint == "?1" else "Desktop" if mobile_hint == "?0" else ""
-    browser = str(technical.get("browser_brands") or technical.get("user_agent") or "").strip()[:160]
-    device_context = " · ".join(part for part in (device_kind, platform, browser) if part)
-    readiness_context = [
-        f"{key.replace('_', ' ').title()}: {str(readiness[key])[:100]}"
-        for key in (
-            "sleep",
-            "body",
-            "pain",
-            "active_injury",
-            "previous_session",
-            "recommendation_state",
-        )
-        if readiness.get(key) not in (None, "", [])
+def _safe_dict(source: dict, fields: tuple[str, ...]) -> dict:
+    return {key: source[key] for key in fields if key in source}
+
+
+def _safe_admin_injury_snapshot(injuries: dict) -> tuple[dict, list[str]]:
+    raw_flags = injuries.get("open_flags") if isinstance(injuries.get("open_flags"), list) else []
+    valid_flags = [flag for flag in raw_flags if isinstance(flag, dict)]
+
+    safe_flags = [
+        _safe_dict(flag, _ADMIN_INJURY_FLAG_FIELDS)
+        for flag in valid_flags[:3]
     ]
-    open_flags = injuries.get("open_flags") if isinstance(injuries.get("open_flags"), list) else []
+    intake = injuries.get("intake") if isinstance(injuries.get("intake"), dict) else {}
+    safe_snapshot: dict = {"open_flags": safe_flags}
+    safe_intake = _safe_dict(intake, _ADMIN_INTAKE_FIELDS)
+    if safe_intake:
+        safe_snapshot["intake"] = safe_intake
+
     injury_summaries: list[str] = []
-    for flag in open_flags:
-        if not isinstance(flag, dict):
-            continue
+    for flag in valid_flags:
         parts = [
             str(flag.get(key) or "").strip()[:80]
             for key in ("body_area", "severity", "status")
@@ -102,6 +125,37 @@ def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
     injury_context = injury_summaries[:3]
     if len(injury_summaries) > 3:
         injury_context.append(f"{len(injury_summaries)} open injury flags total")
+    return safe_snapshot, injury_context
+
+
+def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
+    profile = row.get("profiles") if isinstance(row.get("profiles"), dict) else {}
+    technical = row.get("technical_context") if isinstance(row.get("technical_context"), dict) else {}
+    readiness = row.get("readiness_snapshot") if isinstance(row.get("readiness_snapshot"), dict) else {}
+    injuries = row.get("injury_snapshot") if isinstance(row.get("injury_snapshot"), dict) else {}
+
+    safe_technical = _safe_dict(technical, _ADMIN_TECHNICAL_FIELDS)
+    safe_readiness = _safe_dict(readiness, _ADMIN_READINESS_FIELDS)
+    safe_injuries, injury_context = _safe_admin_injury_snapshot(injuries)
+
+    platform = str(safe_technical.get("device_platform") or "").strip().strip('"')[:80]
+    mobile_hint = str(safe_technical.get("device_mobile") or "").strip()
+    device_kind = "Mobile" if mobile_hint == "?1" else "Desktop" if mobile_hint == "?0" else ""
+    browser = str(safe_technical.get("browser_brands") or safe_technical.get("user_agent") or "").strip()[:160]
+    device_context = " · ".join(part for part in (device_kind, platform, browser) if part)
+    readiness_context = [
+        f"{key.replace('_', ' ').title()}: {str(safe_readiness[key])[:100]}"
+        for key in (
+            "sleep",
+            "body",
+            "pain",
+            "active_injury",
+            "previous_session",
+            "recommendation_state",
+        )
+        if safe_readiness.get(key) not in (None, "", [])
+    ]
+
     return AdminFeedbackRecord(
         id=str(row.get("id") or ""),
         submitted_by_profile_id=str(row.get("submitted_by_profile_id") or ""),
@@ -118,11 +172,14 @@ def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
         today_checkin_id=row.get("today_checkin_id"),
         camp_phase=row.get("camp_phase"),
         app_version=str(row.get("app_version") or ""),
-        page_path=str(technical.get("referer_path") or "").strip()[:512],
+        page_path=str(safe_technical.get("referer_path") or "").strip()[:512],
         device_context=device_context,
-        language=str(technical.get("language") or "").strip()[:80],
+        language=str(safe_technical.get("language") or "").strip()[:80],
         readiness_context=readiness_context,
         injury_context=injury_context,
+        readiness_snapshot=safe_readiness,
+        injury_snapshot=safe_injuries,
+        technical_context=safe_technical,
         has_screenshot=bool(row.get("screenshot_path")),
         screenshot_expires_at=row.get("screenshot_expires_at"),
         created_at=str(row.get("created_at") or ""),
