@@ -1488,7 +1488,7 @@ select:focus-visible {
 }
 
 .admin-feedback-panel {
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border-default));
 }
 
 .admin-feedback-list {
@@ -1500,7 +1500,7 @@ select:focus-visible {
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-default);
   border-left: 3px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
