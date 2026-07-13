@@ -18,6 +18,7 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 import {
+  formatAthletePlanStatus,
   formatPlanFightDate,
   formatPlanStatus,
   formatPlanTimestamp,
@@ -231,7 +232,7 @@ function PlanCard({
   const fightDateLabel = formatPlanFightDate(plan.fight_date);
   const createdLabel = formatPlanTimestamp(plan.created_at);
   const styleSummary = getPlanStyleSummary(plan);
-  const statusLabel = formatPlanStatus(plan.status);
+  const statusLabel = formatAthletePlanStatus(plan.status);
   const versionLabel = getPlanVersionLabel(plan);
   const isActionPending = pendingAction !== null || isSettingActive;
   const renameInputId = `rename-plan-${plan.plan_id}`;
@@ -447,7 +448,7 @@ function PlanCard({
           {!active && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-              {archived ? "Preview" : "Review"}
+              {archived ? "Preview" : "Open"}
             </Link>
             {archived ? (
               <Link href="/onboarding" className="ghost-button">
@@ -460,14 +461,17 @@ function PlanCard({
               </button>
             ) : null}
             {!archived ? (
-              <>
-                <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-                  {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
-                </button>
-                <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-                  {pendingAction === "delete" ? "Archiving..." : "Archive"}
-                </button>
-              </>
+              <details className="plan-action-menu plans-history-menu">
+                <summary className="ghost-button">Manage</summary>
+                <div className="plan-action-menu-popover">
+                  <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
+                    {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+                  </button>
+                  <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+                    {pendingAction === "delete" ? "Archiving..." : "Archive"}
+                  </button>
+                </div>
+              </details>
             ) : null}
           </div>
         </div>
@@ -619,7 +623,7 @@ function LatestPlanCard({
       latestPlanLines.push({ label: "Fight date", value: formatPlanFightDate(fightDate) });
     }
     if (plan.status?.trim()) {
-      latestPlanLines.push({ label: "Status", value: formatPlanStatus(plan.status) });
+      latestPlanLines.push({ label: "Status", value: formatAthletePlanStatus(plan.status) });
     }
   }
 
@@ -877,14 +881,17 @@ function LatestPlanCard({
         </div>
 
         {plan ? (
-          <div className="plan-card-actions plans-dashboard-management-actions" aria-label="Manage latest plan">
-            <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-              {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
-            </button>
-            <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-              {pendingAction === "delete" ? "Archiving..." : "Archive"}
-            </button>
-          </div>
+          <details className="plan-action-menu plans-dashboard-management-actions">
+            <summary className="ghost-button">Manage plan</summary>
+            <div className="plan-action-menu-popover">
+              <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
+                {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+              </button>
+              <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+                {pendingAction === "delete" ? "Archiving..." : "Archive"}
+              </button>
+            </div>
+          </details>
         ) : null}
 
         {error && !isDeleteConfirmOpen ? <div className="error-banner">{error}</div> : null}
@@ -903,37 +910,36 @@ function IntakeCard({
   const intake = getIntakeSource(me);
   const intakeLines = summarizeIntake(me);
   const hasIntake = Boolean(intake);
+  const sourceLines = [...profileLines.slice(1), ...intakeLines];
 
   return (
-    <article className="list-card plans-dashboard-card">
+    <article className="list-card plans-dashboard-card plans-source-card">
       <div className="plans-dashboard-card-header">
         <div className="plans-dashboard-card-copy">
-          <p className="kicker">Current Athlete Profile / Intake</p>
+          <p className="kicker">Plan source</p>
           <h2>{profileLines[0]?.value || "Athlete profile"}</h2>
-          <p className="muted">
-            This is the source for your next generated camp. Review it before starting another build.
-          </p>
+          <p className="muted">Profile and intake details used for your next build.</p>
         </div>
         <span className={`badge ${hasIntake ? "status-badge-success" : "status-badge-neutral"}`}>
           {hasIntake ? "Intake ready" : "Profile only"}
         </span>
       </div>
 
-      <div className="plans-dashboard-meta-grid">
-        <DashboardSummary
-          title="Profile"
-          lines={profileLines}
-          emptyLabel="No profile summary available yet."
-        />
-        <DashboardSummary
-          title="Intake"
-          lines={intakeLines}
-          emptyLabel="No intake summary saved yet."
-        />
-      </div>
+      {sourceLines.length ? (
+        <dl className="plans-source-facts">
+          {sourceLines.map((line) => (
+            <div key={line.label} className="plans-source-fact">
+              <dt>{line.label}</dt>
+              <dd>{line.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="muted">No plan source details saved yet.</p>
+      )}
 
       <div className="plan-card-actions plans-dashboard-actions">
-        <Link href="/onboarding" className="cta">
+        <Link href="/onboarding" className="ghost-button">
           {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
         </Link>
       </div>
@@ -1147,7 +1153,6 @@ export default function PlansPage() {
               onPlanRenamed={handlePlanRenamed}
             />
           )}
-          {isProfileLoading ? <PlansFeaturedSkeleton /> : <IntakeCard me={me} />}
         </div>
 
         {isLoading ? (
@@ -1239,6 +1244,11 @@ export default function PlansPage() {
             )}
           </div>
         ) : null}
+
+        <div className="plans-source-block athlete-motion-slot athlete-motion-main">
+          {isProfileLoading ? <PlansFeaturedSkeleton /> : <IntakeCard me={me} />}
+        </div>
+
         {overlapConflictPlan ? (
           <PlanActivationConflictDialog
             plan={overlapConflictPlan}

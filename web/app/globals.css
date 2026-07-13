@@ -4614,6 +4614,101 @@ button.mobile-step-rail-item {
   text-transform: uppercase;
 }
 
+.plan-next-session {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(181, 18, 43, 0.28);
+  border-left: 3px solid var(--brand-red);
+  border-radius: var(--radius-support);
+  background:
+    linear-gradient(90deg, rgba(181, 18, 43, 0.12), rgba(18, 20, 24, 0.96) 42%),
+    var(--bg-surface);
+  box-shadow: var(--shadow-support);
+}
+
+.plan-next-session-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.plan-next-session-copy h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(19px, 2vw, 24px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.plan-next-session-copy p {
+  margin: 0;
+}
+
+.plan-next-session-cta {
+  min-width: 180px;
+}
+
+.plan-detail-actions {
+  align-items: flex-start;
+}
+
+.plan-action-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.plan-action-menu > summary {
+  list-style: none;
+  user-select: none;
+}
+
+.plan-action-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.plan-action-menu > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 10px;
+  margin-top: -4px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--transition-fast);
+}
+
+.plan-action-menu[open] > summary::after {
+  margin-top: 4px;
+  transform: rotate(225deg);
+}
+
+.plan-action-menu-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 25;
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+  padding: 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  background: rgba(12, 13, 16, 0.98);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+}
+
+.plan-action-menu-popover .ghost-button,
+.plan-action-menu-popover .secondary-button {
+  width: 100%;
+  min-height: 40px;
+  justify-content: flex-start;
+  text-align: left;
+}
+
 .code-block,
 .plan-text-block {
   margin: 0;
@@ -5667,10 +5762,64 @@ button.mobile-step-rail-item {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.plans-dashboard-management-actions > .plan-action-menu-popover {
+  position: static;
+  margin-top: 8px;
+}
+
 .plans-dashboard-management-actions .ghost-button,
 .plans-dashboard-management-actions .secondary-button {
   min-height: 38px;
   padding-inline: 13px;
+}
+
+.plans-source-block {
+  display: grid;
+  padding-top: 8px;
+}
+
+.plans-source-card {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(18, 20, 24, 0.96), rgba(13, 14, 17, 0.98));
+}
+
+.plans-source-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.plans-source-fact {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.plans-source-fact:first-child {
+  border-left: 0;
+}
+
+.plans-source-fact dt {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.plans-source-fact dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .today-page {
@@ -8342,6 +8491,48 @@ html[data-theme="light"] .today-injury-confirm-cancel {
     justify-content: space-between;
   }
 
+  .plan-next-session {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .plan-next-session-cta {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .plan-detail-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .plan-detail-actions > .cta {
+    grid-column: 1 / -1;
+  }
+
+  .plan-detail-actions > .cta,
+  .plan-detail-actions > .ghost-button,
+  .plan-detail-actions > .plan-action-menu,
+  .plan-detail-actions > .plan-action-menu > summary {
+    width: 100%;
+  }
+
+  .plan-action-menu-popover {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    margin-top: 8px;
+  }
+
+  .plans-source-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plans-source-fact:nth-child(odd) {
+    border-left: 0;
+  }
+
   .settings-section-save {
     width: 100%;
     margin-left: 0;
@@ -8517,6 +8708,19 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 }
 
 @media (max-width: 460px) {
+  .plans-source-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .plans-source-fact {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .plans-source-fact:first-child {
+    border-top: 0;
+  }
+
   .mobile-step-rail-item {
     flex-basis: 138px;
   }
@@ -16859,6 +17063,11 @@ html[data-theme="light"] .loading-operational-item {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-stat);
   background: var(--bg-stat);
+}
+
+.cm-guardrails {
+  display: grid;
+  gap: var(--space-2);
 }
 
 /* Day cards */

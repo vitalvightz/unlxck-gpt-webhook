@@ -21,6 +21,7 @@ import {
   readRawTriageMode,
   readStructuredCardDebug,
   resolveApprovalAfterError,
+  resolvePlanActiveState,
   shouldAwaitStructuredPlanUpgrade,
   shouldPollForStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
@@ -45,6 +46,24 @@ test("plan feedback is visible to athletes and only the owning admin", () => {
   assert.equal(canShowContextualPlanFeedback("admin", "admin-1", "athlete-1"), false);
   assert.equal(canShowContextualPlanFeedback("admin", null, "admin-1"), false);
   assert.equal(canShowContextualPlanFeedback("coach", "coach-1", "coach-1"), false);
+});
+
+test("Today can confirm the active plan when the dedicated endpoint fails", () => {
+  assert.equal(
+    resolvePlanActiveState({
+      todayResolved: true,
+      todayActivePlanId: "plan-1",
+      activeEndpointResolved: false,
+    }),
+    "plan-1",
+  );
+  assert.equal(
+    resolvePlanActiveState({
+      todayResolved: false,
+      activeEndpointResolved: false,
+    }),
+    undefined,
+  );
 });
 
 const STRUCTURED_CARD_CHIP_CASES: Array<{
