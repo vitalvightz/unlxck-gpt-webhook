@@ -175,7 +175,7 @@ export function splitLabeledSegments(text: string): PlanTextDetail[] {
 type PlanTextHeading =
   | { kind: "notes"; title: string; remainder: string | null }
   | { kind: "week"; title: string; phase: string | null }
-  | { kind: "session"; countdown: string; weekday: string | null; title: string; remainder: string | null };
+  | { kind: "session"; countdown: string | null; weekday: string | null; title: string; remainder: string | null };
 
 // Deterministic plan_text contract (mirrors fightcamp/weekly_plan_render.py +
 // the stage2 validator's countdown-header rule). Phase labels are the canonical
@@ -195,6 +195,15 @@ const SESSION_COUNTDOWN_FIRST_RE = new RegExp(
 // "Wednesday (D-33) — Aerobic support" (Stage 1 deterministic weekday-first form).
 const SESSION_WEEKDAY_FIRST_RE = new RegExp(
   `^(${WEEKDAY_TOKEN})[^()]*\\(\\s*D-(\\d+)\\s*\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  "i",
+);
+// Renewable open plans have no countdown. Their saved athlete text uses plain
+// weekday headings ("Monday — Support Strength"), which are a complete and
+// simpler timing contract than D-X. This matcher is enabled only inside the
+// explicit Weekly Rhythm / Session Cards sections so ordinary prose cannot be
+// mistaken for a scheduled day.
+const SESSION_WEEKDAY_ONLY_RE = new RegExp(
+  `^(${WEEKDAY_TOKEN})\\s*${HEADER_SEP}\\s*(.+)$`,
   "i",
 );
 // Plan-level context sections that live outside any week. Only the always-on
@@ -226,7 +235,10 @@ function splitSessionTitle(title: string): { title: string; remainder: string | 
   return { title, remainder: null };
 }
 
-function classifyPlanTextHeading(line: string): PlanTextHeading | null {
+function classifyPlanTextHeading(
+  line: string,
+  allowWeekdayOnlySession = false,
+): PlanTextHeading | null {
   const isMarkdownHeader = /^\s*#{1,6}\s+/.test(line);
   const clean = stripPlanMarkup(line);
   if (!clean || /^#+$/.test(clean)) {
@@ -272,6 +284,19 @@ function classifyPlanTextHeading(line: string): PlanTextHeading | null {
       remainder: split.remainder,
     };
   }
+  if (allowWeekdayOnlySession) {
+    const openSession = clean.match(SESSION_WEEKDAY_ONLY_RE);
+    if (openSession) {
+      const split = splitSessionTitle(openSession[2].trim());
+      return {
+        kind: "session",
+        countdown: null,
+        weekday: titleizeToken(openSession[1].trim()),
+        title: split.title,
+        remainder: split.remainder,
+      };
+    }
+  }
 
   // Any other markdown header (## Nutrition, ## Progression, …) opens its own
   // context card rather than being swallowed into the previous session.
@@ -282,7 +307,8 @@ function classifyPlanTextHeading(line: string): PlanTextHeading | null {
   return null;
 }
 
-const COACH_LED_RE = /no (?:extra|app) s\s?&?\s?c|coach owns this session|train with your coach/i;
+const COACH_LED_RE =
+  /no (?:extra|app) s\s?&?\s?c|coach owns this session|coach-owned (?:combat )?session|train with your coach/i;
 
 // Standalone session sub-headings the rehab/accessory renderer emits before a
 // group of bulleted items (RULE 12 and its suppressed-heading alternatives in
@@ -337,6 +363,7 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
   // session, applied as a tag to the blocks beneath it until the next group
   // header or the next session.
   let currentBlockTag: string | null = null;
+  let allowWeekdayOnlySessions = false;
 
   const pushSession = (session: PlanTextSession) => {
     if (currentWeek) {
@@ -413,7 +440,28 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
       continue;
     }
 
-    const heading = classifyPlanTextHeading(line);
+    const cleanLine = stripPlanMarkup(line);
+    if (/^(?:Weekly Rhythm|Session Cards):?$/i.test(cleanLine)) {
+      allowWeekdayOnlySessions = true;
+      currentSession = null;
+      currentWeek = null;
+      currentNotes = null;
+      currentBlockTag = null;
+      continue;
+    }
+    if (allowWeekdayOnlySessions && /^\d+-Week (?:Development )?Block:?$/i.test(cleanLine)) {
+      allowWeekdayOnlySessions = false;
+      currentSession = null;
+      currentWeek = null;
+      currentNotes = null;
+      currentBlockTag = null;
+      continue;
+    }
+    if (allowWeekdayOnlySessions && /^\(Format per session:/i.test(cleanLine)) {
+      continue;
+    }
+
+    const heading = classifyPlanTextHeading(line, allowWeekdayOnlySessions);
     if (heading?.kind === "notes") {
       currentSession = null;
       currentWeek = null;
@@ -604,7 +652,7 @@ function toStructuredDays(
 ): StructuredDay[] {
   const grouped = new Map<string, PlanTextSession[]>();
   sessions.forEach((session, index) => {
-    const key = session.countdown || `session-${index + 1}`;
+    const key = session.countdown || shortWeekday(session.weekday)?.toLowerCase() || "session-" + (index + 1);
     grouped.set(key, [...(grouped.get(key) || []), session]);
   });
 
@@ -617,6 +665,7 @@ function toStructuredDays(
     const coachOnly = Boolean(coachLed && appSessions.length === 0);
     return {
       date: dateFromCountdown(fightDate, countdown),
+      weekday: shortWeekday(daySessions[0]?.weekday),
       countdown_label: countdown,
       phase_label: phase,
       day_type: "moderate",
@@ -632,6 +681,37 @@ function toStructuredDays(
             toStructuredSession(session, dayIndex * 100 + sessionIndex),
           ),
     };
+  });
+}
+
+const WEEKDAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+function shortWeekday(value: string | null | undefined): StructuredDay["weekday"] {
+  const short = titleizeToken(value || "").slice(0, 3) as StructuredDay["weekday"];
+  return WEEKDAY_ORDER.includes(short as (typeof WEEKDAY_ORDER)[number]) ? short : null;
+}
+
+function renewableOpenSessions(sessions: PlanTextSession[]): PlanTextSession[] {
+  const byWeekday = new Map<string, PlanTextSession>();
+  for (const session of sessions) {
+    if (session.countdown) {
+      continue;
+    }
+    const weekday = shortWeekday(session.weekday);
+    if (!weekday) {
+      continue;
+    }
+    const current = byWeekday.get(weekday);
+    // Session Cards follow Weekly Rhythm in the saved plan. Prefer the later,
+    // detailed card when it carries executable work; otherwise the later coach
+    // card is still the cleaner source for its title/note.
+    if (!current || session.blocks.length > 0 || current.blocks.length === 0) {
+      byWeekday.set(weekday, session);
+    }
+  }
+  return WEEKDAY_ORDER.flatMap((weekday) => {
+    const session = byWeekday.get(weekday);
+    return session ? [session] : [];
   });
 }
 
@@ -722,8 +802,36 @@ export function buildStructuredPlanFromText(
   const looseSessions = groups.filter(
     (group): group is PlanTextSession => group.kind === "session",
   );
-  const weekGroups = [...explicitWeeks];
-  if (looseSessions.length > 0) {
+  const openSessions = !fightDate ? renewableOpenSessions(looseSessions) : [];
+  const isOpenTextPlan = openSessions.length > 0;
+  const openWeekMap = new Map<number, PlanTextWeek>();
+  if (openSessions.length > 0) {
+    const explicitWeekMap = new Map<number, PlanTextWeek>();
+    for (const week of explicitWeeks) {
+      const index = weekIndex(week.title, 0);
+      if (index >= 1 && index <= 4) {
+        explicitWeekMap.set(index, week);
+      }
+    }
+    for (let index = 1; index <= 4; index += 1) {
+      const explicitWeek = explicitWeekMap.get(index);
+      openWeekMap.set(
+        index,
+        explicitWeek
+          ? { ...explicitWeek, sessions: openSessions }
+          : {
+              kind: "week",
+              title: `Week ${index}`,
+              phase: null,
+              sessions: openSessions,
+            },
+      );
+    }
+  }
+  const weekGroups = openSessions.length > 0
+    ? [...openWeekMap.values()]
+    : [...explicitWeeks];
+  if (openSessions.length === 0 && looseSessions.length > 0) {
     weekGroups.push({
       kind: "week",
       title: explicitWeeks.length > 0 ? `Week ${explicitWeeks.length + 1}` : "Week 1",
@@ -737,7 +845,11 @@ export function buildStructuredPlanFromText(
 
   return {
     schema_version: "text-adapter.v1",
-    plan_metadata: { title: "Fight Camp", plan_type: "fight_camp", status: "ready" },
+    plan_metadata: {
+      title: isOpenTextPlan ? "Open training plan" : "Fight Camp",
+      plan_type: isOpenTextPlan ? "open_ongoing_system" : "fight_camp",
+      status: "ready",
+    },
     event_context: fightDate ? { fight_date: fightDate } : null,
     plan_notes: notes,
     weeks: weekGroups.map((week, index) => toStructuredWeek(week, index, fightDate)),
