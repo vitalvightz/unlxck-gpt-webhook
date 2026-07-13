@@ -17,6 +17,7 @@ from fastapi import HTTPException, Request, status
 
 from api.feedback_images import SanitisedScreenshot, sanitise_screenshot
 from api.models import ContextualFeedbackRequest, FeedbackRecord, GlobalFeedbackRequest, ProfileRecord
+from api.services.active_plan import resolve_active_plan
 from api.services.plan_schedule import resolve_current_week
 from api.services.today_service import resolve_training_day
 from api.state_machine import ATHLETE_DISPLAYABLE_PLAN_STATUSES
@@ -314,20 +315,45 @@ def put_plan_feedback(
     return _feedback_record(row)
 
 
+def _today_recommendation_context(
+    store: AppStore, profile: ProfileRecord, training_day: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Locate the check-in behind the recommendation the athlete is looking at.
+
+    Mirrors the Today page: the displayed recommendation belongs to the
+    ``resolve_active_plan`` result (explicit ``active_plan_id`` only while that
+    plan stays eligible, otherwise the latest eligible plan) — not to the raw
+    ``profiles.active_plan_id`` pointer. If the resolved plan has no check-in
+    for today, fall back to today's stored check-ins so a stale pointer or a
+    same-day plan switch cannot orphan a recommendation already on screen.
+    """
+    plan = resolve_active_plan(store, profile.profile_id).plan
+    if plan:
+        checkin = store.get_feedback_today_checkin(
+            profile.profile_id, str(plan.get("id") or ""), training_day
+        )
+        if checkin:
+            return plan, checkin
+    for row in store.list_today_checkins_for_day(profile.profile_id, training_day):
+        row_plan_id = str(row.get("plan_id") or "").strip()
+        row_plan = (
+            store.get_feedback_plan_for_owner(row_plan_id, profile.profile_id)
+            if row_plan_id
+            else None
+        )
+        if row_plan:
+            return row_plan, row
+    if plan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="active plan not found")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="today check-in not found")
+
+
 def _today_context(
     store: AppStore, profile: ProfileRecord
 ) -> tuple[dict[str, Any], dict[str, Any], str]:
     _require_contextual_submitter(profile)
-    plan_id = store.get_feedback_active_plan_id(profile.profile_id)
-    if not plan_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="active plan not found")
-    plan = store.get_feedback_plan_for_owner(plan_id, profile.profile_id)
-    if not plan:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="active plan not found")
     training_day = resolve_training_day(profile.athlete_timezone)
-    checkin = store.get_feedback_today_checkin(profile.profile_id, plan_id, training_day)
-    if not checkin:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="today check-in not found")
+    plan, checkin = _today_recommendation_context(store, profile, training_day)
     _require_recommendation_feedback_eligible(checkin)
     phase = _optional_context(
         "camp_phase",

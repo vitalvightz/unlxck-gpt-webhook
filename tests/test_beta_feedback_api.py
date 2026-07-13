@@ -336,6 +336,66 @@ def test_today_feedback_accepts_the_recommendation_already_shown_even_if_plan_is
     assert store.beta_feedback[-1]["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
 
 
+def test_today_feedback_follows_the_resolved_active_plan_when_the_pointer_is_stale():
+    client, store, _ = _build_client()
+    _seed_today(store)
+    # The explicit pointer references an archived plan, so the Today page renders
+    # the recommendation from the latest eligible plan. Feedback must resolve the
+    # plan the same way instead of trusting the raw pointer.
+    _seed_plan(store, plan_id=OTHER_PLAN_ID, status="archived")
+    store.active_plan_ids["athlete-1"] = OTHER_PLAN_ID
+
+    existing = client.get("/api/today/feedback", headers=ATHLETE)
+    submitted = client.put(
+        "/api/today/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+
+    assert existing.status_code == 200
+    assert existing.json() is None
+    assert submitted.status_code == 200
+    saved = store.beta_feedback[-1]
+    assert saved["plan_id"] == PLAN_ID
+    assert saved["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
+
+
+def test_today_feedback_works_without_an_explicit_active_plan_pointer():
+    client, store, _ = _build_client()
+    _seed_today(store)
+    store.active_plan_ids.pop("athlete-1", None)
+
+    submitted = client.put(
+        "/api/today/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+
+    assert submitted.status_code == 200
+    assert store.beta_feedback[-1]["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
+
+
+def test_today_feedback_falls_back_to_todays_stored_checkin_after_a_same_day_plan_switch():
+    client, store, _ = _build_client()
+    _seed_today(store)
+    # The athlete checked in, then activated a different plan the same day: the
+    # check-in stays bound to the original plan and feedback must still land.
+    store.plans[PLAN_ID]["status"] = "archived"
+    _seed_plan(store, plan_id=OTHER_PLAN_ID)
+    store.active_plan_ids["athlete-1"] = OTHER_PLAN_ID
+
+    submitted = client.put(
+        "/api/today/feedback",
+        headers=ATHLETE,
+        json={"response": "yes"},
+    )
+
+    assert submitted.status_code == 200
+    saved = store.beta_feedback[-1]
+    assert saved["plan_id"] == PLAN_ID
+    assert saved["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
+
+
 @pytest.mark.parametrize(
     "reason",
     [
