@@ -806,21 +806,26 @@ export function buildStructuredPlanFromText(
   const isOpenTextPlan = openSessions.length > 0;
   const openWeekMap = new Map<number, PlanTextWeek>();
   if (openSessions.length > 0) {
+    const explicitWeekMap = new Map<number, PlanTextWeek>();
     for (const week of explicitWeeks) {
       const index = weekIndex(week.title, 0);
       if (index >= 1 && index <= 4) {
-        openWeekMap.set(index, { ...week, sessions: openSessions });
+        explicitWeekMap.set(index, week);
       }
     }
     for (let index = 1; index <= 4; index += 1) {
-      if (!openWeekMap.has(index)) {
-        openWeekMap.set(index, {
-          kind: "week",
-          title: `Week ${index}`,
-          phase: null,
-          sessions: openSessions,
-        });
-      }
+      const explicitWeek = explicitWeekMap.get(index);
+      openWeekMap.set(
+        index,
+        explicitWeek
+          ? { ...explicitWeek, sessions: openSessions }
+          : {
+              kind: "week",
+              title: `Week ${index}`,
+              phase: null,
+              sessions: openSessions,
+            },
+      );
     }
   }
   const weekGroups = openSessions.length > 0
