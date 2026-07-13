@@ -5,6 +5,7 @@ import {
   formatAthletePlanStatus,
   getPlanDisplayName,
   isOpenOngoingPlan,
+  resolveFiniteWeekNumber,
 } from "./plan-format";
 
 test("identifies only plans without a fight date as open ongoing plans", () => {
@@ -28,4 +29,10 @@ test("keeps review workflow vocabulary out of athlete-facing status copy", () =>
   assert.equal(formatAthletePlanStatus("publishable_with_flags"), "Ready to train");
   assert.equal(formatAthletePlanStatus("ready"), "Ready to train");
   assert.equal(formatAthletePlanStatus("held_for_review"), "Awaiting review");
+});
+
+test("uses only finite week numbers for open-plan labels", () => {
+  assert.equal(resolveFiniteWeekNumber(Number.NaN, 3), 3);
+  assert.equal(resolveFiniteWeekNumber(Number.POSITIVE_INFINITY, Number.NaN), 1);
+  assert.equal(resolveFiniteWeekNumber(null, undefined, 2), 2);
 });

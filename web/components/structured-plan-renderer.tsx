@@ -60,6 +60,7 @@ import {
 } from "@/lib/open-block";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { formatAppDate } from "@/lib/date-format";
+import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
@@ -1293,9 +1294,12 @@ function WeekOverview({
     },
   ].filter((row): row is { label: string; value: string } => Boolean(row.value));
   const baseHeading = weekLabel(week);
-  const openWeekNumber = scheduleContext?.current_week_number ?? week.week_index ?? 1;
+  const openWeekNumber = resolveFiniteWeekNumber(
+    scheduleContext?.current_week_number,
+    week.week_index,
+  );
   const openWeekHeading = baseHeading.replace(
-    /^Week\s+\d+/i,
+    /^Week(?:\s+\d+)?/i,
     `Week ${openWeekNumber} of 4`,
   );
   const heading = openOngoing

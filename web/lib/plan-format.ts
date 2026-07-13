@@ -32,6 +32,14 @@ export function isOpenOngoingPlan(fightDate?: string | null): boolean {
   return !fightDate?.trim();
 }
 
+export function resolveFiniteWeekNumber(
+  ...candidates: Array<number | null | undefined>
+): number {
+  return candidates.find(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  ) ?? 1;
+}
+
 export function getPlanDisplayName(
   plan: Pick<PlanDisplayFields, "fight_date" | "plan_name" | "technical_style">,
 ): string {

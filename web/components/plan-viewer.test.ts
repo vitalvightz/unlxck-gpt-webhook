@@ -66,6 +66,27 @@ test("Today can confirm the active plan when the dedicated endpoint fails", () =
   );
 });
 
+test("the dedicated active-plan endpoint takes priority, including an explicit null", () => {
+  assert.equal(
+    resolvePlanActiveState({
+      todayResolved: true,
+      todayActivePlanId: "stale-plan",
+      activeEndpointResolved: true,
+      activeEndpointPlanId: null,
+    }),
+    null,
+  );
+  assert.equal(
+    resolvePlanActiveState({
+      todayResolved: true,
+      todayActivePlanId: "stale-plan",
+      activeEndpointResolved: true,
+      activeEndpointPlanId: "current-plan",
+    }),
+    "current-plan",
+  );
+});
+
 const STRUCTURED_CARD_CHIP_CASES: Array<{
   cardState: StructuredCardState;
   label: string;

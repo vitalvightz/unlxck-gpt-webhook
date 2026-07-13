@@ -52,6 +52,7 @@ import {
   formatPlanTimestamp,
   getPlanDisplayName,
   isOpenOngoingPlan,
+  resolveFiniteWeekNumber,
 } from "@/lib/plan-format";
 import { formatAppDate } from "@/lib/date-format";
 import {
@@ -1280,10 +1281,13 @@ export function resolvePlanActiveState(params: {
   activeEndpointResolved: boolean;
   activeEndpointPlanId?: string | null;
 }): string | null | undefined {
-  if (!params.todayResolved && !params.activeEndpointResolved) {
-    return undefined;
+  if (params.activeEndpointResolved) {
+    return params.activeEndpointPlanId ?? null;
   }
-  return params.todayActivePlanId || params.activeEndpointPlanId || null;
+  if (params.todayResolved) {
+    return params.todayActivePlanId ?? null;
+  }
+  return undefined;
 }
 
 type PlanOperationalState = {
@@ -2145,8 +2149,9 @@ export function PlanViewer({
     : null;
   const nextSessionRelation = nextSessionAction?.session_relation === "next" ? "Next session" : "Today";
   const openSessionLabel = nextSessionAction?.session_relation === "next" ? "Open next session" : "Open Today";
+  const openWeekNumber = resolveFiniteWeekNumber(plan.schedule_context?.current_week_number);
   const openBlockLabel = openOngoing
-    ? `Block ${plan.schedule_context?.block_number ?? 1} · Week ${plan.schedule_context?.current_week_number ?? 1} of 4`
+    ? `Block ${plan.schedule_context?.block_number ?? 1} · Week ${openWeekNumber} of 4`
     : null;
 
   const adminSections = [
