@@ -1532,6 +1532,65 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.admin-feedback-no-comment {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.admin-feedback-context {
+  padding: 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 72%, var(--bg-input));
+}
+
+.admin-feedback-context > summary,
+.admin-feedback-context > h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.admin-feedback-context > summary {
+  cursor: pointer;
+}
+
+.admin-feedback-context-grid {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.65rem 0 0;
+}
+
+.admin-feedback-context-grid > div {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.25fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.admin-feedback-context-grid dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-feedback-context-grid dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 640px) {
+  .admin-feedback-context-grid > div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
+
 .admin-active-summary {
   display: flex;
   flex-wrap: wrap;

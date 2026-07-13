@@ -4621,6 +4621,7 @@ class SupabaseAppStore:
                 .select(
                     "id,submitted_by_profile_id,surface,category,response,reason,comment,"
                     "contact_allowed,priority,plan_id,today_checkin_id,camp_phase,app_version,"
+                    "readiness_snapshot,injury_snapshot,technical_context,"
                     "screenshot_path,screenshot_expires_at,created_at,updated_at,"
                     "profiles!beta_feedback_submitted_by_profile_id_fkey(email,full_name)"
                 )

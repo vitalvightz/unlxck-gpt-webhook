@@ -2151,6 +2151,11 @@ class AdminFeedbackRecord(FeedbackRecord):
     today_checkin_id: str | None = None
     camp_phase: str | None = None
     app_version: str = ""
+    page_path: str = ""
+    device_context: str = ""
+    language: str = ""
+    readiness_context: list[str] = Field(default_factory=list)
+    injury_context: list[str] = Field(default_factory=list)
     screenshot_expires_at: str | None = None
 
 
