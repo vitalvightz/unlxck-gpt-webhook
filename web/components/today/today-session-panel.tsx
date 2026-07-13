@@ -18,9 +18,11 @@ import { useToast } from "@/components/toast-provider";
 import { submitTodaySessionCompletion } from "@/lib/api";
 import {
   resolveCurrentDay,
+  resolveOpenPlanWeekNumber,
   sessionIdentity,
   type CurrentDayResolution,
 } from "@/lib/camp-map";
+import type { TodayPlanSchedule } from "@/components/today/use-today-command";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
@@ -200,11 +202,15 @@ function TodaySessionBlocks({
 export function TodaySessionPanel({
   state,
   structuredPlan,
+  planSchedule,
   token,
   onRefresh,
 }: {
   state: TodayCommandView;
   structuredPlan: StructuredPlan | null;
+  /** Server schedule projection + plan creation date, used to anchor the
+   * current week of a weekday-only (open / renewable) plan. */
+  planSchedule?: TodayPlanSchedule | null;
   token: string;
   onRefresh: () => Promise<void>;
 }) {
@@ -229,7 +235,15 @@ export function TodaySessionPanel({
   // on the finished session while the header has already advanced to "Next
   // session", which is exactly how Overview already behaves.
   const focusDate = resolveSessionFocusDate(trainingDay, session);
-  const current = resolveCurrentDay(structuredPlan, focusDate);
+  // Open (renewable) plans carry weekday-only days with no calendar dates, so
+  // the resolver needs to know which week of the block "today" falls in. Dated
+  // camps ignore the hint — they still resolve purely by calendar date.
+  const openWeekNumber = resolveOpenPlanWeekNumber(structuredPlan, focusDate, {
+    currentWeekNumber: planSchedule?.scheduleContext?.current_week_number,
+    anchorDate: planSchedule?.scheduleContext?.anchor_date,
+    createdAt: planSchedule?.createdAt,
+  });
+  const current = resolveCurrentDay(structuredPlan, focusDate, { openWeekNumber });
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
   const isNextSessionPreview = session.session_relation === "next";

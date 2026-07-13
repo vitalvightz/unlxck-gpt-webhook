@@ -43,6 +43,7 @@ import {
   dayCompletion,
   getSessionDisplayStatus,
   resolveNextPlanFocusDay,
+  resolveOpenPlanWeekNumber,
   resolvePlanProgress,
   weekCompletion,
   weekLoadProxy,
@@ -1281,6 +1282,7 @@ export function StructuredPlanRenderer({
   plan,
   openOngoing = false,
   today,
+  createdAt,
   focusDay,
   currentDayLabel = "Today",
   completions,
@@ -1292,7 +1294,9 @@ export function StructuredPlanRenderer({
   /** Renewable four-week plan without a scheduled fight date. */
   openOngoing?: boolean;
   today?: Date;
-  /** Accepted for compatibility with callers, but not rendered on this plan view. */
+  /** Plan creation timestamp. For an open plan without a server projection it
+   * anchors which week of the renewable block is current (first Monday on or
+   * after creation, mirroring the backend timeline). Not rendered. */
   createdAt?: string | null;
   /** Accepted for compatibility with callers, but not rendered on this plan view. */
   planStatus?: string | null;
@@ -1334,14 +1338,24 @@ export function StructuredPlanRenderer({
   }, [currentTrainingDayIso, scheduleContext?.current_training_day]);
   const calendarDay = today ?? serverTrainingDay ?? mountedDay;
 
+  // Weekday-only open plans need to know which week of the renewable block is
+  // current; dated camps ignore the hint (they resolve by calendar date).
+  const openWeekNumber = openOngoing
+    ? resolveOpenPlanWeekNumber(plan, calendarDay ?? null, {
+        currentWeekNumber: scheduleContext?.current_week_number,
+        anchorDate: scheduleContext?.anchor_date,
+        createdAt,
+      })
+    : null;
+
   // The real calendar training day owns the truthful current week marker.
   // `focusDay` only advances the opened week/day highlight.
-  const calendarProgress = resolvePlanProgress(plan, calendarDay);
+  const calendarProgress = resolvePlanProgress(plan, calendarDay, { openWeekNumber });
   const resolvedFocusDay = focusDay
-    ? resolveNextPlanFocusDay(plan, calendarDay, focusDay)
+    ? resolveNextPlanFocusDay(plan, calendarDay, focusDay, { openWeekNumber })
     : undefined;
   const focusProgress = resolvedFocusDay
-    ? resolvePlanProgress(plan, resolvedFocusDay)
+    ? resolvePlanProgress(plan, resolvedFocusDay, { openWeekNumber })
     : calendarProgress;
 
   // `selectedPos` holds ONLY an explicit manual week choice; while it is null the
@@ -1420,9 +1434,16 @@ export function StructuredPlanRenderer({
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
               dayList.map((day, index) => {
+                // Dated days match on the calendar date. A weekday-only (open
+                // plan) match carries no date, so it is identified by week/day
+                // position instead — only while the matched week is the one
+                // being viewed.
                 const isCurrent =
-                  focusProgress.currentDayDate != null &&
-                  cleanText(day.date)?.slice(0, 10) === focusProgress.currentDayDate;
+                  focusProgress.currentDayDate != null
+                    ? cleanText(day.date)?.slice(0, 10) === focusProgress.currentDayDate
+                    : focusProgress.currentWeekPos === safePos &&
+                      focusProgress.currentDayPos === index &&
+                      focusProgress.currentDayPos != null;
 
                 return (
                   <CampDayCard

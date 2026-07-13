@@ -68,44 +68,221 @@ function dayISO(day: StructuredDay | null | undefined): string | null {
   return raw.slice(0, 10);
 }
 
+// ---------------------------------------------------------------------------
+// Weekday-only (open / renewable) plan support.
+//
+// An open training plan has no fight date, so its days carry no calendar date —
+// only a weekday ("WEEK 2 · SAT" in the plan view). Resolving "today" against
+// such a plan matches on today's weekday instead of an ISO date, scoped to the
+// current week of the renewable block. The current week comes from the server's
+// schedule projection when available, else is derived from the same anchor the
+// backend uses (the first Monday on or after plan creation — see
+// api/services/open_plan_timeline.py).
+// ---------------------------------------------------------------------------
+
+const WEEKDAY_TOKENS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+type WeekdayToken = (typeof WEEKDAY_TOKENS)[number];
+
+/** Normalized short weekday ("Mon") from a day's weekday field, or null.
+ * Tolerates full names ("Monday") and any casing. */
+function dayWeekdayToken(day: StructuredDay | null | undefined): WeekdayToken | null {
+  const token = cleanText(day?.weekday)?.slice(0, 3).toLowerCase();
+  if (!token) {
+    return null;
+  }
+  return WEEKDAY_TOKENS.find((candidate) => candidate.toLowerCase() === token) ?? null;
+}
+
+/** Short weekday token for a local Date ("Mon".."Sun"). */
+function weekdayTokenFor(date: Date): WeekdayToken {
+  // getDay(): 0=Sun..6=Sat -> Mon-first token list.
+  return WEEKDAY_TOKENS[(date.getDay() + 6) % 7];
+}
+
+/** True when the day can only be matched by weekday: it has a weekday but no
+ * parseable calendar date. Dated camp days never take the weekday path. */
+function isWeekdayOnlyDay(day: StructuredDay | null | undefined): boolean {
+  return dayISO(day) === null && dayWeekdayToken(day) !== null;
+}
+
+export type OpenScheduleHints = {
+  /** Server-computed 1-based week number inside the current renewable block
+   * (schedule_context.current_week_number). Wins when present. */
+  currentWeekNumber?: number | null;
+  /** Server anchor date (schedule_context.anchor_date). */
+  anchorDate?: string | null;
+  /** Plan creation timestamp; the anchor is derived from it when the server
+   * did not provide one (first Monday on or after creation). */
+  createdAt?: string | null;
+};
+
+/** Local-noon ms for the date portion of an ISO string, or null. Noon keeps the
+ * day-difference math DST-safe. */
+function isoToNoonMs(value: string | null | undefined): number | null {
+  const iso = cleanText(value)?.slice(0, 10);
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    return null;
+  }
+  const ms = new Date(`${iso}T12:00:00`).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/**
+ * The 1-based week number of the renewable block containing `today`, for a
+ * weekday-only open plan. Mirrors the backend projection
+ * (api/services/open_plan_timeline.py): an explicit server week number wins;
+ * otherwise the week is counted from the anchor (server-provided, else the
+ * first Monday on or after plan creation), wrapping every `weekCount` weeks so
+ * the block renews indefinitely. Days before the anchor belong to week 1.
+ * Returns null when there is no week count, no today, or no usable anchor.
+ */
+export function resolveOpenPlanWeekNumber(
+  plan: StructuredPlan | null | undefined,
+  today: Date | null,
+  hints?: OpenScheduleHints | null,
+): number | null {
+  const weekCount = getWeeks(plan).length;
+  if (!weekCount || !today) {
+    return null;
+  }
+
+  const explicit = hints?.currentWeekNumber;
+  if (typeof explicit === "number" && Number.isFinite(explicit) && explicit >= 1) {
+    return Math.min(Math.trunc(explicit), weekCount);
+  }
+
+  let anchorMs = isoToNoonMs(hints?.anchorDate);
+  if (anchorMs === null) {
+    const createdMs = isoToNoonMs(hints?.createdAt);
+    if (createdMs !== null) {
+      const created = new Date(createdMs);
+      // First Monday on or after the creation date (Python weekday(): Mon=0).
+      const pyWeekday = (created.getDay() + 6) % 7;
+      anchorMs = createdMs + ((7 - pyWeekday) % 7) * 86_400_000;
+    }
+  }
+  if (anchorMs === null) {
+    return null;
+  }
+
+  const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12).getTime();
+  const elapsedDays = Math.floor((todayMs - anchorMs) / 86_400_000);
+  if (elapsedDays < 0) {
+    return 1;
+  }
+  return (Math.floor(elapsedDays / 7) % weekCount) + 1;
+}
+
+type WeekdayOnlyMatch = {
+  weekPos: number;
+  dayPos: number;
+  week: StructuredWeek;
+  day: StructuredDay;
+};
+
+/**
+ * Match today's weekday against a plan's weekday-only days. The preferred week
+ * (1-based `openWeekNumber`, when known) is searched first so the block's
+ * current week owns the match; any week with that weekday is the fallback, so
+ * an open plan still resolves when no anchor is available (all weeks of an
+ * open block share the same weekly rhythm). Dated days never match here.
+ */
+function findWeekdayOnlyDay(
+  weeks: StructuredWeek[],
+  today: Date,
+  openWeekNumber?: number | null,
+): WeekdayOnlyMatch | null {
+  const target = weekdayTokenFor(today);
+  const matchIn = (weekPos: number): WeekdayOnlyMatch | null => {
+    const days = getDays(weeks[weekPos]);
+    for (let dayPos = 0; dayPos < days.length; dayPos += 1) {
+      const day = days[dayPos];
+      if (isWeekdayOnlyDay(day) && dayWeekdayToken(day) === target) {
+        return { weekPos, dayPos, week: weeks[weekPos], day };
+      }
+    }
+    return null;
+  };
+
+  const preferred =
+    typeof openWeekNumber === "number" && Number.isFinite(openWeekNumber) && openWeekNumber >= 1
+      ? Math.min(Math.trunc(openWeekNumber), weeks.length) - 1
+      : null;
+  if (preferred !== null) {
+    const match = matchIn(preferred);
+    if (match) {
+      return match;
+    }
+  }
+  for (let weekPos = 0; weekPos < weeks.length; weekPos += 1) {
+    if (weekPos === preferred) {
+      continue;
+    }
+    const match = matchIn(weekPos);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+}
+
 export type PlanProgress = {
   weekCount: number;
   /** Array index of the week containing today, or null when out of camp range. */
   currentWeekPos: number | null;
-  /** ISO date of today's day inside the plan, or null when out of range. */
+  /** ISO date of today's day inside the plan, or null when out of range (always
+   * null for a weekday-only match — those days carry no calendar date). */
   currentDayDate: string | null;
+  /** Array index of today's day within its week, or null when out of range.
+   * The only current-day marker a weekday-only (open plan) match can provide. */
+  currentDayPos: number | null;
   /** "D-28" style countdown for today (from the day, else derived), or null. */
   dLabel: string | null;
 };
 
 /**
  * Resolve where the athlete is in the camp relative to `today`. Matches today to
- * a day by calendar date; when today falls outside every scheduled day the
- * current markers are null (callers default selection to the first week) and the
- * countdown label is derived from the event date when available.
+ * a day by calendar date; weekday-only days (open / renewable plans) fall back
+ * to matching today's weekday, scoped by `options.openWeekNumber` — the same
+ * rules as `resolveCurrentDay`. When today matches nothing the current markers
+ * are null (callers default selection to the first week) and the countdown
+ * label is derived from the event date when available.
  */
 export function resolvePlanProgress(
   plan: StructuredPlan | null | undefined,
   today: Date | null,
+  options?: { openWeekNumber?: number | null },
 ): PlanProgress {
   const weeks = getWeeks(plan);
   const todayIso = today ? toISODate(today) : null;
   let currentWeekPos: number | null = null;
   let currentDayDate: string | null = null;
+  let currentDayPos: number | null = null;
 
   // A null `today` (e.g. before client mount) resolves to "no current day" so
   // the server and first client render agree — never match days on a null date.
   weeks.forEach((week, weekPos) => {
-    if (todayIso && getDays(week).some((day) => dayISO(day) === todayIso)) {
-      currentWeekPos = weekPos;
-      currentDayDate = todayIso;
-    }
+    getDays(week).forEach((day, dayPos) => {
+      if (todayIso && dayISO(day) === todayIso) {
+        currentWeekPos = weekPos;
+        currentDayDate = todayIso;
+        currentDayPos = dayPos;
+      }
+    });
   });
+
+  if (currentWeekPos === null && today) {
+    const weekdayMatch = findWeekdayOnlyDay(weeks, today, options?.openWeekNumber);
+    if (weekdayMatch) {
+      currentWeekPos = weekdayMatch.weekPos;
+      currentDayPos = weekdayMatch.dayPos;
+    }
+  }
 
   const currentDay = findDayByISO(plan, currentDayDate);
   const dLabel = cleanText(currentDay?.countdown_label) || deriveCountdownLabel(plan, today);
 
-  return { weekCount: weeks.length, currentWeekPos, currentDayDate, dLabel };
+  return { weekCount: weeks.length, currentWeekPos, currentDayDate, currentDayPos, dLabel };
 }
 
 export type CampProgress = {
@@ -400,11 +577,12 @@ export function resolveNextPlanFocusDay(
   plan: StructuredPlan | null | undefined,
   trainingDay: Date | null,
   fallbackFocusDay: Date | null | undefined,
+  options?: { openWeekNumber?: number | null },
 ): Date | undefined {
   if (!trainingDay || !fallbackFocusDay) {
     return fallbackFocusDay ?? undefined;
   }
-  const current = resolveCurrentDay(plan, trainingDay);
+  const current = resolveCurrentDay(plan, trainingDay, options);
   if (current.weekPos == null || current.dayPos == null) {
     return fallbackFocusDay;
   }
@@ -647,10 +825,17 @@ export type CurrentDayResolution = {
  * `resolveTrainingDay(new Date())` so they can never disagree on the current
  * day. The matched day is the source of truth for its sessions — a session's own
  * date is never used to override the parent day (parent day wins).
+ *
+ * Dated camps match on the calendar date. When no date matches, weekday-only
+ * days (open / renewable plans — "WEEK 2 · SAT") match on today's weekday, with
+ * `options.openWeekNumber` (see `resolveOpenPlanWeekNumber`) picking the week
+ * of the renewable block. Dated days are never matched by weekday, so a camp
+ * whose dates are simply out of range stays out of range.
  */
 export function resolveCurrentDay(
   plan: StructuredPlan | null | undefined,
   today: Date | null,
+  options?: { openWeekNumber?: number | null },
 ): CurrentDayResolution {
   const trainingDayISO = today ? toISODate(today) : null;
   const weeks = getWeeks(plan);
@@ -672,6 +857,21 @@ export function resolveCurrentDay(
       }
     }
   }
+
+  const weekdayMatch = today ? findWeekdayOnlyDay(weeks, today, options?.openWeekNumber) : null;
+  if (weekdayMatch) {
+    return {
+      trainingDayISO,
+      weekPos: weekdayMatch.weekPos,
+      dayPos: weekdayMatch.dayPos,
+      week: weekdayMatch.week,
+      day: weekdayMatch.day,
+      sessions: getSessions(weekdayMatch.day),
+      dLabel: cleanText(weekdayMatch.day.countdown_label) || deriveCountdownLabel(plan, today),
+      inRange: true,
+    };
+  }
+
   return {
     trainingDayISO,
     weekPos: null,

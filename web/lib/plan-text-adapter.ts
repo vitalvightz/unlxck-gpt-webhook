@@ -813,10 +813,12 @@ const OPEN_PLAN_SYSTEM_NOTE_RE = new RegExp(
 );
 
 const RED_FLAG_SECTION_TITLE_RE = /red-?flag|rehab/i;
-// A note line that actually states a stop/report trigger, as opposed to
-// rendering meta such as "No rehab headings will be used".
-const RED_FLAG_LINE_RE =
-  /\b(?:stop|report|pain|dizz\w*|symptom\w*|medical|bleed\w*|numb\w*|concussion)\b/i;
+// A line that is ONLY rendering meta ("No rehab headings will be used…") and
+// never a trigger. Matched at the start of the line only: legacy run-on prose
+// appends this meta AFTER the real trigger sentence on the same line, and
+// cleanRedFlagText already cuts that tail off, so a mid-line mention must not
+// disqualify the whole line.
+const RED_FLAG_META_LINE_RE = /^no rehab headings\b/i;
 const RED_FLAG_TRIGGER_LABEL_RE = /red-?flags? triggers?\s*(?:\([^)]*\))?\s*:?\s*/i;
 // Where the red-flag sentence ends inside run-on legacy prose: the next system
 // section (or rendering meta) that follows it on the same line.
@@ -854,7 +856,7 @@ function extractOpenPlanRedFlags(noteGroups: PlanTextNotes[]): StructuredRedFlag
   for (const group of noteGroups) {
     if (RED_FLAG_SECTION_TITLE_RE.test(group.title)) {
       for (const line of group.lines) {
-        if (!/no rehab headings/i.test(line)) {
+        if (!RED_FLAG_META_LINE_RE.test(line.trim())) {
           push(line);
         }
       }

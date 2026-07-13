@@ -12,6 +12,7 @@ import {
   getReadinessStrip,
   resolveCurrentDay,
   resolveNextPlanFocusDay,
+  resolveOpenPlanWeekNumber,
   resolvePlanProgress,
   resolveTrainingDay,
   getSessionDisplayStatus,
@@ -354,6 +355,121 @@ test("resolveCurrentDay treats a null today as no current day (SSR-safe)", () =>
   assert.equal(current.weekPos, null);
   assert.equal(current.sessions.length, 0);
   assert.equal(current.dLabel, null);
+});
+
+// A renewable open plan: four identical weekday-only weeks (no fight date, no
+// calendar dates on any day) — the "WEEK 2 · SAT" shape the plan view renders.
+function openPlan(): StructuredPlan {
+  const days = (): NonNullable<StructuredPlan["weeks"]>[number]["days"] => [
+    {
+      weekday: "Mon",
+      day_type: "moderate",
+      sessions: [{ session_id: "open-mon", title: "Support Strength + Coordination", blocks: [] }],
+    },
+    {
+      weekday: "Wed",
+      day_type: "sparring",
+      today_card: { headline: "Coach-led boxing — hard sparring" },
+      sessions: [],
+    },
+    {
+      weekday: "Sat",
+      day_type: "moderate",
+      sessions: [
+        { session_id: "open-sat", title: "Primary Strength + Fight-pace Conditioning", blocks: [] },
+      ],
+    },
+  ];
+  return {
+    schema_version: "text-adapter.v1",
+    plan_metadata: { title: "Open training plan", plan_type: "open_ongoing_system" },
+    event_context: null,
+    weeks: [1, 2, 3, 4].map((index) => ({
+      week_id: `text-week-${index}`,
+      week_index: index,
+      days: days(),
+    })),
+  } satisfies StructuredPlan;
+}
+
+test("resolveCurrentDay matches a weekday-only open plan by today's weekday", () => {
+  // 2026-07-18 is a Saturday; the hint scopes the match to week 2 of the block.
+  const current = resolveCurrentDay(openPlan(), new Date(2026, 6, 18), { openWeekNumber: 2 });
+  assert.equal(current.inRange, true);
+  assert.equal(current.weekPos, 1);
+  assert.equal(current.dayPos, 2);
+  assert.equal(current.sessions[0]?.title, "Primary Strength + Fight-pace Conditioning");
+  assert.equal(current.dLabel, null);
+});
+
+test("resolveCurrentDay matches a coach-led weekday-only day with no sessions", () => {
+  // 2026-07-15 is a Wednesday — coach-led sparring day, sessionless but in range.
+  const current = resolveCurrentDay(openPlan(), new Date(2026, 6, 15), { openWeekNumber: 2 });
+  assert.equal(current.inRange, true);
+  assert.equal(current.weekPos, 1);
+  assert.equal(current.dayPos, 1);
+  assert.equal(current.sessions.length, 0);
+});
+
+test("resolveCurrentDay falls back to the first matching week without a week hint", () => {
+  const current = resolveCurrentDay(openPlan(), new Date(2026, 6, 18));
+  assert.equal(current.inRange, true);
+  assert.equal(current.weekPos, 0);
+  assert.equal(current.dayPos, 2);
+});
+
+test("resolveCurrentDay leaves a weekday-only non-training day out of range", () => {
+  // 2026-07-14 is a Tuesday — the open plan schedules nothing on Tuesdays.
+  const current = resolveCurrentDay(openPlan(), new Date(2026, 6, 14), { openWeekNumber: 2 });
+  assert.equal(current.inRange, false);
+  assert.equal(current.weekPos, null);
+});
+
+test("resolveCurrentDay never matches a dated camp by weekday", () => {
+  // 2026-06-26 is a Friday, same weekday as the camp day 2026-06-19 — but dated
+  // days must only ever match on their calendar date.
+  const plan = campPlan();
+  for (const week of plan.weeks ?? []) {
+    for (const day of week.days ?? []) {
+      day.weekday = "Fri";
+    }
+  }
+  const current = resolveCurrentDay(plan, new Date(2026, 5, 26), { openWeekNumber: 1 });
+  assert.equal(current.inRange, false);
+});
+
+test("resolvePlanProgress marks the weekday-only current week and day position", () => {
+  const progress = resolvePlanProgress(openPlan(), new Date(2026, 6, 18), { openWeekNumber: 2 });
+  assert.equal(progress.currentWeekPos, 1);
+  assert.equal(progress.currentDayPos, 2);
+  // Weekday-only matches carry no calendar date.
+  assert.equal(progress.currentDayDate, null);
+});
+
+test("resolveOpenPlanWeekNumber prefers the server-computed week number", () => {
+  const week = resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 18), {
+    currentWeekNumber: 3,
+    createdAt: "2026-06-30T09:00:00Z",
+  });
+  assert.equal(week, 3);
+});
+
+test("resolveOpenPlanWeekNumber derives the week from the plan-creation anchor", () => {
+  // Created Tuesday 2026-06-30 -> anchor Monday 2026-07-06 (first Monday on or
+  // after creation, mirroring the backend timeline).
+  const hints = { createdAt: "2026-06-30T09:00:00Z" };
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 8), hints), 1);
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 18), hints), 2);
+  // Days before the anchor belong to week 1.
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 1), hints), 1);
+  // The block renews: 4 weeks after the anchor it is week 1 again.
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 7, 8), hints), 1);
+});
+
+test("resolveOpenPlanWeekNumber returns null without an anchor or today", () => {
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 18), {}), null);
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), null, { createdAt: "2026-06-30" }), null);
+  assert.equal(resolveOpenPlanWeekNumber(undefined, new Date(2026, 6, 18), { createdAt: "2026-06-30" }), null);
 });
 
 test("resolveNextPlanFocusDay prefers the next unfinished app card before a later coach-led day", () => {

@@ -96,7 +96,7 @@ export function TodayScreen() {
   const { session } = useAppSession();
   const token = session?.access_token ?? null;
   const trainingDay = useTrainingDay();
-  const { state, structuredPlan, isLoading, error, refresh } = useTodayCommand(token);
+  const { state, structuredPlan, planSchedule, isLoading, error, refresh } = useTodayCommand(token);
 
   const activePlan = state?.active_plan ?? {};
   const openOngoing = isOpenOngoingPlan(activePlan.fight_date);
@@ -204,6 +204,7 @@ export function TodayScreen() {
       <TodaySessionPanel
         state={state}
         structuredPlan={structuredPlan}
+        planSchedule={planSchedule}
         token={token ?? ""}
         onRefresh={refresh}
       />
