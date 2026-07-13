@@ -510,6 +510,36 @@ def test_admin_feedback_feed_summarises_server_context_when_comment_is_empty():
     assert row["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
 
 
+def test_admin_feedback_injury_summary_skips_malformed_flags_and_counts_valid_ones():
+    valid = [
+        {"body_area": f"area-{index}", "severity": "moderate", "status": "open"}
+        for index in range(4)
+    ]
+    row = {
+        "id": "feedback-1",
+        "injury_snapshot": {
+            "open_flags": ["not-a-dict", None, {"unrelated": "field"}, *valid],
+        },
+    }
+
+    record = feedback_routes._admin_feedback_record(row)
+
+    assert record.injury_context == [
+        "area-0 · moderate · open",
+        "area-1 · moderate · open",
+        "area-2 · moderate · open",
+        "4 open injury flags total",
+    ]
+
+    row["injury_snapshot"]["open_flags"] = ["not-a-dict", *valid[:3]]
+    record = feedback_routes._admin_feedback_record(row)
+    assert record.injury_context == [
+        "area-0 · moderate · open",
+        "area-1 · moderate · open",
+        "area-2 · moderate · open",
+    ]
+
+
 def test_global_screenshot_is_sanitised_private_and_rate_limited(monkeypatch):
     monkeypatch.setenv("FEEDBACK_REPORT_LIMIT_PER_HOUR", "5")
     monkeypatch.setenv("FEEDBACK_SCREENSHOT_LIMIT_PER_HOUR", "1")

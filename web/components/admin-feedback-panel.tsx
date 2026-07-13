@@ -54,6 +54,10 @@ function AdminFeedbackContext({ item, expanded }: { item: AdminFeedbackRecord; e
 }
 
 export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reloadKey: number }) {
+  return <AdminFeedbackLoader key={token} token={token} reloadKey={reloadKey} />;
+}
+
+function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: number }) {
   const [feedback, setFeedback] = useState<AdminFeedbackRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -143,6 +143,67 @@ test("admin feedback panel obtains a short-lived screenshot link on demand", asy
   }
 });
 
+test("admin feedback panel clears the previous token's rows while the new token's request is pending", async () => {
+  const originalFetch = globalThis.fetch;
+  const row = {
+    id: "feedback-token-a",
+    surface: "global",
+    category: "general_feedback",
+    response: null,
+    reason: null,
+    comment: "Visible only for token A",
+    priority: "normal",
+    has_screenshot: false,
+    created_at: "2026-07-12T20:00:00Z",
+    updated_at: "2026-07-12T20:00:00Z",
+    submitted_by_profile_id: "athlete-1",
+    submitter_email: "athlete@example.com",
+    submitter_name: "Athlete One",
+    contact_allowed: false,
+    plan_id: null,
+    today_checkin_id: null,
+    camp_phase: null,
+    app_version: "test",
+    page_path: "/settings",
+    device_context: "",
+    language: "",
+    readiness_context: [],
+    injury_context: [],
+    screenshot_expires_at: null,
+  };
+  globalThis.fetch = async (input, init) => {
+    const auth = new Headers(init?.headers).get("authorization") ?? "";
+    if (auth === "Bearer token-a") {
+      return new Response(JSON.stringify([row]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Promise<Response>(() => {});
+  };
+  const { container, root } = mount();
+
+  try {
+    await act(async () => {
+      root.render(<AdminFeedbackPanel token="token-a" reloadKey={0} />);
+    });
+    await settle();
+    assert.match(container.textContent ?? "", /Visible only for token A/);
+
+    await act(async () => {
+      root.render(<AdminFeedbackPanel token="token-b" reloadKey={0} />);
+    });
+    await settle();
+
+    assert.doesNotMatch(container.textContent ?? "", /Visible only for token A/);
+    assert.match(container.textContent ?? "", /Loading feedback/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+
 test("admin feedback expands captured context when no comment was provided", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify([{

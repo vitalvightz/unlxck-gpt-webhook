@@ -88,8 +88,8 @@ def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
         if readiness.get(key) not in (None, "", [])
     ]
     open_flags = injuries.get("open_flags") if isinstance(injuries.get("open_flags"), list) else []
-    injury_context: list[str] = []
-    for flag in open_flags[:3]:
+    injury_summaries: list[str] = []
+    for flag in open_flags:
         if not isinstance(flag, dict):
             continue
         parts = [
@@ -98,9 +98,10 @@ def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
         ]
         summary = " · ".join(part for part in parts if part)
         if summary:
-            injury_context.append(summary)
-    if len(open_flags) > len(injury_context):
-        injury_context.append(f"{len(open_flags)} open injury flags total")
+            injury_summaries.append(summary)
+    injury_context = injury_summaries[:3]
+    if len(injury_summaries) > 3:
+        injury_context.append(f"{len(injury_summaries)} open injury flags total")
     return AdminFeedbackRecord(
         id=str(row.get("id") or ""),
         submitted_by_profile_id=str(row.get("submitted_by_profile_id") or ""),
