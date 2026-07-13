@@ -94,7 +94,7 @@ function getFeedbackSignal(item: AdminFeedbackRecord): {
 }
 
 function getOpenInjuryFlags(item: AdminFeedbackRecord): Record<string, unknown>[] {
-  const openFlags = item.injury_snapshot.open_flags;
+  const openFlags = item.injury_snapshot["open_flags"];
   return Array.isArray(openFlags)
     ? openFlags.filter((flag): flag is Record<string, unknown> => Boolean(flag) && typeof flag === "object")
     : [];
