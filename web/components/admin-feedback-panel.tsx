@@ -310,7 +310,7 @@ function FeedbackItem({
         <a href={`/admin/athletes/${item.submitted_by_profile_id}`}>Open athlete</a>
 
         <details className="admin-feedback-disclosure">
-          <summary>{item.today_checkin_id ? "Open check-in" : "View context"}</summary>
+          <summary>{item.today_checkin_id ? "View check-in" : "View context"}</summary>
           <div className="admin-feedback-disclosure-body">
             <div>
               <p className="kicker">Readiness</p>
