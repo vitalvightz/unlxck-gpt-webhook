@@ -913,6 +913,76 @@ test("open-plan text uses its explicit weekday rhythm instead of an unavailable 
   assert.equal(plan.weeks?.[0]?.days?.[2]?.today_card?.headline, "Coach-led boxing - hard sparring");
 });
 
+test("open-plan system sections route to structured homes instead of note dumps", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "Immediate Coach Summary",
+      "Plan: 4 sessions/week. Two coach-led boxing days (Wednesday, Friday).",
+      "Current Training Rules",
+      "Weekly volume: 4 visible sessions. Do not add more programmed sessions.",
+      "Weekly Rhythm",
+      "Monday - Support Strength (programmed)",
+      "Wednesday - Coach-led boxing (coach-owned)",
+      "Coach-owned combat session. Keep freshness priority.",
+      "Session Cards",
+      "Monday - Support Strength",
+      "Why: build posterior-chain strength.",
+      "- Main work: Trap Bar Deadlift - 4 x 5 @ RPE 7",
+      "4-Week Development Block",
+      "Week 1 - Baseline and technical consistency",
+      "Week 2 - Small progression",
+      "Increase either 1 set on anchor or increase contrast intent.",
+      "Week 3 - Highest controlled week",
+      "Week 4 - Deload and reassess",
+      "Reduce programmed session volume 30-40%; keep intensity sharp but short.",
+      "Progression Rules",
+      "Anchor progression: add volume by +1 set only when quality is kept.",
+      "Adjustment Rules",
+      "If symptoms or fatigue rise, remove optional conditioning first.",
+      "Red-flag triggers (stop and report): new sharp joint pain >3/10, dizziness, or persistent sharp shoulder pain after 24h. Stop training and contact coach/medical if these occur. No rehab headings will be used; support work appears as Activation or Mobility in sessions.",
+      "4-Week Reassessment Gate",
+      "Reassess at the end of each 4-week block.",
+      "End notes (coach-facing)",
+      "Preserve the two coach-led sparring days as gym-owned.",
+    ].join("\n"),
+  );
+
+  assert.equal(plan.plan_metadata?.plan_type, "open_ongoing_system");
+  // The system/rule sections never surface as active notes.
+  assert.deepEqual(plan.plan_notes, []);
+  assert.equal(
+    plan.progression_notes,
+    "Anchor progression: add volume by +1 set only when quality is kept.",
+  );
+  assert.equal(plan.red_flag_rules?.length, 1);
+  const flag = plan.red_flag_rules?.[0]?.display_text ?? "";
+  assert.equal(flag.startsWith("new sharp joint pain >3/10"), true);
+  assert.equal(flag.includes("Stop training and contact coach/medical"), true);
+  assert.equal(flag.includes("No rehab headings"), false);
+});
+
+test("legacy run-on open-plan prose still yields a red-flag rule and no note dump", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "Weekly Rhythm",
+      "Monday - Support Strength (programmed)",
+      "Session Cards",
+      "Monday - Support Strength",
+      "- Main work: Trap Bar Deadlift - 4 x 5",
+      "4-Week Development Block",
+      "Week 1 - Baseline",
+      "Adjustment Rules If symptoms rise remove conditioning first. Red-flag triggers (stop and report): dizziness or sharp joint pain. Stop training and contact coach if these occur. No rehab headings will be used. 4-Week Reassessment Gate Reassess at the end of each block.",
+    ].join("\n"),
+  );
+
+  assert.equal(plan.plan_metadata?.plan_type, "open_ongoing_system");
+  assert.deepEqual(plan.plan_notes, []);
+  assert.equal(
+    plan.red_flag_rules?.[0]?.display_text,
+    "dizziness or sharp joint pain. Stop training and contact coach if these occur.",
+  );
+});
+
 test("fallback week goals omit duplicated week and countdown metadata", () => {
   const explicit = buildStructuredPlanFromText(
     [

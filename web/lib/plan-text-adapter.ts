@@ -11,6 +11,7 @@ import type {
   StructuredBlock,
   StructuredDay,
   StructuredPlan,
+  StructuredRedFlagRule,
   StructuredSession,
   StructuredWeek,
 } from "@/lib/types";
@@ -213,6 +214,19 @@ const SESSION_WEEKDAY_ONLY_RE = new RegExp(
 // mistaken for a new section.
 const NOTE_SECTION_RE =
   /^(Lead notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
+// Renewable open-plan system sections (the section contract in
+// fightcamp/stage2_payload_open_ongoing.py). Each opens its own titled context
+// group so buildStructuredPlanFromText can route it — red-flag triggers become
+// red_flag_rules, progression rules become progression_notes, the remaining
+// coach/system prose stays out of Active Notes — instead of accreting into one
+// untitled blob that dumps the whole plan text into the note cards.
+const OPEN_PLAN_SECTION_RE = new RegExp(
+  "^(Immediate Coach Summary|Current Training Rules|Progression Rules|Priority Hierarchy|Adjustment Rules" +
+    "|Rehab\\s*/\\s*Red Flags|\\d+-Week Reassessment Gate|End notes(?:\\s*\\(coach-facing\\))?" +
+    "|Red-?flags? triggers?(?:\\s*\\([^)]*\\))?)" +
+    `(?:\\s*${HEADER_SEP}\\s*(.+))?$`,
+  "i",
+);
 
 function normalizePhaseToken(value: string): string {
   return value.replace(/_/g, " ").toUpperCase();
@@ -248,6 +262,14 @@ function classifyPlanTextHeading(
   const noteMatch = clean.match(NOTE_SECTION_RE);
   if (noteMatch) {
     return { kind: "notes", title: titleizeToken(noteMatch[1].trim()), remainder: noteMatch[2]?.trim() || null };
+  }
+  const openSectionMatch = clean.match(OPEN_PLAN_SECTION_RE);
+  if (openSectionMatch) {
+    return {
+      kind: "notes",
+      title: titleizeToken(openSectionMatch[1].trim()),
+      remainder: openSectionMatch[2]?.trim() || null,
+    };
   }
 
   // Phase-prefixed week ("GPP — Week 1 (D-33 to D-27) — Build base"), or a bare
@@ -778,6 +800,79 @@ function noteCategory(title: string): string {
   return "general";
 }
 
+// Open-plan note groups that are system mechanics rather than athlete
+// reminders. "Plan" is the untitled loose-prose catch-all: in an open plan
+// that loose prose IS the rendered rule sections (legacy saved texts run the
+// headings into the paragraphs), so it is excluded from plan_notes as well.
+// Genuine note sections (Lead/Active/Final notes) keep rendering.
+const OPEN_PLAN_SYSTEM_NOTE_RE = new RegExp(
+  "^(?:plan|immediate coach summary|current training rules|progression rules|priority hierarchy|adjustment rules" +
+    "|rehab\\s*/\\s*red flags|\\d+-week reassessment gate|end notes(?:\\s*\\(coach-facing\\))?" +
+    "|red-?flags? triggers?(?:\\s*\\([^)]*\\))?)$",
+  "i",
+);
+
+const RED_FLAG_SECTION_TITLE_RE = /red-?flag|rehab/i;
+// A note line that actually states a stop/report trigger, as opposed to
+// rendering meta such as "No rehab headings will be used".
+const RED_FLAG_LINE_RE =
+  /\b(?:stop|report|pain|dizz\w*|symptom\w*|medical|bleed\w*|numb\w*|concussion)\b/i;
+const RED_FLAG_TRIGGER_LABEL_RE = /red-?flags? triggers?\s*(?:\([^)]*\))?\s*:?\s*/i;
+// Where the red-flag sentence ends inside run-on legacy prose: the next system
+// section (or rendering meta) that follows it on the same line.
+const RED_FLAG_CUT_RE =
+  /\s+(?:No rehab headings\b|\d+-Week Reassessment Gate\b|Priority Hierarchy\b|Adjustment Rules\b|Progression Rules\b|Current Training Rules\b|End notes\b)/i;
+
+function cleanRedFlagText(value: string): string {
+  let text = value.trim();
+  const label = text.match(RED_FLAG_TRIGGER_LABEL_RE);
+  if (label?.index === 0) {
+    text = text.slice(label[0].length);
+  }
+  const cut = text.search(RED_FLAG_CUT_RE);
+  if (cut > -1) {
+    text = text.slice(0, cut);
+  }
+  return text.trim();
+}
+
+/**
+ * Deterministically lift the open plan's stop-and-report triggers out of the
+ * parsed note groups: a titled red-flag section contributes its trigger lines,
+ * and legacy run-on prose contributes the sentence following its "Red-flag
+ * triggers:" label. Emitting these as red_flag_rules makes the Red Flags card
+ * render the real stop rules instead of falling back to whole-plan note dumps.
+ */
+function extractOpenPlanRedFlags(noteGroups: PlanTextNotes[]): StructuredRedFlagRule[] {
+  const texts: string[] = [];
+  const push = (value: string) => {
+    const text = cleanRedFlagText(value);
+    if (text && !texts.includes(text)) {
+      texts.push(text);
+    }
+  };
+  for (const group of noteGroups) {
+    if (RED_FLAG_SECTION_TITLE_RE.test(group.title)) {
+      for (const line of group.lines) {
+        if (RED_FLAG_LINE_RE.test(line)) {
+          push(line);
+        }
+      }
+      continue;
+    }
+    for (const line of group.lines) {
+      const labelIndex = line.search(RED_FLAG_TRIGGER_LABEL_RE);
+      if (labelIndex > -1) {
+        push(line.slice(labelIndex));
+      }
+    }
+  }
+  return texts.map((display_text, index) => ({
+    rule_id: `text-red-flag-${index + 1}`,
+    display_text,
+  }));
+}
+
 /**
  * Adapt approved plan_text into the full structured renderer without another
  * model call. Every field comes from the saved athlete-facing text, so a missing
@@ -788,14 +883,9 @@ export function buildStructuredPlanFromText(
   fightDate?: string | null,
 ): StructuredPlan {
   const groups = parsePlanText(rawText);
-  const notes = groups
+  const noteGroups = groups
     .filter((group): group is PlanTextNotes => group.kind === "notes")
-    .filter((group) => group.lines.length > 0)
-    .map((group) => ({
-      category: noteCategory(group.title),
-      label: group.title,
-      text: group.lines.join(" "),
-    }));
+    .filter((group) => group.lines.length > 0);
   const explicitWeeks = groups.filter(
     (group): group is PlanTextWeek => group.kind === "week",
   );
@@ -804,6 +894,22 @@ export function buildStructuredPlanFromText(
   );
   const openSessions = !fightDate ? renewableOpenSessions(looseSessions) : [];
   const isOpenTextPlan = openSessions.length > 0;
+  // In an open plan the schedule spine and week goals already carry the
+  // athlete-facing content; the remaining prose sections are system mechanics.
+  // Route safety triggers to red_flag_rules and progression rules to
+  // progression_notes, and keep the system/loose prose out of plan_notes so
+  // Active Notes and the Red Flags fallback never dump the whole plan text.
+  const redFlagRules = isOpenTextPlan ? extractOpenPlanRedFlags(noteGroups) : [];
+  const progressionSection = isOpenTextPlan
+    ? noteGroups.find((group) => /^progression rules$/i.test(group.title))
+    : undefined;
+  const notes = noteGroups
+    .filter((group) => !isOpenTextPlan || !OPEN_PLAN_SYSTEM_NOTE_RE.test(group.title))
+    .map((group) => ({
+      category: noteCategory(group.title),
+      label: group.title,
+      text: group.lines.join(" "),
+    }));
   const openWeekMap = new Map<number, PlanTextWeek>();
   if (openSessions.length > 0) {
     const explicitWeekMap = new Map<number, PlanTextWeek>();
@@ -851,8 +957,10 @@ export function buildStructuredPlanFromText(
       status: "ready",
     },
     event_context: fightDate ? { fight_date: fightDate } : null,
+    red_flag_rules: redFlagRules.length > 0 ? redFlagRules : null,
     plan_notes: notes,
     weeks: weekGroups.map((week, index) => toStructuredWeek(week, index, fightDate)),
+    progression_notes: progressionSection ? progressionSection.lines.join(" ") : null,
     raw_markdown_fallback: rawText,
   };
 }
