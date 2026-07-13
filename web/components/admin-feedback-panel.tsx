@@ -117,11 +117,7 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
           <button
             type="button"
             className="ghost-button"
-            onClick={() => {
-              setLoading(true);
-              setError(null);
-              setRetryKey((value) => value + 1);
-            }}
+            onClick={() => setRetryKey((value) => value + 1)}
           >
             Retry feedback
           </button>
