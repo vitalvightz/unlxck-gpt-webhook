@@ -821,7 +821,7 @@ const RED_FLAG_TRIGGER_LABEL_RE = /red-?flags? triggers?\s*(?:\([^)]*\))?\s*:?\s
 // Where the red-flag sentence ends inside run-on legacy prose: the next system
 // section (or rendering meta) that follows it on the same line.
 const RED_FLAG_CUT_RE =
-  /\s+(?:No rehab headings\b|\d+-Week Reassessment Gate\b|Priority Hierarchy\b|Adjustment Rules\b|Progression Rules\b|Current Training Rules\b|End notes\b)/i;
+  /\s+(?:No rehab headings\b|(?:\d+-Week Reassessment Gate|Priority Hierarchy|Adjustment Rules|Progression Rules|Current Training Rules|End notes)\b(?=\s+[A-Z]))/i;
 
 function cleanRedFlagText(value: string): string {
   let text = value.trim();
