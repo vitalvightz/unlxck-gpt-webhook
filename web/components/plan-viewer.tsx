@@ -45,7 +45,16 @@ import {
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
-import { formatPlanStatus, isOpenOngoingPlan } from "@/lib/plan-format";
+import {
+  formatAthletePlanStatus,
+  formatPlanFightDate,
+  formatPlanStatus,
+  formatPlanTimestamp,
+  getPlanDisplayName,
+  isOpenOngoingPlan,
+  resolveFiniteWeekNumber,
+} from "@/lib/plan-format";
+import { formatAppDate } from "@/lib/date-format";
 import {
   buildBlockedInjuryContextSummary,
   buildBlockedWhy,
@@ -62,6 +71,7 @@ import type {
   StructuredPlan,
   StructuredSession,
   StructuredWeek,
+  TodaySession,
   UserRole,
 } from "@/lib/types";
 import {
@@ -1265,6 +1275,29 @@ function AdminArtifactSection({
   );
 }
 
+export function resolvePlanActiveState(params: {
+  todayResolved: boolean;
+  todayActivePlanId?: string | null;
+  activeEndpointResolved: boolean;
+  activeEndpointPlanId?: string | null;
+}): string | null | undefined {
+  if (params.activeEndpointResolved) {
+    return params.activeEndpointPlanId ?? null;
+  }
+  if (params.todayResolved) {
+    return params.todayActivePlanId ?? null;
+  }
+  return undefined;
+}
+
+type PlanOperationalState = {
+  planId: string;
+  activePlanId: string | null | undefined;
+  nextSessionFocusDate?: Date;
+  nextSessionAction: TodaySession | null;
+  planCompletions: PlanCompletionsResponse | null;
+};
+
 export function PlanViewer({
   plan,
   accessToken,
@@ -1318,8 +1351,8 @@ export function PlanViewer({
   const useSavedStructuredPlan =
     hasStructuredAthletePlan &&
     !(openOngoing && plan.schedule_context?.projection_status === "unavailable");
-  const planDetailTitle = plan.plan_name?.trim() || (openOngoing ? "Open training plan" : "Fight camp");
-  const fightDateLabel = plan.fight_date ? `Fight date ${plan.fight_date}` : null;
+  const planDetailTitle = getPlanDisplayName(plan);
+  const fightDateLabel = plan.fight_date ? `Fight date ${formatPlanFightDate(plan.fight_date)}` : null;
 
   const blockedTitle =
     injuryTriage?.mode === "medical_hold"
@@ -1330,7 +1363,9 @@ export function PlanViewer({
 
   const statusLabel = isTriageBlocked
     ? blockedTitle
-    : formatPlanStatus(plan.status || "generated");
+    : viewerRole === "athlete"
+      ? formatAthletePlanStatus(plan.status || "generated")
+      : formatPlanStatus(plan.status || "generated");
 
   const stage2Status = isTriageBlocked
     ? "Stage 2 skipped intentionally"
@@ -1341,7 +1376,9 @@ export function PlanViewer({
       ? "The planner intentionally blocked this intake before finalization because it contains urgent or medically disqualifying signals."
       : "The planner intentionally paused normal release because this intake contains structural injury signals that require clearance."
     : hasPublishedPlan
-      ? "This is the validated athlete-facing plan now stored in the app."
+      ? openOngoing
+        ? "Your rolling four-week performance block, ready for the next prescribed dose."
+        : "Your validated camp plan, ready for the next training decision."
       : "This plan is held back from the athlete view until Stage 2 clears review.";
 
   const handoffText = plan.admin_outputs?.stage2_handoff_text || "";
@@ -1446,13 +1483,15 @@ export function PlanViewer({
   const [archivePending, setArchivePending] = useState(false);
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
-  const [activePlanId, setActivePlanId] = useState<string | null>(null);
-  // When THIS plan is the athlete's active plan and today's session is already
-  // logged, the command view advances `next_session` to the next scheduled day.
-  // We mirror that here so the camp map highlights the next session instead of
-  // keeping the finished day under the "Today" badge (matching Overview/Today).
-  const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
-  const [planCompletions, setPlanCompletions] = useState<PlanCompletionsResponse | null>(null);
+  const [planOperationalState, setPlanOperationalState] = useState<PlanOperationalState | null>(null);
+  const currentOperationalState =
+    planOperationalState?.planId === plan.plan_id ? planOperationalState : null;
+  // `undefined` means the active-plan sources are still resolving. Keeping that
+  // distinct from `null` prevents a false "Set active" state during hydration.
+  const activePlanId = currentOperationalState?.activePlanId;
+  const nextSessionFocusDate = currentOperationalState?.nextSessionFocusDate;
+  const nextSessionAction = currentOperationalState?.nextSessionAction ?? null;
+  const planCompletions = currentOperationalState?.planCompletions ?? null;
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [showActiveConflict, setShowActiveConflict] = useState(false);
@@ -1534,34 +1573,11 @@ export function PlanViewer({
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
   }, [plan.plan_id, plan.admin_outputs?.final_plan_text]);
 
-  // Resolve which plan is the athlete's active one so this page can show the
-  // ACTIVE badge / Set active control without duplicating Today's job. A missing
-  // active plan is a normal state (no plan set yet), so failures stay silent.
-  useEffect(() => {
-    if (!accessToken || !canManagePlan) {
-      return;
-    }
-    let cancelled = false;
-    getActivePlan(accessToken)
-      .then((active) => {
-        if (!cancelled) {
-          setActivePlanId(active?.plan_id ?? null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setActivePlanId(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, canManagePlan, plan.plan_id]);
-
-  // Resolve the next-session focus for the camp map. The command view is the
-  // viewer's own (server-scoped to their athlete id), so we only apply it when it
-  // is reporting on THIS plan as the active one — admins viewing another athlete's
-  // plan get no override and the calendar "Today" highlight as before.
+  // Resolve active state, Today and completion rows in parallel. Today is the
+  // server-authoritative operating view, so it can confirm the active plan when
+  // the dedicated endpoint is transiently unavailable. We only apply the daily
+  // focus when the command view reports that THIS plan is active; admins viewing
+  // another athlete's plan get no override.
   useEffect(() => {
     if (!accessToken || !canManagePlan) {
       return;
@@ -1569,17 +1585,24 @@ export function PlanViewer({
     let cancelled = false;
     const canLoadAthleteCompletions =
       viewerRole === "athlete" && viewerProfileId === plan.athlete_id;
-    const todayRequest = getToday(accessToken).catch(() => null);
     const completionsRequest = canLoadAthleteCompletions
-      ? getPlanCompletions(accessToken, plan.plan_id).catch(() => null)
+      ? getPlanCompletions(accessToken, plan.plan_id)
       : Promise.resolve(null);
 
-    Promise.all([todayRequest, completionsRequest])
-      .then(([state, completions]) => {
+    Promise.allSettled([
+      getActivePlan(accessToken),
+      getToday(accessToken),
+      completionsRequest,
+    ]).then(([activeResult, todayResult, completionsResult]) => {
         if (cancelled) {
           return;
         }
-        setPlanCompletions(completions);
+
+        const activeFromToday =
+          todayResult.status === "fulfilled" ? todayResult.value.active_plan?.id || null : null;
+        const activeFromEndpoint =
+          activeResult.status === "fulfilled" ? activeResult.value?.plan_id || null : null;
+        const state = todayResult.status === "fulfilled" ? todayResult.value : null;
         const next = state?.today?.next_session;
         const isThisActivePlan = state?.active_plan?.id === plan.plan_id;
         const iso =
@@ -1589,13 +1612,20 @@ export function PlanViewer({
         // Parse at local noon to dodge any timezone date-shift; an unusable date
         // (undated plans) leaves the calendar "Today" highlight untouched.
         const parsed = iso ? new Date(`${iso}T12:00:00`) : null;
-        setNextSessionFocusDate(parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setNextSessionFocusDate(undefined);
-          setPlanCompletions(null);
-        }
+        setPlanOperationalState({
+          planId: plan.plan_id,
+          activePlanId: resolvePlanActiveState({
+            todayResolved: todayResult.status === "fulfilled",
+            todayActivePlanId: activeFromToday,
+            activeEndpointResolved: activeResult.status === "fulfilled",
+            activeEndpointPlanId: activeFromEndpoint,
+          }),
+          nextSessionAction: isThisActivePlan && next ? next : null,
+          nextSessionFocusDate:
+            parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined,
+          planCompletions:
+            completionsResult.status === "fulfilled" ? completionsResult.value : null,
+        });
       });
     return () => {
       cancelled = true;
@@ -1916,7 +1946,14 @@ export function PlanViewer({
     setSetActiveError(null);
     try {
       const active = await setActivePlan(accessToken, plan.plan_id, { overlapAction });
-      setActivePlanId(active.plan_id);
+      setPlanOperationalState((current) => ({
+        planId: plan.plan_id,
+        activePlanId: active.plan_id,
+        nextSessionAction: current?.planId === plan.plan_id ? current.nextSessionAction : null,
+        nextSessionFocusDate:
+          current?.planId === plan.plan_id ? current.nextSessionFocusDate : undefined,
+        planCompletions: current?.planId === plan.plan_id ? current.planCompletions : null,
+      }));
       setShowActiveConflict(false);
     } catch (error) {
       if (!overlapAction && isActivePlanOverlapError(error)) {
@@ -2104,6 +2141,19 @@ export function PlanViewer({
     }
   }
 
+  const activePlanStateResolved = activePlanId !== undefined;
+  const isCurrentActivePlan = activePlanId === plan.plan_id;
+  const nextSessionTitle = nextSessionAction?.title?.trim() || nextSessionAction?.label?.trim() || "Open the next session";
+  const nextSessionDate = nextSessionAction?.calendar_date
+    ? formatAppDate(nextSessionAction.calendar_date)
+    : null;
+  const nextSessionRelation = nextSessionAction?.session_relation === "next" ? "Next session" : "Today";
+  const openSessionLabel = nextSessionAction?.session_relation === "next" ? "Open next session" : "Open Today";
+  const openWeekNumber = resolveFiniteWeekNumber(plan.schedule_context?.current_week_number);
+  const openBlockLabel = openOngoing
+    ? `Block ${plan.schedule_context?.block_number ?? 1} · Week ${openWeekNumber} of 4`
+    : null;
+
   const adminSections = [
     {
       artifactKey: "draft",
@@ -2177,20 +2227,24 @@ export function PlanViewer({
             <p className="kicker">Plan Detail</p>
             <h1>{planDetailTitle}</h1>
             <p className="muted">{heroSummary}</p>
-            {fightDateLabel ? <p className="plan-detail-meta">{fightDateLabel}</p> : null}
+            {fightDateLabel || openBlockLabel ? (
+              <p className="plan-detail-meta">{fightDateLabel || openBlockLabel}</p>
+            ) : null}
           </div>
           <div className="status-card">
             <p className="status-label">Status</p>
             <h2 className="plan-summary-title">
               {statusLabel}
-              {activePlanId === plan.plan_id ? (
+              {isCurrentActivePlan ? (
                 <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
+              ) : canManagePlan && !activePlanStateResolved ? (
+                <span className="badge status-badge-neutral cm-active-badge">SYNCING</span>
               ) : null}
             </h2>
             <p className="muted">
               {isTriageBlocked
                 ? "Stage 2 was skipped intentionally."
-                : `Created ${new Date(plan.created_at).toLocaleString()}`}
+                : `Created ${formatPlanTimestamp(plan.created_at)}`}
             </p>
           </div>
         </div>
@@ -2211,16 +2265,31 @@ export function PlanViewer({
           </div>
         ) : null}
 
-        <div className="plan-summary-actions">
-          <Link href="/plans" className="ghost-button">
-            Back to plans
-          </Link>
-          {canManagePlan && activePlanId === plan.plan_id ? (
+        {isCurrentActivePlan && nextSessionAction ? (
+          <div className="plan-next-session" role="region" aria-label={nextSessionRelation}>
+            <div className="plan-next-session-copy">
+              <p className="label">{nextSessionRelation}</p>
+              <h2>{nextSessionTitle}</h2>
+              {nextSessionDate ? <p className="muted">{nextSessionDate}</p> : null}
+            </div>
+            <Link href="/today" className="cta plan-next-session-cta">
+              {openSessionLabel}
+            </Link>
+          </div>
+        ) : null}
+
+        <div className="plan-summary-actions plan-detail-actions">
+          {canManagePlan && !activePlanStateResolved ? (
+            <button type="button" className="cta" disabled>
+              Checking plan state…
+            </button>
+          ) : null}
+          {canManagePlan && isCurrentActivePlan && !nextSessionAction ? (
             <Link href="/today" className="cta">
               Open Today
             </Link>
           ) : null}
-          {canManagePlan && activePlanId !== plan.plan_id && canSetActivePlan(plan.status) ? (
+          {canManagePlan && activePlanStateResolved && !isCurrentActivePlan && canSetActivePlan(plan.status) ? (
             <button
               type="button"
               className="cta"
@@ -2230,47 +2299,60 @@ export function PlanViewer({
               {setActivePending ? "Setting active..." : "Set active"}
             </button>
           ) : null}
+          <Link href="/plans" className="ghost-button">
+            All plans
+          </Link>
           {archivedPreview && viewerRole === "athlete" ? (
             <Link href="/onboarding" className="ghost-button">
               Create New Plan
             </Link>
           ) : null}
-          {canManagePlan && !archivedPreview ? (
-            <>
-              <button
-                type="button"
-                className="ghost-button"
-                onClick={handleRenamePlan}
-                disabled={planActionPending !== null}
-              >
-                {planActionPending === "rename" ? "Renaming..." : "Rename"}
-              </button>
-              <button
-                type="button"
-                className="ghost-button"
-                onClick={handleArchiveOwnPlan}
-                disabled={planActionPending !== null}
-              >
-                {planActionPending === "archive" ? "Archiving..." : "Archive"}
-              </button>
-            </>
+
+          {canManagePlan || isViewerAdmin || hasPublishedPlan ? (
+            <details className="plan-action-menu">
+              <summary className="ghost-button">Manage</summary>
+              <div className="plan-action-menu-popover">
+                {canManagePlan && !archivedPreview ? (
+                  <>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={handleRenamePlan}
+                      disabled={planActionPending !== null}
+                    >
+                      {planActionPending === "rename" ? "Renaming..." : "Rename"}
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button danger-button"
+                      onClick={handleArchiveOwnPlan}
+                      disabled={planActionPending !== null}
+                    >
+                      {planActionPending === "archive" ? "Archiving..." : "Archive"}
+                    </button>
+                  </>
+                ) : null}
+                {hasPublishedPlan ? (
+                  <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+                ) : null}
+                {isViewerAdmin ? (
+                  <button
+                    type="button"
+                    className="ghost-button danger-button"
+                    onClick={handlePermanentDelete}
+                    disabled={planActionPending !== null}
+                  >
+                    {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
+                  </button>
+                ) : null}
+                {isViewerAdmin && plan.athlete_id ? (
+                  <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
+                    View athlete profile
+                  </Link>
+                ) : null}
+              </div>
+            </details>
           ) : null}
-          {isViewerAdmin ? (
-            <button
-              type="button"
-              className="ghost-button danger-button"
-              onClick={handlePermanentDelete}
-              disabled={planActionPending !== null}
-            >
-              {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
-            </button>
-          ) : null}
-          {isViewerAdmin && plan.athlete_id ? (
-            <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
-              View athlete profile
-            </Link>
-          ) : null}
-          {hasPublishedPlan ? <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" /> : null}
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}

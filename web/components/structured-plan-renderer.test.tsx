@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
 import { openBlockWeekIntent } from "@/lib/open-block";
-import type { StructuredPlan, StructuredSession } from "@/lib/types";
+import type { PlanScheduleContext, StructuredPlan, StructuredSession } from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
   return text.split(needle).length - 1;
@@ -111,7 +111,40 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
   assert.equal(html.includes("General prep"), false);
   assert.equal(html.includes(">Taper<"), false);
   assert.equal(html.includes(">Load</span>"), false);
+  assert.equal(html.includes("Block 1 · Week 1 of 4"), true);
   assert.equal(countOccurrences(html, "Current block"), 6);
+});
+
+test("open ongoing renderer falls back when schedule and week numbers are non-finite", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-bad",
+        week_index: Number.NaN,
+        phase_label: "SPP",
+        week_goal: "Baseline",
+        days: [],
+      },
+    ],
+  } as unknown as StructuredPlan;
+  const scheduleContext: PlanScheduleContext = {
+    schedule_mode: "open_recurring",
+    projection_status: "projected",
+    current_week_number: Number.NaN,
+  };
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      openOngoing
+      scheduleContext={scheduleContext}
+    />,
+  );
+
+  assert.equal(html.includes("Week 1 of 4"), true);
+  assert.equal(html.includes("NaN"), false);
 });
 
 // Builds a day whose day-card mindset and per-session mindsets can be varied
@@ -788,6 +821,10 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
   const count = (needle: string) => html.split(needle).length - 1;
+
+  // Constraints and stop actions must be seen before the training prescription.
+  assert.ok(html.indexOf("Active notes") < html.indexOf(">Lower<"));
+  assert.ok(html.indexOf("Red flags - stop") < html.indexOf(">Lower<"));
 
   // The medical disclaimer is folded into the Red Flags card — exactly one
   // safety-note block, no standalone banner duplicate.

@@ -60,6 +60,7 @@ import {
 } from "@/lib/open-block";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { formatAppDate } from "@/lib/date-format";
+import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
@@ -359,7 +360,7 @@ export function SessionCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          <h4 className="sp-session-title">{title}</h4>
+          <h3 className="sp-session-title">{title}</h3>
           {objective ? <p className="sp-session-objective">{objective}</p> : null}
         </div>
         <div className="sp-session-meta">
@@ -496,7 +497,7 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          <h4 className="sp-session-title">{title}</h4>
+          <h3 className="sp-session-title">{title}</h3>
         </div>
         <div className="sp-session-meta">
           {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
@@ -1265,7 +1266,11 @@ function WeekOverview({
   const startDate = cleanText(week.start_date);
   const endDate = cleanText(week.end_date);
   const dateRange =
-    startDate && endDate ? `${startDate} → ${endDate}` : startDate || endDate;
+    startDate && endDate
+      ? `${formatAppDate(startDate)} → ${formatAppDate(endDate)}`
+      : startDate || endDate
+        ? formatAppDate(startDate || endDate)
+        : null;
 
   const rows = [
     { label: "Countdown", value: countdownRange },
@@ -1288,16 +1293,25 @@ function WeekOverview({
       value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
     },
   ].filter((row): row is { label: string; value: string } => Boolean(row.value));
-  const heading = openOngoing && scheduleContext?.block_number
-    ? `Block ${scheduleContext.block_number} \u00b7 ${weekLabel(week)}`
-    : weekLabel(week);
+  const baseHeading = weekLabel(week);
+  const openWeekNumber = resolveFiniteWeekNumber(
+    scheduleContext?.current_week_number,
+    week.week_index,
+  );
+  const openWeekHeading = baseHeading.replace(
+    /^Week(?:\s+\d+)?/i,
+    `Week ${openWeekNumber} of 4`,
+  );
+  const heading = openOngoing
+    ? `Block ${scheduleContext?.block_number ?? 1} \u00b7 ${openWeekHeading}`
+    : baseHeading;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
 
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
         <p className="sp-eyebrow">Week overview</p>
-        <h4 className="sp-redflags-title">{heading}</h4>
+        <h2 className="sp-redflags-title">{heading}</h2>
       </div>
 
       {weekIntent ? (
@@ -1475,6 +1489,11 @@ export function StructuredPlanRenderer({
             />
           ) : null}
 
+          <div className="cm-guardrails">
+            <ActiveNotesCard plan={plan} />
+            <RedFlagsCard plan={plan} />
+          </div>
+
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
               dayList.map((day, index) => {
@@ -1546,9 +1565,6 @@ export function StructuredPlanRenderer({
           />
         </CollapsibleSection>
       ) : null}
-
-      <ActiveNotesCard plan={plan} />
-      <RedFlagsCard plan={plan} />
 
       {rawFallback ? (
         <details className="sp-collapse cm-raw-fallback">

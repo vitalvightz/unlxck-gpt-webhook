@@ -32,7 +32,17 @@ export function isOpenOngoingPlan(fightDate?: string | null): boolean {
   return !fightDate?.trim();
 }
 
-export function getPlanDisplayName(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): string {
+export function resolveFiniteWeekNumber(
+  ...candidates: Array<number | null | undefined>
+): number {
+  return candidates.find(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  ) ?? 1;
+}
+
+export function getPlanDisplayName(
+  plan: Pick<PlanDisplayFields, "fight_date" | "plan_name" | "technical_style">,
+): string {
   const customName = getCustomPlanName(plan);
   if (customName) {
     return customName;
@@ -42,7 +52,11 @@ export function getPlanDisplayName(plan: Pick<PlanDisplayFields, "fight_date" | 
     return formatPlanFightDate(plan.fight_date);
   }
 
-  return "Open saved plan";
+  const primaryStyle = getOptionLabels(
+    TECHNICAL_STYLE_OPTIONS,
+    plan.technical_style ?? [],
+  )[0];
+  return primaryStyle ? `${primaryStyle} performance block` : "Ongoing performance block";
 }
 
 export function getFeaturedPlanTitle(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): string {
@@ -65,4 +79,13 @@ export function formatPlanStatus(value?: string | null): string {
   }
 
   return formatPlanLabel(normalized);
+}
+
+/** Athlete-facing status copy keeps workflow vocabulary out of the training UI. */
+export function formatAthletePlanStatus(value?: string | null): string {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "ready" || normalized === "publishable_with_flags") {
+    return "Ready to train";
+  }
+  return formatPlanStatus(value);
 }
