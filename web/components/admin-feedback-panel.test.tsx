@@ -135,7 +135,7 @@ test("admin feedback panel groups athlete responses and keeps raw technical cont
     assert.doesNotMatch(container.textContent ?? "", /Desktop Windows full raw browser string/);
     assert.match(container.textContent ?? "", /Athlete permits follow-up/);
     assert.match(container.textContent ?? "", /View screenshot/);
-    assert.match(container.textContent ?? "", /Open check-in/);
+    assert.match(container.textContent ?? "", /View check-in/);
     assert.match(container.textContent ?? "", /Open plan/);
     assert.match(container.textContent ?? "", /Open athlete/);
     assert.ok(Array.from(container.querySelectorAll("details")).every((details) => !details.open));
