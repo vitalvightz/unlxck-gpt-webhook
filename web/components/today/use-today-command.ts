@@ -5,7 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import { getPlan, getToday } from "@/lib/api";
 import { buildStructuredPlanFromText } from "@/lib/plan-text-adapter";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
-import type { PlanDetail, StructuredPlan, TodayCommandView } from "@/lib/types";
+import type {
+  PlanDetail,
+  PlanScheduleContext,
+  StructuredPlan,
+  TodayCommandView,
+} from "@/lib/types";
 
 /**
  * The plan Today renders blocks from: the saved server card when present,
@@ -27,13 +32,24 @@ export function resolveTodayStructuredPlan(detail: PlanDetail): StructuredPlan |
   return buildStructuredPlanFromText(planText, detail?.fight_date);
 }
 
+/** Plan-level timing metadata Today needs beyond the structured weeks: the
+ * server schedule projection and the plan creation date. Together they anchor
+ * "which week of the renewable block is it" for open (weekday-only) plans. */
+export type TodayPlanSchedule = {
+  scheduleContext: PlanScheduleContext | null;
+  createdAt: string | null;
+};
+
 export type TodayCommand = {
   state: TodayCommandView | null;
   structuredPlan: StructuredPlan | null;
+  planSchedule: TodayPlanSchedule;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 };
+
+const EMPTY_PLAN_SCHEDULE: TodayPlanSchedule = { scheduleContext: null, createdAt: null };
 
 /**
  * Loads the backend Today command view and keeps it refreshable after every
@@ -46,6 +62,7 @@ export type TodayCommand = {
 export function useTodayCommand(token: string | null): TodayCommand {
   const [state, setState] = useState<TodayCommandView | null>(null);
   const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
+  const [planSchedule, setPlanSchedule] = useState<TodayPlanSchedule>(EMPTY_PLAN_SCHEDULE);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +89,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
   useEffect(() => {
     if (!token || !activePlanId) {
       setStructuredPlan(null);
+      setPlanSchedule(EMPTY_PLAN_SCHEDULE);
       return;
     }
     let cancelled = false;
@@ -79,11 +97,16 @@ export function useTodayCommand(token: string | null): TodayCommand {
       .then((detail) => {
         if (!cancelled) {
           setStructuredPlan(resolveTodayStructuredPlan(detail));
+          setPlanSchedule({
+            scheduleContext: detail?.schedule_context ?? null,
+            createdAt: detail?.created_at ?? null,
+          });
         }
       })
       .catch(() => {
         if (!cancelled) {
           setStructuredPlan(null);
+          setPlanSchedule(EMPTY_PLAN_SCHEDULE);
         }
       });
     return () => {
@@ -91,5 +114,5 @@ export function useTodayCommand(token: string | null): TodayCommand {
     };
   }, [token, activePlanId]);
 
-  return { state, structuredPlan, isLoading, error, refresh };
+  return { state, structuredPlan, planSchedule, isLoading, error, refresh };
 }

@@ -341,12 +341,14 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
 function TextStructuredPlanRenderer({
   text,
   fightDate,
+  createdAt,
   focusDay,
   currentDayLabel,
   scheduleContext,
 }: {
   text: string;
   fightDate?: string | null;
+  createdAt?: string | null;
   focusDay?: Date;
   currentDayLabel: string;
   scheduleContext?: PlanDetail["schedule_context"];
@@ -366,6 +368,7 @@ function TextStructuredPlanRenderer({
     <StructuredPlanRenderer
       plan={adaptedPlan}
       openOngoing={isOpenOngoingPlan(fightDate)}
+      createdAt={createdAt}
       focusDay={focusDay}
       currentDayLabel={currentDayLabel}
       scheduleContext={rendererScheduleContext}
@@ -2531,6 +2534,7 @@ export function PlanViewer({
                   <TextStructuredPlanRenderer
                     text={athletePlanText}
                     fightDate={plan.fight_date}
+                    createdAt={plan.created_at}
                     focusDay={nextSessionFocusDate}
                     currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
                     scheduleContext={plan.schedule_context}
