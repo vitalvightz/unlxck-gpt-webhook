@@ -457,7 +457,7 @@ function PlanCard({
             ) : null}
             {!archived && !active && eligibleForActive ? (
               <button type="button" className="secondary-button" onClick={() => void onSetActive(plan)} disabled={isActionPending || isRenaming}>
-                {isSettingActive ? "Setting..." : "Set active"}
+                {isSettingActive ? "Setting..." : "Activate"}
               </button>
             ) : null}
             {!archived ? (
@@ -567,13 +567,15 @@ function DashboardSummary({
   title,
   lines,
   emptyLabel,
+  compact = false,
 }: {
   title: string;
   lines: SummaryLine[];
   emptyLabel: string;
+  compact?: boolean;
 }) {
   return (
-    <div className="plans-dashboard-summary">
+    <div className={`plans-dashboard-summary${compact ? " plans-dashboard-summary-compact" : ""}`}>
       <p className="label">{title}</p>
       {lines.length ? (
         <div className="plans-dashboard-summary-grid">
@@ -851,6 +853,7 @@ function LatestPlanCard({
           title="Current snapshot"
           lines={latestPlanLines}
           emptyLabel="No active plan metadata yet."
+          compact
         />
 
         {inlineRenameForm}
@@ -870,8 +873,19 @@ function LatestPlanCard({
                   }
                 }}
               >
-                Generate new version
+                New version
               </Link>
+              <details className="plan-action-menu plans-dashboard-management-actions">
+                <summary className="ghost-button">Manage</summary>
+                <div className="plan-action-menu-popover">
+                  <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
+                    {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+                  </button>
+                  <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+                    {pendingAction === "delete" ? "Archiving..." : "Archive"}
+                  </button>
+                </div>
+              </details>
             </>
           ) : (
             <Link href={hasSavedIntake ? "/onboarding" : "/quick-build"} className="cta">
@@ -879,20 +893,6 @@ function LatestPlanCard({
             </Link>
           )}
         </div>
-
-        {plan ? (
-          <details className="plan-action-menu plans-dashboard-management-actions">
-            <summary className="ghost-button">Manage plan</summary>
-            <div className="plan-action-menu-popover">
-              <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-                {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
-              </button>
-              <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-                {pendingAction === "delete" ? "Archiving..." : "Archive"}
-              </button>
-            </div>
-          </details>
-        ) : null}
 
         {error && !isDeleteConfirmOpen ? <div className="error-banner">{error}</div> : null}
       </article>
