@@ -166,7 +166,7 @@ export function resolveOpenPlanWeekNumber(
   }
 
   const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12).getTime();
-  const elapsedDays = Math.floor((todayMs - anchorMs) / 86_400_000);
+  const elapsedDays = Math.round((todayMs - anchorMs) / 86_400_000);
   if (elapsedDays < 0) {
     return 1;
   }
