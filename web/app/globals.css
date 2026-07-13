@@ -6077,6 +6077,24 @@ button.mobile-step-rail-item {
   gap: 10px;
 }
 
+.plans-dashboard-primary-card .plans-dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 156px));
+  align-items: stretch;
+}
+
+.plans-dashboard-primary-card .plans-dashboard-actions > .cta,
+.plans-dashboard-primary-card .plans-dashboard-actions > .ghost-button,
+.plans-dashboard-primary-card .plans-dashboard-actions > .plan-action-menu,
+.plans-dashboard-primary-card .plans-dashboard-actions > .plan-action-menu > summary {
+  width: 100%;
+  min-width: 0;
+}
+
+.plans-dashboard-primary-card .plans-dashboard-actions > .plan-action-menu > summary {
+  min-height: 44px;
+}
+
 .plans-dashboard-actions .cta,
 .plans-dashboard-actions .ghost-button {
   min-width: 156px;
