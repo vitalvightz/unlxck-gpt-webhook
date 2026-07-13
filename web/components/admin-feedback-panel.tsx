@@ -115,7 +115,7 @@ function getReadinessChips(item: AdminFeedbackRecord): string[] {
   if (pain) chips.push(pain === "none" ? "No pain" : `${readable(pain)} pain`);
   if (activeInjury) {
     chips.push(activeInjury === "none" ? "No active injury" : `${readable(activeInjury)} injury`);
-  } else if (Array.isArray(item.injury_snapshot.open_flags)) {
+  } else if (Array.isArray(item.injury_snapshot["open_flags"])) {
     const injuryCount = getOpenInjuryFlags(item).length;
     chips.push(injuryCount ? `${injuryCount} active ${injuryCount === 1 ? "injury" : "injuries"}` : "No active injury");
   }
