@@ -20,7 +20,7 @@ async function settle() {
   });
 }
 
-test("admin feedback panel renders operator context without duplicating submitter email", async () => {
+test("admin feedback panel groups athlete responses and keeps raw technical context out of the review card", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify([
     {
@@ -38,16 +38,74 @@ test("admin feedback panel renders operator context without duplicating submitte
       plan_id: null,
       today_checkin_id: null,
       camp_phase: "TAPER",
+      readiness_snapshot: {
+        sleep: "good",
+        body: "normal",
+        pain: "none",
+        active_injury: "none",
+        recommendation_state: "train_as_planned",
+      },
+      injury_snapshot: { open_flags: [] },
+      technical_context: {
+        referer_path: "/today",
+        device_platform: '"Windows"',
+        browser_brands: '"Not:A-Brand";v="8", "Chromium";v="150"',
+        user_agent: "Desktop Windows full raw browser string",
+        language: "en-GB,en;q=0.9",
+      },
       app_version: "test-sha",
-      page_path: "/settings",
-      device_context: "Desktop · Windows · Test Browser",
-      language: "en-GB",
-      readiness_context: [],
-      injury_context: [],
       has_screenshot: true,
       screenshot_expires_at: "2026-10-10T00:00:00Z",
       created_at: "2026-07-12T20:00:00Z",
       updated_at: "2026-07-12T20:00:00Z",
+    },
+    {
+      id: "feedback-2",
+      submitted_by_profile_id: "profile-1",
+      submitter_email: "athlete@example.com",
+      submitter_name: "",
+      surface: "daily_recommendation",
+      category: "recommendation_fit",
+      response: "yes",
+      reason: null,
+      comment: "",
+      contact_allowed: false,
+      priority: "normal",
+      plan_id: "plan-1",
+      today_checkin_id: "checkin-1",
+      camp_phase: "SPP",
+      readiness_snapshot: { sleep: "good", body: "normal", pain: "none" },
+      injury_snapshot: { open_flags: [] },
+      technical_context: {},
+      app_version: "local",
+      has_screenshot: false,
+      screenshot_expires_at: null,
+      created_at: "2026-07-12T19:00:00Z",
+      updated_at: "2026-07-12T19:00:00Z",
+    },
+    {
+      id: "feedback-3",
+      submitted_by_profile_id: "profile-1",
+      submitter_email: "athlete@example.com",
+      submitter_name: "",
+      surface: "plan",
+      category: "plan_usefulness",
+      response: "no",
+      reason: "instructions_unclear",
+      comment: "",
+      contact_allowed: false,
+      priority: "normal",
+      plan_id: "plan-1",
+      today_checkin_id: null,
+      camp_phase: "GPP",
+      readiness_snapshot: {},
+      injury_snapshot: { open_flags: [] },
+      technical_context: {},
+      app_version: "local",
+      has_screenshot: false,
+      screenshot_expires_at: null,
+      created_at: "2026-07-12T18:00:00Z",
+      updated_at: "2026-07-12T18:00:00Z",
     },
   ]), { status: 200, headers: { "content-type": "application/json" } });
   const { container, root } = mount();
@@ -58,13 +116,29 @@ test("admin feedback panel renders operator context without duplicating submitte
     });
     await settle();
 
-    assert.match(container.textContent ?? "", /Latest feedback/);
-    assert.match(container.textContent ?? "", /Safety issue/);
+    assert.match(container.textContent ?? "", /Feedback review/);
+    assert.match(container.textContent ?? "", /Safety report/);
     assert.match(container.textContent ?? "", /Authenticated user/);
     assert.equal((container.textContent ?? "").match(/athlete@example\.com/g)?.length, 1);
-    assert.match(container.textContent ?? "", /Contact permitted/);
-    assert.match(container.textContent ?? "", /View private screenshot/);
-    assert.match(container.textContent ?? "", /Email alerts are best-effort/);
+    assert.match(container.textContent ?? "", /3 recent responses/);
+    assert.match(container.textContent ?? "", /Positive feedback/);
+    assert.match(container.textContent ?? "", /Negative feedback/);
+    assert.match(container.textContent ?? "", /Instructions unclear/);
+    assert.deepEqual(
+      Array.from(container.querySelectorAll(".admin-feedback-response"), (element) => element.textContent),
+      ["REPORT", "POSITIVE", "NEGATIVE"],
+    );
+    assert.match(container.textContent ?? "", /Good sleep/);
+    assert.match(container.textContent ?? "", /Recommendation: Train as planned/);
+    assert.match(container.textContent ?? "", /Windows/);
+    assert.match(container.textContent ?? "", /Chromium/);
+    assert.doesNotMatch(container.textContent ?? "", /Desktop Windows full raw browser string/);
+    assert.match(container.textContent ?? "", /Athlete permits follow-up/);
+    assert.match(container.textContent ?? "", /View screenshot/);
+    assert.match(container.textContent ?? "", /Open check-in/);
+    assert.match(container.textContent ?? "", /Open plan/);
+    assert.match(container.textContent ?? "", /Open athlete/);
+    assert.ok(Array.from(container.querySelectorAll("details")).every((details) => !details.open));
   } finally {
     globalThis.fetch = originalFetch;
     act(() => root.unmount());
@@ -102,12 +176,10 @@ test("admin feedback panel obtains a short-lived screenshot link on demand", asy
       plan_id: null,
       today_checkin_id: null,
       camp_phase: null,
+      readiness_snapshot: {},
+      injury_snapshot: {},
+      technical_context: {},
       app_version: "test",
-      page_path: "/settings",
-      device_context: "Desktop · Windows · Test Browser",
-      language: "en-GB",
-      readiness_context: [],
-      injury_context: [],
       screenshot_expires_at: "2026-10-10T20:00:00Z",
     }]), {
       status: 200,
@@ -125,7 +197,7 @@ test("admin feedback panel obtains a short-lived screenshot link on demand", asy
       await Promise.resolve();
     });
     const button = Array.from(container.querySelectorAll("button")).find((item) =>
-      item.textContent?.includes("View private screenshot"),
+      item.textContent?.includes("View screenshot"),
     );
     assert.ok(button);
     await act(async () => {
@@ -135,13 +207,14 @@ test("admin feedback panel obtains a short-lived screenshot link on demand", asy
     });
     assert.ok(requests.some((url) => url.endsWith("/api/admin/feedback/feedback-attachment/screenshot")));
     const link = container.querySelector<HTMLAnchorElement>('a[href="https://storage.test/signed/feedback.png"]');
-    assert.equal(link?.textContent, "Open private screenshot");
+    assert.equal(link?.textContent, "Open screenshot");
   } finally {
     globalThis.fetch = originalFetch;
     act(() => root.unmount());
     container.remove();
   }
 });
+
 
 test("admin feedback panel clears the previous token's rows while the new token's request is pending", async () => {
   const originalFetch = globalThis.fetch;
@@ -163,15 +236,13 @@ test("admin feedback panel clears the previous token's rows while the new token'
     plan_id: null,
     today_checkin_id: null,
     camp_phase: null,
+    readiness_snapshot: {},
+    injury_snapshot: {},
+    technical_context: {},
     app_version: "test",
-    page_path: "/settings",
-    device_context: "",
-    language: "",
-    readiness_context: [],
-    injury_context: [],
     screenshot_expires_at: null,
   };
-  globalThis.fetch = async (input, init) => {
+  globalThis.fetch = async (_input, init) => {
     const auth = new Headers(init?.headers).get("authorization") ?? "";
     if (auth === "Bearer token-a") {
       return new Response(JSON.stringify([row]), {
@@ -197,57 +268,6 @@ test("admin feedback panel clears the previous token's rows while the new token'
 
     assert.doesNotMatch(container.textContent ?? "", /Visible only for token A/);
     assert.match(container.textContent ?? "", /Loading feedback/);
-  } finally {
-    globalThis.fetch = originalFetch;
-    act(() => root.unmount());
-    container.remove();
-  }
-});
-
-test("admin feedback expands captured context when no comment was provided", async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response(JSON.stringify([{
-    id: "feedback-no-comment",
-    surface: "daily_recommendation",
-    category: "recommendation_fit",
-    response: "yes",
-    reason: null,
-    comment: "",
-    priority: "normal",
-    has_screenshot: false,
-    created_at: "2026-07-12T20:00:00Z",
-    updated_at: "2026-07-12T20:00:00Z",
-    submitted_by_profile_id: "athlete-1",
-    submitter_email: "athlete@example.com",
-    submitter_name: "Athlete One",
-    contact_allowed: false,
-    plan_id: "plan-1",
-    today_checkin_id: "checkin-1",
-    camp_phase: "SPP",
-    app_version: "test",
-    page_path: "/today",
-    device_context: "Mobile · Android · Test Browser",
-    language: "en-GB",
-    readiness_context: ["Pain: none", "Recommendation State: train_as_planned"],
-    injury_context: ["left shoulder · moderate · open"],
-    screenshot_expires_at: null,
-  }]), { status: 200, headers: { "content-type": "application/json" } });
-  const { container, root } = mount();
-
-  try {
-    await act(async () => {
-      root.render(<AdminFeedbackPanel token="admin-token" reloadKey={0} />);
-    });
-    await settle();
-
-    assert.match(container.textContent ?? "", /No written comment\. Showing captured context\./);
-    assert.match(container.textContent ?? "", /Submission context/);
-    assert.match(container.textContent ?? "", /\/today/);
-    assert.match(container.textContent ?? "", /plan-1/);
-    assert.match(container.textContent ?? "", /checkin-1/);
-    assert.match(container.textContent ?? "", /Pain: none/);
-    assert.match(container.textContent ?? "", /left shoulder · moderate · open/);
-    assert.ok(container.querySelector('section[aria-label="Submission context"]'));
   } finally {
     globalThis.fetch = originalFetch;
     act(() => root.unmount());

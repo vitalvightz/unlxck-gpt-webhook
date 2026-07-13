@@ -566,6 +566,9 @@ def test_admin_feedback_feed_summarises_server_context_when_comment_is_empty():
     assert "Pain: none" in row["readiness_context"]
     assert "Recommendation State: train_as_planned" in row["readiness_context"]
     assert row["injury_context"] == ["left shoulder · moderate · open"]
+    assert row["readiness_snapshot"]["pain"] == "none"
+    assert row["injury_snapshot"]["open_flags"][0]["body_area"] == "left shoulder"
+    assert row["technical_context"]["referer_path"] == "/today"
     assert row["plan_id"] == PLAN_ID
     assert row["today_checkin_id"] == "33333333-3333-3333-3333-333333333333"
 

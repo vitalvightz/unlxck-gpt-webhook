@@ -2156,6 +2156,9 @@ class AdminFeedbackRecord(FeedbackRecord):
     language: str = ""
     readiness_context: list[str] = Field(default_factory=list)
     injury_context: list[str] = Field(default_factory=list)
+    readiness_snapshot: dict[str, Any] = Field(default_factory=dict)
+    injury_snapshot: dict[str, Any] = Field(default_factory=dict)
+    technical_context: dict[str, Any] = Field(default_factory=dict)
     screenshot_expires_at: str | None = None
 
 
