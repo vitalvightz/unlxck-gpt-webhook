@@ -142,7 +142,7 @@ function getReadinessRows(item: AdminFeedbackRecord): Array<[string, string]> {
 }
 
 function getIntakeRows(item: AdminFeedbackRecord): Array<[string, string]> {
-  const intake = item.injury_snapshot.intake;
+  const intake = item.injury_snapshot["intake"];
   if (!intake || typeof intake !== "object" || Array.isArray(intake)) return [];
   const record = intake as Record<string, unknown>;
   const rows: Array<[string, string]> = [];
