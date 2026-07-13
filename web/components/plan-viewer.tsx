@@ -2305,7 +2305,7 @@ export function PlanViewer({
 
           {canManagePlan || isViewerAdmin || hasPublishedPlan ? (
             <details className="plan-action-menu">
-              <summary className="ghost-button">Manage plan</summary>
+              <summary className="ghost-button">Manage</summary>
               <div className="plan-action-menu-popover">
                 {canManagePlan && !archivedPreview ? (
                   <>

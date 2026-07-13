@@ -4663,6 +4663,7 @@ button.mobile-step-rail-item {
 .plan-action-menu > summary {
   list-style: none;
   user-select: none;
+  white-space: nowrap;
 }
 
 .plan-action-menu > summary::-webkit-details-marker {
@@ -8516,6 +8517,10 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   .plan-detail-actions > .plan-action-menu,
   .plan-detail-actions > .plan-action-menu > summary {
     width: 100%;
+  }
+
+  .plan-detail-actions > .plan-action-menu > summary {
+    padding-inline: 12px;
   }
 
   .plan-action-menu-popover {
