@@ -854,7 +854,7 @@ function extractOpenPlanRedFlags(noteGroups: PlanTextNotes[]): StructuredRedFlag
   for (const group of noteGroups) {
     if (RED_FLAG_SECTION_TITLE_RE.test(group.title)) {
       for (const line of group.lines) {
-        if (RED_FLAG_LINE_RE.test(line)) {
+        if (!/no rehab headings/i.test(line)) {
           push(line);
         }
       }
