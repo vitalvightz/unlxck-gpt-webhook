@@ -913,6 +913,27 @@ test("open-plan text uses its explicit weekday rhythm instead of an unavailable 
   assert.equal(plan.weeks?.[0]?.days?.[2]?.today_card?.headline, "Coach-led boxing - hard sparring");
 });
 
+test("open-plan weeks are ordered 1..4 even when the development block lists them out of order or skips one", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "Weekly Rhythm",
+      "- Monday - Support Strength (programmed)",
+      "- Saturday - Power & Coordination (programmed)",
+      "",
+      "4-Week Development Block",
+      "Week 3 - Highest controlled week",
+      "Week 1 - Baseline and technical consistency",
+      "Week 4 - Deload and reassess",
+    ].join("\n"),
+  );
+
+  assert.equal(plan.weeks?.length, 4);
+  assert.deepEqual(
+    plan.weeks?.map((week) => week.week_index),
+    [1, 2, 3, 4],
+  );
+});
+
 test("fallback week goals omit duplicated week and countdown metadata", () => {
   const explicit = buildStructuredPlanFromText(
     [

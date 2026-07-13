@@ -806,14 +806,22 @@ export function buildStructuredPlanFromText(
   const isOpenTextPlan = openSessions.length > 0;
   const openWeekMap = new Map<number, PlanTextWeek>();
   if (openSessions.length > 0) {
+    // Collect explicit weeks by their parsed index first, then emit weeks 1..4
+    // in order. Map preserves insertion order, so populating sequentially keeps
+    // weekGroups sorted even when the source lists weeks out of order or skips
+    // one (e.g. Week 3 present but Week 2 missing).
+    const explicitWeekMap = new Map<number, PlanTextWeek>();
     for (const week of explicitWeeks) {
       const index = weekIndex(week.title, 0);
       if (index >= 1 && index <= 4) {
-        openWeekMap.set(index, { ...week, sessions: openSessions });
+        explicitWeekMap.set(index, week);
       }
     }
     for (let index = 1; index <= 4; index += 1) {
-      if (!openWeekMap.has(index)) {
+      const explicitWeek = explicitWeekMap.get(index);
+      if (explicitWeek) {
+        openWeekMap.set(index, { ...explicitWeek, sessions: openSessions });
+      } else {
         openWeekMap.set(index, {
           kind: "week",
           title: `Week ${index}`,
