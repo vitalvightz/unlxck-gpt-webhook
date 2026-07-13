@@ -28,10 +28,10 @@ function AdminFeedbackContext({ item, expanded }: { item: AdminFeedbackRecord; e
       {item.today_checkin_id ? <div><dt>Check-in ID</dt><dd>{item.today_checkin_id}</dd></div> : null}
       {item.device_context ? <div><dt>Device</dt><dd>{item.device_context}</dd></div> : null}
       {item.language ? <div><dt>Language</dt><dd>{item.language}</dd></div> : null}
-      {item.readiness_context.length ? (
+      {item.readiness_context?.length ? (
         <div><dt>Readiness used</dt><dd>{item.readiness_context.join(" · ")}</dd></div>
       ) : null}
-      {item.injury_context.length ? (
+      {item.injury_context?.length ? (
         <div><dt>Open injuries</dt><dd>{item.injury_context.join(" | ")}</dd></div>
       ) : null}
     </dl>
