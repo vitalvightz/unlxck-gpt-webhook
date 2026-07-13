@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
+import { openBlockWeekIntent } from "@/lib/open-block";
 import type { StructuredPlan, StructuredSession } from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
@@ -1112,4 +1113,92 @@ test("renders plan-level active notes as a standalone card", () => {
   // Weight-cut / injury notes get the accent class.
   assert.equal(html.includes("sp-note-weight_cut"), true);
   assert.equal(html.includes("sp-note-injury"), true);
+});
+
+// --- open-plan development-block wave ---------------------------------------
+//
+// An open plan's four weeks share one weekly rhythm, so the block cards carry a
+// week-directed instruction (progress / deload) instead of rendering as four
+// identical clones. Dated camps never receive the intent and stay unchanged.
+
+const waveSession = {
+  session_id: "ses-wave",
+  session_type: "strength_power",
+  title: "Support Strength",
+  blocks: [
+    {
+      block_id: "blk-progress",
+      display_name: "Trap-bar deadlift",
+      progression_rule: "Add 2.5 kg when all sets feel crisp.",
+    },
+    {
+      block_id: "blk-stop",
+      display_name: "Explosive med-ball throw",
+      progression_rule: "Stop when throw speed drops.",
+    },
+  ],
+} satisfies StructuredSession;
+
+test("progression week: block cards surface their own rule once, stop rules stay", () => {
+  const html = renderToStaticMarkup(
+    <SessionCard
+      session={waveSession}
+      defaultOpenBlocks
+      openWeekIntent={openBlockWeekIntent(2)}
+    />,
+  );
+
+  // The rule renders as the week directive, not duplicated in the Progress aside.
+  assert.equal(countOccurrences(html, "This week"), 2);
+  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
+  assert.equal(html.includes(">Progress</span>"), false);
+  // The stop-rule block keeps its safety aside and gets the generic bump.
+  assert.equal(countOccurrences(html, "Stop when throw speed drops."), 1);
+  assert.equal(html.includes(">Stop rule</span>"), true);
+  assert.equal(html.includes("only if last week felt controlled"), true);
+});
+
+test("deload week: block cards read as a volume cut, never a progression", () => {
+  const html = renderToStaticMarkup(
+    <SessionCard
+      session={waveSession}
+      defaultOpenBlocks
+      openWeekIntent={openBlockWeekIntent(4)}
+    />,
+  );
+
+  assert.equal(countOccurrences(html, "cut working sets roughly in half"), 2);
+  assert.equal(html.includes("Add 2.5 kg when all sets feel crisp."), false);
+  assert.equal(html.includes(">Stop rule</span>"), true);
+});
+
+test("without an open week intent the block asides render as before", () => {
+  const html = renderToStaticMarkup(
+    <SessionCard session={waveSession} defaultOpenBlocks />,
+  );
+
+  assert.equal(html.includes("This week"), false);
+  assert.equal(html.includes(">Progress</span>"), true);
+  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
+});
+
+test("open plan week overview headlines the block-week intent", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "open_ongoing_system" },
+    weeks: [
+      { week_id: "wk-1", week_index: 1, days: [{ weekday: "Mon", day_type: "moderate", sessions: [] }] },
+      { week_id: "wk-2", week_index: 2, days: [] },
+      { week_id: "wk-3", week_index: 3, days: [] },
+      { week_id: "wk-4", week_index: 4, days: [] },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing />);
+
+  // Week 1 is selected by default → baseline intent line in the overview.
+  assert.equal(html.includes("Run every dose as written and groove technical consistency."), true);
+
+  const datedHtml = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  assert.equal(datedHtml.includes("Run every dose as written"), false);
 });

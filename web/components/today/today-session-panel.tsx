@@ -23,6 +23,8 @@ import {
   type CurrentDayResolution,
 } from "@/lib/camp-map";
 import type { TodayPlanSchedule } from "@/components/today/use-today-command";
+import { openBlockWeekIntent, type OpenBlockWeekIntent } from "@/lib/open-block";
+import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
@@ -157,22 +159,36 @@ function SafeSessionCard({ view }: { view: SafeSessionView }) {
 function TodaySessionBlocks({
   planId,
   current,
+  openWeekIntent,
 }: {
   planId?: string;
   current: CurrentDayResolution;
+  /** Development-block week intent of an open (renewable) plan: headlines where
+   * today sits in the block and forwards the per-block directive to the cards. */
+  openWeekIntent?: OpenBlockWeekIntent | null;
 }) {
   if (!current.inRange || !current.day) {
     return null;
   }
+  const weekIntentNote = openWeekIntent ? (
+    <p className="today-open-week-note">
+      <span className="sp-tag sp-accent">
+        Week {openWeekIntent.weekNumber} · {openWeekIntent.label}
+      </span>
+      {openWeekIntent.summary}
+    </p>
+  ) : null;
   if (current.sessions.length === 0) {
     return (
       <div className="today-blocks">
+        {weekIntentNote}
         <SessionlessDayCard day={current.day} />
       </div>
     );
   }
   return (
     <div className="today-blocks">
+      {weekIntentNote}
       <DaySessionContext day={current.day} />
       {current.sessions.map((session, index) => (
         <StructuredSessionCard
@@ -189,6 +205,7 @@ function TodaySessionBlocks({
           day={index === 0 ? current.day ?? undefined : undefined}
           defaultOpenBlocks
           showDayContext={false}
+          openWeekIntent={openWeekIntent}
         />
       ))}
     </div>
@@ -244,6 +261,13 @@ export function TodaySessionPanel({
     createdAt: planSchedule?.createdAt,
   });
   const current = resolveCurrentDay(structuredPlan, focusDate, { openWeekNumber });
+  // Where the resolved day sits in the renewable development block (baseline /
+  // progress / peak / deload). The resolved week position wins over the bare
+  // anchor-derived number so the note always matches the blocks shown below.
+  // Dated camps stay null and render unchanged.
+  const openWeekIntent = isOpenOngoingPlan(state.active_plan.fight_date)
+    ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber)
+    : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
   const isNextSessionPreview = session.session_relation === "next";
@@ -352,7 +376,7 @@ export function TodaySessionPanel({
           />
         ) : null}
         {showStructuredBlocks ? (
-          <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
+          <TodaySessionBlocks planId={state.active_plan?.id} current={current} openWeekIntent={openWeekIntent} />
         ) : (
           <p className="muted">No active plan card matched today. Use View full plan to find the next training target.</p>
         )}
@@ -396,7 +420,7 @@ export function TodaySessionPanel({
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (
-        <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
+        <TodaySessionBlocks planId={state.active_plan?.id} current={current} openWeekIntent={openWeekIntent} />
       ) : (
         <div className="today-session-summary">
           <div>

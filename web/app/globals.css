@@ -6077,6 +6077,16 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   margin: 0 0 14px;
 }
 
+.today-open-week-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 .today-card-head {
   gap: 10px;
   align-items: flex-start;
@@ -16315,6 +16325,10 @@ html[data-theme="light"] .loading-operational-item {
   text-transform: uppercase;
   color: var(--text-secondary);
 }
+.sp-week-directive .sp-stat-label {
+  color: var(--brand-red);
+}
+
 .sp-block {
   background: var(--bg-stat);
   border: 1px solid var(--border-subtle);
@@ -16822,6 +16836,14 @@ html[data-theme="light"] .loading-operational-item {
   display: grid;
   gap: 2px;
   margin-bottom: 8px;
+}
+
+.cm-week-intent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
 }
 
 .cm-week-overview-stats {

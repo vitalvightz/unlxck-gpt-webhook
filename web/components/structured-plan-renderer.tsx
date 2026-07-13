@@ -52,6 +52,12 @@ import {
   type CompletionIndex,
   type SessionDisplayStatus,
 } from "@/lib/camp-map";
+import {
+  OPEN_BLOCK_WEEK_LABELS,
+  openBlockWeekDirective,
+  openBlockWeekIntent,
+  type OpenBlockWeekIntent,
+} from "@/lib/open-block";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { formatAppDate } from "@/lib/date-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
@@ -80,12 +86,6 @@ export type SessionCompletionInfo = {
 };
 
 const titleize = formatPlanLabel;
-const OPEN_BLOCK_WEEK_LABELS = [
-  "Baseline",
-  "Progress",
-  "Highest controlled",
-  "Deload + reassess",
-] as const;
 
 const LIGHT_TECHNICAL_NOTE =
   "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
@@ -165,7 +165,16 @@ export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null })
   );
 }
 
-export function BlockCard({ block }: { block: StructuredBlock }) {
+export function BlockCard({
+  block,
+  openWeekIntent,
+}: {
+  block: StructuredBlock;
+  /** Development-block week intent of an open (renewable) plan. Adds the
+   * week-directed instruction (progress / deload) to the card; dated camps
+   * never pass it. */
+  openWeekIntent?: OpenBlockWeekIntent | null;
+}) {
   const title = cleanText(block.display_name) || "Block";
   const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
@@ -178,6 +187,13 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
   const substitutions = getStringList(block.substitutions);
   const regressions = getStringList(block.regression_options);
   const progression = cleanText(block.progression_rule);
+  const weekDirective = openBlockWeekDirective(openWeekIntent, block);
+  // With a week directive on the card, the generic Progress aside is either the
+  // same rule again (progression weeks) or a contradiction (deload week), so it
+  // hides. A stop rule is safety wording and always stays.
+  const showProgressionAside = Boolean(
+    progression && (!weekDirective || progressionRuleLabel(progression) === "Stop rule"),
+  );
 
   return (
     <div className="sp-block">
@@ -219,6 +235,12 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
           ) : null}
         </div>
       ) : null}
+      {weekDirective ? (
+        <p className="sp-block-aside sp-week-directive">
+          <span className="sp-stat-label">{weekDirective.label}</span>
+          {weekDirective.text}
+        </p>
+      ) : null}
       {purpose ? <p className="sp-block-purpose">{purpose}</p> : null}
       {cues.length > 0 ? (
         <ul className="sp-cues">
@@ -239,7 +261,7 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
           {regressions.join(", ")}
         </p>
       ) : null}
-      {progression ? (
+      {progression && showProgressionAside ? (
         <p className="sp-block-aside">
           <span className="sp-stat-label">{progressionRuleLabel(progression)}</span>
           {progression}
@@ -278,6 +300,7 @@ export function SessionCard({
   defaultOpenBlocks,
   showDayContext = true,
   completionInfo,
+  openWeekIntent,
 }: {
   session: StructuredSession;
   day?: StructuredDay;
@@ -289,6 +312,9 @@ export function SessionCard({
   /** Live logged status for this session (plan viewer only). Absent on
    * surfaces without completion data (e.g. the Today screen's embedded card). */
   completionInfo?: SessionCompletionInfo;
+  /** Development-block week intent of an open (renewable) plan, forwarded to
+   * every block card. */
+  openWeekIntent?: OpenBlockWeekIntent | null;
 }) {
   const detailsId = useId();
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
@@ -398,7 +424,11 @@ export function SessionCard({
           {showDetails ? (
             <div id={detailsId} className="sp-blocks">
               {blocks.map((block, index) => (
-                <BlockCard key={cleanText(block.block_id) || `block-${index}`} block={block} />
+                <BlockCard
+                  key={cleanText(block.block_id) || `block-${index}`}
+                  block={block}
+                  openWeekIntent={openWeekIntent}
+                />
               ))}
             </div>
           ) : null}
@@ -657,6 +687,7 @@ export function CampDayCard({
   const timelineLabel = openOngoing
     ? openTimelineDayLabel(day, weekNumber, fallbackLabel || `Week ${weekNumber} training day`)
     : weekday || date || fallbackLabel || "Training day";
+  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
   const completion = dayCompletion(day, completionIndex);
   const sessionCount = sessions.length;
   const dayIso = date ? date.slice(0, 10) : null;
@@ -728,6 +759,7 @@ export function CampDayCard({
                 defaultOpenBlocks={isCurrent}
                 showDayContext={false}
                 completionInfo={completionInfoFor(session)}
+                openWeekIntent={weekIntent}
               />
             ))}
           </div>
@@ -1209,11 +1241,14 @@ function WeekStrip({
  *  already visible in the week pill, so this overview avoids repeating it. */
 function WeekOverview({
   week,
+  weekNumber,
   completionIndex,
   openOngoing,
   scheduleContext,
 }: {
   week: StructuredWeek;
+  /** 1-based position of the viewed week; drives the open-plan week intent. */
+  weekNumber: number;
   completionIndex?: CompletionIndex;
   openOngoing: boolean;
   scheduleContext?: PlanScheduleContext | null;
@@ -1256,6 +1291,7 @@ function WeekOverview({
   const heading = openOngoing && scheduleContext?.block_number
     ? `Block ${scheduleContext.block_number} \u00b7 ${weekLabel(week)}`
     : weekLabel(week);
+  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
 
   return (
     <section className="sp-card cm-week-overview">
@@ -1263,6 +1299,13 @@ function WeekOverview({
         <p className="sp-eyebrow">Week overview</p>
         <h4 className="sp-redflags-title">{heading}</h4>
       </div>
+
+      {weekIntent ? (
+        <p className="sp-block-purpose cm-week-intent">
+          <span className="sp-tag sp-accent">{weekIntent.label}</span>
+          {weekIntent.summary}
+        </p>
+      ) : null}
 
       {rows.length > 0 ? (
         <div className="sp-block-stats cm-week-overview-stats">
@@ -1425,6 +1468,7 @@ export function StructuredPlanRenderer({
           {selectedWeek ? (
             <WeekOverview
               week={selectedWeek}
+              weekNumber={safePos + 1}
               completionIndex={completionIndex}
               openOngoing={openOngoing}
               scheduleContext={scheduleContext}
