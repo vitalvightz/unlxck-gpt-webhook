@@ -265,7 +265,7 @@ export function TodaySessionPanel({
   // progress / peak / deload). The resolved week position wins over the bare
   // anchor-derived number so the note always matches the blocks shown below.
   // Dated camps stay null and render unchanged.
-  const openWeekIntent = isOpenOngoingPlan(state.active_plan.fight_date)
+  const openWeekIntent = state.active_plan && isOpenOngoingPlan(state.active_plan.fight_date)
     ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber)
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
