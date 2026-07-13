@@ -15,4 +15,17 @@ Sentry.init({
   ],
 });
 
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  const actionButton = target.closest<HTMLButtonElement>(".plan-action-menu-popover button");
+  const details = actionButton?.closest<HTMLDetailsElement>("details.plan-action-menu");
+  if (details) {
+    details.open = false;
+  }
+});
+
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
