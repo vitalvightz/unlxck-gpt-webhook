@@ -13017,6 +13017,11 @@ html[data-theme="light"] .stage2-retry-failed {
   background: linear-gradient(180deg, rgba(255, 237, 238, 0.98), rgba(255, 245, 243, 0.98));
 }
 
+html[data-theme="light"] .admin-triage-card {
+  border-color: rgba(163, 21, 45, 0.18);
+  background: linear-gradient(180deg, rgba(255, 237, 238, 0.98), rgba(255, 246, 243, 0.98));
+}
+
 html[data-theme="light"] .sparring-advisory-card {
   border-color: rgba(173, 115, 23, 0.18);
   background: linear-gradient(180deg, rgba(255, 246, 229, 0.98), rgba(255, 250, 241, 0.98));
