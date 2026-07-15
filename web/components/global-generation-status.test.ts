@@ -42,8 +42,8 @@ test("generation ribbon target is not redundant when route is unrelated", () => 
   assert.equal(isGenerationRibbonTargetRedundant(null, "/plans/plan_123"), false);
 });
 
-test("failed generation has no link target", () => {
-  assert.equal(getGenerationStatusTarget("failed", "plan_123", null, "admin_latest_intake", "ath_1"), null);
+test("failed generation routes back to the generate workspace", () => {
+  assert.equal(getGenerationStatusTarget("failed", "plan_123", null, "admin_latest_intake", "ath_1"), "/generate");
 });
 
 test("failed latest job with plan shows open-plan path", () => {
