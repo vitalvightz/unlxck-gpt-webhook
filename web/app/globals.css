@@ -1499,8 +1499,7 @@ select:focus-visible {
 }
 
 .admin-feedback-group {
-  display: grid;
-  gap: 12px;
+  display: block;
 }
 
 .admin-feedback-group + .admin-feedback-group {
