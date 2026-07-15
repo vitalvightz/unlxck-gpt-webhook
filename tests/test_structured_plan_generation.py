@@ -6,6 +6,7 @@ normalizer, and the prompt contract. The actual model call is exercised in
 """
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
@@ -1481,6 +1482,79 @@ def test_prompt_requires_block_detail_and_day_mindset():
         assert needle in prompt, needle
     # Guardrail wording: omit, do not invent.
     assert "invent" in prompt.lower()
+
+
+def _open_plan_brief(*training_days: str) -> dict:
+    return {
+        "payload_mode": "open_ongoing_payload",
+        "render_mode": "open_ongoing_system",
+        "open_plan_spec": {
+            "plan_type": "open_ongoing_system",
+            "weekly_template": {
+                "training_days": list(training_days),
+                "hard_sparring_days": [],
+                "coach_owned_days": {},
+            },
+            "development_block": {
+                "week_1": "Baseline and technical consistency",
+                "week_2": "Small progression",
+                "week_3": "Highest controlled week",
+                "week_4": "Deload and reassess",
+            },
+        },
+    }
+
+
+def _open_plan_candidate(*, weekday: str | None) -> dict:
+    plan = copy.deepcopy(_valid_plan())
+    plan["plan_metadata"]["plan_type"] = "open_ongoing_system"
+    plan["event_context"] = {"event_type": "none", "fight_date": None}
+    plan["countdown_labels"] = []
+    plan["daily_check_ins"] = []
+    week = plan["weeks"][0]
+    week["start_date"] = ""
+    week["end_date"] = ""
+    week["countdown_start"] = None
+    week["countdown_end"] = None
+    day = week["days"][0]
+    day["date"] = ""
+    day["weekday"] = weekday
+    day["countdown_label"] = ""
+    return plan
+
+
+def test_open_plan_prompt_carries_authoritative_weekday_contract():
+    prompt = build_structured_plan_prompt(
+        plan_markdown="# Open plan",
+        planning_brief=_open_plan_brief("Monday", "Tuesday", "Thursday"),
+    )
+
+    assert "OPEN ONGOING PLAN CONTRACT" in prompt
+    assert 'plan_metadata.plan_type to "open_ongoing_system"' in prompt
+    assert '["Mon", "Tue", "Thu"]' in prompt
+    assert "Do not emit OFF/rest-only weekdays" in prompt
+    assert 'event_context.event_type to "none"' in prompt
+
+
+def test_open_plan_contract_repairs_schema_valid_card_without_weekday_identity():
+    brief = _open_plan_brief("Monday")
+    broken = _open_plan_candidate(weekday=None)
+
+    first = build_structured_plan_outcome(broken, planning_brief=brief)
+
+    assert first.status == "invalid_fallback_used"
+    assert any("weekday order" in error for error in first.errors)
+
+    fixed = _open_plan_candidate(weekday="Mon")
+    repaired = build_structured_plan_outcome(
+        broken,
+        planning_brief=brief,
+        repair_fn=lambda _data, _errors: fixed,
+    )
+
+    assert repaired.status == "repair_attempted_valid"
+    assert repaired.structured_plan["plan_metadata"]["plan_type"] == "open_ongoing_system"
+    assert repaired.structured_plan["weeks"][0]["days"][0]["weekday"] == "Mon"
 
 
 # --- malformed daily_check_ins tolerance (PR-7) ------------------------------

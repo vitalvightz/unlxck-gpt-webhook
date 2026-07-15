@@ -248,6 +248,28 @@ _RISK_LEVEL_VALUES = frozenset(get_args(RiskLevel))
 _PLAN_NOTE_CATEGORY_VALUES = frozenset(get_args(PlanNoteCategory))
 _EFFORT_METHOD_VALUES = frozenset(get_args(EffortMethod))
 
+_OPEN_PLAN_TYPE = "open_ongoing_system"
+_OPEN_PLAN_WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_OPEN_PLAN_WEEKDAY_ALIASES = {
+    "mon": "Mon",
+    "monday": "Mon",
+    "tue": "Tue",
+    "tues": "Tue",
+    "tuesday": "Tue",
+    "wed": "Wed",
+    "wednesday": "Wed",
+    "thu": "Thu",
+    "thur": "Thu",
+    "thurs": "Thu",
+    "thursday": "Thu",
+    "fri": "Fri",
+    "friday": "Fri",
+    "sat": "Sat",
+    "saturday": "Sat",
+    "sun": "Sun",
+    "sunday": "Sun",
+}
+
 # Conservative enum aliases for the most common loose values.
 _SESSION_TYPE_ALIASES = {
     "strength": "strength_power",
@@ -1489,12 +1511,123 @@ def _with_deterministic_support(
     return plan_dict
 
 
+def _open_plan_spec_from_brief(planning_brief: Any) -> dict[str, Any] | None:
+    if not isinstance(planning_brief, dict):
+        return None
+    spec = planning_brief.get("open_plan_spec")
+    if not isinstance(spec, dict) or spec.get("plan_type") != _OPEN_PLAN_TYPE:
+        return None
+    return spec
+
+
+def _open_plan_training_weekdays(spec: dict[str, Any]) -> list[str]:
+    template = spec.get("weekly_template")
+    template = template if isinstance(template, dict) else {}
+    raw_days = template.get("training_days")
+    if not isinstance(raw_days, (list, tuple, set)):
+        return []
+    normalized = {
+        day
+        for value in raw_days
+        if (day := _OPEN_PLAN_WEEKDAY_ALIASES.get(str(value or "").strip().lower()))
+    }
+    return [day for day in _OPEN_PLAN_WEEKDAYS if day in normalized]
+
+
+def _open_plan_contract_errors(
+    plan_dict: dict[str, Any], planning_brief: Any
+) -> list[str]:
+    """Validate the non-schema invariants that make an open plan schedulable.
+
+    The generic structured schema deliberately supports dated fight camps and
+    renewable plans.  It cannot express conditional rules such as "open plans
+    must use weekday identities and no countdown".  Enforce those rules here so
+    a schema-valid but unschedulable card triggers the existing single repair
+    attempt instead of being published as an empty timeline.
+    """
+
+    spec = _open_plan_spec_from_brief(planning_brief)
+    if spec is None:
+        return []
+
+    errors: list[str] = []
+    expected_weekdays = _open_plan_training_weekdays(spec)
+    if not expected_weekdays:
+        return ["open_plan_contract: weekly_template.training_days is missing"]
+
+    metadata = plan_dict.get("plan_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    if metadata.get("plan_type") != _OPEN_PLAN_TYPE:
+        errors.append(
+            f'open_plan_contract: plan_metadata.plan_type must be "{_OPEN_PLAN_TYPE}"'
+        )
+
+    event_context = plan_dict.get("event_context")
+    event_context = event_context if isinstance(event_context, dict) else {}
+    if str(event_context.get("event_type") or "none").strip().lower() != "none":
+        errors.append('open_plan_contract: event_context.event_type must be "none"')
+    if any(
+        str(event_context.get(key) or "").strip()
+        for key in ("fight_date", "match_date", "weigh_in_date")
+    ):
+        errors.append("open_plan_contract: renewable plans cannot carry event dates")
+    if plan_dict.get("countdown_labels"):
+        errors.append("open_plan_contract: countdown_labels must be empty")
+
+    weeks = plan_dict.get("weeks")
+    if not isinstance(weeks, list) or len(weeks) not in {1, 4}:
+        errors.append("open_plan_contract: weeks must contain one reusable template or four weeks")
+        return errors
+
+    for position, week in enumerate(weeks, start=1):
+        if not isinstance(week, dict):
+            errors.append(f"open_plan_contract: week {position} must be an object")
+            continue
+        if int(week.get("week_index") or 0) != position:
+            errors.append(f"open_plan_contract: week {position} has the wrong week_index")
+        if any(
+            str(week.get(key) or "").strip()
+            for key in ("start_date", "end_date", "countdown_start", "countdown_end")
+        ):
+            errors.append(f"open_plan_contract: week {position} must remain undated")
+
+        days = week.get("days")
+        if not isinstance(days, list) or len(days) != len(expected_weekdays):
+            errors.append(
+                f"open_plan_contract: week {position} days must match "
+                f"{expected_weekdays!r} exactly"
+            )
+            continue
+
+        actual_weekdays = [
+            _OPEN_PLAN_WEEKDAY_ALIASES.get(str(day.get("weekday") or "").strip().lower())
+            if isinstance(day, dict)
+            else None
+            for day in days
+        ]
+        if actual_weekdays != expected_weekdays:
+            errors.append(
+                f"open_plan_contract: week {position} weekday order must be "
+                f"{expected_weekdays!r}, got {actual_weekdays!r}"
+            )
+        for day_position, day in enumerate(days, start=1):
+            if not isinstance(day, dict):
+                continue
+            if str(day.get("date") or "").strip() or str(day.get("countdown_label") or "").strip():
+                errors.append(
+                    f"open_plan_contract: week {position} day {day_position} must remain undated"
+                )
+
+    return errors
+
+
 def build_structured_plan_outcome(
     raw_data: Any,
     *,
     raw_markdown: str = "",
     repair_fn: Callable[[Any, list[str]], Any] | None = None,
     computed_support: dict[str, Any] | None = None,
+    planning_brief: dict[str, Any] | None = None,
 ) -> StructuredPlanOutcome:
     """Validate a candidate structured payload into a persistable outcome.
 
@@ -1540,20 +1673,19 @@ def build_structured_plan_outcome(
     cleaned = _strip_and_normalize(raw_data)
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
+    first_errors = list(first.errors)
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
-        if unfaithful:
-            return StructuredPlanOutcome(
-                status="invalid_fallback_used",
-                errors=[f"faithfulness: {issue}" for issue in unfaithful],
-            )
-        return _audited_outcome("valid", plan_dict, first.plan.schema_version)
+        first_errors = [f"faithfulness: {issue}" for issue in unfaithful]
+        first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
+        if not first_errors:
+            return _audited_outcome("valid", plan_dict, first.plan.schema_version)
 
     if repair_fn is None:
         return StructuredPlanOutcome(
             status="invalid_fallback_used",
-            errors=list(first.errors),
+            errors=first_errors,
         )
 
     # Strip biometric keys + conservatively normalize anything the repair attempt
@@ -1561,16 +1693,34 @@ def build_structured_plan_outcome(
     def _clean_repair(data: Any, errors: list[str]) -> Any:
         return _strip_and_normalize(repair_fn(data, errors))
 
-    repaired = repair_structured_plan_once(
-        cleaned, repair_fn=_clean_repair, raw_markdown=raw_markdown or None
-    )
+    if first.ok and first.plan is not None:
+        # The generic schema can be valid while the open-plan scheduling contract
+        # is not.  In that case repair_structured_plan_once would return the
+        # original unchanged object without calling repair_fn, so invoke the same
+        # single repair explicitly with the contract/faithfulness errors.
+        try:
+            repaired_data = _clean_repair(cleaned, first_errors)
+            repaired = safe_parse_structured_plan(
+                repaired_data, raw_markdown=raw_markdown or None
+            )
+        except Exception as exc:  # noqa: BLE001 - raw fallback must always survive
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"structured repair failed: {type(exc).__name__}"],
+            )
+    else:
+        repaired = repair_structured_plan_once(
+            cleaned, repair_fn=_clean_repair, raw_markdown=raw_markdown or None
+        )
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
-        if unfaithful:
+        repaired_errors = [f"faithfulness: {issue}" for issue in unfaithful]
+        repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
+        if repaired_errors:
             return StructuredPlanOutcome(
                 status="invalid_fallback_used",
-                errors=[f"faithfulness: {issue}" for issue in unfaithful],
+                errors=repaired_errors,
             )
         return _audited_outcome(
             "repair_attempted_valid", plan_dict, repaired.plan.schema_version
@@ -1674,7 +1824,7 @@ def _strip_fallback_from_broken_json(broken_json: str) -> str:
 
 
 _STRUCTURED_PLAN_RULES = f"""\
-You are converting an already-written fight-camp training plan into a strict,
+You are converting an already-written training plan into a strict,
 machine-readable JSON object. Output ONLY a single JSON object — no markdown, no
 code fences, no commentary.
 
@@ -1701,7 +1851,8 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   Spend your output tokens on the structured fields, not on copying the plan.
 - It MUST use countdown labels (countdown_labels[] and per-day countdown_label,
   e.g. "D-28", "D-7", "D-1", "D0", "D+1") whenever an event/fight/match date is
-  known.
+  known. A renewable open-plan contract explicitly overrides this: open plans
+  carry no event dates or countdown labels.
 - Each week's phase_label MUST be one of: GPP, SPP, TAPER, FIGHT_WEEK,
   REINTEGRATION.
 - Every block load MUST be a machine-readable object, NEVER a string. Use:
@@ -1876,7 +2027,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
       "progression": {{"week_type": "build", "planned_change_from_previous": "..."}},
       "days": [
         {{
-          "date": "YYYY-MM-DD", "day_type": "high", "countdown_label": "D-15", "phase_label": "SPP",
+          "date": "YYYY-MM-DD", "weekday": "Mon", "day_type": "high", "countdown_label": "D-15", "phase_label": "SPP",
           "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "coach_led_contact": "", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}}}},
           "sessions": [
             {{
@@ -1947,6 +2098,40 @@ def _select_brief_context(planning_brief: Any) -> dict[str, Any]:
     }
 
 
+def _open_plan_prompt_contract(planning_brief: Any) -> str:
+    spec = _open_plan_spec_from_brief(planning_brief)
+    if spec is None:
+        return ""
+
+    weekdays = _open_plan_training_weekdays(spec)
+    try:
+        spec_json = json.dumps(spec, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError):
+        spec_json = "{}"
+
+    return f"""\
+OPEN ONGOING PLAN CONTRACT (authoritative; overrides the fight-camp example
+values in the generic root skeleton):
+- This is a renewable open training system, NOT a dated fight camp.
+- Set plan_metadata.plan_type to "{_OPEN_PLAN_TYPE}".
+- Set event_context.event_type to "none" and all event dates to null/empty.
+- Set countdown_labels to [] and every day countdown_label to "".
+- Keep week start/end/countdown fields empty; the server projects real dates.
+- Emit ONE reusable template week unless the source contains fully distinct
+  session prescriptions for all four weeks; in that case emit exactly four.
+- Every emitted week.days array MUST contain exactly these training weekdays in
+  this order: {json.dumps(weekdays)}. Set each day.weekday to that exact short
+  value. Do not emit OFF/rest-only weekdays and do not infer extra training days.
+- Preserve the source session spine. The 4-week development rules describe how
+  the same spine progresses; do not invent additional exercises to fill weeks.
+- The generic schema still requires phase_label; use the source value when
+  stated, otherwise use "GPP" as a neutral internal value. Never surface phase
+  labels as open-plan headings.
+
+AUTHORITATIVE open_plan_spec:
+{spec_json}"""
+
+
 def build_structured_plan_prompt(
     *,
     plan_markdown: str,
@@ -1962,6 +2147,9 @@ def build_structured_plan_prompt(
     """
 
     sections: list[str] = [_STRUCTURED_PLAN_RULES, _ROOT_SKELETON]
+    open_plan_contract = _open_plan_prompt_contract(planning_brief)
+    if open_plan_contract:
+        sections.append(open_plan_contract)
 
     if event_date:
         sections.append(f"EVENT/FIGHT DATE: {event_date}")

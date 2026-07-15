@@ -248,6 +248,15 @@ def test_valid_fight_camp_plan_validates():
     assert plan.schema_version == SCHEMA_VERSION
 
 
+def test_open_ongoing_plan_type_validates():
+    data = _valid_plan()
+    data["plan_metadata"]["plan_type"] = "open_ongoing_system"
+
+    plan = validate_structured_plan(data)
+
+    assert plan.plan_metadata.plan_type == "open_ongoing_system"
+
+
 # A2. coach_led_contact on today_card survives validation (it carries the
 # coach-owned label for a sparring day that also has an app session).
 def test_today_card_coach_led_contact_survives_validation():

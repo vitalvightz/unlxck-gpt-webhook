@@ -605,14 +605,38 @@ test("weekLabel keeps short goals verbatim but caps long ones to a glanceable he
     weekLabel({ week_index: 2, week_goal: "Convert strength into speed." } as never),
     "Week 2 — Convert strength into speed.",
   );
-  // Long multi-clause goal: keep the first clause when it already fits in 6 words.\n  assert.equal(\n    weekLabel({\n      week_index: 1,\n      week_goal:\n        \"Build single-leg drive and balance; maintain punch speed and shoulder-friendly maintenance while preserving freshness.\",\n    } as never),\n    \"Week 1 — Build single-leg drive and balance\",\n  );\n  // Goal with decimal numbers: should not split on the decimal point.\n  assert.equal(\n    weekLabel({\n      week_index: 5,\n      week_goal:\n        \"Build 1.5x bodyweight squat and power; maintain punch speed and shoulder-friendly maintenance.\",\n    } as never),\n    \"Week 5 — Build 1.5x bodyweight squat and…\",\n  );
-  // Long single clause with no early break: hard-cap at 6 words with an ellipsis.
+  assert.equal(
+    weekLabel({
+      week_index: 1,
+      week_goal: "Baseline and technical consistency: establish anchor execution quality",
+    } as never),
+    "Week 1 — Baseline and technical consistency:…",
+  );
+  // Long multi-clause goal: cap the first clause when it still exceeds four words.
+  assert.equal(
+    weekLabel({
+      week_index: 1,
+      week_goal:
+        "Build single-leg drive and balance; maintain punch speed and shoulder-friendly maintenance while preserving freshness.",
+    } as never),
+    "Week 1 — Build single-leg drive and…",
+  );
+  // Goal with decimal numbers: should not split on the decimal point.
+  assert.equal(
+    weekLabel({
+      week_index: 5,
+      week_goal:
+        "Build 1.5x bodyweight squat and power; maintain punch speed and shoulder-friendly maintenance.",
+    } as never),
+    "Week 5 — Build 1.5x bodyweight squat…",
+  );
+  // Long single clause with no early break: hard-cap at 4 words with an ellipsis.
   assert.equal(
     weekLabel({
       week_index: 3,
       week_goal: "Sharpen reactive power speed timing and ring distance control",
     } as never),
-    "Week 3 — Sharpen reactive power speed timing and…",
+    "Week 3 — Sharpen reactive power speed…",
   );
   // No goal: just the week number.
   assert.equal(weekLabel({ week_index: 4 } as never), "Week 4");

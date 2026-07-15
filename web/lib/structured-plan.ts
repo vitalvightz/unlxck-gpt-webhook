@@ -878,12 +878,12 @@ export function getActiveNotesExcludingRedFlags(
 }
 
 // The week heading must read as a glanceable label, not a paragraph. The LLM is
-// told to keep week_goal to ~6 words, but plans (and older saved plans) can still
+// told to keep week_goal short, but plans (and older saved plans) can still
 // carry a full multi-clause sentence, so we shorten deterministically: keep the
-// first clause (up to the first ; or .) when that already fits in 6 words, else
-// hard-cap at 6 words with an ellipsis. Goals already short are returned verbatim
+// first clause (up to the first ; or .) when that already fits in 4 words, else
+// hard-cap at 4 words with an ellipsis. Goals already short are returned verbatim
 // so their punctuation (e.g. a trailing period) is preserved.
-const WEEK_GOAL_MAX_WORDS = 6;
+const WEEK_GOAL_MAX_WORDS = 4;
 function shortenWeekGoal(goal: string): string {
   const words = goal.split(/\s+/).filter(Boolean);
   if (words.length <= WEEK_GOAL_MAX_WORDS) {
