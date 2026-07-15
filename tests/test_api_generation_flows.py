@@ -1315,6 +1315,45 @@ def test_classify_running_job_staleness_prioritizes_job_loaded_stalled_over_star
     assert store._classify_running_job_staleness(job, stale_after_seconds=90) == "job_loaded_stalled"
 
 
+def test_classify_running_job_staleness_hard_ceiling_ignores_fresh_heartbeat(monkeypatch):
+    """A job stuck mid-pipeline with a healthy heartbeat (e.g. the heartbeat
+    loop is alive but the actual generation work has hung downstream) must
+    still be recovered once it has run past the hard wall-clock ceiling —
+    heartbeat freshness alone is not proof of progress."""
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "300")
+    _, store, _ = _build_client(enable_in_process_generation=False)
+    old_started_at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(time.time() - 600))
+    job = {
+        "status": "running",
+        "started_at": old_started_at,
+        "heartbeat_at": _now(),  # heartbeat looks perfectly fresh
+        "progress_milestones": [
+            {"code": "stage1_planner_finished", "at": old_started_at},
+            {"code": "stage2_model_call_started", "at": old_started_at},
+        ],
+        "stage1_result": stage1_result(),
+        "final_result": None,
+        "completed_at": None,
+    }
+    assert store._classify_running_job_staleness(job, stale_after_seconds=90) == "mid_pipeline_stale"
+
+
+def test_classify_running_job_staleness_hard_ceiling_not_yet_exceeded_stays_fresh(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900")
+    _, store, _ = _build_client(enable_in_process_generation=False)
+    recent_started_at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(time.time() - 60))
+    job = {
+        "status": "running",
+        "started_at": recent_started_at,
+        "heartbeat_at": _now(),
+        "progress_milestones": [{"code": "stage1_planner_finished", "at": recent_started_at}],
+        "stage1_result": stage1_result(),
+        "final_result": None,
+        "completed_at": None,
+    }
+    assert store._classify_running_job_staleness(job, stale_after_seconds=90) == "fresh"
+
+
 def test_get_generation_job_keeps_stage1_invoked_running_before_configured_stage1_timeout(monkeypatch):
     monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "180")
     client, store, _ = _build_client(enable_in_process_generation=False)
@@ -1870,6 +1909,179 @@ def test_retry_failed_job_with_saved_plan_is_allowed_for_admin_triage_resume():
     assert retried.status_code == 202
     body = retried.json()
     assert body["status"] in {"queued", "running", "completed"}
+
+
+def test_cancel_queued_job_marks_it_failed():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    queued = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    response = client.post(
+        f"/api/generation-jobs/{queued['id']}/cancel",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    refreshed = store.get_generation_job(queued["id"])
+    assert refreshed["status"] == "failed"
+    assert refreshed["error"] == "Cancelled by athlete."
+
+
+def test_cancel_running_job_marks_it_failed():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    running = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(running["id"], status="running", started_at=_now(), heartbeat_at=_now())
+
+    response = client.post(
+        f"/api/generation-jobs/{running['id']}/cancel",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    refreshed = store.get_generation_job(running["id"])
+    assert refreshed["status"] == "failed"
+    assert refreshed["error"] == "Cancelled by athlete."
+
+
+def test_cancel_terminal_job_is_rejected():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    completed = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-terminal",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(completed["id"], status="running", started_at=_now(), heartbeat_at=_now())
+    store.update_generation_job(completed["id"], status="completed", completed_at=_now())
+
+    response = client.post(
+        f"/api/generation-jobs/{completed['id']}/cancel",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 409
+    assert store.get_generation_job(completed["id"])["status"] == "completed"
+
+
+def test_cancel_rejects_a_different_athletes_job():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-2",
+            email="other@example.com",
+            full_name="Other Athlete",
+            metadata={},
+        )
+    )
+    others_job = store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="cancel-not-mine",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(others_job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+
+    response = client.post(
+        f"/api/generation-jobs/{others_job['id']}/cancel",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 404
+    assert store.get_generation_job(others_job["id"])["status"] == "running"
+
+
+def test_admin_can_cancel_any_athletes_job():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-admin",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+
+    response = client.post(
+        f"/api/generation-jobs/{job['id']}/cancel",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    refreshed = store.get_generation_job(job["id"])
+    assert refreshed["status"] == "failed"
+    assert refreshed["error"] == "Cancelled by admin."
+
+
+def test_cancel_races_worker_completion_and_loses_cleanly():
+    """If the worker finishes the job before the cancel request lands, the
+    atomic fail_generation_job guard (expected_status/expected_attempt_count)
+    must reject the cancel instead of silently clobbering the real result —
+    the same guard the worker's own terminal writes rely on."""
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-vs-completion-race",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+    # Simulate the worker completing the job between the cancel request's read
+    # and its write.
+    store.update_generation_job(job["id"], status="completed", completed_at=_now(), final_result={"status": "ready"})
+
+    response = client.post(
+        f"/api/generation-jobs/{job['id']}/cancel",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 409
+    refreshed = store.get_generation_job(job["id"])
+    assert refreshed["status"] == "completed"
+    assert refreshed["final_result"] == {"status": "ready"}
+
+
+def test_cancelled_job_rejects_worker_completion_after_the_fact():
+    """Once a job is cancelled, a worker that was still mid-flight and later
+    tries to persist a terminal result must be rejected by the same
+    expected_status guard rather than resurrecting the cancelled job."""
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-then-late-completion",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+    attempt_count = int(job.get("attempt_count") or 0)
+
+    response = client.post(
+        f"/api/generation-jobs/{job['id']}/cancel",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert response.status_code == 200
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.complete_generation_job(
+            job["id"],
+            expected_attempt_count=attempt_count,
+            final_status="completed",
+            final_result={"status": "ready"},
+        )
+    assert exc_info.value.status_code == 409
+
+    refreshed = store.get_generation_job(job["id"])
+    assert refreshed["status"] == "failed"
+    assert refreshed["error"] == "Cancelled by athlete."
 
 
 @pytest.mark.parametrize(

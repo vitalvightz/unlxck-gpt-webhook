@@ -31,7 +31,7 @@ from api.state_machine import (
 )
 from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
-from api.store import _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
+from api.store import _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -185,6 +185,11 @@ class FakeStore:
             return "startup_stale"
         if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_stale_after_seconds):
             return "stage1_planner_stalled"
+        started_at = _parse_iso(job.get("started_at"))
+        if started_at is not None:
+            hard_ceiling_age = (datetime.now(timezone.utc) - started_at).total_seconds()
+            if hard_ceiling_age >= _generation_hard_max_runtime_seconds():
+                return "mid_pipeline_stale"
         reference = _latest_job_activity_at(job)
         if reference is None:
             return "fresh"

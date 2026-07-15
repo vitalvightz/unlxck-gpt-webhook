@@ -60,13 +60,28 @@ async def cancel_generation_job(
 
     now_iso = datetime.now(timezone.utc).isoformat()
     cancelled_by = "admin" if is_admin else "athlete"
+    # Route through the same atomic fail_generation_job RPC the worker itself
+    # uses to persist a terminal result (see the *_generation_job Postgres
+    # functions in supabase/migrations). Passing expected_status/
+    # expected_attempt_count means this can only win the race if the job is
+    # still in the state we just read: if the worker completes it first, this
+    # call fails with a 409 instead of clobbering a real result. Once it does
+    # win, the worker's own later completion attempt is symmetrically
+    # rejected by the same guard (its expected_status="running" no longer
+    # matches), so a cancelled job cannot be silently finished/overwritten
+    # out from under the cancellation. enforce_worker_ownership is disabled
+    # because this call comes from the web API process, not the worker that
+    # claimed the job — the status/attempt-count guard alone is the race
+    # protection here.
     updated = await asyncio.to_thread(
-        store.update_generation_job,
+        store.fail_generation_job,
         job_id,
-        status="failed",
+        expected_attempt_count=int(job.get("attempt_count") or 0),
+        expected_status=current_status,
         error=f"Cancelled by {cancelled_by}.",
-        completed_at=now_iso,
+        failed_at=now_iso,
         heartbeat_at=now_iso,
+        enforce_worker_ownership=False,
     )
     viewer_role = "admin" if is_admin else "athlete"
     return _job_response(updated, store=store, viewer_role=viewer_role)
