@@ -41,6 +41,7 @@ SCHEMA_VERSION = "1.0"
 UnitsSystem = Literal["metric", "imperial"]
 PlanType = Literal[
     "fight_camp",
+    "open_ongoing_system",
     "explosive_athlete",
     "match_week",
     "reintegration",

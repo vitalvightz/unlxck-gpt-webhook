@@ -1,9 +1,9 @@
 """Calendar projection for renewable open training plans.
 
-Open plans do not have an event countdown.  Their persisted structured card is
-therefore a four-week template, and this module projects that template onto the
-current renewable block from one stable compatibility anchor: the first Monday
-on or after the plan was created.
+Open plans do not have an event countdown. Their persisted structured card is a
+weekly template (or four already-expanded weeks), and this module projects it
+onto the current renewable block from one stable compatibility anchor: the first
+Monday on or after the plan was created.
 
 The projection is deliberately strict.  Legacy cards are only assigned
 weekdays when their day count and coach-owned pattern agree with the saved
@@ -135,6 +135,96 @@ def _is_coach_led_day(day: Mapping[str, Any]) -> bool:
     return not has_executable_blocks and _COACH_LED_RE.search(text) is not None
 
 
+def _is_safe_legacy_off_day(day: Mapping[str, Any]) -> bool:
+    """Whether a full-calendar legacy slot is provably not a training day."""
+
+    sessions = [item for item in (day.get("sessions") or []) if isinstance(item, Mapping)]
+    today_card = day.get("today_card")
+    today_card = today_card if isinstance(today_card, Mapping) else {}
+    return (
+        not sessions
+        and not str(today_card.get("coach_led_contact") or "").strip()
+        and str(day.get("day_type") or "").strip().lower() in {"rest", "recovery"}
+    )
+
+
+def _resolve_template_days(
+    days: Any, training_days: list[str]
+) -> list[dict[str, Any]] | None:
+    """Resolve one template week without guessing ambiguous session placement.
+
+    Current cards contain only the configured training weekdays.  One historical
+    converter emitted all seven calendar slots instead; that shape is safe to
+    recover only when every omitted weekday is an empty rest/recovery day.
+    """
+
+    if not isinstance(days, list):
+        return None
+
+    if len(days) == len(training_days):
+        pairs = list(zip(training_days, days, strict=True))
+    elif len(days) == len(WEEKDAYS):
+        calendar_pairs = list(zip(WEEKDAYS, days, strict=True))
+        for weekday, day in calendar_pairs:
+            if not isinstance(day, Mapping):
+                return None
+            explicit_weekday = normalize_weekday(day.get("weekday"))
+            if explicit_weekday and explicit_weekday != weekday:
+                return None
+            if weekday not in training_days and not _is_safe_legacy_off_day(day):
+                return None
+        pairs = [(weekday, day) for weekday, day in calendar_pairs if weekday in training_days]
+    else:
+        return None
+
+    resolved: list[dict[str, Any]] = []
+    for weekday, day in pairs:
+        if not isinstance(day, Mapping):
+            return None
+        explicit_weekday = normalize_weekday(day.get("weekday"))
+        if explicit_weekday and explicit_weekday != weekday:
+            return None
+        normalized = copy.deepcopy(dict(day))
+        normalized["weekday"] = weekday
+        resolved.append(normalized)
+    return resolved
+
+
+_OPEN_TEMPLATE_WEEK_TYPES = ("stabilise", "build", "specific_peak", "deload")
+
+
+def _expand_single_template_week(
+    weeks: list[dict[str, Any]], spec: Mapping[str, Any]
+) -> list[dict[str, Any]] | None:
+    if len(weeks) == 4:
+        return weeks
+    if len(weeks) != 1:
+        return None
+
+    development = spec.get("development_block")
+    development = development if isinstance(development, Mapping) else {}
+    base = weeks[0]
+    base_id = str(base.get("week_id") or "open-template").strip() or "open-template"
+    expanded: list[dict[str, Any]] = []
+    for position in range(1, 5):
+        week = copy.deepcopy(base)
+        goal = str(development.get(f"week_{position}") or week.get("week_goal") or "").strip()
+        week["week_id"] = f"{base_id}-w{position}"
+        week["week_index"] = position
+        if goal:
+            week["week_goal"] = goal
+        progression = week.get("progression")
+        if not isinstance(progression, Mapping):
+            progression = {}
+
+        progression["week_type"] = _OPEN_TEMPLATE_WEEK_TYPES[position - 1]
+        if goal:
+            progression["planned_change_from_previous"] = goal
+        week["progression"] = progression
+        expanded.append(week)
+    return expanded
+
+
 def _base_context(
     plan_row: Mapping[str, Any], *, current_training_day: date | None
 ) -> dict[str, Any]:
@@ -192,18 +282,14 @@ def project_open_structured_plan(
         current_week_number = (elapsed % 28) // 7 + 1
 
     # Validate every week before applying any dates so projection is atomic.
+    resolved_weeks: list[dict[str, Any]] = []
     for week in weeks:
         if not isinstance(week, Mapping):
             return source, context
-        days = week.get("days")
-        if not isinstance(days, list) or len(days) != len(training_days):
+        resolved_days = _resolve_template_days(week.get("days"), training_days)
+        if resolved_days is None:
             return source, context
-        for day, expected_weekday in zip(days, training_days, strict=True):
-            if not isinstance(day, Mapping):
-                return source, context
-            explicit_weekday = normalize_weekday(day.get("weekday"))
-            if explicit_weekday and explicit_weekday != expected_weekday:
-                return source, context
+        for day, expected_weekday in zip(resolved_days, training_days, strict=True):
             is_coach_led = _is_coach_led_day(day)
             # A coach-led card may only land on a declared coach-owned day, and
             # a declared hard-sparring day must remain coach-led. Technical days
@@ -213,8 +299,16 @@ def project_open_structured_plan(
                 return source, context
             if expected_weekday in hard_sparring_days and not is_coach_led:
                 return source, context
+        normalized_week = copy.deepcopy(dict(week))
+        normalized_week["days"] = resolved_days
+        resolved_weeks.append(normalized_week)
+
+    resolved_weeks = _expand_single_template_week(resolved_weeks, spec)
+    if resolved_weeks is None:
+        return source, context
 
     projected = copy.deepcopy(source)
+    projected["weeks"] = resolved_weeks
     block_anchor = anchor + timedelta(days=(block_number - 1) * 28)
     for week_position, week in enumerate(projected["weeks"]):
         week_start = block_anchor + timedelta(days=week_position * 7)

@@ -126,6 +126,56 @@ test("selecting a different week re-opens the matching support phase after mount
   }
 });
 
+test("open-plan overview follows the selected week instead of the current calendar week", async () => {
+  const { container, root } = mount();
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: {
+      title: "Open Plan",
+      sport: "boxing",
+      plan_type: "open_ongoing_system",
+    },
+    weeks: [1, 2, 3, 4].map((weekIndex) => ({
+      week_id: `wk-${weekIndex}`,
+      week_index: weekIndex,
+      phase_label: "GPP",
+      week_goal: `Goal ${weekIndex}`,
+      days: [],
+    })),
+  } as StructuredPlan;
+
+  try {
+    await act(async () => {
+      root.render(
+        <StructuredPlanRenderer
+          plan={plan}
+          openOngoing
+          scheduleContext={{
+            schedule_mode: "open_recurring",
+            projection_status: "projected",
+            block_number: 1,
+            current_week_number: 1,
+          }}
+        />,
+      );
+    });
+
+    const weekTwo = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button.cm-week-pill"),
+    ).find((button) => (button.textContent ?? "").includes("W2"));
+    assert.ok(weekTwo, "expected a W2 control");
+
+    await act(async () => {
+      weekTwo.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    const overview = container.querySelector(".cm-week-overview h2")?.textContent ?? "";
+    assert.equal(overview.includes("Block 1 · Week 2 of 4"), true);
+  } finally {
+    cleanup(container, root);
+  }
+});
+
 test("a manual toggle survives until the next week change, then re-syncs", async () => {
   const { container, root } = mount();
   try {

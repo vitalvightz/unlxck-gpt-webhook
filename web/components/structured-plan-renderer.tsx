@@ -1295,8 +1295,8 @@ function WeekOverview({
   ].filter((row): row is { label: string; value: string } => Boolean(row.value));
   const baseHeading = weekLabel(week);
   const openWeekNumber = resolveFiniteWeekNumber(
-    scheduleContext?.current_week_number,
     week.week_index,
+    scheduleContext?.current_week_number,
   );
   const openWeekHeading = baseHeading.replace(
     /^Week(?:\s+\d+)?/i,

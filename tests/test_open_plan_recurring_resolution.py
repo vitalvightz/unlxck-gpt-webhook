@@ -1,3 +1,4 @@
+import copy
 from datetime import date
 
 from api.models import WeeklySchedule
@@ -146,6 +147,66 @@ def test_open_plan_projects_weekdays_and_dates_from_first_monday_anchor():
         "2026-07-18",
     ]
     assert all(not day["countdown_label"] for day in projected["weeks"][0]["days"])
+
+
+def test_open_plan_recovers_one_full_calendar_legacy_week_and_expands_the_block():
+    plan_row = {
+        "id": PLAN_ID,
+        "created_at": "2026-07-12T09:00:00+00:00",
+        "fight_date": None,
+        "planning_brief": _open_plan_brief(),
+    }
+    structured = _open_structured_plan()
+    base_week = copy.deepcopy(structured["weeks"][0])
+    training_days = base_week["days"]
+
+    def off_day(label: str):
+        return {
+            "date": "",
+            "weekday": None,
+            "day_type": "rest",
+            "today_card": {"headline": label},
+            "sessions": [],
+        }
+
+    # Historical open-card conversion emitted Monday-Sunday including the two
+    # OFF days, but omitted every weekday field. Those empty off slots make this
+    # seven-day ordering safe to recover without assigning work heuristically.
+    base_week["days"] = [
+        training_days[0],
+        training_days[1],
+        training_days[2],
+        off_day("Thursday off"),
+        training_days[3],
+        training_days[4],
+        off_day("Sunday off"),
+    ]
+    structured["weeks"] = [base_week]
+
+    projected, context = project_open_structured_plan(
+        plan_row,
+        structured,
+        current_training_day="2026-07-13",
+    )
+
+    assert context["projection_status"] == "projected"
+    assert len(projected["weeks"]) == 4
+    assert [day["weekday"] for day in projected["weeks"][0]["days"]] == [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Fri",
+        "Sat",
+    ]
+    assert [week["week_index"] for week in projected["weeks"]] == [1, 2, 3, 4]
+    assert [week["week_goal"] for week in projected["weeks"]] == [
+        "Baseline",
+        "Progress",
+        "Highest controlled week",
+        "Deload and reassess",
+    ]
+    assert projected["weeks"][0]["days"][0]["date"] == "2026-07-13"
+    assert projected["weeks"][3]["days"][0]["date"] == "2026-08-03"
 
 
 def test_open_plan_projects_the_current_repeating_block_without_date_collisions():

@@ -1129,7 +1129,10 @@ class OpenAIStage2Automator:
             planning_brief.get("computed_support") if isinstance(planning_brief, dict) else None
         )
         first_outcome = build_structured_plan_outcome(
-            first_json, raw_markdown=final_plan_text, computed_support=computed_support
+            first_json,
+            raw_markdown=final_plan_text,
+            computed_support=computed_support,
+            planning_brief=planning_brief,
         )
         # A safety-blocked card is terminal: it was schema-valid, so the repair
         # path would re-validate the same JSON and hit the same blocking
@@ -1171,6 +1174,7 @@ class OpenAIStage2Automator:
             raw_markdown=final_plan_text,
             repair_fn=lambda _data, _errors: repaired_json,
             computed_support=computed_support,
+            planning_brief=planning_brief,
         )
         # Telemetry for the repair lever: did the second call actually rescue a
         # card the first pass could not produce? Aggregated over time this tells
