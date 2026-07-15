@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import suppress
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 from ..generation_config import generation_job_stale_after_seconds
 from ..store import AppStore, is_pre_start_stale_generation_job
@@ -62,12 +63,46 @@ def recover_stale_running_job(
     )
 
 
-async def heartbeat_generation_job(job_id: str, store: AppStore, stop_event: asyncio.Event) -> None:
+async def heartbeat_generation_job(
+    job_id: str,
+    store: AppStore,
+    stop_event: asyncio.Event,
+    *,
+    on_cancelled: Callable[[], None] | None = None,
+    interval_seconds: float = 15,
+) -> None:
+    """Refresh ``heartbeat_at`` on a timer, and stop as soon as someone else
+    moves the job off ``running`` (a manual cancel, or the hard-runtime-
+    ceiling recovery in ``_classify_running_job_staleness``).
+
+    Blindly writing ``heartbeat_at`` on every tick regardless of the job's
+    actual status is what let a cancelled/recovered job look perpetually
+    "alive": the heartbeat loop is independent of the generation work, so a
+    hang downstream never showed up as stale. Checking status here, in the
+    same loop that owns the heartbeat, means the loop itself notices a
+    cancellation within one tick and exits — instead of writing heartbeats
+    for a job nobody is waiting on anymore.
+    """
     while not stop_event.is_set():
         try:
-            await asyncio.wait_for(stop_event.wait(), timeout=15)
+            await asyncio.wait_for(stop_event.wait(), timeout=interval_seconds)
             return
         except asyncio.TimeoutError:
+            try:
+                current = await asyncio.to_thread(store.get_generation_job, job_id)
+            except Exception:
+                logger.exception("[jobs] generation:heartbeat_status_check_failed job_id=%s", job_id)
+                current = None
+            if current is not None and str(current.get("status") or "") != "running":
+                logger.info(
+                    "[jobs] generation:heartbeat_detected_external_terminal job_id=%s status=%s",
+                    job_id,
+                    current.get("status"),
+                )
+                if on_cancelled is not None:
+                    with suppress(Exception):
+                        on_cancelled()
+                return
             try:
                 await asyncio.to_thread(
                     store.update_generation_job,

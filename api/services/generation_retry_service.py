@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import copy
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
@@ -25,6 +26,65 @@ if TYPE_CHECKING:
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 ScheduleGenerationJob = Callable[..., Awaitable[dict[str, Any]]]
+
+
+async def cancel_generation_job(
+    *,
+    job_id: str,
+    profile: ProfileRecord,
+    store: AppStore,
+) -> GenerationJobResponse:
+    """Manually terminate a queued/running generation job.
+
+    Lets an athlete (their own job) or an admin kill a job that is stuck —
+    without waiting for heartbeat-based staleness detection to catch up, which
+    can lag well behind a genuine hang. The job is left in the database as a
+    terminal ``failed`` row (not hard-deleted) so it stops blocking new
+    generation attempts and clears the athlete's active-job slot, while still
+    leaving an audit trail for debugging.
+    """
+    job = await asyncio.to_thread(store.get_generation_job, job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+
+    is_admin = is_effective_admin_profile(profile, store)
+    if not is_admin and str(job.get("athlete_id")) != profile.athlete_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+
+    current_status = str(job.get("status") or "")
+    if current_status not in {"queued", "running"}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="only queued or running generation jobs can be cancelled",
+        )
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    cancelled_by = "admin" if is_admin else "athlete"
+    # Route through the same atomic fail_generation_job RPC the worker itself
+    # uses to persist a terminal result (see the *_generation_job Postgres
+    # functions in supabase/migrations). Passing expected_status/
+    # expected_attempt_count means this can only win the race if the job is
+    # still in the state we just read: if the worker completes it first, this
+    # call fails with a 409 instead of clobbering a real result. Once it does
+    # win, the worker's own later completion attempt is symmetrically
+    # rejected by the same guard (its expected_status="running" no longer
+    # matches), so a cancelled job cannot be silently finished/overwritten
+    # out from under the cancellation. enforce_worker_ownership is disabled
+    # because this call comes from the web API process, not the worker that
+    # claimed the job — the status/attempt-count guard alone is the race
+    # protection here.
+    updated = await asyncio.to_thread(
+        store.fail_generation_job,
+        job_id,
+        expected_attempt_count=int(job.get("attempt_count") or 0),
+        expected_status=current_status,
+        error=f"Cancelled by {cancelled_by}.",
+        failed_at=now_iso,
+        heartbeat_at=now_iso,
+        enforce_worker_ownership=False,
+    )
+    viewer_role = "admin" if is_admin else "athlete"
+    return _job_response(updated, store=store, viewer_role=viewer_role)
 
 
 async def retry_generation_job(

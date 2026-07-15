@@ -82,6 +82,12 @@ async def run_generation_job(
     athlete_id = "unknown"
     progress_callback: ProgressCallback | None = None
     stage1_timed_out = threading.Event()
+    # Set by the heartbeat loop the moment it notices the job has moved off
+    # "running" underneath us (a manual cancel, or the hard-runtime-ceiling
+    # recovery) — checked between stages so the run actually stops burning
+    # CPU/API calls on the next expensive step instead of only having its
+    # final persistence rejected.
+    cancelled = threading.Event()
     seen_milestone_codes: set[str] = set()
     claimed_attempt_count: int | None = None
     profile_refresh_failed = False
@@ -212,9 +218,11 @@ async def run_generation_job(
             job_id=job_id,
             store=store,
             initial_milestones=initial_milestones,
-            should_persist=lambda: not stage1_timed_out.is_set(),
+            should_persist=lambda: not stage1_timed_out.is_set() and not cancelled.is_set(),
         )
-        heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
+        heartbeat_task = asyncio.create_task(
+            heartbeat_generation_job(job_id, store, stop_event, on_cancelled=cancelled.set)
+        )
 
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
@@ -378,6 +386,10 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
 
+        if cancelled.is_set():
+            logger.info("[jobs] generation:cancelled_before_stage1 athlete_id=%s job_id=%s", athlete_id, job_id)
+            return
+
         stage1_result = job.get("stage1_result")
         if not isinstance(stage1_result, dict):
             planner_payload = request_body.to_payload()
@@ -478,6 +490,10 @@ async def run_generation_job(
                 "Stage 1 planner result was saved to the generation job.",
             )
             await _ensure_admin_resume_plan_exists(plan_id)
+
+        if cancelled.is_set():
+            logger.info("[jobs] generation:cancelled_before_stage2 athlete_id=%s job_id=%s", athlete_id, job_id)
+            return
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):

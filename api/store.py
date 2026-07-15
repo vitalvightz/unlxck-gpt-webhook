@@ -812,6 +812,24 @@ def _generation_startup_max_attempts() -> int:
     return max(1, parsed)
 
 
+def _generation_hard_max_runtime_seconds() -> int:
+    """Absolute ceiling on a running job's wall-clock age, independent of heartbeat.
+
+    The heartbeat loop refreshes ``heartbeat_at`` on its own timer regardless of
+    whether the actual generation work is still progressing, so a downstream hang
+    (e.g. a stuck call) can look perpetually "fresh" to every heartbeat-based
+    staleness check. This ceiling is keyed off ``started_at`` instead, so a job
+    that has simply been running too long gets recovered even with a healthy
+    heartbeat.
+    """
+    raw_value = os.getenv("APP_GENERATION_HARD_MAX_RUNTIME_SECONDS", "900").strip()
+    try:
+        parsed = int(float(raw_value))
+    except ValueError:
+        return 900
+    return max(300, parsed)
+
+
 def _positive_float_env(name: str, default: float) -> float:
     raw_value = os.getenv(name)
     if raw_value is None or not raw_value.strip():
@@ -909,12 +927,18 @@ class SupabaseAppStore:
         stage1_threshold = stale_after_seconds if stage1_stale_after_seconds is None else stage1_stale_after_seconds
         if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_threshold):
             return "stage1_planner_stalled"
-        heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
         started_at = _parse_datetime(job.get("started_at"))
+        now = datetime.now(timezone.utc)
+        if started_at is not None and (now - started_at).total_seconds() >= _generation_hard_max_runtime_seconds():
+            # A healthy heartbeat only proves the heartbeat loop is alive, not
+            # that the generation work itself is progressing. Past the hard
+            # ceiling we recover the job regardless of heartbeat freshness.
+            return "mid_pipeline_stale"
+        heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
         reference_time = heartbeat_at or started_at
         if reference_time is None:
             return "fresh"
-        if (datetime.now(timezone.utc) - reference_time).total_seconds() < max(1, stale_after_seconds):
+        if (now - reference_time).total_seconds() < max(1, stale_after_seconds):
             return "fresh"
         return "mid_pipeline_stale"
 

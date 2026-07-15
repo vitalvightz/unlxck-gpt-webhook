@@ -56,7 +56,10 @@ from .services.admin_stage2_service import (
     should_prewarm_review_plan_row,
     submit_manual_stage2 as submit_manual_stage2_service,
 )
-from .services.generation_retry_service import retry_generation_job as retry_generation_job_service
+from .services.generation_retry_service import (
+    cancel_generation_job as cancel_generation_job_service,
+    retry_generation_job as retry_generation_job_service,
+)
 from .services.triage_resume_service import (
     approve_and_resume_job_triage,
     approve_and_resume_plan_triage,
@@ -1020,6 +1023,18 @@ def create_app(
             schedule_generation_job_if_needed=schedule_generation_job_if_needed,
             plan_generate_daily_limit_per_user=_plan_generate_daily_limit_per_user,
             is_exempt_from_daily_generation_cap=_is_exempt_from_daily_generation_cap,
+        )
+
+    @app.post("/api/generation-jobs/{job_id}/cancel", response_model=GenerationJobResponse)
+    async def cancel_generation_job(
+        job_id: str,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> GenerationJobResponse:
+        return await cancel_generation_job_service(
+            job_id=job_id,
+            profile=profile,
+            store=store,
         )
 
     app.include_router(
