@@ -608,6 +608,13 @@ export function retryGenerationJob(
   );
 }
 
+export function cancelGenerationJob(token: string, jobId: string): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(`/api/generation-jobs/${encodeURIComponent(jobId)}/cancel`, {
+    method: "POST",
+    token,
+  });
+}
+
 export function listPlans(token: string): Promise<PlanSummary[]> {
   return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
 }

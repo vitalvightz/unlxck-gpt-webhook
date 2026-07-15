@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
-import { retryGenerationJob } from "@/lib/api";
+import { cancelGenerationJob, retryGenerationJob } from "@/lib/api";
 import { useAppSession } from "./auth-provider";
 import { useGenerationStatus } from "./generation-status-provider";
 
@@ -142,6 +142,10 @@ export function getGenerationStatusTarget(
     return `/plans/${planId}`;
   }
 
+  if (phase === "failed") {
+    return "/generate";
+  }
+
   return null;
 }
 
@@ -177,6 +181,8 @@ export function GlobalGenerationStatus() {
   const [isRetryingLatest, setIsRetryingLatest] = useState(false);
   const [retryLatestError, setRetryLatestError] = useState<string | null>(null);
   const [reopenPos, setReopenPos] = useState<{ x: number; y: number } | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const previousPhaseRef = useRef(phase);
   const previousGenerationKeyRef = useRef<string | null>(null);
@@ -751,6 +757,31 @@ export function GlobalGenerationStatus() {
           {content}
         </button>
       )}
+
+      {isFailed && jobId ? (
+        <button
+          type="button"
+          className="global-generation-status-cta-label"
+          disabled={isCancelling}
+          onClick={() => {
+            if (!session?.access_token || isCancelling) {
+              return;
+            }
+
+            setCancelError(null);
+            setIsCancelling(true);
+
+            void cancelGenerationJob(session.access_token, jobId)
+              .then(() => refreshStatus())
+              .catch(() => setCancelError("Cancel failed. Try again."))
+              .finally(() => setIsCancelling(false));
+          }}
+        >
+          {isCancelling ? "Cancelling..." : "Cancel build"}
+        </button>
+      ) : null}
+
+      {cancelError ? <div className="global-generation-status-message">{cancelError}</div> : null}
 
       <button
         type="button"

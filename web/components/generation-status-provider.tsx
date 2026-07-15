@@ -312,14 +312,25 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           setAthleteId(job.athlete_id || null);
           setSource(job.source || null);
 
-          if (stalledBeforeStart || staleVisibleJob || isTerminalStatus(normalizedStatus)) {
+          if (stalledBeforeStart || staleVisibleJob) {
+            // Deliberately leave the pending-generation record in place and
+            // keep polling this job at the normal cadence, re-setting the
+            // same "Build stalled" state each time. Auto-hiding it after a
+            // few seconds (the old behaviour) only for the next poll —
+            // interval tick or tab refocus — to rediscover the same
+            // still-"running" job and flash the banner right back is what
+            // made the ribbon appear to flicker every few seconds. It now
+            // stays put until the user dismisses it, retries, or cancels the
+            // job (which resolves the job server-side so the next poll picks
+            // up the real terminal status instead).
+          } else if (isTerminalStatus(normalizedStatus)) {
             clearPendingGenerations();
 
             // Schedule the status clear — cancel any previous pending clear first
             if (clearTimerRef.current !== null) {
               clearTimeout(clearTimerRef.current);
             }
-            const delay = stalledBeforeStart || staleVisibleJob || normalizedStatus === "failed" ? 3000 : 5000;
+            const delay = normalizedStatus === "failed" ? 3000 : 5000;
             clearTimerRef.current = setTimeout(() => {
               clearTimerRef.current = null;
               setPhase(null);
