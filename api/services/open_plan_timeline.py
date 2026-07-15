@@ -214,7 +214,9 @@ def _expand_single_template_week(
         if goal:
             week["week_goal"] = goal
         progression = week.get("progression")
-        progression = dict(progression) if isinstance(progression, Mapping) else {}
+        if not isinstance(progression, Mapping):
+            progression = {}
+
         progression["week_type"] = _OPEN_TEMPLATE_WEEK_TYPES[position - 1]
         if goal:
             progression["planned_change_from_previous"] = goal
