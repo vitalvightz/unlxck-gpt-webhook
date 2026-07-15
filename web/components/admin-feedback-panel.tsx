@@ -453,14 +453,14 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
       {!loading && !error && feedback.length > 0 ? (
         <div className="admin-feedback-list">
           {groups.map((group) => (
-            <section key={group.profileId || group.email} className="admin-feedback-group">
-              <div className="admin-feedback-group-header">
+            <details key={group.profileId || group.email} className="admin-feedback-group">
+              <summary className="admin-feedback-group-header">
                 <div>
                   <h3>{group.name}</h3>
                   <p>{group.email}</p>
                 </div>
                 <span>{group.items.length} recent {group.items.length === 1 ? "response" : "responses"}</span>
-              </div>
+              </summary>
               <div className="admin-feedback-group-items">
                 {group.items.map((item) => (
                   <FeedbackItem
@@ -473,7 +473,7 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
                   />
                 ))}
               </div>
-            </section>
+            </details>
           ))}
         </div>
       ) : null}
