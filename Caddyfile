@@ -1,0 +1,15 @@
+{$API_DOMAIN} {
+    encode zstd gzip
+
+    reverse_proxy api:8000 {
+        transport http {
+            dial_timeout 10s
+            response_header_timeout 180s
+        }
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}

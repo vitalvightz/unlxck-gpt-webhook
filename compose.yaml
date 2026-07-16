@@ -1,0 +1,72 @@
+name: unlxck-backend
+
+services:
+  api:
+    build:
+      context: .
+    command: uvicorn api.app:app --host 0.0.0.0 --port 8000 --workers 1
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      UNLXCK_ENABLE_IN_PROCESS_GENERATION: "0"
+      UNLXCK_DISABLE_SPACY: "1"
+      APP_RSS_WARN_MB: "700"
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  worker:
+    build:
+      context: .
+    command: python -m api.worker
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      UNLXCK_ENABLE_IN_PROCESS_GENERATION: "0"
+      UNLXCK_DISABLE_SPACY: "0"
+      UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS: "1"
+      UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS: "35"
+    stop_grace_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  caddy_data:
+  caddy_config:
