@@ -57,10 +57,19 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ## First deployment
 
+1. Clone the repository and check out the deployment branch:
+
 ```bash
 git clone https://github.com/vitalvightz/unlxck-gpt-webhook.git
 cd unlxck-gpt-webhook
 git checkout codex/hetzner-migration
+```
+
+2. Create and populate `.env.production` in the repository root before starting the containers (see **Required files on the server** above). The API, worker, and Caddy services all read this file, so `docker compose` fails to start without it.
+
+3. Build and start the services:
+
+```bash
 sudo docker compose build
 sudo docker compose up -d
 sudo docker compose ps

@@ -14,10 +14,10 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
-COPY . .
-
 RUN useradd --create-home --uid 10001 appuser \
-    && chown -R appuser:appuser /app
+    && chown appuser:appuser /app
+
+COPY --chown=appuser:appuser . .
 
 USER appuser
 

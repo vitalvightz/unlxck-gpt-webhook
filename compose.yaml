@@ -37,6 +37,7 @@ services:
       UNLXCK_ENABLE_IN_PROCESS_GENERATION: "0"
       UNLXCK_DISABLE_SPACY: "0"
       UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS: "1"
+      UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS: "35"
     stop_grace_period: 40s
     logging:
       driver: json-file
@@ -50,8 +51,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    environment:
-      API_DOMAIN: ${API_DOMAIN}
+    env_file:
+      - .env.production
     ports:
       - "80:80"
       - "443:443"
