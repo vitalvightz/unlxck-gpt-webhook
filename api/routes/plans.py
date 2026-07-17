@@ -52,12 +52,13 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         except (ValueError, AttributeError):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
-        if is_effective_admin_profile(profile, store):
+        is_admin = is_effective_admin_profile(profile, store)
+        if is_admin:
             plan_row = store.get_plan(plan_id)
         else:
             plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
 
-        if not plan_row:
+        if not plan_row or (not is_admin and _is_archived_plan(plan_row)):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 
