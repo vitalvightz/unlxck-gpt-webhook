@@ -69,8 +69,9 @@ function ReadinessValue({
   }
   return (
     <dd>
-      <a href={href} aria-label={actionLabel}>
+      <a href={href}>
         {children}
+        {actionLabel ? <span className="sr-only"> — {actionLabel}</span> : null}
       </a>
     </dd>
   );
