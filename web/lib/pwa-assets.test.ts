@@ -69,6 +69,27 @@ test("service worker only runtime-caches safe static assets", () => {
   assert.match(source, /request\.mode === "navigate"/);
   assert.match(source, /caches\.match\(OFFLINE_URL\)/);
   assert.match(source, /url\.pathname\.startsWith\("\/_next\/static\/"\)/);
+  assert.match(source, /isVersionedNextAsset \|\| SAFE_STATIC_PATHS\.has\(url\.pathname\)/);
   assert.match(source, /event\.data\?\.type === "SKIP_WAITING"/);
+  const navigationHandler = source.match(
+    /async function networkFirstNavigation\(request\) \{[\s\S]*?\n\}/,
+  )?.[0];
+  assert.ok(navigationHandler);
+  assert.doesNotMatch(navigationHandler, /cache\.put/);
   assert.doesNotMatch(source, /self\.skipWaiting\(\)[\s\S]*install/);
+
+  for (const forbiddenPath of [
+    "/plans",
+    "/profiles",
+    "/generation_jobs",
+    "/check-ins",
+    "/nutrition",
+    "/admin",
+  ]) {
+    assert.doesNotMatch(
+      source,
+      new RegExp(`SAFE_STATIC_PATHS[^;]*${forbiddenPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+      forbiddenPath,
+    );
+  }
 });

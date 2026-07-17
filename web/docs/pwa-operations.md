@@ -41,9 +41,9 @@ iOS does not expose Chromium’s `beforeinstallprompt` event, so the Settings ac
 
 ### Android and Chromium desktop
 
-Open **Settings → Account → Install UNLXCK** and use the native install prompt. If the prompt is not available, use the browser menu’s **Install app** or **Add to Home screen** action.
+Open **Settings → Account → Install UNLXCK** and use the native install prompt. The panel appears only after the browser provides a real install prompt.
 
-Firefox and some desktop Safari versions provide more limited installation UI. Manifest shortcuts are also browser-dependent.
+Browsers without either a native install prompt or the Safari iOS/iPadOS manual route do not see a misleading install panel. Manifest shortcuts remain browser-dependent.
 
 ## Testing standalone mode
 
@@ -92,7 +92,34 @@ It never caches authenticated HTML, `/api` responses, Supabase or OpenAI traffic
 
 The registration URL and cache names use the current Vercel deployment fingerprint, so old static chunks cannot accumulate across deployments.
 
-The worker does not call `skipWaiting()` during installation. When a new worker is waiting, the app shows **New version available — Refresh**. Only that explicit action activates the worker and reloads the page, so an intake, plan review, or active generation is never refreshed automatically.
+The worker does not call `skipWaiting()` during installation. When a new worker is waiting, the app shows **New version available** with a **Refresh** action only on a safe route. Intake/onboarding, generation, triage, admin review, and pages with unsaved input defer that actionable notice. The waiting worker is preserved, and the action returns after the user navigates to a safe route. Only an explicit Refresh activates the worker; repeated controller-change events cannot create a refresh loop.
+
+## Final real-device readiness checklist
+
+### iPhone and iPad
+
+- Open in Safari and use **Share → Add to Home Screen**.
+- Confirm the UNLXCK icon and app name are correct.
+- Launch from the Home Screen and confirm standalone display.
+- Check notch, status-bar, fixed-navigation, and home-indicator safe areas.
+- Sign in, close the app, reopen it, and confirm login persistence.
+- Confirm the Settings install panel is hidden after installation.
+
+### Android
+
+- Confirm Settings exposes the native install prompt only when the browser provides it.
+- Confirm the maskable icon is centred and unclipped on the launcher.
+- Launch standalone and verify navigation and login persistence.
+- Deploy a test update and verify the explicit update prompt on a safe route.
+- Confirm the update action defers during generation or edited forms, then returns later.
+- Test the offline fallback and recovery after reconnecting.
+
+### Desktop
+
+- Install with Chrome and Edge and verify standalone launch.
+- Confirm unsupported browsers hide the install panel instead of showing generic instructions.
+- Uninstall, clear the site worker/cache in DevTools, and reinstall.
+- Verify one explicit update refresh causes only one reload.
 
 ## Resetting during debugging
 

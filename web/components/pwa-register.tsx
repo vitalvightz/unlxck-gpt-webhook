@@ -15,9 +15,13 @@ import { useToast } from "@/components/toast-provider";
 import {
   createPwaWorkerUrl,
   isIosDevice,
+  isPwaCriticalWorkflow,
   isStandaloneDisplay,
   PWA_DISPLAY_MODE_QUERY,
+  resolvePwaInstallAvailability,
+  shouldReloadForPwaControllerChange,
   shouldRegisterServiceWorker,
+  type PwaInstallAvailability,
 } from "@/lib/pwa";
 
 type InstallOutcome = "accepted" | "dismissed" | "unavailable";
@@ -32,18 +36,19 @@ interface NavigatorWithStandalone extends Navigator {
 }
 
 interface PwaRuntimeContextValue {
-  canPromptInstall: boolean;
+  installAvailability: PwaInstallAvailability;
   isInstalled: boolean | null;
-  isIos: boolean;
   promptInstall: () => Promise<InstallOutcome>;
 }
 
 const PwaRuntimeContext = createContext<PwaRuntimeContextValue>({
-  canPromptInstall: false,
+  installAvailability: "checking",
   isInstalled: null,
-  isIos: false,
   promptInstall: async () => "unavailable",
 });
+
+const UPDATE_SAFETY_POLL_MS = 1_000;
+const reloadCurrentPage = () => window.location.reload();
 
 export function usePwaRuntime(): PwaRuntimeContextValue {
   return useContext(PwaRuntimeContext);
@@ -53,13 +58,24 @@ export function PwaRegister({
   children,
   buildVersion = "local",
   environment = process.env.NODE_ENV,
-}: Readonly<{ children: ReactNode; buildVersion?: string; environment?: string }>) {
-  const { showToast } = useToast();
+  reloadPage = reloadCurrentPage,
+}: Readonly<{
+  children: ReactNode;
+  buildVersion?: string;
+  environment?: string;
+  reloadPage?: () => void;
+}>) {
+  const { dismissToast, showToast } = useToast();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState<boolean | null>(null);
   const [isIos, setIsIos] = useState(false);
+  const [waitingUpdateVersion, setWaitingUpdateVersion] = useState(0);
+  const [isUpdateContextCritical, setIsUpdateContextCritical] = useState(false);
   const waitingWorkerRef = useRef<ServiceWorker | null>(null);
-  const notifiedWorkerRef = useRef<ServiceWorker | null>(null);
+  const updateToastIdRef = useRef<number | null>(null);
+  const unsavedInputRef = useRef(false);
+  const lastRouteKeyRef = useRef("");
+  const updateContextCriticalRef = useRef<boolean | null>(null);
   const refreshRequestedRef = useRef(false);
   const reloadStartedRef = useRef(false);
 
@@ -68,28 +84,42 @@ export function PwaRegister({
     if (!worker) {
       return;
     }
+    updateToastIdRef.current = null;
     refreshRequestedRef.current = true;
     worker.postMessage({ type: "SKIP_WAITING" });
   }, []);
 
-  const announceWaitingWorker = useCallback(
+  const storeWaitingWorker = useCallback(
     (worker: ServiceWorker | null) => {
-      if (!worker || notifiedWorkerRef.current === worker) {
+      if (!worker || waitingWorkerRef.current === worker) {
         return;
       }
+      if (updateToastIdRef.current !== null) {
+        dismissToast(updateToastIdRef.current);
+        updateToastIdRef.current = null;
+      }
       waitingWorkerRef.current = worker;
-      notifiedWorkerRef.current = worker;
-      showToast("New version available.", {
-        durationMs: 0,
-        tone: "info",
-        action: {
-          label: "Refresh",
-          onClick: activateWaitingWorker,
-        },
-      });
+      setWaitingUpdateVersion((current) => current + 1);
     },
-    [activateWaitingWorker, showToast],
+    [dismissToast],
   );
+
+  const evaluateUpdateSafety = useCallback(() => {
+    const routeKey = `${window.location.pathname}${window.location.search}`;
+    if (lastRouteKeyRef.current && lastRouteKeyRef.current !== routeKey) {
+      unsavedInputRef.current = false;
+    }
+    lastRouteKeyRef.current = routeKey;
+
+    const nextCritical =
+      unsavedInputRef.current ||
+      isPwaCriticalWorkflow(window.location.pathname, window.location.search);
+    if (updateContextCriticalRef.current === nextCritical) {
+      return;
+    }
+    updateContextCriticalRef.current = nextCritical;
+    setIsUpdateContextCritical(nextCritical);
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia?.(PWA_DISPLAY_MODE_QUERY);
@@ -126,6 +156,108 @@ export function PwaRegister({
   }, []);
 
   useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      if (target.isContentEditable) {
+        return true;
+      }
+      if (
+        target instanceof window.HTMLTextAreaElement ||
+        target instanceof window.HTMLSelectElement
+      ) {
+        return !target.hasAttribute("disabled");
+      }
+      if (!(target instanceof window.HTMLInputElement)) {
+        return false;
+      }
+      return (
+        !target.disabled &&
+        !target.readOnly &&
+        !["button", "hidden", "reset", "submit"].includes(target.type)
+      );
+    };
+    const markUnsavedInput = (event: Event) => {
+      if (!isEditableTarget(event.target) || unsavedInputRef.current) {
+        return;
+      }
+      unsavedInputRef.current = true;
+      evaluateUpdateSafety();
+    };
+    const clearUnsavedInput = () => {
+      if (!unsavedInputRef.current) {
+        return;
+      }
+      unsavedInputRef.current = false;
+      window.requestAnimationFrame(evaluateUpdateSafety);
+    };
+
+    document.addEventListener("input", markUnsavedInput, true);
+    document.addEventListener("change", markUnsavedInput, true);
+    document.addEventListener("submit", clearUnsavedInput, true);
+    document.addEventListener("reset", clearUnsavedInput, true);
+
+    return () => {
+      document.removeEventListener("input", markUnsavedInput, true);
+      document.removeEventListener("change", markUnsavedInput, true);
+      document.removeEventListener("submit", clearUnsavedInput, true);
+      document.removeEventListener("reset", clearUnsavedInput, true);
+    };
+  }, [evaluateUpdateSafety]);
+
+  useEffect(() => {
+    evaluateUpdateSafety();
+    if (waitingUpdateVersion === 0) {
+      return;
+    }
+
+    const intervalId = window.setInterval(evaluateUpdateSafety, UPDATE_SAFETY_POLL_MS);
+    window.addEventListener("focus", evaluateUpdateSafety);
+    window.addEventListener("popstate", evaluateUpdateSafety);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", evaluateUpdateSafety);
+      window.removeEventListener("popstate", evaluateUpdateSafety);
+    };
+  }, [evaluateUpdateSafety, waitingUpdateVersion]);
+
+  useEffect(() => {
+    if (waitingUpdateVersion === 0) {
+      return;
+    }
+
+    const isCritical =
+      isUpdateContextCritical ||
+      unsavedInputRef.current ||
+      isPwaCriticalWorkflow(window.location.pathname, window.location.search);
+
+    if (isCritical) {
+      if (updateToastIdRef.current !== null) {
+        dismissToast(updateToastIdRef.current);
+        updateToastIdRef.current = null;
+      }
+      return;
+    }
+    if (updateToastIdRef.current !== null) {
+      return;
+    }
+
+    updateToastIdRef.current = showToast("New version available", {
+      action: { label: "Refresh", onClick: activateWaitingWorker },
+      durationMs: 0,
+      tone: "info",
+    });
+  }, [
+    activateWaitingWorker,
+    dismissToast,
+    isUpdateContextCritical,
+    showToast,
+    waitingUpdateVersion,
+  ]);
+
+  useEffect(() => {
     if (!shouldRegisterServiceWorker(environment, "serviceWorker" in navigator)) {
       return;
     }
@@ -135,11 +267,16 @@ export function PwaRegister({
     let installingWorker: ServiceWorker | null = null;
 
     const handleControllerChange = () => {
-      if (!refreshRequestedRef.current || reloadStartedRef.current) {
+      if (
+        !shouldReloadForPwaControllerChange(
+          refreshRequestedRef.current,
+          reloadStartedRef.current,
+        )
+      ) {
         return;
       }
       reloadStartedRef.current = true;
-      window.location.reload();
+      reloadPage();
     };
 
     const handleInstallingStateChange = () => {
@@ -147,7 +284,7 @@ export function PwaRegister({
         installingWorker?.state === "installed" &&
         navigator.serviceWorker.controller
       ) {
-        announceWaitingWorker(registration?.waiting ?? installingWorker);
+        storeWaitingWorker(registration?.waiting ?? installingWorker);
       }
     };
 
@@ -169,7 +306,7 @@ export function PwaRegister({
         }
         registration = nextRegistration;
         registration.addEventListener("updatefound", handleUpdateFound);
-        announceWaitingWorker(registration.waiting);
+        storeWaitingWorker(registration.waiting);
         if (registration.installing) {
           handleUpdateFound();
         }
@@ -185,7 +322,7 @@ export function PwaRegister({
       registration?.removeEventListener("updatefound", handleUpdateFound);
       installingWorker?.removeEventListener("statechange", handleInstallingStateChange);
     };
-  }, [announceWaitingWorker, buildVersion, environment]);
+  }, [buildVersion, environment, reloadPage, storeWaitingWorker]);
 
   const promptInstall = useCallback(async (): Promise<InstallOutcome> => {
     const prompt = installPrompt;
@@ -204,14 +341,23 @@ export function PwaRegister({
     }
   }, [installPrompt]);
 
+  const installAvailability = useMemo(
+    () =>
+      resolvePwaInstallAvailability({
+        hasNativePrompt: installPrompt !== null,
+        installed: isInstalled,
+        ios: isIos,
+      }),
+    [installPrompt, isInstalled, isIos],
+  );
+
   const value = useMemo<PwaRuntimeContextValue>(
     () => ({
-      canPromptInstall: installPrompt !== null,
+      installAvailability,
       isInstalled,
-      isIos,
       promptInstall,
     }),
-    [installPrompt, isInstalled, isIos, promptInstall],
+    [installAvailability, isInstalled, promptInstall],
   );
 
   return <PwaRuntimeContext.Provider value={value}>{children}</PwaRuntimeContext.Provider>;

@@ -19,12 +19,12 @@ function cleanup(container: HTMLElement, root: Root) {
   act(() => root.unmount());
   container.remove();
   document.body.innerHTML = "";
+  window.history.replaceState({}, "", "/");
 }
 
-async function settle() {
+async function settle(durationMs = 20) {
   await act(async () => {
-    await new Promise((resolve) => window.setTimeout(resolve, 20));
-    await Promise.resolve();
+    await new Promise((resolve) => window.setTimeout(resolve, durationMs));
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -41,15 +41,83 @@ function setMatchMedia(matches: boolean) {
   });
 }
 
-function renderInstallSurface(root: Root, environment?: string) {
+function renderInstallSurface(
+  root: Root,
+  environment?: string,
+  reloadPage?: () => void,
+) {
   root.render(
     <ToastProvider>
-      <PwaRegister environment={environment}>
+      <PwaRegister environment={environment} reloadPage={reloadPage}>
         <InstallUnlxck />
       </PwaRegister>
     </ToastProvider>,
   );
 }
+
+function mockServiceWorker() {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+  const controllerChangeListeners = new Set<() => void>();
+  const postedMessages: unknown[] = [];
+  const waitingWorker = { postMessage: (message: unknown) => postedMessages.push(message) };
+  const registration = {
+    waiting: waitingWorker,
+    installing: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  };
+  const serviceWorker = {
+    controller: {},
+    register: async () => registration,
+    addEventListener: (type: string, listener: () => void) => {
+      if (type === "controllerchange") controllerChangeListeners.add(listener);
+    },
+    removeEventListener: (type: string, listener: () => void) => {
+      if (type === "controllerchange") controllerChangeListeners.delete(listener);
+    },
+  };
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: serviceWorker,
+  });
+
+  return {
+    dispatchControllerChange: () => controllerChangeListeners.forEach((listener) => listener()),
+    postedMessages,
+    restore: () => {
+      if (originalDescriptor) {
+        Object.defineProperty(navigator, "serviceWorker", originalDescriptor);
+      } else {
+        Reflect.deleteProperty(navigator, "serviceWorker");
+      }
+    },
+  };
+}
+
+test("unsupported browsers do not see a misleading Settings install panel", async () => {
+  setMatchMedia(false);
+  const { container, root } = mount();
+  try {
+    await act(async () => renderInstallSurface(root));
+    assert.equal(container.querySelector('[data-testid="install-unlxck"]'), null);
+    await settle();
+    assert.equal(container.querySelector('[data-testid="install-unlxck"]'), null);
+    assert.doesNotMatch(container.textContent ?? "", /browser menu|install app/i);
+  } finally {
+    cleanup(container, root);
+  }
+});
+
+test("install state renders nothing while capability detection is pending", async () => {
+  setMatchMedia(false);
+  const { container, root } = mount();
+  try {
+    await act(async () => renderInstallSurface(root));
+    assert.equal(container.querySelector('[data-testid="install-unlxck"]'), null);
+  } finally {
+    cleanup(container, root);
+  }
+});
 
 test("installed standalone mode hides the Settings install action", async () => {
   setMatchMedia(true);
@@ -63,42 +131,7 @@ test("installed standalone mode hides the Settings install action", async () => 
   }
 });
 
-test("explicit Settings action opens restrained browser install instructions", async () => {
-  setMatchMedia(false);
-  const { container, root } = mount();
-  try {
-    await act(async () => renderInstallSurface(root));
-    await settle();
-    const trigger = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
-      button.textContent?.includes("View install steps"),
-    );
-    assert.ok(trigger);
-    await act(async () => trigger.click());
-    assert.equal(container.querySelector('[role="dialog"]')?.getAttribute("aria-modal"), "true");
-    assert.match(container.querySelector('[role="dialog"]')?.textContent ?? "", /Choose “Install app”/);
-
-    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
-    const close = dialog?.querySelector<HTMLButtonElement>('[aria-label="Close install instructions"]');
-    const done = Array.from(dialog?.querySelectorAll<HTMLButtonElement>("button") ?? []).find(
-      (button) => button.textContent === "Done",
-    );
-    assert.ok(close);
-    assert.ok(done);
-    assert.equal(document.activeElement, close);
-    await act(async () => {
-      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Tab", shiftKey: true }));
-    });
-    assert.equal(document.activeElement, done);
-    await act(async () => {
-      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Tab" }));
-    });
-    assert.equal(document.activeElement, close);
-  } finally {
-    cleanup(container, root);
-  }
-});
-
-test("iPhone Settings action shows the truthful Safari Add to Home Screen flow", async () => {
+test("iPhone Settings action shows only the Safari Add to Home Screen flow", async () => {
   setMatchMedia(false);
   const userAgentDescriptor = Object.getOwnPropertyDescriptor(navigator, "userAgent");
   const touchDescriptor = Object.getOwnPropertyDescriptor(navigator, "maxTouchPoints");
@@ -111,37 +144,48 @@ test("iPhone Settings action shows the truthful Safari Add to Home Screen flow",
   try {
     await act(async () => renderInstallSurface(root));
     await settle();
-    const trigger = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
-      button.textContent === "View iPhone steps",
+    const trigger = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent === "View iPhone steps",
     );
     assert.ok(trigger);
     await act(async () => trigger.click());
-    const dialogText = container.querySelector('[role="dialog"]')?.textContent ?? "";
+    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
+    const dialogText = dialog?.textContent ?? "";
     assert.match(dialogText, /Open the Share menu/);
     assert.match(dialogText, /Select “Add to Home Screen”/);
     assert.match(dialogText, /Tap “Add”/);
+    assert.doesNotMatch(dialogText, /browser menu|Install app/i);
+
+    const close = dialog?.querySelector<HTMLButtonElement>(
+      '[aria-label="Close install instructions"]',
+    );
+    const done = Array.from(dialog?.querySelectorAll<HTMLButtonElement>("button") ?? []).find(
+      (button) => button.textContent === "Done",
+    );
+    assert.ok(close);
+    assert.ok(done);
+    assert.equal(document.activeElement, close);
+    await act(async () => {
+      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Tab", shiftKey: true }));
+    });
+    assert.equal(document.activeElement, done);
   } finally {
     cleanup(container, root);
-    if (userAgentDescriptor) {
-      Object.defineProperty(navigator, "userAgent", userAgentDescriptor);
-    } else {
-      Reflect.deleteProperty(navigator, "userAgent");
-    }
-    if (touchDescriptor) {
-      Object.defineProperty(navigator, "maxTouchPoints", touchDescriptor);
-    } else {
-      Reflect.deleteProperty(navigator, "maxTouchPoints");
-    }
+    if (userAgentDescriptor) Object.defineProperty(navigator, "userAgent", userAgentDescriptor);
+    else Reflect.deleteProperty(navigator, "userAgent");
+    if (touchDescriptor) Object.defineProperty(navigator, "maxTouchPoints", touchDescriptor);
+    else Reflect.deleteProperty(navigator, "maxTouchPoints");
   }
 });
 
-test("captured Chromium install prompt is used only after the explicit install click", async () => {
+test("captured Chromium install prompt is used only after an explicit click", async () => {
   setMatchMedia(false);
   let promptCalls = 0;
   const { container, root } = mount();
   try {
     await act(async () => renderInstallSurface(root));
     await settle();
+    assert.equal(container.querySelector('[data-testid="install-unlxck"]'), null);
 
     const event = Object.assign(new window.Event("beforeinstallprompt", { cancelable: true }), {
       prompt: async () => {
@@ -151,15 +195,14 @@ test("captured Chromium install prompt is used only after the explicit install c
     });
     await act(async () => window.dispatchEvent(event));
 
-    const trigger = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
-      button.textContent === "Install UNLXCK",
+    const trigger = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent === "Install UNLXCK",
     );
     assert.ok(trigger);
     assert.equal(promptCalls, 0);
     await act(async () => trigger.click());
     await settle();
     assert.equal(promptCalls, 1);
-    assert.ok(container.querySelector('[data-testid="install-unlxck"]'));
     await act(async () => window.dispatchEvent(new window.Event("appinstalled")));
     await settle();
     assert.equal(container.querySelector('[data-testid="install-unlxck"]'), null);
@@ -168,7 +211,7 @@ test("captured Chromium install prompt is used only after the explicit install c
   }
 });
 
-test("a rejected native prompt falls back to the manual install guide", async () => {
+test("a rejected native prompt hides the panel instead of inventing manual steps", async () => {
   setMatchMedia(false);
   const { container, root } = mount();
   try {
@@ -187,46 +230,86 @@ test("a rejected native prompt falls back to the manual install guide", async ()
     assert.ok(trigger);
     await act(async () => trigger.click());
     await settle();
-    assert.ok(container.querySelector('[role="dialog"]'));
+    assert.equal(container.querySelector('[data-testid="install-unlxck"]'), null);
+    assert.equal(container.querySelector('[role="dialog"]'), null);
   } finally {
     cleanup(container, root);
   }
 });
 
-test("a waiting service worker surfaces the controlled refresh action", async () => {
+test("waiting updates defer on critical routes and return with a Refresh action on safe routes", async () => {
   setMatchMedia(false);
-  const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
-  const postedMessages: unknown[] = [];
-  const waitingWorker = { postMessage: (message: unknown) => postedMessages.push(message) };
-  const registration = {
-    waiting: waitingWorker,
-    installing: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  };
-  const serviceWorker = {
-    controller: {},
-    register: async () => registration,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  };
-  Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: serviceWorker });
-
+  window.history.replaceState({}, "", "/generate");
+  const worker = mockServiceWorker();
   const { container, root } = mount();
   try {
-    await act(async () => renderInstallSurface(root, "production"));
+    await act(async () => renderInstallSurface(root, "production", () => {}));
     await settle();
-    assert.match(container.textContent ?? "", /New version available\./);
+    assert.doesNotMatch(container.textContent ?? "", /New version available/);
+    assert.deepEqual(worker.postedMessages, []);
+
+    window.history.pushState({}, "", "/dashboard");
+    await act(async () => window.dispatchEvent(new window.PopStateEvent("popstate")));
+    await settle();
+    assert.match(container.textContent ?? "", /New version available/);
+    assert.equal(container.querySelector<HTMLButtonElement>(".toast-action")?.textContent, "Refresh");
+  } finally {
+    cleanup(container, root);
+    worker.restore();
+  }
+});
+
+test("unsaved input hides an update action until navigation reaches a safe route", async () => {
+  setMatchMedia(false);
+  const worker = mockServiceWorker();
+  const { container, root } = mount();
+  try {
+    await act(async () => renderInstallSurface(root, "production", () => {}));
+    await settle();
+    assert.ok(container.querySelector(".toast-action"));
+
+    const input = document.createElement("input");
+    container.appendChild(input);
+    await act(async () => input.dispatchEvent(new window.Event("input", { bubbles: true })));
+    await settle();
+    assert.equal(container.querySelector(".toast-action"), null);
+
+    window.history.pushState({}, "", "/today");
+    await act(async () => window.dispatchEvent(new window.PopStateEvent("popstate")));
+    await settle();
+    assert.equal(container.querySelector<HTMLButtonElement>(".toast-action")?.textContent, "Refresh");
+  } finally {
+    cleanup(container, root);
+    worker.restore();
+  }
+});
+
+test("controller changes never reload automatically and explicit refresh reloads only once", async () => {
+  setMatchMedia(false);
+  const worker = mockServiceWorker();
+  let reloadCalls = 0;
+  const { container, root } = mount();
+  try {
+    await act(async () =>
+      renderInstallSurface(root, "production", () => {
+        reloadCalls += 1;
+      }),
+    );
+    await settle();
+
+    worker.dispatchControllerChange();
+    assert.equal(reloadCalls, 0);
+
     const refresh = container.querySelector<HTMLButtonElement>(".toast-action");
     assert.ok(refresh);
     await act(async () => refresh.click());
-    assert.deepEqual(postedMessages, [{ type: "SKIP_WAITING" }]);
+    assert.deepEqual(worker.postedMessages, [{ type: "SKIP_WAITING" }]);
+
+    worker.dispatchControllerChange();
+    worker.dispatchControllerChange();
+    assert.equal(reloadCalls, 1);
   } finally {
     cleanup(container, root);
-    if (originalDescriptor) {
-      Object.defineProperty(navigator, "serviceWorker", originalDescriptor);
-    } else {
-      Reflect.deleteProperty(navigator, "serviceWorker");
-    }
+    worker.restore();
   }
 });

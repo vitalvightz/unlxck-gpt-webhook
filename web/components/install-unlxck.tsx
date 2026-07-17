@@ -25,7 +25,9 @@ function AddToHomeIcon() {
 }
 
 export function InstallUnlxck() {
-  const { canPromptInstall, isInstalled, isIos, promptInstall } = usePwaRuntime();
+  const { installAvailability, isInstalled, promptInstall } = usePwaRuntime();
+  const canPromptInstall = installAvailability === "native";
+  const isIos = installAvailability === "ios-manual";
   const [showGuide, setShowGuide] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -92,15 +94,17 @@ export function InstallUnlxck() {
       if (outcome === "dismissed") {
         rememberInstallGuideDismissal(window.localStorage);
       }
-      if (outcome === "unavailable") {
-        setShowGuide(true);
-      }
       return;
     }
-    setShowGuide(true);
+    if (isIos) {
+      setShowGuide(true);
+    }
   }
 
-  if (isInstalled !== false) {
+  if (
+    isInstalled !== false ||
+    (installAvailability !== "native" && installAvailability !== "ios-manual")
+  ) {
     return null;
   }
 
@@ -120,13 +124,10 @@ export function InstallUnlxck() {
           <p className="muted pwa-install-description">
             Open your control room from a home-screen icon in a focused, standalone window.
           </p>
-          {!canPromptInstall && !isIos ? (
-            <p className="pwa-install-hint">Your browser’s install option may also appear in its main menu.</p>
-          ) : null}
         </div>
         <div className="pwa-install-actions">
           <button ref={triggerRef} type="button" className="cta" onClick={() => void handleInstall()}>
-            {canPromptInstall ? "Install UNLXCK" : isIos ? "View iPhone steps" : "View install steps"}
+            {canPromptInstall ? "Install UNLXCK" : "View iPhone steps"}
           </button>
         </div>
       </div>
@@ -161,33 +162,21 @@ export function InstallUnlxck() {
               </button>
             </div>
             <p id="pwa-install-sheet-description" className="muted">
-              {isIos
-                ? "Safari uses the Share menu to add a web app to your Home Screen."
-                : "Use your browser’s install control to add UNLXCK to this device."}
+              Safari uses the Share menu to add a web app to your Home Screen.
             </p>
             <ol className="pwa-install-steps">
-              {isIos ? (
-                <>
-                  <li>
-                    <span className="pwa-install-step-icon"><ShareIcon /></span>
-                    <span><strong>Open the Share menu</strong><small>Tap the Share icon in Safari’s toolbar.</small></span>
-                  </li>
-                  <li>
-                    <span className="pwa-install-step-icon"><AddToHomeIcon /></span>
-                    <span><strong>Select “Add to Home Screen”</strong><small>Scroll the actions list if it is not immediately visible.</small></span>
-                  </li>
-                  <li>
-                    <span className="pwa-install-step-number">03</span>
-                    <span><strong>Tap “Add”</strong><small>UNLXCK will appear with its own icon and launch standalone.</small></span>
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li><span className="pwa-install-step-number">01</span><span><strong>Open the browser menu</strong><small>Look for the menu beside the address bar.</small></span></li>
-                  <li><span className="pwa-install-step-number">02</span><span><strong>Choose “Install app”</strong><small>Some browsers label this “Add to Home screen”.</small></span></li>
-                  <li><span className="pwa-install-step-number">03</span><span><strong>Confirm installation</strong><small>Launch UNLXCK from your device like any other app.</small></span></li>
-                </>
-              )}
+              <li>
+                <span className="pwa-install-step-icon"><ShareIcon /></span>
+                <span><strong>Open the Share menu</strong><small>Tap the Share icon in Safari’s toolbar.</small></span>
+              </li>
+              <li>
+                <span className="pwa-install-step-icon"><AddToHomeIcon /></span>
+                <span><strong>Select “Add to Home Screen”</strong><small>Scroll the actions list if it is not immediately visible.</small></span>
+              </li>
+              <li>
+                <span className="pwa-install-step-number">03</span>
+                <span><strong>Tap “Add”</strong><small>UNLXCK will appear with its own icon and launch standalone.</small></span>
+              </li>
             </ol>
             <button type="button" className="ghost-button pwa-install-sheet-done" onClick={dismissGuide}>
               Done

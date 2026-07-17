@@ -16758,14 +16758,8 @@ body[data-pwa-install-sheet="open"] {
   text-transform: uppercase;
 }
 
-.pwa-install-description,
-.pwa-install-hint {
+.pwa-install-description {
   margin: 8px 0 0;
-}
-
-.pwa-install-hint {
-  color: var(--text-muted);
-  font-size: 12px;
 }
 
 .pwa-install-actions {

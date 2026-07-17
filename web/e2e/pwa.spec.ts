@@ -18,11 +18,22 @@ test("manifest, service worker, icon, and offline assets are production-ready", 
     display: "standalone",
   });
 
-  const workerResponse = await request.get("/sw.js");
+  const workerResponse = await request.get("/sw.js?build=headers-check");
   expect(workerResponse.status()).toBe(200);
   expect(workerResponse.headers()["content-type"]).toContain("application/javascript");
+  expect(workerResponse.headers()["cache-control"]).toContain("no-cache");
   expect(workerResponse.headers()["cache-control"]).toContain("no-store");
+  expect(workerResponse.headers()["cache-control"]).toContain("must-revalidate");
   expect(workerResponse.headers()["service-worker-allowed"]).toBe("/");
+  expect(workerResponse.headers()["content-security-policy"]).toBe(
+    "default-src 'self'; base-uri 'none'; connect-src 'self'; object-src 'none'; script-src 'self'",
+  );
+
+  const rootResponse = await request.get("/");
+  const rootCsp = rootResponse.headers()["content-security-policy"] ?? "";
+  expect(rootCsp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
+  expect(rootCsp).toContain("worker-src 'self' blob:");
+  expect(rootCsp).toContain("manifest-src 'self'");
 
   for (const path of [
     "/icons/icon-192x192.png",
@@ -33,6 +44,56 @@ test("manifest, service worker, icon, and offline assets are production-ready", 
   ]) {
     const response = await request.get(path);
     expect(response.status(), path).toBe(200);
+  }
+});
+
+test("root-scoped worker caches only the offline shell and static assets", async ({
+  page,
+  baseURL,
+}) => {
+  await isolateFromNetwork(page, baseURL ?? BASE_URL);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const registration = await page.evaluate(async () => {
+    const ready = await navigator.serviceWorker.ready;
+    await fetch("/api/health").catch(() => null);
+    return {
+      scope: ready.scope,
+      scriptURL: ready.active?.scriptURL ?? ready.waiting?.scriptURL ?? "",
+    };
+  });
+
+  expect(registration.scope).toBe(`${new URL(baseURL ?? BASE_URL).origin}/`);
+  expect(registration.scriptURL).toContain("/sw.js?build=");
+
+  const cachedUrls = await page.evaluate(async () => {
+    const names = await caches.keys();
+    const urls = await Promise.all(
+      names.map(async (name) => (await (await caches.open(name)).keys()).map((request) => request.url)),
+    );
+    return urls.flat();
+  });
+
+  expect(cachedUrls.length).toBeGreaterThan(0);
+  for (const value of cachedUrls) {
+    const url = new URL(value);
+    expect(
+      url.pathname === "/offline.html" ||
+        url.pathname.startsWith("/icons/") ||
+        url.pathname.startsWith("/_next/static/"),
+      value,
+    ).toBe(true);
+  }
+  for (const forbidden of [
+    "/api/",
+    "/plans",
+    "/profiles",
+    "generation_jobs",
+    "/check-ins",
+    "/nutrition",
+    "/admin",
+  ]) {
+    expect(cachedUrls.some((value) => value.includes(forbidden)), forbidden).toBe(false);
   }
 });
 
