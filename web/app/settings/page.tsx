@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { InstallUnlxck } from "@/components/install-unlxck";
 import { GlobalFeedback } from "@/components/feedback/global-feedback";
 import { ApiError, changeUsername, updateMe } from "@/lib/api";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
@@ -932,6 +933,8 @@ export default function SettingsPage() {
             })}
           </div>
         </div>
+
+        <InstallUnlxck />
       </>
     );
   }

@@ -47,6 +47,25 @@ const SECURITY_HEADERS = [
   },
 ];
 
+const SERVICE_WORKER_HEADERS = [
+  {
+    key: "Content-Type",
+    value: "application/javascript; charset=utf-8",
+  },
+  {
+    key: "Cache-Control",
+    value: "no-cache, no-store, must-revalidate",
+  },
+  {
+    key: "Service-Worker-Allowed",
+    value: "/",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: "default-src 'self'; base-uri 'none'; connect-src 'self'; object-src 'none'; script-src 'self'",
+  },
+];
+
 const nextConfig: NextConfig = {
   turbopack: {
     root: WORKSPACE_ROOT,
@@ -66,6 +85,10 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/sw.js",
+        headers: SERVICE_WORKER_HEADERS,
+      },
       {
         source: "/:path*",
         headers: SECURITY_HEADERS,
