@@ -306,10 +306,12 @@ function writeLocalJson(key: string, value: unknown) {
 
 function SettingsNav({
   isSaving,
+  disabled = false,
   onSave,
   sections,
 }: Readonly<{
   isSaving: boolean;
+  disabled?: boolean;
   onSave: () => void;
   sections: SettingsSection[];
 }>) {
@@ -320,7 +322,7 @@ function SettingsNav({
           {section.label}
         </a>
       ))}
-      <button type="button" className="settings-section-save" onClick={onSave} disabled={isSaving}>
+      <button type="button" className="settings-section-save" onClick={onSave} disabled={isSaving || disabled}>
         {isSaving ? "Saving..." : "Save"}
       </button>
     </nav>
@@ -346,7 +348,12 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isAvatarProcessing, setIsAvatarProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Monotonic id for the in-flight avatar compression. Bumped whenever a new
+  // photo is selected (or the avatar is otherwise changed) so a slower earlier
+  // compression can't clobber a newer selection when it finishes last.
+  const avatarRequestRef = useRef(0);
 
   const [usernameDraft, setUsernameDraft] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
@@ -447,6 +454,12 @@ export default function SettingsPage() {
 
   function handleSaveAccount() {
     if (!session?.access_token) {
+      return;
+    }
+    if (isAvatarProcessing) {
+      // Photo is still compressing; block the save so we don't persist the old
+      // avatar under a preview that hasn't been committed yet.
+      setError("Your photo is still processing. Please wait a moment.");
       return;
     }
     setMessage(null);
@@ -579,23 +592,34 @@ export default function SettingsPage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+    const requestId = ++avatarRequestRef.current;
     setError(null);
+    setIsAvatarProcessing(true);
     compressAvatarImage(file)
       .then((dataUrl) => {
+        // A newer selection has superseded this one — drop the stale result.
+        if (requestId !== avatarRequestRef.current) return;
         setAvatarUrl(dataUrl);
         setUrlInputValue("");
         setError(null);
       })
       .catch(() => {
+        if (requestId !== avatarRequestRef.current) return;
         setError("Couldn't process that image. Please try a different photo.");
       })
       .finally(() => {
+        // Only the latest request clears the processing flag.
+        if (requestId === avatarRequestRef.current) {
+          setIsAvatarProcessing(false);
+        }
         // Reset so re-selecting the same file fires another change event.
         if (fileInputRef.current) fileInputRef.current.value = "";
       });
   }
 
   function handleRemoveAvatar() {
+    // Invalidate any in-flight compression so it can't repopulate the avatar.
+    avatarRequestRef.current += 1;
     setAvatarUrl("");
     setUrlInputValue("");
     if (fileInputRef.current) {
@@ -629,6 +653,7 @@ export default function SettingsPage() {
   const usernameSubmitDisabled = isUsernamePending || !usernameChangedFromCurrent || usernameRemaining <= 0;
 
   function renderAvatarEditor() {
+    const hasAvatar = avatarUrl.trim() !== "" && isSafeAvatarImageUrl(avatarUrl.trim());
     return (
       <>
         <input
@@ -638,6 +663,7 @@ export default function SettingsPage() {
           className="avatar-file-input"
           aria-label="Upload profile photo"
           onChange={handleFileChange}
+          disabled={isAvatarProcessing}
         />
 
         <div className="avatar-editor-row">
@@ -646,6 +672,7 @@ export default function SettingsPage() {
             className="avatar-upload-trigger"
             aria-label="Choose profile photo"
             onClick={() => fileInputRef.current?.click()}
+            disabled={isAvatarProcessing}
           >
             <div className="avatar-upload-circle">
               {isSafeAvatarImageUrl(avatarUrl) ? (
@@ -677,12 +704,22 @@ export default function SettingsPage() {
           </button>
 
           <div className="avatar-editor-actions">
-            <button type="button" className="secondary-button avatar-upload-btn" onClick={() => fileInputRef.current?.click()}>
-              {avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? "Change photo" : "Upload photo"}
+            <button
+              type="button"
+              className="secondary-button avatar-upload-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isAvatarProcessing}
+            >
+              {isAvatarProcessing ? "Processing photo…" : hasAvatar ? "Change photo" : "Upload photo"}
             </button>
 
-            {avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? (
-              <button type="button" className="ghost-button danger-button" onClick={handleRemoveAvatar}>
+            {hasAvatar ? (
+              <button
+                type="button"
+                className="ghost-button danger-button"
+                onClick={handleRemoveAvatar}
+                disabled={isAvatarProcessing}
+              >
                 Remove
               </button>
             ) : null}
@@ -699,6 +736,7 @@ export default function SettingsPage() {
                 }}
                 maxLength={AVATAR_URL_MAX}
                 placeholder="https://example.com/photo.jpg"
+                disabled={isAvatarProcessing}
               />
             </div>
           </div>
@@ -1192,7 +1230,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <SettingsNav sections={sections} isSaving={isPending} onSave={handleSaveAccount} />
+        <SettingsNav sections={sections} isSaving={isPending} disabled={isAvatarProcessing} onSave={handleSaveAccount} />
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
@@ -1200,14 +1238,14 @@ export default function SettingsPage() {
         {isAdmin ? renderAdminSettings() : renderAthleteSettings()}
 
         <div className="form-actions settings-mobile-save athlete-motion-slot athlete-motion-rail">
-          <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending}>
-            {isPending ? "Saving..." : "Save account"}
+          <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending || isAvatarProcessing}>
+            {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
           </button>
         </div>
 
         <div className="form-actions settings-desktop-save athlete-motion-slot athlete-motion-rail">
-          <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending}>
-            {isPending ? "Saving..." : "Save account"}
+          <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending || isAvatarProcessing}>
+            {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
           </button>
         </div>
       </section>
