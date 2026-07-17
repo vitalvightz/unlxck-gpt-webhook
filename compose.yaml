@@ -37,8 +37,8 @@ services:
       UNLXCK_ENABLE_IN_PROCESS_GENERATION: "0"
       UNLXCK_DISABLE_SPACY: "0"
       UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS: "1"
-      UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS: "35"
-    stop_grace_period: 40s
+      UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS: "600"
+    stop_grace_period: 610s
     logging:
       driver: json-file
       options:
