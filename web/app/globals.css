@@ -6386,6 +6386,48 @@ button.mobile-step-rail-item {
   }
 }
 
+/* Today panels double as jump targets for the readiness-strip links. Clear the
+   fixed mobile nav so an anchored panel is never tucked under it after a jump. */
+.today-card {
+  scroll-margin-top: var(--mobile-nav-clearance);
+}
+
+/* When a status cell has a live section to resolve it, its value becomes a
+   jump-link. The chevron marks it as actionable; colour is inherited from the
+   cell tone so the accent language stays intact. */
+.today-readiness-strip a {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.today-readiness-strip a::after {
+  content: "\203a";
+  margin-left: 6px;
+  font-weight: 600;
+  opacity: 0.55;
+  transition:
+    transform var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.today-readiness-strip a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.today-readiness-strip a:hover::after,
+.today-readiness-strip a:focus-visible::after {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.today-readiness-strip a:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 3px;
+}
+
 /* Light theme: the strip's cells are hardcoded dark above, which renders as an
    unreadable dark band on the light background. Re-tone the surface, border and
    the "clear" accent so the strip reads on light. */
@@ -7456,6 +7498,15 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   .overview-pending-pill::before,
   .today-pending-pill::before {
     animation: none;
+  }
+
+  .today-readiness-strip a::after {
+    transition: none;
+  }
+
+  .today-readiness-strip a:hover::after,
+  .today-readiness-strip a:focus-visible::after {
+    transform: none;
   }
 
   .today-segment,
