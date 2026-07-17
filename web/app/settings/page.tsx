@@ -51,6 +51,64 @@ type AdminTemplateDraft = {
 };
 
 const MAX_AVATAR_FILE_BYTES = 5 * 1024 * 1024;
+// Largest edge (px) we keep for a profile photo — the avatar only ever renders
+// in a small circle, so anything bigger is wasted bytes.
+const AVATAR_MAX_DIMENSION = 512;
+// Byte budget for the resulting base64 data URL. Real phone photos are several
+// MB raw, which blows past the API's request-body ceiling and the avatar_url
+// field limit ("request body too large"), so we downscale + JPEG-compress the
+// upload to fit well under 100 KB before sending it.
+const AVATAR_TARGET_DATA_URL_CHARS = 96 * 1024;
+
+// Downscale + JPEG-compress a chosen image into a small base64 data URL.
+// Loads the file into an offscreen canvas, shrinks the longest edge to
+// AVATAR_MAX_DIMENSION, then steps quality (and, if still too big, dimensions)
+// down until the encoded data URL fits AVATAR_TARGET_DATA_URL_CHARS.
+async function compressAvatarImage(file: File): Promise<string> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("decode-failed"));
+      img.src = objectUrl;
+    });
+
+    const { naturalWidth: width, naturalHeight: height } = image;
+    if (!width || !height) {
+      throw new Error("decode-failed");
+    }
+
+    let dimension = Math.min(AVATAR_MAX_DIMENSION, Math.max(width, height));
+    while (dimension >= 96) {
+      const scale = dimension / Math.max(width, height);
+      const targetW = Math.max(1, Math.round(width * scale));
+      const targetH = Math.max(1, Math.round(height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("canvas-unsupported");
+      }
+      ctx.drawImage(image, 0, 0, targetW, targetH);
+
+      for (const quality of [0.82, 0.7, 0.6, 0.5, 0.4]) {
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        if (dataUrl.length <= AVATAR_TARGET_DATA_URL_CHARS) {
+          return dataUrl;
+        }
+      }
+      // Even the lowest quality is over budget at this size: shrink and retry.
+      dimension = Math.round(dimension * 0.75);
+    }
+    throw new Error("too-large");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 24;
@@ -521,20 +579,20 @@ export default function SettingsPage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result;
-      if (typeof dataUrl === "string") {
+    setError(null);
+    compressAvatarImage(file)
+      .then((dataUrl) => {
         setAvatarUrl(dataUrl);
         setUrlInputValue("");
         setError(null);
-      }
-    };
-    reader.onerror = () => {
-      setError("Failed to load image. Please try a different file.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    };
-    reader.readAsDataURL(file);
+      })
+      .catch(() => {
+        setError("Couldn't process that image. Please try a different photo.");
+      })
+      .finally(() => {
+        // Reset so re-selecting the same file fires another change event.
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      });
   }
 
   function handleRemoveAvatar() {
