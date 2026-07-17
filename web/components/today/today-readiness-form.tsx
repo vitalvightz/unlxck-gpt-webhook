@@ -135,7 +135,7 @@ export function TodayReadinessForm({
   }
 
   return (
-    <section className="today-card today-checkin-card" aria-labelledby="today-checkin-heading">
+    <section id="today-checkin" className="today-card today-checkin-card" aria-labelledby="today-checkin-heading">
       <div className="today-card-head">
         <div>
           <p className="kicker">Fast check-in</p>

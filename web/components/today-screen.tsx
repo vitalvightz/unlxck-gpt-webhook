@@ -217,42 +217,36 @@ export function TodayScreen() {
           openInjuryCount={state.open_injuries?.length ?? 0}
           completionStatus={state.today.completion_status}
           checkinHref={showCheckin ? "#today-checkin" : undefined}
-          injuriesHref={token ? "#today-injuries" : undefined}
+          injuriesHref={token ? "#today-injury" : undefined}
           sessionHref="#today-session"
         />
         <TodayRiskWatch risks={state.risk_watch} />
       </section>
 
       {showCheckin ? (
-        <div id="today-checkin" className="today-anchor">
-          <TodayReadinessForm
-            plan={activePlan}
-            token={token ?? ""}
-            warnings={state.today.warnings}
-            onRefresh={refresh}
-          />
-        </div>
+        <TodayReadinessForm
+          plan={activePlan}
+          token={token ?? ""}
+          warnings={state.today.warnings}
+          onRefresh={refresh}
+        />
       ) : null}
 
       {token ? (
-        <div id="today-injuries" className="today-anchor">
-          <TodayInjuryManager
-            openInjuries={state.open_injuries ?? []}
-            token={token}
-            onRefresh={refresh}
-          />
-        </div>
-      ) : null}
-
-      <div id="today-session" className="today-anchor">
-        <TodaySessionPanel
-          state={state}
-          structuredPlan={structuredPlan}
-          planSchedule={planSchedule}
-          token={token ?? ""}
+        <TodayInjuryManager
+          openInjuries={state.open_injuries ?? []}
+          token={token}
           onRefresh={refresh}
         />
-      </div>
+      ) : null}
+
+      <TodaySessionPanel
+        state={state}
+        structuredPlan={structuredPlan}
+        planSchedule={planSchedule}
+        token={token ?? ""}
+        onRefresh={refresh}
+      />
     </div>
   );
 }

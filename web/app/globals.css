@@ -6386,9 +6386,9 @@ button.mobile-step-rail-item {
   }
 }
 
-/* Sections targeted by the readiness-strip jump-links. Clear the fixed mobile
-   nav so an anchored panel is never tucked under it after a jump. */
-.today-anchor {
+/* Today panels double as jump targets for the readiness-strip links. Clear the
+   fixed mobile nav so an anchored panel is never tucked under it after a jump. */
+.today-card {
   scroll-margin-top: var(--mobile-nav-clearance);
 }
 
