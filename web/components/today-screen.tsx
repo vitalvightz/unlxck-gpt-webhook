@@ -44,7 +44,7 @@ function NoActivePlanState() {
         <p className="muted">{TODAY_EMPTY_TEXT}</p>
       </div>
       <div className="today-action-row">
-        <Link href="/intake" className="cta">
+        <Link href="/onboarding" className="cta">
           Complete Intake
         </Link>
       </div>
@@ -52,14 +52,44 @@ function NoActivePlanState() {
   );
 }
 
+// A status value that, when a same-page target exists, doubles as a jump-link to
+// the section that resolves it — so the strip reads as a decision surface, not
+// just a status readout. Cells without a live target render as plain text.
+function ReadinessValue({
+  children,
+  href,
+  actionLabel,
+}: {
+  children: React.ReactNode;
+  href?: string;
+  actionLabel?: string;
+}) {
+  if (!href) {
+    return <dd>{children}</dd>;
+  }
+  return (
+    <dd>
+      <a href={href} aria-label={actionLabel}>
+        {children}
+      </a>
+    </dd>
+  );
+}
+
 function TodayReadinessStrip({
   needsCheckin,
   openInjuryCount,
   completionStatus,
+  checkinHref,
+  injuriesHref,
+  sessionHref,
 }: {
   needsCheckin: boolean;
   openInjuryCount: number;
   completionStatus: TodayCompletionStatus;
+  checkinHref?: string;
+  injuriesHref?: string;
+  sessionHref?: string;
 }) {
   const injuryLabel = openInjuryCount
     ? `${openInjuryCount} active injur${openInjuryCount === 1 ? "y" : "ies"}`
@@ -78,15 +108,21 @@ function TodayReadinessStrip({
     <dl className="today-readiness-strip" aria-label="Today command status">
       <div data-tone={needsCheckin ? "pending" : "clear"}>
         <dt>Check-in</dt>
-        <dd>{needsCheckin ? "Due" : "Logged"}</dd>
+        <ReadinessValue href={checkinHref} actionLabel="Go to today's check-in">
+          {needsCheckin ? "Due" : "Logged"}
+        </ReadinessValue>
       </div>
       <div data-tone={openInjuryCount ? "risk" : "clear"}>
         <dt>Injury</dt>
-        <dd>{injuryLabel}</dd>
+        <ReadinessValue href={injuriesHref} actionLabel="Go to injury manager">
+          {injuryLabel}
+        </ReadinessValue>
       </div>
       <div data-tone={sessionTone}>
         <dt>Session</dt>
-        <dd>{getCompletionLabel(completionStatus)}</dd>
+        <ReadinessValue href={sessionHref} actionLabel="Go to today's session">
+          {getCompletionLabel(completionStatus)}
+        </ReadinessValue>
       </div>
     </dl>
   );
@@ -180,34 +216,43 @@ export function TodayScreen() {
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}
           completionStatus={state.today.completion_status}
+          checkinHref={showCheckin ? "#today-checkin" : undefined}
+          injuriesHref={token ? "#today-injuries" : undefined}
+          sessionHref="#today-session"
         />
         <TodayRiskWatch risks={state.risk_watch} />
       </section>
 
       {showCheckin ? (
-        <TodayReadinessForm
-          plan={activePlan}
-          token={token ?? ""}
-          warnings={state.today.warnings}
-          onRefresh={refresh}
-        />
+        <div id="today-checkin" className="today-anchor">
+          <TodayReadinessForm
+            plan={activePlan}
+            token={token ?? ""}
+            warnings={state.today.warnings}
+            onRefresh={refresh}
+          />
+        </div>
       ) : null}
 
       {token ? (
-        <TodayInjuryManager
-          openInjuries={state.open_injuries ?? []}
-          token={token}
-          onRefresh={refresh}
-        />
+        <div id="today-injuries" className="today-anchor">
+          <TodayInjuryManager
+            openInjuries={state.open_injuries ?? []}
+            token={token}
+            onRefresh={refresh}
+          />
+        </div>
       ) : null}
 
-      <TodaySessionPanel
-        state={state}
-        structuredPlan={structuredPlan}
-        planSchedule={planSchedule}
-        token={token ?? ""}
-        onRefresh={refresh}
-      />
+      <div id="today-session" className="today-anchor">
+        <TodaySessionPanel
+          state={state}
+          structuredPlan={structuredPlan}
+          planSchedule={planSchedule}
+          token={token ?? ""}
+          onRefresh={refresh}
+        />
+      </div>
     </div>
   );
 }
