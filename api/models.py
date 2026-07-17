@@ -75,7 +75,12 @@ RECORD_MAX_CHARS = 40
 PROFILE_SHORT_TEXT_MAX_CHARS = 120
 PROFILE_TIMEZONE_MAX_CHARS = 100
 PROFILE_LOCALE_MAX_CHARS = 35
-AVATAR_URL_MAX_CHARS = 2048
+# Large enough to hold a client-downscaled, JPEG-compressed avatar embedded as a
+# base64 ``data:`` URL (the web app shrinks uploads to well under 100 KB before
+# sending) while still admitting ordinary ``https://`` links. Kept comfortably
+# below ``MAX_REQUEST_BODY_BYTES`` so a legitimate avatar never trips the body
+# ceiling.
+AVATAR_URL_MAX_CHARS = 256 * 1024
 ATHLETE_STYLE_LIST_MAX_ITEMS = 32
 ATHLETE_LIST_ITEM_MAX_CHARS = 120
 PLAN_LIST_ITEM_MAX_CHARS = 120
