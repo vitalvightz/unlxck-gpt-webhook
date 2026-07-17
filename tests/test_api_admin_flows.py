@@ -233,7 +233,7 @@ def test_removed_allowlist_admin_cannot_use_role_bypass_on_shared_routes():
         headers={"Authorization": "Bearer removed-admin-token"},
     )
 
-    assert plan_response.status_code == 403
+    assert plan_response.status_code == 404
     assert job_response.status_code == 403
 
 

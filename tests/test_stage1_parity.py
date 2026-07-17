@@ -128,18 +128,19 @@ def _run_stage1(overrides: dict) -> dict:
 
 
 @pytest.mark.parametrize("name,overrides", list(_scenarios().items()))
-def test_stage1_draft_has_no_hard_validator_blockers(name: str, overrides: dict) -> None:
-    """Stage 1's own output never trips validator errors or hard blockers."""
+def test_stage1_draft_has_no_unexpected_release_blockers(name: str, overrides: dict) -> None:
+    """Stage 1 only trips the structural blockers resolved by Stage 2."""
     result = _run_stage1(overrides)
     breakdown = stage1_parity_breakdown(result)
 
     assert breakdown["error_count"] == 0, (
         f"{name}: Stage 1 draft produced validator errors {breakdown['error_codes']}"
     )
-    assert breakdown["blocking_count"] == 0, (
-        f"{name}: Stage 1 draft produced blocking warnings {breakdown['blocking_codes']}"
+    unexpected = set(breakdown["blocking_codes"]) - WEEK_STRUCTURE_CODES
+    assert not unexpected, (
+        f"{name}: Stage 1 draft produced unexpected release blockers {sorted(unexpected)}"
     )
-    assert breakdown["is_publishable"] is True
+    assert breakdown["is_publishable"] is (breakdown["blocking_count"] == 0)
 
 
 @pytest.mark.parametrize("name,overrides", list(_scenarios().items()))

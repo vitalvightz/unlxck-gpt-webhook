@@ -19,7 +19,7 @@ def test_plan_manager_renders_active_and_set_active_states():
     source = _read("web/app/plans/page.tsx")
     helper = _read("web/lib/plan-active.ts")
     assert "ACTIVE" in source
-    assert "Set active" in source
+    assert "Activate" in source
     assert "Cannot be active" in source
     assert "function canSetActivePlan" in helper
     assert 'normalized === "ready" || normalized === "publishable_with_flags"' in helper

@@ -86,7 +86,7 @@ def test_review_stage2_output_returns_fail_for_restriction_violation():
     assert any("Push Press" in line for line in review["summary_lines"])
 
 
-def test_review_stage2_output_returns_pass_for_non_safety_structure_gaps():
+def test_review_stage2_output_holds_admin_blocking_structure_gaps():
     review = review_stage2_output(
         planning_brief=_stage1_result_fixture()["planning_brief"],
         final_plan_text="""
@@ -96,8 +96,10 @@ def test_review_stage2_output_returns_pass_for_non_safety_structure_gaps():
         """,
     )
 
-    assert review["status"] == "PASS"
-    assert review["needs_retry"] is False
+    assert review["status"] == "WARN"
+    assert review["needs_retry"] is True
+    blocking_codes = {warning["code"] for warning in review["validator_report"]["blocking_warnings"]}
+    assert blocking_codes == {"missing_required_element"}
 
 
 def test_review_stage2_output_returns_pass_with_non_blocking_review_flags():
@@ -146,6 +148,8 @@ def test_review_stage2_output_keeps_empty_safety_language_non_blocking():
     review = review_stage2_output(
         planning_brief=planning_brief,
         final_plan_text="""
+        Injury watch: left hamstring strain; keep lower-body loading within restrictions.
+
         SPP
         - Listen to your body with lower-body loading.
         - Landmine Press - 4x5
@@ -505,7 +509,7 @@ def test_build_stage2_retry_prompts_for_publish_blocking_review_flag():
     assert "Air Bike Sprint" in retry["repair_prompt"]
 
 
-def test_review_stage2_output_keeps_weekly_session_overage_as_review_flag():
+def test_review_stage2_output_holds_weekly_session_overage_for_admin_review():
     planning_brief = {
         "athlete_model": {"sport": "boxing"},
         "restrictions": [],
@@ -553,8 +557,9 @@ def test_review_stage2_output_keeps_weekly_session_overage_as_review_flag():
         """,
     )
 
-    assert review["status"] == "PASS"
-    assert review["needs_retry"] is False
-    assert review["validator_report"]["blocking_warnings"] == []
+    assert review["status"] == "WARN"
+    assert review["needs_retry"] is True
+    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
+    assert "weekly_session_overage" in blocking_codes
     review_flag_codes = [warning["code"] for warning in review["validator_report"]["review_flags"]]
     assert "weekly_session_overage" in review_flag_codes

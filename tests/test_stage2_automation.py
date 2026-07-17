@@ -11,6 +11,7 @@ from api.stage2_automation import OpenAIStage2Automator, Stage2AutomationError
 from fightcamp.stage2_policy import (
     ADMIN_REVIEW_BLOCKING_CODES,
     ATHLETE_RELEASE_WITH_FLAGS_CODES,
+    apply_stage2_release_policy,
 )
 from support import FakeOpenAIClient as FakeClient
 
@@ -403,7 +404,7 @@ def test_first_pass_hard_failure_returns_held_for_review_with_one_provider_call(
         "warnings": [],
         "schema_version": None,
     }
-    assert report == _review("FAIL")["validator_report"]
+    assert report == apply_stage2_release_policy(_review("FAIL")["validator_report"])
 
 
 def test_first_pass_non_pass_without_release_blockers_returns_ready(
