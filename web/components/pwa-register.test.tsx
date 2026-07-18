@@ -169,6 +169,15 @@ test("iPhone Settings action shows only the Safari Add to Home Screen flow", asy
       window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Tab", shiftKey: true }));
     });
     assert.equal(document.activeElement, done);
+
+    const outsideButton = document.createElement("button");
+    document.body.appendChild(outsideButton);
+    outsideButton.focus();
+    await act(async () => {
+      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Tab" }));
+    });
+    assert.equal(document.activeElement, close);
+    outsideButton.remove();
   } finally {
     cleanup(container, root);
     if (userAgentDescriptor) Object.defineProperty(navigator, "userAgent", userAgentDescriptor);

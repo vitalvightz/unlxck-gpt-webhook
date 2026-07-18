@@ -63,7 +63,10 @@ export function InstallUnlxck() {
       if (event.shiftKey && (document.activeElement === first || !dialog?.contains(document.activeElement))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last || !dialog?.contains(document.activeElement))
+      ) {
         event.preventDefault();
         first.focus();
       }
