@@ -3320,6 +3320,9 @@ html[data-theme="light"] .camp-progress-meta {
   --athlete-motion-delay: 260ms;
 }
 
+/* The animation fills forwards, so its final keyframe persists. It must end at
+   transform: none (not translateY(0)): a retained transform makes the section
+   the containing block for position: fixed descendants such as modals. */
 @keyframes athlete-reveal-in {
   from {
     opacity: 0;
@@ -3328,7 +3331,7 @@ html[data-theme="light"] .camp-progress-meta {
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -16770,6 +16773,44 @@ body[data-pwa-install-sheet="open"] {
 .pwa-install-actions .cta {
   min-height: 44px;
   white-space: nowrap;
+}
+
+.pwa-install-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-support);
+  background: var(--bg-support);
+}
+
+.pwa-install-inline-copy {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.pwa-install-inline-copy .pwa-install-label {
+  margin-bottom: 4px;
+}
+
+.pwa-install-inline-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pwa-install-inline-button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .pwa-install-inline-button {
+    width: 100%;
+  }
 }
 
 .pwa-install-sheet-backdrop {

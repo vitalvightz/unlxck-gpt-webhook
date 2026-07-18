@@ -45,11 +45,12 @@ function renderInstallSurface(
   root: Root,
   environment?: string,
   reloadPage?: () => void,
+  variant?: "panel" | "inline",
 ) {
   root.render(
     <ToastProvider>
       <PwaRegister environment={environment} reloadPage={reloadPage}>
-        <InstallUnlxck />
+        <InstallUnlxck variant={variant} />
       </PwaRegister>
     </ToastProvider>,
   );
@@ -149,7 +150,11 @@ test("iPhone Settings action shows only the Safari Add to Home Screen flow", asy
     );
     assert.ok(trigger);
     await act(async () => trigger.click());
-    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
+    // The sheet is portaled to <body> so fixed positioning cannot be captured
+    // by transformed ancestors — it must exist but live outside the container.
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+    assert.ok(dialog);
+    assert.equal(container.contains(dialog), false);
     const dialogText = dialog?.textContent ?? "";
     assert.match(dialogText, /Open the Share menu/);
     assert.match(dialogText, /Select “Add to Home Screen”/);
@@ -184,6 +189,35 @@ test("iPhone Settings action shows only the Safari Add to Home Screen flow", asy
     else Reflect.deleteProperty(navigator, "userAgent");
     if (touchDescriptor) Object.defineProperty(navigator, "maxTouchPoints", touchDescriptor);
     else Reflect.deleteProperty(navigator, "maxTouchPoints");
+  }
+});
+
+test("inline install variant on public pages opens the same iPhone guide", async () => {
+  setMatchMedia(false);
+  const userAgentDescriptor = Object.getOwnPropertyDescriptor(navigator, "userAgent");
+  Object.defineProperty(navigator, "userAgent", {
+    configurable: true,
+    value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+  });
+  const { container, root } = mount();
+  try {
+    await act(async () => renderInstallSurface(root, undefined, undefined, "inline"));
+    await settle();
+    const strip = container.querySelector('[data-testid="install-unlxck-inline"]');
+    assert.ok(strip);
+    const trigger = Array.from(strip.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent === "View iPhone steps",
+    );
+    assert.ok(trigger);
+    await act(async () => trigger.click());
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+    assert.ok(dialog);
+    assert.equal(container.contains(dialog), false);
+    assert.match(dialog.textContent ?? "", /Add to Home Screen/);
+  } finally {
+    cleanup(container, root);
+    if (userAgentDescriptor) Object.defineProperty(navigator, "userAgent", userAgentDescriptor);
+    else Reflect.deleteProperty(navigator, "userAgent");
   }
 });
 
@@ -240,7 +274,7 @@ test("a rejected native prompt hides the panel instead of inventing manual steps
     await act(async () => trigger.click());
     await settle();
     assert.equal(container.querySelector('[data-testid="install-unlxck"]'), null);
-    assert.equal(container.querySelector('[role="dialog"]'), null);
+    assert.equal(document.querySelector('[role="dialog"]'), null);
   } finally {
     cleanup(container, root);
   }
