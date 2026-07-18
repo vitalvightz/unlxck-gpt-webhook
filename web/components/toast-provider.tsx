@@ -19,7 +19,7 @@ interface Toast extends ToastOptions {
 }
 
 interface ToastContextValue {
-  showToast: (message: string, options?: ToastOptions) => void;
+  showToast: (message: string, options?: ToastOptions) => number;
   dismissToast: (id: number) => void;
 }
 
@@ -52,6 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         const timerId = window.setTimeout(() => dismissToast(id), duration);
         timersRef.current.set(id, timerId);
       }
+      return id;
     },
     [dismissToast],
   );
@@ -107,7 +108,7 @@ export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
   if (!context) {
     return {
-      showToast: () => {},
+      showToast: () => 0,
       dismissToast: () => {},
     };
   }
