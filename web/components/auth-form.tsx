@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent, type ReactNode } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
@@ -25,10 +25,14 @@ export function AuthForm({
   mode,
   role,
   onChangeRole,
+  footerSlot,
 }: {
   mode: "signup" | "login";
   role?: UserRole;
   onChangeRole?: () => void;
+  /** Rendered inside the auth card below the form — e.g. the PWA install
+      prompt on login. Keeps page-level concerns out of this component. */
+  footerSlot?: ReactNode;
 }) {
   const router = useRouter();
   const { isReady, session, me } = useAppSession();
@@ -261,6 +265,8 @@ export function AuthForm({
             </div>
           </div>
         </form>
+
+        {footerSlot}
       </div>
 
       <div className="auth-rail">

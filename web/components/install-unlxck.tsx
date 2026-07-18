@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 
 import { usePwaRuntime } from "@/components/pwa-register";
@@ -24,7 +25,7 @@ function AddToHomeIcon() {
   );
 }
 
-export function InstallUnlxck() {
+export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inline" }) {
   const { installAvailability, isInstalled, promptInstall } = usePwaRuntime();
   const canPromptInstall = installAvailability === "native";
   const isIos = installAvailability === "ios-manual";
@@ -111,31 +112,11 @@ export function InstallUnlxck() {
     return null;
   }
 
-  return (
-    <>
-      <div className="settings-subsection pwa-install-panel" data-testid="install-unlxck">
-        <div className="pwa-install-mark" aria-hidden="true">
-          <Image src="/icons/icon-192x192.png" alt="" width={64} height={64} />
-        </div>
-        <div className="pwa-install-copy">
-          <div className="settings-subsection-header">
-            <div>
-              <p className="pwa-install-label">Mobile access</p>
-              <h3 className="settings-subsection-title">Install UNLXCK</h3>
-            </div>
-          </div>
-          <p className="muted pwa-install-description">
-            Open your control room from a home-screen icon in a focused, standalone window.
-          </p>
-        </div>
-        <div className="pwa-install-actions">
-          <button ref={triggerRef} type="button" className="cta" onClick={() => void handleInstall()}>
-            {canPromptInstall ? "Install UNLXCK" : "View iPhone steps"}
-          </button>
-        </div>
-      </div>
-
-      {showGuide ? (
+  // The sheet is fixed-position, so it must escape ancestors whose entrance
+  // animations retain a transform (they become the containing block and push
+  // the sheet off-screen). Portaling to <body> keeps it viewport-anchored.
+  const installSheet = showGuide
+    ? createPortal(
         <div
           className="pwa-install-sheet-backdrop"
           role="presentation"
@@ -185,8 +166,60 @@ export function InstallUnlxck() {
               Done
             </button>
           </section>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  if (variant === "inline") {
+    return (
+      <>
+        <div className="pwa-install-inline" data-testid="install-unlxck-inline">
+          <div className="pwa-install-inline-copy">
+            <p className="pwa-install-label">Mobile access</p>
+            <p className="muted pwa-install-inline-text">
+              Add UNLXCK to your phone’s home screen and open it like an app.
+            </p>
+          </div>
+          <button
+            ref={triggerRef}
+            type="button"
+            className="secondary-button pwa-install-inline-button"
+            onClick={() => void handleInstall()}
+          >
+            {canPromptInstall ? "Install UNLXCK" : "View iPhone steps"}
+          </button>
         </div>
-      ) : null}
+        {installSheet}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="settings-subsection pwa-install-panel" data-testid="install-unlxck">
+        <div className="pwa-install-mark" aria-hidden="true">
+          <Image src="/icons/icon-192x192.png" alt="" width={64} height={64} />
+        </div>
+        <div className="pwa-install-copy">
+          <div className="settings-subsection-header">
+            <div>
+              <p className="pwa-install-label">Mobile access</p>
+              <h3 className="settings-subsection-title">Install UNLXCK</h3>
+            </div>
+          </div>
+          <p className="muted pwa-install-description">
+            Open your control room from a home-screen icon in a focused, standalone window.
+          </p>
+        </div>
+        <div className="pwa-install-actions">
+          <button ref={triggerRef} type="button" className="cta" onClick={() => void handleInstall()}>
+            {canPromptInstall ? "Install UNLXCK" : "View iPhone steps"}
+          </button>
+        </div>
+      </div>
+
+      {installSheet}
     </>
   );
 }

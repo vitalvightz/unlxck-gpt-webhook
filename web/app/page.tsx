@@ -8,6 +8,7 @@ import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 
 import { useAppSession } from "@/components/auth-provider";
 import { CampProgressBar } from "@/components/camp-progress-bar";
 import { EmptyState } from "@/components/empty-state";
+import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { getPlan, getToday } from "@/lib/api";
 import { useTrainingDay } from "@/lib/use-training-day";
@@ -752,6 +753,7 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+            <InstallUnlxck variant="inline" />
           </div>
 
           <article className="support-panel public-preview-panel">
