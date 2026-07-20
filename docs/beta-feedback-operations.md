@@ -4,7 +4,7 @@ The beta feedback API uses the Supabase service role only. Do not grant browser 
 
 ## Environment
 
-Configure these on the Render API and the Render Cron Job:
+Configure these in the Hetzner production environment file at `/opt/unlxck/.env.production`:
 
 ```env
 SUPABASE_URL=...
@@ -86,22 +86,24 @@ Authenticated admins can select **View private screenshot** in `/admin`. The bac
 
 ## Screenshot retention
 
-Create a Render Cron Job from this repository with:
+Run retention once daily on the Hetzner server. `compose.yaml` does not currently define a scheduler service, so configure one host cron entry (or an equivalent systemd timer) and keep only one scheduled runner:
 
-- Schedule: `30 3 * * *` (03:30 UTC daily)
-- Runtime: the same Python 3.11.14 runtime and production dependencies as the API
-- Command: `python -m api.feedback_retention`
-- Environment: the Supabase service credentials and feedback retention setting above
+```cron
+30 3 * * * cd /opt/unlxck && /usr/bin/docker compose exec -T api python -m api.feedback_retention
+```
+
+The command runs inside the existing API container and inherits `.env.production`.
 
 Manual run:
 
-```powershell
-python -m api.feedback_retention
+```bash
+cd /opt/unlxck
+docker compose exec -T api python -m api.feedback_retention
 ```
 
 The command reads expired references in bounded batches, continuing until the backlog is empty, a deletion fails, or the default 1,000-object per-run safety cap is reached. Override the cap with `--max-per-run` during a managed backlog drain. It deletes each object through the Storage API and clears the database path only after Storage confirms the delete request. Failed rows remain unchanged and are retried by the next run. A non-zero exit means at least one object should be retried.
 
-Verify the cron after deployment:
+Verify the scheduled job after deployment:
 
 ```sql
 select count(*) as overdue_screenshots
