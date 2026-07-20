@@ -100,9 +100,9 @@ Before production cutover:
 ```bash
 git fetch origin
 git reset --hard origin/Main
-docker compose config --quiet
-docker compose up -d --build
-docker compose ps
+sudo docker compose config --quiet
+sudo docker compose up -d --build
+sudo docker compose ps
 curl -fsS https://$API_DOMAIN/health
 ```
 
