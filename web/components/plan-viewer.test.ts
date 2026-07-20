@@ -23,8 +23,10 @@ import {
   resolveApprovalAfterError,
   resolvePlanActiveState,
   shouldAwaitStructuredPlanUpgrade,
+  shouldHoldPlanForEnhancedCard,
   shouldPollForStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
+  EnhancedCardLockInCard,
   StructuredCardStatusChip,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
@@ -428,6 +430,83 @@ test("plans without an access token cannot await a structured upgrade", () => {
     }),
     false,
   );
+});
+
+const LOCKIN_HOLD_BASE = {
+  isViewerAdmin: false,
+  structuredCardLifecycleState: "building" as const,
+  hasPublishedPlan: true,
+  hasStructuredPlan: false,
+  pollWindowExpired: false,
+  hasAccessToken: true,
+  isRecentPlan: true,
+};
+
+test("athletes are held on the lock-in card while the enhanced card builds", () => {
+  assert.equal(shouldHoldPlanForEnhancedCard(LOCKIN_HOLD_BASE), true);
+  // "none" covers the gap right after publish before the lifecycle record lands.
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({
+      ...LOCKIN_HOLD_BASE,
+      structuredCardLifecycleState: "none",
+    }),
+    true,
+  );
+});
+
+test("admins are never held on the lock-in card", () => {
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({ ...LOCKIN_HOLD_BASE, isViewerAdmin: true }),
+    false,
+  );
+});
+
+test("terminal card states fall back to the deterministic plan instead of holding", () => {
+  for (const state of ["failed", "not_attempted", "live"] as const) {
+    assert.equal(
+      shouldHoldPlanForEnhancedCard({
+        ...LOCKIN_HOLD_BASE,
+        structuredCardLifecycleState: state,
+      }),
+      false,
+      `state ${state} must not hold the athlete view`,
+    );
+  }
+});
+
+test("the lock-in hold is bounded and only applies to plans that can still upgrade", () => {
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({ ...LOCKIN_HOLD_BASE, pollWindowExpired: true }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({ ...LOCKIN_HOLD_BASE, isRecentPlan: false }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({ ...LOCKIN_HOLD_BASE, hasAccessToken: false }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({ ...LOCKIN_HOLD_BASE, hasStructuredPlan: true }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({ ...LOCKIN_HOLD_BASE, hasPublishedPlan: false }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({ ...LOCKIN_HOLD_BASE, isTriageBlocked: true }),
+    false,
+  );
+});
+
+test("the lock-in card announces the camp is being lxcked in", () => {
+  const html = renderToStaticMarkup(createElement(EnhancedCardLockInCard));
+  assert.match(html, /YOUR CAMP IS BEING LXCKED IN/);
+  assert.match(html, /reviewing every phase, session and detail/);
+  assert.match(html, /2–5 mins/);
+  assert.match(html, /role="status"/);
 });
 
 test("the upgrade poll keeps running for an older published plan still missing its card", () => {

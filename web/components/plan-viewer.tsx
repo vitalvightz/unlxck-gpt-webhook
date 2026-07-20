@@ -165,6 +165,44 @@ export function shouldAwaitStructuredPlanUpgrade(params: {
 }
 
 /**
+ * Whether the athlete-facing view should hold back the deterministic plan
+ * fallback and show the "camp is being lxcked in" waiting card instead, so the
+ * first plan an athlete ever sees is the enhanced card.
+ *
+ * The hold only applies while the richer payload can still land: it needs the
+ * same await conditions as the background upgrade (recent plan, open poll
+ * window, access token, published, not triage-blocked) AND a card lifecycle
+ * that has not already terminally failed. Failed / not-attempted / lost-card
+ * plans fall back to the deterministic renderer immediately, and the
+ * mount-scoped poll window bounds the hold even if a build hangs. Admins are
+ * never held — they keep the text view plus diagnostics for review.
+ */
+export function shouldHoldPlanForEnhancedCard(params: {
+  isViewerAdmin: boolean;
+  structuredCardLifecycleState: StructuredCardLifecycleState;
+  hasPublishedPlan: boolean;
+  hasStructuredPlan: boolean;
+  pollWindowExpired: boolean;
+  hasAccessToken: boolean;
+  isRecentPlan: boolean;
+  isTriageBlocked?: boolean;
+}): boolean {
+  if (params.isViewerAdmin) {
+    return false;
+  }
+  // "none" covers the moment right after publish before the lifecycle record
+  // lands; "building" is an active server-side conversion. Every other state
+  // means no richer payload is coming, so the fallback must show.
+  if (
+    params.structuredCardLifecycleState !== "building" &&
+    params.structuredCardLifecycleState !== "none"
+  ) {
+    return false;
+  }
+  return shouldAwaitStructuredPlanUpgrade(params);
+}
+
+/**
  * A plan is "recent" if it was created within the recent-plan window. Used to
  * avoid holding the structured-card finalising state for legacy plans that were
  * created long before structured plans existed (or never produced one).
@@ -383,6 +421,31 @@ function TextStructuredPlanRenderer({
       currentDayLabel={currentDayLabel}
       scheduleContext={rendererScheduleContext}
     />
+  );
+}
+
+/**
+ * Athlete-facing hold card shown instead of the deterministic plan fallback
+ * while the enhanced card is still building, so the first plan view is always
+ * the elite card. The background poll swaps the enhanced card in when it lands.
+ */
+export function EnhancedCardLockInCard() {
+  return (
+    <section className="support-panel plan-lockin-card" role="status" aria-live="polite">
+      <p className="kicker plan-lockin-kicker">Final review</p>
+      <h3 className="plan-lockin-title">
+        YOUR CAMP IS BEING LXCKED IN
+        <span className="loading-title-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </h3>
+      <p className="plan-lockin-copy">
+        UNLXCK is reviewing every phase, session and detail. Your final plan will be ready in
+        2&ndash;5 mins &mdash; we&rsquo;ll notify you.
+      </p>
+    </section>
   );
 }
 
@@ -1562,6 +1625,19 @@ export function PlanViewer({
     },
   });
   const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
+  // Hold the athlete's first view on the lock-in card until the enhanced card
+  // lands. Bounded by the poll window and skipped for terminal card states, so
+  // the deterministic fallback still shows when no richer payload is coming.
+  const holdPlanForEnhancedCard = shouldHoldPlanForEnhancedCard({
+    isViewerAdmin,
+    structuredCardLifecycleState: structuredCardState.state,
+    hasPublishedPlan,
+    hasStructuredPlan: hasStructuredAthletePlan,
+    pollWindowExpired: structuredPlanPollExpired,
+    hasAccessToken: Boolean(accessToken),
+    isRecentPlan: isRecentlyCreatedPlan(plan),
+    isTriageBlocked,
+  });
   // The server field is authoritative after reload. Old failure details are
   // hidden only while a newer attempt is actively building.
   const structuredCardDebug = buildStructuredCardDiagnostic(
@@ -2592,6 +2668,8 @@ export function PlanViewer({
                     plan.schedule_context?.current_training_day
                   }
                 />
+              ) : holdPlanForEnhancedCard ? (
+                <EnhancedCardLockInCard />
               ) : (
                 <>
                   {isViewerAdmin && structuredCardState.state === "building" ? (
@@ -2623,7 +2701,7 @@ export function PlanViewer({
                   />
                 </>
               )}
-              {canSubmitPlanFeedback && accessToken ? (
+              {!holdPlanForEnhancedCard && canSubmitPlanFeedback && accessToken ? (
                 <ContextualFeedback
                   key={`plan-feedback-${plan.plan_id}`}
                   token={accessToken}
