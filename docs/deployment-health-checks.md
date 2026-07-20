@@ -2,52 +2,54 @@
 
 ## The failure mode this guards against
 
-When the runtime app fails to build at import time, `api/app.py` does not crash —
-it serves a minimal **startup-failure app** whose `/health` returns
-`503 Service Unavailable` (`_build_startup_failure_app`). That is the correct
-behaviour **only if the deploy platform treats a failing `/health` as an unhealthy
-deploy**. If the platform never probes `/health`, a "successfully deployed"
-service can in fact be dead — every request returns 503 — and nobody is paged.
+When the runtime app fails during import, `api/app.py` serves a startup-failure application instead of disappearing into a crash loop. Normal endpoints return `503`, while `/health` also returns `503` so infrastructure and operators can detect that the service is not usable.
 
-## Required platform configuration
+## Hetzner production checks
 
-### Render (backend)
+The production backend runs on Hetzner through Docker Compose:
 
-Set the service **Health Check Path** to `/health`.
+- `api` has a container health check against `http://127.0.0.1:8000/health`.
+- `caddy` waits for the API container to become healthy, then exposes the public HTTPS endpoint.
+- `worker` is a separate persistent queue consumer and must be running alongside the API.
 
-- A healthy runtime returns `200` with a JSON body including the mode label.
-- The startup-failure app returns `503` from `/health`, so Render marks the
-  deploy unhealthy and does not route traffic to a dead instance.
+After every deployment, run:
 
-If/when the backend is managed via a Render Blueprint (`render.yaml`), encode it:
-
-```yaml
-services:
-  - type: web
-    name: unlxck-api
-    healthCheckPath: /health
+```bash
+cd /opt/unlxck
+docker compose config --quiet
+docker compose ps
+curl -fsS https://$API_DOMAIN/health
+docker compose logs --tail=100 api worker caddy
 ```
 
-> Not committed today because the service is dashboard-managed. Configure the
-> Health Check Path in the Render dashboard until a Blueprint is adopted.
+Expected state:
 
-### Vercel (frontend)
+- `api` is `healthy`.
+- `worker` and `caddy` are running.
+- the public health endpoint returns HTTP `200` with `ok: true`.
+- no restart loop, OOM kill, schema-readiness error, or repeated worker exception appears in the logs.
 
-The frontend is static/SSR on Vercel and has no equivalent process-health probe;
-it depends on the backend `/health` gate above.
+Do not treat a successful image build as a successful deployment. The container and public endpoint checks must both pass.
+
+## Vercel frontend
+
+The Next.js frontend runs on Vercel and has no equivalent long-running process-health probe. It depends on:
+
+- the latest production deployment being `READY`;
+- `NEXT_PUBLIC_API_BASE_URL` pointing to the current Hetzner HTTPS API URL;
+- the same-origin `/api/*` rewrite reaching the healthy backend.
 
 ## Alerting
 
-- Alert on **any `503` from `/health`** (synthetic uptime check or log-based
-  alert). A sustained 503 means the startup-failure app is being served.
-- Alert on the startup log line `[admin] startup_admin_count=0`.
-- Consider alerting on Stage 2 failure rate, generation queue depth, and
-  generation duration (see `docs/generation-reliability-checklist.md`).
+- Alert on any public `/health` `503` or connection failure.
+- Alert on repeated API/container restarts.
+- Monitor Sentry for startup failures, schema-readiness failures, and elevated 5xx responses.
+- Monitor the generation queue for stale jobs and abnormal generation duration.
 
 ## Decision: fail soft vs. fail hard
 
-The current design **fails soft** (serve 503) rather than crash-looping. This is
-fine when the health check is wired and alerting fires. If the deploy platform is
-configured to restart cleanly on process exit and you would rather a bad build
-never accept connections at all, switch `_build_startup_failure_app` to re-raise
-in production. Until then, the health check + alert above are mandatory.
+The application fails soft by serving `503` from the startup-failure app. This preserves diagnostics while still allowing the Docker health check and public monitoring to reject the deployment.
+
+## Legacy Render fallback
+
+Render is not part of the live production path. Its services remain suspended only as an emergency rollback option. Never run the Render and Hetzner workers against the production queue at the same time.
