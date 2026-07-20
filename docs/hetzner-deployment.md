@@ -1,6 +1,6 @@
 # Hetzner backend deployment
 
-This deployment runs the FastAPI API, persistent generation worker, and Caddy on one Hetzner CX23.
+This is the live production backend. It runs the FastAPI API, persistent generation worker, and Caddy on one Hetzner CX23 from `/opt/unlxck` on the `Main` branch.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ The API must not run plan generation in-process. spaCy is disabled only in the A
 
 ## Required files on the server
 
-Create `.env.production` in the repository root. Do not commit it.
+Production uses `/opt/unlxck/.env.production`. Create it during first setup, protect it with `chmod 600`, and never commit it.
 
 Required values include:
 
@@ -62,7 +62,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```bash
 git clone https://github.com/vitalvightz/unlxck-gpt-webhook.git
 cd unlxck-gpt-webhook
-git checkout codex/hetzner-migration
+git checkout Main
 ```
 
 2. Create and populate `.env.production` in the repository root before starting the containers (see **Required files on the server** above). The API, worker, and Caddy services all read this file, so `docker compose` fails to start without it.
@@ -98,22 +98,40 @@ Before production cutover:
 ## Updates
 
 ```bash
-git pull --ff-only
-sudo docker compose build
-sudo docker compose up -d
-sudo docker compose ps
+git fetch origin
+git reset --hard origin/Main
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+curl -fsS https://$API_DOMAIN/health
 ```
 
 ## Rollback
 
-1. Stop the Hetzner worker first:
+### Roll back to a previous Hetzner commit
+
+Stop the worker first so only one queue consumer can run:
 
 ```bash
-sudo docker compose stop worker
+cd /opt/unlxck
+docker compose stop worker
+git fetch origin Main
+git reset --hard PREVIOUS_COMMIT_SHA
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+curl -fsS https://$API_DOMAIN/health
 ```
 
-2. Restore the previous API DNS or frontend API base URL.
-3. Re-enable the Render services.
-4. Preserve Hetzner logs for diagnosis.
+Preserve the failed deployment logs for diagnosis.
 
-Do not run Render and Hetzner workers against the production queue simultaneously unless multi-worker job claiming has been explicitly tested.
+### Emergency Render fallback
+
+Render is not part of the live system. Only resume its suspended web and worker services as a deliberate full rollback:
+
+1. Stop the Hetzner worker.
+2. Resume the Render worker and web service.
+3. Change Vercel `NEXT_PUBLIC_API_BASE_URL` to the Render API URL.
+4. Redeploy Vercel and verify the public flow.
+
+Never run the Render and Hetzner workers against the production queue at the same time.
