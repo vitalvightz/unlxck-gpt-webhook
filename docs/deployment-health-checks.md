@@ -18,7 +18,7 @@ After every deployment, run:
 cd /opt/unlxck
 docker compose config --quiet
 docker compose ps
-curl -fsS https://unlxck-staging.167.233.47.121.sslip.io/health
+curl -fsS https://$API_DOMAIN/health
 docker compose logs --tail=100 api worker caddy
 ```
 
