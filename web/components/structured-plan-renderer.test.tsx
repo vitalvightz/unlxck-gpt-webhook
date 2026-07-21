@@ -360,6 +360,55 @@ test("does not duplicate a rehab insert as a summary once the blocks are expande
   assert.equal(html.includes("Rehab / Mobility"), false);
 });
 
+test("drops a mindset Context line that only restates the session objective", () => {
+  // The objective already prints under the title; a Context anchor that repeats
+  // it (bar casing/trailing period) must not print the same sentence twice, but
+  // the other mindset lines and a genuinely distinct Context must stay.
+  const session = {
+    session_id: "ses-1",
+    session_type: "skill",
+    title: "Technical Shadow Rhythm",
+    objective: "Timing and coordination rehearsal without physiological cost",
+    mindset_anchor: {
+      intent: "Reinforce entries/exits and rhythm",
+      focus_cue: "Continuous smooth rounds",
+      context: "Timing and coordination rehearsal without physiological cost.",
+    },
+    blocks: [{ block_id: "b1", display_name: "Shadow rounds" }],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  // The objective sentence appears once (the title subtitle), not twice.
+  assert.equal(
+    countOccurrences(html, "Timing and coordination rehearsal without physiological cost"),
+    1,
+  );
+  // The duplicate Context row is gone, but Intent/Focus remain.
+  assert.equal(html.includes("Context"), false);
+  assert.equal(html.includes("Reinforce entries/exits and rhythm"), true);
+  assert.equal(html.includes("Continuous smooth rounds"), true);
+});
+
+test("keeps a mindset Context line that adds information beyond the objective", () => {
+  const session = {
+    session_id: "ses-2",
+    session_type: "skill",
+    title: "Sharp technical work",
+    objective: "Sharpen decision rules for opening exchanges",
+    mindset_anchor: {
+      intent: "Sharpen decisions",
+      context: "Pairs with coach-led technical session",
+    },
+    blocks: [{ block_id: "b1", display_name: "Drill" }],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes("Context"), true);
+  assert.equal(html.includes("Pairs with coach-led technical session"), true);
+});
+
 test("a malformed numeric payload never renders NaN / Infinity in the card", () => {
   // Every numeric field is deliberately malformed. The block detail is expanded
   // so the block renders in full, and the plan carries malformed macros, sleep
