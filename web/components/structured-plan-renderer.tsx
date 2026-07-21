@@ -1522,6 +1522,7 @@ export function StructuredPlanRenderer({
   currentTrainingDayIso,
   scheduleContext,
   onLogSession,
+  isAdmin = false,
 }: {
   plan: StructuredPlan;
   /** Renewable four-week plan without a scheduled fight date. */
@@ -1551,6 +1552,11 @@ export function StructuredPlanRenderer({
   scheduleContext?: PlanScheduleContext | null;
   /** Opens the retro-log flow for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
+  /** Whether the viewer is an admin. The raw "Original plan text" dump is an
+   * internal artefact and is hidden from athletes; it still appears for admins,
+   * and for anyone in the fail-closed "schedule unavailable" state where the
+   * on-screen message directs the athlete to the raw plan below. */
+  isAdmin?: boolean;
 }) {
   const weeks = getWeeks(plan);
   const completionIndex = useMemo(
@@ -1627,6 +1633,12 @@ export function StructuredPlanRenderer({
 
   const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
+  // The raw plan dump is internal: athletes see the structured cards only. It
+  // stays for admins, and for the fail-closed schedule-unavailable state whose
+  // message tells the athlete to read the original plan below.
+  const scheduleUnavailable =
+    openOngoing && scheduleContext?.projection_status === "unavailable";
+  const showRawFallback = Boolean(rawFallback) && (isAdmin || scheduleUnavailable);
   const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
   const hasRecoverySupport = getRecoveryPhaseItems(plan).length > 0;
   const dayList = useMemo(() => (selectedWeek ? getDays(selectedWeek) : []), [selectedWeek]);
@@ -1789,7 +1801,7 @@ export function StructuredPlanRenderer({
         </CollapsibleSection>
       ) : null}
 
-      {rawFallback ? (
+      {showRawFallback ? (
         <details className="sp-collapse cm-raw-fallback">
           <summary className="sp-collapse-summary">
             <span className="sp-collapse-title">Original plan text</span>

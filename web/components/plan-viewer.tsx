@@ -399,6 +399,7 @@ function TextStructuredPlanRenderer({
   focusDay,
   currentDayLabel,
   scheduleContext,
+  isAdmin = false,
 }: {
   text: string;
   fightDate?: string | null;
@@ -406,6 +407,7 @@ function TextStructuredPlanRenderer({
   focusDay?: Date;
   currentDayLabel: string;
   scheduleContext?: PlanDetail["schedule_context"];
+  isAdmin?: boolean;
 }) {
   const adaptedPlan = useMemo(
     () => buildStructuredPlanFromText(text, fightDate),
@@ -426,6 +428,7 @@ function TextStructuredPlanRenderer({
       focusDay={focusDay}
       currentDayLabel={currentDayLabel}
       scheduleContext={rendererScheduleContext}
+      isAdmin={isAdmin}
     />
   );
 }
@@ -2760,6 +2763,7 @@ export function PlanViewer({
                     planCompletions?.current_training_day ||
                     plan.schedule_context?.current_training_day
                   }
+                  isAdmin={isViewerAdmin}
                 />
               ) : holdPlanForEnhancedCard ? (
                 <EnhancedCardLockInCard accessToken={accessToken} />
@@ -2791,6 +2795,7 @@ export function PlanViewer({
                     focusDay={nextSessionFocusDate}
                     currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
                     scheduleContext={plan.schedule_context}
+                    isAdmin={isViewerAdmin}
                   />
                 </>
               )}
