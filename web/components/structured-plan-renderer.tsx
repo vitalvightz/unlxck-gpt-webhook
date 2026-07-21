@@ -147,9 +147,39 @@ function CollapsibleSection({
   );
 }
 
-export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null }) {
+/** Casefold + whitespace/trailing-punctuation normalise for equality checks, so
+ * "Mobility and low-noise speed." matches "mobility and low-noise speed". */
+function normalizeForDedupe(value: string | null | undefined): string | null {
+  const clean = cleanText(value ?? null);
+  if (!clean) {
+    return null;
+  }
+  return clean.toLowerCase().replace(/\s+/g, " ").replace(/[.\s]+$/, "");
+}
+
+export function MindsetAnchorCard({
+  anchor,
+  dedupeContext,
+}: {
+  anchor?: MindsetAnchor | null;
+  /** Text already shown next to this card (the session objective or day
+   * description). A Context line that only restates it is dropped so the same
+   * sentence never prints twice on one card. */
+  dedupeContext?: string | (string | null | undefined)[] | null;
+}) {
   const lines = getMindsetLines(anchor);
-  if (lines.length === 0) {
+  const dedupeTargets = new Set(
+    (Array.isArray(dedupeContext) ? dedupeContext : [dedupeContext])
+      .map(normalizeForDedupe)
+      .filter((text): text is string => text !== null),
+  );
+  const shown =
+    dedupeTargets.size === 0
+      ? lines
+      : lines.filter(
+          (line) => !(line.label === "Context" && dedupeTargets.has(normalizeForDedupe(line.value)!)),
+        );
+  if (shown.length === 0) {
     return null;
   }
   const renderLine = (line: { label: string; value: string }) => (
@@ -161,7 +191,7 @@ export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null })
   return (
     <div className="sp-mindset">
       <p className="sp-eyebrow">Mindset</p>
-      <ul className="sp-mindset-list">{lines.map(renderLine)}</ul>
+      <ul className="sp-mindset-list">{shown.map(renderLine)}</ul>
     </div>
   );
 }
@@ -404,7 +434,7 @@ export function SessionCard({
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
 
-      <MindsetAnchorCard anchor={sessionMindset} />
+      <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
       {/* The rehab/mobility summary is a compact PREVIEW of the inserts shown
           only while the full blocks are collapsed. Once expanded, every rehab
           block renders in full below, so keeping the summary too would print the
@@ -471,7 +501,7 @@ export function TodayCard({ day }: { day: StructuredDay }) {
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      <MindsetAnchorCard anchor={card?.mindset_anchor} />
+      <MindsetAnchorCard anchor={card?.mindset_anchor} dedupeContext={headline} />
     </div>
   );
 }
@@ -524,7 +554,7 @@ export function SessionlessDayCard({
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      <MindsetAnchorCard anchor={card?.mindset_anchor} />
+      <MindsetAnchorCard anchor={card?.mindset_anchor} dedupeContext={[cleanText(card?.headline), title]} />
       {isRest ? <p className="sp-muted">Rest day.</p> : null}
     </article>
   );
@@ -587,6 +617,9 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   // in addition to this day-level one; they are distinct anchors.
   const dayMindset = card?.mindset_anchor;
   const hasDayMindset = getMindsetLines(dayMindset).length > 0;
+  // The day mindset's Context often restates a session's objective shown just
+  // below it (same sentence, twice on screen); drop it against those.
+  const dayObjectives = getSessions(day).map((session) => cleanText(session.objective));
   const hasDayContext = Boolean(
     warning || nutrition || weightCut || lightTechnicalContext || coachLedContact || hasDayMindset,
   );
@@ -605,7 +638,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      {hasDayMindset ? <MindsetAnchorCard anchor={dayMindset} /> : null}
+      {hasDayMindset ? <MindsetAnchorCard anchor={dayMindset} dedupeContext={dayObjectives} /> : null}
     </div>
   );
 }
