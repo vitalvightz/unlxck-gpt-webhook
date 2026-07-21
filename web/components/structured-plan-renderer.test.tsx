@@ -41,8 +41,8 @@ test("structured renderer uses one session card and hides detail blocks until ex
                 mindset_anchor: {
                   intent: "Stay loose",
                   focus_cue: "Clean rhythm",
-                  reset_cue: "Do not render reset",
-                  confidence_anchor: "Do not render anchor",
+                  reset_cue: "Breathe and reset",
+                  confidence_anchor: "Rounds are banked",
                   context: "Taper freshness day",
                 },
                 blocks: [{ block_id: "blk-1", display_name: "Breathing reset" }],
@@ -73,8 +73,10 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Show more (1 block)"), true);
   assert.equal(html.includes("Context"), true);
   assert.equal(html.includes("Taper freshness day"), true);
-  assert.equal(html.includes("Do not render reset"), false);
-  assert.equal(html.includes("Do not render anchor"), false);
+  // The full mindset anchor renders on the session card, including the reset
+  // cue and confidence anchor (the mental content, not just training focus).
+  assert.equal(html.includes("Breathe and reset"), true);
+  assert.equal(html.includes("Rounds are banked"), true);
 });
 
 test("open ongoing renderer uses renewable block labels instead of fight-camp phases", () => {

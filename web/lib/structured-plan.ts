@@ -390,7 +390,9 @@ export function getStringList(value: string[] | null | undefined): string[] {
     .filter((item): item is string => item !== null);
 }
 
-/** A simplified mindset anchor only if it has at least one usable line. */
+/** The mindset anchor as label/value lines (Intent, Focus, Reset, Confidence,
+ * Context), in that order, skipping any field that is blank. Empty when the
+ * anchor has no usable line, so the renderer can hide the card. */
 export function getMindsetLines(
   anchor:
     | {
@@ -409,9 +411,13 @@ export function getMindsetLines(
   const lines: { label: string; value: string }[] = [];
   const intent = cleanText(anchor.intent);
   const focus = cleanText(anchor.focus_cue);
+  const reset = cleanText(anchor.reset_cue);
+  const confidence = cleanText(anchor.confidence_anchor);
   const context = cleanText(anchor.context);
   if (intent) lines.push({ label: "Intent", value: intent });
   if (focus) lines.push({ label: "Focus", value: focus });
+  if (reset) lines.push({ label: "Reset", value: reset });
+  if (confidence) lines.push({ label: "Confidence", value: confidence });
   if (context) lines.push({ label: "Context", value: context });
   return lines;
 }
