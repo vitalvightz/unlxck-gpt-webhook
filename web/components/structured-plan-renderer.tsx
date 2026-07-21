@@ -609,10 +609,10 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
   const coachLedContact = getCoachLedContactView(day);
-  // Exercise/session-level anchors are the most specific coaching cue, so keep
-  // them and suppress the broader day anchor whenever any session owns one. The
-  // red-accent day anchor remains the fallback when none of the sessions has a
-  // usable mindset.
+  // Session-level anchors are the most specific coaching cue in this schema, so
+  // keep them and suppress the broader day anchor whenever any session owns one.
+  // The red-accent day anchor remains the fallback when none of the sessions has
+  // a usable mindset.
   const dayMindset = card?.mindset_anchor;
   const hasSessionMindset = getSessions(day).some(
     (session) => getMindsetLines(session.mindset_anchor).length > 0,
