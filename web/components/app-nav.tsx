@@ -52,6 +52,8 @@ export function AppNav() {
   const router = useRouter();
   const { isReady, isMeHydrated, session, me, signOut } = useAppSession();
   const [mobileNavState, setMobileNavState] = useState<MobileNavState>("closed");
+  const [navToggleHidden, setNavToggleHidden] = useState(false);
+  const [navToggleCondensed, setNavToggleCondensed] = useState(false);
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const [pendingNavHref, setPendingNavHref] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
@@ -124,6 +126,44 @@ export function AppNav() {
       clearCloseTimeout();
     };
   }, []);
+
+  // The floating Menu pill is position:fixed, so once the page scrolls it sits
+  // on top of mid-page content. Hide it while scrolling down, bring it back on
+  // scroll-up or near the top, and condense it to icon-only once scrolled.
+  // Skipped while the drawer is open (the button is unmounted then anyway).
+  useEffect(() => {
+    if (isMobileDrawerVisible) {
+      return;
+    }
+    let lastY = window.scrollY;
+    let frame: number | null = null;
+    const update = () => {
+      frame = null;
+      const y = window.scrollY;
+      const delta = y - lastY;
+      lastY = y;
+      setNavToggleCondensed(y > 24);
+      if (y <= 24) {
+        setNavToggleHidden(false);
+      } else if (delta > 0 && y > 90) {
+        setNavToggleHidden(true);
+      } else if (delta < 0) {
+        setNavToggleHidden(false);
+      }
+    };
+    const onScroll = () => {
+      if (frame === null) {
+        frame = window.requestAnimationFrame(update);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [isMobileDrawerVisible]);
 
   useEffect(() => {
     const { documentElement } = document;
@@ -279,7 +319,8 @@ export function AppNav() {
       {!isMobileDrawerVisible ? (
         <button
           type="button"
-          className="mobile-nav-toggle"
+          className={`mobile-nav-toggle${navToggleHidden ? " mobile-nav-toggle-hidden" : ""}`}
+          data-condensed={navToggleCondensed ? "true" : undefined}
           aria-label="Open navigation"
           aria-expanded={false}
           aria-controls="app-sidebar"
