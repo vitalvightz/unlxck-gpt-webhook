@@ -237,6 +237,19 @@ def _is_archived_plan(row: dict[str, Any] | None) -> bool:
     return str(row.get("status") or "").strip().lower() == "archived"
 
 
+def _is_admin_archived_hidden_from_athlete(row: dict[str, Any] | None) -> bool:
+    """Archived AND explicitly hidden by an admin (why_log marker).
+
+    A plain athlete-archived plan stays readable as a history preview; only the
+    admin bulk-archive path stamps this marker to remove it from the athlete
+    view entirely.
+    """
+    if not _is_archived_plan(row):
+        return False
+    why_log = row.get("why_log") if isinstance(row.get("why_log"), dict) else {}
+    return bool(why_log.get("admin_archived_hidden_from_athlete"))
+
+
 def _is_triage_blocked_plan(row: dict[str, Any] | None) -> bool:
     if not isinstance(row, dict):
         return False

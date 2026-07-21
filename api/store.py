@@ -476,6 +476,24 @@ class AppStore(Protocol):
         self, athlete_id: str, *, limit: int = 14
     ) -> list[dict[str, Any]]: ...
 
+    # --- Web push subscriptions (api/routes/push.py, push notification services) ---
+
+    def upsert_push_subscription(self, profile_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_push_subscriptions(self, profile_id: str) -> list[dict[str, Any]]: ...
+
+    def delete_push_subscription(self, profile_id: str, endpoint: str) -> None: ...
+
+    def delete_push_subscription_by_endpoint(self, endpoint: str) -> None: ...
+
+    def list_all_push_subscriptions(
+        self, *, limit: int = 500, after_id: str | None = None
+    ) -> list[dict[str, Any]]: ...
+
+    def mark_push_subscription_morning_sent(
+        self, subscription_id: str, *, sent_day: str
+    ) -> None: ...
+
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_injury_flags(
@@ -4477,6 +4495,93 @@ class SupabaseAppStore:
             .execute()
         )
         return getattr(response, "data", None) or []
+
+    def upsert_push_subscription(self, profile_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"profile_id": profile_id, **fields}
+        try:
+            response = (
+                self.client.table("push_subscriptions")
+                # An endpoint identifies one browser install. Re-subscribing (or a
+                # different account subscribing on a shared device) replaces the
+                # row so pushes only ever reach the endpoint's current owner.
+                .upsert(payload, on_conflict="endpoint")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_push_subscription:no_rows profile_id=%s", profile_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist push subscription",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_push_subscription profile_id={profile_id}",
+                detail="failed to persist push subscription",
+                exc=exc,
+            )
+
+    def list_push_subscriptions(self, profile_id: str) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("push_subscriptions")
+            .select("*")
+            .eq("profile_id", profile_id)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def delete_push_subscription(self, profile_id: str, endpoint: str) -> None:
+        try:
+            (
+                self.client.table("push_subscriptions")
+                .delete()
+                .eq("profile_id", profile_id)
+                .eq("endpoint", endpoint)
+                .execute()
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"delete_push_subscription profile_id={profile_id}",
+                detail="failed to remove push subscription",
+                exc=exc,
+            )
+
+    def delete_push_subscription_by_endpoint(self, endpoint: str) -> None:
+        """Prune a dead endpoint (push service returned 404/410). Best-effort."""
+        (
+            self.client.table("push_subscriptions")
+            .delete()
+            .eq("endpoint", endpoint)
+            .execute()
+        )
+
+    def list_all_push_subscriptions(
+        self, *, limit: int = 500, after_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """One id-ordered page of subscriptions; ``after_id`` is the keyset cursor.
+
+        Keyset (rather than offset) pagination so the morning sweep can walk an
+        arbitrarily large table without skipping rows when it deletes dead
+        endpoints mid-walk.
+        """
+        query = self.client.table("push_subscriptions").select("*")
+        if after_id:
+            query = query.gt("id", after_id)
+        response = query.order("id", desc=False).limit(limit).execute()
+        return getattr(response, "data", None) or []
+
+    def mark_push_subscription_morning_sent(
+        self, subscription_id: str, *, sent_day: str
+    ) -> None:
+        (
+            self.client.table("push_subscriptions")
+            .update({"morning_last_sent_day": sent_day})
+            .eq("id", subscription_id)
+            .execute()
+        )
 
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(

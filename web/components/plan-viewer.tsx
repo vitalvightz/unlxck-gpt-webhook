@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -30,6 +30,12 @@ import {
 } from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
+import { useToast } from "@/components/toast-provider";
+import {
+  getPushOptInState,
+  subscribeToPushNotifications,
+  type PushOptInState,
+} from "@/lib/push";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
@@ -162,6 +168,44 @@ export function shouldAwaitStructuredPlanUpgrade(params: {
     params.isRecentPlan &&
     params.isTriageBlocked !== true
   );
+}
+
+/**
+ * Whether the athlete-facing view should hold back the deterministic plan
+ * fallback and show the "camp is being lxcked in" waiting card instead, so the
+ * first plan an athlete ever sees is the enhanced card.
+ *
+ * The hold only applies while the richer payload can still land: it needs the
+ * same await conditions as the background upgrade (recent plan, open poll
+ * window, access token, published, not triage-blocked) AND a card lifecycle
+ * that has not already terminally failed. Failed / not-attempted / lost-card
+ * plans fall back to the deterministic renderer immediately, and the
+ * mount-scoped poll window bounds the hold even if a build hangs. Admins are
+ * never held — they keep the text view plus diagnostics for review.
+ */
+export function shouldHoldPlanForEnhancedCard(params: {
+  isViewerAdmin: boolean;
+  structuredCardLifecycleState: StructuredCardLifecycleState;
+  hasPublishedPlan: boolean;
+  hasStructuredPlan: boolean;
+  pollWindowExpired: boolean;
+  hasAccessToken: boolean;
+  isRecentPlan: boolean;
+  isTriageBlocked?: boolean;
+}): boolean {
+  if (params.isViewerAdmin) {
+    return false;
+  }
+  // "none" covers the moment right after publish before the lifecycle record
+  // lands; "building" is an active server-side conversion. Every other state
+  // means no richer payload is coming, so the fallback must show.
+  if (
+    params.structuredCardLifecycleState !== "building" &&
+    params.structuredCardLifecycleState !== "none"
+  ) {
+    return false;
+  }
+  return shouldAwaitStructuredPlanUpgrade(params);
 }
 
 /**
@@ -383,6 +427,93 @@ function TextStructuredPlanRenderer({
       currentDayLabel={currentDayLabel}
       scheduleContext={rendererScheduleContext}
     />
+  );
+}
+
+/**
+ * Athlete-facing hold card shown instead of the deterministic plan fallback
+ * while the enhanced card is still building, so the first plan view is always
+ * the elite card. The background poll swaps the enhanced card in when it lands.
+ *
+ * This is also the highest-motivation moment to offer push notifications, so
+ * the card carries the opt-in: granted permission here powers both the
+ * plan-ready push and the daily morning check-in nudge.
+ */
+export function EnhancedCardLockInCard({
+  accessToken = null,
+}: {
+  accessToken?: string | null;
+}) {
+  const [pushState, setPushState] = useState<PushOptInState | "loading" | "enabling">("loading");
+  const [pushError, setPushError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPushOptInState(accessToken)
+      .then((state) => {
+        if (!cancelled) {
+          setPushState(state);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPushState("unsupported");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
+  async function handleEnableNotifications() {
+    if (!accessToken) {
+      return;
+    }
+    setPushState("enabling");
+    setPushError(null);
+    try {
+      await subscribeToPushNotifications(accessToken);
+      setPushState("subscribed");
+    } catch (error) {
+      setPushState("unsubscribed");
+      setPushError(
+        error instanceof Error ? error.message : "Unable to enable notifications right now.",
+      );
+    }
+  }
+
+  return (
+    <section className="support-panel plan-lockin-card" role="status" aria-live="polite">
+      <p className="kicker plan-lockin-kicker">Final review</p>
+      <h3 className="plan-lockin-title">
+        YOUR CAMP IS BEING LXCKED IN
+        <span className="loading-title-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </h3>
+      <p className="plan-lockin-copy">
+        UNLXCK is reviewing and finalising your camp. This takes 2-5 minutes.
+        We&rsquo;ll notify you when it&rsquo;s ready.
+      </p>
+      {accessToken && (pushState === "unsubscribed" || pushState === "enabling") ? (
+        <button
+          type="button"
+          className="cta plan-lockin-notify-button"
+          onClick={handleEnableNotifications}
+          disabled={pushState === "enabling"}
+        >
+          {pushState === "enabling" ? "Enabling notifications…" : "Notify me when it's ready"}
+        </button>
+      ) : null}
+      {pushState === "subscribed" ? (
+        <p className="plan-lockin-notify-confirmed">
+          Notifications on. We&rsquo;ll ping you the moment it&rsquo;s live.
+        </p>
+      ) : null}
+      {pushError ? <p className="plan-lockin-notify-error">{pushError}</p> : null}
+    </section>
   );
 }
 
@@ -1561,7 +1692,45 @@ export function PlanViewer({
       router.refresh();
     },
   });
+  const { showToast } = useToast();
+  // Announce the enhanced card landing while the athlete is on the page: the
+  // background poll swaps the renderer silently, so without this the "we'll
+  // notify you" promise has no open-tab counterpart. Keyed per plan so
+  // switching between plans in one mounted viewer can never false-positive.
+  const structuredPlanSeenRef = useRef<{ planId: string; hadStructuredPlan: boolean } | null>(
+    null,
+  );
+  useEffect(() => {
+    const previous = structuredPlanSeenRef.current;
+    structuredPlanSeenRef.current = {
+      planId: plan.plan_id,
+      hadStructuredPlan: hasStructuredAthletePlan,
+    };
+    if (
+      previous &&
+      previous.planId === plan.plan_id &&
+      !previous.hadStructuredPlan &&
+      hasStructuredAthletePlan &&
+      !isViewerAdmin
+    ) {
+      showToast("Your final camp is live.", { tone: "success" });
+    }
+  }, [plan.plan_id, hasStructuredAthletePlan, isViewerAdmin, showToast]);
+
   const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
+  // Hold the athlete's first view on the lock-in card until the enhanced card
+  // lands. Bounded by the poll window and skipped for terminal card states, so
+  // the deterministic fallback still shows when no richer payload is coming.
+  const holdPlanForEnhancedCard = shouldHoldPlanForEnhancedCard({
+    isViewerAdmin,
+    structuredCardLifecycleState: structuredCardState.state,
+    hasPublishedPlan,
+    hasStructuredPlan: hasStructuredAthletePlan,
+    pollWindowExpired: structuredPlanPollExpired,
+    hasAccessToken: Boolean(accessToken),
+    isRecentPlan: isRecentlyCreatedPlan(plan),
+    isTriageBlocked,
+  });
   // The server field is authoritative after reload. Old failure details are
   // hidden only while a newer attempt is actively building.
   const structuredCardDebug = buildStructuredCardDiagnostic(
@@ -2592,6 +2761,8 @@ export function PlanViewer({
                     plan.schedule_context?.current_training_day
                   }
                 />
+              ) : holdPlanForEnhancedCard ? (
+                <EnhancedCardLockInCard accessToken={accessToken} />
               ) : (
                 <>
                   {isViewerAdmin && structuredCardState.state === "building" ? (
@@ -2623,7 +2794,7 @@ export function PlanViewer({
                   />
                 </>
               )}
-              {canSubmitPlanFeedback && accessToken ? (
+              {!holdPlanForEnhancedCard && canSubmitPlanFeedback && accessToken ? (
                 <ContextualFeedback
                   key={`plan-feedback-${plan.plan_id}`}
                   token={accessToken}

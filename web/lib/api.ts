@@ -1230,3 +1230,37 @@ export function submitGlobalFeedback(
     body: form,
   });
 }
+
+export interface PushSettingsResponse {
+  enabled: boolean;
+  public_key: string;
+}
+
+export interface PushSubscriptionPayload {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  timezone: string;
+}
+
+export function getPushSettings(token: string): Promise<PushSettingsResponse> {
+  return readJson<PushSettingsResponse>("/api/push/settings", { token });
+}
+
+export function savePushSubscription(
+  token: string,
+  payload: PushSubscriptionPayload,
+): Promise<void> {
+  return requestVoid("/api/push/subscriptions", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deletePushSubscription(token: string, endpoint: string): Promise<void> {
+  return requestVoid("/api/push/subscriptions", {
+    method: "DELETE",
+    token,
+    body: JSON.stringify({ endpoint }),
+  });
+}

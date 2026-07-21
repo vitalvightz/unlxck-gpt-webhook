@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { InstallUnlxck } from "@/components/install-unlxck";
+import { PushNotificationSettings } from "@/components/push-notification-settings";
 import { GlobalFeedback } from "@/components/feedback/global-feedback";
 import { ApiError, changeUsername, updateMe } from "@/lib/api";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
@@ -973,6 +974,9 @@ export default function SettingsPage() {
             <p className="kicker">Notifications</p>
             <h2 className="form-section-title">Reminders and messages</h2>
           </div>
+          {session?.access_token ? (
+            <PushNotificationSettings token={session.access_token} />
+          ) : null}
           <div className="settings-toggle-list">
             {NOTIFICATION_ROWS.map((row) => (
               <label key={row.key} className="settings-toggle-row">

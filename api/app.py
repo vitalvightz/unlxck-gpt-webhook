@@ -72,6 +72,7 @@ from .cors_config import (
 )
 from .plan_mappers import (
     _map_profile_row,
+    _is_admin_archived_hidden_from_athlete,
     _is_archived_plan,
     _lookup_plan_source,
     _map_plan_detail,
@@ -96,6 +97,7 @@ from .routes import (
     build_nutrition_router,
     build_plans_router,
     build_profile_router,
+    build_push_router,
     build_today_router,
 )
 
@@ -405,13 +407,6 @@ def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
         "stage2_status": "admin_archived",
         "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
     }
-
-
-def _is_admin_archived_hidden_from_athlete(plan_row: dict[str, Any]) -> bool:
-    if not _is_archived_plan(plan_row):
-        return False
-    why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
-    return bool(why_log.get("admin_archived_hidden_from_athlete"))
 
 
 def _log_admin_count_on_startup(store: AppStore) -> None:
@@ -953,6 +948,12 @@ def create_app(
         build_feedback_router(
             require_profile=require_profile,
             require_admin=require_admin,
+            get_store=get_store,
+        )
+    )
+    app.include_router(
+        build_push_router(
+            require_profile=require_profile,
             get_store=get_store,
         )
     )
