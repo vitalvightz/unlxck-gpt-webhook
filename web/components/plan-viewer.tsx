@@ -449,11 +449,17 @@ export function EnhancedCardLockInCard({
 
   useEffect(() => {
     let cancelled = false;
-    getPushOptInState(accessToken).then((state) => {
-      if (!cancelled) {
-        setPushState(state);
-      }
-    });
+    getPushOptInState(accessToken)
+      .then((state) => {
+        if (!cancelled) {
+          setPushState(state);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPushState("unsupported");
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -488,7 +494,7 @@ export function EnhancedCardLockInCard({
         </span>
       </h3>
       <p className="plan-lockin-copy">
-        UNLXCK is reviewing and finalising your camp. This takes 2&ndash;5 minutes.
+        UNLXCK is reviewing and finalising your camp. This takes 2-5 minutes.
         We&rsquo;ll notify you when it&rsquo;s ready.
       </p>
       {accessToken && (pushState === "unsubscribed" || pushState === "enabling") ? (
@@ -503,7 +509,7 @@ export function EnhancedCardLockInCard({
       ) : null}
       {pushState === "subscribed" ? (
         <p className="plan-lockin-notify-confirmed">
-          Notifications on &mdash; we&rsquo;ll ping you the moment it&rsquo;s live.
+          Notifications on. We&rsquo;ll ping you the moment it&rsquo;s live.
         </p>
       ) : null}
       {pushError ? <p className="plan-lockin-notify-error">{pushError}</p> : null}
@@ -1707,7 +1713,7 @@ export function PlanViewer({
       hasStructuredAthletePlan &&
       !isViewerAdmin
     ) {
-      showToast("Your camp is lxcked in — your final plan is live.", { tone: "success" });
+      showToast("Your final camp is live.", { tone: "success" });
     }
   }, [plan.plan_id, hasStructuredAthletePlan, isViewerAdmin, showToast]);
 

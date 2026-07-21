@@ -32,14 +32,10 @@ PLAN_READY_TAG = "plan-ready"
 MORNING_CHECKIN_TAG = "morning-checkin"
 
 PLAN_READY_TITLE = "Your camp is LXCKED IN"
-PLAN_READY_BODY = (
-    "Every phase, session and detail has been reviewed. Your final plan is live — open it now."
-)
+PLAN_READY_BODY = "Your final camp is live."
 
 MORNING_CHECKIN_TITLE = "Morning check-in"
-MORNING_CHECKIN_BODY = (
-    "How are you feeling today? Log your check-in before your session so UNLXCK can dose it right."
-)
+MORNING_CHECKIN_BODY = "Log how you're feeling before today's session."
 
 
 def vapid_private_key() -> str:

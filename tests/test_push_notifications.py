@@ -167,6 +167,28 @@ def test_morning_sweep_prunes_dead_endpoints(vapid_env, monkeypatch):
     assert store.push_subscriptions == {}
 
 
+def test_morning_sweep_pages_past_one_batch(vapid_env, monkeypatch):
+    # Gemini review finding: a single capped listing silently dropped every
+    # subscriber past the cap. The sweep must keyset-paginate the whole table.
+    from api.services import morning_push
+
+    store = FakeStore()
+    for index in range(5):
+        _subscription(store, endpoint=f"https://push.example/device-{index}", timezone="UTC")
+
+    sends: list[str] = []
+    monkeypatch.setattr(morning_push, "MORNING_SWEEP_BATCH_SIZE", 2)
+    monkeypatch.setattr(
+        morning_push,
+        "send_morning_checkin_push",
+        lambda _store, subscription: sends.append(subscription["endpoint"]) or True,
+    )
+    now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
+
+    assert run_morning_push_sweep(store, now_utc=now) == 5
+    assert len(sends) == 5
+
+
 def test_morning_sweep_disabled_without_keys(monkeypatch):
     monkeypatch.delenv("UNLXCK_VAPID_PRIVATE_KEY", raising=False)
     monkeypatch.delenv("UNLXCK_VAPID_PUBLIC_KEY", raising=False)

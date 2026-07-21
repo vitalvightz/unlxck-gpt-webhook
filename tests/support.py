@@ -1513,8 +1513,10 @@ class FakeStore:
     def delete_push_subscription_by_endpoint(self, endpoint: str) -> None:
         self.push_subscriptions.pop(endpoint, None)
 
-    def list_all_push_subscriptions(self, *, limit: int = 1000) -> list[dict]:
-        rows = sorted(self.push_subscriptions.values(), key=lambda row: row["created_at"])
+    def list_all_push_subscriptions(self, *, limit: int = 500, after_id: str | None = None) -> list[dict]:
+        rows = sorted(self.push_subscriptions.values(), key=lambda row: row["id"])
+        if after_id:
+            rows = [row for row in rows if row["id"] > after_id]
         return [dict(row) for row in rows[:limit]]
 
     def mark_push_subscription_morning_sent(self, subscription_id: str, *, sent_day: str) -> None:

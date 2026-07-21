@@ -20,11 +20,17 @@ export function PushNotificationSettings({ token }: { token: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    getPushOptInState(token).then((resolved) => {
-      if (!cancelled) {
-        setState(resolved);
-      }
-    });
+    getPushOptInState(token)
+      .then((resolved) => {
+        if (!cancelled) {
+          setState(resolved);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setState("unsupported");
+        }
+      });
     return () => {
       cancelled = true;
     };

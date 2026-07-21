@@ -25,6 +25,9 @@ from .push_notifications import push_notifications_configured, send_morning_chec
 logger = logging.getLogger(__name__)
 
 DEFAULT_MORNING_PUSH_LOCAL_HOUR = 7
+# Keyset page size for walking the whole subscription table; the sweep keeps
+# paging until a short batch, so growth past any one page is never truncated.
+MORNING_SWEEP_BATCH_SIZE = 500
 # Past this local hour the nudge is stale: check-in value drops once the
 # training day is underway, and a "morning" ping in the evening reads as noise.
 DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR = 11
@@ -98,14 +101,42 @@ def run_morning_push_sweep(
     now = now_utc or datetime.now(timezone.utc)
     local_hour = morning_push_local_hour()
     cutoff = morning_push_cutoff_local_hour()
-    try:
-        subscriptions = store.list_all_push_subscriptions()
-    except Exception:  # noqa: BLE001 - the sweep must never crash its host loop
-        logger.exception("[morning_push] subscription listing failed")
-        return 0
 
     sent = 0
-    for subscription in subscriptions:
+    after_id: str | None = None
+    while True:
+        try:
+            batch = store.list_all_push_subscriptions(
+                limit=MORNING_SWEEP_BATCH_SIZE, after_id=after_id
+            )
+        except Exception:  # noqa: BLE001 - the sweep must never crash its host loop
+            logger.exception("[morning_push] subscription listing failed")
+            return sent
+        if not batch:
+            break
+        sent += _sweep_batch(
+            store, batch, now=now, local_hour=local_hour, cutoff=cutoff
+        )
+        if len(batch) < MORNING_SWEEP_BATCH_SIZE:
+            break
+        after_id = str(batch[-1].get("id") or "")
+        if not after_id:
+            break
+    if sent:
+        logger.info("[morning_push] sweep sent=%s", sent)
+    return sent
+
+
+def _sweep_batch(
+    store: AppStore,
+    batch: list[dict[str, Any]],
+    *,
+    now: datetime,
+    local_hour: int,
+    cutoff: int,
+) -> int:
+    sent = 0
+    for subscription in batch:
         if not isinstance(subscription, dict):
             continue
         try:
@@ -132,6 +163,4 @@ def run_morning_push_sweep(
             logger.exception(
                 "[morning_push] sweep failed for subscription_id=%s", subscription.get("id")
             )
-    if sent:
-        logger.info("[morning_push] sweep sent=%s", sent)
     return sent

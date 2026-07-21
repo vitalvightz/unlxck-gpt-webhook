@@ -486,7 +486,9 @@ class AppStore(Protocol):
 
     def delete_push_subscription_by_endpoint(self, endpoint: str) -> None: ...
 
-    def list_all_push_subscriptions(self, *, limit: int = 1000) -> list[dict[str, Any]]: ...
+    def list_all_push_subscriptions(
+        self, *, limit: int = 500, after_id: str | None = None
+    ) -> list[dict[str, Any]]: ...
 
     def mark_push_subscription_morning_sent(
         self, subscription_id: str, *, sent_day: str
@@ -4556,14 +4558,19 @@ class SupabaseAppStore:
             .execute()
         )
 
-    def list_all_push_subscriptions(self, *, limit: int = 1000) -> list[dict[str, Any]]:
-        response = (
-            self.client.table("push_subscriptions")
-            .select("*")
-            .order("created_at", desc=False)
-            .limit(limit)
-            .execute()
-        )
+    def list_all_push_subscriptions(
+        self, *, limit: int = 500, after_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """One id-ordered page of subscriptions; ``after_id`` is the keyset cursor.
+
+        Keyset (rather than offset) pagination so the morning sweep can walk an
+        arbitrarily large table without skipping rows when it deletes dead
+        endpoints mid-walk.
+        """
+        query = self.client.table("push_subscriptions").select("*")
+        if after_id:
+            query = query.gt("id", after_id)
+        response = query.order("id", desc=False).limit(limit).execute()
         return getattr(response, "data", None) or []
 
     def mark_push_subscription_morning_sent(
