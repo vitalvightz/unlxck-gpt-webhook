@@ -8454,6 +8454,36 @@ html[data-theme="light"] .today-injury-confirm-cancel {
     background: rgba(12, 13, 15, 0.96);
     backdrop-filter: blur(16px);
     max-width: calc(100vw - var(--safe-area-left) - var(--safe-area-right) - 32px);
+    transition: transform var(--transition-base), opacity var(--transition-base);
+  }
+
+  /* Fixed buttons float over mid-page content, so the toggle slides away on
+     scroll-down and returns on scroll-up (or on keyboard focus). */
+  .mobile-nav-toggle-hidden {
+    transform: translateY(calc(-100% - var(--mobile-nav-offset-top) - var(--safe-area-top)));
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .mobile-nav-toggle:focus-visible {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Once scrolled, the visible toggle shrinks to an icon-only square to cover
+     as little content as possible. */
+  .mobile-nav-toggle[data-condensed="true"] {
+    width: var(--mobile-nav-min-height);
+    min-height: var(--mobile-nav-min-height);
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .mobile-nav-toggle[data-condensed="true"] .nav-toggle-label,
+  .mobile-nav-toggle[data-condensed="true"] .badge {
+    display: none;
   }
 
   .nav-scrim {
@@ -17571,13 +17601,13 @@ html[data-theme="light"] .loading-operational-item {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .sp-note {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 0 8px 10px;
+  padding: 6px 0 6px 10px;
   border-left: 3px solid var(--border-subtle);
 }
 /* Weight-cut and injury notes are the non-negotiables — accent them. */
@@ -17593,7 +17623,7 @@ html[data-theme="light"] .loading-operational-item {
 }
 .sp-note-text {
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 .sp-redflag {
   display: flex;
@@ -17689,6 +17719,16 @@ html[data-theme="light"] .loading-operational-item {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Active/progression notes are secondary context — keep their collapsed cards
+   a step tighter than the default collapse chrome. */
+.sp-active-notes > .sp-collapse-summary,
+.sp-progression > .sp-collapse-summary {
+  padding: 10px 12px;
+}
+.sp-progression .sp-block-purpose {
+  font-size: 0.86rem;
 }
 
 /* Active notes & Safety priority are collapsible cards. Two-class selectors keep
@@ -18004,28 +18044,101 @@ html[data-theme="light"] .loading-operational-item {
   gap: var(--space-2);
 }
 
-/* Day cards */
+/* Day cards: one compact line per closed day — mono D-countdown column,
+   weekday, optional TODAY marker, then the completion fraction + chevron. */
 .cm-days {
   display: grid;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .cm-day-summary {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
+  padding: 10px 14px;
+  min-height: 44px;
 }
 
 .cm-day-head {
   display: inline-flex;
   align-items: baseline;
   gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .cm-day-meta {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
+}
+
+/* Fixed-width tabular countdown so the weekday column aligns down the list.
+   Neutral by default; .sp-accent recolors only the current day's label. */
+.cm-day-countdown {
+  min-width: 3.4em;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.cm-day-title {
+  /* .sp-week-title pushes trailing content away with margin-right auto; here
+     the TODAY marker sits right next to the weekday instead. */
+  margin-right: 0;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-day-now {
+  flex: none;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-red);
+}
+
+.cm-day-count {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.cm-day-count-done {
+  color: var(--success-ink);
+}
+
+/* Rest rows (real rest days and synthesized countdown gap-fill) are inert:
+   dashed outline, no surface, no chevron — nothing to expand. */
+.cm-rest-day {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+}
+
+.cm-rest-label {
+  flex: none;
+  margin-left: auto;
+  padding-left: 10px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-muted);
 }
 
 .cm-day-context {
@@ -18053,16 +18166,31 @@ html[data-theme="light"] .loading-operational-item {
   margin-top: 8px;
 }
 
-/* The current day is the athlete's anchor in the week — give it the red border
-   plus a faint wash and left accent on its header so it reads at a glance even
-   while collapsed, without tinting the whole card. */
+/* The current day is the athlete's anchor in the week — a thin red bar on the
+   card edge (spanning the open body) plus a soft wash on the header. Kept
+   deliberately restrained so saturated red stays reserved for the safety card. */
 .cm-day-current {
-  border-color: var(--border-active);
+  box-shadow: inset 2px 0 0 var(--brand-red);
 }
 
 .cm-day-current > .cm-day-summary {
-  box-shadow: inset 3px 0 0 var(--brand-red);
   background: var(--brand-red-soft);
+}
+
+.cm-rest-day.cm-day-current {
+  border-style: solid;
+  background: var(--brand-red-soft);
+}
+
+/* Tighter expanded state, scoped to plan day cards only — the Today tab shares
+   the base .sp-session/.sp-week-body rules and must keep its spacing. */
+.cm-day .sp-week-body {
+  padding: 0 12px 12px;
+  gap: 10px;
+}
+
+.cm-day .sp-session {
+  padding: 12px;
 }
 
 /* Support + raw fallback */

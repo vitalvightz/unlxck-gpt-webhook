@@ -300,6 +300,7 @@ export function SessionCard({
   day,
   defaultOpenBlocks,
   showDayContext = true,
+  showDayLabels = true,
   completionInfo,
   openWeekIntent,
 }: {
@@ -310,6 +311,10 @@ export function SessionCard({
    * the parent day card instead, so the same information does not repeat inside
    * every session. */
   showDayContext?: boolean;
+  /** When false, the countdown/date labels are omitted because the parent day
+   * row already shows them (the plan accordion); standalone surfaces like the
+   * Today tab keep the default. */
+  showDayLabels?: boolean;
   /** Live logged status for this session (plan viewer only). Absent on
    * surfaces without completion data (e.g. the Today screen's embedded card). */
   completionInfo?: SessionCompletionInfo;
@@ -354,7 +359,7 @@ export function SessionCard({
     <article className="sp-session">
       <header className="sp-session-head">
         <div>
-          {countdown || date ? (
+          {showDayLabels && (countdown || date) ? (
             <div className="sp-day-labels sp-session-day-labels">
               {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
@@ -477,7 +482,15 @@ export function TodayCard({ day }: { day: StructuredDay }) {
  * deterministically from the day data (see classifySessionlessDay) instead of
  * collapsing into "Rest day.". Only a genuine rest day reads as a rest day.
  */
-export function SessionlessDayCard({ day }: { day: StructuredDay }) {
+export function SessionlessDayCard({
+  day,
+  showDayLabels = true,
+}: {
+  day: StructuredDay;
+  /** False inside the plan accordion, where the day row already shows the
+   * countdown/date; the Today tab keeps the default. */
+  showDayLabels?: boolean;
+}) {
   const date = cleanText(day.date);
   const countdown = cleanText(day.countdown_label);
   const card = day.today_card;
@@ -491,7 +504,7 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
     <article className={`sp-session sp-day-card sp-day-card-${kind}`}>
       <header className="sp-session-head">
         <div>
-          {countdown || date ? (
+          {showDayLabels && (countdown || date) ? (
             <div className="sp-day-labels sp-session-day-labels">
               {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
@@ -623,16 +636,147 @@ function openTimelineDayLabel(
   return weekday ? `WEEK ${weekNumber} \u00b7 ${weekday}` : fallbackLabel;
 }
 
+/** One row of the week's day timeline: a real plan day (with its original index
+ * in the week's day list, which the current/default-open logic is keyed on) or a
+ * synthesized gap day that fills a hole in the countdown. */
+export type TimelineEntry =
+  | { kind: "day"; day: StructuredDay; index: number }
+  | { kind: "gap"; dateIso: string; weekday: string | null; countdown: string | null };
+
+const COUNTDOWN_LABEL_RE = /^D-(\d+)$/i;
+
+function parseIsoDay(iso: string | null | undefined): Date | null {
+  const clean = cleanText(iso ?? null);
+  if (!clean) {
+    return null;
+  }
+  const parsed = new Date(`${clean.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function toLocalIsoDay(date: Date): string {
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Gap rows between two consecutive plan days. Fails closed: no rows unless
+ * both dates parse and sit 2–7 calendar days apart (in-order, sane data), and
+ * no countdown number unless both neighbours' labels parse as D-n and descend
+ * exactly one per day — a weekday-only rest row beats a wrong number. */
+function gapRowsBetween(prev: StructuredDay, next: StructuredDay): TimelineEntry[] {
+  const prevDate = parseIsoDay(prev.date);
+  const nextDate = parseIsoDay(next.date);
+  if (!prevDate || !nextDate) {
+    return [];
+  }
+  const diff = Math.round((nextDate.getTime() - prevDate.getTime()) / 86_400_000);
+  if (diff < 2 || diff > 7) {
+    return [];
+  }
+  const prevMatch = cleanText(prev.countdown_label)?.match(COUNTDOWN_LABEL_RE);
+  const nextMatch = cleanText(next.countdown_label)?.match(COUNTDOWN_LABEL_RE);
+  const prevN = prevMatch ? Number(prevMatch[1]) : null;
+  const nextN = nextMatch ? Number(nextMatch[1]) : null;
+  const countdownConsistent = prevN != null && nextN != null && prevN - diff === nextN;
+  const rows: TimelineEntry[] = [];
+  for (let offset = 1; offset < diff; offset += 1) {
+    const gapDate = new Date(prevDate);
+    gapDate.setDate(gapDate.getDate() + offset);
+    const dateIso = toLocalIsoDay(gapDate);
+    rows.push({
+      kind: "gap",
+      dateIso,
+      weekday: weekdayLabel(dateIso),
+      countdown: countdownConsistent ? `D-${prevN! - offset}` : null,
+    });
+  }
+  return rows;
+}
+
+/** The selected week's days with rest rows filling intra-week date holes, so
+ * the countdown reads continuous (D-10, D-9, D-8…) instead of skipping. Open
+ * (weekday-only) plans carry no dates, so gap fill is disabled there. */
+export function buildDayTimeline(days: StructuredDay[], enabled: boolean): TimelineEntry[] {
+  const timeline: TimelineEntry[] = [];
+  days.forEach((day, index) => {
+    if (enabled && index > 0) {
+      timeline.push(...gapRowsBetween(days[index - 1], day));
+    }
+    timeline.push({ kind: "day", day, index });
+  });
+  return timeline;
+}
+
+/** A plan day that is genuinely just rest — no sessions, classified as rest,
+ * and no day-card context worth expanding — so it can render as a compact
+ * non-interactive rest row identical to the synthesized gap rows. */
+function isPlainRestDay(day: StructuredDay): boolean {
+  if (getSessions(day).length > 0 || classifySessionlessDay(day).kind !== "rest") {
+    return false;
+  }
+  const card = day.today_card;
+  return !(
+    cleanText(card?.headline) ||
+    cleanText(card?.primary_warning) ||
+    cleanText(card?.nutrition_summary) ||
+    cleanText(card?.weight_cut_warning) ||
+    getMindsetLines(card?.mindset_anchor).length > 0
+  );
+}
+
+/** Compact non-interactive rest row: same columns as a day summary (countdown,
+ * weekday, optional current marker) with a right-aligned label where the session
+ * count would sit. Deliberately a div, not a <details> — there is nothing to
+ * expand, so it must not advertise an affordance.
+ *
+ * `label` distinguishes the two sources: a backend-classified rest day reads
+ * "Rest", while a synthesized countdown-gap row (a date simply absent from the
+ * sparse plan, which could be rest, coach-led, or undocumented) reads the
+ * honest "No planned session" — it must not assert rest the data can't back. */
+function RestDayRow({
+  countdown,
+  weekday,
+  label = "Rest",
+  isCurrent,
+  currentLabel = "Today",
+}: {
+  countdown: string | null;
+  weekday: string | null;
+  label?: string;
+  isCurrent?: boolean;
+  currentLabel?: string;
+}) {
+  return (
+    <div className={`sp-week cm-day cm-rest-day${isCurrent ? " cm-day-current" : ""}`}>
+      <span className="cm-day-head">
+        {countdown ? (
+          <span className={`sp-countdown cm-day-countdown${isCurrent ? " sp-accent" : ""}`}>
+            {countdown}
+          </span>
+        ) : null}
+        {weekday ? <span className="sp-week-title cm-day-title">{weekday}</span> : null}
+        {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
+      </span>
+      <span className="cm-rest-label">{label}</span>
+    </div>
+  );
+}
+
 function CompletionTag({ completion }: { completion: Completion }) {
   if (completion.total === 0) {
     return null;
   }
   const done = completion.done >= completion.total && completion.total > 0;
   // "Done" is a positive, completed state — give it a calm success tone rather
-  // than the brand red, which we keep reserved for current action / risk.
+  // than the brand red, which we keep reserved for current action / risk. The
+  // bare fraction keeps the closed row to one line; screen readers still get
+  // the full meaning.
   return (
-    <span className={`sp-tag${done ? " sp-done" : ""}`}>
-      {completion.done}/{completion.total} done
+    <span className={`cm-day-count${done ? " cm-day-count-done" : ""}`}>
+      {done ? "✓ " : ""}
+      {completion.done}/{completion.total}
+      <span className="sr-only"> sessions done</span>
     </span>
   );
 }
@@ -690,7 +834,6 @@ export function CampDayCard({
     : weekday || date || fallbackLabel || "Training day";
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
   const completion = dayCompletion(day, completionIndex);
-  const sessionCount = sessions.length;
   const dayIso = date ? date.slice(0, 10) : null;
 
   const completionInfoFor = (session: StructuredSession): SessionCompletionInfo | undefined => {
@@ -732,17 +875,16 @@ export function CampDayCard({
         }}
       >
         <span className="cm-day-head">
-          {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
-          <span className="sp-week-title">{timelineLabel}</span>
+          {countdown ? (
+            <span className={`sp-countdown cm-day-countdown${isCurrent ? " sp-accent" : ""}`}>
+              {countdown}
+            </span>
+          ) : null}
+          <span className="sp-week-title cm-day-title">{timelineLabel}</span>
+          {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
         </span>
 
         <span className="cm-day-meta">
-          {isCurrent ? <span className="sp-tag sp-accent">{currentLabel}</span> : null}
-          {sessionCount > 0 ? (
-            <span className="sp-tag">
-              {sessionCount} session{sessionCount === 1 ? "" : "s"}
-            </span>
-          ) : null}
           <CompletionTag completion={completion} />
         </span>
       </summary>
@@ -759,13 +901,14 @@ export function CampDayCard({
                 day={index === 0 ? day : undefined}
                 defaultOpenBlocks={isCurrent}
                 showDayContext={false}
+                showDayLabels={false}
                 completionInfo={completionInfoFor(session)}
                 openWeekIntent={weekIntent}
               />
             ))}
           </div>
         ) : (
-          <SessionlessDayCard day={day} />
+          <SessionlessDayCard day={day} showDayLabels={false} />
         )}
       </div>
     </details>
@@ -1453,7 +1596,22 @@ export function StructuredPlanRenderer({
   const rawFallback = cleanText(plan.raw_markdown_fallback);
   const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
   const hasRecoverySupport = getRecoveryPhaseItems(plan).length > 0;
-  const dayList = selectedWeek ? getDays(selectedWeek) : [];
+  const dayList = useMemo(() => (selectedWeek ? getDays(selectedWeek) : []), [selectedWeek]);
+  const dayTimeline = useMemo(
+    () => buildDayTimeline(dayList, !openOngoing),
+    [dayList, openOngoing],
+  );
+  // Calendar day a synthesized gap row should highlight. Gap days never exist
+  // in the plan, so focusProgress can't mark them — compare dates directly.
+  // Only in the normal (non-advanced) view, though: once the plan advances to a
+  // future "Next session" (focusDay set), that future session card owns the
+  // marker, so gap rows stay plain instead of stamping today with a label that
+  // belongs to a different day.
+  const restCurrentIso = focusDay
+    ? null
+    : (cleanText(currentTrainingDayIso)?.slice(0, 10) ??
+      cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
+      (calendarDay ? toLocalIsoDay(calendarDay) : null));
   // Open the support phase that matches the week the athlete is viewing.
   const activeSupportPhaseKey = normalizeSupportPhaseKey(selectedWeek?.phase_label);
 
@@ -1496,7 +1654,20 @@ export function StructuredPlanRenderer({
 
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
-              dayList.map((day, index) => {
+              dayTimeline.map((entry) => {
+                if (entry.kind === "gap") {
+                  return (
+                    <RestDayRow
+                      key={`rest-${entry.dateIso}`}
+                      countdown={entry.countdown}
+                      weekday={entry.weekday}
+                      label="No planned session"
+                      isCurrent={entry.dateIso === restCurrentIso}
+                      currentLabel={currentDayLabel}
+                    />
+                  );
+                }
+                const { day, index } = entry;
                 // Dated days match on the calendar date. A weekday-only (open
                 // plan) match carries no date, so it is identified by week/day
                 // position instead — only while the matched week is the one
@@ -1507,6 +1678,22 @@ export function StructuredPlanRenderer({
                     : focusProgress.currentWeekPos === safePos &&
                       focusProgress.currentDayPos === index &&
                       focusProgress.currentDayPos != null;
+
+                // A pure rest day renders identically to a synthesized gap row,
+                // so real and filled-in rest days read as one continuous line.
+                if (!openOngoing && isPlainRestDay(day)) {
+                  const restDate = cleanText(day.date);
+                  return (
+                    <RestDayRow
+                      key={restDate || `day-${index}`}
+                      countdown={cleanText(day.countdown_label)}
+                      weekday={weekdayLabel(restDate)}
+                      label="Rest"
+                      isCurrent={isCurrent}
+                      currentLabel={currentDayLabel}
+                    />
+                  );
+                }
 
                 return (
                   <CampDayCard
@@ -1531,11 +1718,14 @@ export function StructuredPlanRenderer({
         </>
       ) : null}
 
-            {progressionNotes ? (
-        <section className="sp-card sp-progression">
-          <p className="sp-eyebrow">Progression notes</p>
+      {progressionNotes ? (
+        <CollapsibleSection
+          title="Progression notes"
+          detailLabel="notes"
+          className="sp-progression"
+        >
           <p className="sp-block-purpose">{progressionNotes}</p>
-        </section>
+        </CollapsibleSection>
       ) : null}
 
       {hasRecoverySupport ? (

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
+import { buildDayTimeline, SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
 import { openBlockWeekIntent } from "@/lib/open-block";
 import type { PlanScheduleContext, StructuredPlan, StructuredSession } from "@/lib/types";
 
@@ -57,8 +57,12 @@ test("structured renderer uses one session card and hides detail blocks until ex
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(countOccurrences(html, "Freshness Reset"), 1);
-  assert.equal(html.includes('<span class="sp-countdown sp-accent">D-19</span>'), true);
-  assert.equal(html.includes('<span class="sp-week-title">Mon</span>'), true);
+  // A non-current day keeps a neutral countdown (red is reserved for today).
+  assert.equal(html.includes('<span class="sp-countdown cm-day-countdown">D-19</span>'), true);
+  assert.equal(html.includes("sp-countdown cm-day-countdown sp-accent"), false);
+  assert.equal(html.includes('<span class="sp-week-title cm-day-title">Mon</span>'), true);
+  // The closed row shows only the completion fraction — no session-count pill.
+  assert.equal(html.includes("1 session"), false);
   assert.equal(html.includes("Morning intro duplicate"), false); // headline not shown on session days
   // The DAY mindset renders once at day level (distinct from the session's own
   // mindset, which renders on the session card).
@@ -566,8 +570,9 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(html.includes("Coach-led boxing — technical only"), true);
   assert.equal(html.includes("train with your coach"), true);
   assert.equal(html.includes("sp-day-card-technical"), true);
-  // The genuine rest day still reads as a rest day exactly once.
-  assert.equal(countOccurrences(html, "Rest day."), 1);
+  // The genuine rest day renders as a single compact, non-expandable rest row.
+  assert.equal(countOccurrences(html, "cm-rest-day"), 1);
+  assert.equal(html.includes("Rest day."), false);
 });
 
 test("open plans keep session categories inside chronological day cards", () => {
@@ -615,9 +620,9 @@ test("open plans keep session categories inside chronological day cards", () => 
     />,
   );
 
-  assert.equal(html.includes('<span class="sp-week-title">MON 13 JUL</span>'), true);
-  assert.equal(html.includes('<span class="sp-week-title">WED 15 JUL</span>'), true);
-  assert.equal(html.includes('<span class="sp-week-title">Support Strength</span>'), false);
+  assert.equal(html.includes('<span class="sp-week-title cm-day-title">MON 13 JUL</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title cm-day-title">WED 15 JUL</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title cm-day-title">Support Strength</span>'), false);
   assert.equal(html.includes("Support Strength"), true);
   assert.equal(html.includes("D-"), false);
   assert.equal(html.includes("Block 1"), true);
@@ -656,8 +661,8 @@ test("ambiguous open plans fail closed instead of using category names as dates"
   );
 
   assert.equal(html.includes("Schedule unavailable"), true);
-  assert.equal(html.includes('<span class="sp-week-title">Training day 1</span>'), true);
-  assert.equal(html.includes('<span class="sp-week-title">Support Strength</span>'), false);
+  assert.equal(html.includes('<span class="sp-week-title cm-day-title">Training day 1</span>'), true);
+  assert.equal(html.includes('<span class="sp-week-title cm-day-title">Support Strength</span>'), false);
 });
 
 test("renders light technical context alongside app sessions in the same day card", () => {
@@ -771,9 +776,11 @@ test("marks the current day and surfaces the camp status + week focus", () => {
   // call — that stays on Today.
   assert.equal(html.includes("Train as planned"), false);
   assert.equal(html.includes("train_as_planned"), false);
-  // Current day is flagged, and its completion shows on the day card.
+  // Current day is flagged, and its completion shows on the day card as the
+  // compact success-toned fraction.
   assert.equal(html.includes("cm-day-current"), true);
-  assert.equal(html.includes("1/1 done"), true);
+  assert.equal(html.includes("cm-day-count-done"), true);
+  assert.equal(html.includes("1/1"), true);
 });
 
 test("compresses the plan: dedupes safety, folds the disclaimer, trims the week overview", () => {
@@ -1119,9 +1126,9 @@ test("completed work is tagged with the calm success tone, never the brand red a
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
 
-  assert.equal(html.includes("sp-done"), true);
-  // The "done" completion tag must not borrow the red accent class.
-  assert.equal(/class="sp-tag sp-accent"[^>]*>\s*1\/1 done/.test(html), false);
+  assert.equal(html.includes("cm-day-count-done"), true);
+  // The "done" completion fraction must not borrow the red accent class.
+  assert.equal(/class="[^"]*sp-accent[^"]*"[^>]*>[^<]*1\/1/.test(html), false);
 });
 
 test("renders plan-level active notes as a standalone card", () => {
@@ -1238,4 +1245,180 @@ test("open plan week overview headlines the block-week intent", () => {
 
   const datedHtml = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
   assert.equal(datedHtml.includes("Run every dose as written"), false);
+});
+
+// ---------------------------------------------------------------------------
+// Countdown gap fill: missing dates between plan days render as rest rows so
+// the D-countdown reads continuous instead of skipping numbers.
+
+function gapFillPlan(
+  days: Array<Record<string, unknown>>,
+): StructuredPlan {
+  return {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "SPP", days }],
+  } as unknown as StructuredPlan;
+}
+
+test("buildDayTimeline fills intra-week date holes with countdown rest rows", () => {
+  const days = [
+    { date: "2026-07-07", countdown_label: "D-10", day_type: "high", sessions: [{ session_id: "s1", blocks: [] }] },
+    { date: "2026-07-10", countdown_label: "D-7", day_type: "high", sessions: [{ session_id: "s2", blocks: [] }] },
+  ] as unknown as Parameters<typeof buildDayTimeline>[0];
+
+  const timeline = buildDayTimeline(days, true);
+
+  assert.deepEqual(
+    timeline.map((entry) => (entry.kind === "gap" ? `${entry.countdown}:${entry.weekday}` : entry.kind)),
+    ["day", "D-9:Wed", "D-8:Thu", "day"],
+  );
+});
+
+test("buildDayTimeline never synthesizes a countdown that contradicts the neighbours", () => {
+  // Labels claim a 4-step drop but the dates are only 2 apart → weekday-only rows.
+  const days = [
+    { date: "2026-07-07", countdown_label: "D-10", day_type: "high", sessions: [] },
+    { date: "2026-07-09", countdown_label: "D-6", day_type: "high", sessions: [] },
+  ] as unknown as Parameters<typeof buildDayTimeline>[0];
+
+  const timeline = buildDayTimeline(days, true);
+  const gaps = timeline.filter((entry) => entry.kind === "gap");
+
+  assert.equal(gaps.length, 1);
+  assert.equal(gaps[0].kind === "gap" && gaps[0].countdown, null);
+});
+
+test("buildDayTimeline fails closed on missing dates, huge gaps, and disabled mode", () => {
+  const noDates = [
+    { weekday: "Mon", day_type: "high", sessions: [] },
+    { weekday: "Fri", day_type: "high", sessions: [] },
+  ] as unknown as Parameters<typeof buildDayTimeline>[0];
+  assert.equal(buildDayTimeline(noDates, true).every((entry) => entry.kind === "day"), true);
+
+  const hugeGap = [
+    { date: "2026-07-01", countdown_label: "D-20", day_type: "high", sessions: [] },
+    { date: "2026-07-11", countdown_label: "D-10", day_type: "high", sessions: [] },
+  ] as unknown as Parameters<typeof buildDayTimeline>[0];
+  assert.equal(buildDayTimeline(hugeGap, true).every((entry) => entry.kind === "day"), true);
+
+  const dated = [
+    { date: "2026-07-07", countdown_label: "D-10", day_type: "high", sessions: [] },
+    { date: "2026-07-10", countdown_label: "D-7", day_type: "high", sessions: [] },
+  ] as unknown as Parameters<typeof buildDayTimeline>[0];
+  assert.equal(buildDayTimeline(dated, false).every((entry) => entry.kind === "day"), true);
+});
+
+test("renderer shows synthesized rest rows as inert rows, not accordions", () => {
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-10",
+      day_type: "high",
+      sessions: [{ session_id: "s1", title: "Power", blocks: [] }],
+    },
+    {
+      date: "2026-07-10",
+      countdown_label: "D-7",
+      day_type: "high",
+      sessions: [{ session_id: "s2", title: "Conditioning", blocks: [] }],
+    },
+  ]);
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 6, 7)} />);
+
+  assert.equal(countOccurrences(html, "cm-rest-day"), 2);
+  assert.equal(html.includes("D-9"), true);
+  assert.equal(html.includes("D-8"), true);
+  // Rest rows are plain divs — the only <details> day rows are the two real days.
+  assert.equal(countOccurrences(html, "cm-day-summary"), 2);
+  // A synthesized gap has no backend signal, so it must NOT assert "Rest" — it
+  // reads the honest neutral label instead.
+  assert.equal(html.includes("No planned session"), true);
+  assert.equal(html.includes(">Rest</span>"), false);
+});
+
+test("a backend-classified rest day keeps the definite 'Rest' label", () => {
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-10",
+      day_type: "high",
+      sessions: [{ session_id: "s1", title: "Power", blocks: [] }],
+    },
+    {
+      date: "2026-07-08",
+      countdown_label: "D-9",
+      day_type: "rest",
+      today_card: {},
+      sessions: [],
+    },
+  ]);
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 6, 7)} />);
+
+  // The explicit rest day (day_type "rest") is a compact rest row labelled "Rest".
+  assert.equal(html.includes(">Rest</span>"), true);
+  assert.equal(html.includes("No planned session"), false);
+});
+
+test("gap rows are not highlighted once the plan advances to a future 'Next session'", () => {
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-10",
+      day_type: "high",
+      sessions: [{ session_id: "s1", title: "Power", blocks: [] }],
+    },
+    {
+      date: "2026-07-10",
+      countdown_label: "D-7",
+      day_type: "high",
+      sessions: [{ session_id: "s2", title: "Conditioning", blocks: [] }],
+    },
+  ]);
+
+  // Today (the 8th) is a gap day, but the view has advanced to a future session
+  // (focusDay + "Next session"). The future session card owns the marker; the
+  // gap row must stay plain rather than stamping today with "Next session".
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 6, 8)}
+      currentTrainingDayIso="2026-07-08"
+      focusDay={new Date(2026, 6, 10)}
+      currentDayLabel="Next session"
+    />,
+  );
+
+  // No rest row carries the current-day treatment (which is also what would
+  // render the marker label), so today's gap row is never stamped "Next session".
+  assert.equal(html.includes("cm-rest-day cm-day-current"), false);
+});
+
+test("a synthesized rest row on the athlete's current day is highlighted", () => {
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-10",
+      day_type: "high",
+      sessions: [{ session_id: "s1", title: "Power", blocks: [] }],
+    },
+    {
+      date: "2026-07-10",
+      countdown_label: "D-7",
+      day_type: "high",
+      sessions: [{ session_id: "s2", title: "Conditioning", blocks: [] }],
+    },
+  ]);
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 6, 8)}
+      currentTrainingDayIso="2026-07-08"
+    />,
+  );
+
+  assert.equal(html.includes("cm-rest-day cm-day-current"), true);
 });
