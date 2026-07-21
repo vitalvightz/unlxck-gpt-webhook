@@ -18130,11 +18130,14 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 .cm-rest-label {
+  flex: none;
   margin-left: auto;
+  padding-left: 10px;
   font-size: 0.66rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--text-muted);
 }
 

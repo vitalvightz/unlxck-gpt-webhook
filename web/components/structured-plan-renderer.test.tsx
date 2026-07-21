@@ -1332,6 +1332,68 @@ test("renderer shows synthesized rest rows as inert rows, not accordions", () =>
   assert.equal(html.includes("D-8"), true);
   // Rest rows are plain divs — the only <details> day rows are the two real days.
   assert.equal(countOccurrences(html, "cm-day-summary"), 2);
+  // A synthesized gap has no backend signal, so it must NOT assert "Rest" — it
+  // reads the honest neutral label instead.
+  assert.equal(html.includes("No planned session"), true);
+  assert.equal(html.includes(">Rest</span>"), false);
+});
+
+test("a backend-classified rest day keeps the definite 'Rest' label", () => {
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-10",
+      day_type: "high",
+      sessions: [{ session_id: "s1", title: "Power", blocks: [] }],
+    },
+    {
+      date: "2026-07-08",
+      countdown_label: "D-9",
+      day_type: "rest",
+      today_card: {},
+      sessions: [],
+    },
+  ]);
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 6, 7)} />);
+
+  // The explicit rest day (day_type "rest") is a compact rest row labelled "Rest".
+  assert.equal(html.includes(">Rest</span>"), true);
+  assert.equal(html.includes("No planned session"), false);
+});
+
+test("gap rows are not highlighted once the plan advances to a future 'Next session'", () => {
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-10",
+      day_type: "high",
+      sessions: [{ session_id: "s1", title: "Power", blocks: [] }],
+    },
+    {
+      date: "2026-07-10",
+      countdown_label: "D-7",
+      day_type: "high",
+      sessions: [{ session_id: "s2", title: "Conditioning", blocks: [] }],
+    },
+  ]);
+
+  // Today (the 8th) is a gap day, but the view has advanced to a future session
+  // (focusDay + "Next session"). The future session card owns the marker; the
+  // gap row must stay plain rather than stamping today with "Next session".
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 6, 8)}
+      currentTrainingDayIso="2026-07-08"
+      focusDay={new Date(2026, 6, 10)}
+      currentDayLabel="Next session"
+    />,
+  );
+
+  // No rest row carries the current-day treatment (which is also what would
+  // render the marker label), so today's gap row is never stamped "Next session".
+  assert.equal(html.includes("cm-rest-day cm-day-current"), false);
 });
 
 test("a synthesized rest row on the athlete's current day is highlighted", () => {

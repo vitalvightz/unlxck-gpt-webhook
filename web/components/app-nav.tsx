@@ -9,6 +9,11 @@ import { Skeleton } from "@/components/skeleton";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
+import {
+  NAV_TOGGLE_INITIAL_STATE,
+  nextNavToggleScrollState,
+  type NavToggleScrollState,
+} from "@/lib/nav-toggle-scroll";
 
 type MobileNavState = "closed" | "opening" | "open" | "closing";
 
@@ -52,8 +57,7 @@ export function AppNav() {
   const router = useRouter();
   const { isReady, isMeHydrated, session, me, signOut } = useAppSession();
   const [mobileNavState, setMobileNavState] = useState<MobileNavState>("closed");
-  const [navToggleHidden, setNavToggleHidden] = useState(false);
-  const [navToggleCondensed, setNavToggleCondensed] = useState(false);
+  const [navToggle, setNavToggle] = useState<NavToggleScrollState>(NAV_TOGGLE_INITIAL_STATE);
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const [pendingNavHref, setPendingNavHref] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
@@ -128,9 +132,10 @@ export function AppNav() {
   }, []);
 
   // The floating Menu pill is position:fixed, so once the page scrolls it sits
-  // on top of mid-page content. Hide it while scrolling down, bring it back on
-  // scroll-up or near the top, and condense it to icon-only once scrolled.
-  // Skipped while the drawer is open (the button is unmounted then anyway).
+  // on top of mid-page content. The hide/condense decision lives in the pure
+  // `nextNavToggleScrollState` (unit-tested); this effect is just the glue that
+  // samples scrollY on a rAF and applies the result. Skipped while the drawer is
+  // open (the button is unmounted then anyway).
   useEffect(() => {
     if (isMobileDrawerVisible) {
       return;
@@ -140,16 +145,12 @@ export function AppNav() {
     const update = () => {
       frame = null;
       const y = window.scrollY;
-      const delta = y - lastY;
+      // Capture the previous sample and advance lastY before the (possibly
+      // deferred) state update runs, so the direction is computed from this
+      // tick's delta regardless of when React applies the updater.
+      const prevY = lastY;
       lastY = y;
-      setNavToggleCondensed(y > 24);
-      if (y <= 24) {
-        setNavToggleHidden(false);
-      } else if (delta > 0 && y > 90) {
-        setNavToggleHidden(true);
-      } else if (delta < 0) {
-        setNavToggleHidden(false);
-      }
+      setNavToggle((prev) => nextNavToggleScrollState(prev, y, prevY));
     };
     const onScroll = () => {
       if (frame === null) {
@@ -319,8 +320,8 @@ export function AppNav() {
       {!isMobileDrawerVisible ? (
         <button
           type="button"
-          className={`mobile-nav-toggle${navToggleHidden ? " mobile-nav-toggle-hidden" : ""}`}
-          data-condensed={navToggleCondensed ? "true" : undefined}
+          className={`mobile-nav-toggle${navToggle.hidden ? " mobile-nav-toggle-hidden" : ""}`}
+          data-condensed={navToggle.condensed ? "true" : undefined}
           aria-label="Open navigation"
           aria-expanded={false}
           aria-controls="app-sidebar"

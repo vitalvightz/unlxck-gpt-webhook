@@ -726,17 +726,24 @@ function isPlainRestDay(day: StructuredDay): boolean {
 }
 
 /** Compact non-interactive rest row: same columns as a day summary (countdown,
- * weekday, optional current marker) with a muted REST label where the session
+ * weekday, optional current marker) with a right-aligned label where the session
  * count would sit. Deliberately a div, not a <details> — there is nothing to
- * expand, so it must not advertise an affordance. */
+ * expand, so it must not advertise an affordance.
+ *
+ * `label` distinguishes the two sources: a backend-classified rest day reads
+ * "Rest", while a synthesized countdown-gap row (a date simply absent from the
+ * sparse plan, which could be rest, coach-led, or undocumented) reads the
+ * honest "No planned session" — it must not assert rest the data can't back. */
 function RestDayRow({
   countdown,
   weekday,
+  label = "Rest",
   isCurrent,
   currentLabel = "Today",
 }: {
   countdown: string | null;
   weekday: string | null;
+  label?: string;
   isCurrent?: boolean;
   currentLabel?: string;
 }) {
@@ -751,7 +758,7 @@ function RestDayRow({
         {weekday ? <span className="sp-week-title cm-day-title">{weekday}</span> : null}
         {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
       </span>
-      <span className="cm-rest-label">Rest</span>
+      <span className="cm-rest-label">{label}</span>
     </div>
   );
 }
@@ -1594,12 +1601,17 @@ export function StructuredPlanRenderer({
     () => buildDayTimeline(dayList, !openOngoing),
     [dayList, openOngoing],
   );
-  // Calendar day a rest row should highlight: synthesized gap days never exist
+  // Calendar day a synthesized gap row should highlight. Gap days never exist
   // in the plan, so focusProgress can't mark them — compare dates directly.
-  const restCurrentIso =
-    cleanText(currentTrainingDayIso)?.slice(0, 10) ??
-    cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
-    (calendarDay ? toLocalIsoDay(calendarDay) : null);
+  // Only in the normal (non-advanced) view, though: once the plan advances to a
+  // future "Next session" (focusDay set), that future session card owns the
+  // marker, so gap rows stay plain instead of stamping today with a label that
+  // belongs to a different day.
+  const restCurrentIso = focusDay
+    ? null
+    : (cleanText(currentTrainingDayIso)?.slice(0, 10) ??
+      cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
+      (calendarDay ? toLocalIsoDay(calendarDay) : null));
   // Open the support phase that matches the week the athlete is viewing.
   const activeSupportPhaseKey = normalizeSupportPhaseKey(selectedWeek?.phase_label);
 
@@ -1649,7 +1661,9 @@ export function StructuredPlanRenderer({
                       key={`rest-${entry.dateIso}`}
                       countdown={entry.countdown}
                       weekday={entry.weekday}
+                      label="No planned session"
                       isCurrent={entry.dateIso === restCurrentIso}
+                      currentLabel={currentDayLabel}
                     />
                   );
                 }
@@ -1674,6 +1688,7 @@ export function StructuredPlanRenderer({
                       key={restDate || `day-${index}`}
                       countdown={cleanText(day.countdown_label)}
                       weekday={weekdayLabel(restDate)}
+                      label="Rest"
                       isCurrent={isCurrent}
                       currentLabel={currentDayLabel}
                     />
