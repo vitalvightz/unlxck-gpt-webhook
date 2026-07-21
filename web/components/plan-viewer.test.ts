@@ -504,8 +504,8 @@ test("the lock-in hold is bounded and only applies to plans that can still upgra
 test("the lock-in card announces the camp is being lxcked in", () => {
   const html = renderToStaticMarkup(createElement(EnhancedCardLockInCard));
   assert.match(html, /YOUR CAMP IS BEING LXCKED IN/);
-  assert.match(html, /reviewing every phase, session and detail/);
-  assert.match(html, /2–5 mins/);
+  assert.match(html, /reviewing and finalising your camp/);
+  assert.match(html, /2–5 minutes/);
   assert.match(html, /role="status"/);
 });
 

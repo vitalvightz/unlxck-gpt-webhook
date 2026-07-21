@@ -488,8 +488,8 @@ export function EnhancedCardLockInCard({
         </span>
       </h3>
       <p className="plan-lockin-copy">
-        UNLXCK is reviewing every phase, session and detail. Your final plan will be ready in
-        2&ndash;5 mins &mdash; we&rsquo;ll notify you.
+        UNLXCK is reviewing and finalising your camp. This takes 2&ndash;5 minutes.
+        We&rsquo;ll notify you when it&rsquo;s ready.
       </p>
       {accessToken && (pushState === "unsubscribed" || pushState === "enabling") ? (
         <button
