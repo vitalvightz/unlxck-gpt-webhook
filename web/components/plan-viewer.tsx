@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -30,6 +30,12 @@ import {
 } from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
+import { useToast } from "@/components/toast-provider";
+import {
+  getPushOptInState,
+  subscribeToPushNotifications,
+  type PushOptInState,
+} from "@/lib/push";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
@@ -428,8 +434,48 @@ function TextStructuredPlanRenderer({
  * Athlete-facing hold card shown instead of the deterministic plan fallback
  * while the enhanced card is still building, so the first plan view is always
  * the elite card. The background poll swaps the enhanced card in when it lands.
+ *
+ * This is also the highest-motivation moment to offer push notifications, so
+ * the card carries the opt-in: granted permission here powers both the
+ * plan-ready push and the daily morning check-in nudge.
  */
-export function EnhancedCardLockInCard() {
+export function EnhancedCardLockInCard({
+  accessToken = null,
+}: {
+  accessToken?: string | null;
+}) {
+  const [pushState, setPushState] = useState<PushOptInState | "loading" | "enabling">("loading");
+  const [pushError, setPushError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPushOptInState(accessToken).then((state) => {
+      if (!cancelled) {
+        setPushState(state);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
+  async function handleEnableNotifications() {
+    if (!accessToken) {
+      return;
+    }
+    setPushState("enabling");
+    setPushError(null);
+    try {
+      await subscribeToPushNotifications(accessToken);
+      setPushState("subscribed");
+    } catch (error) {
+      setPushState("unsubscribed");
+      setPushError(
+        error instanceof Error ? error.message : "Unable to enable notifications right now.",
+      );
+    }
+  }
+
   return (
     <section className="support-panel plan-lockin-card" role="status" aria-live="polite">
       <p className="kicker plan-lockin-kicker">Final review</p>
@@ -445,6 +491,22 @@ export function EnhancedCardLockInCard() {
         UNLXCK is reviewing every phase, session and detail. Your final plan will be ready in
         2&ndash;5 mins &mdash; we&rsquo;ll notify you.
       </p>
+      {accessToken && (pushState === "unsubscribed" || pushState === "enabling") ? (
+        <button
+          type="button"
+          className="cta plan-lockin-notify-button"
+          onClick={handleEnableNotifications}
+          disabled={pushState === "enabling"}
+        >
+          {pushState === "enabling" ? "Enabling notifications…" : "Notify me when it's ready"}
+        </button>
+      ) : null}
+      {pushState === "subscribed" ? (
+        <p className="plan-lockin-notify-confirmed">
+          Notifications on &mdash; we&rsquo;ll ping you the moment it&rsquo;s live.
+        </p>
+      ) : null}
+      {pushError ? <p className="plan-lockin-notify-error">{pushError}</p> : null}
     </section>
   );
 }
@@ -1624,6 +1686,31 @@ export function PlanViewer({
       router.refresh();
     },
   });
+  const { showToast } = useToast();
+  // Announce the enhanced card landing while the athlete is on the page: the
+  // background poll swaps the renderer silently, so without this the "we'll
+  // notify you" promise has no open-tab counterpart. Keyed per plan so
+  // switching between plans in one mounted viewer can never false-positive.
+  const structuredPlanSeenRef = useRef<{ planId: string; hadStructuredPlan: boolean } | null>(
+    null,
+  );
+  useEffect(() => {
+    const previous = structuredPlanSeenRef.current;
+    structuredPlanSeenRef.current = {
+      planId: plan.plan_id,
+      hadStructuredPlan: hasStructuredAthletePlan,
+    };
+    if (
+      previous &&
+      previous.planId === plan.plan_id &&
+      !previous.hadStructuredPlan &&
+      hasStructuredAthletePlan &&
+      !isViewerAdmin
+    ) {
+      showToast("Your camp is lxcked in — your final plan is live.", { tone: "success" });
+    }
+  }, [plan.plan_id, hasStructuredAthletePlan, isViewerAdmin, showToast]);
+
   const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
   // Hold the athlete's first view on the lock-in card until the enhanced card
   // lands. Bounded by the poll window and skipped for terminal card states, so
@@ -2669,7 +2756,7 @@ export function PlanViewer({
                   }
                 />
               ) : holdPlanForEnhancedCard ? (
-                <EnhancedCardLockInCard />
+                <EnhancedCardLockInCard accessToken={accessToken} />
               ) : (
                 <>
                   {isViewerAdmin && structuredCardState.state === "building" ? (

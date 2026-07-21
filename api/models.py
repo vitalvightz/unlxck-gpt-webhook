@@ -1361,6 +1361,49 @@ class UsernameRateLimitInfo(BaseModel):
     next_available_at: str | None = None
 
 
+# Browser push endpoints are long opaque URLs; keys are base64url strings. The
+# caps are generous versus real payloads and exist only to bound abuse.
+PUSH_ENDPOINT_MAX_CHARS = 1024
+PUSH_KEY_MAX_CHARS = 256
+
+
+class PushSubscriptionKeys(BaseModel):
+    p256dh: str = Field(min_length=1, max_length=PUSH_KEY_MAX_CHARS)
+    auth: str = Field(min_length=1, max_length=PUSH_KEY_MAX_CHARS)
+
+
+class PushSubscribeRequest(BaseModel):
+    """A browser PushSubscription plus the device's IANA timezone."""
+
+    endpoint: str = Field(min_length=1, max_length=PUSH_ENDPOINT_MAX_CHARS)
+    keys: PushSubscriptionKeys
+    timezone: str = Field(default="", max_length=PROFILE_TIMEZONE_MAX_CHARS)
+
+    @field_validator("endpoint")
+    @classmethod
+    def _validate_endpoint(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized.lower().startswith("https://"):
+            raise ValueError("push endpoint must be an https URL")
+        return normalized
+
+    @field_validator("timezone", mode="before")
+    @classmethod
+    def _clean_timezone(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class PushUnsubscribeRequest(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=PUSH_ENDPOINT_MAX_CHARS)
+
+
+class PushSettingsResponse(BaseModel):
+    """What the client needs to offer push: server readiness + the VAPID public key."""
+
+    enabled: bool
+    public_key: str = ""
+
+
 class ProfileRecord(BaseModel):
     athlete_id: str
     email: str

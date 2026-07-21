@@ -96,6 +96,7 @@ from .routes import (
     build_nutrition_router,
     build_plans_router,
     build_profile_router,
+    build_push_router,
     build_today_router,
 )
 
@@ -953,6 +954,12 @@ def create_app(
         build_feedback_router(
             require_profile=require_profile,
             require_admin=require_admin,
+            get_store=get_store,
+        )
+    )
+    app.include_router(
+        build_push_router(
+            require_profile=require_profile,
             get_store=get_store,
         )
     )

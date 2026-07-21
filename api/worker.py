@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import signal
+import time
 from contextlib import suppress
 
 from fightcamp.logging_utils import configure_logging
@@ -37,6 +38,37 @@ def _worker_max_concurrent_jobs() -> int:
 
 def _worker_shutdown_grace_seconds() -> int:
     return _int_env("UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS", 25, minimum=1)
+
+
+def _morning_push_sweep_interval_seconds() -> int:
+    return _int_env("UNLXCK_MORNING_PUSH_SWEEP_INTERVAL_SECONDS", 600, minimum=60)
+
+
+async def _run_morning_push_sweep_if_due(
+    *,
+    store: AppStore,
+    state: dict[str, float],
+    interval_seconds: int,
+) -> None:
+    """Piggyback the morning check-in push sweep on the worker's tick loop.
+
+    The sweep itself is idempotent (per-device local-day dedupe), so the cadence
+    only bounds delivery latency after the local morning hour. It runs in a
+    worker thread (sync store + HTTP calls) and never raises into the loop.
+    """
+
+    now = time.monotonic()
+    if now - state.get("last_sweep_at", 0.0) < interval_seconds:
+        return
+    state["last_sweep_at"] = now
+    try:
+        from .services.morning_push import morning_push_enabled, run_morning_push_sweep
+
+        if not morning_push_enabled():
+            return
+        await asyncio.to_thread(run_morning_push_sweep, store)
+    except Exception:  # noqa: BLE001 - the nudge sweep must never disturb generation
+        logger.exception("[worker] morning push sweep failed")
 
 
 def _install_shutdown_handlers(
@@ -258,6 +290,9 @@ async def run_worker() -> None:
     if os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "0":
         logger.info("[worker] generation:worker_only_mode enabled")
 
+    morning_sweep_state: dict[str, float] = {}
+    morning_sweep_interval = _morning_push_sweep_interval_seconds()
+
     try:
         while not shutdown_event.is_set():
             await _tick(
@@ -266,6 +301,11 @@ async def run_worker() -> None:
                 detached_tasks=detached_tasks,
                 stale_after_seconds=stale_after_seconds,
                 max_concurrent_jobs=max_concurrent_jobs,
+            )
+            await _run_morning_push_sweep_if_due(
+                store=store,
+                state=morning_sweep_state,
+                interval_seconds=morning_sweep_interval,
             )
             # Wake early if shutdown is requested mid-interval; otherwise this
             # preserves the existing poll cadence between ticks.

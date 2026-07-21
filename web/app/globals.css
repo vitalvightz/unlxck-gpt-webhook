@@ -4761,6 +4761,45 @@ button.mobile-step-rail-item {
   color: var(--text-secondary);
 }
 
+.settings-push-block {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-push-row {
+  gap: 14px;
+}
+
+.settings-push-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--brand-red);
+}
+
+.plan-lockin-notify-button {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+}
+
+.plan-lockin-notify-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.plan-lockin-notify-confirmed {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--success-ink, #7de2a8);
+}
+
+.plan-lockin-notify-error {
+  margin: 6px 0 0;
+  max-width: 460px;
+  font-size: 13px;
+  color: var(--brand-red);
+}
+
 @keyframes plan-lockin-sheen {
   0% {
     transform: translateX(-100%);

@@ -97,3 +97,62 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(staleWhileRevalidate(request, event));
   }
 });
+
+// ---------------------------------------------------------------------------
+// Web push: plan-ready ("your camp is lxcked in") and morning check-in nudges.
+// Payloads are JSON {title, body, url, tag} built by the backend push service.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_NOTIFICATION = {
+  title: "UNLXCK",
+  body: "Open the app for an update.",
+  url: "/",
+  tag: "unlxck",
+};
+
+self.addEventListener("push", (event) => {
+  let payload = DEFAULT_NOTIFICATION;
+  try {
+    payload = { ...DEFAULT_NOTIFICATION, ...(event.data ? event.data.json() : {}) };
+  } catch {
+    // Non-JSON payloads fall back to the default shell notification.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      tag: payload.tag,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
+      data: { url: payload.url },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(
+    (event.notification.data && event.notification.data.url) || "/",
+    self.location.origin,
+  ).href;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url === targetUrl && "focus" in client) {
+            return client.focus();
+          }
+        }
+        // Prefer refocusing any open app window onto the target instead of
+        // opening a duplicate tab/window.
+        for (const client of clientList) {
+          if ("navigate" in client && "focus" in client) {
+            return client.navigate(targetUrl).then((navigated) => (navigated || client).focus());
+          }
+        }
+        return self.clients.openWindow(targetUrl);
+      }),
+  );
+});

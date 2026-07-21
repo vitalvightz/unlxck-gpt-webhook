@@ -115,6 +115,7 @@ class FakeStore:
         self.injury_flags: dict[str, list[dict]] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
+        self.push_subscriptions: dict[str, dict] = {}
         self.beta_feedback: list[dict] = []
         self.feedback_screenshots: dict[str, tuple[bytes, str]] = {}
         self._feedback_rate_events: dict[tuple[str, str], list[datetime]] = {}
@@ -1481,6 +1482,47 @@ class FakeStore:
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]
+
+    def upsert_push_subscription(self, profile_id: str, fields: dict) -> dict:
+        endpoint = str(fields.get("endpoint") or "")
+        existing = self.push_subscriptions.get(endpoint)
+        row = {
+            "id": existing["id"] if existing else str(uuid4()),
+            "morning_last_sent_day": existing.get("morning_last_sent_day") if existing else None,
+            "timezone": "",
+            **fields,
+            "profile_id": profile_id,
+            "created_at": existing["created_at"] if existing else _now(),
+            "updated_at": _now(),
+        }
+        self.push_subscriptions[endpoint] = row
+        return dict(row)
+
+    def list_push_subscriptions(self, profile_id: str) -> list[dict]:
+        return [
+            dict(row)
+            for row in self.push_subscriptions.values()
+            if row.get("profile_id") == profile_id
+        ]
+
+    def delete_push_subscription(self, profile_id: str, endpoint: str) -> None:
+        row = self.push_subscriptions.get(endpoint)
+        if row and row.get("profile_id") == profile_id:
+            del self.push_subscriptions[endpoint]
+
+    def delete_push_subscription_by_endpoint(self, endpoint: str) -> None:
+        self.push_subscriptions.pop(endpoint, None)
+
+    def list_all_push_subscriptions(self, *, limit: int = 1000) -> list[dict]:
+        rows = sorted(self.push_subscriptions.values(), key=lambda row: row["created_at"])
+        return [dict(row) for row in rows[:limit]]
+
+    def mark_push_subscription_morning_sent(self, subscription_id: str, *, sent_day: str) -> None:
+        for row in self.push_subscriptions.values():
+            if row.get("id") == subscription_id:
+                row["morning_last_sent_day"] = sent_day
+                row["updated_at"] = _now()
+                return
 
     def create_session_log(self, athlete_id: str, fields: dict) -> dict:
         row = {

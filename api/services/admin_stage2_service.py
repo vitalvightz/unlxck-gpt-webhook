@@ -643,6 +643,7 @@ async def run_structured_plan_post_processing(
     stage2: Stage2Automator | None = None,
     continue_existing_attempt: bool = False,
     rebuild: bool = False,
+    notify: bool = True,
 ) -> None:
     """Best-effort, non-blocking structured-plan conversion for an approved plan.
 
@@ -744,7 +745,7 @@ async def run_structured_plan_post_processing(
         should_persist_debug = debug_status not in {None, "not_attempted"} or bool(debug_errors)
         attempt_finished = STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in report
         if result.get("structured_plan") is not None or should_persist_debug or attempt_finished:
-            await asyncio.to_thread(
+            persisted = await asyncio.to_thread(
                 store.update_plan_structured_artifacts,
                 plan_id,
                 structured_plan=result.get("structured_plan"),
@@ -752,6 +753,28 @@ async def run_structured_plan_post_processing(
                 stage2_validator_report=report,
                 expected_final_plan_text=conversion_source_text,
             )
+            # The lock-in card's "we'll notify you": the enhanced card just went
+            # from missing to live on an athlete-visible plan. Gated on the
+            # persisted row (the narrow writer may have skipped a stale card) and
+            # on the pre-conversion snapshot so re-runs never re-notify. Push is
+            # best-effort and never fails this task.
+            if (
+                notify
+                and isinstance(persisted, dict)
+                and persisted.get("structured_plan") is not None
+                and plan_row.get("structured_plan") is None
+                and is_athlete_displayable_plan_status(
+                    str(persisted.get("status") or "").strip().lower()
+                )
+            ):
+                from .push_notifications import send_plan_ready_push
+
+                await asyncio.to_thread(
+                    send_plan_ready_push,
+                    store,
+                    athlete_id=str(persisted.get("athlete_id") or ""),
+                    plan_id=plan_id,
+                )
     except Exception:  # noqa: BLE001 - background work must never bubble up
         logger.exception("structured plan post-processing failed for plan_id=%s", plan_id)
 
@@ -794,7 +817,11 @@ async def backfill_structured_plans(
         return
     for plan_id in plan_ids:
         try:
-            await run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=stage2)
+            # Backfill targets old plans the athlete has long been living with;
+            # a "your final plan is ready" push there would be noise.
+            await run_structured_plan_post_processing(
+                plan_id=plan_id, store=store, stage2=stage2, notify=False
+            )
         except Exception:  # noqa: BLE001 - one bad plan must not abort the backfill
             logger.exception("structured plan backfill failed for plan_id=%s", plan_id)
 
