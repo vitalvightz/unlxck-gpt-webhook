@@ -18,6 +18,7 @@ from api.models import (
     WeeklySchedule,
 )
 from api.plan_mappers import (
+    _is_admin_archived_hidden_from_athlete,
     _is_archived_plan,
     _is_triage_blocked_plan,
     _lookup_plan_source,
@@ -58,7 +59,10 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         else:
             plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
 
-        if not plan_row or (not is_admin and _is_archived_plan(plan_row)):
+        # Athletes keep read-only access to their own archived plans (history
+        # preview); only plans an admin archived as hidden disappear entirely.
+        # This mirrors require_plan_row in api/app.py.
+        if not plan_row or (not is_admin and _is_admin_archived_hidden_from_athlete(plan_row)):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 

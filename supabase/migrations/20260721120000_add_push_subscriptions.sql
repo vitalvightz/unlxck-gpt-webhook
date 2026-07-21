@@ -10,7 +10,9 @@
 -- the athlete-local date of the last morning nudge, the per-day dedupe key.
 --
 -- Write path: service role only (backend). Read path: owners read their own
--- rows, admins read everything — matching today_checkins/session_completions.
+-- rows only. There is intentionally no is_admin() clause: browser-facing RLS
+-- is own-rows-only across the schema (see the 20260710120000 revocation
+-- hardening); admin/backend access goes through the service role.
 
 create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
@@ -39,7 +41,7 @@ alter table public.push_subscriptions enable row level security;
 
 drop policy if exists "push_subscriptions_owner_select" on public.push_subscriptions;
 create policy "push_subscriptions_owner_select" on public.push_subscriptions
-for select using (profile_id = auth.uid() or public.is_admin());
+for select using (profile_id = auth.uid());
 
 revoke all on public.push_subscriptions from anon;
 revoke insert, update, delete on public.push_subscriptions from authenticated;
