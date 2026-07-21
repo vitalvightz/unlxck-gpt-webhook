@@ -50,7 +50,7 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> dict[str, bool]:
-        store.delete_push_subscription(profile.profile_id, request.endpoint)
+        store.delete_push_subscription(profile.athlete_id, request.endpoint)
         return {"ok": True}
 
     return router
