@@ -1,6 +1,6 @@
 # Hetzner backend deployment
 
-This deployment runs the FastAPI API, persistent generation worker, and Caddy on one Hetzner CX23.
+This is the live production backend. It runs the FastAPI API, persistent generation worker, and Caddy on one Hetzner CX23 from `/opt/unlxck` on the `Main` branch.
 
 ## Architecture
 
@@ -168,3 +168,14 @@ Do not re-enable the suspended Render worker. Only one production queue worker m
 Disable **Deploy Hetzner** from the repository's Actions page before server maintenance or deployment-key rotation. Existing containers keep running. Re-enable the workflow only after verifying the deploy user, Docker access, known-host entry, and repository secrets.
 
 To revoke automation completely, disable the workflow, remove the five GitHub secrets, and delete the deployment public key line from `/home/unlxck-deploy/.ssh/authorized_keys`.
+
+## Emergency Render fallback
+
+Render is not part of the live system. Only resume its suspended web and worker services as a deliberate full rollback:
+
+1. Stop the Hetzner worker.
+2. Resume the Render worker and web service.
+3. Change Vercel `NEXT_PUBLIC_API_BASE_URL` to the Render API URL.
+4. Redeploy Vercel and verify the public flow.
+
+Never run the Render and Hetzner workers against the production queue at the same time.

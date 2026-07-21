@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
+import { PwaRegister } from "@/components/pwa-register";
 import { ToastProvider } from "@/components/toast-provider";
 import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
@@ -23,12 +24,36 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "UNLXCK Athlete Control Room",
   description: "Athlete-first fight camp planning on the web.",
+  applicationName: "UNLXCK",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "UNLXCK",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    address: false,
+    email: false,
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+    { media: "(prefers-color-scheme: light)", color: "#faf7f2" },
+  ],
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -42,6 +67,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // guard means such a value is never reflected into the page as a nonce.
   const rawNonce = (await headers()).get("x-nonce");
   const nonce = rawNonce && /^[A-Za-z0-9+/]{48}$/.test(rawNonce) ? rawNonce : undefined;
+  const pwaBuildVersion =
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    process.env.VERCEL_DEPLOYMENT_ID ??
+    process.env.VERCEL_URL ??
+    "local";
   return (
     <html lang="en" data-theme="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <head>
@@ -56,20 +86,22 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <AuthProvider>
           <ToastProvider>
-            <GenerationStatusShell>
-              <div className="app-shell">
-                <AppNav />
-                <div className="app-content">
-                  <main className="app-main">
-                    <div className="page">{children}</div>
-                  </main>
-                  <footer className="app-safety-footer" role="contentinfo">
-                    <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
-                    <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
-                  </footer>
+            <PwaRegister buildVersion={pwaBuildVersion}>
+              <GenerationStatusShell>
+                <div className="app-shell">
+                  <AppNav />
+                  <div className="app-content">
+                    <main className="app-main">
+                      <div className="page">{children}</div>
+                    </main>
+                    <footer className="app-safety-footer" role="contentinfo">
+                      <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
+                      <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
+                    </footer>
+                  </div>
                 </div>
-              </div>
-            </GenerationStatusShell>
+              </GenerationStatusShell>
+            </PwaRegister>
           </ToastProvider>
         </AuthProvider>
       </body>
