@@ -554,10 +554,10 @@ test("extracts session blocks from a valid plan", () => {
 test("extracts mindset anchor lines", () => {
   const session = getSessions(getDays(getWeeks(validPlan())[0])[0])[0];
   const lines = getMindsetLines(session.mindset_anchor);
-  assert.equal(lines.length, 2);
+  assert.equal(lines.length, 3);
   assert.deepEqual(
     lines.map((line) => line.label),
-    ["Intent", "Focus"],
+    ["Intent", "Focus", "Reset"],
   );
 });
 
@@ -580,7 +580,7 @@ test("getStringList cleans, drops blanks, and tolerates null", () => {
   assert.deepEqual(getStringList([]), []);
 });
 
-test("getMindsetLines keeps the simplified Intent/Focus/Context structure", () => {
+test("getMindsetLines surfaces the full mindset anchor including reset and confidence", () => {
   const lines = getMindsetLines({
     intent: "Move fast",
     focus_cue: "Drive",
@@ -590,7 +590,11 @@ test("getMindsetLines keeps the simplified Intent/Focus/Context structure", () =
   });
   assert.deepEqual(
     lines.map((l) => l.label),
-    ["Intent", "Focus", "Context"],
+    ["Intent", "Focus", "Reset", "Confidence", "Context"],
+  );
+  assert.deepEqual(
+    lines.map((l) => l.value),
+    ["Move fast", "Drive", "Reset", "Banked the work", "First hard week"],
   );
   // Empty anchor object yields no lines (renderer hides it).
   assert.deepEqual(getMindsetLines({}), []);
@@ -784,7 +788,7 @@ test("redFlagView tolerates missing fields", () => {
   assert.equal(empty.severityLabel, null);
 });
 
-test("splitMindsetLines keeps all simplified mindset lines primary", () => {
+test("splitMindsetLines keeps all mindset lines primary", () => {
   const { primary, secondary } = splitMindsetLines({
     intent: "Stay sharp",
     focus_cue: "Hands up",
@@ -794,7 +798,7 @@ test("splitMindsetLines keeps all simplified mindset lines primary", () => {
   });
   assert.deepEqual(
     primary.map((line) => line.label),
-    ["Intent", "Focus", "Context"],
+    ["Intent", "Focus", "Reset", "Confidence", "Context"],
   );
   assert.deepEqual(secondary, []);
 });
