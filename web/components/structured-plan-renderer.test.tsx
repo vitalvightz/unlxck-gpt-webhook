@@ -898,7 +898,7 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   assert.equal(count("Build single-leg drive."), 1);
 });
 
-test("renders the raw markdown fallback collapsed at the bottom", () => {
+test("shows the raw markdown fallback to admins but hides it from athletes", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -906,11 +906,42 @@ test("renders the raw markdown fallback collapsed at the bottom", () => {
     raw_markdown_fallback: "## Original plan\nLegacy text body.",
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2030, 0, 1)} />);
+  const adminHtml = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} today={new Date(2030, 0, 1)} isAdmin />,
+  );
+  assert.equal(adminHtml.includes("Original plan text"), true);
+  assert.equal(adminHtml.includes("Legacy text body."), true);
+  assert.equal(adminHtml.includes("cm-raw-fallback"), true);
+
+  // Default (athlete) view: the internal raw dump is gone entirely.
+  const athleteHtml = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} today={new Date(2030, 0, 1)} />,
+  );
+  assert.equal(athleteHtml.includes("Original plan text"), false);
+  assert.equal(athleteHtml.includes("Legacy text body."), false);
+  assert.equal(athleteHtml.includes("cm-raw-fallback"), false);
+});
+
+test("keeps the raw fallback for athletes in the fail-closed schedule-unavailable state", () => {
+  // The on-screen message tells the athlete to read the original plan below, so
+  // the raw text must remain reachable there even without admin.
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Open Plan", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "SPP", days: [] }],
+    raw_markdown_fallback: "## Original plan\nLegacy text body.",
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      openOngoing
+      scheduleContext={{ schedule_mode: "open_recurring", projection_status: "unavailable" }}
+    />,
+  );
 
   assert.equal(html.includes("Original plan text"), true);
   assert.equal(html.includes("Legacy text body."), true);
-  assert.equal(html.includes("cm-raw-fallback"), true);
 });
 
 // NOTE: the earlier "command header" tests (a header rendering "Camp map",
