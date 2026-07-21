@@ -34,7 +34,7 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
         store: AppStore = Depends(get_store),
     ) -> dict[str, bool]:
         store.upsert_push_subscription(
-            profile.profile_id,
+            profile.athlete_id,
             {
                 "endpoint": request.endpoint,
                 "p256dh": request.keys.p256dh,
