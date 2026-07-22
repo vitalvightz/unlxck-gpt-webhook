@@ -1112,33 +1112,69 @@ def _first_active_open_injury_label(context: ReadinessContext) -> str:
 
 
 def _injury_text_regions(text: str) -> set[str]:
-    """Canonical injury regions named anywhere in a piece of injury text."""
+    """Canonical injury regions named anywhere in a piece of injury text.
+
+    Uses whole-phrase matching (``fightcamp.normalization.phrase_in_text``), not a
+    bare substring check — a naive ``"disc" in text`` would misfire on "knee
+    DISComfort" and wrongly add lower_back as an injured region.
+    """
     cleaned = _clean(text).lower().replace("_", " ")
     if not cleaned:
         return set()
     try:
         from fightcamp.injury_exclusion_rules import INJURY_REGION_KEYWORDS
+        from fightcamp.normalization import phrase_in_text
     except Exception:  # pragma: no cover - region map always importable in-app
         return set()
     regions: set[str] = set()
     for region, keywords in INJURY_REGION_KEYWORDS.items():
-        if any(keyword in cleaned for keyword in keywords):
+        if any(phrase_in_text(cleaned, keyword) for keyword in keywords):
             regions.add(region)
     return regions
 
 
+def _resolve_injury_regions(value: str) -> set[str]:
+    """Canonical regions for one injury value, structured resolution first.
+
+    A structured location string (the check-in's ``body_area``/``active_injury``,
+    e.g. "shoulder", "quad") is resolved through the same canonical
+    location/synonym registry the injury-exclusion engine uses
+    (``get_exclusion_regions``) before falling back to free-text keyword
+    matching, so a specific structured value is never diluted by a broader
+    substring scan.
+    """
+    cleaned = _clean(value)
+    if not cleaned:
+        return set()
+    try:
+        from fightcamp.injury_exclusion_rules import get_exclusion_regions
+    except Exception:  # pragma: no cover - always importable in-app
+        return _injury_text_regions(cleaned)
+    resolved = get_exclusion_regions(cleaned)
+    if resolved:
+        return set(resolved)
+    return _injury_text_regions(cleaned)
+
+
 def _active_injury_regions(checkin: ReadinessCheckin, context: ReadinessContext) -> set[str]:
-    """Regions of the athlete's currently active injuries (open + this check-in)."""
+    """Regions of the athlete's currently active injuries (open + this check-in).
+
+    The structured ``body_area`` is resolved authoritatively via
+    ``_resolve_injury_regions``; free-text ``label``/``description`` are also
+    scanned (whole-phrase, not substring) so a region named only in prose is
+    still caught.
+    """
     regions: set[str] = set()
     for injury in context.open_injuries:
         if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
             continue
-        text = " ".join(
-            _clean(injury.get(key)) for key in ("label", "body_area", "description")
-        )
+        body_area = _clean(injury.get("body_area"))
+        if body_area:
+            regions |= _resolve_injury_regions(body_area)
+        text = " ".join(_clean(injury.get(key)) for key in ("label", "description"))
         regions |= _injury_text_regions(text)
     if checkin.active_injury not in {"", "none"}:
-        regions |= _injury_text_regions(checkin.active_injury)
+        regions |= _resolve_injury_regions(checkin.active_injury)
     return regions
 
 
@@ -1158,16 +1194,57 @@ def _iter_session_mappings(session: Mapping[str, Any]) -> list[Mapping[str, Any]
     return mappings
 
 
+# Fields that name an entry (its exercise/primer/block title). Deliberately
+# excludes narrative fields (objective, coach_note, reason, display_text,
+# primary_focus, emphasis) — those describe or review the session in prose and can
+# mention a movement word ("review how they react to your jab") without the
+# athlete physically throwing anything.
+_ENTRY_NAME_FIELDS = ("title", "label", "name", "athlete_facing_label")
+_NON_PHYSICAL_INSERT_CATEGORIES = {"tactical", "mental"}
+
+
+def _is_non_physical_mapping(mapping: Mapping[str, Any]) -> bool:
+    """True for a tactical/mental entry whose name must never drive a physical-load
+    keyword match — a "Jab Cue Card" review is video/notes work, not a thrown jab."""
+    for key in ("support_insert_category", "insert_category", "category"):
+        if _clean(mapping.get(key)).lower() in _NON_PHYSICAL_INSERT_CATEGORIES:
+            return True
+    return False
+
+
+def _physical_entry_name_text(session: Mapping[str, Any]) -> str:
+    """Name-only text (title/label/name) from the session's physical entries.
+
+    This is the ONLY text the movement-keyword fallback in
+    ``_session_mechanical_load_regions`` may scan — see ``_ENTRY_NAME_FIELDS`` and
+    ``_is_non_physical_mapping`` for why objective/coach_note/reason text and
+    tactical/mental entries are excluded.
+    """
+    parts: list[str] = []
+    for mapping in _iter_session_mappings(session):
+        if _is_non_physical_mapping(mapping):
+            continue
+        for key in _ENTRY_NAME_FIELDS:
+            value = mapping.get(key)
+            if value:
+                parts.append(_clean(value))
+    return " ".join(parts).lower()
+
+
 def _session_mechanical_load_regions(session: Mapping[str, Any] | None) -> set[str]:
     """Body regions a support session mechanically loads.
 
     Draws on three signals, most authoritative first: the structured
     ``mechanical_load_regions`` the gap-fill fillers emit, the bank items'
     ``mechanical_risk_tags``, and — as a fallback for content that only surfaces as
-    a name — the movement wording in the session's labels and block names.
+    a name — the movement wording in physical entries' names only (never
+    objectives/notes/reasons, and never tactical/mental entries; see
+    ``_physical_entry_name_text``).
     """
     if not isinstance(session, Mapping) or not session:
         return set()
+    from fightcamp.normalization import phrase_in_text
+
     regions: set[str] = set()
     for mapping in _iter_session_mappings(session):
         declared = mapping.get("mechanical_load_regions")
@@ -1177,10 +1254,10 @@ def _session_mechanical_load_regions(session: Mapping[str, Any] | None) -> set[s
         if isinstance(mech_tags, Sequence) and not isinstance(mech_tags, (str, bytes)):
             for tag in mech_tags:
                 regions.update(_MECH_TAG_REGIONS.get(_clean(tag).lower(), ()))
-    text = _session_text(session)
-    if text:
+    physical_text = _physical_entry_name_text(session)
+    if physical_text:
         for region, keywords in _REGION_LOAD_KEYWORDS.items():
-            if any(keyword in text for keyword in keywords):
+            if any(phrase_in_text(physical_text, keyword) for keyword in keywords):
                 regions.add(region)
     return regions
 

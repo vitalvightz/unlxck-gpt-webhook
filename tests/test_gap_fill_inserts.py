@@ -189,14 +189,28 @@ def test_weight_cut_prefers_breathing_tactical_sleep_over_physical_filler():
 
 
 def test_mechanical_load_regions_surface_on_built_role():
-    # A punch-rhythm primer declares the striking chain it loads; a pure mental /
-    # breathing / rehab insert declares nothing so it stays injury-exempt.
+    # A punch-rhythm primer declares the striking chain AND the footwork/stance
+    # load that comes with it; a pure mental / breathing insert declares nothing.
+    # mobility_rehab / joint_prep are the deliberate exception: gentle,
+    # pain-free, TARGETED rehab for the flagged restriction stays exempt even
+    # though it touches the injured joint by design.
     assert set(insert_mechanical_load_regions("technical_shadow_rhythm")) == {
-        "shoulder", "elbow", "wrist", "chest"
+        "shoulder", "elbow", "wrist", "chest", "ankle", "knee"
     }
     assert insert_mechanical_load_regions("tactical_watch") == ()
     assert insert_mechanical_load_regions("mobility_rehab") == ()
+    assert insert_mechanical_load_regions("joint_prep") == ()
     assert insert_mechanical_load_regions("breathing_reset") == ()
+    # Low load is not zero load: walking and low-amplitude foot-placement work
+    # still touch the lower chain enough to matter for an ankle/foot/Achilles
+    # injury, so these must not be exempt.
+    assert insert_mechanical_load_regions("walk_flush") == (
+        "ankle", "foot", "achilles", "calf", "knee"
+    )
+    assert insert_mechanical_load_regions("aerobic_walk_flush") == (
+        "ankle", "foot", "achilles", "calf", "knee"
+    )
+    assert set(insert_mechanical_load_regions("movement_quality")) == {"ankle", "foot"}
 
     insert = select_gap_fill_insert(_athlete(weaknesses=["footwork"]), 12)
     assert insert is not None
