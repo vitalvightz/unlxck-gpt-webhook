@@ -309,17 +309,17 @@ export function AuthForm({
           <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Enter the UNLXCK fight camp control room."}</h1>
           <p>
             {mode === "signup"
-              ? "Create your account, complete Advanced Intake, and generate a saved fight camp."
-              : "Resume intake and reopen saved plans from one athlete workspace."}
+              ? "Set up once, then get a fight camp that tells you what to train and adapts as you go."
+              : "Pick up your camp where you left off."}
           </p>
         </div>
         {mode === "signup" ? (
           <div className="auth-signup-proof">
             <p className="kicker">What you get</p>
             <ul className="summary-list">
-              <li>A camp built around your schedule and restrictions.</li>
-              <li>Daily readiness decisions that adjust training.</li>
-              <li>Saved plans and progress in one workspace.</li>
+              <li>Know what to train today, built around your fight date.</li>
+              <li>Adjust before fatigue becomes failure with daily check-ins.</li>
+              <li>Your whole camp stays in one place, so you never start over.</li>
             </ul>
           </div>
         ) : null}

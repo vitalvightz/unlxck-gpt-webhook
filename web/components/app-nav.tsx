@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "
 import { useAppSession } from "@/components/auth-provider";
 import { Skeleton } from "@/components/skeleton";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
+import { getShellSurface, isAuthSurfaceRoute } from "@/lib/app-surface";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
 import { isNavToggleCondensed } from "@/lib/nav-toggle-scroll";
@@ -15,18 +16,9 @@ type MobileNavState = "closed" | "opening" | "open" | "closing";
 
 const MOBILE_NAV_CLOSE_MS = 240;
 const MOBILE_NAV_MEDIA_QUERY = "(max-width: 960px)";
-const BRAND_SURFACE_ROUTES = new Set(["/", "/login", "/signup", "/forgot-password", "/reset-password"]);
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function getShellSurface(pathname: string, hasSession: boolean): "brand" | "workspace" {
-  if (hasSession) {
-    return "workspace";
-  }
-
-  return BRAND_SURFACE_ROUTES.has(pathname) ? "brand" : "workspace";
 }
 
 function getInitials(name: string): string {
@@ -61,6 +53,13 @@ export function AppNav() {
   const hasSession = Boolean(session);
   const isSessionResolving = Boolean(session && !isMeHydrated);
   const shellSurface = getShellSurface(pathname, hasSession);
+  // Public auth routes (login / signup / password reset) render only the brand
+  // shell. Suppress every piece of workspace navigation there (the floating
+  // Menu control, the sidebar, and its "checking your session" loading card)
+  // so these pages never look like a half-loaded workspace. Derived from the
+  // pathname alone, so it is correct from the very first render (no flash), and
+  // signed-in visitors are redirected away by the auth pages themselves.
+  const isAuthRoute = isAuthSurfaceRoute(pathname);
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
 
@@ -310,6 +309,8 @@ export function AppNav() {
           </nav>
         </header>
       ) : null}
+      {isAuthRoute ? null : (
+        <>
       {!isMobileDrawerVisible ? (
         <button
           type="button"
@@ -492,6 +493,8 @@ export function AppNav() {
           ) : null}
         </div>
       </aside>
+        </>
+      )}
     </>
   );
 }

@@ -41,103 +41,14 @@ import {
   type TodayDecisionTier,
 } from "@/lib/today";
 import { SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
+import {
+  LANDING_OUTCOME_POINTS,
+  LANDING_PRODUCT_PROOF_POINTS,
+  LANDING_WORKFLOW_STEPS,
+  LANDING_WORKSPACE_ROWS,
+  PUBLIC_HERO_SUMMARY,
+} from "@/lib/public-landing-copy";
 import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
-
-const landingWorkspaceRows = [
-  {
-    step: "01",
-    label: "Intake",
-    status: "Complete",
-    title: "Intake",
-    body: "Fight date, schedule, style, goals, and restrictions.",
-  },
-  {
-    step: "02",
-    label: "Readiness",
-    status: "Checked",
-    title: "Readiness",
-    body: "Load, nutrition, injuries, and availability.",
-  },
-  {
-    step: "03",
-    label: "Camp plan",
-    status: "Ready",
-    title: "Camp plan",
-    body: "Phases, sessions, targets, and recovery.",
-  },
-  {
-    step: "04",
-    label: "Saved history",
-    status: "Saved",
-    title: "History",
-    body: "Latest camp and past plans stay attached.",
-  },
-] as const;
-
-const landingOutcomePoints = [
-  {
-    label: "Intake",
-    value: "Context and limits",
-  },
-  {
-    label: "Readiness",
-    value: "Load and safety",
-  },
-  {
-    label: "Camp plan",
-    value: "Weeks and sessions",
-  },
-  {
-    label: "Saved history",
-    value: "Plans attached",
-  },
-] as const;
-
-const landingWorkflowSteps = [
-  {
-    label: "Step 1",
-    title: "Complete intake",
-    body: "Add fight context, availability, restrictions, history, and goals.",
-  },
-  {
-    label: "Step 2",
-    title: "Run readiness check",
-    body: "Check load, nutrition, injuries, and schedule limits.",
-  },
-  {
-    label: "Step 3",
-    title: "Generate fight camp",
-    body: "Create phases, sessions, targets, and key performance work.",
-  },
-  {
-    label: "Step 4",
-    title: "Return between sessions",
-    body: "Reopen, review, and continue on mobile or desktop.",
-  },
-] as const;
-
-const landingProductProofPoints = [
-  {
-    label: "Intake",
-    title: "Context before output.",
-    body: "Fight date, schedule, style, training age, equipment, restrictions, and goals.",
-  },
-  {
-    label: "Readiness",
-    title: "Constraints stay visible.",
-    body: "Load, recovery, nutrition, injury limits, and availability stay beside the plan.",
-  },
-  {
-    label: "Camp plan",
-    title: "The plan is structured.",
-    body: "Phases, daily sessions, conditioning, strength, recovery, and targets.",
-  },
-  {
-    label: "Saved history",
-    title: "Return without rebuilding.",
-    body: "Latest camp and previous plans stay attached for review and continuation.",
-  },
-] as const;
 
 function formatPlanCount(value: number): string {
   return `${value} saved plan${value === 1 ? "" : "s"}`;
@@ -777,7 +688,7 @@ export default function HomePage() {
               <span>Your camp.</span>
               <span>Lxcked in.</span>
             </h1>
-            <p className="public-hero-summary">Intake, readiness, camp plan, and saved history in one workspace.</p>
+            <p className="public-hero-summary">{PUBLIC_HERO_SUMMARY}</p>
             <div className="hero-actions">
               <Link href="/signup" className="cta">
                 Start free beta
@@ -787,7 +698,7 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="public-proof-strip" aria-label="Product outcomes">
-              {landingOutcomePoints.map((point) => (
+              {LANDING_OUTCOME_POINTS.map((point) => (
                 <div key={point.label} className="public-proof-pill">
                   <span className="label">{point.label}</span>
                   <span className="public-proof-value">{point.value}</span>
@@ -819,7 +730,7 @@ export default function HomePage() {
                   <span>Intake</span>
                 </aside>
               <div className="public-workspace-list">
-                {landingWorkspaceRows.map((row) => (
+                {LANDING_WORKSPACE_ROWS.map((row) => (
                   <article key={row.step} className="public-workspace-row">
                     <span className="public-workspace-step">{row.step}</span>
                     <div>
@@ -838,7 +749,7 @@ export default function HomePage() {
       </section>
 
       <section className="public-proof-grid" aria-label="Product proof points">
-        {landingProductProofPoints.map((section) => (
+        {LANDING_PRODUCT_PROOF_POINTS.map((section) => (
           <article key={section.title} className="support-panel public-proof-card">
             <p className="kicker">{section.label}</p>
             <h2 className="form-section-title">{section.title}</h2>
@@ -857,7 +768,7 @@ export default function HomePage() {
       </section>
 
       <section className="metric-grid public-journey-grid">
-        {landingWorkflowSteps.map((step) => (
+        {LANDING_WORKFLOW_STEPS.map((step) => (
           <article key={step.title} className="support-panel">
             <div className="form-section-header">
               <p className="kicker">{step.label}</p>

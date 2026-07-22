@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { PwaRegister } from "@/components/pwa-register";
 import { ToastProvider } from "@/components/toast-provider";
+import { getServerShellSurface } from "@/lib/app-surface";
 import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
 import "./globals.css";
@@ -65,15 +66,26 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // UUID -> 48-char unpadded base64). On routes the middleware excludes there is
   // no CSP, but a client could still supply an arbitrary x-nonce header; this
   // guard means such a value is never reflected into the page as a nonce.
-  const rawNonce = (await headers()).get("x-nonce");
+  const requestHeaders = await headers();
+  const rawNonce = requestHeaders.get("x-nonce");
   const nonce = rawNonce && /^[A-Za-z0-9+/]{48}$/.test(rawNonce) ? rawNonce : undefined;
+  // Commit the brand shell for auth routes on the server so the workspace
+  // sidebar/menu never flash before the client session resolves. Other routes
+  // return null here and let the client AppNav effect set the surface.
+  const serverSurface = getServerShellSurface(requestHeaders.get("x-pathname"));
   const pwaBuildVersion =
     process.env.VERCEL_GIT_COMMIT_SHA ??
     process.env.VERCEL_DEPLOYMENT_ID ??
     process.env.VERCEL_URL ??
     "local";
   return (
-    <html lang="en" data-theme="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme="dark"
+      data-app-surface={serverSurface ?? undefined}
+      style={{ colorScheme: "dark" }}
+      suppressHydrationWarning
+    >
       <head>
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
