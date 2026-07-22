@@ -104,6 +104,64 @@ export function formatAppDateTime(value: string | null | undefined): string {
   return render(value, true);
 }
 
+/** How far out a relative label stays useful; beyond this the bare date reads
+ *  fine on its own, so we return null and callers show only the date. */
+const RELATIVE_DAY_HORIZON = 14;
+
+/** A value's UTC calendar day as a whole-day count, or null when unparseable.
+ *  Both date-only strings (anchored at noon UTC) and full timestamps (their
+ *  YYYY-MM-DD prefix) collapse to the same calendar day, so the count is a pure
+ *  function of the date — independent of the machine's timezone. */
+function utcCalendarDay(value: string | null | undefined): number | null {
+  const parsed = parseAppDate(String(value ?? ""), false);
+  if (!parsed) {
+    return null;
+  }
+  return Math.floor(
+    Date.UTC(
+      parsed.date.getUTCFullYear(),
+      parsed.date.getUTCMonth(),
+      parsed.date.getUTCDate(),
+    ) / 86_400_000,
+  );
+}
+
+/**
+ * A short, time-relative label for a near-future date — "Today", "Tomorrow",
+ * "in N days" — so a date reads as something happening soon, not just a static
+ * calendar entry. Returns null (so the caller can fall back to the plain date)
+ * for anything unparseable, in the past, or further out than
+ * `RELATIVE_DAY_HORIZON`.
+ *
+ * Deterministic by design: both the target and the reference "today" are given
+ * as date strings and compared by UTC calendar day — no `new Date()`, no local
+ * clock. `referenceDay` must be the app's authoritative training-day ISO
+ * (`current_training_day`), so server render, browser hydration, and the
+ * 04:00 training-day rollover all agree. Returns null when the reference is
+ * missing, rather than silently falling back to a nondeterministic clock.
+ */
+export function describeRelativeDay(
+  value: string | null | undefined,
+  referenceDay: string | null | undefined,
+): string | null {
+  const targetDay = utcCalendarDay(value);
+  const nowDay = utcCalendarDay(referenceDay);
+  if (targetDay === null || nowDay === null) {
+    return null;
+  }
+  const diffDays = targetDay - nowDay;
+  if (diffDays < 0 || diffDays > RELATIVE_DAY_HORIZON) {
+    return null;
+  }
+  if (diffDays === 0) {
+    return "Today";
+  }
+  if (diffDays === 1) {
+    return "Tomorrow";
+  }
+  return `in ${diffDays} days`;
+}
+
 /**
  * A compact, single-line date range that drops the parts the two ends share so
  * it stays on one line — the full `formatAppDate` twice is too long for tight

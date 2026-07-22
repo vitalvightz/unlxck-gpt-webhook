@@ -60,7 +60,7 @@ import {
   isOpenOngoingPlan,
   resolveFiniteWeekNumber,
 } from "@/lib/plan-format";
-import { formatAppDate } from "@/lib/date-format";
+import { describeRelativeDay, formatAppDate } from "@/lib/date-format";
 import {
   buildBlockedInjuryContextSummary,
   buildBlockedWhy,
@@ -2316,10 +2316,24 @@ export function PlanViewer({
   const activePlanStateResolved = activePlanId !== undefined;
   const isCurrentActivePlan = activePlanId === plan.plan_id;
   const nextSessionTitle = nextSessionAction?.title?.trim() || nextSessionAction?.label?.trim() || "Open the next session";
-  const nextSessionDate = nextSessionAction?.calendar_date
-    ? formatAppDate(nextSessionAction.calendar_date)
-    : null;
   const nextSessionRelation = nextSessionAction?.session_relation === "next" ? "Next session" : "Today";
+  // The app's authoritative "today" — same source the plan renderer uses for its
+  // current-day marker — so the countdown is deterministic across server render,
+  // browser hydration, and the 04:00 training-day rollover (never the machine clock).
+  const currentTrainingDayIso =
+    planCompletions?.current_training_day || plan.schedule_context?.current_training_day;
+  // For a genuinely-upcoming session, append a "· in N days" countdown so the
+  // card reads as time-relative; skip it for the "Today" relation, where the
+  // date is already today and a countdown would just echo the label.
+  const nextSessionRelativeDay =
+    nextSessionAction?.session_relation === "next"
+      ? describeRelativeDay(nextSessionAction.calendar_date, currentTrainingDayIso)
+      : null;
+  const nextSessionDate = nextSessionAction?.calendar_date
+    ? [formatAppDate(nextSessionAction.calendar_date), nextSessionRelativeDay]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
   const openSessionLabel = nextSessionAction?.session_relation === "next" ? "Open next session" : "Open Today";
   const openWeekNumber = resolveFiniteWeekNumber(plan.schedule_context?.current_week_number);
   const openBlockLabel = openOngoing
@@ -2759,10 +2773,7 @@ export function PlanViewer({
                   planStatus={plan.status}
                   scheduleContext={plan.schedule_context}
                   completions={planCompletions?.completions}
-                  currentTrainingDayIso={
-                    planCompletions?.current_training_day ||
-                    plan.schedule_context?.current_training_day
-                  }
+                  currentTrainingDayIso={currentTrainingDayIso}
                   isAdmin={isViewerAdmin}
                 />
               ) : holdPlanForEnhancedCard ? (
