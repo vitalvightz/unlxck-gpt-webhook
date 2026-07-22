@@ -378,7 +378,7 @@ export function TodaySessionPanel({
         {showStructuredBlocks ? (
           <TodaySessionBlocks planId={state.active_plan?.id} current={current} openWeekIntent={openWeekIntent} />
         ) : (
-          <p className="muted">No active plan card matched today. Use View full plan to find the next training target.</p>
+          <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
         )}
       </section>
     );
@@ -455,7 +455,7 @@ export function TodaySessionPanel({
         <div className="today-next-planned-note">
           <p className="today-pending-line">
             <span className="today-pending-pill">Pending</span>
-            Requires a fresh check-in before clearance.
+            Check in on the day to unlock this session.
           </p>
           {nextIsHardCombat ? (
             <div className="today-caution-row">

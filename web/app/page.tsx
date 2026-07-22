@@ -23,6 +23,7 @@ import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName, isOpenOngoingPlan } from "@/lib/plan-format";
 import {
   getCampDayLabel,
+  getCompletionLabel,
   getInjuryOverrideBanner,
   getRiskWatchSummary,
   getRiskWatchText,
@@ -236,27 +237,39 @@ function OverviewDisclosure({
 
 function WorkspaceOverviewSkeleton() {
   return (
-    <section className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header" aria-busy="true">
-      <div className="overview-command-grid">
-        <div className="hero-panel-copy overview-command-copy">
-          <Skeleton variant="text" width={90} height={12} />
-          <Skeleton variant="text" width="68%" height={42} />
-          <Skeleton variant="text" width="82%" height={16} />
-          <div className="overview-operational-strip" aria-label="Workspace status loading">
-            {[0, 1, 2].map((index) => (
-              <div key={index} className="overview-operational-item">
-                <Skeleton variant="text" width={92} height={10} />
-                <Skeleton variant="text" width={136} height={16} />
-              </div>
-            ))}
+    <>
+      <section
+        className="hero-panel overview-command-shell overview-command-primary athlete-motion-slot athlete-motion-header"
+        aria-busy="true"
+      >
+        <div className="overview-primary-grid">
+          <div className="status-card overview-command-card overview-decision-lead">
+            <Skeleton variant="text" width={110} height={12} />
+            <Skeleton variant="text" width="70%" height={40} />
+            <Skeleton variant="text" width="88%" height={16} />
+            <Skeleton variant="text" width="76%" height={16} />
+            <div className="plan-summary-actions overview-primary-actions">
+              <Skeleton variant="block" width={168} height={44} />
+              <Skeleton variant="block" width={140} height={44} />
+            </div>
+          </div>
+          <div className="overview-primary-session">
+            <PlansFeaturedSkeleton />
           </div>
         </div>
+      </section>
+      <section className="panel overview-secondary athlete-motion-slot athlete-motion-status" aria-busy="true">
+        <div className="overview-operational-strip" aria-label="Workspace status loading">
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} className="overview-operational-item">
+              <Skeleton variant="text" width={72} height={10} />
+              <Skeleton variant="text" width={120} height={16} />
+            </div>
+          ))}
+        </div>
         <PlansFeaturedSkeleton />
-      </div>
-      <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-        <PlansFeaturedSkeleton />
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
 
@@ -301,7 +314,7 @@ function OverviewRiskWatch({
     return (
       <article className="status-card overview-command-card overview-risk-card">
         <p className="status-label">Risk watch</p>
-        <p className="muted">No risk flags from today&apos;s command view.</p>
+        <p className="muted">No active warnings.</p>
       </article>
     );
   }
@@ -581,7 +594,6 @@ export default function HomePage() {
       ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
       : ["Submit today's fast check-in to unlock your training decision."];
     const decisionSafety = decisionBanner?.safety;
-    const decisionBlocks = decisionBanner?.blocksTraining ?? false;
     // Today's countdown to the fight, and whether the scheduled session is today
     // (vs a future planned day that must read as pending, not cleared).
     const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
@@ -592,6 +604,14 @@ export default function HomePage() {
     // Any future scheduled session -> show it as pending clearance, never cleared.
     const safeSession = isStop && hasNextSession && sessionIsToday ? getSafeSessionView(nextSessionTitle) : null;
     const showNextPlanned = hasNextSession && !sessionIsToday;
+    // When today's session has already been logged (modified / done / skipped),
+    // surface that state on the session card so a modified day reads clearly and
+    // is not mistaken for an untouched session.
+    const todayCompletionStatus = commandState?.today?.completion_status;
+    const sessionStateLabel =
+      sessionIsToday && todayCompletionStatus && todayCompletionStatus !== "not_started"
+        ? getCompletionLabel(todayCompletionStatus)
+        : null;
     // Decision tone drives the colour accents on the decision card (matches
     // Today). Neutral/preview carries no accent — the next-session preview stays
     // grey and is never tinted red just because today is a pull-back. The
@@ -599,125 +619,131 @@ export default function HomePage() {
     // IS the blocked one and correctly reads red.
     const decisionTone =
       decisionBanner && decisionBanner.tone !== "neutral" ? decisionBanner.tone : undefined;
-    // When an injury blocks the day, deep-link straight to the injury check-in
-    // card (matches the Today CTA) so the athlete lands on the action, not the
-    // top of the page.
-    const primaryHref = !hasActivePlan
-      ? "/onboarding"
+    // One dominant next action, chosen by state. When there is no active plan the
+    // athlete either has no plans yet (build one) or has plans but none is active
+    // (select one on /plans). Otherwise the injury override outranks the daily
+    // decision; a not-yet-checked-in day asks for the check-in; a STOP with a safe
+    // replacement routes to it (STOP is never a "train" label); everything else
+    // opens today's session. When an injury blocks the day we deep-link straight
+    // to the injury check-in card so the athlete lands on the action.
+    const noPlanAction =
+      (me.plan_count ?? 0) > 0
+        ? { href: "/plans", label: "Select active plan" }
+        : { href: "/onboarding", label: "Build your plan" };
+    const primaryAction = !hasActivePlan
+      ? noPlanAction
       : injuryOverride
-        ? "/today#today-injury"
-        : isStop
-          ? "/today#today-session"
-          : "/today";
-    // STOP is not a recommendation to train, so it never says "View
-    // recommendation" — it routes to the safe session (or the injury check-in).
-    const primaryLabel = !hasActivePlan
-      ? "Complete Intake"
-      : injuryOverride
-        ? "Open injury check-in"
-        : isStop
-          ? "View safe session"
-          : recommendation === "not_checked_in"
-            ? "Open Today / Check in"
-            : decisionBlocks
-              ? "View recommendation"
-              : "Open Today";
+        ? { href: "/today#today-injury", label: "Open injury check-in" }
+        : recommendation === "not_checked_in"
+          ? { href: "/today#today-checkin", label: "Check in now" }
+          : isStop && safeSession
+            ? { href: "/today#today-session", label: "View safe session" }
+            : { href: "/today#today-session", label: "Open today's session" };
+    const primaryHref = primaryAction.href;
+    const primaryLabel = primaryAction.label;
 
     return (
       <>
-        <section className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header">
-          <div className="overview-command-grid">
-            <div className="hero-panel-copy overview-command-copy">
-              <p className="eyebrow">Overview</p>
-              <h1 className="hero-title">{openOngoing ? "Training command centre" : "Camp command centre"}</h1>
-              <p className="overview-command-summary">Today&apos;s training decision, next safe action, and active risk signals from your {openOngoing ? "ongoing plan" : "camp plan"}.</p>
-              <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
-                <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
-              </div>
-              <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
-              {commandError ? (
-                <div className="error-banner" role="alert">
-                  <span>{commandError}</span>
-                  <button
-                    type="button"
-                    className="error-banner-retry"
-                    onClick={() => void loadCommandState()}
-                    disabled={isReloadingCommand}
-                  >
-                    {isReloadingCommand ? "Retrying..." : "Retry"}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <div className="status-card overview-next-action overview-decision-card overview-command-card" data-tone={decisionTone}>
-              <p className="status-label">{tierMeta.eyebrow}</p>
-              <h2 className="plan-summary-title overview-decision-title">{decisionTitle}</h2>
+        {/* Primary command area — today's decision, the session it affects, and
+            one dominant action lead the first viewport. */}
+        <section className="hero-panel overview-command-shell overview-command-primary athlete-motion-slot athlete-motion-header">
+          <div className="overview-primary-grid">
+            <div className="status-card overview-command-card overview-decision-lead" data-tone={decisionTone}>
+              <p className="eyebrow">Today&apos;s command</p>
+              <h1 className="hero-title overview-decision-headline">{decisionTitle}</h1>
               <div className="overview-decision-copy">
                 {decisionLines.map((line, index) => (
                   <p key={index} className="muted">{line}</p>
                 ))}
                 {decisionSafety ? <p className="muted overview-decision-safety">{decisionSafety}</p> : null}
               </div>
-              <div className="plan-summary-actions">
+              <div className="plan-summary-actions overview-primary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
                 {hasActivePlan ? (
-                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">View full plan</Link>
+                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">Open camp plan</Link>
                 ) : (
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>
                 )}
               </div>
             </div>
+            <div className="overview-primary-session">
+              {safeSession ? (
+                <article className="status-card overview-command-card overview-safe-session-card" data-tone="red">
+                  <p className="status-label">{safeSession.eyebrow}</p>
+                  <h2 className="plan-summary-title">{safeSession.title}</h2>
+                  <p className="muted">{safeSession.detail}</p>
+                  <div className="overview-safe-session-lists">
+                    <div className="overview-safe-list" data-kind="allowed">
+                      <p className="overview-safe-list-label">Allowed</p>
+                      <ul>{safeSession.allowed.map((item) => <li key={item}>{item}</li>)}</ul>
+                    </div>
+                    <div className="overview-safe-list" data-kind="blocked">
+                      <p className="overview-safe-list-label">Blocked</p>
+                      <ul>{safeSession.blocked.map((item) => <li key={item}>{item}</li>)}</ul>
+                    </div>
+                  </div>
+                </article>
+              ) : showNextPlanned ? (
+                <article className="status-card overview-command-card overview-next-session-card">
+                  <p className="status-label">Next planned session</p>
+                  <h2 className="plan-summary-title">{nextSessionTitle}</h2>
+                  {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
+                  <p className="overview-session-pending">
+                    <span className="overview-pending-pill">Pending</span>
+                    Check in on the day to unlock this session.
+                  </p>
+                  {nextIsHardCombat ? (
+                    <div className="overview-caution-row">
+                      <span className="overview-caution-label">Caution</span>
+                      <span className="overview-caution-text">
+                        Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
+                      </span>
+                    </div>
+                  ) : null}
+                </article>
+              ) : (
+                <article className="status-card overview-command-card overview-next-session-card">
+                  <p className="status-label">{sessionIsToday ? "Today's session" : "Next session"}</p>
+                  <h2 className="plan-summary-title">{nextSessionTitle}</h2>
+                  {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
+                  {sessionStateLabel ? (
+                    <p className="overview-session-state">
+                      <span className="overview-session-state-pill">{sessionStateLabel}</span>
+                    </p>
+                  ) : null}
+                  <p className="muted">{nextSessionFocus}</p>
+                </article>
+              )}
+            </div>
           </div>
+          {commandError ? (
+            <div className="error-banner" role="alert">
+              <span>{commandError}</span>
+              <button
+                type="button"
+                className="error-banner-retry"
+                onClick={() => void loadCommandState()}
+                disabled={isReloadingCommand}
+              >
+                {isReloadingCommand ? "Retrying..." : "Retry"}
+              </button>
+            </div>
+          ) : null}
+        </section>
 
-          <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-            {safeSession ? (
-              <article className="status-card overview-command-card overview-safe-session-card" data-tone="red">
-                <p className="status-label">{safeSession.eyebrow}</p>
-                <h2 className="plan-summary-title">{safeSession.title}</h2>
-                <p className="muted">{safeSession.detail}</p>
-                <div className="overview-safe-session-lists">
-                  <div className="overview-safe-list" data-kind="allowed">
-                    <p className="overview-safe-list-label">Allowed</p>
-                    <ul>{safeSession.allowed.map((item) => <li key={item}>{item}</li>)}</ul>
-                  </div>
-                  <div className="overview-safe-list" data-kind="blocked">
-                    <p className="overview-safe-list-label">Blocked</p>
-                    <ul>{safeSession.blocked.map((item) => <li key={item}>{item}</li>)}</ul>
-                  </div>
-                </div>
-              </article>
-            ) : showNextPlanned ? (
-              <article className="status-card overview-command-card overview-next-session-card">
-                <p className="status-label">Next planned session</p>
-                <h2 className="plan-summary-title">{nextSessionTitle}</h2>
-                {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
-                <p className="overview-session-pending">
-                  <span className="overview-pending-pill">Pending</span>
-                  Requires a fresh check-in before clearance.
-                </p>
-                {nextIsHardCombat ? (
-                  <div className="overview-caution-row">
-                    <span className="overview-caution-label">Caution</span>
-                    <span className="overview-caution-text">
-                      Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
-                    </span>
-                  </div>
-                ) : null}
-              </article>
-            ) : (
-              <article className="status-card overview-command-card overview-next-session-card">
-                <p className="status-label">Next session</p>
-                <h2 className="plan-summary-title">{nextSessionTitle}</h2>
-                {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
-                <p className="muted">{nextSessionFocus}</p>
-              </article>
-            )}
-            <OverviewRiskWatch risks={risks} tier={decisionTier} />
-            <p className="overview-medical-disclaimer">{SAFETY_DISCLAIMER_TIGHT}</p>
+        {/* Secondary — camp context, progress, full risk watch, disclaimer.
+            Available but visually reduced so it never competes with the command. */}
+        <section className="panel overview-secondary athlete-motion-slot athlete-motion-status">
+          <p className="kicker overview-secondary-eyebrow">{openOngoing ? "Training context" : "Camp context"}</p>
+          <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
+            <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
+            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>
+            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
+            <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
           </div>
+          <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
+          <OverviewRiskWatch risks={risks} tier={decisionTier} />
+          <p className="overview-medical-disclaimer">{SAFETY_DISCLAIMER_TIGHT}</p>
         </section>
       </>
     );

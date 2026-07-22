@@ -671,12 +671,26 @@ test("risk watch summary reports count and the strongest signal", () => {
   assert.equal(summary.strongestLabel, "STOP");
 });
 
-test("Overview STOP state routes to the safe session, never 'View recommendation'", () => {
+test("Overview STOP state routes to the safe session, never a train label", () => {
   const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.equal(source.includes('"View safe session"'), true);
-  // STOP must be handled before the generic block branch so it never falls
-  // through to "View recommendation".
-  assert.equal(source.indexOf("isStop") < source.indexOf('"View recommendation"'), true);
+  assert.equal(source.includes('label: "View safe session"'), true);
+  // The old "View recommendation" wording is gone — STOP never reads as a
+  // recommendation to train.
+  assert.equal(source.includes("View recommendation"), false);
+  // STOP with a safe replacement must be resolved before the generic
+  // "Open today's session" fallthrough so it can win.
+  assert.equal(
+    source.indexOf('label: "View safe session"') < source.indexOf('label: "Open today\'s session"'),
+    true,
+  );
+});
+
+test("Overview splits the no-active-plan CTA by whether any plan exists", () => {
+  const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+  // No plans at all -> build; plans exist but none active -> select on /plans.
+  assert.equal(source.includes('label: "Build your plan"'), true);
+  assert.equal(source.includes('label: "Select active plan"'), true);
+  assert.equal(source.includes("me.plan_count"), true);
 });
 
 // ---------------------------------------------------------------------------
