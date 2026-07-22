@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { formatAppDate, formatAppDateRange, formatAppDateTime } from "./date-format.ts";
+import {
+  describeRelativeDay,
+  formatAppDate,
+  formatAppDateRange,
+  formatAppDateTime,
+} from "./date-format.ts";
 
 test("formatAppDate renders date-only ISO as 'EEE DD MMM YYYY'", () => {
   assert.equal(formatAppDate("2026-07-02"), "Thu 02 Jul 2026");
@@ -69,4 +74,19 @@ test("formatAppDateRange falls back to an arrow-join when an end is unparseable"
     formatAppDateRange("2026-07-22", "nope"),
     "Wed 22 Jul 2026 → nope",
   );
+});
+
+test("describeRelativeDay labels today, tomorrow, and near-future days", () => {
+  const now = new Date("2026-07-22T09:00:00");
+  assert.equal(describeRelativeDay("2026-07-22", now), "Today");
+  assert.equal(describeRelativeDay("2026-07-23", now), "Tomorrow");
+  assert.equal(describeRelativeDay("2026-07-24", now), "in 2 days");
+});
+
+test("describeRelativeDay returns null for past, far-future, or unparseable dates", () => {
+  const now = new Date("2026-07-22T09:00:00");
+  assert.equal(describeRelativeDay("2026-07-21", now), null);
+  assert.equal(describeRelativeDay("2026-08-30", now), null);
+  assert.equal(describeRelativeDay("nope", now), null);
+  assert.equal(describeRelativeDay(null, now), null);
 });

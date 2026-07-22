@@ -104,6 +104,48 @@ export function formatAppDateTime(value: string | null | undefined): string {
   return render(value, true);
 }
 
+/** How far out a relative label stays useful; beyond this the bare date reads
+ *  fine on its own, so we return null and callers show only the date. */
+const RELATIVE_DAY_HORIZON = 14;
+
+/**
+ * A short, time-relative label for a near-future date — "Today", "Tomorrow",
+ * "in N days" — so a date reads as something happening soon, not just a static
+ * calendar entry. Returns null (so the caller can fall back to the plain date)
+ * for anything unparseable, in the past, or further out than
+ * `RELATIVE_DAY_HORIZON`.
+ *
+ * Whole-day math: the target's UTC calendar day (date-only values are anchored
+ * at noon UTC by parseAppDate) is compared against the viewer's local calendar
+ * day, so "in 2 days" matches what the athlete perceives as today.
+ */
+export function describeRelativeDay(
+  value: string | null | undefined,
+  now: Date = new Date(),
+): string | null {
+  const parsed = parseAppDate(String(value ?? ""), false);
+  if (!parsed) {
+    return null;
+  }
+  const targetDay = Date.UTC(
+    parsed.date.getUTCFullYear(),
+    parsed.date.getUTCMonth(),
+    parsed.date.getUTCDate(),
+  );
+  const nowDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((targetDay - nowDay) / 86_400_000);
+  if (diffDays < 0 || diffDays > RELATIVE_DAY_HORIZON) {
+    return null;
+  }
+  if (diffDays === 0) {
+    return "Today";
+  }
+  if (diffDays === 1) {
+    return "Tomorrow";
+  }
+  return `in ${diffDays} days`;
+}
+
 /**
  * A compact, single-line date range that drops the parts the two ends share so
  * it stays on one line — the full `formatAppDate` twice is too long for tight

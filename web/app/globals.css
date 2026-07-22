@@ -17991,13 +17991,38 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 /* Compact CURRENT indicator: a small red dot with a soft halo, in place of the
-   old full "NOW" badge. */
+   old full "NOW" badge. The halo breathes so the marker reads as "live" — the
+   dot core stays solid, so the cue never disappears (copy still carries the
+   meaning; motion is only an accent). */
 .cm-week-pill-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--brand-red);
   box-shadow: 0 0 0 3px var(--brand-red-soft);
+  animation: cm-live-dot-pulse 2s ease-in-out infinite;
+}
+
+/* Shared heartbeat halo for the plan's "current" markers (current week + current
+   day), so the live-now language reads identically across the page. The soft
+   ring expands and fades while the dot itself holds steady. */
+@keyframes cm-live-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--brand-red-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(226, 58, 76, 0);
+  }
+}
+
+/* Live dots hold their resting halo when motion is reduced — still fully visible,
+   nothing about the marker depends on the animation. */
+@media (prefers-reduced-motion: reduce) {
+  .cm-week-pill-dot,
+  .cm-day-now::before {
+    animation: none;
+  }
 }
 
 .cm-week-pill-phase {
@@ -18143,11 +18168,28 @@ html[data-theme="light"] .loading-operational-item {
 
 .cm-day-now {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--brand-red);
+}
+
+/* Same live heartbeat dot as the current-week pill, so "current" reads
+   identically in the week strip and the day list. Accent only — the badge text
+   still carries the meaning. */
+.cm-day-now::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-red);
+  box-shadow: 0 0 0 3px var(--brand-red-soft);
+  animation: cm-live-dot-pulse 2s ease-in-out infinite;
 }
 
 .cm-day-count {
