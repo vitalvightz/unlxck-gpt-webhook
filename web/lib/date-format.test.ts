@@ -77,16 +77,36 @@ test("formatAppDateRange falls back to an arrow-join when an end is unparseable"
 });
 
 test("describeRelativeDay labels today, tomorrow, and near-future days", () => {
-  const now = new Date("2026-07-22T09:00:00");
-  assert.equal(describeRelativeDay("2026-07-22", now), "Today");
-  assert.equal(describeRelativeDay("2026-07-23", now), "Tomorrow");
-  assert.equal(describeRelativeDay("2026-07-24", now), "in 2 days");
+  const today = "2026-07-22";
+  assert.equal(describeRelativeDay("2026-07-22", today), "Today");
+  assert.equal(describeRelativeDay("2026-07-23", today), "Tomorrow");
+  assert.equal(describeRelativeDay("2026-07-24", today), "in 2 days");
 });
 
 test("describeRelativeDay returns null for past, far-future, or unparseable dates", () => {
-  const now = new Date("2026-07-22T09:00:00");
-  assert.equal(describeRelativeDay("2026-07-21", now), null);
-  assert.equal(describeRelativeDay("2026-08-30", now), null);
-  assert.equal(describeRelativeDay("nope", now), null);
-  assert.equal(describeRelativeDay(null, now), null);
+  const today = "2026-07-22";
+  assert.equal(describeRelativeDay("2026-07-21", today), null);
+  assert.equal(describeRelativeDay("2026-08-30", today), null);
+  assert.equal(describeRelativeDay("nope", today), null);
+  assert.equal(describeRelativeDay(null, today), null);
+});
+
+test("describeRelativeDay compares by calendar day, not wall clock", () => {
+  // Reference and target given as full timestamps straddling midnight UTC. The
+  // label must resolve by calendar date (22nd vs 23rd) regardless of the machine
+  // timezone — the server/browser near-midnight disagreement the anchor fixes.
+  assert.equal(
+    describeRelativeDay("2026-07-23T00:30:00Z", "2026-07-22T23:30:00Z"),
+    "Tomorrow",
+  );
+  assert.equal(
+    describeRelativeDay("2026-07-22T02:00:00Z", "2026-07-22T23:30:00Z"),
+    "Today",
+  );
+});
+
+test("describeRelativeDay returns null when the reference day is missing", () => {
+  assert.equal(describeRelativeDay("2026-07-24", null), null);
+  assert.equal(describeRelativeDay("2026-07-24", undefined), null);
+  assert.equal(describeRelativeDay("2026-07-24", ""), null);
 });
