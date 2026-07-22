@@ -279,47 +279,16 @@ export function AuthForm({
               : "Resume intake and reopen saved plans from one athlete workspace."}
           </p>
         </div>
-        <details className="auth-rail-extras">
-          <summary>What&apos;s inside the workspace</summary>
-          <div className="auth-rail-extras-body">
-            <div className="support-panel">
-              <p className="kicker">Flow</p>
-              <ol className="auth-flow">
-                <li>Sign in once and keep your intake on your athlete profile.</li>
-                <li>Resume the intake draft whenever you return.</li>
-                <li>Generate and reopen saved plans from the same workspace.</li>
-              </ol>
-            </div>
-            <div className="support-panel auth-preview-panel">
-              <div className="form-section-header">
-                <p className="kicker">Inside the workspace</p>
-                <h2 className="form-section-title">Pick up where you left off</h2>
-              </div>
-              <div className="auth-preview-stack">
-                <div className="auth-preview-item">
-                  <span className="label">Intake</span>
-                  <p className="muted">Draft steps stay attached to your athlete profile, so you can resume instead of restarting.</p>
-                </div>
-                <div className="auth-preview-item">
-                  <span className="label">Saved plans</span>
-                  <p className="muted">The latest camp reopens fast, with plan history still in reach.</p>
-                </div>
-                <div className="auth-preview-item">
-                  <span className="label">Nutrition</span>
-                  <p className="muted">Readiness, weight setup, and plan history stay connected in one workflow.</p>
-                </div>
-              </div>
-            </div>
-            <div className="support-panel">
-              <p className="kicker">Why athletes keep using it</p>
-              <ul className="summary-list">
-                <li>Every generated camp stays saved to the athlete account.</li>
-                <li>The same workspace holds intake, nutrition, and plan history.</li>
-                <li>Mobile-friendly access makes it easier to reopen camps between sessions.</li>
-              </ul>
-            </div>
+        {mode === "signup" ? (
+          <div className="auth-signup-proof">
+            <p className="kicker">What you get</p>
+            <ul className="summary-list">
+              <li>A camp built around your schedule and restrictions.</li>
+              <li>Daily readiness decisions that adjust training.</li>
+              <li>Saved plans and progress in one workspace.</li>
+            </ul>
           </div>
-        </details>
+        ) : null}
       </div>
     </section>
   );
