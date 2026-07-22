@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 
 import { ApiError, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -18,6 +18,8 @@ type AppSession = {
   email?: string | null;
   user_id?: string | null;
 };
+
+type LoadMe = (nextSession: AppSession | null, options?: { allowRefresh?: boolean }) => Promise<void>;
 
 
 type AppSessionValue = {
@@ -62,21 +64,27 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const hydratedAccessTokenRef = useRef<string | null>(null);
   const loadGenerationRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestMeRef = useRef<MeResponse | null>(me);
+  const loadMeRef = useRef<LoadMe | null>(null);
 
-  function clearRetryTimer() {
+  useEffect(() => {
+    latestMeRef.current = me;
+  }, [me]);
+
+  const clearRetryTimer = useCallback(() => {
     if (retryTimerRef.current !== null) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-  }
+  }, []);
 
   useEffect(() => {
     return () => {
       clearRetryTimer();
     };
-  }, []);
+  }, [clearRetryTimer]);
 
-  async function loadMe(nextSession: AppSession | null, options: { allowRefresh?: boolean } = {}) {
+  const loadMe = useCallback<LoadMe>(async (nextSession, options = {}) => {
     const allowRefresh = options.allowRefresh ?? true;
     const currentLoadId = loadGenerationRef.current + 1;
     loadGenerationRef.current = currentLoadId;
@@ -98,7 +106,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setSession(nextSession);
     setIsReady(true);
 
-    if (hydratedAccessTokenRef.current === nextSession.access_token && me) {
+    if (hydratedAccessTokenRef.current === nextSession.access_token && latestMeRef.current) {
       setIsMeHydrated(true);
       return;
     }
@@ -155,7 +163,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
               user_id: refreshResult.data.session?.user.id ?? nextSession.user_id ?? null,
             };
             handledAccessTokenRef.current = refreshedAccessToken;
-            await loadMe(refreshedSession, { allowRefresh: false });
+            await loadMeRef.current?.(refreshedSession, { allowRefresh: false });
             return;
           }
         } catch {
@@ -179,7 +187,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
             clearRetryTimer();
             retryTimerRef.current = setTimeout(() => {
               retryTimerRef.current = null;
-              void loadMe(liveSession, { allowRefresh: false });
+              void loadMeRef.current?.(liveSession, { allowRefresh: false });
             }, ME_RETRY_DELAY_MS);
             return;
           }
@@ -191,7 +199,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           clearRetryTimer();
           retryTimerRef.current = setTimeout(() => {
             retryTimerRef.current = null;
-            void loadMe(nextSession, { allowRefresh: false });
+            void loadMeRef.current?.(nextSession, { allowRefresh: false });
           }, ME_RETRY_DELAY_MS);
           return;
         }
@@ -213,7 +221,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       clearRetryTimer();
       retryTimerRef.current = setTimeout(() => {
         retryTimerRef.current = null;
-        void loadMe(nextSession, { allowRefresh: false });
+        void loadMeRef.current?.(nextSession, { allowRefresh: false });
       }, ME_RETRY_DELAY_MS);
     } finally {
       if (loadGenerationRef.current === currentLoadId) {
@@ -223,7 +231,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
       }
     }
-  }
+  }, [clearRetryTimer]);
+  useEffect(() => {
+    loadMeRef.current = loadMe;
+  }, [loadMe]);
 
   useEffect(() => {
     let active = true;
@@ -302,7 +313,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       active = false;
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [clearRetryTimer, loadMe]);
 
   useEffect(() => {
     if (!isReady) {

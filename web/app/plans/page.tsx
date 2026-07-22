@@ -228,6 +228,7 @@ function PlanCard({
   const [renameDraft, setRenameDraft] = useState(() => getRenameDraftValue(plan));
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
+  const renameDraftValue = plan.plan_name?.trim() || plan.fight_date || "";
   const planTitle = getPlanDisplayName(plan);
   const fightDateLabel = formatPlanFightDate(plan.fight_date);
   const createdLabel = formatPlanTimestamp(plan.created_at);
@@ -243,13 +244,13 @@ function PlanCard({
 
   useEffect(() => {
     if (!isRenaming) {
-      setRenameDraft(getRenameDraftValue(plan));
+      setRenameDraft(renameDraftValue);
       return;
     }
 
     renameInputRef.current?.focus();
     renameInputRef.current?.select();
-  }, [isRenaming, plan.fight_date, plan.plan_name]);
+  }, [isRenaming, renameDraftValue]);
 
   useEffect(() => {
     if (!isDeleteConfirmOpen) {

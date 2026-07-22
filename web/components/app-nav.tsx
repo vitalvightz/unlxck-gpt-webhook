@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type TransitionEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { Skeleton } from "@/components/skeleton";
@@ -68,23 +68,23 @@ export function AppNav() {
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
 
-  function clearCloseTimeout() {
+  const clearCloseTimeout = useCallback(() => {
     if (closeTimeoutRef.current === null) {
       return;
     }
     window.clearTimeout(closeTimeoutRef.current);
     closeTimeoutRef.current = null;
-  }
+  }, []);
 
   function openMobileDrawer() {
     clearCloseTimeout();
     setMobileNavState((current) => (current === "open" || current === "opening" ? current : "opening"));
   }
 
-  function closeMobileDrawer() {
+  const closeMobileDrawer = useCallback(() => {
     clearCloseTimeout();
     setMobileNavState((current) => (current === "closed" || current === "closing" ? current : "closing"));
-  }
+  }, [clearCloseTimeout]);
 
   function handleSidebarClose() {
     if (window.matchMedia(MOBILE_NAV_MEDIA_QUERY).matches) {
@@ -107,7 +107,7 @@ export function AppNav() {
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [mobileNavState]);
+  }, [clearCloseTimeout, mobileNavState]);
 
   useEffect(() => {
     if (mobileNavState !== "closing") {
@@ -123,13 +123,13 @@ export function AppNav() {
     return () => {
       clearCloseTimeout();
     };
-  }, [mobileNavState]);
+  }, [clearCloseTimeout, mobileNavState]);
 
   useEffect(() => {
     return () => {
       clearCloseTimeout();
     };
-  }, []);
+  }, [clearCloseTimeout]);
 
   // The floating Menu pill is position:fixed, so once the page scrolls it sits
   // on top of mid-page content. The hide/condense decision lives in the pure
@@ -238,7 +238,7 @@ export function AppNav() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isMobileDrawerVisible]);
+  }, [closeMobileDrawer, isMobileDrawerVisible]);
 
   useEffect(() => {
     if (!isMobileDrawerVisible) {
@@ -246,7 +246,7 @@ export function AppNav() {
     }
 
     closeMobileDrawer();
-  }, [pathname, session]);
+  }, [closeMobileDrawer, isMobileDrawerVisible, pathname, session]);
 
   useEffect(() => {
     if (pendingNavHref && isActive(pathname, pendingNavHref)) {

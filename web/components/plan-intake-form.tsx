@@ -695,7 +695,6 @@ function CheckboxGroup({
       className={`field${invalid ? " field-invalid" : ""}`}
       role="group"
       aria-label={label}
-      aria-invalid={invalid ? true : undefined}
       aria-describedby={describedBy}
       tabIndex={invalid ? -1 : undefined}
     >
@@ -714,7 +713,14 @@ function CheckboxGroup({
               aria-disabled={disabled}
               title={labelTitle}
             >
-              <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                aria-invalid={invalid ? true : undefined}
+                aria-describedby={describedBy}
+                onChange={() => onToggle(option.value)}
+              />
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
               </span>

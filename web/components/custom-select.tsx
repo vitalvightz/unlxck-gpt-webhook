@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -72,14 +73,14 @@ export function CustomSelect({
   const triggerLabel = selectedLabel || placeholder;
   const hasValue = Boolean(value);
 
-  function clearCloseTimer() {
+  const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
-  }
+  }, []);
 
-  function updateMenuPosition() {
+  const updateMenuPosition = useCallback(() => {
     if (isSheetMode) {
       setMenuStyle({});
       return;
@@ -93,9 +94,9 @@ export function CustomSelect({
       top: rect.bottom + MENU_OFFSET,
       width: rect.width,
     });
-  }
+  }, [isSheetMode]);
 
-  function closeMenu(options?: { restoreFocus?: boolean }) {
+  const closeMenu = useCallback((options?: { restoreFocus?: boolean }) => {
     const restoreFocus = options?.restoreFocus ?? false;
     clearCloseTimer();
     setIsOpen(false);
@@ -114,7 +115,7 @@ export function CustomSelect({
         triggerRef.current?.focus();
       }
     }, MENU_ANIMATION_MS);
-  }
+  }, [clearCloseTimer, isMounted]);
 
   function openMenu(preferredIndex?: number) {
     if (disabled) {
@@ -235,7 +236,7 @@ export function CustomSelect({
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
     };
-  }, [isMounted, isOpen]);
+  }, [closeMenu, isMounted, isOpen, updateMenuPosition]);
 
   useEffect(() => {
     if (!isOpen || activeIndex < 0) {
@@ -251,7 +252,7 @@ export function CustomSelect({
     return () => {
       clearCloseTimer();
     };
-  }, []);
+  }, [clearCloseTimer]);
 
   return (
     <>
@@ -259,6 +260,7 @@ export function CustomSelect({
         ref={triggerRef}
         id={id}
         type="button"
+        role="combobox"
         className={`custom-select-trigger ${!hasValue ? "custom-select-trigger-placeholder" : ""}`.trim()}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
