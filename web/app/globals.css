@@ -17925,11 +17925,17 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-secondary);
 }
 
-/* Readiness / risk strip */
-/* Week strip */
+/* Week progression rail.
+   Cards read left→right as the plan timeline. Up to four weeks share the strip
+   width evenly, so a short plan fills the outer card instead of trailing off as
+   loose cards. Five or more hold a readable ~quarter width and the rail scrolls,
+   with the next card peeking so it's obvious more weeks exist.
+   The strip stays a direct grid child of .cm-root: as a scroll container it then
+   contains its own horizontal overflow (a wrapper or a mask on it would let that
+   overflow escape and scroll the whole page). */
 .cm-week-strip {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
   padding: 2px;
   scrollbar-width: none;
@@ -17944,20 +17950,35 @@ html[data-theme="light"] .loading-operational-item {
 
 .cm-week-pill {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   align-content: start;
-  flex: 0 0 auto;
-  min-width: 92px;
-  min-height: 64px;
-  padding: 10px 12px;
-  border-radius: var(--radius-stat);
-  border: 1px solid var(--border-default);
+  /* Positioned so the visually-hidden .sr-only spans resolve their containing
+     block to the card (clipped to 1px), not the root — otherwise, inside the
+     horizontal scroll container, their static position at a far scroll-x offset
+     would stretch the page's scroll width. */
+  position: relative;
+  /* ≤4 weeks: each card takes an equal share of the strip, so the row fills the
+     available width with no overflow (and therefore no scroll). */
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 56px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   color: var(--text-secondary);
   cursor: pointer;
   text-align: left;
   scroll-snap-align: start;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  transition: transform var(--transition-fast), border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+/* >4 weeks: readable width so ~4 fit per viewport (3 × 8px gaps = 24px) with
+   ~20px reserved for the next card to peek. The 84px floor keeps cards legible
+   on very narrow phones (there ~3 fit and the rail simply scrolls further). */
+.cm-week-strip[data-scroll="true"] .cm-week-pill {
+  flex: 0 0 max(84px, calc((100% - 24px - 20px) / 4));
 }
 
 .cm-week-pill:hover {
@@ -17965,16 +17986,40 @@ html[data-theme="light"] .loading-operational-item {
   border-color: var(--border-strong);
 }
 
+.cm-week-pill:focus-visible {
+  outline: 2px solid var(--border-active);
+  outline-offset: 2px;
+}
+
+.cm-week-pill-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .cm-week-pill-index {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+/* Compact CURRENT indicator: a small red dot with a soft halo, in place of the
+   old full "NOW" badge. */
+.cm-week-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-red);
+  box-shadow: 0 0 0 3px var(--brand-red-soft);
 }
 
 .cm-week-pill-phase {
   font-size: 11px;
   letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cm-week-pill-completion {
@@ -17983,30 +18028,25 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-muted);
 }
 
-.cm-week-pill-now {
-  justify-self: start;
-  margin-top: 2px;
-  padding: 1px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--brand-red-soft);
-  color: #ffd5db;
-  font-family: var(--font-mono), monospace;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Selected (the week you're viewing) gets a neutral strong outline; the brand
-   red is held back for the current "now" week so the two states stay distinct
-   and red never floods the strip. */
+/* Selected (the week you're viewing) elevates with a neutral strong outline; the
+   brand red is held back for the current "now" week so the two states stay
+   distinct and red never floods the rail. */
 .cm-week-pill-selected {
   border-color: var(--border-strong);
   background: var(--bg-surface-alt);
 }
 
+.cm-week-pill-selected .cm-week-pill-index {
+  color: var(--text-primary);
+}
+
 .cm-week-pill-current {
   border-color: var(--border-active);
-  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.4);
+}
+
+.cm-week-pill-current .cm-week-pill-index {
+  color: var(--brand-red);
 }
 
 /* Selected-week overview */
@@ -18214,10 +18254,9 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 @media (max-width: 720px) {
-  .cm-week-pill {
-    min-width: 84px;
-  }
-
+  /* No min-width floor here: in the ≤4-week fill layout the cards must be free
+     to share the strip width evenly. The scroll layout carries its own readable
+     floor via max() above. */
   .cm-week-overview-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

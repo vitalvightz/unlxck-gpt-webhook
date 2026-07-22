@@ -253,3 +253,107 @@ test("swapping in a structurally different plan resets the stale week selection"
     cleanup(container, root);
   }
 });
+
+// A dated multi-week plan long enough to make the week rail scroll. Each week
+// carries one dated day so current-week resolution can land on a real week.
+function manyWeekPlan(count: number): StructuredPlan {
+  const isoWeek = (i: number): string => {
+    const d = new Date(2026, 5, 1);
+    d.setDate(d.getDate() + i * 7);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  return {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: Array.from({ length: count }, (_, i) => ({
+      week_id: `wk-${i + 1}`,
+      week_index: i + 1,
+      phase_label: i === 0 ? "GPP" : i === count - 1 ? "TAPER" : "SPP",
+      days: [{ date: isoWeek(i), day_type: "moderate", sessions: [] }],
+    })),
+  } as StructuredPlan;
+}
+
+// jsdom performs no layout, so element geometry is fed in explicitly. This lets
+// the rail's scroll effect run against realistic numbers.
+function stubGeometry(el: Element, values: Partial<Record<"clientWidth" | "scrollWidth" | "offsetLeft", number>>) {
+  for (const [key, value] of Object.entries(values)) {
+    Object.defineProperty(el, key, { configurable: true, get: () => value });
+  }
+}
+
+test("selecting an off-screen week scrolls the rail to centre it", async () => {
+  const { container, root } = mount();
+  try {
+    // No `today`: current week is unresolved, so the *selected* week drives the
+    // rail and clicking a far week is a clean way to exercise the scroll effect.
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={manyWeekPlan(8)} />);
+    });
+
+    const strip = container.querySelector<HTMLElement>(".cm-week-strip");
+    assert.ok(strip, "the rail is present");
+
+    // Make the rail overflow (scrollWidth > clientWidth) and give the target
+    // week a known position, plus a capturable scrollLeft.
+    let scrollLeft = 0;
+    Object.defineProperty(strip!, "scrollLeft", {
+      configurable: true,
+      get: () => scrollLeft,
+      set: (v: number) => {
+        scrollLeft = v;
+      },
+    });
+    stubGeometry(strip!, { clientWidth: 300, scrollWidth: 1000 });
+    const target = container.querySelector<HTMLButtonElement>('[data-week-pos="6"]');
+    assert.ok(target, "the seventh week card is present");
+    stubGeometry(target!, { offsetLeft: 700, clientWidth: 80 });
+
+    await act(async () => {
+      target!.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    // Centred: offsetLeft - (clientWidth - pillWidth) / 2 = 700 - (300 - 80) / 2.
+    assert.equal(scrollLeft, 700 - (300 - 80) / 2);
+    // Selection still works: the clicked week is the selected card.
+    const selected = container.querySelector("button.cm-week-pill-selected");
+    assert.equal(selected?.getAttribute("data-week-pos"), "6");
+  } finally {
+    cleanup(container, root);
+  }
+});
+
+test("the rail does not scroll (or throw) when it fits without overflow", async () => {
+  const { container, root } = mount();
+  try {
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={manyWeekPlan(3)} />);
+    });
+
+    const strip = container.querySelector<HTMLElement>(".cm-week-strip");
+    assert.ok(strip, "the rail is present");
+    // Three weeks share the width — the rail is not marked scrollable.
+    assert.equal(strip!.getAttribute("data-scroll"), null);
+
+    let scrollLeft = 0;
+    Object.defineProperty(strip!, "scrollLeft", {
+      configurable: true,
+      get: () => scrollLeft,
+      set: (v: number) => {
+        scrollLeft = v;
+      },
+    });
+    // clientWidth === scrollWidth (no overflow): the effect must leave it alone.
+    stubGeometry(strip!, { clientWidth: 300, scrollWidth: 300 });
+
+    const second = container.querySelector<HTMLButtonElement>('[data-week-pos="1"]');
+    await act(async () => {
+      second!.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    assert.equal(scrollLeft, 0);
+    assert.equal(container.querySelector("button.cm-week-pill-selected")?.getAttribute("data-week-pos"), "1");
+  } finally {
+    cleanup(container, root);
+  }
+});

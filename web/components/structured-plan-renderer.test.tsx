@@ -2,8 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { buildDayTimeline, SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
+import {
+  buildDayTimeline,
+  SessionCard,
+  StructuredPlanRenderer,
+  weekStripCenterOffset,
+} from "./structured-plan-renderer";
 import { openBlockWeekIntent } from "@/lib/open-block";
+import { formatPlanLabel } from "@/lib/plan-labels";
 import type { PlanScheduleContext, StructuredPlan, StructuredSession } from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
@@ -110,7 +116,7 @@ test("open ongoing renderer uses renewable block labels instead of fight-camp ph
 
   assert.equal(html.includes('aria-label="Training block weeks"'), true);
   for (const label of ["Baseline", "Progress", "Highest Controlled", "Deload + Reassess"]) {
-    assert.equal(html.includes(`cm-week-pill-phase">${label}</span>`), true);
+    assert.equal(html.includes(`cm-week-pill-phase" title="${label}">${label}</span>`), true);
   }
   assert.equal(html.includes("Specific prep"), false);
   assert.equal(html.includes("General prep"), false);
@@ -1499,4 +1505,75 @@ test("a synthesized rest row on the athlete's current day is highlighted", () =>
   );
 
   assert.equal(html.includes("cm-rest-day cm-day-current"), true);
+});
+
+// ---------------------------------------------------------------------------
+// Week progression rail: equal-fill for short plans, readable scroll for long
+// ones, plus the pure centring math for bringing the active week into view.
+
+function weeksPlan(count: number, firstPhase?: string): StructuredPlan {
+  return {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: Array.from({ length: count }, (_, i) => ({
+      week_id: `wk-${i + 1}`,
+      week_index: i + 1,
+      phase_label: i === 0 ? firstPhase ?? "GPP" : i === count - 1 ? "TAPER" : "SPP",
+      days: [],
+    })),
+  } as unknown as StructuredPlan;
+}
+
+test("week rail fills the width without scrolling for one to four weeks", () => {
+  for (const count of [1, 2, 3, 4]) {
+    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={weeksPlan(count)} />);
+    assert.equal(
+      countOccurrences(html, 'data-week-pos="'),
+      count,
+      `expected ${count} week cards`,
+    );
+    assert.equal(
+      html.includes('data-scroll="true"'),
+      false,
+      `${count} weeks should share the width, not scroll`,
+    );
+  }
+});
+
+test("week rail scrolls once there are more than four weeks", () => {
+  for (const count of [5, 8, 16]) {
+    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={weeksPlan(count)} />);
+    assert.equal(
+      countOccurrences(html, 'data-week-pos="'),
+      count,
+      `expected ${count} week cards`,
+    );
+    assert.equal(
+      html.includes('data-scroll="true"'),
+      true,
+      `${count} weeks should scroll`,
+    );
+  }
+});
+
+test("a long phase label is kept on one line with the full text available on hover/AT", () => {
+  const longPhase = "Accumulation Overreaching Realisation Block";
+  const plan = weeksPlan(3, longPhase);
+  const expected = formatPlanLabel(longPhase);
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  // Truncation is visual (CSS ellipsis); the complete label stays in the title
+  // attribute and the text node, so nothing is lost to hover or screen readers.
+  assert.equal(html.includes(`title="${expected}"`), true);
+  assert.equal(html.includes(`<span class="cm-week-pill-phase" title="${expected}">${expected}</span>`), true);
+});
+
+test("weekStripCenterOffset centres the active card and clamps at the start", () => {
+  // Mid-rail card is centred within the viewport width.
+  assert.equal(weekStripCenterOffset(300, 500, 80), 500 - (300 - 80) / 2);
+  // A card near the start never produces a negative scroll offset.
+  assert.equal(weekStripCenterOffset(300, 10, 80), 0);
+  // The very first card sits flush at 0.
+  assert.equal(weekStripCenterOffset(300, 0, 80), 0);
 });
