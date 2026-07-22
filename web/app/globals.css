@@ -18036,6 +18036,15 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 /* Selected-week overview */
+/* The card is the plan's headline surface, so it gets a faint brand-red glow
+   drifting out of the top-right corner — a light premium accent in the app's
+   existing radial-glow language. */
+.cm-week-overview {
+  background:
+    radial-gradient(circle at top right, var(--brand-red-soft), transparent 42%),
+    var(--bg-surface);
+}
+
 .cm-week-overview-head {
   display: grid;
   gap: 2px;
@@ -18063,6 +18072,15 @@ html[data-theme="light"] .loading-operational-item {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-stat);
   background: var(--bg-stat);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The Dates tile carries the longest value (a full date range); give it a
+   double-width column so the compact range stays on a single line instead of
+   wrapping and unbalancing the row. On the ≤720px 2-col grid this becomes a
+   full-width row, which reads cleanly. */
+.cm-week-overview-stats .sp-stat[data-wide] {
+  grid-column: span 2;
 }
 
 .cm-guardrails {

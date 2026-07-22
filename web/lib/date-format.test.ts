@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { formatAppDate, formatAppDateTime } from "./date-format.ts";
+import { formatAppDate, formatAppDateRange, formatAppDateTime } from "./date-format.ts";
 
 test("formatAppDate renders date-only ISO as 'EEE DD MMM YYYY'", () => {
   assert.equal(formatAppDate("2026-07-02"), "Thu 02 Jul 2026");
@@ -35,4 +35,38 @@ test("formatAppDateTime appends the time to the canonical date", () => {
 
 test("formatAppDateTime returns the raw input when unparseable", () => {
   assert.equal(formatAppDateTime("nope"), "nope");
+});
+
+test("formatAppDateRange drops the shared month and year within one month", () => {
+  assert.equal(
+    formatAppDateRange("2026-07-22", "2026-07-28"),
+    "Wed 22 → Tue 28 Jul 2026",
+  );
+});
+
+test("formatAppDateRange drops only the shared year across months", () => {
+  assert.equal(
+    formatAppDateRange("2026-07-29", "2026-08-02"),
+    "Wed 29 Jul → Sun 02 Aug 2026",
+  );
+});
+
+test("formatAppDateRange keeps both years fully across a year boundary", () => {
+  assert.equal(
+    formatAppDateRange("2026-12-29", "2027-01-01"),
+    "Tue 29 Dec 2026 → Fri 01 Jan 2027",
+  );
+});
+
+test("formatAppDateRange falls back to the single date when one end is missing", () => {
+  assert.equal(formatAppDateRange("2026-07-22", null), "Wed 22 Jul 2026");
+  assert.equal(formatAppDateRange("", "2026-07-28"), "Tue 28 Jul 2026");
+  assert.equal(formatAppDateRange(null, undefined), "");
+});
+
+test("formatAppDateRange falls back to an arrow-join when an end is unparseable", () => {
+  assert.equal(
+    formatAppDateRange("2026-07-22", "nope"),
+    "Wed 22 Jul 2026 → nope",
+  );
 });

@@ -59,7 +59,7 @@ import {
   type OpenBlockWeekIntent,
 } from "@/lib/open-block";
 import { useTrainingDay } from "@/lib/use-training-day";
-import { formatAppDate } from "@/lib/date-format";
+import { formatAppDate, formatAppDateRange } from "@/lib/date-format";
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { SafetyNote } from "@/components/safety-note";
@@ -1503,14 +1503,14 @@ function WeekOverview({
   const endDate = cleanText(week.end_date);
   const dateRange =
     startDate && endDate
-      ? `${formatAppDate(startDate)} → ${formatAppDate(endDate)}`
+      ? formatAppDateRange(startDate, endDate)
       : startDate || endDate
         ? formatAppDate(startDate || endDate)
         : null;
 
   const rows = [
     { label: "Countdown", value: countdownRange },
-    { label: "Dates", value: dateRange },
+    { label: "Dates", value: dateRange, wide: true },
     { label: "Load", value: load },
     {
       label: "Training days",
@@ -1528,7 +1528,9 @@ function WeekOverview({
       label: "Completion",
       value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
     },
-  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
+  ].filter((row): row is { label: string; value: string; wide?: boolean } =>
+    Boolean(row.value),
+  );
   const baseHeading = weekLabel(week);
   const openWeekNumber = resolveFiniteWeekNumber(
     week.week_index,
@@ -1560,7 +1562,7 @@ function WeekOverview({
       {rows.length > 0 ? (
         <div className="sp-block-stats cm-week-overview-stats">
           {rows.map((row) => (
-            <span key={row.label} className="sp-stat">
+            <span key={row.label} className="sp-stat" data-wide={row.wide ? "" : undefined}>
               <span className="sp-stat-label">{row.label}</span>
               {row.value}
             </span>
