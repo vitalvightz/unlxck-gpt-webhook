@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { getMe } from "@/lib/api";
+import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@/lib/auth-feedback";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
@@ -36,6 +37,7 @@ export function AuthForm({
 }) {
   const router = useRouter();
   const { isReady, session, me } = useAppSession();
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,6 +58,12 @@ export function AuthForm({
     }
   }, [isReady, me, router, session]);
 
+  useEffect(() => {
+    if (mode === "login" && window.matchMedia("(min-width: 721px)").matches) {
+      emailInputRef.current?.focus();
+    }
+  }, [mode]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
@@ -71,7 +79,7 @@ export function AuthForm({
       try {
         client = getSupabaseBrowserClient();
       } catch {
-        setError("We're having trouble connecting. Please try again in a minute.");
+        setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
 
@@ -105,9 +113,17 @@ export function AuthForm({
         return;
       }
 
-      const { data, error: loginError } = await client.auth.signInWithPassword({ email, password });
+      let loginResult;
+      try {
+        loginResult = await client.auth.signInWithPassword({ email, password });
+      } catch {
+        setError(AUTH_FEEDBACK.connectionFailure);
+        return;
+      }
+
+      const { data, error: loginError } = loginResult;
       if (loginError) {
-        setError(loginError.message);
+        setError(getLoginErrorMessage(loginError));
         return;
       }
 
@@ -135,23 +151,31 @@ export function AuthForm({
       try {
         client = getSupabaseBrowserClient();
       } catch {
-        setError("We're having trouble connecting. Please try again in a minute.");
+        setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
       const siteOrigin = getSiteOrigin();
       const redirectTo = siteOrigin ? `${siteOrigin}/login` : undefined;
-      const { error: otpError } = await client.auth.signInWithOtp({
-        email: trimmedEmail,
-        options: {
-          shouldCreateUser: mode === "signup",
-          emailRedirectTo: redirectTo,
-        },
-      });
-      if (otpError) {
-        setError(otpError.message);
+      let magicLinkResult;
+      try {
+        magicLinkResult = await client.auth.signInWithOtp({
+          email: trimmedEmail,
+          options: {
+            shouldCreateUser: mode === "signup",
+            emailRedirectTo: redirectTo,
+          },
+        });
+      } catch {
+        setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
-      setMessage(`Check ${trimmedEmail} for a one-tap sign-in link.`);
+
+      const { error: otpError } = magicLinkResult;
+      if (otpError) {
+        setError(getMagicLinkErrorMessage(otpError));
+        return;
+      }
+      setMessage(AUTH_FEEDBACK.magicLinkSent);
     });
   }
 
@@ -176,11 +200,19 @@ export function AuthForm({
               </p>
             ) : null}
           </div>
-          <span className="badge status-badge-neutral">{mode === "signup" ? "Beta" : "Secure"}</span>
+          {mode === "signup" ? <span className="badge status-badge-neutral">Beta</span> : null}
         </div>
 
-        {message ? <div className="success-banner">{message}</div> : null}
-        {error ? <div className="error-banner">{error}</div> : null}
+        {message ? (
+          <div className="success-banner" role="status" aria-live="polite" aria-atomic="true">
+            {message}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
+            {error}
+          </div>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="auth-form-grid">
           {mode === "signup" ? (
@@ -205,7 +237,7 @@ export function AuthForm({
               type="email"
               inputMode="email"
               autoComplete="email"
-              autoFocus={mode === "login"}
+              ref={emailInputRef}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -239,19 +271,21 @@ export function AuthForm({
 
           <div className="form-actions auth-form-actions">
             <button type="submit" className="cta" disabled={isPending || isSignupPasswordBlocked}>
-              {isPending ? "Working..." : mode === "signup" ? "Create account" : "Log in"}
+              {isPending
+                ? mode === "signup"
+                  ? "Creating account…"
+                  : "Signing in…"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Log in"}
             </button>
             <button
               type="button"
-              className="secondary-button auth-magic-link-button"
+              className="auth-text-link auth-magic-link-action"
               onClick={handleMagicLink}
               disabled={isPending || isMagicLinkPending}
             >
-              {isMagicLinkPending
-                ? "Sending link..."
-                : mode === "signup"
-                  ? "Email sign-in link"
-                  : "Email sign-in link"}
+              {isMagicLinkPending ? "Sending link…" : "Email sign-in link"}
             </button>
             <div className="auth-secondary-links" aria-label="Account help">
               <Link href={mode === "signup" ? "/login" : "/signup"} className="auth-text-link">

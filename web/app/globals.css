@@ -972,9 +972,19 @@ select:focus-visible {
   gap: 10px;
 }
 
-.auth-magic-link-button {
-  width: 100%;
-  justify-content: center;
+.auth-magic-link-action {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.auth-magic-link-action:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
 }
 
 .auth-secondary-links {

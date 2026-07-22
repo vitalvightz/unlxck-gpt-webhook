@@ -299,9 +299,11 @@ export function AppNav() {
             <span>Fight Camp</span>
           </Link>
           <nav className="brand-topbar-actions" aria-label="Account access">
-            <Link href="/login" className="ghost-button">
-              Log in
-            </Link>
+            {pathname !== "/login" ? (
+              <Link href="/login" className="ghost-button">
+                Log in
+              </Link>
+            ) : null}
             <Link href="/signup" className="cta">
               Start free beta
             </Link>
