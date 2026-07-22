@@ -28,7 +28,7 @@ export const BRAND_SURFACE_ROUTES: ReadonlySet<string> = new Set([
 ]);
 
 // True on the public auth routes, where the signed-in workspace navigation must
-// never render — not even the loading/"checking your session" state — because
+// never render (not even the loading/"checking your session" state), because
 // the auth form is the whole experience.
 export function isAuthSurfaceRoute(pathname: string): boolean {
   return AUTH_SURFACE_ROUTES.has(pathname);

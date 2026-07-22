@@ -54,8 +54,8 @@ export function AppNav() {
   const isSessionResolving = Boolean(session && !isMeHydrated);
   const shellSurface = getShellSurface(pathname, hasSession);
   // Public auth routes (login / signup / password reset) render only the brand
-  // shell. Suppress every piece of workspace navigation there — the floating
-  // Menu control, the sidebar, and its "checking your session" loading card —
+  // shell. Suppress every piece of workspace navigation there (the floating
+  // Menu control, the sidebar, and its "checking your session" loading card)
   // so these pages never look like a half-loaded workspace. Derived from the
   // pathname alone, so it is correct from the very first render (no flash), and
   // signed-in visitors are redirected away by the auth pages themselves.

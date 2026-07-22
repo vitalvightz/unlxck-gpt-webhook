@@ -319,7 +319,7 @@ export function AuthForm({
             <ul className="summary-list">
               <li>Know what to train today, built around your fight date.</li>
               <li>Adjust before fatigue becomes failure with daily check-ins.</li>
-              <li>Your whole camp stays in one place — no restarting.</li>
+              <li>Your whole camp stays in one place, so you never start over.</li>
             </ul>
           </div>
         ) : null}

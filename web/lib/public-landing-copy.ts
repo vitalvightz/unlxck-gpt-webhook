@@ -3,8 +3,8 @@
 // Kept in one pure module so the copy is unit-testable and so the outcome-led
 // voice stays consistent instead of drifting per-section. The homepage used to
 // repeat the same "Intake / Readiness / Camp Plan / Saved History" feature list
-// across four sections; the pipeline taxonomy now lives in exactly one place —
-// the workspace-preview mock (LANDING_WORKSPACE_ROWS) — while every prose
+// across four sections; the pipeline taxonomy now lives in exactly one place,
+// the workspace-preview mock (LANDING_WORKSPACE_ROWS), while every prose
 // section is written around what the athlete achieves.
 //
 // Copy rules (see also lib/safety-copy.ts):
@@ -16,7 +16,7 @@
 // - Don't repeat the same benefit across sections.
 
 // First-viewport value line under the hero title. Outcome-led, not a feature
-// list — this is the sentence that has to land the product in one read.
+// list. This is the sentence that has to land the product in one read.
 export const PUBLIC_HERO_SUMMARY =
   "Know what to train today, and adjust before fatigue becomes failure.";
 
@@ -60,13 +60,13 @@ export const LANDING_WORKSPACE_ROWS = [
   },
 ] as const;
 
-// Proof grid. Outcome-led headlines that each say something distinct — no
+// Proof grid. Outcome-led headlines that each say something distinct, so no
 // section just re-lists the pipeline.
 export const LANDING_PRODUCT_PROOF_POINTS = [
   {
     label: "Today",
     title: "Know what to train today.",
-    body: "Open the app and see the session that fits your fight date, current load, and availability — not a generic block.",
+    body: "Open the app and see the session that fits your fight date, current load, and availability, not a generic block.",
   },
   {
     label: "Readiness",
@@ -76,7 +76,7 @@ export const LANDING_PRODUCT_PROOF_POINTS = [
   {
     label: "Decisions",
     title: "Turn check-ins into clear training decisions.",
-    body: "Daily inputs resolve into a straight answer — train hard, modify, or pull back — instead of another dashboard to read.",
+    body: "Daily inputs resolve into a straight answer: train hard, modify, or pull back. It's a decision, not another dashboard to read.",
   },
   {
     label: "Full camp",
