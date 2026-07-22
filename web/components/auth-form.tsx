@@ -279,6 +279,16 @@ export function AuthForm({
               : "Resume intake and reopen saved plans from one athlete workspace."}
           </p>
         </div>
+        {mode === "signup" ? (
+          <div className="auth-signup-proof">
+            <p className="kicker">What you get</p>
+            <ul className="summary-list">
+              <li>A camp built around your schedule and restrictions.</li>
+              <li>Daily readiness decisions that adjust training.</li>
+              <li>Saved plans and progress in one workspace.</li>
+            </ul>
+          </div>
+        ) : null}
       </div>
     </section>
   );
