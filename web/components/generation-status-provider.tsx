@@ -404,7 +404,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [checkStatus]);
+  }, [checkStatus, token]);
 
   const value: GenerationStatusContextValue = {
     phase,

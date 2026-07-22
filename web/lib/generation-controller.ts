@@ -486,7 +486,7 @@ export function useGenerationController({
         setError(mapGenerationErrorMessage(generationError));
       }
     },
-    [createJob, isGenerating, storageKey, token, watchJobUntilTerminal],
+    [createJob, isGenerating, recoverActiveJob, storageKey, token, watchJobUntilTerminal],
   );
 
   const retryGeneration = useCallback(async () => {
