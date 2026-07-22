@@ -222,6 +222,105 @@ test("weekLoadProxy still returns High for repeated hard weekly stress", () => {
   assert.equal(weekLoadProxy(week), "High");
 });
 
+test("weekLoadProxy does not count filler or mobility sessions as high-load days", () => {
+  const week = {
+    phase_label: "SPP",
+    days: [
+      {
+        day_type: "high",
+        sessions: [{ session_type: "skill", title: "Mobility and low-noise speed", blocks: [] }],
+      },
+      {
+        day_type: "high",
+        sessions: [{ session_type: "skill", title: "Tactical Cue Card", blocks: [] }],
+      },
+      {
+        day_type: "high",
+        sessions: [{ session_type: "recovery", title: "Recovery Reset", blocks: [] }],
+      },
+      {
+        day_type: "high",
+        sessions: [{ session_type: "primer", title: "Joint Prep", blocks: [] }],
+      },
+      {
+        day_type: "high",
+        sessions: [
+          {
+            session_type: "skill",
+            title: "Movement quality",
+            blocks: [{ block_type: "mobility_activation", display_name: "Hip flow" }],
+          },
+        ],
+      },
+    ],
+  };
+
+  assert.equal(weekLoadProxy(week), "Moderate");
+});
+
+test("weekLoadProxy keeps loaded blocks load-bearing when a generic session title mentions mobility", () => {
+  const week = {
+    phase_label: "SPP",
+    days: ["2026-07-10", "2026-07-12", "2026-07-14"].map((date, index) => ({
+      date,
+      day_type: "low",
+      sessions: [
+        {
+          session_id: `loaded-mobility-${index + 1}`,
+          session_type: "skill",
+          title: "Mobility and acceleration",
+          blocks: [{ block_type: "speed_acceleration", display_name: "Acceleration work" }],
+        },
+      ],
+    })),
+  };
+
+  assert.equal(weekLoadProxy(week), "Moderate");
+});
+
+test("weekLoadProxy caps taper weeks at Moderate", () => {
+  const week = {
+    phase_label: "TAPER",
+    days: [
+      {
+        day_type: "high",
+        sessions: [{ session_type: "conditioning", title: "Hard conditioning", blocks: [] }],
+      },
+      {
+        day_type: "high",
+        sessions: [{ session_type: "strength_power", title: "Power and sprint session", blocks: [] }],
+      },
+      {
+        day_type: "high",
+        today_card: { headline: "Coach-led sparring" },
+        sessions: [],
+      },
+    ],
+  };
+
+  assert.equal(weekLoadProxy(week), "Moderate");
+});
+
+test("weekLoadProxy still counts coach-led hard contact when a filler shares the day", () => {
+  const week = {
+    phase_label: "SPP",
+    days: [
+      {
+        day_type: "high",
+        today_card: { coach_led_contact: "Coach-led sparring" },
+        sessions: [{ session_type: "recovery", title: "Recovery Reset", blocks: [] }],
+      },
+      {
+        day_type: "high",
+        today_card: { coach_led_contact: "Coach-led sparring" },
+        sessions: [{ session_type: "skill", title: "Tactical Cue Card", blocks: [] }],
+      },
+    ],
+  };
+
+  assert.equal(weekLoadProxy(week), "High");
+});
+
 test("weekLoadProxy handles low, rest and empty weeks", () => {
   const plan = campPlan();
 

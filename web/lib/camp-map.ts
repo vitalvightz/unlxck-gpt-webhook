@@ -8,6 +8,7 @@ import {
   cleanText,
   classifySessionlessDay,
   getBlocks,
+  getCoachLedContactView,
   getDays,
   getDisplayableRedFlags,
   getPlanNotes,
@@ -672,7 +673,57 @@ function dayTypeLoadPoints(day: StructuredDay | null | undefined): number {
   return token ? DAY_LOAD_POINTS[token] ?? 0 : 0;
 }
 
+const LOW_LOAD_SESSION_TYPES = new Set(["primer", "recovery", "rehab", "support_insert"]);
+const LOW_LOAD_BLOCK_TYPES = new Set([
+  "preparation",
+  "mobility_activation",
+  "cooldown_recovery",
+  "nutrition",
+  "mindset",
+  "rehab",
+]);
+const LOADED_SESSION_TYPES = new Set([
+  "strength_power",
+  "conditioning",
+  "sparring",
+  "fight_or_match",
+  "mixed",
+]);
+const SUPPORT_SESSION_TITLE_RE =
+  /\b(?:cue card|fight tactical watch|self-review cues?|neural visualization|breathing reset|recovery reset|sleep downshift|mobility|movement quality check|technical shadow rhythm|footwork walkthrough|joint prep|walk flush|shadowboxing aerobic flow|footwork rhythm flush|skipping flush|jog flush)\b/;
+
+/** True when a session is a low-cost filler or mobility/recovery-only touch. */
+function isLowLoadSupportSession(session: StructuredSession | null | undefined): boolean {
+  const sessionType = normalizedLoadToken(session?.session_type);
+  if (sessionType && LOW_LOAD_SESSION_TYPES.has(sessionType)) {
+    return true;
+  }
+
+  const blocks = getBlocks(session);
+  if (
+    blocks.length > 0 &&
+    blocks.every((block) => {
+      const blockType = normalizedLoadToken(block.block_type);
+      return Boolean(blockType && LOW_LOAD_BLOCK_TYPES.has(blockType));
+    })
+  ) {
+    return true;
+  }
+
+  // Distinctive generated filler titles survive structured-plan normalization.
+  // Do not let a generic mobility mention override an explicitly loaded session.
+  if (sessionType && LOADED_SESSION_TYPES.has(sessionType)) {
+    return false;
+  }
+  const title = cleanText(session?.title)?.toLowerCase() ?? "";
+  return blocks.length === 0 && SUPPORT_SESSION_TITLE_RE.test(title);
+}
+
 function sessionLoadPoints(session: StructuredSession | null | undefined): number {
+  if (isLowLoadSupportSession(session)) {
+    return 1;
+  }
+
   const text = [
     session?.session_type,
     session?.title,
@@ -693,7 +744,7 @@ function sessionLoadPoints(session: StructuredSession | null | undefined): numbe
     return 2;
   }
 
-  if (/\b(rehab|prehab|mobility|recovery|easy|low)\b/.test(text)) {
+  if (getBlocks(session).length === 0 && /\b(rehab|prehab|mobility|recovery|easy|low)\b/.test(text)) {
     return 1;
   }
 
@@ -706,19 +757,31 @@ function appDayLoadPoints(day: StructuredDay): number {
     return 0;
   }
 
-  const sessionMax = sessions.reduce(
-    (max, session) => Math.max(max, sessionLoadPoints(session)),
-    0,
-  );
+  const sessionScores = sessions.map(sessionLoadPoints);
+  const sessionMax = Math.max(...sessionScores);
+  const loadBearingSessions = sessionScores.filter((score) => score > 1).length;
 
-  // Extra sessions add volume, but cap the day so one stacked day does not
-  // automatically mislabel the whole week as High.
-  const extraSessionVolume = Math.max(0, sessions.length - 1) * 0.75;
+  // Extra load-bearing sessions add volume. Fillers and mobility-only inserts do
+  // not raise the day score or inherit an incorrectly high day_type badge.
+  const extraSessionVolume = Math.max(0, loadBearingSessions - 1) * 0.75;
+  const dayTypeFloor = loadBearingSessions > 0 ? dayTypeLoadPoints(day) : 0;
+  const coachLedFloor = coachLedDayLoadPoints(day);
 
-  return Math.min(4, Math.max(dayTypeLoadPoints(day), sessionMax, 1) + extraSessionVolume);
+  return Math.min(4, Math.max(dayTypeFloor, coachLedFloor, sessionMax, 1) + extraSessionVolume);
 }
 
 function coachLedDayLoadPoints(day: StructuredDay): number {
+  const coachLedContact = getCoachLedContactView(day);
+  if (coachLedContact?.kind === "sparring") {
+    return 3;
+  }
+  if (coachLedContact?.kind === "technical") {
+    return 1.5;
+  }
+  if (coachLedContact) {
+    return 2;
+  }
+
   const sessionless = classifySessionlessDay(day);
 
   if (!sessionless.coachLed) {
@@ -770,13 +833,14 @@ export function weekLoadProxy(week: StructuredWeek | null | undefined): string |
 
   const total = trainingScores.reduce((sum, score) => sum + score, 0);
   const highDays = trainingScores.filter((score) => score >= 3).length;
-  const trainingDays = trainingScores.length;
+  const loadBearingDays = trainingScores.filter((score) => score > 1).length;
+  const isTaper = /\btaper\b/i.test(cleanText(week?.phase_label) ?? "");
 
-  if (total >= 8 || highDays >= 2 || trainingDays >= 5) {
-    return "High";
+  if (total >= 8 || highDays >= 2 || loadBearingDays >= 5) {
+    return isTaper ? "Moderate" : "High";
   }
 
-  if (total >= 4 || trainingDays >= 3) {
+  if (total >= 4 || loadBearingDays >= 3) {
     return "Moderate";
   }
 
