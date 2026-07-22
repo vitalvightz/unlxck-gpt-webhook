@@ -8457,22 +8457,8 @@ html[data-theme="light"] .today-injury-confirm-cancel {
     transition: transform var(--transition-base), opacity var(--transition-base);
   }
 
-  /* Fixed buttons float over mid-page content, so the toggle slides away on
-     scroll-down and returns on scroll-up (or on keyboard focus). */
-  .mobile-nav-toggle-hidden {
-    transform: translateY(calc(-100% - var(--mobile-nav-offset-top) - var(--safe-area-top)));
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .mobile-nav-toggle:focus-visible {
-    transform: none;
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* Once scrolled, the visible toggle shrinks to an icon-only square to cover
-     as little content as possible. */
+  /* Once scrolled, the toggle shrinks to an icon-only square to cover as little
+     content as possible. It stays fully visible and tappable at all times. */
   .mobile-nav-toggle[data-condensed="true"] {
     width: var(--mobile-nav-min-height);
     min-height: var(--mobile-nav-min-height);
