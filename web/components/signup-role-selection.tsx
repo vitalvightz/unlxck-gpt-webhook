@@ -28,7 +28,7 @@ const ROLE_OPTIONS: RoleOption[] = [
   },
   {
     role: "gym_owner",
-    title: "Gym Owner",
+    title: "Gym owner",
     description: "Run your gym, oversee coaches, and manage athletes in one place.",
     comingSoonNote: "Gym accounts will be available in public beta.",
   },
