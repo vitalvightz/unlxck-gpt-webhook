@@ -14,6 +14,7 @@ import {
   getCompletionActions,
   getDecisionTier,
   getInjuryOverrideBanner,
+  getOverviewPrimaryAction,
   getRecommendationCopy,
   getRiskWatchSummary,
   getSafeSessionView,
@@ -27,6 +28,7 @@ import {
   resolveDecisionTier,
   shouldShowTodayCheckin,
 } from "./today.ts";
+import type { TodayDecisionTier } from "./today.ts";
 import type { InjuryFlagRecord } from "./types.ts";
 import { submitTodayCheckin, submitTodaySessionCompletion } from "./api.ts";
 import type { TodayCommandView, TodaySession } from "./types.ts";
@@ -671,26 +673,56 @@ test("risk watch summary reports count and the strongest signal", () => {
   assert.equal(summary.strongestLabel, "STOP");
 });
 
-test("Overview STOP state routes to the safe session, never a train label", () => {
-  const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.equal(source.includes('label: "View safe session"'), true);
-  // The old "View recommendation" wording is gone — STOP never reads as a
-  // recommendation to train.
-  assert.equal(source.includes("View recommendation"), false);
-  // STOP with a safe replacement must be resolved before the generic
-  // "Open today's session" fallthrough so it can win.
-  assert.equal(
-    source.indexOf('label: "View safe session"') < source.indexOf('label: "Open today\'s session"'),
-    true,
-  );
-});
+test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () => {
+  const base = {
+    hasActivePlan: true,
+    planCount: 1,
+    hasInjuryOverride: false,
+    recommendation: "train_as_planned" as TodayCommandView["today"]["recommendation_state"],
+    decisionTier: "green" as TodayDecisionTier,
+    hasSafeSession: false,
+  };
 
-test("Overview splits the no-active-plan CTA by whether any plan exists", () => {
-  const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
-  // No plans at all -> build; plans exist but none active -> select on /plans.
-  assert.equal(source.includes('label: "Build your plan"'), true);
-  assert.equal(source.includes('label: "Select active plan"'), true);
-  assert.equal(source.includes("me.plan_count"), true);
+  // No plans at all -> build the first one.
+  assert.deepEqual(getOverviewPrimaryAction({ ...base, hasActivePlan: false, planCount: 0 }), {
+    href: "/onboarding",
+    label: "Build your plan",
+  });
+  // Plans exist but none active -> select one on /plans (the beta test account).
+  assert.deepEqual(getOverviewPrimaryAction({ ...base, hasActivePlan: false, planCount: 4 }), {
+    href: "/plans",
+    label: "Select active plan",
+  });
+  // Severe-injury override outranks the daily decision (even when not checked in).
+  assert.deepEqual(
+    getOverviewPrimaryAction({
+      ...base,
+      hasInjuryOverride: true,
+      recommendation: "not_checked_in",
+      decisionTier: "stop",
+    }),
+    { href: "/today#today-injury", label: "Open injury check-in" },
+  );
+  // Not checked in yet -> check in.
+  assert.deepEqual(
+    getOverviewPrimaryAction({ ...base, recommendation: "not_checked_in", decisionTier: "not_checked_in" }),
+    { href: "/today#today-checkin", label: "Check in now" },
+  );
+  // STOP with a safe replacement -> route to it.
+  assert.deepEqual(getOverviewPrimaryAction({ ...base, decisionTier: "stop", hasSafeSession: true }), {
+    href: "/today#today-session",
+    label: "View safe session",
+  });
+  // STOP without a safe session must NOT fall through to a train label.
+  assert.deepEqual(getOverviewPrimaryAction({ ...base, decisionTier: "stop", hasSafeSession: false }), {
+    href: "/today#today-session",
+    label: "Review stop guidance",
+  });
+  // Normal cleared / modified session.
+  assert.deepEqual(getOverviewPrimaryAction(base), {
+    href: "/today#today-session",
+    label: "Open today's session",
+  });
 });
 
 // ---------------------------------------------------------------------------

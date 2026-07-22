@@ -25,6 +25,7 @@ import {
   getCampDayLabel,
   getCompletionLabel,
   getInjuryOverrideBanner,
+  getOverviewPrimaryAction,
   getRiskWatchSummary,
   getRiskWatchText,
   getSafeSessionView,
@@ -558,6 +559,9 @@ export default function HomePage() {
 
     const activePlan = enrichConfirmedActivePlan(commandState?.active_plan, latestPlan);
     const hasActivePlan = Boolean(activePlan.id);
+    // "No active plan" splits into two states the whole primary area must agree
+    // on: saved plans exist (pick one) vs no plans at all (build the first).
+    const hasSavedPlans = (me.plan_count ?? 0) > 0;
     const sessionPreview = (commandState?.today?.next_session ?? {}) as TodaySession;
     const hasNextSession = hasTodaySession(sessionPreview);
     const nextSessionTitle = hasNextSession ? getSessionTitle(sessionPreview) : "No upcoming session";
@@ -566,7 +570,9 @@ export default function HomePage() {
       ? getSessionFocus(sessionPreview)
       : hasActivePlan
         ? "Open Today for the matched session."
-        : "Generate a plan to see your next session.";
+        : hasSavedPlans
+          ? "Select a saved plan to see its next session."
+          : "Build a plan to see your first session.";
     const risks = commandState?.risk_watch ?? [];
     const recommendation = commandState?.today?.recommendation_state ?? "not_checked_in";
     // Reuse the same decision framing as the Today screen so the title, the
@@ -594,6 +600,23 @@ export default function HomePage() {
       ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
       : ["Submit today's fast check-in to unlock your training decision."];
     const decisionSafety = decisionBanner?.safety;
+    // With no active plan there is no training decision to render, so the whole
+    // primary area (headline + body) is overridden to match the CTA instead of
+    // showing a stale "CHECK IN REQUIRED" that the athlete cannot act on.
+    const overviewTitle = !hasActivePlan
+      ? hasSavedPlans
+        ? "Select active plan"
+        : "Build your plan"
+      : decisionTitle;
+    const overviewLines = !hasActivePlan
+      ? [
+          hasSavedPlans
+            ? "Choose which saved plan should control Today, check-ins and session tracking."
+            : "Create your first plan to unlock Today and session tracking.",
+        ]
+      : decisionLines;
+    // Safety copy only belongs to a real decision — never on the no-plan states.
+    const overviewSafety = hasActivePlan ? decisionSafety : undefined;
     // Today's countdown to the fight, and whether the scheduled session is today
     // (vs a future planned day that must read as pending, not cleared).
     const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
@@ -619,26 +642,18 @@ export default function HomePage() {
     // IS the blocked one and correctly reads red.
     const decisionTone =
       decisionBanner && decisionBanner.tone !== "neutral" ? decisionBanner.tone : undefined;
-    // One dominant next action, chosen by state. When there is no active plan the
-    // athlete either has no plans yet (build one) or has plans but none is active
-    // (select one on /plans). Otherwise the injury override outranks the daily
-    // decision; a not-yet-checked-in day asks for the check-in; a STOP with a safe
-    // replacement routes to it (STOP is never a "train" label); everything else
-    // opens today's session. When an injury blocks the day we deep-link straight
-    // to the injury check-in card so the athlete lands on the action.
-    const noPlanAction =
-      (me.plan_count ?? 0) > 0
-        ? { href: "/plans", label: "Select active plan" }
-        : { href: "/onboarding", label: "Build your plan" };
-    const primaryAction = !hasActivePlan
-      ? noPlanAction
-      : injuryOverride
-        ? { href: "/today#today-injury", label: "Open injury check-in" }
-        : recommendation === "not_checked_in"
-          ? { href: "/today#today-checkin", label: "Check in now" }
-          : isStop && safeSession
-            ? { href: "/today#today-session", label: "View safe session" }
-            : { href: "/today#today-session", label: "Open today's session" };
+    // One dominant next action, resolved from the whole state by a pure helper so
+    // the button can never contradict the headline/body (and is unit-tested per
+    // state). STOP never falls through to a "train" label — see
+    // getOverviewPrimaryAction.
+    const primaryAction = getOverviewPrimaryAction({
+      hasActivePlan,
+      planCount: me.plan_count ?? 0,
+      hasInjuryOverride: Boolean(injuryOverride),
+      recommendation,
+      decisionTier,
+      hasSafeSession: Boolean(safeSession),
+    });
     const primaryHref = primaryAction.href;
     const primaryLabel = primaryAction.label;
 
@@ -650,12 +665,12 @@ export default function HomePage() {
           <div className="overview-primary-grid">
             <div className="status-card overview-command-card overview-decision-lead" data-tone={decisionTone}>
               <p className="eyebrow">Today&apos;s command</p>
-              <h1 className="hero-title overview-decision-headline">{decisionTitle}</h1>
+              <h1 className="hero-title overview-decision-headline">{overviewTitle}</h1>
               <div className="overview-decision-copy">
-                {decisionLines.map((line, index) => (
+                {overviewLines.map((line, index) => (
                   <p key={index} className="muted">{line}</p>
                 ))}
-                {decisionSafety ? <p className="muted overview-decision-safety">{decisionSafety}</p> : null}
+                {overviewSafety ? <p className="muted overview-decision-safety">{overviewSafety}</p> : null}
               </div>
               <div className="plan-summary-actions overview-primary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>

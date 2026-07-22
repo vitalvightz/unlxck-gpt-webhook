@@ -760,6 +760,52 @@ export function getTierMeta(tier: TodayDecisionTier): TodayTierMeta {
   return TIER_META[tier];
 }
 
+export type OverviewPrimaryAction = { href: string; label: string };
+
+/**
+ * The single dominant CTA for the Overview command area, resolved from the
+ * whole athlete state so the button can never contradict the rest of the card.
+ * Priority: no active plan (build vs select) → severe-injury override → not yet
+ * checked in → STOP → everything else. STOP never falls through to a "train"
+ * label: with a safe replacement it routes to it, otherwise it points at the
+ * stop guidance. Pure so it can be unit-tested across every state.
+ */
+export function getOverviewPrimaryAction(params: {
+  hasActivePlan: boolean;
+  planCount: number;
+  hasInjuryOverride: boolean;
+  recommendation: TodayRecommendationState;
+  decisionTier: TodayDecisionTier;
+  hasSafeSession: boolean;
+}): OverviewPrimaryAction {
+  const {
+    hasActivePlan,
+    planCount,
+    hasInjuryOverride,
+    recommendation,
+    decisionTier,
+    hasSafeSession,
+  } = params;
+
+  if (!hasActivePlan) {
+    return planCount > 0
+      ? { href: "/plans", label: "Select active plan" }
+      : { href: "/onboarding", label: "Build your plan" };
+  }
+  if (hasInjuryOverride) {
+    return { href: "/today#today-injury", label: "Open injury check-in" };
+  }
+  if (recommendation === "not_checked_in") {
+    return { href: "/today#today-checkin", label: "Check in now" };
+  }
+  if (decisionTier === "stop") {
+    return hasSafeSession
+      ? { href: "/today#today-session", label: "View safe session" }
+      : { href: "/today#today-session", label: "Review stop guidance" };
+  }
+  return { href: "/today#today-session", label: "Open today's session" };
+}
+
 /**
  * Whether the scheduled session is TODAY (vs a future planned day). Prefers the
  * session's own relation, then the command-view scope. Future sessions must be
