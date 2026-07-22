@@ -33,7 +33,11 @@ def test_today_view_full_plan_uses_active_plan_detail_route():
 
 def test_overview_view_active_plan_uses_active_plan_detail_route_and_is_read_only():
     source = _read("web/app/page.tsx")
-    assert "Camp command centre" in source
+    # The authenticated command area now leads with the decision in the
+    # "overview-decision-lead" card (was the "Camp command centre" hero before
+    # the P0-2 hierarchy redesign); it still links to the active plan detail
+    # route and stays read-only.
+    assert "overview-decision-lead" in source
     assert 'href={`/plans/${activePlan.id}`}' in source
     assert "today-checkin-form" not in source
     assert "today-completion-form" not in source
