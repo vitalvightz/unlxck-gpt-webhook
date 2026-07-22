@@ -13179,6 +13179,17 @@ html[data-theme="light"] .plan-summary-card {
     linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(244, 246, 249, 0.98));
 }
 
+/* The next-session banner's base gradient fades into a near-black panel built
+   for the dark theme; on the light page that reads as an out-of-place black
+   block, and any copy landing past the fade sits dark-on-dark. Re-tone it to a
+   soft brand-red wash over the light surface so the copy (dark --text-primary)
+   and the red CTA stay legible. */
+html[data-theme="light"] .plan-next-session {
+  border-color: color-mix(in srgb, var(--brand-red) 22%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--brand-red) 12%, white), var(--bg-surface) 58%);
+}
+
 html[data-theme="light"] .support-panel,
 html[data-theme="light"] .plan-summary-card,
 html[data-theme="light"] .status-card,
