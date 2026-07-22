@@ -9,6 +9,7 @@ from fightcamp.gap_fill_inserts import (
     ZERO_COST_INSERTS,
     _allowed_inserts,
     apply_gap_fill_inserts,
+    insert_mechanical_load_regions,
     select_gap_fill_insert,
 )
 from fightcamp.stage2_payload import _is_meaningful_stressor, build_stage2_payload
@@ -185,6 +186,22 @@ def test_weight_cut_prefers_breathing_tactical_sleep_over_physical_filler():
     assert insert is not None
     assert insert["role_key"] in TACTICAL_INSERTS | {"breathing_reset", "sleep_downshift", "recovery_reset"}
     assert insert["role_key"] not in PHYSICAL_INSERTS
+
+
+def test_mechanical_load_regions_surface_on_built_role():
+    # A punch-rhythm primer declares the striking chain it loads; a pure mental /
+    # breathing / rehab insert declares nothing so it stays injury-exempt.
+    assert set(insert_mechanical_load_regions("technical_shadow_rhythm")) == {
+        "shoulder", "elbow", "wrist", "chest"
+    }
+    assert insert_mechanical_load_regions("tactical_watch") == ()
+    assert insert_mechanical_load_regions("mobility_rehab") == ()
+    assert insert_mechanical_load_regions("breathing_reset") == ()
+
+    insert = select_gap_fill_insert(_athlete(weaknesses=["footwork"]), 12)
+    assert insert is not None
+    assert "mechanical_load_regions" in insert
+    assert isinstance(insert["mechanical_load_regions"], list)
 
 
 def test_footwork_weakness_prefers_footwork_filler():

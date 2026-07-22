@@ -241,6 +241,35 @@ _INSERT_META = {
 }
 
 
+# Mechanical load footprint per insert: the body regions each filler/primer
+# actually LOADS enough to aggravate an injury there. Canonical region keys match
+# fightcamp.injury_exclusion_rules.INJURY_REGION_KEYWORDS so a downstream safety
+# gate can intersect them with an active injury's region.
+#
+# Pure mental cue work, breathing/sleep resets, and gentle pain-free rehab/mobility
+# (RPE 1-2, "stop before fatigue", "stay pain-free") load nothing meaningful and are
+# intentionally absent — they must stay exempt from injury blocks (a neck strain
+# cannot stop you writing a fight cue, and mobility/rehab is what an injury STOP
+# prescribes). Only inserts with real ballistic / impact / rhythmic load are tagged,
+# so the gate never fires on genuinely restorative work.
+_INSERT_MECH_LOAD_REGIONS: dict[str, tuple[str, ...]] = {
+    # Shadow / punch rhythm loads the striking chain (shoulder, elbow, wrist, chest).
+    "technical_shadow_rhythm": ("shoulder", "elbow", "wrist", "chest"),
+    "aerobic_shadow_flow": ("shoulder", "elbow", "wrist", "chest"),
+    # Footwork / stance movement loads the lower chain.
+    "footwork_walkthrough": ("ankle", "foot", "knee"),
+    "aerobic_footwork_rhythm": ("ankle", "foot", "calf", "knee"),
+    # Skipping and jogging add rebound / continuous impact on the lower legs.
+    "aerobic_skip_flush": ("calf", "achilles", "ankle", "foot", "shin", "knee"),
+    "aerobic_jog_flush": ("calf", "achilles", "ankle", "foot", "shin", "knee", "hamstring"),
+}
+
+
+def insert_mechanical_load_regions(role_key: str) -> tuple[str, ...]:
+    """Body regions a gap-fill insert mechanically loads (empty for non-loading work)."""
+    return _INSERT_MECH_LOAD_REGIONS.get(role_key, ())
+
+
 def _normalised_set(values: Any) -> set[str]:
     return {str(value).strip().lower().replace(" ", "_") for value in clean_list(values) if str(value).strip()}
 
@@ -841,6 +870,7 @@ def _build_insert_role(
         "rpe_max": int(meta["rpe_max"]),
         "support_insert_category": _insert_category(role_key),
         "support_insert_cost_category": _cost_category(role_key),
+        "mechanical_load_regions": list(insert_mechanical_load_regions(role_key)),
         "countdown_offset": insert_offset,
         "countdown_label": f"D-{insert_offset}",
         "scheduled_countdown_label": f"D-{insert_offset}",

@@ -260,6 +260,96 @@ def test_filler_session_ignores_fatigue_soft_warnings():
 
 
 # ---------------------------------------------------------------------------
+# A low-stress "support" session can still carry a filler/primer that loads the
+# INJURED region (an explosive band row on a bruised shoulder). That must not be
+# blanket-declared "safe to do around your injury" — it downgrades to a targeted
+# "protect the area" modify.
+# ---------------------------------------------------------------------------
+
+
+def _shoulder_injury():
+    return [{"status": "open", "severity": "moderate", "label": "Right shoulder bruise",
+             "body_area": "shoulder"}]
+
+
+def test_freshness_session_with_shoulder_loading_primer_is_flagged():
+    # The exact reported failure: fight-week freshness support session carrying a
+    # Band Row primer while the shoulder is bruised.
+    session = {
+        "title": "Fight-week freshness",
+        "session_type": "support_insert",
+        "stress_class": "support",
+        "blocks": [
+            {"title": "Mobility Reset Flow", "type": "mobility"},
+            {"title": "Band Row Speed Focus", "type": "primer"},
+        ],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+    assert "Right shoulder bruise" in adj.reason
+    _assert_card_shape(adj)
+
+
+def test_filler_with_structured_load_regions_conflicting_is_flagged():
+    session = {
+        "title": "Technical Shadow Rhythm",
+        "category": "support_insert",
+        "support_insert_category": "technical",
+        "mechanical_load_regions": ["shoulder", "elbow", "wrist", "chest"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+
+
+def test_filler_with_mechanical_risk_tags_conflicting_is_flagged():
+    session = {
+        "title": "Fight-week freshness",
+        "stress_class": "support",
+        "blocks": [{"title": "primer", "mechanical_risk_tags": ["mech_upper_pull"]}],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(active_injury="shoulder"),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "modify"
+
+
+def test_shoulder_injury_with_lower_body_filler_stays_safe():
+    # A footwork/lower-leg filler loads nothing in the shoulder, so a shoulder
+    # injury leaves it fully safe — the gate must be region-specific, not a blanket
+    # "any injury blocks any physical filler".
+    session = {
+        "title": "Footwork Walkthrough",
+        "category": "support_insert",
+        "mechanical_load_regions": ["ankle", "foot", "knee"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+
+
+def test_non_loading_filler_with_shoulder_injury_stays_safe():
+    # A pure mental cue loads nothing, so even a shoulder injury leaves it safe.
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=_filler_session(), open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+
+
+# ---------------------------------------------------------------------------
 # Accumulated check-in signals must only be built from RECENT history — sporadic
 # check-ins/sessions weeks apart must not inflate a "3-day streak" / "recent load".
 # ---------------------------------------------------------------------------
