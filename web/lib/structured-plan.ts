@@ -242,26 +242,18 @@ function normalizedSplitWeekPhase(value: unknown): string | null {
   return normalized && SPLIT_WEEK_PHASES.has(normalized) ? normalized : null;
 }
 
+function countdownDaysToEvent(value: unknown): number | null {
+  const match = cleanText(value)?.match(/^D\s*([+-]?\d+)$/i);
+  if (!match) {
+    return null;
+  }
+  return -Number(match[1]);
+}
+
 function splitWeekPhaseLabel(week: StructuredWeek, days: StructuredDay[]): string | null | undefined {
   const dayPhases = days
     .map((day) => normalizedSplitWeekPhase(day.phase_label))
     .filter((phase): phase is string => phase !== null);
-
-  // A split display week wholly inside D-7..D-0 is necessarily taper/fight
-  // week. This also repairs older long-block payloads whose day labels all
-  // inherited the source block's SPP value.
-  const countdownDays = days
-    .map((day) => cleanText(day.countdown_label)?.match(/^D-(\d+)$/i)?.[1] ?? null)
-    .filter((value): value is string => value !== null)
-    .map(Number);
-  if (
-    countdownDays.length === days.length &&
-    countdownDays.length > 0 &&
-    countdownDays.every((day) => day >= 0 && day <= 7) &&
-    !dayPhases.includes("FIGHT_WEEK")
-  ) {
-    return "TAPER";
-  }
 
   if (dayPhases.length > 0) {
     const counts = new Map<string, number>();
@@ -276,6 +268,46 @@ function splitWeekPhaseLabel(week: StructuredWeek, days: StructuredDay[]): strin
   }
 
   return week.phase_label;
+}
+
+function enforceTerminalTaperPhase(
+  weeks: StructuredWeek[],
+  plan: StructuredPlan | null | undefined,
+): StructuredWeek[] {
+  if (weeks.length === 0) {
+    return weeks;
+  }
+  const terminal = weeks[weeks.length - 1];
+  const planType = cleanText(plan?.plan_metadata?.plan_type)?.toLowerCase() ?? null;
+  if (
+    planType === "open_ongoing_system" ||
+    planType === "reintegration" ||
+    normalizedSplitWeekPhase(terminal.phase_label) === "REINTEGRATION"
+  ) {
+    return weeks;
+  }
+  const countdowns = [
+    terminal.countdown_start,
+    terminal.countdown_end,
+    ...getDays(terminal).map((day) => day.countdown_label),
+  ]
+    .map(countdownDaysToEvent)
+    .filter((value): value is number => value !== null);
+  const terminalWindow = countdowns.length > 0 && countdowns.every((days) => days >= 0 && days <= 7);
+  if (!terminalWindow) {
+    return weeks;
+  }
+
+  const normalizedTerminal: StructuredWeek = {
+    ...terminal,
+    phase_label: "TAPER",
+    days: getDays(terminal).map((day) =>
+      normalizedSplitWeekPhase(day.phase_label) === "REINTEGRATION"
+        ? day
+        : { ...day, phase_label: "TAPER" },
+    ),
+  };
+  return [...weeks.slice(0, -1), normalizedTerminal];
 }
 
 /**
@@ -363,13 +395,14 @@ function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
 export function getWeeks(plan: StructuredPlan | null | undefined): StructuredWeek[] {
   const raw = safeArray(plan?.weeks).filter(isObject);
   const split = raw.flatMap(splitWeekByCalendarWeek);
+  const normalized = enforceTerminalTaperPhase(split, plan);
   // No week spanned multiple calendar weeks -> identity (zero change for normal
   // camps). Only when a split happened do we renumber week_index so the strip
   // reads Week 1, 2, 3… in order.
   if (split.length === raw.length) {
-    return raw;
+    return normalized;
   }
-  return split.map((week, index) => ({ ...week, week_index: index + 1 }));
+  return normalized.map((week, index) => ({ ...week, week_index: index + 1 }));
 }
 
 export function getDays(week: StructuredWeek | null | undefined): StructuredDay[] {

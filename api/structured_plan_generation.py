@@ -969,6 +969,50 @@ def _normalize_week(value: Any) -> dict[str, Any]:
     return out
 
 
+def _terminal_week_countdowns(week: dict[str, Any]) -> list[int]:
+    labels = [week.get("countdown_start"), week.get("countdown_end")]
+    labels.extend(day.get("countdown_label") for day in _as_dict_list(week.get("days")))
+    countdowns: list[int] = []
+    for label in labels:
+        match = _COUNTDOWN_RE.match(_coerce_str(label).strip())
+        if match:
+            countdowns.append(-int(match.group(1)))
+    return countdowns
+
+
+def _enforce_terminal_taper_phase(plan: dict[str, Any]) -> None:
+    """Keep the terminal pre-fight week on the deterministic TAPER phase.
+
+    Model conversion may flatten a short-notice camp into one SPP-labelled block
+    or copy SPP onto every week. Phase allocation already reserves the terminal
+    phase for taper, so this repairs metadata only; it never rewrites sessions.
+    """
+
+    weeks = _as_dict_list(plan.get("weeks"))
+    if not weeks:
+        return
+
+    metadata = plan.get("plan_metadata") if isinstance(plan.get("plan_metadata"), dict) else {}
+    terminal = weeks[-1]
+    if metadata.get("plan_type") in {"open_ongoing_system", "reintegration"}:
+        return
+    if terminal.get("phase_label") == "REINTEGRATION":
+        return
+
+    countdowns = _terminal_week_countdowns(terminal)
+    terminal_window = bool(countdowns) and all(0 <= days <= 7 for days in countdowns)
+    if not terminal_window:
+        return
+
+    terminal["phase_label"] = "TAPER"
+    progression = terminal.get("progression")
+    if isinstance(progression, dict):
+        progression["week_type"] = "taper"
+    for day in _as_dict_list(terminal.get("days")):
+        if day.get("phase_label") != "REINTEGRATION":
+            day["phase_label"] = "TAPER"
+
+
 def _normalize_plan_note(value: Any) -> dict[str, Any] | None:
     """Coerce a plan-level note, or ``None`` when it carries no text.
 
@@ -1318,13 +1362,14 @@ def _dedupe_plan_safety_text(plan: dict[str, Any]) -> dict[str, Any]:
 def normalize_structured_plan_candidate(data: Any) -> Any:
     """Conservatively coerce a model's near-miss structured JSON into schema shape.
 
-    Only fixes obvious *formatting* mistakes (enum aliases, string loads/rests,
+    Only fixes obvious formatting mistakes (enum aliases, string loads/rests,
     string countdown labels, non-list ``daily_check_ins``, non-string
     ``progression_notes``, missing required meta fields filled with neutral
-    structural defaults, intensity-label typos, and duplicated warning text). It
-    never invents training content and never alters ``raw_markdown_fallback``
-    text. Non-dict input is returned unchanged so the strict schema can reject
-    it. Never raises.
+    structural defaults, intensity-label typos, and duplicated warning text),
+    plus the deterministic terminal-taper phase invariant. It never invents or
+    rewrites training content and never alters ``raw_markdown_fallback`` text.
+    Non-dict input is returned unchanged so the strict schema can reject it.
+    Never raises.
     """
 
     if not isinstance(data, dict):
@@ -1346,6 +1391,7 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
     plan["red_flag_rules"] = [_normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))]
     plan["plan_notes"] = _normalize_plan_notes(plan.get("plan_notes"))
     plan["weeks"] = [_normalize_week(week) for week in _as_dict_list(plan.get("weeks"))]
+    _enforce_terminal_taper_phase(plan)
     # daily_check_ins must be a list of fully-valid entries; a non-list, or a
     # partial/garbled entry, must never fail the whole plan. Malformed entries are
     # dropped conservatively (no fabricated scores/decisions/dates), leaving [] if

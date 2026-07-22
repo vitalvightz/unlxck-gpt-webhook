@@ -652,6 +652,64 @@ def test_normalize_invalid_event_type_maps_to_none():
     assert plan2["event_context"]["event_type"] == "fight"
 
 
+def test_normalize_forces_scheduled_fight_terminal_week_to_taper():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_metadata": {"plan_type": "fight_camp"},
+            "event_context": {"event_type": "fight", "fight_date": "2026-08-07"},
+            "weeks": [
+                {
+                    "phase_label": "SPP",
+                    "countdown_start": "D-4",
+                    "countdown_end": "D0",
+                    "progression": {"week_type": "build"},
+                    "days": [{"phase_label": "SPP", "countdown_label": "D-2"}],
+                }
+            ],
+        }
+    )
+
+    terminal = plan["weeks"][-1]
+    assert terminal["phase_label"] == "TAPER"
+    assert terminal["progression"]["week_type"] == "taper"
+    assert terminal["days"][0]["phase_label"] == "TAPER"
+
+
+def test_normalize_does_not_force_open_or_reintegration_terminal_week_to_taper():
+    open_plan = normalize_structured_plan_candidate(
+        {
+            "plan_metadata": {"plan_type": "open_ongoing_system"},
+            "event_context": {"event_type": "none"},
+            "weeks": [{"phase_label": "SPP", "days": []}],
+        }
+    )
+    reintegration = normalize_structured_plan_candidate(
+        {
+            "plan_metadata": {"plan_type": "fight_camp"},
+            "event_context": {"event_type": "fight", "fight_date": "2026-08-07"},
+            "weeks": [{"phase_label": "REINTEGRATION", "days": []}],
+        }
+    )
+    earlier_excerpt = normalize_structured_plan_candidate(
+        {
+            "plan_metadata": {"plan_type": "fight_camp"},
+            "event_context": {"event_type": "fight", "fight_date": "2026-08-07"},
+            "weeks": [
+                {
+                    "phase_label": "SPP",
+                    "countdown_start": "D-19",
+                    "countdown_end": "D-13",
+                    "days": [],
+                }
+            ],
+        }
+    )
+
+    assert open_plan["weeks"][-1]["phase_label"] == "SPP"
+    assert reintegration["weeks"][-1]["phase_label"] == "REINTEGRATION"
+    assert earlier_excerpt["weeks"][-1]["phase_label"] == "SPP"
+
+
 def test_normalize_countdown_label_strings_become_objects():
     plan = normalize_structured_plan_candidate({"countdown_labels": ["D-28", "D0", "D+1"]})
     labels = plan["countdown_labels"]

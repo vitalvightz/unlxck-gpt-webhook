@@ -346,6 +346,62 @@ test("getWeeks labels the final D-7 to D-0 display week as taper", () => {
   assert.equal(weeks[2].countdown_end, "D-0");
 });
 
+test("getWeeks forces an unsplit terminal fight week and its days to taper", () => {
+  const weeks = getWeeks({
+    weeks: [
+      { week_id: "wk-1", week_index: 1, phase_label: "SPP", countdown_start: "D-15", countdown_end: "D-12", days: [] },
+      { week_id: "wk-2", week_index: 2, phase_label: "SPP", countdown_start: "D-11", countdown_end: "D-5", days: [] },
+      {
+        week_id: "wk-3",
+        week_index: 3,
+        phase_label: "FIGHT_WEEK",
+        countdown_start: "D-4",
+        countdown_end: "D0",
+        days: [{ countdown_label: "D-2", phase_label: "SPP" }],
+      },
+    ],
+  } as never);
+
+  assert.deepEqual(weeks.map((week) => week.phase_label), ["SPP", "SPP", "TAPER"]);
+  assert.equal(getDays(weeks[2])[0].phase_label, "TAPER");
+});
+
+test("getWeeks does not force open or post-fight terminal weeks to taper", () => {
+  const openWeeks = getWeeks({
+    weeks: [{ week_id: "open", week_index: 1, phase_label: "SPP", days: [] }],
+  } as never);
+  const reintegrationWeeks = getWeeks({
+    weeks: [
+      {
+        week_id: "post-fight",
+        week_index: 1,
+        phase_label: "REINTEGRATION",
+        countdown_start: "D+1",
+        countdown_end: "D+7",
+        days: [{ countdown_label: "D+1", phase_label: "REINTEGRATION" }],
+      },
+    ],
+  } as never);
+  const earlierExcerpt = getWeeks({
+    plan_metadata: { plan_type: "fight_camp" },
+    event_context: { event_type: "fight", fight_date: "2026-08-07" },
+    weeks: [
+      {
+        week_id: "earlier",
+        week_index: 1,
+        phase_label: "SPP",
+        countdown_start: "D-19",
+        countdown_end: "D-13",
+        days: [],
+      },
+    ],
+  } as never);
+
+  assert.equal(openWeeks[0].phase_label, "SPP");
+  assert.equal(reintegrationWeeks[0].phase_label, "REINTEGRATION");
+  assert.equal(earlierExcerpt[0].phase_label, "SPP");
+});
+
 // --- plan-level active notes ------------------------------------------------
 
 test("getPlanNotes keeps notes with text, drops empties, lowercases category", () => {
