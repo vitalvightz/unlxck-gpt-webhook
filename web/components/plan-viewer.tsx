@@ -400,6 +400,7 @@ function TextStructuredPlanRenderer({
   currentDayLabel,
   scheduleContext,
   isAdmin = false,
+  rehabAsPrehab = false,
 }: {
   text: string;
   fightDate?: string | null;
@@ -408,6 +409,7 @@ function TextStructuredPlanRenderer({
   currentDayLabel: string;
   scheduleContext?: PlanDetail["schedule_context"];
   isAdmin?: boolean;
+  rehabAsPrehab?: boolean;
 }) {
   const adaptedPlan = useMemo(
     () => buildStructuredPlanFromText(text, fightDate),
@@ -429,6 +431,7 @@ function TextStructuredPlanRenderer({
       currentDayLabel={currentDayLabel}
       scheduleContext={rendererScheduleContext}
       isAdmin={isAdmin}
+      rehabAsPrehab={rehabAsPrehab}
     />
   );
 }
@@ -1585,6 +1588,18 @@ export function PlanViewer({
         ),
       })
     : null;
+  // Once every injury captured at intake has cleared (medically cleared, or a
+  // later check-in that resolved it and updated the intake record), the plan's
+  // remaining rehab work is prophylactic — so the renderer prints its tag as
+  // "Prehab" instead of "Rehab". Conservative: any still-uncleared injury leaves
+  // the label unchanged, and a plan with no captured injuries is never relabelled.
+  const intakeInjuries = [
+    plan.latest_intake?.guided_injury,
+    ...(plan.latest_intake?.guided_injuries ?? []),
+  ].filter((injury): injury is NonNullable<typeof injury> => Boolean(injury));
+  const rehabAsPrehab =
+    intakeInjuries.length > 0 &&
+    intakeInjuries.every((injury) => (injury.cleared ?? "").trim().toLowerCase() === "yes");
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
     : "Approve anyway";
@@ -2775,6 +2790,7 @@ export function PlanViewer({
                   completions={planCompletions?.completions}
                   currentTrainingDayIso={currentTrainingDayIso}
                   isAdmin={isViewerAdmin}
+                  rehabAsPrehab={rehabAsPrehab}
                 />
               ) : holdPlanForEnhancedCard ? (
                 <EnhancedCardLockInCard accessToken={accessToken} />
@@ -2807,6 +2823,7 @@ export function PlanViewer({
                     currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
                     scheduleContext={plan.schedule_context}
                     isAdmin={isViewerAdmin}
+                    rehabAsPrehab={rehabAsPrehab}
                   />
                 </>
               )}

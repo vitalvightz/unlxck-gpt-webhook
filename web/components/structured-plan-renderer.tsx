@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   classifySessionlessDay,
@@ -196,6 +196,22 @@ export function MindsetAnchorCard({
   );
 }
 
+// Once the intake injury that seeded a plan's rehab work has cleared, that work
+// is no longer rehabilitation — it is prophylactic (prehab). The plan carries no
+// per-block injury link, so the decision is plan-wide and lives at the top of the
+// render tree; this context relays it to the leaf cards that print the tag
+// without drilling the flag through every intermediate day/session component.
+// Defaults to false so standalone surfaces (Today card) keep the "Rehab" label.
+const RehabAsPrehabContext = createContext(false);
+
+/** Tag label for a block, swapping "Rehab" for "Prehab" once the injury cleared. */
+function blockTagLabel(blockType: string, rehabAsPrehab: boolean): string {
+  if (rehabAsPrehab && blockType.toLowerCase() === "rehab") {
+    return "Prehab";
+  }
+  return titleize(blockType);
+}
+
 export function BlockCard({
   block,
   openWeekIntent,
@@ -206,6 +222,7 @@ export function BlockCard({
    * never pass it. */
   openWeekIntent?: OpenBlockWeekIntent | null;
 }) {
+  const rehabAsPrehab = useContext(RehabAsPrehabContext);
   const title = cleanText(block.display_name) || "Block";
   const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
@@ -230,7 +247,7 @@ export function BlockCard({
     <div className="sp-block">
       <div className="sp-block-head">
         <span className="sp-block-title">{title}</span>
-        {blockType ? <span className="sp-tag">{titleize(blockType)}</span> : null}
+        {blockType ? <span className="sp-tag">{blockTagLabel(blockType, rehabAsPrehab)}</span> : null}
       </div>
       {metrics.length > 0 || work || load || rest || effort ? (
         <div className="sp-block-stats">
@@ -303,12 +320,13 @@ export function BlockCard({
 }
 
 function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
+  const rehabAsPrehab = useContext(RehabAsPrehabContext);
   if (blocks.length === 0) {
     return null;
   }
   return (
     <div className="sp-rehab-summary">
-      <p className="sp-eyebrow">Rehab / Mobility</p>
+      <p className="sp-eyebrow">{rehabAsPrehab ? "Prehab / Mobility" : "Rehab / Mobility"}</p>
       <ul className="sp-rehab-list">
         {blocks.map((block, index) => {
           const title = cleanText(block.display_name) || "Rehab block";
@@ -1585,6 +1603,7 @@ export function StructuredPlanRenderer({
   scheduleContext,
   onLogSession,
   isAdmin = false,
+  rehabAsPrehab = false,
 }: {
   plan: StructuredPlan;
   /** Renewable four-week plan without a scheduled fight date. */
@@ -1619,6 +1638,10 @@ export function StructuredPlanRenderer({
    * and for anyone in the fail-closed "schedule unavailable" state where the
    * on-screen message directs the athlete to the raw plan below. */
   isAdmin?: boolean;
+  /** When true, every rehab-typed block renders its tag as "Prehab" instead of
+   * "Rehab" — set by the caller once the intake injury has cleared, so the
+   * remaining prophylactic work is named correctly. */
+  rehabAsPrehab?: boolean;
 }) {
   const weeks = getWeeks(plan);
   const completionIndex = useMemo(
@@ -1723,6 +1746,7 @@ export function StructuredPlanRenderer({
   const activeSupportPhaseKey = normalizeSupportPhaseKey(selectedWeek?.phase_label);
 
   return (
+    <RehabAsPrehabContext.Provider value={rehabAsPrehab}>
     <div className="sp-root cm-root">
       {weeks.length > 0 ? (
         <>
@@ -1875,5 +1899,6 @@ export function StructuredPlanRenderer({
         </details>
       ) : null}
     </div>
+    </RehabAsPrehabContext.Provider>
   );
 }
