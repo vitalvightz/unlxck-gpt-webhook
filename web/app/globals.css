@@ -18036,13 +18036,46 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 /* Selected-week overview */
+/* Premium treatment: the card is the plan's headline surface, so it gets a
+   faint brand-red glow drifting out of the top-right corner and an etched
+   blood-splatter mark clipped to that corner — texture that reads as fight-camp
+   identity, not a sticker. All decoration is inert (pointer-events: none) and
+   sits behind the content via z-index. */
+.cm-week-overview {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, var(--brand-red-soft), transparent 42%),
+    var(--bg-surface);
+}
+
+.cm-week-overview::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 172px;
+  height: 172px;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22%3E%3Cg%20fill=%22%23b5122b%22%3E%3Cpath%20d=%22M62%2014C66%206%2078%202%2084%208C90%204%2098%2010%2094%2018C100%2022%2098%2034%2090%2034C88%2042%2078%2044%2074%2038C66%2042%2058%2036%2062%2028C56%2024%2058%2016%2062%2014Z%22/%3E%3Ccircle%20cx=%2254%22%20cy=%2246%22%20r=%223.4%22/%3E%3Ccircle%20cx=%2248%22%20cy=%2233%22%20r=%222%22/%3E%3Ccircle%20cx=%2268%22%20cy=%2252%22%20r=%222.6%22/%3E%3Ccircle%20cx=%2244%22%20cy=%2253%22%20r=%221.4%22/%3E%3Ccircle%20cx=%2260%22%20cy=%2259%22%20r=%221.8%22/%3E%3Ccircle%20cx=%2270%22%20cy=%2243%22%20r=%221.2%22/%3E%3Ccircle%20cx=%2238%22%20cy=%2245%22%20r=%221.5%22/%3E%3Ccircle%20cx=%2252%22%20cy=%2262%22%20r=%221%22/%3E%3Ccircle%20cx=%2241%22%20cy=%2262%22%20r=%220.8%22/%3E%3Ccircle%20cx=%2275%22%20cy=%2260%22%20r=%221.1%22/%3E%3Ccircle%20cx=%2233%22%20cy=%2255%22%20r=%220.9%22/%3E%3Ccircle%20cx=%2282%22%20cy=%2230%22%20r=%221.3%22/%3E%3Ccircle%20cx=%2288%22%20cy=%2242%22%20r=%220.9%22/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: contain;
+  opacity: 0.09;
+}
+
 .cm-week-overview-head {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 2px;
   margin-bottom: 8px;
 }
 
 .cm-week-intent {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -18051,6 +18084,8 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 .cm-week-overview-stats {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 8px;
@@ -18063,6 +18098,21 @@ html[data-theme="light"] .loading-operational-item {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-stat);
   background: var(--bg-stat);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The Dates tile carries the longest value (a full date range); give it a
+   double-width column so the compact range stays on a single line instead of
+   wrapping and unbalancing the row. On the ≤720px 2-col grid this becomes a
+   full-width row, which reads cleanly. */
+.cm-week-overview-stats .sp-stat[data-wide] {
+  grid-column: span 2;
+}
+
+/* On light backgrounds the same red reads much heavier, so drop the splatter to
+   a whisper. */
+html[data-theme="light"] .cm-week-overview::before {
+  opacity: 0.05;
 }
 
 .cm-guardrails {

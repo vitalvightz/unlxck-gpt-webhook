@@ -58,6 +58,25 @@ function getFormatter(withTime: boolean, dateOnly: boolean): Intl.DateTimeFormat
   return formatter;
 }
 
+/** The canonical date parts for a single value, or null when unparseable. */
+type DateParts = { weekday: string; day: string; month: string; year: string };
+
+function dateParts(value: string): DateParts | null {
+  const parsed = parseAppDate(value, false);
+  if (!parsed) {
+    return null;
+  }
+  const parts = getFormatter(false, parsed.dateOnly).formatToParts(parsed.date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return {
+    weekday: get("weekday"),
+    day: get("day"),
+    month: get("month"),
+    year: get("year"),
+  };
+}
+
 function render(value: string | null | undefined, withTime: boolean): string {
   const raw = String(value ?? "");
   const parsed = parseAppDate(raw, withTime);
@@ -83,4 +102,42 @@ export function formatAppDate(value: string | null | undefined): string {
 /** "Thu 02 Jul 2026, 14:30". Returns the raw input if it can't be parsed. */
 export function formatAppDateTime(value: string | null | undefined): string {
   return render(value, true);
+}
+
+/**
+ * A compact, single-line date range that drops the parts the two ends share so
+ * it stays on one line — the full `formatAppDate` twice is too long for tight
+ * layouts (e.g. the week-overview stat tile) and wraps.
+ *
+ *   same month + year  -> "Wed 22 → Tue 28 Jul 2026"
+ *   same year          -> "Wed 29 Jul → Sun 02 Aug 2026"
+ *   different years     -> "Wed 29 Dec 2026 → Fri 01 Jan 2027"
+ *
+ * Degrades gracefully: if either end is missing it returns the single formatted
+ * date; if either can't be parsed it falls back to the plain arrow-join so the
+ * output is never worse than the previous `formatAppDate → formatAppDate`.
+ */
+export function formatAppDateRange(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): string {
+  const rawStart = start == null ? "" : String(start).trim();
+  const rawEnd = end == null ? "" : String(end).trim();
+  if (!rawStart || !rawEnd) {
+    return formatAppDate(rawStart || rawEnd);
+  }
+  const a = dateParts(rawStart);
+  const b = dateParts(rawEnd);
+  if (!a || !b) {
+    return `${formatAppDate(rawStart)} → ${formatAppDate(rawEnd)}`;
+  }
+  const sameYear = a.year === b.year;
+  const sameMonth = sameYear && a.month === b.month;
+  const startText = sameMonth
+    ? `${a.weekday} ${a.day}`
+    : sameYear
+      ? `${a.weekday} ${a.day} ${a.month}`
+      : `${a.weekday} ${a.day} ${a.month} ${a.year}`;
+  const endText = `${b.weekday} ${b.day} ${b.month} ${b.year}`;
+  return `${startText} → ${endText}`;
 }
