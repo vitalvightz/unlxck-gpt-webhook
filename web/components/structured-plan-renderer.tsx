@@ -609,14 +609,15 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
   const coachLedContact = getCoachLedContactView(day);
-  // Rule: the DAY mindset renders exactly once, here at the day level, whenever
-  // it exists. Session cards render with showDayContext=false, so they show ONLY
-  // their own session mindset (never the day's) — this avoids both dropping the
-  // day mindset when a session lacks one AND duplicating the day mindset into
-  // every session. A session that defines its own mindset shows that on its card
-  // in addition to this day-level one; they are distinct anchors.
+  // Session-level anchors are the most specific coaching cue in this schema, so
+  // keep them and suppress the broader day anchor whenever any session owns one.
+  // The red-accent day anchor remains the fallback when none of the sessions has
+  // a usable mindset.
   const dayMindset = card?.mindset_anchor;
-  const hasDayMindset = getMindsetLines(dayMindset).length > 0;
+  const hasSessionMindset = getSessions(day).some(
+    (session) => getMindsetLines(session.mindset_anchor).length > 0,
+  );
+  const hasDayMindset = !hasSessionMindset && getMindsetLines(dayMindset).length > 0;
   // The day mindset's Context often restates a session's objective shown just
   // below it (same sentence, twice on screen); drop it against those.
   const dayObjectives = getSessions(day).map((session) => cleanText(session.objective));

@@ -64,9 +64,8 @@ test("structured renderer uses one session card and hides detail blocks until ex
   // The closed row shows only the completion fraction — no session-count pill.
   assert.equal(html.includes("1 session"), false);
   assert.equal(html.includes("Morning intro duplicate"), false); // headline not shown on session days
-  // The DAY mindset renders once at day level (distinct from the session's own
-  // mindset, which renders on the session card).
-  assert.equal(html.includes("Duplicate intro intent"), true);
+  // The more specific session mindset suppresses the broader day fallback.
+  assert.equal(html.includes("Duplicate intro intent"), false);
   assert.equal(html.includes("Breathing reset"), false);
   assert.equal(html.includes("MORE"), false);
   assert.equal(html.includes("LESS"), false);
@@ -156,8 +155,8 @@ test("open ongoing renderer falls back when schedule and week numbers are non-fi
 // Builds a day whose day-card mindset and per-session mindsets can be varied
 // independently. Each entry in `sessionMindsets` becomes one session; `undefined`
 // omits the session's mindset_anchor, an object supplies one. This exercises the
-// rule that the DAY mindset renders exactly once at day level while SESSION
-// mindsets render only on the sessions that define their own.
+// rule that SESSION mindsets take priority and the DAY mindset is only a
+// fallback when no session defines a usable anchor.
 function mindsetPlan({
   dayCardMindset,
   sessionMindsets,
@@ -202,7 +201,7 @@ function mindsetCardCount(html: string): number {
   return countOccurrences(html, "sp-mindset-list");
 }
 
-test("mindset scenario 1: day mindset only renders once at day level", () => {
+test("mindset scenario 1: day mindset is the fallback when sessions have none", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={mindsetPlan({
@@ -231,7 +230,7 @@ test("mindset scenario 2: session mindset only renders on its session card", () 
   assert.equal(html.includes("Session-only focus"), true);
 });
 
-test("mindset scenario 3: day mindset plus all sessions having their own", () => {
+test("mindset scenario 3: session mindsets suppress the day fallback", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={mindsetPlan({
@@ -244,15 +243,13 @@ test("mindset scenario 3: day mindset plus all sessions having their own", () =>
     />,
   );
 
-  // One day-level card + one per session = three cards total.
-  assert.equal(mindsetCardCount(html), 3);
-  // The day mindset renders exactly once, not duplicated into each session.
-  assert.equal(countOccurrences(html, "Day intent"), 1);
+  assert.equal(mindsetCardCount(html), 2);
+  assert.equal(html.includes("Day intent"), false);
   assert.equal(html.includes("Session A intent"), true);
   assert.equal(html.includes("Session B intent"), true);
 });
 
-test("mindset scenario 4: day mindset plus mixed sessions (only some have their own)", () => {
+test("mindset scenario 4: any session mindset suppresses the day fallback", () => {
   const html = renderToStaticMarkup(
     <StructuredPlanRenderer
       plan={mindsetPlan({
@@ -265,10 +262,9 @@ test("mindset scenario 4: day mindset plus mixed sessions (only some have their 
     />,
   );
 
-  // One day-level card + one for the session that owns a mindset = two cards.
-  // The session without its own mindset shows none (no day-mindset duplication).
-  assert.equal(mindsetCardCount(html), 2);
-  assert.equal(countOccurrences(html, "Day intent"), 1);
+  // Keep the specific anchor; the session without one does not repeat the day.
+  assert.equal(mindsetCardCount(html), 1);
+  assert.equal(html.includes("Day intent"), false);
   assert.equal(html.includes("Owning session intent"), true);
 });
 
