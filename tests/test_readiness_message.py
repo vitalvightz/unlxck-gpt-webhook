@@ -260,6 +260,238 @@ def test_filler_session_ignores_fatigue_soft_warnings():
 
 
 # ---------------------------------------------------------------------------
+# A low-stress "support" session can still carry a filler/primer that loads the
+# INJURED region (an explosive band row on a bruised shoulder). That must not be
+# blanket-declared "safe to do around your injury" — it downgrades to a targeted
+# "protect the area" modify.
+# ---------------------------------------------------------------------------
+
+
+def _shoulder_injury():
+    return [{"status": "open", "severity": "moderate", "label": "Right shoulder bruise",
+             "body_area": "shoulder"}]
+
+
+def test_freshness_session_with_shoulder_loading_primer_is_flagged():
+    # The exact reported failure: fight-week freshness support session carrying a
+    # Band Row primer while the shoulder is bruised.
+    session = {
+        "title": "Fight-week freshness",
+        "session_type": "support_insert",
+        "stress_class": "support",
+        "blocks": [
+            {"title": "Mobility Reset Flow", "type": "mobility"},
+            {"title": "Band Row Speed Focus", "type": "primer"},
+        ],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+    assert "Right shoulder bruise" in adj.reason
+    _assert_card_shape(adj)
+
+
+def test_filler_with_structured_load_regions_conflicting_is_flagged():
+    session = {
+        "title": "Technical Shadow Rhythm",
+        "category": "support_insert",
+        "support_insert_category": "technical",
+        "mechanical_load_regions": ["shoulder", "elbow", "wrist", "chest"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+
+
+def test_filler_with_mechanical_risk_tags_conflicting_is_flagged():
+    session = {
+        "title": "Fight-week freshness",
+        "stress_class": "support",
+        "blocks": [{"title": "primer", "mechanical_risk_tags": ["mech_upper_pull"]}],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(active_injury="shoulder"),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "modify"
+
+
+def test_shoulder_injury_with_lower_body_filler_stays_safe():
+    # A footwork/lower-leg filler loads nothing in the shoulder, so a shoulder
+    # injury leaves it fully safe — the gate must be region-specific, not a blanket
+    # "any injury blocks any physical filler".
+    session = {
+        "title": "Footwork Walkthrough",
+        "category": "support_insert",
+        "mechanical_load_regions": ["ankle", "foot", "knee"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+
+
+def test_non_loading_filler_with_shoulder_injury_stays_safe():
+    # A pure mental cue loads nothing, so even a shoulder injury leaves it safe.
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=_filler_session(), open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+
+
+def test_tactical_review_text_does_not_read_as_physical_loading():
+    # Reviewer regression #1: a tactical-watch objective can name a movement word
+    # ("your jab") in prose without the athlete throwing anything. The keyword
+    # fallback must only scan physical entry NAMES, and must skip an entry that
+    # is structurally tactical/mental regardless of its wording.
+    session = {
+        "title": "Fight Tactical Watch",
+        "session_type": "support_insert",
+        "category": "support_insert",
+        "support_insert_category": "tactical",
+        "objective": "Review how the opponent reacts to your jab.",
+        "coach_note": "Focus on entries, exits, and footwork patterns to counter.",
+        "reason": "Sharpen the fight plan without loading the shoulder.",
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+
+
+def test_physical_block_name_still_flagged_when_tactical_wrapper_present():
+    # The exclusion is scoped to the entry that is actually tactical/mental — a
+    # genuinely physical block nested next to it must still be caught.
+    session = {
+        "title": "Fight-week freshness",
+        "session_type": "support_insert",
+        "stress_class": "support",
+        "blocks": [
+            {"title": "Fight Tactical Watch", "support_insert_category": "tactical"},
+            {"title": "Band Row Speed Focus"},
+        ],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+
+
+def test_walk_flush_flagged_for_ankle_injury():
+    # Reviewer regression #2: walk_flush/aerobic_walk_flush previously declared no
+    # load regions at all, so a brisk walk read as "safe" for an ankle sprain.
+    ankle_injury = [{"status": "open", "severity": "moderate", "label": "Ankle sprain",
+                      "body_area": "ankle"}]
+    session = {
+        "title": "Brisk Walk Flush",
+        "category": "support_insert",
+        "support_insert_category": "conditioning_maintenance",
+        "mechanical_load_regions": ["ankle", "foot", "achilles", "calf", "knee"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(ankle_injury)),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+
+
+def test_shadow_rhythm_flagged_for_knee_injury_via_footwork_load():
+    # Reviewer regression #2: technical_shadow_rhythm / aerobic_shadow_flow only
+    # declared the upper body despite entries/exits/stance work loading the knee.
+    knee_injury = [{"status": "open", "severity": "moderate", "label": "Knee strain",
+                     "body_area": "knee"}]
+    session = {
+        "title": "Technical Shadow Rhythm",
+        "category": "support_insert",
+        "support_insert_category": "technical",
+        "mechanical_load_regions": ["shoulder", "elbow", "wrist", "chest", "ankle", "knee"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(knee_injury)),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+
+
+def test_targeted_rehab_stays_safe_even_for_the_matching_injury():
+    # mobility_rehab / joint_prep are gentle, pain-free work explicitly targeted
+    # at the flagged restriction — their regional overlap is the point of
+    # prescribing them, not a hazard, so they must stay in the safe branch.
+    session = {
+        "title": "Mobility/Rehab Reset",
+        "category": "support_insert",
+        "support_insert_category": "mobility",
+        "mechanical_load_regions": [],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(_shoulder_injury())),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+
+
+def test_disc_substring_does_not_misfire_on_knee_discomfort():
+    # Reviewer regression #3: "disc" is a lower_back keyword; a naive substring
+    # check would misread "knee discomfort" as a disc/lower-back injury and wrongly
+    # flag an unrelated lower-back-loading filler.
+    knee_injury = [{"status": "open", "severity": "mild", "label": "knee discomfort",
+                     "body_area": "knee"}]
+    lower_back_loading_session = {
+        "title": "Fight-week freshness",
+        "category": "support_insert",
+        "mechanical_load_regions": ["lower_back", "hamstring"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=lower_back_loading_session, open_injuries=tuple(knee_injury)),
+    )
+    assert adj.decision == "train_as_planned"
+    assert adj.title == "Safe session today."
+    # The substring bug would have added lower_back to the injured-region set;
+    # confirm directly that "knee discomfort" resolves to knee only.
+    from api.contracts.readiness_message import _active_injury_regions
+
+    assert _active_injury_regions(
+        ReadinessCheckin(), ReadinessContext(open_injuries=tuple(knee_injury))
+    ) == {"knee"}
+
+
+def test_structured_body_area_is_authoritative_over_free_text_wording():
+    # Reviewer regression #3: the structured body_area should drive region
+    # resolution directly rather than relying purely on a text scan of label.
+    quad_injury = [{"status": "open", "severity": "moderate", "label": "Thigh knock",
+                     "body_area": "quad"}]
+    session = {
+        "title": "Squat Primer",
+        "category": "support_insert",
+        "mechanical_load_regions": ["quad", "knee"],
+    }
+    adj = build_readiness_adjustment(
+        ReadinessCheckin(),
+        ReadinessContext(today_session=session, open_injuries=tuple(quad_injury)),
+    )
+    assert adj.decision == "modify"
+    assert adj.title == "Protect the injured area."
+
+
+# ---------------------------------------------------------------------------
 # Accumulated check-in signals must only be built from RECENT history — sporadic
 # check-ins/sessions weeks apart must not inflate a "3-day streak" / "recent load".
 # ---------------------------------------------------------------------------

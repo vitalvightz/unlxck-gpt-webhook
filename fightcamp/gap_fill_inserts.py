@@ -241,6 +241,50 @@ _INSERT_META = {
 }
 
 
+# Mechanical load footprint per insert: the body regions each filler/primer
+# actually LOADS enough to aggravate an injury there. Canonical region keys match
+# fightcamp.injury_exclusion_rules.INJURY_REGION_KEYWORDS so a downstream safety
+# gate can intersect them with an active injury's region. Low load is not zero
+# load — even a brisk walk or a low-amplitude foot-placement drill still loads
+# the lower chain, so every insert with real bodily movement is mapped here,
+# not just the visibly ballistic ones.
+#
+# mobility_rehab and joint_prep are the deliberate exception, not an oversight:
+# both are gentle, pain-free, controlled-range work explicitly TARGETED at the
+# athlete's flagged restriction ("Target the flagged restriction with easy
+# range... stop well before fatigue" / "Stay smooth and pain-free"). They are
+# the designated safe option even at moderate_plus injury (see
+# _allowed_inserts), so their regional overlap with an active injury is the
+# whole point of prescribing them, not a hazard for the gate to catch. Pure
+# mental cue work and breathing/sleep resets are absent for the same
+# not-a-hazard reason: a neck strain cannot stop you writing a fight cue.
+_INSERT_MECH_LOAD_REGIONS: dict[str, tuple[str, ...]] = {
+    # Shadow / punch rhythm loads the striking chain (shoulder, elbow, wrist,
+    # chest) AND the entries/exits/stance work that comes with it (ankle, knee).
+    "technical_shadow_rhythm": ("shoulder", "elbow", "wrist", "chest", "ankle", "knee"),
+    "aerobic_shadow_flow": ("shoulder", "elbow", "wrist", "chest", "ankle", "knee"),
+    # Footwork / stance movement loads the lower chain.
+    "footwork_walkthrough": ("ankle", "foot", "knee"),
+    "aerobic_footwork_rhythm": ("ankle", "foot", "calf", "knee"),
+    # Low-amplitude foot-placement / stance-quality work still loads the same
+    # lower-leg contact points, just at a smaller range.
+    "movement_quality": ("ankle", "foot"),
+    # Skipping and jogging add rebound / continuous impact on the lower legs.
+    "aerobic_skip_flush": ("calf", "achilles", "ankle", "foot", "shin", "knee"),
+    "aerobic_jog_flush": ("calf", "achilles", "ankle", "foot", "shin", "knee", "hamstring"),
+    # Walking is genuinely low load, but it is still repetitive weight-bearing
+    # gait: an ankle sprain, Achilles flare, foot stress reaction, or irritable
+    # knee can all be aggravated by a brisk walk, so it is not zero-cost.
+    "walk_flush": ("ankle", "foot", "achilles", "calf", "knee"),
+    "aerobic_walk_flush": ("ankle", "foot", "achilles", "calf", "knee"),
+}
+
+
+def insert_mechanical_load_regions(role_key: str) -> tuple[str, ...]:
+    """Body regions a gap-fill insert mechanically loads (empty for non-loading work)."""
+    return _INSERT_MECH_LOAD_REGIONS.get(role_key, ())
+
+
 def _normalised_set(values: Any) -> set[str]:
     return {str(value).strip().lower().replace(" ", "_") for value in clean_list(values) if str(value).strip()}
 
@@ -841,6 +885,7 @@ def _build_insert_role(
         "rpe_max": int(meta["rpe_max"]),
         "support_insert_category": _insert_category(role_key),
         "support_insert_cost_category": _cost_category(role_key),
+        "mechanical_load_regions": list(insert_mechanical_load_regions(role_key)),
         "countdown_offset": insert_offset,
         "countdown_label": f"D-{insert_offset}",
         "scheduled_countdown_label": f"D-{insert_offset}",

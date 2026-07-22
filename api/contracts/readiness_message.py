@@ -258,6 +258,67 @@ _SUPPORT_INSERT_CATEGORIES = frozenset(
     {"tactical", "mental", "recovery", "mobility", "movement_quality"}
 )
 
+# Region-aware safe-filler gate -------------------------------------------------
+# A support / filler session is normally exempt from injury blocks (see
+# _safe_filler_adjustment). But a low-stress session can still include a filler or
+# primer that mechanically LOADS the injured region — e.g. a fight-week freshness
+# day that carries an explosive Band Row primer while the shoulder is bruised. In
+# that case the blanket "safe to do around your {injury}" claim is wrong. These
+# maps let the gate detect the conflict from whatever signal the Today session
+# carries: the structured mechanical_load_regions the fillers now emit, the bank
+# items' mechanical_risk_tags, and — as a fallback — the movement wording in the
+# session's labels/blocks. Region keys match
+# fightcamp.injury_exclusion_rules.INJURY_REGION_KEYWORDS.
+_MECH_TAG_REGIONS: dict[str, tuple[str, ...]] = {
+    "mech_upper_pull": ("shoulder", "upper_back", "elbow"),
+    "mech_horizontal_pull": ("shoulder", "upper_back", "elbow"),
+    "mech_vertical_pull_heavy": ("shoulder", "upper_back", "elbow"),
+    "mech_upper_press": ("shoulder", "chest", "elbow"),
+    "mech_horizontal_push": ("shoulder", "chest", "elbow"),
+    "mech_shoulder_overhead": ("shoulder",),
+    "mech_overhead_dynamic": ("shoulder",),
+    "mech_overhead_static": ("shoulder",),
+    "mech_grip_support": ("wrist", "hand", "forearm", "elbow"),
+    "mech_grip_intensive": ("wrist", "hand", "forearm"),
+    "mech_grip_static": ("wrist", "hand", "forearm"),
+    "mech_hinge_eccentric": ("hamstring", "lower_back"),
+    "mech_squat_deep": ("knee", "hip"),
+    "mech_landing_impact": ("ankle", "knee", "calf", "achilles", "foot"),
+    "mech_reactive_rebound": ("ankle", "calf", "achilles", "foot"),
+    "mech_max_velocity": ("hamstring", "calf", "achilles"),
+    "mech_acceleration": ("hamstring", "calf", "achilles"),
+    "mech_change_of_direction": ("ankle", "knee", "groin"),
+    "mech_deceleration": ("knee", "quad", "ankle"),
+}
+
+# Movement wording that loads each region, matched against the session's labels /
+# block names. Scoped to the vocabulary that actually appears in fillers, primers,
+# and late-camp touches so a warm-up mention never over-triggers.
+_REGION_LOAD_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "shoulder": (
+        "row", "pull-up", "pull up", "pullup", "pulldown", "chin-up", "chin up",
+        "face pull", "band pull", "scap", "press", "overhead", "shadow", "punch",
+        "jab", "cross", "hook", "throw", "raise", "snatch",
+    ),
+    "upper_back": ("row", "pull-up", "pull up", "pullup", "pulldown", "face pull", "scap", "carry"),
+    "elbow": ("row", "pull-up", "pull up", "chin-up", "curl", "press", "punch", "extension", "throw"),
+    "wrist": ("row", "pull-up", "grip", "hang", "punch", "press", "push-up", "push up", "carry", "throw"),
+    "hand": ("grip", "hang", "punch", "carry"),
+    "forearm": ("row", "grip", "hang", "curl", "carry"),
+    "chest": ("press", "push-up", "push up", "punch", "fly", "dip", "throw", "shadow"),
+    "hip": ("squat", "lunge", "hinge", "step-up", "shuffle", "footwork", "sprint", "jog"),
+    "groin": ("lunge", "lateral", "shuffle", "cossack", "adductor", "skater"),
+    "hamstring": ("hinge", "deadlift", "rdl", "sprint", "jog", "run", "bound"),
+    "quad": ("squat", "lunge", "step-up", "sprint", "jog", "jump"),
+    "knee": ("squat", "lunge", "jump", "sprint", "jog", "run", "shuffle", "footwork", "skip"),
+    "shin": ("jump", "skip", "sprint", "jog", "run", "bound", "footwork"),
+    "calf": ("skip", "jump", "sprint", "jog", "run", "bound", "footwork", "calf raise"),
+    "achilles": ("skip", "jump", "sprint", "jog", "run", "bound"),
+    "ankle": ("skip", "jump", "sprint", "jog", "run", "shuffle", "footwork", "pivot", "lateral"),
+    "foot": ("skip", "jump", "sprint", "jog", "run", "footwork", "pivot"),
+    "toe": ("skip", "jump", "sprint", "bound"),
+}
+
 
 def is_support_session(session: Mapping[str, Any] | None) -> bool:
     """True for a low-cost support / filler session (mental cue work, breathing or
@@ -1050,6 +1111,157 @@ def _first_active_open_injury_label(context: ReadinessContext) -> str:
     return ""
 
 
+def _injury_text_regions(text: str) -> set[str]:
+    """Canonical injury regions named anywhere in a piece of injury text.
+
+    Uses whole-phrase matching (``fightcamp.normalization.phrase_in_text``), not a
+    bare substring check — a naive ``"disc" in text`` would misfire on "knee
+    DISComfort" and wrongly add lower_back as an injured region.
+    """
+    cleaned = _clean(text).lower().replace("_", " ")
+    if not cleaned:
+        return set()
+    try:
+        from fightcamp.injury_exclusion_rules import INJURY_REGION_KEYWORDS
+        from fightcamp.normalization import phrase_in_text
+    except Exception:  # pragma: no cover - region map always importable in-app
+        return set()
+    regions: set[str] = set()
+    for region, keywords in INJURY_REGION_KEYWORDS.items():
+        if any(phrase_in_text(cleaned, keyword) for keyword in keywords):
+            regions.add(region)
+    return regions
+
+
+def _resolve_injury_regions(value: str) -> set[str]:
+    """Canonical regions for one injury value, structured resolution first.
+
+    A structured location string (the check-in's ``body_area``/``active_injury``,
+    e.g. "shoulder", "quad") is resolved through the same canonical
+    location/synonym registry the injury-exclusion engine uses
+    (``get_exclusion_regions``) before falling back to free-text keyword
+    matching, so a specific structured value is never diluted by a broader
+    substring scan.
+    """
+    cleaned = _clean(value)
+    if not cleaned:
+        return set()
+    try:
+        from fightcamp.injury_exclusion_rules import get_exclusion_regions
+    except Exception:  # pragma: no cover - always importable in-app
+        return _injury_text_regions(cleaned)
+    resolved = get_exclusion_regions(cleaned)
+    if resolved:
+        return set(resolved)
+    return _injury_text_regions(cleaned)
+
+
+def _active_injury_regions(checkin: ReadinessCheckin, context: ReadinessContext) -> set[str]:
+    """Regions of the athlete's currently active injuries (open + this check-in).
+
+    The structured ``body_area`` is resolved authoritatively via
+    ``_resolve_injury_regions``; free-text ``label``/``description`` are also
+    scanned (whole-phrase, not substring) so a region named only in prose is
+    still caught.
+    """
+    regions: set[str] = set()
+    for injury in context.open_injuries:
+        if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
+            continue
+        body_area = _clean(injury.get("body_area"))
+        if body_area:
+            regions |= _resolve_injury_regions(body_area)
+        text = " ".join(_clean(injury.get(key)) for key in ("label", "description"))
+        regions |= _injury_text_regions(text)
+    if checkin.active_injury not in {"", "none"}:
+        regions |= _resolve_injury_regions(checkin.active_injury)
+    return regions
+
+
+def _iter_session_mappings(session: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """The session mapping plus any nested block/exercise mappings that carry tags."""
+    mappings: list[Mapping[str, Any]] = [session]
+    for key in ("blocks", "exercises", "movements", "items"):
+        nested = session.get(key)
+        if isinstance(nested, Sequence) and not isinstance(nested, (str, bytes)):
+            for item in nested:
+                if isinstance(item, Mapping):
+                    mappings.append(item)
+                    for inner_key in ("exercises", "movements", "items"):
+                        inner = item.get(inner_key)
+                        if isinstance(inner, Sequence) and not isinstance(inner, (str, bytes)):
+                            mappings.extend(m for m in inner if isinstance(m, Mapping))
+    return mappings
+
+
+# Fields that name an entry (its exercise/primer/block title). Deliberately
+# excludes narrative fields (objective, coach_note, reason, display_text,
+# primary_focus, emphasis) — those describe or review the session in prose and can
+# mention a movement word ("review how they react to your jab") without the
+# athlete physically throwing anything.
+_ENTRY_NAME_FIELDS = ("title", "label", "name", "athlete_facing_label")
+_NON_PHYSICAL_INSERT_CATEGORIES = {"tactical", "mental"}
+
+
+def _is_non_physical_mapping(mapping: Mapping[str, Any]) -> bool:
+    """True for a tactical/mental entry whose name must never drive a physical-load
+    keyword match — a "Jab Cue Card" review is video/notes work, not a thrown jab."""
+    for key in ("support_insert_category", "insert_category", "category"):
+        if _clean(mapping.get(key)).lower() in _NON_PHYSICAL_INSERT_CATEGORIES:
+            return True
+    return False
+
+
+def _physical_entry_name_text(session: Mapping[str, Any]) -> str:
+    """Name-only text (title/label/name) from the session's physical entries.
+
+    This is the ONLY text the movement-keyword fallback in
+    ``_session_mechanical_load_regions`` may scan — see ``_ENTRY_NAME_FIELDS`` and
+    ``_is_non_physical_mapping`` for why objective/coach_note/reason text and
+    tactical/mental entries are excluded.
+    """
+    parts: list[str] = []
+    for mapping in _iter_session_mappings(session):
+        if _is_non_physical_mapping(mapping):
+            continue
+        for key in _ENTRY_NAME_FIELDS:
+            value = mapping.get(key)
+            if value:
+                parts.append(_clean(value))
+    return " ".join(parts).lower()
+
+
+def _session_mechanical_load_regions(session: Mapping[str, Any] | None) -> set[str]:
+    """Body regions a support session mechanically loads.
+
+    Draws on three signals, most authoritative first: the structured
+    ``mechanical_load_regions`` the gap-fill fillers emit, the bank items'
+    ``mechanical_risk_tags``, and — as a fallback for content that only surfaces as
+    a name — the movement wording in physical entries' names only (never
+    objectives/notes/reasons, and never tactical/mental entries; see
+    ``_physical_entry_name_text``).
+    """
+    if not isinstance(session, Mapping) or not session:
+        return set()
+    from fightcamp.normalization import phrase_in_text
+
+    regions: set[str] = set()
+    for mapping in _iter_session_mappings(session):
+        declared = mapping.get("mechanical_load_regions")
+        if isinstance(declared, Sequence) and not isinstance(declared, (str, bytes)):
+            regions.update(_clean(region).lower() for region in declared if _clean(region))
+        mech_tags = mapping.get("mechanical_risk_tags")
+        if isinstance(mech_tags, Sequence) and not isinstance(mech_tags, (str, bytes)):
+            for tag in mech_tags:
+                regions.update(_MECH_TAG_REGIONS.get(_clean(tag).lower(), ()))
+    physical_text = _physical_entry_name_text(session)
+    if physical_text:
+        for region, keywords in _REGION_LOAD_KEYWORDS.items():
+            if any(phrase_in_text(physical_text, keyword) for keyword in keywords):
+                regions.add(region)
+    return regions
+
+
 def _safe_filler_adjustment(
     checkin: ReadinessCheckin,
     context: ReadinessContext,
@@ -1062,8 +1274,35 @@ def _safe_filler_adjustment(
     It is restorative low/zero-stress work, so neither an injury (exempted upstream)
     nor an accumulated fatigue soft-warning should reduce it — the athlete just does
     the easy session.
+
+    The one exception: a low-stress session can still carry a filler or primer that
+    mechanically loads the *injured* region (an explosive band row on a bruised
+    shoulder, footwork on a sprained ankle, ...). Blanket-declaring that "safe to do
+    around your injury" is exactly the failure this guard closes — when the session
+    loads the active injury's region we downgrade to a targeted "protect the area"
+    modify instead of the safe-session all-clear.
     """
     label = _first_active_open_injury_label(context)
+    injured_regions = _active_injury_regions(checkin, context)
+    loaded_regions = _session_mechanical_load_regions(context.today_session)
+    if injured_regions & loaded_regions:
+        injury_phrase = f"your {label}" if label else "the injured area"
+        return ReadinessAdjustment(
+            decision="modify",
+            title="Protect the injured area.",
+            reason=(
+                f"This is mostly low-stress work, but part of it loads {injury_phrase}, "
+                "which the check-in still flags as active."
+            ),
+            action=(
+                "Do the rest of the session easy, but skip or replace any movement that "
+                "loads the injured area, and stop anything that provokes it."
+            ),
+            triggers=_with_context_triggers(
+                "support_session", session_risk=session_risk, phase=phase, contact_sport=contact_sport
+            ),
+            session_risk=session_risk,
+        )
     has_signal = (
         bool(context.open_injuries)
         or checkin.active_injury != "none"
