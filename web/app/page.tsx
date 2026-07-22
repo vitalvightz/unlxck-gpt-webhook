@@ -60,14 +60,14 @@ const landingWorkspaceRows = [
   },
   {
     step: "03",
-    label: "Camp Plan",
+    label: "Camp plan",
     status: "Ready",
     title: "Camp plan",
     body: "Phases, sessions, targets, and recovery.",
   },
   {
     step: "04",
-    label: "Saved History",
+    label: "Saved history",
     status: "Saved",
     title: "History",
     body: "Latest camp and past plans stay attached.",
@@ -84,11 +84,11 @@ const landingOutcomePoints = [
     value: "Load and safety",
   },
   {
-    label: "Camp Plan",
+    label: "Camp plan",
     value: "Weeks and sessions",
   },
   {
-    label: "Saved History",
+    label: "Saved history",
     value: "Plans attached",
   },
 ] as const;
@@ -128,12 +128,12 @@ const landingProductProofPoints = [
     body: "Load, recovery, nutrition, injury limits, and availability stay beside the plan.",
   },
   {
-    label: "Camp Plan",
+    label: "Camp plan",
     title: "The plan is structured.",
     body: "Phases, daily sessions, conditioning, strength, recovery, and targets.",
   },
   {
-    label: "Saved History",
+    label: "Saved history",
     title: "Return without rebuilding.",
     body: "Latest camp and previous plans stay attached for review and continuation.",
   },
