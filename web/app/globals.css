@@ -12151,12 +12151,12 @@ html[data-theme="light"] .injury-severity-badge-low {
 }
 
 html[data-theme="light"] .injury-severity-badge-moderate {
-  background: #e9ebee;
+  background: var(--progress-gold-soft);
   color: #854f0b;
 }
 
 html[data-theme="light"] .injury-severity-badge-high {
-  background: #eff1f4;
+  background: var(--danger-soft);
   color: #bd1020;
 }
 
@@ -12166,7 +12166,7 @@ html[data-theme="light"] .injury-trend-badge-improving {
 }
 
 html[data-theme="light"] .injury-trend-badge-worsening {
-  background: #eff1f4;
+  background: var(--danger-soft);
   color: #bd1020;
 }
 
@@ -12184,13 +12184,13 @@ html[data-theme="light"] .injury-severity-chip-low {
 
 html[data-theme="light"] .injury-severity-chip-moderate {
   border-color: rgba(133, 79, 11, 0.25);
-  background: #e9ebee;
+  background: var(--progress-gold-soft);
   color: #854f0b;
 }
 
 html[data-theme="light"] .injury-severity-chip-high {
   border-color: rgba(189, 16, 32, 0.25);
-  background: #eff1f4;
+  background: var(--danger-soft);
   color: #bd1020;
 }
 
@@ -12679,11 +12679,6 @@ html[data-theme="light"] .gi-review-warning-icon {
 }
 
 html[data-theme="light"] .gi-remove-confirm-panel {
-  border-color: rgba(80, 81, 84, 0.12);
-  background: rgba(240, 242, 245, 0.58);
-}
-
-html[data-theme="light"] .gi-remove-confirm-panel {
   border-color: rgba(0, 0, 0, 0.08);
   background: rgba(0, 0, 0, 0.02);
 }
@@ -12838,14 +12833,13 @@ html[data-theme="light"] .gi-notes-toggle:hover {
 
 .appearance-mode-preview-light {
   background:
-    radial-gradient(circle at top left, rgba(181, 18, 43, 0.16), transparent 32%),
-    radial-gradient(circle at 14% 18%, rgba(181, 18, 43, 0.08), transparent 12%),
-    radial-gradient(circle at bottom right, rgba(181, 18, 43, 0.12), transparent 28%),
-    linear-gradient(180deg, #fffaf7 0%, #f7ede6 100%);
+    radial-gradient(circle at top left, rgba(189, 16, 32, 0.1), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(90, 101, 115, 0.06), transparent 28%),
+    linear-gradient(180deg, #fbfcfd 0%, #f1f3f6 100%);
 }
 
 .appearance-mode-preview-light::before {
-  background-image: linear-gradient(rgba(103, 74, 68, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(103, 74, 68, 0.05) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(40, 46, 56, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(40, 46, 56, 0.04) 1px, transparent 1px);
   background-size: 22px 22px;
   opacity: 0.35;
 }
@@ -12853,13 +12847,13 @@ html[data-theme="light"] .gi-notes-toggle:hover {
 .appearance-mode-preview-light .appearance-mode-preview-header,
 .appearance-mode-preview-light .appearance-mode-preview-line,
 .appearance-mode-preview-light .appearance-mode-preview-line-short {
-  background: rgba(111, 92, 87, 0.14);
+  background: rgba(80, 81, 84, 0.16);
 }
 
 .appearance-mode-preview-light .appearance-mode-preview-panel {
-  background: linear-gradient(180deg, rgba(255, 252, 248, 0.96), rgba(255, 245, 239, 0.98));
-  border: 1px solid rgba(181, 18, 43, 0.1);
-  box-shadow: 0 10px 24px rgba(97, 64, 55, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 245, 248, 0.98));
+  border: 1px solid rgba(189, 16, 32, 0.12);
+  box-shadow: 0 10px 24px rgba(20, 24, 34, 0.08);
 }
 
 .appearance-mode-copy {
@@ -13309,13 +13303,13 @@ html[data-theme="light"] .sparring-advisory-card .sparring-risk-green {
 
 html[data-theme="light"] .sparring-advisory-card .sparring-risk-amber {
   border-color: rgba(173, 115, 23, 0.18);
-  background: rgba(241, 243, 246, 0.98);
+  background: rgba(173, 115, 23, 0.1);
   color: #8a590f;
 }
 
 html[data-theme="light"] .sparring-advisory-card .sparring-risk-red {
   border-color: rgba(199, 92, 54, 0.18);
-  background: rgba(241, 243, 246, 0.98);
+  background: rgba(199, 92, 54, 0.1);
   color: #9d3c1d;
 }
 
@@ -13608,13 +13602,13 @@ html[data-theme="light"] .plan-dialog {
 .appearance-mode-preview-light {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 36%),
-    linear-gradient(180deg, #fbf8f3 0%, #efe7db 100%);
+    linear-gradient(180deg, #fbfcfd 0%, #f1f3f6 100%);
 }
 
 .appearance-mode-preview-light::before {
   background-image:
-    linear-gradient(rgba(104, 84, 75, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(104, 84, 75, 0.025) 1px, transparent 1px);
+    linear-gradient(rgba(40, 46, 56, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40, 46, 56, 0.025) 1px, transparent 1px);
   background-size: 24px 24px;
   opacity: 0.22;
 }
@@ -13622,13 +13616,13 @@ html[data-theme="light"] .plan-dialog {
 .appearance-mode-preview-light .appearance-mode-preview-header,
 .appearance-mode-preview-light .appearance-mode-preview-line,
 .appearance-mode-preview-light .appearance-mode-preview-line-short {
-  background: rgba(116, 94, 85, 0.14);
+  background: rgba(80, 81, 84, 0.16);
 }
 
 .appearance-mode-preview-light .appearance-mode-preview-panel {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 242, 234, 0.98));
-  border: 1px solid rgba(92, 72, 64, 0.08);
-  box-shadow: 0 12px 30px rgba(64, 47, 41, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 245, 248, 0.98));
+  border: 1px solid rgba(68, 69, 72, 0.1);
+  box-shadow: 0 12px 30px rgba(20, 24, 34, 0.08);
 }
 
 html[data-theme="light"] {
