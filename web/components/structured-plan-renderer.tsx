@@ -1396,8 +1396,12 @@ function WeekStrip({
 }) {
   const stripRef = useRef<HTMLElement>(null);
   const scrollable = weeks.length > WEEK_STRIP_FIT_LIMIT;
-  // Prefer the real "now" week; fall back to whatever is being viewed.
-  const activePos = currentPos ?? selectedPos;
+  // Centre on the week being viewed. `selectedPos` (the parent's `safePos`)
+  // already defaults to the current week until the athlete picks another, so it
+  // covers "land on now" on mount AND re-centres each manual selection — whereas
+  // preferring `currentPos` would pin the target and never move when a different
+  // week is tapped, leaving that card half cut off.
+  const activePos = selectedPos;
 
   // Bring the active week into view when the rail scrolls. Adjusts only the
   // horizontal scroll of the strip itself (never scrollIntoView, which could

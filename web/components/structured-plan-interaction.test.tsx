@@ -285,14 +285,21 @@ function stubGeometry(el: Element, values: Partial<Record<"clientWidth" | "scrol
 test("selecting an off-screen week scrolls the rail to centre it", async () => {
   const { container, root } = mount();
   try {
-    // No `today`: current week is unresolved, so the *selected* week drives the
-    // rail and clicking a far week is a clean way to exercise the scroll effect.
+    // A real current week exists (today matches week 0). Centring must still
+    // follow the *selected* week, not stay pinned to "now" — otherwise tapping a
+    // far card leaves it half cut off. manyWeekPlan(0)'s day is 2026-06-01.
     await act(async () => {
-      root.render(<StructuredPlanRenderer plan={manyWeekPlan(8)} />);
+      root.render(<StructuredPlanRenderer plan={manyWeekPlan(8)} today={new Date(2026, 5, 1)} />);
     });
 
     const strip = container.querySelector<HTMLElement>(".cm-week-strip");
     assert.ok(strip, "the rail is present");
+    // Week 0 is genuinely the current week (this is what would mask the bug if
+    // centring preferred currentPos over selectedPos).
+    assert.equal(
+      container.querySelector("button.cm-week-pill-current")?.getAttribute("data-week-pos"),
+      "0",
+    );
 
     // Make the rail overflow (scrollWidth > clientWidth) and give the target
     // week a known position, plus a capturable scrollLeft.
@@ -313,7 +320,8 @@ test("selecting an off-screen week scrolls the rail to centre it", async () => {
       target!.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
 
-    // Centred: offsetLeft - (clientWidth - pillWidth) / 2 = 700 - (300 - 80) / 2.
+    // Centred on the newly selected week, even though week 0 is still "current":
+    // offsetLeft - (clientWidth - pillWidth) / 2 = 700 - (300 - 80) / 2.
     assert.equal(scrollLeft, 700 - (300 - 80) / 2);
     // Selection still works: the clicked week is the selected card.
     const selected = container.querySelector("button.cm-week-pill-selected");
