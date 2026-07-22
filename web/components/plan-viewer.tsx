@@ -1588,18 +1588,13 @@ export function PlanViewer({
         ),
       })
     : null;
-  // Once every injury captured at intake has cleared (medically cleared, or a
-  // later check-in that resolved it and updated the intake record), the plan's
-  // remaining rehab work is prophylactic — so the renderer prints its tag as
-  // "Prehab" instead of "Rehab". Conservative: any still-uncleared injury leaves
-  // the label unchanged, and a plan with no captured injuries is never relabelled.
-  const intakeInjuries = [
-    plan.latest_intake?.guided_injury,
-    ...(plan.latest_intake?.guided_injuries ?? []),
-  ].filter((injury): injury is NonNullable<typeof injury> => Boolean(injury));
-  const rehabAsPrehab =
-    intakeInjuries.length > 0 &&
-    intakeInjuries.every((injury) => (injury.cleared ?? "").trim().toLowerCase() === "yes");
+  // Whether the plan's rehab work should read as "Prehab". Decided server-side
+  // from the athlete's live injury flags (resolve_rehab_label_mode), NOT the
+  // intake "medically cleared" answer — an athlete can be cleared to train while
+  // still rehabbing, and the Today "Cleared" action resolves the injury flag
+  // without touching intake. "prehab" only once every tracked injury for the plan
+  // is resolved; legacy payloads omit the field and stay "rehab".
+  const rehabAsPrehab = plan.rehab_label_mode === "prehab";
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
     : "Approve anyway";

@@ -1576,6 +1576,12 @@ class PlanDetail(PlanSummary):
     # from the submitted intake and the saved profile may be stale. Derived from
     # the plan row's why_log marker in plan_mappers._map_plan_detail.
     profile_refresh_failed: bool = False
+    # Whether the plan's rehab work should read as "Rehab" or "Prehab" in the
+    # viewer. Derived server-side from the athlete's live injury flags (not the
+    # intake medical-clearance answer): "prehab" only once every tracked injury
+    # for this plan has been resolved, otherwise "rehab". See
+    # plan_mappers.resolve_rehab_label_mode.
+    rehab_label_mode: RehabLabelMode = "rehab"
 
 
 class ProgressMilestone(BaseModel):
@@ -1729,6 +1735,10 @@ AdaptationDecisionValue = Literal[
 ]
 InjuryFlagSeverity = Literal["mild", "moderate", "severe"]
 InjuryFlagStatus = Literal["open", "monitoring", "resolved"]
+# How a plan's rehab work should be labelled in the viewer. "prehab" once every
+# tracked injury for the plan has been resolved (the work is now prophylactic);
+# "rehab" while any injury is still active, or when no injury is tracked.
+RehabLabelMode = Literal["rehab", "prehab"]
 InjuryReportedStatus = Literal["ongoing", "improving", "worse", "resolved"]
 AdminReviewStatus = Literal["pending", "acknowledged", "resolved"]
 

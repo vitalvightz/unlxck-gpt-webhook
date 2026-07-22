@@ -25,6 +25,7 @@ from api.plan_mappers import (
     _map_plan_detail,
     _map_plan_summary,
     _map_weekly_schedule,
+    resolve_rehab_label_mode,
 )
 from api.services.plan_safety_copy import clarify_restricted_training_hold
 from api.store import AppStore, is_effective_admin_profile
@@ -82,6 +83,9 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             current_training_day=resolve_training_day_str(
                 datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
             ),
+            rehab_label_mode=resolve_rehab_label_mode(
+                store, athlete_id=profile.athlete_id, plan_id=str(plan_row.get("id") or "")
+            ),
         )
         return clarify_restricted_training_hold(detail)
 
@@ -130,6 +134,9 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
             current_training_day=resolve_training_day_str(
                 datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+            ),
+            rehab_label_mode=resolve_rehab_label_mode(
+                store, athlete_id=profile.athlete_id, plan_id=str(plan_row.get("id") or "")
             ),
         )
         return clarify_restricted_training_hold(detail)
@@ -216,6 +223,9 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             plan_source=_lookup_plan_source(store, plan_id),
             current_training_day=resolve_training_day_str(
                 datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+            ),
+            rehab_label_mode=resolve_rehab_label_mode(
+                store, athlete_id=profile.athlete_id, plan_id=plan_id
             ),
         )
         return clarify_restricted_training_hold(detail)
