@@ -716,7 +716,7 @@ function isLowLoadSupportSession(session: StructuredSession | null | undefined):
     return false;
   }
   const title = cleanText(session?.title)?.toLowerCase() ?? "";
-  return SUPPORT_SESSION_TITLE_RE.test(title);
+  return blocks.length === 0 && SUPPORT_SESSION_TITLE_RE.test(title);
 }
 
 function sessionLoadPoints(session: StructuredSession | null | undefined): number {
@@ -744,7 +744,7 @@ function sessionLoadPoints(session: StructuredSession | null | undefined): numbe
     return 2;
   }
 
-  if (/\b(rehab|prehab|mobility|recovery|easy|low)\b/.test(text)) {
+  if (getBlocks(session).length === 0 && /\b(rehab|prehab|mobility|recovery|easy|low)\b/.test(text)) {
     return 1;
   }
 

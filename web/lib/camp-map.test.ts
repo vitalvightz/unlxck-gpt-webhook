@@ -258,6 +258,26 @@ test("weekLoadProxy does not count filler or mobility sessions as high-load days
   assert.equal(weekLoadProxy(week), "Moderate");
 });
 
+test("weekLoadProxy keeps loaded blocks load-bearing when a generic session title mentions mobility", () => {
+  const week = {
+    phase_label: "SPP",
+    days: ["2026-07-10", "2026-07-12", "2026-07-14"].map((date, index) => ({
+      date,
+      day_type: "low",
+      sessions: [
+        {
+          session_id: `loaded-mobility-${index + 1}`,
+          session_type: "skill",
+          title: "Mobility and acceleration",
+          blocks: [{ block_type: "speed_acceleration", display_name: "Acceleration work" }],
+        },
+      ],
+    })),
+  };
+
+  assert.equal(weekLoadProxy(week), "Moderate");
+});
+
 test("weekLoadProxy caps taper weeks at Moderate", () => {
   const week = {
     phase_label: "TAPER",
