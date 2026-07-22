@@ -524,12 +524,62 @@ def _derive_structured_card_state(
     )
 
 
+def resolve_rehab_label_mode(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_id: str,
+) -> str:
+    """Decide whether a plan's rehab work reads as "rehab" or "prehab".
+
+    Source of truth is the athlete's live injury flags — NOT the intake
+    "medically cleared" answer, which says an athlete may train, not that the
+    injury has resolved. Intake injuries are seeded into ``injury_flags`` (with
+    this plan's id), and the Today "Cleared" action stamps them ``resolved``, so
+    the flag table reflects the real current state for both origins.
+
+    Rules (safety-first — an active injury must never read as prehab):
+      * any injury still ``open``/``monitoring`` (for ANY plan) -> "rehab";
+      * otherwise, if this plan had a tracked injury that is now ``resolved``
+        -> "prehab" (the remaining work is prophylactic);
+      * no tracked injuries -> "rehab" (default).
+    """
+    plan_id = str(plan_id or "").strip()
+    if not plan_id:
+        return "rehab"
+    lister = getattr(store, "list_injury_flags", None)
+    if not callable(lister):
+        return "rehab"
+    try:
+        flags = lister(
+            athlete_id, statuses=("open", "monitoring", "resolved"), limit=500
+        ) or []
+    except Exception:  # pragma: no cover - best-effort; never break the plan read
+        return "rehab"
+
+    resolved_for_plan = False
+    for flag in flags:
+        record = flag if isinstance(flag, dict) else {}
+        flag_status = str(record.get("status") or "").strip().lower()
+        # A live injury anywhere on the athlete keeps the honest "rehab" label,
+        # so medically-cleared-but-still-injured never mislabels as prehab.
+        if flag_status in {"open", "monitoring"}:
+            return "rehab"
+        if (
+            flag_status == "resolved"
+            and str(record.get("plan_id") or "").strip() == plan_id
+        ):
+            resolved_for_plan = True
+    return "prehab" if resolved_for_plan else "rehab"
+
+
 def _map_plan_detail(
     row: dict[str, Any],
     *,
     include_admin: bool,
     plan_source: str | None = None,
     current_training_day: date | str | None = None,
+    rehab_label_mode: str = "rehab",
 ) -> PlanDetail:
     summary = _map_plan_summary(row)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
@@ -595,6 +645,7 @@ def _map_plan_detail(
                 PROFILE_REFRESH_FAILED_WHY_LOG_KEY
             )
         ),
+        rehab_label_mode=rehab_label_mode if rehab_label_mode == "prehab" else "rehab",
         admin_outputs=(
             AdminPlanOutputs(
                 coach_notes=str(row.get("coach_notes") or ""),

@@ -13179,6 +13179,17 @@ html[data-theme="light"] .plan-summary-card {
     linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(244, 246, 249, 0.98));
 }
 
+/* The next-session banner's base gradient fades into a near-black panel built
+   for the dark theme; on the light page that reads as an out-of-place black
+   block, and any copy landing past the fade sits dark-on-dark. Re-tone it to a
+   soft brand-red wash over the light surface so the copy (dark --text-primary)
+   and the red CTA stay legible. */
+html[data-theme="light"] .plan-next-session {
+  border-color: color-mix(in srgb, var(--brand-red) 22%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--brand-red) 12%, white), var(--bg-surface) 58%);
+}
+
 html[data-theme="light"] .support-panel,
 html[data-theme="light"] .plan-summary-card,
 html[data-theme="light"] .status-card,
@@ -14668,6 +14679,29 @@ html[data-theme="light"] .today-risk-item[data-tone="info"] {
   border-color: rgba(73, 105, 141, 0.18);
   border-left-color: #49698d;
   background: linear-gradient(135deg, rgba(73, 105, 141, 0.07), rgba(255, 255, 255, 0.62));
+}
+
+/* The risk-watch "!" chips carry the dark theme's pale glyph colours (near-white
+   ink on a faint tint), which all but vanish on the light tinted item
+   backgrounds. Re-ink each tone with its dark colour — mirroring the decision
+   banner's icon overrides — so the warning marker stays legible in light mode. */
+html[data-theme="light"] .today-risk-item[data-tone="stop"] .today-risk-icon,
+html[data-theme="light"] .today-risk-item[data-tone="warning"] .today-risk-icon {
+  border-color: color-mix(in srgb, var(--brand-red) 32%, transparent);
+  background: color-mix(in srgb, var(--brand-red) 12%, white);
+  color: var(--danger-ink, #a50f1e);
+}
+
+html[data-theme="light"] .today-risk-item[data-tone="caution"] .today-risk-icon {
+  border-color: color-mix(in srgb, var(--progress-gold) 40%, transparent);
+  background: color-mix(in srgb, var(--progress-gold) 14%, white);
+  color: var(--progress-gold, #96713b);
+}
+
+html[data-theme="light"] .today-risk-item[data-tone="info"] .today-risk-icon {
+  border-color: color-mix(in srgb, #49698d 32%, transparent);
+  background: color-mix(in srgb, #49698d 12%, white);
+  color: #2b5c8f;
 }
 
 html[data-theme="light"] .today-segment,

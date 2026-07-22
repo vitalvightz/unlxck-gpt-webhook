@@ -622,6 +622,12 @@ export type PlanDetail = PlanSummary & {
   // this plan was built from the submitted intake and the saved profile may be
   // stale. Surfaced as a non-blocking notice in the plan viewer.
   profile_refresh_failed?: boolean;
+  // Whether this plan's rehab work should read as "Rehab" or "Prehab", derived
+  // server-side from the athlete's live injury flags (see resolve_rehab_label_mode
+  // in api/plan_mappers.py). "prehab" only once every tracked injury for the plan
+  // has been resolved; "rehab" otherwise. Absent on legacy payloads → treat as
+  // "rehab".
+  rehab_label_mode?: "rehab" | "prehab";
 };
 
 export type ProgressMilestone = {

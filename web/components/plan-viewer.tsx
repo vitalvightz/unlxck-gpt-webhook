@@ -400,6 +400,7 @@ function TextStructuredPlanRenderer({
   currentDayLabel,
   scheduleContext,
   isAdmin = false,
+  rehabAsPrehab = false,
 }: {
   text: string;
   fightDate?: string | null;
@@ -408,6 +409,7 @@ function TextStructuredPlanRenderer({
   currentDayLabel: string;
   scheduleContext?: PlanDetail["schedule_context"];
   isAdmin?: boolean;
+  rehabAsPrehab?: boolean;
 }) {
   const adaptedPlan = useMemo(
     () => buildStructuredPlanFromText(text, fightDate),
@@ -429,6 +431,7 @@ function TextStructuredPlanRenderer({
       currentDayLabel={currentDayLabel}
       scheduleContext={rendererScheduleContext}
       isAdmin={isAdmin}
+      rehabAsPrehab={rehabAsPrehab}
     />
   );
 }
@@ -1585,6 +1588,13 @@ export function PlanViewer({
         ),
       })
     : null;
+  // Whether the plan's rehab work should read as "Prehab". Decided server-side
+  // from the athlete's live injury flags (resolve_rehab_label_mode), NOT the
+  // intake "medically cleared" answer — an athlete can be cleared to train while
+  // still rehabbing, and the Today "Cleared" action resolves the injury flag
+  // without touching intake. "prehab" only once every tracked injury for the plan
+  // is resolved; legacy payloads omit the field and stay "rehab".
+  const rehabAsPrehab = plan.rehab_label_mode === "prehab";
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
     : "Approve anyway";
@@ -2775,6 +2785,7 @@ export function PlanViewer({
                   completions={planCompletions?.completions}
                   currentTrainingDayIso={currentTrainingDayIso}
                   isAdmin={isViewerAdmin}
+                  rehabAsPrehab={rehabAsPrehab}
                 />
               ) : holdPlanForEnhancedCard ? (
                 <EnhancedCardLockInCard accessToken={accessToken} />
@@ -2807,6 +2818,7 @@ export function PlanViewer({
                     currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
                     scheduleContext={plan.schedule_context}
                     isAdmin={isViewerAdmin}
+                    rehabAsPrehab={rehabAsPrehab}
                   />
                 </>
               )}

@@ -332,6 +332,54 @@ test("surfaces rehab summary while keeping full rehab details collapsed", () => 
   assert.equal(html.includes("Show more (2 blocks)"), true);
 });
 
+test("rehabAsPrehab relabels the rehab summary as Prehab once the injury has cleared", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "GPP",
+        days: [
+          {
+            date: "2026-06-17",
+            countdown_label: "D-34",
+            day_type: "low",
+            sessions: [
+              {
+                session_id: "ses-1",
+                session_type: "conditioning",
+                title: "Assault Bike aerobic steady state + rehab",
+                blocks: [
+                  { block_id: "bike", block_type: "conditioning", display_name: "Easy Assault Bike" },
+                  {
+                    block_id: "rehab",
+                    block_type: "rehab",
+                    display_name: "Neutral-Grip Isometric Holds",
+                    sets: 2,
+                    reps: "12-15 s",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  // Default: an active intake injury keeps the "Rehab" wording.
+  const rehabHtml = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  assert.equal(rehabHtml.includes("Rehab / Mobility"), true);
+  assert.equal(rehabHtml.includes("Prehab / Mobility"), false);
+
+  // Cleared: the same prophylactic work reads as "Prehab".
+  const prehabHtml = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} rehabAsPrehab />);
+  assert.equal(prehabHtml.includes("Prehab / Mobility"), true);
+  assert.equal(prehabHtml.includes("Rehab / Mobility"), false);
+});
+
 test("does not duplicate a rehab insert as a summary once the blocks are expanded", () => {
   // With the full blocks open, every rehab insert renders in full below, so the
   // compact Rehab / Mobility summary must not ALSO print — no two cards for one
