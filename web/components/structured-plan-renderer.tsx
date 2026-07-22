@@ -1359,7 +1359,26 @@ export function RecoveryCard({
   );
 }
 
-/** Horizontal, mobile-scrollable strip of week pills used to pick the week. */
+/** Threshold at which the week rail switches from "share the width evenly" to
+ * "hold a readable width and scroll". Up to this many weeks fit the strip
+ * without scrolling; beyond it the rail shows ~this many per viewport. */
+const WEEK_STRIP_FIT_LIMIT = 4;
+
+/** Horizontal scroll offset that centres a week card within the rail, clamped so
+ * the first cards never scroll past the start. Pure for direct testing — jsdom
+ * reports zero element geometry, so the centring math is verified here rather
+ * than through a rendered layout. */
+export function weekStripCenterOffset(
+  stripWidth: number,
+  pillOffset: number,
+  pillWidth: number,
+): number {
+  return Math.max(0, pillOffset - (stripWidth - pillWidth) / 2);
+}
+
+/** Progression rail of week cards used to pick the week. Up to four weeks share
+ * the strip width evenly (no scroll); five or more hold a readable ~quarter
+ * width and the rail scrolls with snap, auto-centring the active week. */
 function WeekStrip({
   weeks,
   selectedPos,
@@ -1375,8 +1394,38 @@ function WeekStrip({
   completionIndex?: CompletionIndex;
   openOngoing: boolean;
 }) {
+  const stripRef = useRef<HTMLElement>(null);
+  const scrollable = weeks.length > WEEK_STRIP_FIT_LIMIT;
+  // Centre on the week being viewed. `selectedPos` (the parent's `safePos`)
+  // already defaults to the current week until the athlete picks another, so it
+  // covers "land on now" on mount AND re-centres each manual selection — whereas
+  // preferring `currentPos` would pin the target and never move when a different
+  // week is tapped, leaving that card half cut off.
+  const activePos = selectedPos;
+
+  // Bring the active week into view when the rail scrolls. Adjusts only the
+  // horizontal scroll of the strip itself (never scrollIntoView, which could
+  // jump the whole page vertically). No-ops when the rail is not scrollable or
+  // has no layout yet (SSR / jsdom report zero widths).
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip || strip.scrollWidth <= strip.clientWidth) {
+      return;
+    }
+    const pill = strip.querySelector<HTMLElement>(`[data-week-pos="${activePos}"]`);
+    if (!pill) {
+      return;
+    }
+    strip.scrollLeft = weekStripCenterOffset(strip.clientWidth, pill.offsetLeft, pill.clientWidth);
+  }, [activePos, weeks.length]);
+
   return (
-    <nav className="cm-week-strip" aria-label={openOngoing ? "Training block weeks" : "Camp weeks"}>
+    <nav
+      ref={stripRef}
+      className="cm-week-strip"
+      data-scroll={scrollable ? "true" : undefined}
+      aria-label={openOngoing ? "Training block weeks" : "Camp weeks"}
+    >
       {weeks.map((week, pos) => {
         const completion = weekCompletion(week, completionIndex);
         const phase = openOngoing
@@ -1388,10 +1437,12 @@ function WeekStrip({
             : pos + 1;
         const selected = pos === selectedPos;
         const current = pos === currentPos;
+        const phaseLabel = phase ? titleize(phase) : null;
         return (
           <button
             key={cleanText(week.week_id) || `week-${pos}`}
             type="button"
+            data-week-pos={pos}
             className={`cm-week-pill${selected ? " cm-week-pill-selected" : ""}${
               current ? " cm-week-pill-current" : ""
             }`}
@@ -1399,14 +1450,22 @@ function WeekStrip({
             aria-pressed={selected}
             onClick={() => onSelect(pos)}
           >
-            <span className="cm-week-pill-index">W{index}</span>
-            {phase ? <span className="cm-week-pill-phase">{titleize(phase)}</span> : null}
+            <span className="cm-week-pill-head">
+              <span className="cm-week-pill-index">W{index}</span>
+              {current ? <span className="cm-week-pill-dot" aria-hidden="true" /> : null}
+            </span>
+            {phaseLabel ? (
+              <span className="cm-week-pill-phase" title={phaseLabel}>
+                {phaseLabel}
+              </span>
+            ) : null}
             {completion.total > 0 ? (
               <span className="cm-week-pill-completion">
                 {completion.done}/{completion.total}
+                <span className="sr-only"> sessions completed</span>
               </span>
             ) : null}
-            {current ? <span className="cm-week-pill-now">Now</span> : null}
+            {current ? <span className="sr-only">Current week</span> : null}
           </button>
         );
       })}
