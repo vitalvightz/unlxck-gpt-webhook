@@ -309,6 +309,43 @@ test("getWeeks splits a multi-calendar-week late-fight block into weeks", () => 
   assert.equal(new Set(weeks.map((week) => week.week_id)).size, 3);
 });
 
+test("getWeeks labels the final D-7 to D-0 display week as taper", () => {
+  // Regression: a D-15..D-0 late-fight block arrived as one SPP week. The UI
+  // split it into three calendar weeks but copied SPP onto W3 (D-4..D-0).
+  const start = new Date("2026-07-23T00:00:00Z");
+  const days = Array.from({ length: 16 }, (_, index) => {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + index);
+    return {
+      date: date.toISOString().slice(0, 10),
+      countdown_label: `D-${15 - index}`,
+      phase_label: "SPP",
+    };
+  });
+  const weeks = getWeeks({
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        start_date: "2026-07-23",
+        end_date: "2026-08-07",
+        countdown_start: "D-15",
+        countdown_end: "D-0",
+        days,
+      },
+    ],
+  } as never);
+
+  assert.equal(weeks.length, 3);
+  assert.deepEqual(
+    weeks.map((week) => week.phase_label),
+    ["SPP", "SPP", "TAPER"],
+  );
+  assert.equal(weeks[2].countdown_start, "D-4");
+  assert.equal(weeks[2].countdown_end, "D-0");
+});
+
 // --- plan-level active notes ------------------------------------------------
 
 test("getPlanNotes keeps notes with text, drops empties, lowercases category", () => {

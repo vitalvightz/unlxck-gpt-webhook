@@ -235,6 +235,49 @@ function daySpan(startIso: string, endIso: string): number | null {
   return Math.round((end.getTime() - start.getTime()) / 86_400_000);
 }
 
+const SPLIT_WEEK_PHASES = new Set(["GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"]);
+
+function normalizedSplitWeekPhase(value: unknown): string | null {
+  const normalized = cleanText(value)?.toUpperCase().replace(/[\s-]+/g, "_") ?? null;
+  return normalized && SPLIT_WEEK_PHASES.has(normalized) ? normalized : null;
+}
+
+function splitWeekPhaseLabel(week: StructuredWeek, days: StructuredDay[]): string | null | undefined {
+  const dayPhases = days
+    .map((day) => normalizedSplitWeekPhase(day.phase_label))
+    .filter((phase): phase is string => phase !== null);
+
+  // A split display week wholly inside D-7..D-0 is necessarily taper/fight
+  // week. This also repairs older long-block payloads whose day labels all
+  // inherited the source block's SPP value.
+  const countdownDays = days
+    .map((day) => cleanText(day.countdown_label)?.match(/^D-(\d+)$/i)?.[1] ?? null)
+    .filter((value): value is string => value !== null)
+    .map(Number);
+  if (
+    countdownDays.length === days.length &&
+    countdownDays.length > 0 &&
+    countdownDays.every((day) => day >= 0 && day <= 7) &&
+    !dayPhases.includes("FIGHT_WEEK")
+  ) {
+    return "TAPER";
+  }
+
+  if (dayPhases.length > 0) {
+    const counts = new Map<string, number>();
+    for (const phase of dayPhases) {
+      counts.set(phase, (counts.get(phase) ?? 0) + 1);
+    }
+    // Stable tie-break: the later day wins, matching the phase the display week
+    // is moving into as the fight approaches.
+    return [...dayPhases].reverse().reduce((selected, phase) =>
+      (counts.get(phase) ?? 0) > (counts.get(selected) ?? 0) ? phase : selected,
+    );
+  }
+
+  return week.phase_label;
+}
+
 /**
  * Split one plan week into per-calendar-week (Mon–Sun) display weeks.
  *
@@ -305,6 +348,7 @@ function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
     return {
       ...week,
       week_id: `${cleanText(week.week_id) || "week"}-${group.monday}-cw${index + 1}`,
+      phase_label: splitWeekPhaseLabel(week, group.days),
 
       days: group.days,
       start_date: dates[0] ?? week.start_date,
