@@ -2177,8 +2177,8 @@ select:focus-visible {
 
 /* P0-2: decision-led primary command area + reduced secondary. Today's decision,
    the session it affects, and one dominant action lead the first viewport; camp
-   context, progress, the full risk watch and the disclaimer drop to a reduced
-   section below so they stay available without competing with the command. */
+   context, progress and the full risk watch drop to a reduced section below so
+   they stay available without competing with the command. */
 .overview-command-primary {
   gap: 18px;
 }
@@ -2614,15 +2614,6 @@ html[data-theme="light"] .today-caution-row {
 .overview-risk-strongest {
   color: #ff8d9a;
   font-weight: 700;
-}
-
-/* Compact medical disclaimer under the Overview stack. */
-.overview-medical-disclaimer {
-  margin: 2px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.45;
-  opacity: 0.85;
 }
 
 html[data-theme="light"] .today-safe-session {

@@ -40,7 +40,6 @@ import {
   resolveDecisionTier,
   type TodayDecisionTier,
 } from "@/lib/today";
-import { SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import {
   LANDING_OUTCOME_POINTS,
   LANDING_PRODUCT_PROOF_POINTS,
@@ -669,7 +668,6 @@ export default function HomePage() {
           </div>
           <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
           <OverviewRiskWatch risks={risks} tier={decisionTier} />
-          <p className="overview-medical-disclaimer">{SAFETY_DISCLAIMER_TIGHT}</p>
         </section>
       </>
     );
