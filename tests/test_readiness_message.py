@@ -183,7 +183,7 @@ def test_is_support_session_detects_fillers_and_ignores_hard_work():
     assert is_support_session({"support_insert_category": "mobility", "title": "x"}) is True
     # A real loaded session that merely mentions mobility in a warm-up is not a filler.
     assert is_support_session(_session(title="Heavy squat then mobility")) is False
-    assert is_support_session(_session(title="Hard sparring")) is False
+    assert is_support_session(_session(title="Hard sparring", session_type="sparring")) is False
 
 
 def test_support_session_is_safety_first_high_risk_wording_vetoes_structured_signal():
@@ -583,7 +583,7 @@ def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="good", body="sharp", pain="none"),
         ReadinessContext(
-            today_session=_session(title="Sparring and hard conditioning"),
+            today_session=_session(title="Sparring and hard conditioning", session_type="sparring"),
             open_injuries=[
                 {
                     "status": "open",
@@ -606,7 +606,7 @@ def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
 def test_high_pain_returns_rehab_only_guidance():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(pain="high"),
-        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
     )
 
     assert adjustment.decision == "pull_back"
@@ -663,7 +663,7 @@ def test_poor_sleep_plus_flat_body_stacks_two_warnings():
 def test_hard_sparring_only_has_no_warning_sources_or_modify_card():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="good", body="normal", pain="none"),
-        ReadinessContext(today_session=_session(title="Hard sparring")),
+        ReadinessContext(today_session=_session(title="Hard sparring", session_type="sparring")),
     )
 
     assert adjustment.decision == "train_as_planned"
@@ -678,7 +678,7 @@ def test_selected_injury_severity_without_added_injury_is_not_counted():
     # added injury row may count.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="good", body="normal", pain="none"),
-        ReadinessContext(today_session=_session(title="Hard sparring"), open_injuries=()),
+        ReadinessContext(today_session=_session(title="Hard sparring", session_type="sparring"), open_injuries=()),
     )
 
     assert adjustment.decision == "train_as_planned"
@@ -691,13 +691,13 @@ def test_removing_injury_clears_related_warning_source():
     with_injury = build_readiness_adjustment(
         ReadinessCheckin(sleep="good", body="normal", pain="none"),
         ReadinessContext(
-            today_session=_session(title="Hard sparring"),
+            today_session=_session(title="Hard sparring", session_type="sparring"),
             open_injuries=(_injury(None, "mild", label="knee pain"),),
         ),
     )
     without_injury = build_readiness_adjustment(
         ReadinessCheckin(sleep="good", body="normal", pain="none"),
-        ReadinessContext(today_session=_session(title="Hard sparring"), open_injuries=()),
+        ReadinessContext(today_session=_session(title="Hard sparring", session_type="sparring"), open_injuries=()),
     )
 
     assert "tracked_injury_high_risk_session" in with_injury.triggers
@@ -875,7 +875,7 @@ def test_pain_worsening_trend_pulls_back_before_high_risk_work():
                 {"training_day": "2026-06-17", "pain": "manageable"},
                 {"training_day": "2026-06-16", "pain": "none"},
             ),
-            today_session=_session(title="Sparring and hard conditioning"),
+            today_session=_session(title="Sparring and hard conditioning", session_type="sparring"),
         ),
     )
 
@@ -932,7 +932,7 @@ def test_manageable_pain_streak_to_high_pain_still_uses_hard_override():
                 {"training_day": "2026-06-17", "pain": "manageable"},
                 {"training_day": "2026-06-16", "pain": "manageable"},
             ),
-            today_session=_session(title="Sparring and hard conditioning"),
+            today_session=_session(title="Sparring and hard conditioning", session_type="sparring"),
         ),
     )
 
@@ -966,7 +966,7 @@ def test_two_hard_sessions_plus_poor_today_uses_load_trend_message():
 def test_three_soft_warnings_pull_back_before_high_risk_combat_work():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor", body="flat", pain="manageable"),
-        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
     )
 
     assert adjustment.decision == "pull_back"
@@ -1046,7 +1046,7 @@ def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
 def test_high_risk_combat_session_uses_combat_reduction_copy():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),
-        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
     )
 
     assert adjustment.decision == "modify"
@@ -1059,7 +1059,7 @@ def test_high_risk_combat_session_uses_combat_reduction_copy():
 def test_flat_body_high_risk_uses_bag_or_max_output_copy():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(body="flat"),
-        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
     )
 
     assert adjustment.decision == "modify"
@@ -1073,7 +1073,7 @@ def test_manageable_pain_before_high_risk_work_pulls_back():
     # stop-action contradiction). On a lower-risk session it stays a modify.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(pain="manageable"),
-        ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+        ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
     )
 
     assert adjustment.decision == "pull_back"
@@ -1099,7 +1099,7 @@ def test_hyphenated_combat_sports_are_recognized_for_contact_guidance():
             ReadinessCheckin(sleep="poor"),
             ReadinessContext(
                 intake={"athlete": {"technical_style": [style]}},
-                today_session=_session(title="Sparring and hard conditioning"),
+                today_session=_session(title="Sparring and hard conditioning", session_type="sparring"),
             ),
         )
 
@@ -1132,7 +1132,7 @@ def test_fight_week_uses_timing_speed_and_rhythm_copy():
         ReadinessContext(
             training_day="2026-06-18",
             active_plan={"fight_date": "2026-06-21"},
-            today_session=_session(title="Technical boxing rounds"),
+            today_session=_session(title="Technical boxing rounds", session_type="sparring"),
         ),
     )
 
@@ -1166,15 +1166,15 @@ def test_readiness_messages_do_not_use_old_general_training_terms():
         ),
         (
             ReadinessCheckin(sleep="poor"),
-            ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+            ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
         ),
         (
             ReadinessCheckin(body="flat"),
-            ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+            ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
         ),
         (
             ReadinessCheckin(pain="manageable"),
-            ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+            ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
         ),
         (
             ReadinessCheckin(sleep="poor", phase="TAPER"),
@@ -1186,11 +1186,11 @@ def test_readiness_messages_do_not_use_old_general_training_terms():
         ),
         (
             ReadinessCheckin(sleep="good", body="normal", pain="none"),
-            ReadinessContext(today_session=_session(title="Technical boxing rounds")),
+            ReadinessContext(today_session=_session(title="Technical boxing rounds", session_type="sparring")),
         ),
         (
             ReadinessCheckin(sleep="poor", body="flat", pain="manageable"),
-            ReadinessContext(today_session=_session(title="Sparring and hard conditioning")),
+            ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
         ),
     ]
     banned = (
@@ -1232,34 +1232,34 @@ def test_collapsing_warning_pair_does_not_claim_multiple_sources():
     assert "Multiple warning signs are showing: poor sleep and flat body." in reason
 
 
-def test_session_modality_classifies_core_types():
-    # Bare title dicts (no session_type) so the classifier reflects the work named.
-    assert classify_session_modality({"title": "Primary strength anchor"}) == "strength"
-    assert classify_session_modality({"title": "Trap bar deadlift and accessories"}) == "strength"
-    assert classify_session_modality({"title": "Hard sparring"}) == "combat"
-    assert classify_session_modality({"title": "Bike intervals conditioning"}) == "conditioning"
-    # Lifting plus combat/conditioning stays mixed (keeps the combat framing).
-    assert classify_session_modality({"title": "Strength then hard sparring"}) == "mixed"
+def test_session_modality_reads_the_structured_session_type_tag():
+    # Classification comes from the structured session_type tag, not the title.
+    assert classify_session_modality({"session_type": "strength_power"}) == "strength"
+    assert classify_session_modality({"session_type": "sparring"}) == "combat"
+    assert classify_session_modality({"session_type": "fight_or_match"}) == "combat"
+    assert classify_session_modality({"session_type": "skill"}) == "combat"
+    assert classify_session_modality({"session_type": "conditioning"}) == "conditioning"
+    assert classify_session_modality({"session_type": "mixed"}) == "mixed"
+    # Loose aliases upstream also accepts still classify.
+    assert classify_session_modality({"session_type": "strength"}) == "strength"
+    assert classify_session_modality({"session_type": "s&c"}) == "strength"
+    assert classify_session_modality({"session_type": "spar"}) == "combat"
+
+
+def test_session_modality_uses_tag_and_blocks_never_title_text():
+    # The tag is authoritative: a lifting title under a sparring tag is combat, and
+    # a title that merely CONTAINS a keyword ("pressure", "padding") never flips it.
+    assert classify_session_modality({"session_type": "sparring", "title": "Heavy squat and deadlift"}) == "combat"
+    assert classify_session_modality({"session_type": "strength_power", "title": "Boxing footwork"}) == "strength"
+    # No tag, but typed blocks still classify (structured, not text).
+    assert classify_session_modality({"blocks": [{"type": "strength"}, {"type": "accessory"}]}) == "strength"
+    assert classify_session_modality({"blocks": [{"type": "strength"}, {"type": "sparring"}]}) == "mixed"
+    assert classify_session_modality({"blocks": [{"type": "conditioning"}]}) == "conditioning"
+    # A title alone (no tag, no typed blocks) no longer classifies -> combat default.
+    assert classify_session_modality({"title": "Pressure and padding drills"}) == "unknown"
+    assert classify_session_modality({"title": "Primary strength anchor"}) == "unknown"
+    assert classify_session_modality({}) == "unknown"
     assert classify_session_modality(None) == "unknown"
-
-
-def test_session_modality_matches_on_word_boundaries_not_substrings():
-    # Words that merely CONTAIN a keyword must not flip the framing: "press" in
-    # "pressure", "pad" in "padding", "erg" in "energy", "run" in "run-through",
-    # and the deliberately-dropped ambiguous words "clean" / "skill".
-    for title in (
-        "Pressure management review",
-        "Padding and equipment check",
-        "Energy system education",
-        "Run-through of the tactical plan",
-        "Clean technique review",
-        "Skill acquisition theory",
-    ):
-        assert classify_session_modality({"title": title}) == "unknown", title
-    # Real inflected forms still classify via word/stem matching.
-    assert classify_session_modality({"title": "Barbell rows and presses"}) == "strength"
-    assert classify_session_modality({"title": "Throwing combinations on the pads"}) == "combat"
-    assert classify_session_modality({"title": "Wrestling and grappling live"}) == "combat"
 
 
 def test_strength_stacked_warnings_reason_matches_strength_action():
@@ -1297,7 +1297,7 @@ def test_combat_session_poor_sleep_still_uses_rounds():
     # Regression: the combat framing is unchanged for a combat/mixed session.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),
-        ReadinessContext(today_session=_session(title="Hard sparring")),
+        ReadinessContext(today_session=_session(title="Hard sparring", session_type="sparring")),
     )
 
     assert adjustment.decision == "modify"
