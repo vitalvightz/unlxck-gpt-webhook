@@ -80,9 +80,21 @@ jobs:
             requirements-dev.txt
 
       - name: Install test dependencies
+        env:
+          # Give pip its own network resilience; the loop below is the belt-and-
+          # braces for a transient 5xx on the GitHub-hosted en_core_web_sm wheel.
+          PIP_RETRIES: "5"
+          PIP_DEFAULT_TIMEOUT: "60"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          n=0
+          until pip install -r requirements-dev.txt; do
+            n=$((n + 1))
+            if [ "$n" -ge 3 ]; then
+              echo "pip install failed after $n attempts"; exit 1
+            fi
+            echo "Transient install failure; retry $n in $((n * 15))s..."; sleep $((n * 15))
+          done
           pip check
 
       - name: Run full pytest suite
@@ -107,9 +119,20 @@ jobs:
             requirements-dev.txt
 
       - name: Install runtime + test dependencies
+        env:
+          # See test-full-suite: retry a transient 5xx on the GitHub-hosted wheel.
+          PIP_RETRIES: "5"
+          PIP_DEFAULT_TIMEOUT: "60"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          n=0
+          until pip install -r requirements-dev.txt; do
+            n=$((n + 1))
+            if [ "$n" -ge 3 ]; then
+              echo "pip install failed after $n attempts"; exit 1
+            fi
+            echo "Transient install failure; retry $n in $((n * 15))s..."; sleep $((n * 15))
+          done
           pip check
 
       - name: Run generation/runtime regression suite
