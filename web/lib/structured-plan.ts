@@ -38,6 +38,14 @@ export function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value.filter((item) => item != null) : [];
 }
 
+/** Capitalise the first character so a mental cue reads as a sentence
+ * ("stop if breathing becomes heavy" -> "Stop if breathing becomes heavy").
+ * Only the first character is touched, so acronyms and the rest of the phrase
+ * are left exactly as authored. */
+function capitalizeFirst(value: string): string {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
+
 /**
  * Whether to render the structured UI instead of the plan_text fallback.
  * True only when structured_plan is an object with at least one week. Malformed
@@ -414,11 +422,14 @@ export function getMindsetLines(
   const reset = cleanText(anchor.reset_cue);
   const confidence = cleanText(anchor.confidence_anchor);
   const context = cleanText(anchor.context);
-  if (intent) lines.push({ label: "Intent", value: intent });
-  if (focus) lines.push({ label: "Focus", value: focus });
-  if (reset) lines.push({ label: "Reset", value: reset });
-  if (confidence) lines.push({ label: "Confidence", value: confidence });
-  if (context) lines.push({ label: "Context", value: context });
+  // Cues are authored inconsistently (some sentence-case, most lower-case); the
+  // card reads better when each one starts with a capital, so normalise the first
+  // letter for display without touching the rest of the phrase.
+  if (intent) lines.push({ label: "Intent", value: capitalizeFirst(intent) });
+  if (focus) lines.push({ label: "Focus", value: capitalizeFirst(focus) });
+  if (reset) lines.push({ label: "Reset", value: capitalizeFirst(reset) });
+  if (confidence) lines.push({ label: "Confidence", value: capitalizeFirst(confidence) });
+  if (context) lines.push({ label: "Context", value: capitalizeFirst(context) });
   return lines;
 }
 
