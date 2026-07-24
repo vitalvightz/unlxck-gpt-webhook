@@ -13,6 +13,13 @@ import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
 import { normalizeInjuryLabel } from "@/lib/injury-display";
+import { TODAY_INJURY_DETAIL_MAX } from "@/lib/input-limits";
+import {
+  NO_TODAY_INJURY_TYPE,
+  TODAY_INJURY_TYPE_OPTIONS,
+  type TodayInjuryTypeSelection,
+  composeTodayInjuryDescription,
+} from "@/lib/today-injury-input";
 import type {
   InjuryFlagRecord,
   InjuryFlagSeverity,
@@ -92,6 +99,8 @@ export function TodayInjuryManager({
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
+  const [newType, setNewType] = useState<TodayInjuryTypeSelection>(NO_TODAY_INJURY_TYPE);
+  const [newDetail, setNewDetail] = useState("");
   const [newZone, setNewZone] = useState("");
   const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
@@ -152,14 +161,21 @@ export function TodayInjuryManager({
   async function addInjury(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const area = newArea.trim();
-    if (!area || isAdding) {
+    // A type is a required, explicit choice — an area alone can no longer submit a
+    // blank report. ("Other" is a valid choice; it just carries no condition word.)
+    if (!area || !newType || isAdding) {
       return;
     }
     setIsAdding(true);
     try {
-      await submit([{ body_area: area, severity: newSeverity, status: "ongoing" }]);
+      const description = composeTodayInjuryDescription({ injuryType: newType, detail: newDetail });
+      await submit([
+        { body_area: area, description, severity: newSeverity, status: "ongoing" },
+      ]);
       setNewArea("");
       setNewSeverity("moderate");
+      setNewType(NO_TODAY_INJURY_TYPE);
+      setNewDetail("");
       setNewZone("");
       showToast("Injury added.", { tone: "success" });
     } catch (error) {
@@ -185,6 +201,8 @@ export function TodayInjuryManager({
     setNewArea("");
     setNewZone("");
     setNewSeverity("moderate");
+    setNewType(NO_TODAY_INJURY_TYPE);
+    setNewDetail("");
   }
 
   return (
@@ -308,7 +326,7 @@ export function TodayInjuryManager({
             id="today-injury-area"
             value={newArea}
             maxLength={200}
-            placeholder="e.g. left shoulder bruise"
+            placeholder="e.g. left shoulder"
             onChange={(event) => {
               const value = event.target.value;
               setNewArea(value);
@@ -319,6 +337,22 @@ export function TodayInjuryManager({
           />
         </label>
         <SegmentGroup
+          label="Type"
+          value={newType}
+          options={TODAY_INJURY_TYPE_OPTIONS}
+          onChange={setNewType}
+        />
+        <div className="field today-injury-detail">
+          <label htmlFor="today-injury-detail">Anything else? — optional</label>
+          <input
+            id="today-injury-detail"
+            value={newDetail}
+            maxLength={TODAY_INJURY_DETAIL_MAX}
+            placeholder="e.g. worse when sprinting"
+            onChange={(event) => setNewDetail(event.target.value)}
+          />
+        </div>
+        <SegmentGroup
           label="Severity"
           value={newSeverity}
           options={INJURY_SEVERITY_OPTIONS}
@@ -327,7 +361,7 @@ export function TodayInjuryManager({
         <button
           type="submit"
           className="secondary-button"
-          disabled={isAdding || !newArea.trim()}
+          disabled={isAdding || !newArea.trim() || !newType}
         >
           {isAdding ? "Adding..." : "Add injury"}
         </button>
