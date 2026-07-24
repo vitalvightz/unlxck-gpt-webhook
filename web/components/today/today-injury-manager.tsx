@@ -13,12 +13,13 @@ import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
 import { normalizeInjuryLabel } from "@/lib/injury-display";
-import { TODAY_INJURY_DETAIL_MAX } from "@/lib/input-limits";
+import { TODAY_INJURY_TEXT_MAX } from "@/lib/input-limits";
 import {
   NO_TODAY_INJURY_TYPE,
   TODAY_INJURY_TYPE_OPTIONS,
   type TodayInjuryTypeSelection,
   composeTodayInjuryDescription,
+  limitInjuryEntryText,
 } from "@/lib/today-injury-input";
 import type {
   InjuryFlagRecord,
@@ -325,10 +326,10 @@ export function TodayInjuryManager({
           <input
             id="today-injury-area"
             value={newArea}
-            maxLength={200}
+            maxLength={TODAY_INJURY_TEXT_MAX}
             placeholder="e.g. left shoulder"
             onChange={(event) => {
-              const value = event.target.value;
+              const value = limitInjuryEntryText(event.target.value);
               setNewArea(value);
               if (!value.trim()) {
                 setNewZone("");
@@ -348,9 +349,9 @@ export function TodayInjuryManager({
           <input
             id="today-injury-detail"
             value={newDetail}
-            maxLength={TODAY_INJURY_DETAIL_MAX}
+            maxLength={TODAY_INJURY_TEXT_MAX}
             placeholder="e.g. worse when sprinting"
-            onChange={(event) => setNewDetail(event.target.value)}
+            onChange={(event) => setNewDetail(limitInjuryEntryText(event.target.value))}
           />
         </div>
         <SegmentGroup

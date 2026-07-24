@@ -27,7 +27,25 @@
 // (``build_injury_label``) and the safety consequence tier — so no new backend
 // field is needed.
 
+import { TODAY_INJURY_MAX_WORDS, TODAY_INJURY_TEXT_MAX } from "./input-limits.ts";
+
 export type TodayInjuryType = "soreness" | "tightness" | "bruise" | "other";
+
+/**
+ * Clamp a daily-check-in injury text entry to the character and word caps
+ * (`TODAY_INJURY_TEXT_MAX` / `TODAY_INJURY_MAX_WORDS`). Enforced as the athlete
+ * types so a report stays a terse phrase, not a paragraph. A trailing space while
+ * still under the word cap is preserved (so the next word can be started); once
+ * the cap is exceeded the extra words are dropped.
+ */
+export function limitInjuryEntryText(value: string): string {
+  const capped = value.slice(0, TODAY_INJURY_TEXT_MAX);
+  const words = capped.split(/\s+/).filter(Boolean);
+  if (words.length <= TODAY_INJURY_MAX_WORDS) {
+    return capped;
+  }
+  return words.slice(0, TODAY_INJURY_MAX_WORDS).join(" ");
+}
 
 // Form-state type: "" is the unselected state, since a type must be chosen
 // explicitly before the report can be added (no default selection).

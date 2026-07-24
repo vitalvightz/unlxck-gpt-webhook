@@ -5,6 +5,7 @@ import {
   NO_TODAY_INJURY_TYPE,
   TODAY_INJURY_TYPE_OPTIONS,
   composeTodayInjuryDescription,
+  limitInjuryEntryText,
 } from "./today-injury-input.ts";
 
 test("only minor, non-escalating types plus Other are offered", () => {
@@ -49,4 +50,22 @@ test("detail whitespace is collapsed and trimmed", () => {
     composeTodayInjuryDescription({ injuryType: "tightness", detail: "  eased   overnight  " }),
     "tightness. eased overnight",
   );
+});
+
+test("limitInjuryEntryText keeps entries within the word and character caps", () => {
+  // Under both caps: passed through unchanged.
+  assert.equal(limitInjuryEntryText("left shoulder"), "left shoulder");
+  // Exactly 3 words is allowed.
+  assert.equal(limitInjuryEntryText("left shoulder bruise"), "left shoulder bruise");
+  // A 4th word is dropped.
+  assert.equal(limitInjuryEntryText("left shoulder bruise ache"), "left shoulder bruise");
+  // A trailing space while under the word cap is preserved (next word can start).
+  assert.equal(limitInjuryEntryText("left "), "left ");
+});
+
+test("limitInjuryEntryText caps at 30 characters", () => {
+  const long = "abcdefghij klmnopqrst uvwxyzabcd"; // 31 chars, 3 words
+  const result = limitInjuryEntryText(long);
+  assert.equal(result.length, 30);
+  assert.equal(result, "abcdefghij klmnopqrst uvwxyzab");
 });
