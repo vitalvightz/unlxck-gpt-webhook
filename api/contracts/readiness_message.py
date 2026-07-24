@@ -309,9 +309,12 @@ def classify_session_modality(session: Mapping[str, Any] | None) -> Modality:
     if not isinstance(session, Mapping) or not session:
         return "unknown"
     mapped = _MODALITY_BY_SESSION_TYPE.get(_clean(session.get("session_type")).lower())
-    if mapped is not None:
+    # A concrete tag is final. "mixed" is deliberately NOT final: its blocks may
+    # reveal a single-modality session (e.g. all-strength), so consult them and
+    # settle for "mixed" only when the blocks add nothing more specific.
+    if mapped is not None and mapped != "mixed":
         return mapped
-    return _modality_from_blocks(session) or "unknown"
+    return _modality_from_blocks(session) or mapped or "unknown"
 
 
 # Distinctive labels/roles for the plan's low-cost "filler" support inserts

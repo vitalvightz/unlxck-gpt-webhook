@@ -1262,6 +1262,26 @@ def test_session_modality_uses_tag_and_blocks_never_title_text():
     assert classify_session_modality(None) == "unknown"
 
 
+def test_mixed_session_type_defers_to_block_types():
+    # "mixed" is not final: single-modality blocks refine it, a genuine mix keeps
+    # it, and blocks with no work-type leave it "mixed".
+    strength_blocks = [{"type": "strength"}, {"type": "accessory"}]
+    assert classify_session_modality({"session_type": "mixed", "blocks": strength_blocks}) == "strength"
+    both_blocks = [{"type": "strength"}, {"type": "sparring"}]
+    assert classify_session_modality({"session_type": "mixed", "blocks": both_blocks}) == "mixed"
+    # cooldown/mindset blocks carry no work-type signal -> stays "mixed".
+    assert classify_session_modality({"session_type": "mixed", "blocks": [{"type": "mindset"}]}) == "mixed"
+    assert classify_session_modality({"session_type": "mixed"}) == "mixed"
+
+
+def test_strength_and_conditioning_alias_maps_to_strength_like_upstream():
+    # Upstream normalises "s&c" / "strength_and_conditioning" to strength_power
+    # (api/structured_plan_generation.py _SESSION_TYPE_ALIASES), so we match that
+    # decision: strength framing (sets / load), not mixed.
+    assert classify_session_modality({"session_type": "strength_and_conditioning"}) == "strength"
+    assert classify_session_modality({"session_type": "s&c"}) == "strength"
+
+
 def test_strength_stacked_warnings_reason_matches_strength_action():
     # Two warnings on a strength session must not read "reduce combat work" above a
     # "cut your sets" action — the reason and action share the same lever.
