@@ -152,35 +152,54 @@ jobs:
                 } > "$LOG_FILE" 2>&1
                 echo "Saved failure diagnostics to ${LOG_FILE}." >&2
 
-                # Restore the previous source and containers. Stop the worker
-                # first so only one queue consumer exists during the swap.
-                docker compose stop worker
-                git reset --hard "$PREVIOUS_COMMIT" \
-                  || echo "ROLLBACK ERROR: git reset to ${PREVIOUS_COMMIT} failed." >&2
-                docker compose config --quiet \
-                  || echo "ROLLBACK ERROR: compose config invalid at ${PREVIOUS_COMMIT}." >&2
-                docker compose up -d --build --remove-orphans \
-                  || echo "ROLLBACK ERROR: compose up failed during rollback." >&2
+                # Restore the previous source and containers. Every step must
+                # succeed: a rollback that leaves the old (healthy) containers
+                # running but fails to restore the source must NOT be reported
+                # as a successful restore.
+                #
+                # Stop the worker first so only one queue consumer exists during
+                # the swap (best-effort: a stop failure is not itself fatal).
+                rollback_steps_ok=true
+                docker compose stop worker || true
 
-                # Verify BOTH the API and the worker after rollback.
+                if ! git reset --hard "$PREVIOUS_COMMIT"; then
+                  echo "ROLLBACK ERROR: git reset to ${PREVIOUS_COMMIT} failed." >&2
+                  rollback_steps_ok=false
+                fi
+                if [ "$(git rev-parse HEAD 2>/dev/null)" != "$PREVIOUS_COMMIT" ]; then
+                  echo "ROLLBACK ERROR: source is not at ${PREVIOUS_COMMIT} after reset (HEAD=$(git rev-parse HEAD 2>/dev/null))." >&2
+                  rollback_steps_ok=false
+                fi
+                if ! docker compose config --quiet; then
+                  echo "ROLLBACK ERROR: compose config invalid at ${PREVIOUS_COMMIT}." >&2
+                  rollback_steps_ok=false
+                fi
+                if ! docker compose up -d --build --remove-orphans; then
+                  echo "ROLLBACK ERROR: compose up failed during rollback." >&2
+                  rollback_steps_ok=false
+                fi
+
+                # Only after every restore step succeeded do we probe the
+                # services; a false restore must never pass on the strength of
+                # the previous containers still answering.
                 rollback_ok=false
-                for attempt in $(seq 1 18); do
-                  if api_healthy; then
-                    if worker_running; then
+                if [ "$rollback_steps_ok" = true ]; then
+                  for attempt in $(seq 1 18); do
+                    if api_healthy && worker_running && caddy_running; then
                       rollback_ok=true
                       break
                     fi
-                    echo "Rollback: API healthy but worker not running yet (${attempt}/18)." >&2
-                  else
-                    echo "Rollback: waiting for API health (${attempt}/18)." >&2
-                  fi
-                  sleep 5
-                done
+                    echo "Rollback: waiting for restored API, worker and caddy (${attempt}/18)." >&2
+                    sleep 5
+                  done
+                else
+                  echo "Rollback: one or more restore steps failed; not treating the deployment as restored." >&2
+                fi
 
                 if [ "$rollback_ok" = true ]; then
-                  echo "Rollback successful: restored ${PREVIOUS_COMMIT} (API healthy, worker running)." >&2
+                  echo "Rollback successful: source restored to ${PREVIOUS_COMMIT}; API healthy, worker and caddy running." >&2
                 else
-                  echo "ROLLBACK FAILED: API and/or worker not healthy after restoring ${PREVIOUS_COMMIT}." >&2
+                  echo "ROLLBACK FAILED: could not fully restore ${PREVIOUS_COMMIT} (source, API, worker and/or caddy not verified)." >&2
                   docker compose ps >&2
                   docker compose logs --tail=200 api worker caddy >&2
                 fi
