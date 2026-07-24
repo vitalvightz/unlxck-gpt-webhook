@@ -5,6 +5,7 @@ import {
   NO_TODAY_INJURY_TYPE,
   TODAY_INJURY_TYPE_OPTIONS,
   composeTodayInjuryDescription,
+  isInjuryEntryLimited,
   limitInjuryEntryText,
 } from "./today-injury-input.ts";
 
@@ -52,20 +53,28 @@ test("detail whitespace is collapsed and trimmed", () => {
   );
 });
 
-test("limitInjuryEntryText keeps entries within the word and character caps", () => {
-  // Under both caps: passed through unchanged.
+test("limitInjuryEntryText allows real 4-word locations", () => {
   assert.equal(limitInjuryEntryText("left shoulder"), "left shoulder");
-  // Exactly 3 words is allowed.
-  assert.equal(limitInjuryEntryText("left shoulder bruise"), "left shoulder bruise");
-  // A 4th word is dropped.
-  assert.equal(limitInjuryEntryText("left shoulder bruise ache"), "left shoulder bruise");
+  // 4 words is allowed, so the body part is never lost.
+  assert.equal(limitInjuryEntryText("back of left knee"), "back of left knee");
+  assert.equal(limitInjuryEntryText("outside of right ankle"), "outside of right ankle");
+  // A 5th word is dropped.
+  assert.equal(limitInjuryEntryText("back of left knee area"), "back of left knee");
   // A trailing space while under the word cap is preserved (next word can start).
   assert.equal(limitInjuryEntryText("left "), "left ");
 });
 
-test("limitInjuryEntryText caps at 30 characters", () => {
-  const long = "abcdefghij klmnopqrst uvwxyzabcd"; // 31 chars, 3 words
-  const result = limitInjuryEntryText(long);
-  assert.equal(result.length, 30);
-  assert.equal(result, "abcdefghij klmnopqrst uvwxyzab");
+test("limitInjuryEntryText caps at 40 characters on a word boundary", () => {
+  // Four 10-char words = 43 chars > 40; the 4th word is dropped whole, not cut.
+  const input = "aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd";
+  const result = limitInjuryEntryText(input);
+  assert.ok(result.length <= 40, `expected <=40, got ${result.length}`);
+  assert.equal(result, "aaaaaaaaaa bbbbbbbbbb cccccccccc");
+  // A single word longer than the cap has no boundary, so it is hard-cut.
+  assert.equal(limitInjuryEntryText("x".repeat(45)).length, 40);
+});
+
+test("isInjuryEntryLimited flags only entries that were actually trimmed", () => {
+  assert.equal(isInjuryEntryLimited("back of left knee"), false);
+  assert.equal(isInjuryEntryLimited("back of left knee area"), true);
 });

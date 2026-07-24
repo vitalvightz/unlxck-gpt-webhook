@@ -7285,6 +7285,16 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   background: rgba(181, 18, 43, 0.08);
 }
 
+/* Word/character-cap hint under the injury text inputs. Muted while informational,
+   brand-red when the cap was actually hit so a dropped word is never a surprise. */
+.today-injury-limit-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.today-injury-limit-hint[data-limit-hit="true"] {
+  color: var(--brand-red);
+}
+
 .today-injury-selection-clear {
   display: inline-flex;
   align-items: center;

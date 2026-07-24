@@ -13,12 +13,13 @@ import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
 import { normalizeInjuryLabel } from "@/lib/injury-display";
-import { TODAY_INJURY_TEXT_MAX } from "@/lib/input-limits";
+import { TODAY_INJURY_MAX_WORDS } from "@/lib/input-limits";
 import {
   NO_TODAY_INJURY_TYPE,
   TODAY_INJURY_TYPE_OPTIONS,
   type TodayInjuryTypeSelection,
   composeTodayInjuryDescription,
+  isInjuryEntryLimited,
   limitInjuryEntryText,
 } from "@/lib/today-injury-input";
 import type {
@@ -102,6 +103,10 @@ export function TodayInjuryManager({
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
   const [newType, setNewType] = useState<TodayInjuryTypeSelection>(NO_TODAY_INJURY_TYPE);
   const [newDetail, setNewDetail] = useState("");
+  // Whether the last edit hit the word/character cap, so the hint can explain the
+  // trim instead of a word silently vanishing.
+  const [areaLimited, setAreaLimited] = useState(false);
+  const [detailLimited, setDetailLimited] = useState(false);
   const [newZone, setNewZone] = useState("");
   const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
@@ -177,6 +182,8 @@ export function TodayInjuryManager({
       setNewSeverity("moderate");
       setNewType(NO_TODAY_INJURY_TYPE);
       setNewDetail("");
+      setAreaLimited(false);
+      setDetailLimited(false);
       setNewZone("");
       showToast("Injury added.", { tone: "success" });
     } catch (error) {
@@ -190,7 +197,11 @@ export function TodayInjuryManager({
     const sameZone = newZone === zone;
     setNewZone(zone);
     if (!sameZone || !newArea.trim()) {
-      setNewArea(label);
+      // Body-map labels go through the same cap as typed text so an inserted label
+      // can never exceed the limit either.
+      const limited = limitInjuryEntryText(label);
+      setNewArea(limited);
+      setAreaLimited(limited !== label);
     }
     setNewSeverity((current) => (sameZone ? cycleInjuryFlagSeverity(current) : "mild"));
   }
@@ -204,6 +215,8 @@ export function TodayInjuryManager({
     setNewSeverity("moderate");
     setNewType(NO_TODAY_INJURY_TYPE);
     setNewDetail("");
+    setAreaLimited(false);
+    setDetailLimited(false);
   }
 
   return (
@@ -326,16 +339,27 @@ export function TodayInjuryManager({
           <input
             id="today-injury-area"
             value={newArea}
-            maxLength={TODAY_INJURY_TEXT_MAX}
+            spellCheck
             placeholder="e.g. left shoulder"
             onChange={(event) => {
-              const value = limitInjuryEntryText(event.target.value);
+              const raw = event.target.value;
+              const value = limitInjuryEntryText(raw);
+              setAreaLimited(value !== raw);
               setNewArea(value);
               if (!value.trim()) {
                 setNewZone("");
               }
             }}
           />
+          <small
+            className="today-injury-limit-hint"
+            data-limit-hit={areaLimited}
+            aria-live="polite"
+          >
+            {areaLimited
+              ? `${TODAY_INJURY_MAX_WORDS}-word limit — extra removed`
+              : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
+          </small>
         </label>
         <SegmentGroup
           label="Type"
@@ -349,10 +373,23 @@ export function TodayInjuryManager({
           <input
             id="today-injury-detail"
             value={newDetail}
-            maxLength={TODAY_INJURY_TEXT_MAX}
+            spellCheck
             placeholder="e.g. worse when sprinting"
-            onChange={(event) => setNewDetail(limitInjuryEntryText(event.target.value))}
+            onChange={(event) => {
+              const raw = event.target.value;
+              setDetailLimited(isInjuryEntryLimited(raw));
+              setNewDetail(limitInjuryEntryText(raw));
+            }}
           />
+          <small
+            className="today-injury-limit-hint"
+            data-limit-hit={detailLimited}
+            aria-live="polite"
+          >
+            {detailLimited
+              ? `${TODAY_INJURY_MAX_WORDS}-word limit — extra removed`
+              : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
+          </small>
         </div>
         <SegmentGroup
           label="Severity"
