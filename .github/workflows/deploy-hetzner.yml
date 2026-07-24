@@ -90,8 +90,11 @@ jobs:
                   if curl --fail --silent --show-error --max-time 10 \
                     https://unlxck-staging.167.233.47.121.sslip.io/health; then
                     echo
-                    echo "Rollback successful."
-                    exit "$exit_code"
+                    if test -n "$(docker compose ps --status running -q worker)"; then
+                      echo "Rollback successful."
+                      exit "$exit_code"
+                    fi
+                    echo "Rollback API is healthy, but worker is not running."
                   fi
                   echo "Waiting for rollback health check: $attempt/12"
                   sleep 5
@@ -122,10 +125,13 @@ jobs:
                 if curl --fail --silent --show-error --max-time 10 \
                   https://unlxck-staging.167.233.47.121.sslip.io/health; then
                   echo
-                  DEPLOYMENT_SUCCEEDED=true
-                  echo "Deployment successful: $ACTUAL_COMMIT"
-                  docker compose ps
-                  exit 0
+                  if test -n "$(docker compose ps --status running -q worker)"; then
+                    DEPLOYMENT_SUCCEEDED=true
+                    echo "Deployment successful: $ACTUAL_COMMIT"
+                    docker compose ps
+                    exit 0
+                  fi
+                  echo "API is healthy, but worker is not running."
                 fi
                 echo "Waiting for health check: $attempt/12"
                 sleep 5
