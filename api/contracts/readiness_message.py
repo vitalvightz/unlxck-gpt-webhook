@@ -8,7 +8,6 @@ decision plus the athlete-facing adjustment message.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Literal, Mapping, Sequence
@@ -233,123 +232,60 @@ def classify_session_risk(session: Mapping[str, Any] | None) -> SessionRisk:
     return "medium"
 
 
-# Modality keyword sets, matched against the same session text as risk. Matched
-# on WORD BOUNDARIES, not raw substrings, so "press" never fires on "pressure",
-# "row" not on "throw", "erg" not on "energy", "run" not on "run-through". Two
-# groups: whole "words" (a trailing plural / -ing / -ed is tolerated, so "squat"
-# also catches "squats") and true "stems" matched as a prefix (so "spar" catches
-# "sparring" and "wrestl" catches "wrestling"). Ambiguous bare words that name a
-# quality rather than the work — "clean" (technique vs. the lift), "carry",
-# "skill", bare "run" — are intentionally omitted; the specific lift/strike terms
-# still classify the session.
-_STRENGTH_MODALITY_WORDS = (
-    "strength",
-    "deadlift",
-    "rdl",
-    "squat",
-    "hinge",
-    "bench",
-    "press",
-    "row",
-    "chin-up",
-    "chin up",
-    "pull-up",
-    "pull up",
-    "pullup",
-    "curl",
-    "loaded carry",
-    "lunge",
-    "split squat",
-    "step-up",
-    "step up",
-    "hip thrust",
-    "snatch",
-    "power clean",
-    "hang clean",
-    "trap bar",
-    "accessory",
-    "accessories",
-    "lift",
-    "1rm",
-    "max load",
-    "heavy lower",
-    "heavy press",
-    "heavy squat",
-    "heavy pull",
-)
-_STRENGTH_MODALITY_STEMS: tuple[str, ...] = ()
-_COMBAT_MODALITY_WORDS = (
-    "bag",
-    "pad",
-    "pads",
-    "mitt",
-    "mitts",
-    "punch",
-    "jab",
-    "cross",
-    "hook",
-    "uppercut",
-    "kick",
-    "clinch",
-    "boxing",
-    "striking",
-    "combination",
-    "combo",
-    "takedown",
-    "sprawl",
-)
-_COMBAT_MODALITY_STEMS = ("spar", "wrestl", "grappl", "shadow")
-_CONDITIONING_MODALITY_WORDS = (
-    "conditioning",
-    "hiit",
-    "aerobic",
-    "anaerobic",
-    "assault bike",
-    "row erg",
-    "erg",
-    "running",
-    "sprint",
-    "interval",
-    "circuit",
-    "tempo",
-    "gasser",
-    "shuttle",
-)
-_CONDITIONING_MODALITY_STEMS: tuple[str, ...] = ()
+# Modality is read from the STRUCTURED session tag the plan generator already
+# stamps on every session (SessionType in api/structured_plan_models.py) — not by
+# scanning the title text — so it is exact and never trips on a substring. Only the
+# axis that changes the copy matters: strength is dosed in sets / load / reps in
+# reserve, everything else in rounds / intensity.
+_MODALITY_BY_SESSION_TYPE: dict[str, Modality] = {
+    # Canonical SessionType values.
+    "strength_power": "strength",
+    "conditioning": "conditioning",
+    "skill": "combat",
+    "sparring": "combat",
+    "fight_or_match": "combat",
+    "mixed": "mixed",
+    # Loose aliases upstream also accepts (see _SESSION_TYPE_ALIASES in
+    # api/structured_plan_generation.py) — mapped here too so a value that has not
+    # been normalised yet still classifies.
+    "strength": "strength",
+    "power": "strength",
+    "strength_and_conditioning": "strength",
+    "s&c": "strength",
+    "cardio": "conditioning",
+    "spar": "combat",
+    "fight": "combat",
+    "match": "combat",
+    "technical": "combat",
+    # primer / recovery / rehab / rest carry no framing signal and fall through to
+    # the block-level types below.
+}
+
+# Block types (BlockType in api/structured_plan_models.py), consulted only when the
+# session tag is missing or ambiguous ("mixed"/"primer"/…): the blocks still say
+# what the athlete is actually doing.
+_STRENGTH_BLOCK_TYPES = frozenset({"strength", "strength_speed", "plyometric_power", "accessory"})
+_COMBAT_BLOCK_TYPES = frozenset({"sparring", "skill"})
+_CONDITIONING_BLOCK_TYPES = frozenset({"conditioning"})
 
 
-def _compile_modality(words: tuple[str, ...], stems: tuple[str, ...]) -> "re.Pattern[str]":
-    """Build a word-boundary matcher: whole `words` (plural/-ing/-ed tolerated)
-    plus `stems` matched as a prefix. Longest alternatives first so a phrase like
-    'assault bike' is tried before a bare word it contains."""
-    parts: list[str] = []
-    if words:
-        joined = "|".join(sorted((re.escape(w) for w in words), key=len, reverse=True))
-        parts.append(rf"\b(?:{joined})(?:es|s|ed|ing)?\b")
-    if stems:
-        joined = "|".join(sorted((re.escape(s) for s in stems), key=len, reverse=True))
-        parts.append(rf"\b(?:{joined})\w*")
-    return re.compile("|".join(parts))
-
-
-_STRENGTH_MODALITY_RE = _compile_modality(_STRENGTH_MODALITY_WORDS, _STRENGTH_MODALITY_STEMS)
-_COMBAT_MODALITY_RE = _compile_modality(_COMBAT_MODALITY_WORDS, _COMBAT_MODALITY_STEMS)
-_CONDITIONING_MODALITY_RE = _compile_modality(_CONDITIONING_MODALITY_WORDS, _CONDITIONING_MODALITY_STEMS)
-
-
-def classify_session_modality(session: Mapping[str, Any] | None) -> Modality:
-    """Coarse modality for copy framing only (never for safety gating).
-
-    "strength" only when the session reads as lifting with no combat/conditioning
-    signal; lifting alongside combat/conditioning stays "mixed" so the default
-    combat framing (which still fits the non-lifting half) is used.
-    """
-    text = _session_text(session)
-    if not text:
-        return "unknown"
-    strength = bool(_STRENGTH_MODALITY_RE.search(text))
-    combat = bool(_COMBAT_MODALITY_RE.search(text))
-    conditioning = bool(_CONDITIONING_MODALITY_RE.search(text))
+def _modality_from_blocks(session: Mapping[str, Any]) -> Modality | None:
+    """Derive modality from the session's structured block types, or ``None`` when
+    no block carries a recognised type."""
+    blocks = session.get("blocks")
+    if not isinstance(blocks, Sequence) or isinstance(blocks, (str, bytes)):
+        return None
+    strength = combat = conditioning = False
+    for block in blocks:
+        if not isinstance(block, Mapping):
+            continue
+        btype = _clean(block.get("type")).lower()
+        if btype in _STRENGTH_BLOCK_TYPES:
+            strength = True
+        elif btype in _COMBAT_BLOCK_TYPES:
+            combat = True
+        elif btype in _CONDITIONING_BLOCK_TYPES:
+            conditioning = True
     if strength and not combat and not conditioning:
         return "strength"
     if strength:
@@ -358,7 +294,27 @@ def classify_session_modality(session: Mapping[str, Any] | None) -> Modality:
         return "combat"
     if conditioning:
         return "conditioning"
-    return "unknown"
+    return None
+
+
+def classify_session_modality(session: Mapping[str, Any] | None) -> Modality:
+    """Coarse modality for copy framing only (never for safety gating).
+
+    Reads the structured ``session_type`` tag the plan generator stamps on every
+    session; falls back to the block types when the tag is absent or ambiguous
+    (e.g. "mixed"/"primer"). Returns "unknown" when the session carries no
+    structured type at all (legacy / headline-only cards), in which case the copy
+    keeps its combat-framed default.
+    """
+    if not isinstance(session, Mapping) or not session:
+        return "unknown"
+    mapped = _MODALITY_BY_SESSION_TYPE.get(_clean(session.get("session_type")).lower())
+    # A concrete tag is final. "mixed" is deliberately NOT final: its blocks may
+    # reveal a single-modality session (e.g. all-strength), so consult them and
+    # settle for "mixed" only when the blocks add nothing more specific.
+    if mapped is not None and mapped != "mixed":
+        return mapped
+    return _modality_from_blocks(session) or mapped or "unknown"
 
 
 # Distinctive labels/roles for the plan's low-cost "filler" support inserts
