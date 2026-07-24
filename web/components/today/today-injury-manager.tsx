@@ -341,6 +341,7 @@ export function TodayInjuryManager({
           value={newType}
           options={TODAY_INJURY_TYPE_OPTIONS}
           onChange={setNewType}
+          columns={2}
         />
         <div className="field today-injury-detail">
           <label htmlFor="today-injury-detail">Anything else? — optional</label>
