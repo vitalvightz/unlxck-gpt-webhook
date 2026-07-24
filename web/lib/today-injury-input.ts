@@ -27,7 +27,42 @@
 // (``build_injury_label``) and the safety consequence tier — so no new backend
 // field is needed.
 
+import { TODAY_INJURY_MAX_WORDS, TODAY_INJURY_TEXT_MAX } from "./input-limits.ts";
+
 export type TodayInjuryType = "soreness" | "tightness" | "bruise" | "other";
+
+/**
+ * Clamp a daily-check-in injury text entry to the word and character caps
+ * (`TODAY_INJURY_MAX_WORDS` / `TODAY_INJURY_TEXT_MAX`). Enforced as the athlete
+ * types (and when a body-map label is inserted) so a report stays a terse phrase,
+ * not a paragraph. A trailing space while still under the word cap is preserved
+ * so the next word can be started; extra words past the cap are dropped. The
+ * character cap trims at a WORD BOUNDARY so a word is never cut in half — unless a
+ * single word is itself longer than the cap, where a hard cut is unavoidable.
+ */
+export function limitInjuryEntryText(value: string): string {
+  const words = value.split(/\s+/).filter(Boolean);
+  let limited =
+    words.length > TODAY_INJURY_MAX_WORDS
+      ? words.slice(0, TODAY_INJURY_MAX_WORDS).join(" ")
+      : value;
+
+  if (limited.length > TODAY_INJURY_TEXT_MAX) {
+    const hardCut = limited.slice(0, TODAY_INJURY_TEXT_MAX);
+    // Drop a half-cut trailing word only when there is an earlier word to keep;
+    // a lone over-long word has no boundary, so the hard cut stands.
+    limited = /\s/.test(hardCut) && /\S$/.test(hardCut)
+      ? hardCut.replace(/\S+$/, "").replace(/\s+$/, "")
+      : hardCut;
+  }
+  return limited;
+}
+
+/** True when clamping actually changed the entry — used to explain to the athlete
+ * why a word/character was dropped, rather than removing it silently. */
+export function isInjuryEntryLimited(value: string): boolean {
+  return limitInjuryEntryText(value) !== value;
+}
 
 // Form-state type: "" is the unselected state, since a type must be chosen
 // explicitly before the report can be added (no default selection).
