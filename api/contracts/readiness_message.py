@@ -14,6 +14,12 @@ from typing import Any, Literal, Mapping, Sequence
 
 RecommendationDecision = Literal["train_as_planned", "modify", "pull_back"]
 SessionRisk = Literal["low", "medium", "high", "unknown"]
+# What the athlete is physically doing today, used only to frame the copy. The
+# levers differ: a strength day is dosed in sets / load / reps-in-reserve, a
+# combat or conditioning day in rounds / intensity. "mixed" (lifting AND combat
+# or conditioning in one session) keeps the combat framing, whose "cut a round /
+# drop conditioning" advice still lands on the non-lifting half.
+Modality = Literal["strength", "combat", "conditioning", "mixed", "unknown"]
 
 _DECISION_RANK: dict[str, int] = {
     "train_as_planned": 0,
@@ -224,6 +230,115 @@ def classify_session_risk(session: Mapping[str, Any] | None) -> SessionRisk:
     if any(term in text for term in _MEDIUM_RISK_TERMS):
         return "medium"
     return "medium"
+
+
+# Modality keyword sets. Matched against the same session text as risk. Kept to
+# vocabulary that names the *work* (lifts, strikes, energy-system work), not
+# generic warm-up mentions, so a single word does not flip the framing.
+_STRENGTH_MODALITY_TERMS = (
+    "strength",
+    "deadlift",
+    "rdl",
+    "squat",
+    "hinge",
+    "bench",
+    "press",
+    "row",
+    "chin-up",
+    "chin up",
+    "pull-up",
+    "pull up",
+    "pullup",
+    "curl",
+    "loaded carry",
+    "carry",
+    "lunge",
+    "split squat",
+    "step-up",
+    "step up",
+    "hip thrust",
+    "clean",
+    "snatch",
+    "trap bar",
+    "accessory",
+    "accessories",
+    "lift",
+    "lifting",
+    "1rm",
+    "max load",
+    "heavy lower",
+    "heavy press",
+    "heavy squat",
+    "heavy pull",
+)
+_COMBAT_MODALITY_TERMS = (
+    "spar",
+    "sparring",
+    "bag",
+    "pad",
+    "pads",
+    "mitt",
+    "mitts",
+    "punch",
+    "jab",
+    "cross",
+    "hook",
+    "uppercut",
+    "kick",
+    "clinch",
+    "shadow",
+    "boxing",
+    "striking",
+    "combination",
+    "combo",
+    "wrestl",
+    "grappl",
+    "takedown",
+    "sprawl",
+    "skill",
+)
+_CONDITIONING_MODALITY_TERMS = (
+    "conditioning",
+    "hiit",
+    "aerobic",
+    "anaerobic",
+    "assault bike",
+    "row erg",
+    "erg",
+    "run",
+    "running",
+    "sprint",
+    "interval",
+    "intervals",
+    "circuit",
+    "tempo",
+    "gasser",
+    "shuttle",
+)
+
+
+def classify_session_modality(session: Mapping[str, Any] | None) -> Modality:
+    """Coarse modality for copy framing only (never for safety gating).
+
+    "strength" only when the session reads as lifting with no combat/conditioning
+    signal; lifting alongside combat/conditioning stays "mixed" so the default
+    combat framing (which still fits the non-lifting half) is used.
+    """
+    text = _session_text(session)
+    if not text:
+        return "unknown"
+    strength = any(term in text for term in _STRENGTH_MODALITY_TERMS)
+    combat = any(term in text for term in _COMBAT_MODALITY_TERMS)
+    conditioning = any(term in text for term in _CONDITIONING_MODALITY_TERMS)
+    if strength and not combat and not conditioning:
+        return "strength"
+    if strength:
+        return "mixed"
+    if combat:
+        return "combat"
+    if conditioning:
+        return "conditioning"
+    return "unknown"
 
 
 # Distinctive labels/roles for the plan's low-cost "filler" support inserts
@@ -1036,31 +1151,120 @@ def _specific_soft_warning_message(
     return "modify", "Session adjusted.", "Your body needs a safer dose today.", "Reduce volume and keep the work clean."
 
 
+def _strength_soft_override(warning: str, session_risk: SessionRisk) -> tuple[str | None, str] | None:
+    """Reframe one soft-warning modify for a strength-dominant session.
+
+    Returns ``(reason_override, action)`` in sets / load / reps-in-reserve terms —
+    the actual strength levers, not the combat "rounds" default. ``reason_override``
+    is ``None`` when the default reason is already modality-neutral. Returns ``None``
+    for a warning with no strength-specific framing, so the default copy stands.
+    """
+    if warning == "poor_sleep_3_day_streak":
+        return None, "Cut total sets and keep loads submaximal (2-3 reps in reserve). Add no extra work."
+    if warning == "flat_body_3_day_streak":
+        return (
+            "Your body has felt flat for 3 days, so force output and bar speed may drop.",
+            "Cap intensity: moderate loads, fast crisp reps, no near-max sets.",
+        )
+    if warning == "pain_3_day_streak":
+        return None, "Skip heavy loading and painful ranges; keep light, controlled rehab-style sets only."
+    if warning == "pain_worsening_trend":
+        return (
+            "Pain is getting worse, so heavy loading needs to be limited.",
+            "Skip heavy loading and painful ranges; keep light, controlled rehab-style sets only.",
+        )
+    if warning == "recent_hard_load_plus_poor_today":
+        return None, "Keep loads controlled, cut back-off sets, and add nothing extra."
+    if warning == "poor_sleep":
+        action = "Drop 1 set per main lift, leave 2-3 reps in reserve, and skip optional accessories."
+        reason: str | None = None
+        if session_risk == "high":
+            reason = "Poor sleep before heavy loading raises injury risk today."
+            action = "No maxes or grinders today: cap the top sets and cut back-off volume."
+        elif session_risk == "low":
+            action = "Keep the light lifts and cut anything extra."
+        return reason, action
+    if warning == "flat_body":
+        action = "Keep the lifts crisp: moderate loads, stop well short of failure, no maxes."
+        if session_risk == "high":
+            action = "No maxes or grinders today; keep bar speed fast and cut back-off volume."
+        return "A flat body lowers force output and bar speed today.", action
+    if warning == "manageable_pain":
+        if session_risk == "high":
+            return (
+                "Manageable pain before heavy loading means the area needs extra protection today.",
+                "Skip heavy loading and painful ranges; keep light, controlled rehab-style sets only.",
+            )
+        return None, "Cut sets on anything that loads the sore area, avoid painful ranges, and skip max loads."
+    if warning == "repeated_poor_readiness":
+        return None, "Cut sets and load today. Add no extra work."
+    if warning == "tracked_injury_high_risk_session":
+        return (
+            "An active injury means heavy loading needs to be limited today.",
+            "Keep heavy load off the injured area: cut sets and use lighter, controlled loads.",
+        )
+    if warning == "recent_hard_session":
+        return None, "Keep loads controlled and cut back-off sets."
+    if warning == "taper_poor_readiness":
+        return None, "Keep the main lift crisp and light; drop the back-off volume."
+    if warning == "reintegration_poor_readiness":
+        return (
+            "You are rebuilding, so heavy loading needs to stay controlled today.",
+            "Keep loads light and volume low.",
+        )
+    return None
+
+
+def _modality_specific_soft_warning_message(
+    warning: str,
+    *,
+    session_risk: SessionRisk,
+    modality: Modality,
+) -> tuple[RecommendationDecision, str, str, str]:
+    """Single-warning message, reframed for a strength session where it differs."""
+    decision, title, reason, action = _specific_soft_warning_message(warning, session_risk=session_risk)
+    if modality == "strength":
+        override = _strength_soft_override(warning, session_risk)
+        if override is not None:
+            reason_override, action_override = override
+            if action_override:
+                action = action_override
+            if reason_override:
+                reason = reason_override
+    return decision, title, reason, action
+
+
 def _soft_warning_message(
     warnings: Sequence[str],
     *,
     session_risk: SessionRisk,
     phase: str,
     fight_week: bool,
+    modality: Modality = "unknown",
 ) -> tuple[RecommendationDecision, str, str, str]:
     # Count off the filtered set so a pair that collapses to one display label
     # (e.g. worsening pain absorbing the pain streak) drops to the single-warning
     # message instead of claiming "multiple" and then listing one.
     warnings = _filter_warnings(warnings)
     warning_count = len(warnings)
+    strength = modality == "strength"
     if warning_count >= 3:
         if session_risk == "high" or _has_pain_warning(warnings) or phase in {"TAPER", "REINTEGRATION"} or fight_week:
             return (
                 "pull_back",
                 "Pull back today.",
                 f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Hard combat work should be reduced today.",
-                "Skip combat work and use recovery or light mobility instead.",
+                "Skip the loaded work today and use recovery or light mobility instead."
+                if strength
+                else "Skip combat work and use recovery or light mobility instead.",
             )
         return (
             "modify",
             "Session reduced.",
             f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Today needs a safer dose.",
-            "Cut rounds, cap intensity, and remove conditioning.",
+            "Cut sets, cap load, and add no extra work."
+            if strength
+            else "Cut rounds, cap intensity, and remove conditioning.",
         )
 
     if warning_count == 2:
@@ -1068,18 +1272,24 @@ def _soft_warning_message(
             "modify",
             "Session reduced.",
             f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Hard combat work should be reduced today.",
-            "Skip sparring, hard rounds, and conditioning finishers, and keep the remaining rounds controlled.",
+            "Cut the heavy top sets and back-off volume, and keep the remaining lifts controlled."
+            if strength
+            else "Skip sparring, hard rounds, and conditioning finishers, and keep the remaining rounds controlled.",
         )
 
     if warning_count == 1:
-        return _specific_soft_warning_message(warnings[0], session_risk=session_risk)
+        return _modality_specific_soft_warning_message(
+            warnings[0], session_risk=session_risk, modality=modality
+        )
 
     if fight_week:
         return (
             "train_as_planned",
             "Sharp work only.",
             "Fight week rewards freshness, not extra fatigue.",
-            "Keep timing, speed, and rhythm work; leave conditioning volume alone.",
+            "Keep the lifting light and sharp; leave the volume alone."
+            if strength
+            else "Keep timing, speed, and rhythm work; leave conditioning volume alone.",
         )
 
     if phase == "TAPER":
@@ -1087,14 +1297,18 @@ def _soft_warning_message(
             "train_as_planned",
             "Sharp work only.",
             "You are in taper, so sharpness matters more than extra work today.",
-            "Keep speed and timing work only; remove tiring rounds.",
+            "Keep the lifts fast and light; drop the tiring back-off sets."
+            if strength
+            else "Keep speed and timing work only; remove tiring rounds.",
         )
 
     return (
         "train_as_planned",
         "Full session.",
         "Your sleep, body, and pain checks are all clear today.",
-        "Run the planned work and keep the rounds clean.",
+        "Run the planned work and keep the lifts crisp."
+        if strength
+        else "Run the planned work and keep the rounds clean.",
     )
 
 
@@ -1337,6 +1551,7 @@ def build_readiness_adjustment(
     context = context or ReadinessContext()
     phase = _normalize_phase(context.phase or checkin.phase)
     session_risk = classify_session_risk(context.today_session)
+    session_modality = classify_session_modality(context.today_session)
     contact_sport = _is_combat_contact_sport(context)
     # A low-cost support / filler session (mental cue work, breathing/sleep reset,
     # mobility or rehab touch) is exempt from injury-driven blocks — it is the safe
@@ -1382,6 +1597,7 @@ def build_readiness_adjustment(
         session_risk=session_risk,
         phase=phase,
         fight_week=fight_week,
+        modality=session_modality,
     )
 
     # A pain signal before hard combat work is a pull-back, not a modify: the modify
@@ -1420,7 +1636,13 @@ def build_readiness_adjustment(
     if fight_week and not soft_warnings.effective:
         triggers.append("fight_week")
 
-    if contact_sport and session_risk == "high" and decision == "modify" and "contact_sport" not in triggers:
+    if (
+        contact_sport
+        and session_modality != "strength"
+        and session_risk == "high"
+        and decision == "modify"
+        and "contact_sport" not in triggers
+    ):
         action = action.rstrip(".") + " and do not add extra contact rounds."
 
     return ReadinessAdjustment(

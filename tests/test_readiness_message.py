@@ -5,6 +5,7 @@ from api.contracts.readiness_message import (
     ReadinessContext,
     _soft_warning_message,
     build_readiness_adjustment,
+    classify_session_modality,
     classify_session_risk,
     is_support_session,
 )
@@ -624,8 +625,8 @@ def test_poor_sleep_removes_one_set_or_reduces_volume():
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
     assert "Poor sleep" in adjustment.reason
-    assert "Cut 1 round" in adjustment.action
-    assert "set" not in adjustment.message.lower()
+    assert "Drop 1 set per main lift" in adjustment.action
+    assert "reps in reserve" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -638,7 +639,7 @@ def test_flat_body_caps_intensity():
     assert adjustment.decision == "modify"
     assert adjustment.title == "Intensity capped."
     assert "flat body" in adjustment.reason.lower()
-    assert "all-out work" in adjustment.action
+    assert "no maxes" in adjustment.action.lower()
     _assert_card_shape(adjustment)
 
 
@@ -652,9 +653,8 @@ def test_poor_sleep_plus_flat_body_stacks_two_warnings():
     assert adjustment.title == "Session reduced."
     assert "Multiple warning signs are showing" in adjustment.reason
     assert "poor sleep and flat body" in adjustment.reason
-    assert "sparring" in adjustment.action
-    assert "hard rounds" in adjustment.action
-    assert "conditioning finishers" in adjustment.action
+    assert "Cut the heavy top sets and back-off volume" in adjustment.action
+    assert "keep the remaining lifts controlled" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "flat_body" in adjustment.triggers
     _assert_card_shape(adjustment)
@@ -762,8 +762,8 @@ def test_clear_taper_produces_freshness_first_wording():
     assert adjustment.decision == "train_as_planned"
     assert adjustment.title == "Sharp work only."
     assert "sharpness" in adjustment.reason
-    assert "speed" in adjustment.action
-    assert "timing" in adjustment.action
+    assert "lifts" in adjustment.action
+    assert "back-off" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -776,7 +776,7 @@ def test_taper_poor_flat_manageable_pain_pulls_back_without_modify_copy():
     assert adjustment.decision == "pull_back"
     assert "Pull back today." in adjustment.message
     assert "Multiple warning signs are showing" in adjustment.message
-    assert "Skip combat work" in adjustment.message
+    assert "Skip the loaded work" in adjustment.message
     assert "Keep sharp work only" not in adjustment.message
     assert "Remove 1 set" not in adjustment.message
     assert "fatigue-heavy accessories" not in adjustment.message
@@ -798,7 +798,7 @@ def test_repeated_poor_readiness_adds_stronger_warning():
 
     assert adjustment.decision == "modify"
     assert "Multiple warning signs are showing" in adjustment.reason
-    assert "Skip sparring, hard rounds, and conditioning finishers" in adjustment.action
+    assert "Cut the heavy top sets and back-off volume" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "repeated_poor_readiness" in adjustment.triggers
     _assert_card_shape(adjustment)
@@ -822,7 +822,7 @@ def test_three_poor_sleep_days_uses_sleep_trend_message():
     assert adjustment.decision == "modify"
     assert "poor_sleep_3_day_streak" in adjustment.triggers
     assert "Poor sleep has built up for 3 days" in adjustment.reason
-    assert "Cut 1 round" in adjustment.action
+    assert "Cut total sets" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -842,7 +842,7 @@ def test_three_flat_body_days_uses_body_trend_message():
     assert adjustment.decision == "modify"
     assert "flat_body_3_day_streak" in adjustment.triggers
     assert "body has felt flat for 3 days" in adjustment.reason
-    assert "Keep rounds technical" in adjustment.action
+    assert "Cap intensity" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -862,7 +862,7 @@ def test_three_pain_days_uses_pain_trend_message():
     assert adjustment.decision == "modify"
     assert "pain_3_day_streak" in adjustment.triggers
     assert "Pain has shown up for 3 days" in adjustment.reason
-    assert "Skip sparring" in adjustment.action
+    assert "Skip heavy loading" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -959,7 +959,7 @@ def test_two_hard_sessions_plus_poor_today_uses_load_trend_message():
     assert adjustment.decision == "modify"
     assert "recent_hard_load_plus_poor_today" in adjustment.triggers
     assert "recent training load was high" in adjustment.reason
-    assert "Keep rounds controlled" in adjustment.action
+    assert "Keep loads controlled" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -998,7 +998,7 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
 
     assert adjustment.decision == "modify"
     assert "Multiple warning signs are showing" in adjustment.reason
-    assert "Cut rounds, cap intensity, and remove conditioning" in adjustment.action
+    assert "Cut sets, cap load, and add no extra work" in adjustment.action
     assert "poor_sleep_3_day_streak" in adjustment.triggers
     assert "flat_body_3_day_streak" in adjustment.triggers
     assert "recent_hard_load_plus_poor_today" in adjustment.triggers
@@ -1039,7 +1039,7 @@ def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
 
     assert adjustment.decision == "pull_back"
     assert "Multiple warning signs are showing" in adjustment.message
-    assert "Skip combat work" in adjustment.message
+    assert "Skip the loaded work" in adjustment.message
     _assert_card_shape(adjustment)
 
 
@@ -1230,3 +1230,56 @@ def test_collapsing_warning_pair_does_not_claim_multiple_sources():
         ("poor_sleep", "flat_body"), session_risk="medium", phase="GPP", fight_week=False
     )
     assert "Multiple warning signs are showing: poor sleep and flat body." in reason
+
+
+def test_session_modality_classifies_core_types():
+    # Bare title dicts (no session_type) so the classifier reflects the work named.
+    assert classify_session_modality({"title": "Primary strength anchor"}) == "strength"
+    assert classify_session_modality({"title": "Trap bar deadlift and accessories"}) == "strength"
+    assert classify_session_modality({"title": "Hard sparring"}) == "combat"
+    assert classify_session_modality({"title": "Bike intervals conditioning"}) == "conditioning"
+    # Lifting plus combat/conditioning stays mixed (keeps the combat framing).
+    assert classify_session_modality({"title": "Strength then hard sparring"}) == "mixed"
+    assert classify_session_modality(None) == "unknown"
+
+
+def test_strength_session_poor_sleep_uses_sets_not_rounds():
+    # The exact case from the screenshot: a strength anchor + poor sleep must talk
+    # sets / reps-in-reserve, never "cut a round".
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(today_session=_session(title="Primary strength anchor")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "Drop 1 set per main lift" in adjustment.action
+    assert "reps in reserve" in adjustment.action
+    assert "round" not in adjustment.action.lower()
+    assert "conditioning" not in adjustment.action.lower()
+    _assert_card_shape(adjustment)
+
+
+def test_combat_session_poor_sleep_still_uses_rounds():
+    # Regression: the combat framing is unchanged for a combat/mixed session.
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(today_session=_session(title="Hard sparring")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "round" in adjustment.action.lower()
+    assert "set" not in adjustment.action.lower()
+    _assert_card_shape(adjustment)
+
+
+def test_high_risk_strength_day_names_maxes_and_grinders():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(today_session=_session(title="Heavy squat 1rm work")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert adjustment.session_risk == "high"
+    assert "maxes or grinders" in adjustment.action.lower()
+    assert "round" not in adjustment.action.lower()
+    _assert_card_shape(adjustment)
