@@ -6,9 +6,16 @@ on:
       - Main
   workflow_dispatch:
 
+# Least privilege: the job only needs to read the repository so the runner can
+# check out the commit. No GitHub token ever leaves the runner or reaches the
+# server; the server is updated from a git bundle over SSH.
 permissions:
   contents: read
 
+# Serialize deployments so two runs can never touch /opt/unlxck at the same
+# time. cancel-in-progress: false queues newer runs behind the running one
+# instead of interrupting a deploy midway (which could leave a half-applied
+# state or the worker stopped).
 concurrency:
   group: hetzner-backend-deployment
   cancel-in-progress: false
@@ -19,7 +26,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    env:
+      HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+      HETZNER_USER: ${{ secrets.HETZNER_USER }}
+      EXPECTED_COMMIT: ${{ github.sha }}
+      # Unique per run; numeric run_id is safe to interpolate into a path.
+      REMOTE_BUNDLE: /tmp/unlxck-deploy-${{ github.run_id }}.bundle
+
     steps:
+      # Full history is required so the git bundle is complete and can be
+      # applied on the server regardless of what history it already has.
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
@@ -34,116 +55,211 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
       - name: Test SSH connection
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
-          ssh \
-            -i ~/.ssh/unlxck_deploy \
-            -o BatchMode=yes \
-            -o ConnectTimeout=15 \
-            "$HETZNER_USER@$HETZNER_HOST" \
-            "echo 'SSH connection successful'"
+          set -euo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          if ! $SSH "$HETZNER_USER@$HETZNER_HOST" "echo 'SSH connection successful'"; then
+            echo "ERROR: SSH connection to the deployment server failed." >&2
+            exit 1
+          fi
+
+      # Package the exact checked-out commit (github.sha) as a self-contained
+      # git bundle. This is the source of truth that gets deployed; the server
+      # never contacts GitHub.
+      - name: Package commit as git bundle
+        run: |
+          set -euo pipefail
+          git bundle create "$RUNNER_TEMP/unlxck-deploy.bundle" HEAD
+          if ! git bundle verify "$RUNNER_TEMP/unlxck-deploy.bundle"; then
+            echo "ERROR: generated git bundle failed verification." >&2
+            exit 1
+          fi
+
+      # Stream the bundle to the server over the same authenticated SSH
+      # channel. The bundle contains only public source, so no secret is moved.
+      - name: Upload commit bundle to server
+        run: |
+          set -euo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          if ! $SSH "$HETZNER_USER@$HETZNER_HOST" "cat > '$REMOTE_BUNDLE'" < "$RUNNER_TEMP/unlxck-deploy.bundle"; then
+            echo "ERROR: failed to transfer the commit bundle to the server." >&2
+            exit 1
+          fi
 
       - name: Deploy backend
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
-          EXPECTED_COMMIT: ${{ github.sha }}
         run: |
-          ssh \
-            -i ~/.ssh/unlxck_deploy \
-            -o BatchMode=yes \
-            "$HETZNER_USER@$HETZNER_HOST" \
-            "EXPECTED_COMMIT='$EXPECTED_COMMIT' bash -s" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SSH "$HETZNER_USER@$HETZNER_HOST" \
+            "EXPECTED_COMMIT='$EXPECTED_COMMIT' BUNDLE_PATH='$REMOTE_BUNDLE' bash -s" <<'REMOTE_SCRIPT'
               set -Eeuo pipefail
 
-              cd /opt/unlxck
+              HEALTH_URL="https://unlxck-staging.167.233.47.121.sslip.io/health"
+
+              worker_running() { [ -n "$(docker compose ps --status running -q worker)" ]; }
+              caddy_running()  { [ -n "$(docker compose ps --status running -q caddy)" ]; }
+              api_healthy() {
+                curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" >/dev/null
+              }
+
+              cd /opt/unlxck || { echo "ERROR: /opt/unlxck is missing on the server." >&2; exit 1; }
+
+              # --- Pre-flight (nothing changed yet, so failures just abort;
+              #     rollback is not armed and must not run) ---
+              if [ ! -f "$BUNDLE_PATH" ]; then
+                echo "ERROR: commit bundle not found at $BUNDLE_PATH." >&2
+                exit 1
+              fi
+              if ! git bundle verify "$BUNDLE_PATH" >/dev/null 2>&1; then
+                echo "ERROR: commit bundle failed verification on the server." >&2
+                exit 1
+              fi
+              if [ ! -f .env.production ]; then
+                echo "ERROR: /opt/unlxck/.env.production is missing; refusing to deploy." >&2
+                exit 1
+              fi
+
               PREVIOUS_COMMIT="$(git rev-parse HEAD)"
               DEPLOYMENT_SUCCEEDED=false
 
               rollback() {
                 exit_code=$?
                 trap - ERR
+                # Best-effort inside rollback: keep going and collect
+                # diagnostics even if an individual step fails.
+                set +e
 
+                # A late ERR after success must not trigger a destructive
+                # rollback; just propagate the status.
                 if [ "$DEPLOYMENT_SUCCEEDED" = true ]; then
                   exit "$exit_code"
                 fi
 
-                echo "Deployment failed. Restoring $PREVIOUS_COMMIT"
-                mkdir -p /opt/unlxck/deployment-logs
+                echo "Deployment failed (exit ${exit_code}). Restoring previous commit ${PREVIOUS_COMMIT}." >&2
 
+                # Preserve diagnostics from the failed state before changing it.
+                mkdir -p /opt/unlxck/deployment-logs
+                LOG_FILE="/opt/unlxck/deployment-logs/failed-$(date +%Y%m%dT%H%M%S)-${EXPECTED_COMMIT}.log"
                 {
                   echo "Deployment failed at $(date --iso-8601=seconds)"
-                  echo "Target commit: $EXPECTED_COMMIT"
-                  echo "Previous commit: $PREVIOUS_COMMIT"
+                  echo "Failure exit code: ${exit_code}"
+                  echo "Target commit:   ${EXPECTED_COMMIT}"
+                  echo "Previous commit: ${PREVIOUS_COMMIT}"
+                  echo "--- docker compose ps ---"
                   docker compose ps
+                  echo "--- docker compose logs (api worker caddy) ---"
                   docker compose logs --tail=300 api worker caddy
-                } > "/opt/unlxck/deployment-logs/failed-${EXPECTED_COMMIT}.log" 2>&1 || true
+                } > "$LOG_FILE" 2>&1
+                echo "Saved failure diagnostics to ${LOG_FILE}." >&2
 
-                docker compose stop worker || true
-                git reset --hard "$PREVIOUS_COMMIT"
-                docker compose config --quiet
-                docker compose up -d --build --remove-orphans
+                # Restore the previous source and containers. Stop the worker
+                # first so only one queue consumer exists during the swap.
+                docker compose stop worker
+                git reset --hard "$PREVIOUS_COMMIT" \
+                  || echo "ROLLBACK ERROR: git reset to ${PREVIOUS_COMMIT} failed." >&2
+                docker compose config --quiet \
+                  || echo "ROLLBACK ERROR: compose config invalid at ${PREVIOUS_COMMIT}." >&2
+                docker compose up -d --build --remove-orphans \
+                  || echo "ROLLBACK ERROR: compose up failed during rollback." >&2
 
-                for attempt in $(seq 1 12); do
-                  if curl --fail --silent --show-error --max-time 10 \
-                    https://unlxck-staging.167.233.47.121.sslip.io/health; then
-                    echo
-                    if test -n "$(docker compose ps --status running -q worker)"; then
-                      echo "Rollback successful."
-                      exit "$exit_code"
+                # Verify BOTH the API and the worker after rollback.
+                rollback_ok=false
+                for attempt in $(seq 1 18); do
+                  if api_healthy; then
+                    if worker_running; then
+                      rollback_ok=true
+                      break
                     fi
-                    echo "Rollback API is healthy, but worker is not running."
+                    echo "Rollback: API healthy but worker not running yet (${attempt}/18)." >&2
+                  else
+                    echo "Rollback: waiting for API health (${attempt}/18)." >&2
                   fi
-                  echo "Waiting for rollback health check: $attempt/12"
                   sleep 5
                 done
 
-                echo "Rollback health check failed."
-                docker compose ps
-                docker compose logs --tail=200 api worker caddy
+                if [ "$rollback_ok" = true ]; then
+                  echo "Rollback successful: restored ${PREVIOUS_COMMIT} (API healthy, worker running)." >&2
+                else
+                  echo "ROLLBACK FAILED: API and/or worker not healthy after restoring ${PREVIOUS_COMMIT}." >&2
+                  docker compose ps >&2
+                  docker compose logs --tail=200 api worker caddy >&2
+                fi
+
+                # Always fail the workflow: a rollback still means this
+                # deployment did not succeed.
                 exit "$exit_code"
               }
 
               trap rollback ERR
 
-              echo "Previous commit: $PREVIOUS_COMMIT"
-              echo "Expected commit: $EXPECTED_COMMIT"
+              echo "Previous commit: ${PREVIOUS_COMMIT}"
+              echo "Expected commit: ${EXPECTED_COMMIT}"
 
-              git remote set-url origin https://github.com/vitalvightz/unlxck-gpt-webhook.git
-              GIT_TERMINAL_PROMPT=0 git -c credential.helper= fetch --no-tags --prune origin Main
-              git reset --hard origin/Main
+              # Import the exact commit from the local bundle. No network, no
+              # credentials, immune to server-side git URL/credential config.
+              # Force-update the staging ref so a revert or an out-of-order
+              # re-run (non-fast-forward) is still accepted.
+              git fetch --no-tags "$BUNDLE_PATH" "+HEAD:refs/deploy/incoming"
+              git reset --hard refs/deploy/incoming
 
               ACTUAL_COMMIT="$(git rev-parse HEAD)"
-              test "$ACTUAL_COMMIT" = "$EXPECTED_COMMIT"
-              test -f .env.production
+              if [ "$ACTUAL_COMMIT" != "$EXPECTED_COMMIT" ]; then
+                echo "ERROR: commit mismatch. Expected ${EXPECTED_COMMIT} but tree is at ${ACTUAL_COMMIT}." >&2
+                false
+              fi
+
+              echo "Validating docker compose configuration..."
               docker compose config --quiet
+
+              echo "Building and (re)starting api, worker and caddy..."
               docker compose up -d --build --remove-orphans
               docker compose ps
 
-              for attempt in $(seq 1 12); do
-                if curl --fail --silent --show-error --max-time 10 \
-                  https://unlxck-staging.167.233.47.121.sslip.io/health; then
-                  echo
-                  if test -n "$(docker compose ps --status running -q worker)"; then
-                    DEPLOYMENT_SUCCEEDED=true
-                    echo "Deployment successful: $ACTUAL_COMMIT"
-                    docker compose ps
-                    exit 0
+              echo "Waiting for API health and worker readiness..."
+              healthy=false
+              for attempt in $(seq 1 18); do
+                if api_healthy; then
+                  if worker_running; then
+                    healthy=true
+                    break
                   fi
-                  echo "API is healthy, but worker is not running."
+                  echo "API healthy but worker not running yet (${attempt}/18)."
+                else
+                  echo "Waiting for API health via Caddy (${attempt}/18)."
                 fi
-                echo "Waiting for health check: $attempt/12"
                 sleep 5
               done
 
-              echo "Health check failed after 12 attempts."
+              if [ "$healthy" != true ]; then
+                echo "ERROR: health checks failed (API and/or worker not ready after 18 attempts)." >&2
+                docker compose ps
+                docker compose logs --tail=200 api worker caddy
+                false
+              fi
+
+              # Caddy is the public TLS entrypoint; a 200 above implies it is up,
+              # but assert explicitly so its absence is reported clearly.
+              if ! caddy_running; then
+                echo "ERROR: caddy container is not running after deployment." >&2
+                docker compose ps
+                false
+              fi
+
+              DEPLOYMENT_SUCCEEDED=true
+              echo "Deployment successful: ${ACTUAL_COMMIT} (API healthy, worker running, caddy running)."
               docker compose ps
-              docker compose logs --tail=200 api worker caddy
-              false
           REMOTE_SCRIPT
 
+      # Always remove the transferred bundle, even if the deploy failed.
+      - name: Remove transferred bundle from server
+        if: always()
+        run: |
+          set -uo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SSH "$HETZNER_USER@$HETZNER_HOST" "rm -f '$REMOTE_BUNDLE'" || true
+
+      # Independent, external re-confirmation that the public endpoint is 200.
+      # Skipped automatically if the deploy step failed (job already failed).
       - name: Verify public health endpoint
         run: |
           curl \
