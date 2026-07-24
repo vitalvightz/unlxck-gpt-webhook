@@ -15,9 +15,9 @@ import { submitTodayInjuryCheckin } from "@/lib/api";
 import { normalizeInjuryLabel } from "@/lib/injury-display";
 import { TODAY_INJURY_DETAIL_MAX } from "@/lib/input-limits";
 import {
-  DEFAULT_TODAY_INJURY_TYPE,
+  NO_TODAY_INJURY_TYPE,
   TODAY_INJURY_TYPE_OPTIONS,
-  type TodayInjuryType,
+  type TodayInjuryTypeSelection,
   composeTodayInjuryDescription,
 } from "@/lib/today-injury-input";
 import type {
@@ -99,7 +99,7 @@ export function TodayInjuryManager({
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
-  const [newType, setNewType] = useState<TodayInjuryType>(DEFAULT_TODAY_INJURY_TYPE);
+  const [newType, setNewType] = useState<TodayInjuryTypeSelection>(NO_TODAY_INJURY_TYPE);
   const [newDetail, setNewDetail] = useState("");
   const [newZone, setNewZone] = useState("");
   const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
@@ -161,7 +161,9 @@ export function TodayInjuryManager({
   async function addInjury(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const area = newArea.trim();
-    if (!area || isAdding) {
+    // A type is a required, explicit choice — an area alone can no longer submit a
+    // blank report. ("Other" is a valid choice; it just carries no condition word.)
+    if (!area || !newType || isAdding) {
       return;
     }
     setIsAdding(true);
@@ -172,7 +174,7 @@ export function TodayInjuryManager({
       ]);
       setNewArea("");
       setNewSeverity("moderate");
-      setNewType(DEFAULT_TODAY_INJURY_TYPE);
+      setNewType(NO_TODAY_INJURY_TYPE);
       setNewDetail("");
       setNewZone("");
       showToast("Injury added.", { tone: "success" });
@@ -199,7 +201,7 @@ export function TodayInjuryManager({
     setNewArea("");
     setNewZone("");
     setNewSeverity("moderate");
-    setNewType(DEFAULT_TODAY_INJURY_TYPE);
+    setNewType(NO_TODAY_INJURY_TYPE);
     setNewDetail("");
   }
 
@@ -341,15 +343,14 @@ export function TodayInjuryManager({
           onChange={setNewType}
         />
         <div className="field today-injury-detail">
-          <label htmlFor="today-injury-detail">Additional detail — optional</label>
+          <label htmlFor="today-injury-detail">Anything else? — optional</label>
           <input
             id="today-injury-detail"
             value={newDetail}
             maxLength={TODAY_INJURY_DETAIL_MAX}
-            placeholder="e.g. tight after sprinting"
+            placeholder="e.g. worse when sprinting"
             onChange={(event) => setNewDetail(event.target.value)}
           />
-          <small className="muted">Briefly describe what it feels like.</small>
         </div>
         <SegmentGroup
           label="Severity"
@@ -360,7 +361,7 @@ export function TodayInjuryManager({
         <button
           type="submit"
           className="secondary-button"
-          disabled={isAdding || !newArea.trim()}
+          disabled={isAdding || !newArea.trim() || !newType}
         >
           {isAdding ? "Adding..." : "Add injury"}
         </button>

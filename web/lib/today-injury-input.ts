@@ -8,9 +8,14 @@
 //   * Soreness, Tightness, Bruise -> the injury scorer classifies each as a minor
 //     (non-restricting) condition, so a single tap can never silently escalate a
 //     report into a training restriction.
-//   * Other -> injects no condition word; the optional detail line (or the body
-//     map location alone) carries the report, so an unusual thing still reads
-//     minor-by-default while escalating only if the athlete's own words warrant it.
+//   * Other -> injects no condition word. The report then rests on the athlete's
+//     own detail text (plus the body-map location), which the scorer escalates
+//     only when the wording warrants it (e.g. "unstable", "gave way"). Absent such
+//     wording there is simply no condition signal — "Other" is a catch-all for the
+//     unusual, not an assertion that the injury is minor.
+//
+// A type is a REQUIRED explicit choice on the form (there is no default), so a
+// report always carries a deliberate type intent rather than an accidental blank.
 //
 // Deliberately absent: "Strain" is a diagnosis (the scorer treats it as a
 // load-sensitive injury) and is inferred from area + severity, not tapped; "Sharp
@@ -24,14 +29,18 @@
 
 export type TodayInjuryType = "soreness" | "tightness" | "bruise" | "other";
 
+// Form-state type: "" is the unselected state, since a type must be chosen
+// explicitly before the report can be added (no default selection).
+export type TodayInjuryTypeSelection = TodayInjuryType | "";
+
+export const NO_TODAY_INJURY_TYPE: TodayInjuryTypeSelection = "";
+
 export const TODAY_INJURY_TYPE_OPTIONS: Array<{ value: TodayInjuryType; label: string }> = [
   { value: "soreness", label: "Soreness" },
   { value: "tightness", label: "Tightness" },
   { value: "bruise", label: "Bruise" },
   { value: "other", label: "Other" },
 ];
-
-export const DEFAULT_TODAY_INJURY_TYPE: TodayInjuryType = "other";
 
 function collapseWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();

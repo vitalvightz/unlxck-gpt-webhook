@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  NO_TODAY_INJURY_TYPE,
   TODAY_INJURY_TYPE_OPTIONS,
   composeTodayInjuryDescription,
 } from "./today-injury-input.ts";
@@ -10,6 +11,14 @@ test("only minor, non-escalating types plus Other are offered", () => {
   assert.deepEqual(
     TODAY_INJURY_TYPE_OPTIONS.map((option) => option.value),
     ["soreness", "tightness", "bruise", "other"],
+  );
+});
+
+test("the unselected sentinel is not a selectable option (type must be chosen)", () => {
+  assert.equal(NO_TODAY_INJURY_TYPE, "");
+  assert.ok(
+    !TODAY_INJURY_TYPE_OPTIONS.some((option) => option.value === NO_TODAY_INJURY_TYPE),
+    "empty selection must never be a tappable type",
   );
 });
 
