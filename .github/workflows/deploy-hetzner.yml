@@ -1,0 +1,149 @@
+name: Deploy Backend to Hetzner
+
+on:
+  push:
+    branches:
+      - Main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hetzner-backend-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy API and worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/unlxck_deploy
+          chmod 600 ~/.ssh/unlxck_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          ssh \
+            -i ~/.ssh/unlxck_deploy \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            "echo 'SSH connection successful'"
+
+      - name: Deploy backend
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          ssh \
+            -i ~/.ssh/unlxck_deploy \
+            -o BatchMode=yes \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            "EXPECTED_COMMIT='$EXPECTED_COMMIT' bash -s" <<'REMOTE_SCRIPT'
+              set -Eeuo pipefail
+
+              cd /opt/unlxck
+              PREVIOUS_COMMIT="$(git rev-parse HEAD)"
+              DEPLOYMENT_SUCCEEDED=false
+
+              rollback() {
+                exit_code=$?
+                trap - ERR
+
+                if [ "$DEPLOYMENT_SUCCEEDED" = true ]; then
+                  exit "$exit_code"
+                fi
+
+                echo "Deployment failed. Restoring $PREVIOUS_COMMIT"
+                mkdir -p /opt/unlxck/deployment-logs
+
+                {
+                  echo "Deployment failed at $(date --iso-8601=seconds)"
+                  echo "Target commit: $EXPECTED_COMMIT"
+                  echo "Previous commit: $PREVIOUS_COMMIT"
+                  docker compose ps
+                  docker compose logs --tail=300 api worker caddy
+                } > "/opt/unlxck/deployment-logs/failed-${EXPECTED_COMMIT}.log" 2>&1 || true
+
+                docker compose stop worker || true
+                git reset --hard "$PREVIOUS_COMMIT"
+                docker compose config --quiet
+                docker compose up -d --build --remove-orphans
+
+                for attempt in $(seq 1 12); do
+                  if curl --fail --silent --show-error --max-time 10 \
+                    https://unlxck-staging.167.233.47.121.sslip.io/health; then
+                    echo
+                    echo "Rollback successful."
+                    exit "$exit_code"
+                  fi
+                  echo "Waiting for rollback health check: $attempt/12"
+                  sleep 5
+                done
+
+                echo "Rollback health check failed."
+                docker compose ps
+                docker compose logs --tail=200 api worker caddy
+                exit "$exit_code"
+              }
+
+              trap rollback ERR
+
+              echo "Previous commit: $PREVIOUS_COMMIT"
+              echo "Expected commit: $EXPECTED_COMMIT"
+
+              git fetch origin Main
+              git reset --hard origin/Main
+
+              ACTUAL_COMMIT="$(git rev-parse HEAD)"
+              test "$ACTUAL_COMMIT" = "$EXPECTED_COMMIT"
+              test -f .env.production
+              docker compose config --quiet
+              docker compose up -d --build --remove-orphans
+              docker compose ps
+
+              for attempt in $(seq 1 12); do
+                if curl --fail --silent --show-error --max-time 10 \
+                  https://unlxck-staging.167.233.47.121.sslip.io/health; then
+                  echo
+                  DEPLOYMENT_SUCCEEDED=true
+                  echo "Deployment successful: $ACTUAL_COMMIT"
+                  docker compose ps
+                  exit 0
+                fi
+                echo "Waiting for health check: $attempt/12"
+                sleep 5
+              done
+
+              echo "Health check failed after 12 attempts."
+              docker compose ps
+              docker compose logs --tail=200 api worker caddy
+              false
+          REMOTE_SCRIPT
+
+      - name: Verify public health endpoint
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-delay 5 \
+            --max-time 15 \
+            https://unlxck-staging.167.233.47.121.sslip.io/health
