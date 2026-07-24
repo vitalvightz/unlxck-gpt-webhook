@@ -430,7 +430,7 @@ function PlanCard({
 
   return (
     <>
-      <article className="plan-history-row plan-history-row-card">
+      <article className={`plan-history-row plan-history-row-card${archived ? " plan-history-row-archived" : ""}`}>
         <div className="plan-history-copy">
           <p className="label">{versionLabel}</p>
           <Link href={`/plans/${plan.plan_id}`}>
@@ -445,7 +445,9 @@ function PlanCard({
           {reviewReason ? <p className="muted">{reviewReason}</p> : null}
         </div>
         <div className="plan-history-meta">
-          <span className="badge">{active ? "ACTIVE" : statusLabel}</span>
+          <span className={`badge${archived ? " status-badge-neutral plan-archived-badge" : ""}`}>
+            {active ? "ACTIVE" : archived ? "ARCHIVED" : statusLabel}
+          </span>
           {!active && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">

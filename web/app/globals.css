@@ -8288,6 +8288,45 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   z-index: 30;
 }
 
+/* Archived plans are read-only leftovers, so they must look unmistakably
+   set-aside next to live plans: a muted wash, a dashed edge, and dimmed copy. */
+.plan-history-row-archived {
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-left: 3px solid rgba(255, 255, 255, 0.28);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.018),
+      rgba(255, 255, 255, 0.018) 10px,
+      transparent 10px,
+      transparent 20px
+    ),
+    rgba(255, 255, 255, 0.012);
+  opacity: 0.82;
+}
+
+.plan-history-row-archived:hover {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.03) 10px,
+      transparent 10px,
+      transparent 20px
+    ),
+    rgba(255, 255, 255, 0.03);
+  opacity: 1;
+  transform: none;
+}
+
+.plan-history-row-archived .plan-card-title {
+  color: var(--text-secondary);
+}
+
+.plan-archived-badge {
+  letter-spacing: 0.12em;
+}
+
 .plan-history-row-card .plan-card-meta {
   gap: 8px 14px;
 }
@@ -14116,6 +14155,32 @@ html[data-theme="light"] .plans-featured-meta-chip-accent {
 
 html[data-theme="light"] .plan-history-row-card:hover {
   background: rgba(248, 250, 253, 0.88);
+}
+
+html[data-theme="light"] .plan-history-row-archived {
+  border-color: rgba(80, 81, 84, 0.18);
+  border-left-color: rgba(80, 81, 84, 0.4);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(63, 64, 67, 0.035),
+      rgba(63, 64, 67, 0.035) 10px,
+      transparent 10px,
+      transparent 20px
+    ),
+    rgba(63, 64, 67, 0.02);
+}
+
+html[data-theme="light"] .plan-history-row-archived:hover {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(63, 64, 67, 0.05),
+      rgba(63, 64, 67, 0.05) 10px,
+      transparent 10px,
+      transparent 20px
+    ),
+    rgba(248, 250, 253, 0.88);
 }
 
 html[data-theme="light"] .plans-history-toggle {
