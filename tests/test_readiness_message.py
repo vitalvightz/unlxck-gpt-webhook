@@ -1089,7 +1089,7 @@ def test_manageable_pain_on_lower_risk_session_stays_modify():
     )
 
     assert adjustment.decision == "modify"
-    assert "clinch" in adjustment.action
+    assert "avoid painful ranges" in adjustment.action
     _assert_card_shape(adjustment)
 
 
@@ -1241,6 +1241,40 @@ def test_session_modality_classifies_core_types():
     # Lifting plus combat/conditioning stays mixed (keeps the combat framing).
     assert classify_session_modality({"title": "Strength then hard sparring"}) == "mixed"
     assert classify_session_modality(None) == "unknown"
+
+
+def test_session_modality_matches_on_word_boundaries_not_substrings():
+    # Words that merely CONTAIN a keyword must not flip the framing: "press" in
+    # "pressure", "pad" in "padding", "erg" in "energy", "run" in "run-through",
+    # and the deliberately-dropped ambiguous words "clean" / "skill".
+    for title in (
+        "Pressure management review",
+        "Padding and equipment check",
+        "Energy system education",
+        "Run-through of the tactical plan",
+        "Clean technique review",
+        "Skill acquisition theory",
+    ):
+        assert classify_session_modality({"title": title}) == "unknown", title
+    # Real inflected forms still classify via word/stem matching.
+    assert classify_session_modality({"title": "Barbell rows and presses"}) == "strength"
+    assert classify_session_modality({"title": "Throwing combinations on the pads"}) == "combat"
+    assert classify_session_modality({"title": "Wrestling and grappling live"}) == "combat"
+
+
+def test_strength_stacked_warnings_reason_matches_strength_action():
+    # Two warnings on a strength session must not read "reduce combat work" above a
+    # "cut your sets" action — the reason and action share the same lever.
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat"),
+        ReadinessContext(today_session=_session(title="Heavy lower body strength")),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "Heavy loading should be reduced today." in adjustment.reason
+    assert "combat work" not in adjustment.reason.lower()
+    assert "top sets" in adjustment.action
+    _assert_card_shape(adjustment)
 
 
 def test_strength_session_poor_sleep_uses_sets_not_rounds():

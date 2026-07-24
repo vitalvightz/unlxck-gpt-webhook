@@ -8,6 +8,7 @@ decision plus the athlete-facing adjustment message.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Literal, Mapping, Sequence
@@ -232,10 +233,16 @@ def classify_session_risk(session: Mapping[str, Any] | None) -> SessionRisk:
     return "medium"
 
 
-# Modality keyword sets. Matched against the same session text as risk. Kept to
-# vocabulary that names the *work* (lifts, strikes, energy-system work), not
-# generic warm-up mentions, so a single word does not flip the framing.
-_STRENGTH_MODALITY_TERMS = (
+# Modality keyword sets, matched against the same session text as risk. Matched
+# on WORD BOUNDARIES, not raw substrings, so "press" never fires on "pressure",
+# "row" not on "throw", "erg" not on "energy", "run" not on "run-through". Two
+# groups: whole "words" (a trailing plural / -ing / -ed is tolerated, so "squat"
+# also catches "squats") and true "stems" matched as a prefix (so "spar" catches
+# "sparring" and "wrestl" catches "wrestling"). Ambiguous bare words that name a
+# quality rather than the work — "clean" (technique vs. the lift), "carry",
+# "skill", bare "run" — are intentionally omitted; the specific lift/strike terms
+# still classify the session.
+_STRENGTH_MODALITY_WORDS = (
     "strength",
     "deadlift",
     "rdl",
@@ -251,19 +258,18 @@ _STRENGTH_MODALITY_TERMS = (
     "pullup",
     "curl",
     "loaded carry",
-    "carry",
     "lunge",
     "split squat",
     "step-up",
     "step up",
     "hip thrust",
-    "clean",
     "snatch",
+    "power clean",
+    "hang clean",
     "trap bar",
     "accessory",
     "accessories",
     "lift",
-    "lifting",
     "1rm",
     "max load",
     "heavy lower",
@@ -271,9 +277,8 @@ _STRENGTH_MODALITY_TERMS = (
     "heavy squat",
     "heavy pull",
 )
-_COMBAT_MODALITY_TERMS = (
-    "spar",
-    "sparring",
+_STRENGTH_MODALITY_STEMS: tuple[str, ...] = ()
+_COMBAT_MODALITY_WORDS = (
     "bag",
     "pad",
     "pads",
@@ -286,18 +291,15 @@ _COMBAT_MODALITY_TERMS = (
     "uppercut",
     "kick",
     "clinch",
-    "shadow",
     "boxing",
     "striking",
     "combination",
     "combo",
-    "wrestl",
-    "grappl",
     "takedown",
     "sprawl",
-    "skill",
 )
-_CONDITIONING_MODALITY_TERMS = (
+_COMBAT_MODALITY_STEMS = ("spar", "wrestl", "grappl", "shadow")
+_CONDITIONING_MODALITY_WORDS = (
     "conditioning",
     "hiit",
     "aerobic",
@@ -305,16 +307,34 @@ _CONDITIONING_MODALITY_TERMS = (
     "assault bike",
     "row erg",
     "erg",
-    "run",
     "running",
     "sprint",
     "interval",
-    "intervals",
     "circuit",
     "tempo",
     "gasser",
     "shuttle",
 )
+_CONDITIONING_MODALITY_STEMS: tuple[str, ...] = ()
+
+
+def _compile_modality(words: tuple[str, ...], stems: tuple[str, ...]) -> "re.Pattern[str]":
+    """Build a word-boundary matcher: whole `words` (plural/-ing/-ed tolerated)
+    plus `stems` matched as a prefix. Longest alternatives first so a phrase like
+    'assault bike' is tried before a bare word it contains."""
+    parts: list[str] = []
+    if words:
+        joined = "|".join(sorted((re.escape(w) for w in words), key=len, reverse=True))
+        parts.append(rf"\b(?:{joined})(?:es|s|ed|ing)?\b")
+    if stems:
+        joined = "|".join(sorted((re.escape(s) for s in stems), key=len, reverse=True))
+        parts.append(rf"\b(?:{joined})\w*")
+    return re.compile("|".join(parts))
+
+
+_STRENGTH_MODALITY_RE = _compile_modality(_STRENGTH_MODALITY_WORDS, _STRENGTH_MODALITY_STEMS)
+_COMBAT_MODALITY_RE = _compile_modality(_COMBAT_MODALITY_WORDS, _COMBAT_MODALITY_STEMS)
+_CONDITIONING_MODALITY_RE = _compile_modality(_CONDITIONING_MODALITY_WORDS, _CONDITIONING_MODALITY_STEMS)
 
 
 def classify_session_modality(session: Mapping[str, Any] | None) -> Modality:
@@ -327,9 +347,9 @@ def classify_session_modality(session: Mapping[str, Any] | None) -> Modality:
     text = _session_text(session)
     if not text:
         return "unknown"
-    strength = any(term in text for term in _STRENGTH_MODALITY_TERMS)
-    combat = any(term in text for term in _COMBAT_MODALITY_TERMS)
-    conditioning = any(term in text for term in _CONDITIONING_MODALITY_TERMS)
+    strength = bool(_STRENGTH_MODALITY_RE.search(text))
+    combat = bool(_COMBAT_MODALITY_RE.search(text))
+    conditioning = bool(_CONDITIONING_MODALITY_RE.search(text))
     if strength and not combat and not conditioning:
         return "strength"
     if strength:
@@ -1248,12 +1268,15 @@ def _soft_warning_message(
     warnings = _filter_warnings(warnings)
     warning_count = len(warnings)
     strength = modality == "strength"
+    # Keep the reason's "reduce X" clause on the same lever as the strength action
+    # so the card never says "reduce combat work" above a "cut your sets" action.
+    reduce_clause = "Heavy loading should be reduced today." if strength else "Hard combat work should be reduced today."
     if warning_count >= 3:
         if session_risk == "high" or _has_pain_warning(warnings) or phase in {"TAPER", "REINTEGRATION"} or fight_week:
             return (
                 "pull_back",
                 "Pull back today.",
-                f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Hard combat work should be reduced today.",
+                f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. {reduce_clause}",
                 "Skip the loaded work today and use recovery or light mobility instead."
                 if strength
                 else "Skip combat work and use recovery or light mobility instead.",
@@ -1271,7 +1294,7 @@ def _soft_warning_message(
         return (
             "modify",
             "Session reduced.",
-            f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Hard combat work should be reduced today.",
+            f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. {reduce_clause}",
             "Cut the heavy top sets and back-off volume, and keep the remaining lifts controlled."
             if strength
             else "Skip sparring, hard rounds, and conditioning finishers, and keep the remaining rounds controlled.",
