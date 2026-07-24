@@ -13,6 +13,13 @@ import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
 import { normalizeInjuryLabel } from "@/lib/injury-display";
+import { TODAY_INJURY_DETAIL_MAX } from "@/lib/input-limits";
+import {
+  DEFAULT_TODAY_INJURY_TYPE,
+  TODAY_INJURY_TYPE_OPTIONS,
+  type TodayInjuryType,
+  composeTodayInjuryDescription,
+} from "@/lib/today-injury-input";
 import type {
   InjuryFlagRecord,
   InjuryFlagSeverity,
@@ -92,6 +99,8 @@ export function TodayInjuryManager({
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
+  const [newType, setNewType] = useState<TodayInjuryType>(DEFAULT_TODAY_INJURY_TYPE);
+  const [newDetail, setNewDetail] = useState("");
   const [newZone, setNewZone] = useState("");
   const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
@@ -157,9 +166,14 @@ export function TodayInjuryManager({
     }
     setIsAdding(true);
     try {
-      await submit([{ body_area: area, severity: newSeverity, status: "ongoing" }]);
+      const description = composeTodayInjuryDescription({ injuryType: newType, detail: newDetail });
+      await submit([
+        { body_area: area, description, severity: newSeverity, status: "ongoing" },
+      ]);
       setNewArea("");
       setNewSeverity("moderate");
+      setNewType(DEFAULT_TODAY_INJURY_TYPE);
+      setNewDetail("");
       setNewZone("");
       showToast("Injury added.", { tone: "success" });
     } catch (error) {
@@ -185,6 +199,8 @@ export function TodayInjuryManager({
     setNewArea("");
     setNewZone("");
     setNewSeverity("moderate");
+    setNewType(DEFAULT_TODAY_INJURY_TYPE);
+    setNewDetail("");
   }
 
   return (
@@ -308,7 +324,7 @@ export function TodayInjuryManager({
             id="today-injury-area"
             value={newArea}
             maxLength={200}
-            placeholder="e.g. left shoulder bruise"
+            placeholder="e.g. left shoulder"
             onChange={(event) => {
               const value = event.target.value;
               setNewArea(value);
@@ -318,6 +334,23 @@ export function TodayInjuryManager({
             }}
           />
         </label>
+        <SegmentGroup
+          label="Type"
+          value={newType}
+          options={TODAY_INJURY_TYPE_OPTIONS}
+          onChange={setNewType}
+        />
+        <div className="field today-injury-detail">
+          <label htmlFor="today-injury-detail">Additional detail — optional</label>
+          <input
+            id="today-injury-detail"
+            value={newDetail}
+            maxLength={TODAY_INJURY_DETAIL_MAX}
+            placeholder="e.g. tight after sprinting"
+            onChange={(event) => setNewDetail(event.target.value)}
+          />
+          <small className="muted">Briefly describe what it feels like.</small>
+        </div>
         <SegmentGroup
           label="Severity"
           value={newSeverity}
