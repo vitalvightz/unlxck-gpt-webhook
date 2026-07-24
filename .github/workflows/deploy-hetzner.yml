@@ -111,7 +111,8 @@ jobs:
               echo "Previous commit: $PREVIOUS_COMMIT"
               echo "Expected commit: $EXPECTED_COMMIT"
 
-              git fetch origin Main
+              git remote set-url origin https://github.com/vitalvightz/unlxck-gpt-webhook.git
+              GIT_TERMINAL_PROMPT=0 git -c credential.helper= fetch --no-tags --prune origin Main
               git reset --hard origin/Main
 
               ACTUAL_COMMIT="$(git rev-parse HEAD)"
