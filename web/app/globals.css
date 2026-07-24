@@ -17601,6 +17601,13 @@ html[data-theme="light"] .loading-operational-item {
   padding: 10px 12px;
   margin: 10px 0;
 }
+/* The "MINDSET" heading sits directly above the INTENT / FOCUS / RESET field
+   labels and, being muted, blended into them. Give it the brand-red accent and a
+   heavier weight (same size) so it reads clearly as the section heading. */
+.sp-mindset .sp-eyebrow {
+  color: var(--brand-red);
+  font-weight: 700;
+}
 .sp-mindset-list,
 .sp-kv-list,
 .sp-cues,

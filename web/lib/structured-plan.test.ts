@@ -601,6 +601,26 @@ test("getMindsetLines surfaces the full mindset anchor including reset and confi
   assert.deepEqual(getMindsetLines(null), []);
 });
 
+test("getMindsetLines capitalises the first letter of each cue for display", () => {
+  const lines = getMindsetLines({
+    intent: "keep it light and fluid",
+    focus_cue: "intentional explosive pulls, then full recovery",
+    reset_cue: "stop if breathing becomes heavy",
+    confidence_anchor: "you are protecting freshness",
+    context: "short band work and mobility",
+  });
+  assert.deepEqual(
+    lines.map((l) => l.value),
+    [
+      "Keep it light and fluid",
+      "Intentional explosive pulls, then full recovery",
+      "Stop if breathing becomes heavy",
+      "You are protecting freshness",
+      "Short band work and mobility",
+    ],
+  );
+});
+
 // --- deterministic (Stage 1) nutrition + recovery (PR-6) -------------------
 
 test("weekLabel keeps short goals verbatim but caps long ones to a glanceable heading", () => {
