@@ -8,6 +8,7 @@ import {
 } from "@/components/session-completion-form";
 import {
   DaySessionContext,
+  RehabLabelProvider,
   SessionCard as StructuredSessionCard,
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
@@ -43,6 +44,7 @@ import {
   type SafeSessionView,
 } from "@/lib/today";
 import type {
+  RehabLabelPolicy,
   StructuredPlan,
   TodayCommandView,
   TodayCompletionStatus,
@@ -160,12 +162,18 @@ function TodaySessionBlocks({
   planId,
   current,
   openWeekIntent,
+  rehabLabelPolicy,
 }: {
   planId?: string;
   current: CurrentDayResolution;
   /** Development-block week intent of an open (renewable) plan: headlines where
    * today sits in the block and forwards the per-block directive to the cards. */
   openWeekIntent?: OpenBlockWeekIntent | null;
+  /** Per-region Rehab/Prehab policy from the active plan. Today renders
+   * SessionCard directly rather than through Plan Detail's full-plan renderer,
+   * so it has to mount the provider itself; without it every rehab block on this
+   * screen read "Rehab" no matter which injuries had cleared. */
+  rehabLabelPolicy?: RehabLabelPolicy | null;
 }) {
   if (!current.inRange || !current.day) {
     return null;
@@ -187,28 +195,30 @@ function TodaySessionBlocks({
     );
   }
   return (
-    <div className="today-blocks">
-      {weekIntentNote}
-      <DaySessionContext day={current.day} />
-      {current.sessions.map((session, index) => (
-        <StructuredSessionCard
-          key={sessionIdentity({
-            planId,
-            weekPos: current.weekPos ?? 0,
-            dayPos: current.dayPos ?? 0,
-            sessionPos: index,
-            week: current.week,
-            day: current.day,
-            session,
-          })}
-          session={session}
-          day={index === 0 ? current.day ?? undefined : undefined}
-          defaultOpenBlocks
-          showDayContext={false}
-          openWeekIntent={openWeekIntent}
-        />
-      ))}
-    </div>
+    <RehabLabelProvider policy={rehabLabelPolicy}>
+      <div className="today-blocks">
+        {weekIntentNote}
+        <DaySessionContext day={current.day} />
+        {current.sessions.map((session, index) => (
+          <StructuredSessionCard
+            key={sessionIdentity({
+              planId,
+              weekPos: current.weekPos ?? 0,
+              dayPos: current.dayPos ?? 0,
+              sessionPos: index,
+              week: current.week,
+              day: current.day,
+              session,
+            })}
+            session={session}
+            day={index === 0 ? current.day ?? undefined : undefined}
+            defaultOpenBlocks
+            showDayContext={false}
+            openWeekIntent={openWeekIntent}
+          />
+        ))}
+      </div>
+    </RehabLabelProvider>
   );
 }
 
@@ -220,11 +230,14 @@ export function TodaySessionPanel({
   state,
   structuredPlan,
   planSchedule,
+  rehabLabelPolicy,
   token,
   onRefresh,
 }: {
   state: TodayCommandView;
   structuredPlan: StructuredPlan | null;
+  /** Server-derived per-region Rehab/Prehab policy for the active plan. */
+  rehabLabelPolicy?: RehabLabelPolicy | null;
   /** Server schedule projection + plan creation date, used to anchor the
    * current week of a weekday-only (open / renewable) plan. */
   planSchedule?: TodayPlanSchedule | null;
@@ -376,7 +389,12 @@ export function TodaySessionPanel({
           />
         ) : null}
         {showStructuredBlocks ? (
-          <TodaySessionBlocks planId={state.active_plan?.id} current={current} openWeekIntent={openWeekIntent} />
+          <TodaySessionBlocks
+            planId={state.active_plan?.id}
+            current={current}
+            openWeekIntent={openWeekIntent}
+            rehabLabelPolicy={rehabLabelPolicy}
+          />
         ) : (
           <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
         )}
@@ -420,7 +438,12 @@ export function TodaySessionPanel({
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (
-        <TodaySessionBlocks planId={state.active_plan?.id} current={current} openWeekIntent={openWeekIntent} />
+        <TodaySessionBlocks
+          planId={state.active_plan?.id}
+          current={current}
+          openWeekIntent={openWeekIntent}
+          rehabLabelPolicy={rehabLabelPolicy}
+        />
       ) : (
         <div className="today-session-summary">
           <div>

@@ -1563,6 +1563,30 @@ class AdminPlanOutputs(BaseModel):
     structured_schema_version: str | None = None
 
 
+class ActiveInjuryRegion(BaseModel):
+    """A body region the athlete is currently injured in, plus its match terms.
+
+    ``terms`` are normalized (lowercase, punctuation collapsed) location synonyms
+    and rehab-bank drill names. A rehab block whose text contains any of them is
+    targeting this live injury and keeps the "Rehab" label.
+    """
+
+    region: str
+    terms: list[str] = Field(default_factory=list)
+
+
+class RehabLabelPolicy(BaseModel):
+    """How to label each of a plan's rehab blocks — see api.rehab_labels.
+
+    ``default_mode`` is what a rehab block reads as when it matches no active
+    region: "prehab" (the work is prophylactic) once every live injury has been
+    localized, "rehab" while an unlocalizable injury is open.
+    """
+
+    default_mode: RehabLabelMode = "rehab"
+    active_regions: list[ActiveInjuryRegion] = Field(default_factory=list)
+
+
 class PlanDetail(PlanSummary):
     outputs: PlanOutputs
     safety_state: PlanSafetyState
@@ -1576,12 +1600,12 @@ class PlanDetail(PlanSummary):
     # from the submitted intake and the saved profile may be stale. Derived from
     # the plan row's why_log marker in plan_mappers._map_plan_detail.
     profile_refresh_failed: bool = False
-    # Whether the plan's rehab work should read as "Rehab" or "Prehab" in the
-    # viewer. Derived server-side from the athlete's live injury flags (not the
-    # intake medical-clearance answer): "prehab" only once every tracked injury
-    # for this plan has been resolved, otherwise "rehab". See
-    # plan_mappers.resolve_rehab_label_mode.
-    rehab_label_mode: RehabLabelMode = "rehab"
+    # Per-region Rehab/Prehab labelling for this plan's rehab blocks. Derived
+    # server-side from the athlete's live injury flags (not the intake
+    # medical-clearance answer). A rehab block reads "Rehab" only while the body
+    # region it targets is actually injured; everything else is "Prehab". See
+    # api.rehab_labels.resolve_rehab_label_policy.
+    rehab_label_policy: RehabLabelPolicy = Field(default_factory=RehabLabelPolicy)
 
 
 class ProgressMilestone(BaseModel):
@@ -1735,9 +1759,9 @@ AdaptationDecisionValue = Literal[
 ]
 InjuryFlagSeverity = Literal["mild", "moderate", "severe"]
 InjuryFlagStatus = Literal["open", "monitoring", "resolved"]
-# How a plan's rehab work should be labelled in the viewer. "prehab" once every
-# tracked injury for the plan has been resolved (the work is now prophylactic);
-# "rehab" while any injury is still active, or when no injury is tracked.
+# How a rehab block is labelled in the viewer. "rehab" while the body region it
+# targets is actively injured; "prehab" once that injury clears and the work is
+# purely prophylactic.
 RehabLabelMode = Literal["rehab", "prehab"]
 InjuryReportedStatus = Literal["ongoing", "improving", "worse", "resolved"]
 AdminReviewStatus = Literal["pending", "acknowledged", "resolved"]
