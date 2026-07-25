@@ -622,12 +622,26 @@ export type PlanDetail = PlanSummary & {
   // this plan was built from the submitted intake and the saved profile may be
   // stale. Surfaced as a non-blocking notice in the plan viewer.
   profile_refresh_failed?: boolean;
-  // Whether this plan's rehab work should read as "Rehab" or "Prehab", derived
-  // server-side from the athlete's live injury flags (see resolve_rehab_label_mode
-  // in api/plan_mappers.py). "prehab" only once every tracked injury for the plan
-  // has been resolved; "rehab" otherwise. Absent on legacy payloads → treat as
-  // "rehab".
-  rehab_label_mode?: "rehab" | "prehab";
+  // Per-region Rehab/Prehab labelling for this plan's rehab blocks, derived
+  // server-side from the athlete's live injury flags (see resolve_rehab_label_policy
+  // in api/rehab_labels.py). Applied per block by resolveBlockRehabLabel in
+  // web/lib/rehab-label.ts. Absent on legacy payloads → everything reads "Rehab".
+  rehab_label_policy?: RehabLabelPolicy;
+};
+
+/** A body region the athlete is currently injured in, plus its match terms.
+ * `terms` are normalized (lowercase, punctuation collapsed) location synonyms
+ * and rehab-bank drill names. */
+export type ActiveInjuryRegion = {
+  region: string;
+  terms: string[];
+};
+
+export type RehabLabelPolicy = {
+  // What a rehab block reads as when it matches no active region: "prehab" once
+  // every live injury has been localized, "rehab" while one cannot be.
+  default_mode: "rehab" | "prehab";
+  active_regions: ActiveInjuryRegion[];
 };
 
 export type ProgressMilestone = {

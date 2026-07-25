@@ -10,7 +10,12 @@ import {
 } from "./structured-plan-renderer";
 import { openBlockWeekIntent } from "@/lib/open-block";
 import { formatPlanLabel } from "@/lib/plan-labels";
-import type { PlanScheduleContext, StructuredPlan, StructuredSession } from "@/lib/types";
+import type {
+  PlanScheduleContext,
+  RehabLabelPolicy,
+  StructuredPlan,
+  StructuredSession,
+} from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
   return text.split(needle).length - 1;
@@ -332,8 +337,10 @@ test("surfaces rehab summary while keeping full rehab details collapsed", () => 
   assert.equal(html.includes("Show more (2 blocks)"), true);
 });
 
-test("rehabAsPrehab relabels the rehab summary as Prehab once the injury has cleared", () => {
-  const plan = {
+// A one-session plan whose only rehab block targets the hamstring. The tag on
+// that block is the thing under test in the label cases below.
+function hamstringRehabPlan(): StructuredPlan {
+  return {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
     weeks: [
@@ -356,7 +363,7 @@ test("rehabAsPrehab relabels the rehab summary as Prehab once the injury has cle
                   {
                     block_id: "rehab",
                     block_type: "rehab",
-                    display_name: "Neutral-Grip Isometric Holds",
+                    display_name: "Isometric Hamstring Bridge Hold",
                     sets: 2,
                     reps: "12-15 s",
                   },
@@ -368,16 +375,54 @@ test("rehabAsPrehab relabels the rehab summary as Prehab once the injury has cle
       },
     ],
   } satisfies StructuredPlan;
+}
 
-  // Default: an active intake injury keeps the "Rehab" wording.
-  const rehabHtml = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
-  assert.equal(rehabHtml.includes("Rehab / Mobility"), true);
-  assert.equal(rehabHtml.includes("Prehab / Mobility"), false);
+const HAMSTRING_OPEN: RehabLabelPolicy = {
+  default_mode: "prehab",
+  active_regions: [{ region: "hamstring", terms: ["hamstring", "hamstrings"] }],
+};
 
-  // Cleared: the same prophylactic work reads as "Prehab".
-  const prehabHtml = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} rehabAsPrehab />);
-  assert.equal(prehabHtml.includes("Prehab / Mobility"), true);
-  assert.equal(prehabHtml.includes("Rehab / Mobility"), false);
+const QUAD_OPEN_HAMSTRING_CLEARED: RehabLabelPolicy = {
+  default_mode: "prehab",
+  active_regions: [{ region: "quads", terms: ["quad", "quads", "quadriceps"] }],
+};
+
+test("without a policy every rehab block keeps the Rehab wording", () => {
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={hamstringRehabPlan()} />);
+  assert.equal(html.includes("Rehab / Mobility"), true);
+  assert.equal(html.includes("Prehab / Mobility"), false);
+});
+
+test("a rehab block whose region is still injured stays Rehab", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={hamstringRehabPlan()} rehabLabelPolicy={HAMSTRING_OPEN} />,
+  );
+  assert.equal(html.includes("Rehab / Mobility"), true);
+  assert.equal(html.includes("Prehab / Mobility"), false);
+});
+
+test("a cleared region reads Prehab even while another region is injured", () => {
+  // The regression: one open quad flag used to pin the whole plan to "Rehab",
+  // so cleared hamstring work kept reading Rehab.
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={hamstringRehabPlan()}
+      rehabLabelPolicy={QUAD_OPEN_HAMSTRING_CLEARED}
+    />,
+  );
+  assert.equal(html.includes("Prehab / Mobility"), true);
+  assert.equal(html.includes("Rehab / Mobility"), false);
+});
+
+test("an unlocalizable open injury keeps every rehab block on Rehab", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={hamstringRehabPlan()}
+      rehabLabelPolicy={{ default_mode: "rehab", active_regions: [] }}
+    />,
+  );
+  assert.equal(html.includes("Rehab / Mobility"), true);
+  assert.equal(html.includes("Prehab / Mobility"), false);
 });
 
 test("does not duplicate a rehab insert as a summary once the blocks are expanded", () => {

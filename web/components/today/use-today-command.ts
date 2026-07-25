@@ -8,6 +8,7 @@ import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import type {
   PlanDetail,
   PlanScheduleContext,
+  RehabLabelPolicy,
   StructuredPlan,
   TodayCommandView,
 } from "@/lib/types";
@@ -44,6 +45,10 @@ export type TodayCommand = {
   state: TodayCommandView | null;
   structuredPlan: StructuredPlan | null;
   planSchedule: TodayPlanSchedule;
+  /** Per-region Rehab/Prehab policy from the same plan read. Today renders the
+   * shared SessionCard, so without this every rehab block on this screen read
+   * "Rehab" no matter which injuries had cleared. */
+  rehabLabelPolicy: RehabLabelPolicy | null;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -63,6 +68,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const [state, setState] = useState<TodayCommandView | null>(null);
   const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
   const [planSchedule, setPlanSchedule] = useState<TodayPlanSchedule>(EMPTY_PLAN_SCHEDULE);
+  const [rehabLabelPolicy, setRehabLabelPolicy] = useState<RehabLabelPolicy | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +96,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
     if (!token || !activePlanId) {
       setStructuredPlan(null);
       setPlanSchedule(EMPTY_PLAN_SCHEDULE);
+      setRehabLabelPolicy(null);
       return;
     }
     let cancelled = false;
@@ -101,12 +108,14 @@ export function useTodayCommand(token: string | null): TodayCommand {
             scheduleContext: detail?.schedule_context ?? null,
             createdAt: detail?.created_at ?? null,
           });
+          setRehabLabelPolicy(detail?.rehab_label_policy ?? null);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setStructuredPlan(null);
           setPlanSchedule(EMPTY_PLAN_SCHEDULE);
+          setRehabLabelPolicy(null);
         }
       });
     return () => {
@@ -114,5 +123,5 @@ export function useTodayCommand(token: string | null): TodayCommand {
     };
   }, [token, activePlanId]);
 
-  return { state, structuredPlan, planSchedule, isLoading, error, refresh };
+  return { state, structuredPlan, planSchedule, rehabLabelPolicy, isLoading, error, refresh };
 }
