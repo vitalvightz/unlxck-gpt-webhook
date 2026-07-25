@@ -1735,6 +1735,10 @@ def build_readiness_adjustment(
         and session_risk == "high"
         and decision == "modify"
         and "contact_sport" not in triggers
+        # Skip when the action already tells the athlete to drop contact work
+        # ("Skip sparring…", "No sparring…"): appending the suffix there restated
+        # the same instruction in a second clause.
+        and not any(term in action.lower() for term in ("sparring", "contact"))
     ):
         action = action.rstrip(".") + " and do not add extra contact rounds."
 
