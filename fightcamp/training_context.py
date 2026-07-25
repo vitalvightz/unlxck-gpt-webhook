@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .config import CONDITIONING_PER_DAY, STRENGTH_PER_DAY
+from .weight_cut import WEIGHT_CUT_INPUTS_KNOWN
 
 EQUIP_ALIASES = {
     "med balls": "medicine_ball",
@@ -114,6 +115,10 @@ class TrainingContext:
     recent_exercises: list[str]
     phase_weeks: dict
     days_until_fight: int | None
+    # Whether current/target weight were both collected. ``weight_cut_pct`` is
+    # 0.0 when either is missing, so this is the only way downstream consumers
+    # can tell "no cut" apart from "no cut data".
+    weight_cut_status: str = WEIGHT_CUT_INPUTS_KNOWN
     training_split: dict[str, Any] = field(default_factory=dict)
     hard_sparring_days: list[str] = field(default_factory=list)
     support_work_days: list[str] = field(default_factory=list)

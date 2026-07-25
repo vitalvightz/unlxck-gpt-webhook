@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from fightcamp import recovery
 from fightcamp.nutrition import _is_high_pressure_weight_cut as nutrition_high_pressure_cut
-from fightcamp.nutrition import generate_nutrition_block
+from fightcamp.nutrition import compute_nutrition_targets, generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
-from fightcamp.weight_cut import compute_weight_cut_pct, parse_weight_value
+from fightcamp.weight_cut import (
+    WEIGHT_CUT_INPUTS_MISSING_TARGET,
+    compute_weight_cut_pct,
+    parse_weight_value,
+)
 
 
 def test_nutrition_high_pressure_weight_cut_detects_multiple_triggers():
@@ -204,3 +208,45 @@ def test_compute_weight_cut_pct_clamps_negative_and_zero_current_weight():
     assert compute_weight_cut_pct(0, 65) == 0.0
     assert compute_weight_cut_pct("64 kg", "66 kg") == 0.0
     assert compute_weight_cut_pct("70kg", "66kg") == 5.7
+
+
+def test_nutrition_targets_report_unknown_cut_when_target_weight_missing():
+    targets = compute_nutrition_targets(
+        flags={
+            "weight": 88.0,
+            "phase": "GPP",
+            "fatigue": "low",
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "weight_cut_status": WEIGHT_CUT_INPUTS_MISSING_TARGET,
+            "days_until_fight": 42,
+        }
+    )
+
+    # Not "no active cut" — the data to decide that was never collected.
+    assert targets["weight_cut"]["known"] is False
+    assert targets["weight_cut"]["unknown_reason"] == WEIGHT_CUT_INPUTS_MISSING_TARGET
+    assert "No target weight set" in targets["weight_cut"]["note"]
+    # An unknown cut never escalates or demands supervision.
+    assert targets["weight_cut"]["active"] is False
+    assert targets["weight_cut"]["risk_band"] == "none"
+    assert targets["weight_cut"]["supervision_required"] is False
+    assert "coach_gated" not in targets
+
+
+def test_nutrition_targets_mark_cut_known_when_both_weights_present():
+    targets = compute_nutrition_targets(
+        flags={
+            "weight": 88.0,
+            "phase": "GPP",
+            "fatigue": "low",
+            "weight_cut_risk": True,
+            "weight_cut_pct": 3.5,
+            "days_until_fight": 42,
+        }
+    )
+
+    # A known cut keeps the tight athlete-facing shape — the unknown-state keys
+    # are added only when there is genuinely no cut data.
+    assert set(targets["weight_cut"]) == {"active", "risk_band", "supervision_required"}
+    assert targets["weight_cut"].get("known", True) is True
