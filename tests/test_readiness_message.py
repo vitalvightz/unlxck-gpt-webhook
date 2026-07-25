@@ -1107,7 +1107,11 @@ def test_hyphenated_combat_sports_are_recognized_for_contact_guidance():
 
         assert adjustment.decision == "modify"
         assert "contact_sport" in adjustment.triggers
-        assert "contact rounds" in adjustment.action
+        # The subject here is sport RECOGNITION (the trigger above). The action is
+        # asserted to give contact-specific guidance, but not via the "extra contact
+        # rounds" suffix: that suffix is now suppressed when the action already says
+        # to drop contact work, as this one does.
+        assert "sparring" in adjustment.action.lower()
         _assert_card_shape(adjustment)
 
 
@@ -1423,6 +1427,47 @@ def test_mixed_session_copy_differs_from_both_pure_modalities():
 
     assert mixed.action != combat.action
     assert mixed.action != strength.action
+
+
+_CONTACT_SPORT_PLAN = {"technical_style": "MMA"}
+
+
+@pytest.mark.parametrize("session_type", ["sparring", "mixed"])
+def test_contact_suffix_skipped_when_action_already_drops_contact(session_type):
+    # High-risk contact day whose action already says "Skip sparring…": appending
+    # "and do not add extra contact rounds" only restated it.
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(
+            today_session=_session(title="Hard sparring and max squat", session_type=session_type),
+            active_plan=_CONTACT_SPORT_PLAN,
+        ),
+    )
+
+    assert adjustment.session_risk == "high"
+    assert adjustment.decision == "modify"
+    assert "sparring" in adjustment.action.lower()
+    assert "do not add extra contact rounds" not in adjustment.action
+    _assert_card_shape(adjustment)
+
+
+@pytest.mark.parametrize("session_type", ["sparring", "mixed"])
+def test_contact_suffix_still_added_when_action_never_mentions_contact(session_type):
+    # The suffix still carries information when the action only talks about
+    # rounds/load, so it must survive the redundancy guard.
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(previous_session="very_hard"),
+        ReadinessContext(
+            today_session=_session(title="Hard sparring and max squat", session_type=session_type),
+            phase="SPP",
+            active_plan=_CONTACT_SPORT_PLAN,
+        ),
+    )
+
+    assert adjustment.session_risk == "high"
+    assert adjustment.decision == "modify"
+    assert adjustment.action.endswith("and do not add extra contact rounds.")
+    _assert_card_shape(adjustment)
 
 
 def test_high_risk_strength_day_names_maxes_and_grinders():
