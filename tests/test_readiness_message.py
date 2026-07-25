@@ -1,5 +1,7 @@
 """Tests for the context-aware Today readiness message engine."""
 
+import pytest
+
 from api.contracts.readiness_message import (
     ReadinessCheckin,
     ReadinessContext,
@@ -1332,7 +1334,7 @@ def test_strength_session_poor_sleep_uses_sets_not_rounds():
 
 
 def test_combat_session_poor_sleep_still_uses_rounds():
-    # Regression: the combat framing is unchanged for a combat/mixed session.
+    # Regression: the combat framing is unchanged for a pure combat session.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),
         ReadinessContext(today_session=_session(title="Hard sparring", session_type="sparring")),
@@ -1342,6 +1344,85 @@ def test_combat_session_poor_sleep_still_uses_rounds():
     assert "round" in adjustment.action.lower()
     assert "set" not in adjustment.action.lower()
     _assert_card_shape(adjustment)
+
+
+def _mixed_session(**overrides):
+    """A session that genuinely trains both levers: lifting AND combat work."""
+    return _session(
+        title="Technical work",
+        session_type="mixed",
+        blocks=[{"block_type": "strength"}, {"block_type": "sparring"}],
+        **overrides,
+    )
+
+
+def test_mixed_session_action_names_both_levers():
+    # A mixed day is lifting alongside combat work, so the action must address the
+    # rounds AND the loading — the combat-only default spoke to half the session.
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor"),
+        ReadinessContext(today_session=_mixed_session()),
+    )
+
+    assert classify_session_modality(_mixed_session()) == "mixed"
+    assert adjustment.decision == "modify"
+    action = adjustment.action.lower()
+    assert "round" in action
+    assert "set" in action
+    _assert_card_shape(adjustment)
+
+
+@pytest.mark.parametrize(
+    "checkin",
+    [
+        ReadinessCheckin(sleep="poor"),
+        ReadinessCheckin(body="flat"),
+        ReadinessCheckin(pain="manageable"),
+        ReadinessCheckin(previous_session="hard"),
+        ReadinessCheckin(sleep="poor", body="flat"),
+    ],
+)
+def test_mixed_session_never_speaks_only_one_lever(checkin):
+    # Whatever the warning, a mixed day names a rounds/conditioning lever and a
+    # sets/load lever, so neither half of the session is left unaddressed.
+    adjustment = build_readiness_adjustment(checkin, ReadinessContext(today_session=_mixed_session()))
+
+    action = adjustment.action.lower()
+    combat_lever = any(term in action for term in ("round", "sparring", "conditioning", "impact"))
+    strength_lever = any(term in action for term in ("set", "load", "lift"))
+    assert combat_lever, adjustment.action
+    assert strength_lever, adjustment.action
+    _assert_card_shape(adjustment)
+
+
+def test_mixed_stacked_warnings_reason_names_both_levers():
+    # The reason's "reduce X" clause must cover the same two levers as the action.
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat"),
+        ReadinessContext(today_session=_mixed_session()),
+    )
+
+    assert adjustment.decision == "modify"
+    assert "Hard combat work and heavy loading should be reduced today." in adjustment.reason
+    assert "sparring" in adjustment.action.lower()
+    assert "top sets" in adjustment.action
+    _assert_card_shape(adjustment)
+
+
+def test_mixed_session_copy_differs_from_both_pure_modalities():
+    # Mixed is its own framing now: no longer a copy of the combat default, and not
+    # the strength copy either.
+    checkin = ReadinessCheckin(sleep="poor")
+    mixed = build_readiness_adjustment(checkin, ReadinessContext(today_session=_mixed_session()))
+    combat = build_readiness_adjustment(
+        checkin, ReadinessContext(today_session=_session(title="Technical work", session_type="skill"))
+    )
+    strength = build_readiness_adjustment(
+        checkin, ReadinessContext(today_session=_session(title="Technical work", session_type="strength_power"))
+    )
+
+    assert mixed.action != combat.action
+    assert mixed.action != strength.action
 
 
 def test_high_risk_strength_day_names_maxes_and_grinders():
