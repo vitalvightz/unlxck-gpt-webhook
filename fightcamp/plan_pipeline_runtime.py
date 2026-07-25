@@ -27,7 +27,7 @@ from .strength import (
 )
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
 from .training_context import TrainingContext, normalize_equipment_list
-from .weight_cut import compute_weight_cut_pct, parse_weight_value
+from .weight_cut import compute_weight_cut_pct, parse_weight_value, weight_cut_input_status
 
 PHASES = ("GPP", "SPP", "TAPER")
 PHASE_COLORS = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}
@@ -171,6 +171,7 @@ class PlanRuntimeContext:
     apply_muay_thai_filters: bool
     weight_cut_risk_flag: bool
     weight_cut_pct_val: float
+    weight_cut_status_val: str
     mental_block_class: list[str]
     camp_len: int
     phase_weeks: dict
@@ -308,6 +309,10 @@ def build_runtime_context(
     target_weight = plan_input.target_weight
     weight_val = parse_weight_value(weight)
     target_val = parse_weight_value(target_weight)
+    # Blank/unparseable input stays distinguishable from a real zero here: a
+    # missing target weight means the cut is unknown, so it must not be scored
+    # as a 100% cut and must not raise any cut flag.
+    weight_cut_status_val = weight_cut_input_status(weight, target_weight)
     weight_cut_pct_val = compute_weight_cut_pct(weight_val, target_val)
     weight_cut_risk_flag = weight_cut_pct_val >= 3.0
     mental_block_class = classify_mental_block(plan_input.mental_block or "")
@@ -372,6 +377,7 @@ def build_runtime_context(
         equipment=normalize_equipment_list(plan_input.equipment_access),
         weight_cut_risk=weight_cut_risk_flag,
         weight_cut_pct=weight_cut_pct_val,
+        weight_cut_status=weight_cut_status_val,
         fight_format=selection_format,
         status=plan_input.status.strip().lower(),
         key_goals=[
@@ -416,6 +422,7 @@ def build_runtime_context(
         apply_muay_thai_filters=apply_muay_thai_filters,
         weight_cut_risk_flag=weight_cut_risk_flag,
         weight_cut_pct_val=weight_cut_pct_val,
+        weight_cut_status_val=weight_cut_status_val,
         mental_block_class=mental_block_class,
         camp_len=camp_len,
         phase_weeks=phase_weeks,

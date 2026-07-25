@@ -23,14 +23,72 @@ def parse_weight_value(raw: object) -> float:
         return 0.0
 
 
+def parse_optional_weight_value(raw: object) -> float | None:
+    """Usable weight in kg, or ``None`` when it was never provided.
+
+    ``parse_weight_value`` collapses missing, blank, and unparseable input to
+    ``0.0``, which is indistinguishable from a real zero. Weight-cut logic must
+    keep that distinction: a blank target weight is *unknown*, not "cutting to
+    zero". Anything that does not parse to a positive number is treated as not
+    provided.
+    """
+    value = parse_weight_value(raw)
+    return value if value > 0.0 else None
+
+
+# Whether both sides of the cut calculation were actually collected. Blank or
+# unparseable input yields a ``missing_*`` status rather than a silent zero, so
+# downstream consumers can say "no target weight set" instead of inventing a
+# 100% cut (blank target) or silently dropping a declared target (blank current).
+WEIGHT_CUT_INPUTS_KNOWN = "known"
+WEIGHT_CUT_INPUTS_MISSING_TARGET = "missing_target_weight"
+WEIGHT_CUT_INPUTS_MISSING_CURRENT = "missing_current_weight"
+WEIGHT_CUT_INPUTS_MISSING_BOTH = "missing_both_weights"
+
+WEIGHT_CUT_INPUTS_UNKNOWN_STATUSES = frozenset(
+    {
+        WEIGHT_CUT_INPUTS_MISSING_TARGET,
+        WEIGHT_CUT_INPUTS_MISSING_CURRENT,
+        WEIGHT_CUT_INPUTS_MISSING_BOTH,
+    }
+)
+
+
+def weight_cut_input_status(current_weight: object, target_weight: object) -> str:
+    """Which side(s) of the cut calculation the athlete actually provided."""
+    current = parse_optional_weight_value(current_weight)
+    target = parse_optional_weight_value(target_weight)
+    if current is None and target is None:
+        return WEIGHT_CUT_INPUTS_MISSING_BOTH
+    if current is None:
+        return WEIGHT_CUT_INPUTS_MISSING_CURRENT
+    if target is None:
+        return WEIGHT_CUT_INPUTS_MISSING_TARGET
+    return WEIGHT_CUT_INPUTS_KNOWN
+
+
+def weight_cut_inputs_known(current_weight: object, target_weight: object) -> bool:
+    """Whether both current and target weight are usable numbers."""
+    return weight_cut_input_status(current_weight, target_weight) == WEIGHT_CUT_INPUTS_KNOWN
+
+
 def compute_weight_cut_pct(current_weight: object, target_weight: object) -> float:
     """
     Return active cut percentage as body-mass delta:
       (current - target) / current * 100
     Clamped at zero and rounded to one decimal.
+
+    Returns ``0.0`` when either weight is missing. A blank target weight used to
+    parse as ``0.0`` and produce a 100% cut, which saturated every downstream
+    severity gate (``extreme`` bucket, supervision required, hard-sparring
+    blocks) for an athlete who simply left the optional field empty. Absent
+    input means the cut is *unknown*, not maximal — callers that need to tell
+    "no cut" apart from "no data" should use :func:`weight_cut_input_status`.
     """
-    current = parse_weight_value(current_weight)
-    target = parse_weight_value(target_weight)
+    current = parse_optional_weight_value(current_weight)
+    target = parse_optional_weight_value(target_weight)
+    if current is None or target is None:
+        return 0.0
     if current < 1.0:
         return 0.0
     return round(max(0.0, (current - target) / current * 100.0), 1)

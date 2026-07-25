@@ -1,8 +1,28 @@
 from .weight_cut import (
+    WEIGHT_CUT_INPUTS_KNOWN,
+    WEIGHT_CUT_INPUTS_MISSING_BOTH,
+    WEIGHT_CUT_INPUTS_MISSING_CURRENT,
+    WEIGHT_CUT_INPUTS_MISSING_TARGET,
+    WEIGHT_CUT_INPUTS_UNKNOWN_STATUSES,
     parse_weight_value,
     weight_cut_risk_band,
     weight_cut_supervision_required,
 )
+
+_WEIGHT_CUT_UNKNOWN_NOTES = {
+    WEIGHT_CUT_INPUTS_MISSING_TARGET: (
+        "No target weight set — cut size unknown. Add a fight-week target weight "
+        "for cut guidance."
+    ),
+    WEIGHT_CUT_INPUTS_MISSING_CURRENT: (
+        "No current weight recorded — cut size unknown. Add current bodyweight "
+        "for cut guidance."
+    ),
+    WEIGHT_CUT_INPUTS_MISSING_BOTH: (
+        "No current or target weight recorded — cut size unknown. Add both for "
+        "cut guidance."
+    ),
+}
 
 
 def _is_high_pressure_weight_cut(flags: dict) -> bool:
@@ -157,6 +177,9 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
         targets["fatigue_adjustment"] = fatigue
 
     days_until_fight = flags.get("days_until_fight")
+    weight_cut_status = str(
+        flags.get("weight_cut_status") or WEIGHT_CUT_INPUTS_KNOWN
+    ).strip().lower()
     targets["weight_cut"] = {
         "active": weight_cut_risk,
         "risk_band": weight_cut_risk_band(weight_cut_risk, cut_pct, days_until_fight),
@@ -164,6 +187,16 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
             weight_cut_risk, cut_pct, days_until_fight
         ),
     }
+    if weight_cut_status in WEIGHT_CUT_INPUTS_UNKNOWN_STATUSES:
+        # Mirror the missing-bodyweight handling above: never present "no active
+        # cut" as a finding when the inputs to decide that were never collected.
+        # These keys are added ONLY in the unknown state — the athlete-facing
+        # weight-cut summary for a known cut stays exactly
+        # {active, risk_band, supervision_required}, which is a deliberate
+        # coach-gating boundary. Consumers read ``.get("known", True)``.
+        targets["weight_cut"]["known"] = False
+        targets["weight_cut"]["unknown_reason"] = weight_cut_status
+        targets["weight_cut"]["note"] = _WEIGHT_CUT_UNKNOWN_NOTES[weight_cut_status]
 
     # Coach/medical-gated: exact acute-cut + supplement dosing. NEVER render
     # these directly to athletes — they require qualified supervision.

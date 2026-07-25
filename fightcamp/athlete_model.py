@@ -20,7 +20,11 @@ from .stage2_render_guards import (
     _has_active_injury_from_training_context,
 )
 from .training_context import TrainingContext
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .weight_cut import (
+    WEIGHT_CUT_INPUTS_KNOWN,
+    compute_cut_severity_score,
+    cut_severity_bucket,
+)
 
 
 _RECORD_PATTERN = re.compile(r"^(\d+)-(\d+)(?:-(\d+))?$")
@@ -179,6 +183,12 @@ def _build_athlete_model(
         "age": training_context.age,
         "weight_cut_risk": training_context.weight_cut_risk,
         "weight_cut_pct": training_context.weight_cut_pct,
+        # ``weight_cut_pct`` is 0.0 both when there is no cut and when a weight
+        # was never collected. This carries the difference so Stage 2 can say
+        # "no target weight set" rather than asserting "no active cut".
+        "weight_cut_status": getattr(
+            training_context, "weight_cut_status", WEIGHT_CUT_INPUTS_KNOWN
+        ),
         "cut_severity_score": cut_severity_score,
         "cut_severity_bucket": cut_severity_bucket(cut_severity_score),
         "technical_styles": training_context.style_technical,

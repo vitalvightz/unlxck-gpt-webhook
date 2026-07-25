@@ -4116,6 +4116,7 @@ Active weight cut: state it plainly in one short summary note, never buried in n
 * high: add one measured support note (protect freshness, keep optional fatigue low). Supervision language is allowed but keep it proportionate.
 * critical / extreme: safety-first supervision framing is appropriate — flag the elevated risk plainly.
 Never escalate above the graded severity; when unsure, under-warn.
+Unknown cut data: when athlete_snapshot.weight_cut_status is not "known", the athlete did not give both weights, so the cut size is UNKNOWN — not zero and not severe. Do not describe a cut, do not assign a severity, and do not claim there is no cut. Give one short neutral note naming what is missing ("no target weight set", "no current weight recorded", or "no weights recorded") and that cut guidance needs it. Never invent a target weight or a cut percentage.
 Active injury: lead with constraints, substitutions, and stop rules — not optional language.
 * If render_guards.suppress_rehab_headings == true, do not render sections/headings titled: Rehab, Prehab, Brief Rehab, Injury Rehab, Prepare / brief rehab, or Rehab / Mobility.
 * If render_guards.suppress_rehab_headings == true, generic low-load work may only be labelled: Activation, Movement Prep, Mobility, Warm-up, or Reset — never as rehab/prehab.
@@ -4151,6 +4152,7 @@ If fatigue is high or fight-week pressure is active, reduce optionality and make
 If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
 If a target-weight constraint is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
 Never write 'weight cut none active' or 'recovery tolerance is standard' when target-weight constraint flags are present.
+If athlete_snapshot.weight_cut_status is not "known", there is no target-weight constraint to state — say the target weight is not set instead of asserting either a cut or an absence of one.
 If a target-weight constraint is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
 In short camps, every rendered session must map to one compressed week-level priority from the finalizer packet. Do not create a standalone session purpose for embedded-support or deferred items.

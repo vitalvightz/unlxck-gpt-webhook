@@ -33,6 +33,7 @@ _ATHLETE_KEYS = (
     "age",
     "weight_cut_risk",
     "weight_cut_pct",
+    "weight_cut_status",
     "cut_severity_score",
     "cut_severity_bucket",
     "technical_styles",

@@ -28,6 +28,7 @@ from .stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
+from .weight_cut import parse_optional_weight_value
 
 
 def _insert_lead_summary(plan_text: str, lead_summary: str) -> str:
@@ -318,6 +319,23 @@ def _sparring_nutrition_lines(context: PlanRuntimeContext) -> list[str]:
         "",
     ]
 
+def _profile_weight_lines(context: PlanRuntimeContext) -> list[str]:
+    """Weight/target lines that read honestly when a field was left blank.
+
+    Interpolating a blank straight into the template produced a bare
+    ``- Target Weight: kg``, which reads as a real value to both the athlete and
+    Stage 2. Say "not provided" instead.
+    """
+    def _line(label: str, raw: object) -> str:
+        value = parse_optional_weight_value(raw)
+        return f"- {label}: not provided" if value is None else f"- {label}: {raw}kg"
+
+    return [
+        _line("Weight", context.plan_input.weight),
+        _line("Target Weight", context.plan_input.target_weight),
+    ]
+
+
 def _week_str(weeks: int, days: int) -> str:
     return "~1" if weeks == 0 and days > 0 else str(weeks)
 
@@ -504,8 +522,7 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         "## Athlete Profile",
         f"- **Name:** {context.plan_input.full_name}",
         f"- Age: {context.plan_input.age}",
-        f"- Weight: {context.plan_input.weight}kg",
-        f"- Target Weight: {context.plan_input.target_weight}kg",
+        *_profile_weight_lines(context),
         f"- Height: {context.plan_input.height}cm",
         f"- Technical Style: {context.plan_input.fighting_style_technical}",
         f"- Tactical Style: {context.plan_input.fighting_style_tactical}",
@@ -543,8 +560,7 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
     profile_lines = [
         f"- **Name:** {context.plan_input.full_name}",
         f"- Age: {context.plan_input.age}",
-        f"- Weight: {context.plan_input.weight}kg",
-        f"- Target Weight: {context.plan_input.target_weight}kg",
+        *_profile_weight_lines(context),
         f"- Height: {context.plan_input.height}cm",
         f"- Technical Style: {context.plan_input.fighting_style_technical}",
         f"- Tactical Style: {context.plan_input.fighting_style_tactical}",
