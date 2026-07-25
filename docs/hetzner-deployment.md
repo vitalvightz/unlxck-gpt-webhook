@@ -95,7 +95,61 @@ Before production cutover:
 5. Record API, worker, child-process, total RAM, and swap peaks.
 6. Reject the cutover if an OOM kill or unexplained restart occurs.
 
-## Updates
+## Automated deployment (GitHub Actions)
+
+`.github/workflows/deploy-hetzner.yml` deploys automatically on every push to
+`Main` (including merged pull requests) and can be run on demand with
+**workflow_dispatch**. Concurrent runs are serialised so two deployments can
+never touch `/opt/unlxck` at the same time.
+
+### How the exact commit reaches the server
+
+The server does **not** fetch from GitHub. Instead:
+
+1. The runner checks out the exact `github.sha` with full history.
+2. It packages that commit as a self-contained **git bundle**.
+3. The bundle is streamed to the server over the existing SSH connection.
+4. The server imports the commit from the local bundle and `git reset --hard`
+   to it, then verifies `HEAD == github.sha`.
+
+This means deployment does not depend on the server's git URL/credential
+configuration and needs no GitHub token or deploy key on the server. If GitHub
+is unreachable, the runner's checkout fails before anything on the server
+changes, so a failed deploy is always fail-safe.
+
+### Required GitHub Actions secrets
+
+| Secret | Purpose |
+| --- | --- |
+| `HETZNER_HOST` | Server hostname or IP for SSH. |
+| `HETZNER_USER` | SSH user (must be able to run `docker compose`). |
+| `HETZNER_SSH_PRIVATE_KEY` | Private key for that user. |
+| `HETZNER_KNOWN_HOSTS` | `ssh-keyscan` output pinning the server host key (strict host-key checking is enforced). |
+
+### One-time server requirements
+
+- `/opt/unlxck` is a git checkout of this repository on `Main`.
+- `/opt/unlxck/.env.production` exists and is `chmod 600`. It is untracked, so
+  `git reset --hard` never overwrites or deletes it; the workflow aborts if it
+  is missing.
+- The SSH user is in the `docker` group (the workflow calls `docker compose`
+  without `sudo`).
+- Docker Engine and the Compose plugin are installed.
+
+### Deploy, validation, and rollback behaviour
+
+Each run validates `docker compose config --quiet`, rebuilds and restarts
+`api`, `worker`, and `caddy` with `docker compose up -d --build` (never
+`docker compose down`, and volumes are preserved), then requires **both** the
+public API health endpoint and a running `worker` container before declaring
+success. On any failure it saves diagnostics to
+`/opt/unlxck/deployment-logs/`, restores the previous commit, rebuilds, and
+re-verifies the API and worker. A run that had to roll back still reports
+failure.
+
+## Manual update (fallback)
+
+Use this only for a hands-on update from a shell on the server:
 
 ```bash
 git fetch origin
