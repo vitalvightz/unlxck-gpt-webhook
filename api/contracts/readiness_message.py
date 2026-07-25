@@ -279,7 +279,10 @@ def _modality_from_blocks(session: Mapping[str, Any]) -> Modality | None:
     for block in blocks:
         if not isinstance(block, Mapping):
             continue
-        btype = _clean(block.get("type")).lower()
+        # Real plan data names this field "block_type" (SessionBlock in
+        # api/structured_plan_models.py, persisted by structured_plan_generation);
+        # "type" is only tolerated for hand-built / legacy session dicts.
+        btype = _clean(block.get("block_type") or block.get("type")).lower()
         if btype in _STRENGTH_BLOCK_TYPES:
             strength = True
         elif btype in _COMBAT_BLOCK_TYPES:

@@ -1274,6 +1274,24 @@ def test_mixed_session_type_defers_to_block_types():
     assert classify_session_modality({"session_type": "mixed"}) == "mixed"
 
 
+def test_block_fallback_reads_the_real_block_type_field():
+    # Real plan data spells this field "block_type" (SessionBlock in
+    # api/structured_plan_models.py, persisted by structured_plan_generation) — the
+    # fallback must read it, not just the hand-written "type" shorthand, or it is
+    # dead on every generated plan.
+    real_strength = [{"block_id": "b1", "block_type": "strength"}, {"block_id": "b2", "block_type": "accessory"}]
+    assert classify_session_modality({"blocks": real_strength}) == "strength"
+    # An ambiguous tag ("primer"/"recovery"/"rehab") over real strength blocks must
+    # still reach strength framing.
+    assert classify_session_modality({"session_type": "primer", "blocks": real_strength}) == "strength"
+    assert classify_session_modality({"session_type": "mixed", "blocks": real_strength}) == "strength"
+    assert classify_session_modality({"blocks": [{"block_type": "sparring"}]}) == "combat"
+    assert classify_session_modality({"blocks": [{"block_type": "conditioning"}]}) == "conditioning"
+    assert (
+        classify_session_modality({"blocks": [{"block_type": "strength"}, {"block_type": "sparring"}]}) == "mixed"
+    )
+
+
 def test_strength_and_conditioning_alias_maps_to_strength_like_upstream():
     # Upstream normalises "s&c" / "strength_and_conditioning" to strength_power
     # (api/structured_plan_generation.py _SESSION_TYPE_ALIASES), so we match that
