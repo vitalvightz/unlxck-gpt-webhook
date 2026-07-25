@@ -92,6 +92,43 @@ def test_bank_drill_names_cover_blocks_that_never_name_the_region() -> None:
     assert any("copenhagen" in term for term in groin.terms)
 
 
+def test_deep_bank_regions_ship_every_drill_term() -> None:
+    # Regression: the term list was capped at 60 per region. Every term that
+    # survives _bank_drill_terms is a drill whose name contains NO region
+    # synonym, so it is the only thing that can match that drill — truncating
+    # dropped exactly the terms nothing else could catch, downgrading live rehab
+    # work to "Prehab". "Suitcase Carry" is a real lower-back bank drill that sat
+    # at index 60, the first casualty of the cap.
+    store = FakeStore()
+    _flag(store, body_area="lower back", description="strain", status="open")
+    policy = _policy(store)
+    lower_back = next(
+        region for region in policy.active_regions if region.region == "lower back"
+    )
+
+    assert len(lower_back.terms) > 60, "expected a region deep enough to exercise the old cap"
+    assert "suitcase carry" in lower_back.terms
+    assert lower_back.terms.index("suitcase carry") >= 60
+    assert _matches(policy, "Suitcase Carry") == {"lower back"}
+
+
+def test_no_active_region_term_is_dropped_by_a_cap() -> None:
+    # Guards the cap against returning for ANY region, not just the one above:
+    # every term past the old 60-item cutoff must still match its own block.
+    store = FakeStore()
+    for body_area in ("shoulder", "wrist", "hand", "lower back"):
+        _flag(store, body_area=body_area, description="strain", status="open")
+    policy = _policy(store)
+
+    deep = [region for region in policy.active_regions if len(region.terms) > 60]
+    assert deep, "expected at least one region deeper than the old cap"
+    for region in deep:
+        for term in region.terms[60:]:
+            assert region.region in _matches(policy, term), (
+                f"{region.region} term {term!r} past the old cap no longer matches"
+            )
+
+
 def test_unlocalizable_open_injury_falls_back_to_rehab() -> None:
     # Nothing in the flag resolves to a body region, so no block can be matched
     # against it. Everything stays "Rehab" rather than guessing "Prehab".

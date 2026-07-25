@@ -33,10 +33,12 @@ LOGGER = logging.getLogger(__name__)
 
 _ACTIVE_STATUSES = ("open", "monitoring")
 
-# Upper bound on match terms shipped per region. Regions with a deep rehab bank
-# (wrist has 60 entries) would otherwise dominate the plan payload for no gain —
-# the synonyms plus the first slice of bank drills already carry the signal.
-_MAX_TERMS_PER_REGION = 60
+# Deliberately uncapped. Every bank drill term that survives _bank_drill_terms is
+# one whose name contains NO region synonym, so it is the only thing that can
+# match that drill — truncating the list would silently downgrade live rehab work
+# to "Prehab" for exactly the drills nothing else can catch. The deepest region
+# (shoulder) costs ~2.4KB against a payload that already carries the whole
+# structured plan, so there is nothing to buy back by trimming.
 
 # LOCATION_MAP resolves a few spellings of one body region to different canonical
 # keys ("glute" vs "glutes"). Fold them so an injury and a rehab drill written
@@ -136,10 +138,7 @@ def _bank_drill_terms(region: str, *, covered_by: set[str]) -> list[str]:
 def _build_region(region: str) -> ActiveInjuryRegion:
     synonyms = _synonym_terms(region)
     drills = _bank_drill_terms(region, covered_by=set(synonyms))
-    return ActiveInjuryRegion(
-        region=region,
-        terms=(synonyms + drills)[:_MAX_TERMS_PER_REGION],
-    )
+    return ActiveInjuryRegion(region=region, terms=synonyms + drills)
 
 
 def resolve_rehab_label_policy(store: AppStore, *, athlete_id: str) -> RehabLabelPolicy:
