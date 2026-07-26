@@ -42,8 +42,12 @@ test("generation ribbon target is not redundant when route is unrelated", () => 
   assert.equal(isGenerationRibbonTargetRedundant(null, "/plans/plan_123"), false);
 });
 
-test("failed generation routes back to the generate workspace", () => {
-  assert.equal(getGenerationStatusTarget("failed", "plan_123", null, "admin_latest_intake", "ath_1"), "/generate");
+test("failed generation has no navigation target", () => {
+  // Sending a failed build back to /generate mounted the build screen and then
+  // bounced, which read as "it started generating again". The failed ribbon
+  // renders explicit retry/stop actions instead.
+  assert.equal(getGenerationStatusTarget("failed", "plan_123", null, "admin_latest_intake", "ath_1"), null);
+  assert.equal(getGenerationStatusTarget("failed", null, null, "self_serve", null), null);
 });
 
 test("failed latest job with plan shows open-plan path", () => {

@@ -5,6 +5,12 @@ import { useEffect, useState } from "react";
 import { GenerationProgressMilestones } from "@/components/generation-progress-milestones";
 import { StageOnePreviewCard } from "@/components/stage-one-preview-card";
 import type { GenerationUiPhase } from "@/lib/generation-controller";
+import {
+  describeGenerationFailure,
+  GENERATION_FAILURE_ACTION_LABELS,
+  type GenerationFailureAction,
+  type GenerationFailureKind,
+} from "@/lib/generation-failure";
 import { buildStageOnePreview } from "@/lib/stage-one-preview";
 import type { PlanRequest, ProgressMilestone } from "@/lib/types";
 
@@ -124,11 +130,13 @@ export const PHASE_CONTENT: Record<
   },
   failed: {
     eyebrow: "Generation stopped",
-    title: "Plan failed. Try again.",
-    copy: "The saved intake did not reach an openable plan state. You can retry from the athlete workspace.",
-    chip: "Needs retry",
-    statusFallback: "Plan failed. Try again.",
-    reassurance: "Your intake is still saved. Return to the workspace when you are ready to retry.",
+    // Overridden per failure kind by describeGenerationFailure; these stay as
+    // the fallback for a failure the classifier could not name.
+    title: "Your plan build stopped before it finished.",
+    copy: "The saved intake did not reach an openable plan state.",
+    chip: "Stopped",
+    statusFallback: "The plan build stopped.",
+    reassurance: "Your intake is still saved. No half-finished plan was kept.",
     buildState: "Stopped",
   },
 };
@@ -152,11 +160,11 @@ interface PremiumLoadingScreenProps {
   startedAtMs?: number | null;
   milestones?: ProgressMilestone[];
   intake?: PlanRequest | null;
+  failureKind?: GenerationFailureKind | null;
   onRetry?: (() => void) | null;
   canRetry?: boolean;
   onOpenPlanHistory?: (() => void) | null;
   onReturnToWorkspace?: (() => void) | null;
-  onRefreshStatus?: (() => void) | null;
   onRefineIntake?: (() => void) | null;
 }
 
@@ -184,16 +192,31 @@ export function PremiumLoadingScreen({
   startedAtMs = null,
   milestones = [],
   intake = null,
+  failureKind = null,
   onRetry = null,
   canRetry = false,
   onOpenPlanHistory = null,
   onReturnToWorkspace = null,
-  onRefreshStatus = null,
   onRefineIntake = null,
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
-  const isTerminalNonProgress = phase === "failed" || phase === "already_generated" || phase === "review_paused";
+  const isFailed = phase === "failed";
+  const isTerminalNonProgress = isFailed || phase === "already_generated" || phase === "review_paused";
+  const failure = isFailed ? describeGenerationFailure(failureKind, error) : null;
+  const failureHandlers: Record<GenerationFailureAction, (() => void) | null> = {
+    retry: canRetry ? onRetry : null,
+    refine_intake: onRefineIntake,
+    plan_history: onOpenPlanHistory,
+    workspace: onReturnToWorkspace,
+  };
+  // A failed build must never leave the athlete without a way out, so the
+  // workspace exit is appended whenever the classified actions do not already
+  // include it.
+  const failureActions: GenerationFailureAction[] = failure
+    ? Array.from(new Set<GenerationFailureAction>([failure.primary, ...failure.secondary, "workspace"]))
+        .filter((action) => failureHandlers[action] !== null)
+    : [];
   const showElapsed = !isTerminalNonProgress && phase !== "finalizing" && startedAtMs !== null;
   const [now, setNow] = useState(() => Date.now());
   const stageOnePreview = isTerminalNonProgress ? null : buildStageOnePreview(intake, milestones);
@@ -222,7 +245,7 @@ export function PremiumLoadingScreen({
               <div className="loading-stage-copy">
                 <p className="loading-eyebrow">{phaseContent.eyebrow}</p>
                 <h1 className="loading-title">
-                  {phaseContent.title}
+                  {failure ? failure.headline : phaseContent.title}
                   {!isTerminalNonProgress ? (
                     <span className="loading-title-dots" aria-hidden="true">
                       <span />
@@ -232,11 +255,11 @@ export function PremiumLoadingScreen({
                   ) : null}
                 </h1>
               </div>
-              <span className={`loading-phase-badge${phase === "failed" ? " loading-phase-badge-error" : ""}`}>
+              <span className={`loading-phase-badge${isFailed ? " loading-phase-badge-error" : ""}`}>
                 {phaseContent.chip}
               </span>
             </div>
-            <p className="muted loading-copy">{phaseContent.copy}</p>
+            <p className="muted loading-copy">{failure ? failure.detail : phaseContent.copy}</p>
             <GenerationProgressMilestones phase={phase} startedAtMs={startedAtMs} nowMs={now} milestones={milestones} />
             {stageOnePreview ? <StageOnePreviewCard preview={stageOnePreview} /> : null}
             <div className="loading-operational-strip" aria-label="Generation status">
@@ -260,7 +283,9 @@ export function PremiumLoadingScreen({
             ) : null}
             {showMilestones ? (
               <div className="loading-milestone-feed" aria-label="Generation milestones" aria-live="polite">
-                <p className="loading-eyebrow loading-milestone-eyebrow">Plan activity</p>
+                <p className="loading-eyebrow loading-milestone-eyebrow">
+                  {isFailed ? "Where the build stopped" : "Plan activity"}
+                </p>
                 <ol className="loading-milestone-list">
                   {visibleMilestones.map((milestone, index) => {
                     const isLatest = milestone === latestMilestone;
@@ -291,30 +316,33 @@ export function PremiumLoadingScreen({
                 <span className="loading-scan-line" />
               </div>
             ) : null}
-            {error ? (
+            {isFailed ? null : error ? (
               <div className="error-banner">{error}</div>
             ) : (
               <div className="loading-status-strip">{statusMessage ?? phaseContent.statusFallback}</div>
             )}
-            {phase === "failed" ? (
+            {failure ? (
               <div className="loading-failure-actions">
-                <p className="loading-failure-headline">Generation failed.</p>
-                {onRetry && canRetry ? (
-                  <button
-                    type="button"
-                    className="cta"
-                    onClick={onRetry}
-                  >
-                    Try again
-                  </button>
-                ) : null}
-                {!canRetry ? (
-                  <div className="loading-failure-secondary-actions">
-                    {onOpenPlanHistory ? <button type="button" className="cta ghost" onClick={onOpenPlanHistory}>Open plan history</button> : null}
-                    {onReturnToWorkspace ? <button type="button" className="cta ghost" onClick={onReturnToWorkspace}>Return to workspace</button> : null}
-                    {onRefreshStatus ? <button type="button" className="cta ghost" onClick={onRefreshStatus}>Refresh status</button> : null}
-                  </div>
-                ) : null}
+                <p className="loading-failure-headline">What you can do next</p>
+                {/*
+                  Every action here changes something. A failed build is
+                  terminal, so there is deliberately no "refresh status" —
+                  re-reading a finished job cannot revive it, and showing a
+                  live-looking status control on a dead build is what made the
+                  screen read as if it were generating again.
+                */}
+                <div className="loading-failure-secondary-actions">
+                  {failureActions.map((action) => (
+                    <button
+                      key={action}
+                      type="button"
+                      className={action === failure.primary ? "cta" : "cta ghost"}
+                      onClick={failureHandlers[action] ?? undefined}
+                    >
+                      {GENERATION_FAILURE_ACTION_LABELS[action]}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
             {phase === "already_generated" ? (
@@ -340,6 +368,30 @@ export function PremiumLoadingScreen({
         </div>
 
         <aside className="step-aside athlete-motion-slot athlete-motion-rail">
+          {/*
+            The progress rail is a live-build instrument: on a stopped build it
+            would tick four stages "complete" and blame the last one, which is
+            both wrong and reads like work is still happening. A stopped build
+            gets a plain account of what it means instead.
+          */}
+          {isFailed ? (
+            <div className="support-panel loading-secondary-panel">
+              <div className="form-section-header">
+                <p className="loading-eyebrow">Build stopped</p>
+                <h2 className="form-section-title">What happened</h2>
+                <p className="muted">
+                  Your intake is saved exactly as you entered it. No partial plan was written, so nothing needs
+                  cleaning up before you try again.
+                </p>
+              </div>
+              <div className="loading-support-note">
+                <p className="kicker">Still stuck?</p>
+                <p className="muted">
+                  If a retry stops the same way, refine the intake or open plan history to work from your last saved plan.
+                </p>
+              </div>
+            </div>
+          ) : (
           <div className="support-panel loading-secondary-panel">
             <div className="form-section-header">
               <p className="loading-eyebrow">Build steps</p>
@@ -349,13 +401,11 @@ export function PremiumLoadingScreen({
             <ol className="loading-steps" aria-label="Generation workflow">
               {WORKFLOW_STEPS.map((step, index) => {
                 const stepState =
-                  phase === "failed" && index === activeIndex
-                    ? "error"
-                    : index < activeIndex
-                      ? "complete"
-                      : index === activeIndex
-                        ? "current"
-                        : "upcoming";
+                  index < activeIndex
+                    ? "complete"
+                    : index === activeIndex
+                      ? "current"
+                      : "upcoming";
 
                 return (
                   <li
@@ -381,6 +431,7 @@ export function PremiumLoadingScreen({
               </p>
             </div>
           </div>
+          )}
         </aside>
       </div>
     </section>

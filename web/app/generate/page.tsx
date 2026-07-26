@@ -227,13 +227,13 @@ export default function GeneratePage() {
         startedAtMs={controller.startedAtMs}
         milestones={controller.milestones}
         intake={payload}
+        failureKind={controller.failureKind}
         onRetry={() => {
           void controller.retryGeneration();
         }}
         canRetry={controller.canRetry}
         onOpenPlanHistory={() => router.push("/plans")}
         onReturnToWorkspace={() => router.push("/")}
-        onRefreshStatus={() => router.refresh()}
         onRefineIntake={() => router.push("/onboarding")}
       />
     </RequireAuth>

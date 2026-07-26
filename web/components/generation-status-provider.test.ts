@@ -47,6 +47,62 @@ test("terminal latest job with neither plan id is not retained", () => {
   );
 });
 
+test("recent retryable failure without a plan is retained so the failure stays visible", () => {
+  // Without this the ribbon dropped the job and a failed build vanished the
+  // moment the user left /generate — no notice, no retry.
+  const nowMs = Date.parse("2026-01-01T01:00:00Z");
+  assert.equal(
+    shouldRetainLatestJob(
+      {
+        ...baseJob,
+        status: "failed",
+        plan_id: null,
+        latest_plan_id: null,
+        can_retry: true,
+        completed_at: "2026-01-01T00:30:00Z",
+      },
+      nowMs,
+    ),
+    true,
+  );
+});
+
+test("stale retryable failure is not resurfaced", () => {
+  const nowMs = Date.parse("2026-01-05T00:00:00Z");
+  assert.equal(
+    shouldRetainLatestJob(
+      {
+        ...baseJob,
+        status: "failed",
+        plan_id: null,
+        latest_plan_id: null,
+        can_retry: true,
+        completed_at: "2026-01-01T00:30:00Z",
+      },
+      nowMs,
+    ),
+    false,
+  );
+});
+
+test("failure the backend cannot retry is still dropped", () => {
+  const nowMs = Date.parse("2026-01-01T01:00:00Z");
+  assert.equal(
+    shouldRetainLatestJob(
+      {
+        ...baseJob,
+        status: "failed",
+        plan_id: null,
+        latest_plan_id: null,
+        can_retry: false,
+        completed_at: "2026-01-01T00:30:00Z",
+      },
+      nowMs,
+    ),
+    false,
+  );
+});
+
 test("completed latest job with only latest_plan_id is retained as openable", () => {
   assert.equal(
     shouldRetainLatestJob({ ...baseJob, status: "completed", plan_id: null, latest_plan_id: "plan_latest" }),

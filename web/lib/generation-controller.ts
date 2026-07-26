@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
+import {
+  classifyGenerationFailure,
+  isRetryableGenerationFailure,
+  STALLED_GENERATION_ERROR,
+  type GenerationFailureKind,
+} from "@/lib/generation-failure";
 import { normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus, ProgressMilestone } from "@/lib/types";
 
@@ -302,6 +308,28 @@ export function useGenerationController({
   const [milestones, setMilestones] = useState<ProgressMilestone[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [failedJobId, setFailedJobId] = useState<string | null>(null);
+  const [failureKind, setFailureKind] = useState<GenerationFailureKind | null>(null);
+  // State updates are not visible to the async function that just scheduled
+  // them, and the failure classifier has to know synchronously whether a job
+  // was ever created — so the job id is mirrored into a ref.
+  const failedJobIdRef = useRef<string | null>(null);
+
+  const markFailedJob = useCallback((jobId: string | null) => {
+    failedJobIdRef.current = jobId;
+    setFailedJobId(jobId);
+  }, []);
+
+  const recordFailure = useCallback((generationError: unknown) => {
+    const kind = classifyGenerationFailure(generationError, {
+      hasFailedJobId: Boolean(failedJobIdRef.current),
+    });
+    setPhase("failed");
+    setStatusMessage(null);
+    setIsGenerating(false);
+    setFailureKind(kind);
+    setError(mapGenerationErrorMessage(generationError));
+  }, []);
+
   const [startedAtMs, setStartedAtMs] = useState<number | null>(() => {
     const pending = getPendingGeneration(storageKey);
     if (!pending) {
@@ -329,8 +357,8 @@ export function useGenerationController({
       }
       if (isPreStartStaleGenerationJob(job)) {
         clearAllPendingGenerations();
-        setFailedJobId(job.job_id);
-        throw new Error("Build stalled — retry");
+        markFailedJob(job.job_id);
+        throw new Error(STALLED_GENERATION_ERROR);
       }
       savePendingGeneration(activeStorageKey, {
         clientRequestId,
@@ -347,8 +375,8 @@ export function useGenerationController({
 
         if (isPreStartStaleGenerationJob(currentJob)) {
           clearAllPendingGenerations();
-          setFailedJobId(currentJob.job_id);
-          throw new Error("Build stalled — retry");
+          markFailedJob(currentJob.job_id);
+          throw new Error(STALLED_GENERATION_ERROR);
         }
 
         savePendingGeneration(activeStorageKey, {
@@ -417,7 +445,7 @@ export function useGenerationController({
             return;
           }
           clearAllPendingGenerations();
-          setFailedJobId(currentJob.job_id);
+          markFailedJob(currentJob.job_id);
           throw new Error(currentJob.error || "Plan generation failed.");
         }
 
@@ -429,7 +457,7 @@ export function useGenerationController({
         await sleep(getPollDelay(createdAtMs));
       }
     },
-    [onComplete],
+    [markFailedJob, onComplete],
   );
 
   const startGeneration = useCallback(
@@ -439,7 +467,8 @@ export function useGenerationController({
       }
 
       setError(null);
-      setFailedJobId(null);
+      setFailureKind(null);
+      markFailedJob(null);
       setIsGenerating(true);
       const recovered = options.recovered ?? false;
       const clientRequestId = options.clientRequestId ?? buildClientRequestId();
@@ -480,21 +509,28 @@ export function useGenerationController({
         );
       } catch (generationError) {
         clearPendingGeneration(storageKey);
-        setIsGenerating(false);
-        setStatusMessage(null);
-        setPhase("failed");
-        setError(mapGenerationErrorMessage(generationError));
+        recordFailure(generationError);
       }
     },
-    [createJob, isGenerating, recoverActiveJob, storageKey, token, watchJobUntilTerminal],
+    [createJob, isGenerating, markFailedJob, recordFailure, recoverActiveJob, storageKey, token, watchJobUntilTerminal],
   );
 
   const retryGeneration = useCallback(async () => {
-    if (!token || !storageKey || isGenerating || !failedJobId) {
+    if (!token || !storageKey || isGenerating) {
+      return;
+    }
+
+    // Nothing was created server-side (the request never landed), so there is
+    // no job to re-run — start a fresh build instead of leaving the user on a
+    // failure screen with a button that cannot do anything.
+    if (!failedJobId) {
+      setFailureKind(null);
+      await startGeneration();
       return;
     }
 
     setError(null);
+    setFailureKind(null);
     setIsGenerating(true);
     setMilestones([]);
     setPhase("submitting");
@@ -509,7 +545,7 @@ export function useGenerationController({
       const clientRequestId = newJob.client_request_id || buildClientRequestId();
       const createdAtMs = Date.parse(newJob.created_at || retryStartedAt) || retryStartedAtMs;
       setStartedAtMs(createdAtMs);
-      setFailedJobId(null);
+      markFailedJob(null);
       await watchJobUntilTerminal(
         token,
         storageKey,
@@ -521,12 +557,9 @@ export function useGenerationController({
       );
     } catch (retryError) {
       clearPendingGeneration(storageKey);
-      setIsGenerating(false);
-      setStatusMessage(null);
-      setPhase("failed");
-      setError(mapGenerationErrorMessage(retryError));
+      recordFailure(retryError);
     }
-  }, [failedJobId, isGenerating, storageKey, token, watchJobUntilTerminal]);
+  }, [failedJobId, isGenerating, markFailedJob, recordFailure, startGeneration, storageKey, token, watchJobUntilTerminal]);
 
   useEffect(() => {
   if (!token || !storageKey || isGenerating) {
@@ -584,9 +617,13 @@ export function useGenerationController({
     milestones,
     error,
     setError,
+    failureKind,
     startGeneration,
     retryGeneration,
-    canRetry: Boolean(failedJobId) && !isGenerating,
+    // Retry is offered by what went wrong, not by whether a job id happens to
+    // exist: a build that never started is the most retryable case of all,
+    // while a rejected intake can never succeed on an identical retry.
+    canRetry: phase === "failed" && isRetryableGenerationFailure(failureKind) && !isGenerating,
     hasPendingGeneration: Boolean(getPendingGeneration(storageKey)),
   };
 }
