@@ -1,6 +1,5 @@
 import type {
   ApproveAndResumeGenerationRequest,
-  AdminAthleteDailyStatus,
   AdminAthleteRecord,
   AdminLatestIntakeUpdateRequest,
   AdminGenerationJobDiagnostic,
@@ -9,10 +8,6 @@ import type {
   AdminPlanSummary,
   AdminReviewRecord,
   AdminReviewResolveRequest,
-  AthleteDashboardState,
-  DailyCheckinRecord,
-  DailyCheckinRequest,
-  DailyCheckinResponse,
   InjuryFlagCreateRequest,
   InjuryFlagRecord,
   InjuryFlagStatus,
@@ -29,9 +24,6 @@ import type {
   PlanRequest,
   PlanSummary,
   ProfileUpdateRequest,
-  SessionLogRecord,
-  SessionLogRequest,
-  SessionLogResponse,
   TodayCheckinHistoryRecord,
   TodayCheckinRequest,
   TodayCheckinResponse,
@@ -1002,44 +994,6 @@ export function backfillStructuredPlans(
 // admin review queue).
 // ---------------------------------------------------------------------------
 
-export function getDashboard(token: string): Promise<AthleteDashboardState> {
-  return withTransientRetries(() => readJson<AthleteDashboardState>("/api/dashboard", { token }));
-}
-
-export function submitDailyCheckin(
-  token: string,
-  payload: DailyCheckinRequest,
-): Promise<DailyCheckinResponse> {
-  return readJson<DailyCheckinResponse>("/api/checkins", {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  });
-}
-
-export function listDailyCheckins(token: string, limit = 14): Promise<DailyCheckinRecord[]> {
-  return withTransientRetries(() =>
-    readJson<DailyCheckinRecord[]>(`/api/checkins?limit=${limit}`, { token }),
-  );
-}
-
-export function submitSessionLog(
-  token: string,
-  payload: SessionLogRequest,
-): Promise<SessionLogResponse> {
-  return readJson<SessionLogResponse>("/api/session-logs", {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  });
-}
-
-export function listSessionLogs(token: string, limit = 20): Promise<SessionLogRecord[]> {
-  return withTransientRetries(() =>
-    readJson<SessionLogRecord[]>(`/api/session-logs?limit=${limit}`, { token }),
-  );
-}
-
 export function reportInjury(
   token: string,
   payload: InjuryFlagCreateRequest,
@@ -1111,18 +1065,6 @@ export function updateAdminInjuryFlag(
     token,
     body: JSON.stringify({ status }),
   });
-}
-
-export function getAdminAthleteDailyStatus(
-  token: string,
-  athleteId: string,
-): Promise<AdminAthleteDailyStatus> {
-  return withTransientRetries(() =>
-    readJson<AdminAthleteDailyStatus>(
-      `/api/admin/athletes/${encodeURIComponent(athleteId)}/daily-status`,
-      { token },
-    ),
-  );
 }
 
 export function getToday(token: string): Promise<TodayCommandView> {

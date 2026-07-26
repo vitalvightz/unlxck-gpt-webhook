@@ -433,8 +433,10 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         label="profiles active_plan_id index",
         accepted_names=("profiles_active_plan_id_idx",),
     ),
-    # One check-in per athlete per day; the store's upsert path
-    # (api/store.py::upsert_daily_checkin) depends on this conflict target.
+    # Legacy: one check-in per athlete per day. The daily_checkins table is
+    # retained for its historical rows but no longer has a read/write path —
+    # the Today surface owns check-ins now. The index stays asserted so the
+    # gate keeps matching the deployed schema.
     IndexRequirement(
         label="daily_checkins athlete/date uniqueness",
         accepted_names=("daily_checkins_athlete_date_key",),
