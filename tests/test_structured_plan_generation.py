@@ -24,6 +24,7 @@ from api.structured_plan_generation import (
     normalize_structured_plan_candidate,
     parse_bank_prescription,
     parse_structured_json,
+    reconcile_late_fight_week_context,
     should_attempt_structured_plan,
     strip_biometric_fields,
 )
@@ -104,6 +105,112 @@ def test_valid_plan_outcome_is_valid_and_carries_schema_version():
     # Raw markdown fallback is preserved on the structured object.
     assert outcome.structured_plan["raw_markdown_fallback"]
     assert outcome.errors == []
+
+
+def test_d10_structured_generation_restores_week_context_and_cleans_adjustment_cues():
+    plan = _valid_plan()
+    week = plan["weeks"][0]
+    week["phase_label"] = "GPP"
+    week["week_goal"] = None
+    week["countdown_start"] = "D-10"
+    week["countdown_end"] = "D-5"
+    day = week["days"][0]
+    day["countdown_label"] = "D-10"
+    day["phase_label"] = "GPP"
+    block = day["sessions"][0]["blocks"][0]
+    block["coaching_cues"] = [
+        "Regression /",
+        "Stay relaxed through the throw.",
+        "Stop: reduce to breathing only if shoulder pain rises.",
+    ]
+    block["regression_options"] = ["Use a lighter ball."]
+    brief = {
+        "late_fight_plan_spec": {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-10",
+        },
+        "week_by_week_progression": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "stage_label": "Compressed Pre-Fight Week",
+                }
+            ]
+        },
+    }
+
+    outcome = build_structured_plan_outcome(
+        plan,
+        raw_markdown=_faithful_source(plan),
+        planning_brief=brief,
+    )
+
+    assert outcome.status == "valid"
+    structured_week = outcome.structured_plan["weeks"][0]
+    assert structured_week["week_goal"] == "Compressed Pre-Fight Week"
+    assert structured_week["phase_label"] == "TAPER"
+    structured_block = structured_week["days"][0]["sessions"][0]["blocks"][0]
+    assert structured_block["coaching_cues"] == ["Stay relaxed through the throw."]
+    assert structured_block["regression_options"] == ["Use a lighter ball."]
+    assert structured_block["progression_rule"].startswith("Stop:")
+
+
+def test_read_time_week_context_repairs_each_countdown_week_but_preserves_legacy_titles():
+    brief = {
+        "late_fight_plan_spec": {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-10",
+        },
+        "week_by_week_progression": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "stage_label": "Compressed Pre-Fight Week",
+                }
+            ]
+        },
+    }
+    broken = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase_label": "GPP",
+                "week_goal": None,
+                "countdown_start": "D-10",
+                "days": [{"countdown_label": "D-10", "phase_label": "GPP"}],
+            },
+            {
+                "week_index": 2,
+                "phase_label": "GPP",
+                "week_goal": "",
+                "countdown_start": "D-4",
+                "days": [{"countdown_label": "D-4", "phase_label": "GPP"}],
+            },
+        ]
+    }
+
+    repaired = reconcile_late_fight_week_context(broken, brief)
+
+    assert [week["week_goal"] for week in repaired["weeks"]] == [
+        "Compressed Pre-Fight Week",
+        "Sharpness Sessions",
+    ]
+    assert [week["phase_label"] for week in repaired["weeks"]] == ["TAPER", "TAPER"]
+
+    legacy = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase_label": "SPP",
+                "week_goal": "Power Transfer Touch",
+                "countdown_start": "D-10",
+                "days": [],
+            }
+        ]
+    }
+    assert reconcile_late_fight_week_context(legacy, brief) is legacy
 
 
 def test_invalid_without_repair_falls_back():

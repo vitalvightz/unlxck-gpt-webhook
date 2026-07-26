@@ -15,12 +15,14 @@ import {
   formatWeightCutBand,
   macroLine,
   getActiveNotesExcludingRedFlags,
+  getBlockCoachingDisplay,
   getBlocks,
   getCoachingCues,
   getDays,
   getDeterministicNutritionPhases,
   getDeterministicRecoveryPhases,
   getDisplayableRedFlags,
+  getFallbackSafetyNotes,
   getMindsetLines,
   getPlanNotes,
   planNoteLabel,
@@ -34,10 +36,12 @@ import {
   isProminentRedFlagSeverity,
   isStopRuleText,
   isTimeLikeReps,
+  inferredLateFightWeekContext,
   nutritionPhaseRows,
   progressionRuleLabel,
   recoveryPhaseView,
   redFlagView,
+  resolvedWeekPhase,
   selectBlockMetric,
   shouldRenderStructuredPlan,
   shouldShowRest,
@@ -210,6 +214,21 @@ test("stop-rule detection is safe on null / blank input", () => {
   assert.equal(progressionRuleLabel(null), "Progress");
 });
 
+test("legacy bare regression labels are dropped and Stop cues are separated", () => {
+  const display = getBlockCoachingDisplay({
+    coaching_cues: [
+      "Regression /",
+      "Stay tall and relaxed.",
+      "Stop: reduce to breathing only if shoulder pain rises.",
+    ],
+  } as never);
+
+  assert.deepEqual(display.cues, ["Stay tall and relaxed."]);
+  assert.deepEqual(display.stopRules, [
+    "Stop: reduce to breathing only if shoulder pain rises.",
+  ]);
+});
+
 // --- defensive selectors: never crash on partial data -----------------------
 
 test("selectors return safe empties on missing/partial fields", () => {
@@ -308,6 +327,40 @@ test("getWeeks splits a multi-calendar-week late-fight block into weeks", () => 
   // Metadata is inherited; ids stay unique.
   assert.equal(weeks[0].phase_label, "SPP");
   assert.equal(new Set(weeks.map((week) => week.week_id)).size, 3);
+});
+
+test("calendar splitting re-resolves deterministic late-fight titles but preserves custom legacy goals", () => {
+  const sourceWeek = {
+    week_id: "wk-late",
+    week_index: 1,
+    phase_label: "TAPER",
+    week_goal: "Compressed Pre-Fight Week",
+    start_date: "2026-07-26",
+    end_date: "2026-08-05",
+    countdown_start: "D-10",
+    countdown_end: "D-0",
+    days: [
+      { date: "2026-07-26", countdown_label: "D-10" },
+      { date: "2026-07-27", countdown_label: "D-9" },
+      { date: "2026-08-02", countdown_label: "D-3" },
+      { date: "2026-08-03", countdown_label: "D-2" },
+      { date: "2026-08-05", countdown_label: "D-0" },
+    ],
+  };
+
+  const deterministic = getWeeks({ weeks: [sourceWeek] } as never);
+  assert.deepEqual(
+    deterministic.map((week) => week.week_goal),
+    ["Compressed Pre-Fight Week", "Compressed Pre-Fight Week", "Sharpness Sessions"],
+  );
+
+  const legacy = getWeeks({
+    weeks: [{ ...sourceWeek, week_goal: "Power Transfer Touch" }],
+  } as never);
+  assert.deepEqual(
+    legacy.map((week) => week.week_goal),
+    ["Power Transfer Touch", "Power Transfer Touch", "Power Transfer Touch"],
+  );
 });
 
 // --- plan-level active notes ------------------------------------------------
@@ -679,6 +732,60 @@ test("weekLabel keeps short goals verbatim but caps long ones to a glanceable he
   );
   // No goal: just the week number.
   assert.equal(weekLabel({ week_index: 4 } as never), "Week 4");
+});
+
+test("countdown-led late-fight weeks infer missing titles and phase without overriding legacy values", () => {
+  const compressed = {
+    week_index: 1,
+    countdown_start: "D-10",
+    days: [{ countdown_label: "D-10" }, { countdown_label: "D-5" }],
+  } as never;
+  assert.deepEqual(inferredLateFightWeekContext(compressed), {
+    goal: "Compressed Pre-Fight Week",
+    phase: "TAPER",
+  });
+  assert.equal(weekLabel(compressed), "Week 1 — Compressed Pre-Fight Week");
+  assert.equal(resolvedWeekPhase(compressed), "TAPER");
+
+  const legacy = {
+    week_index: 1,
+    phase_label: "SPP",
+    week_goal: "Power transfer touch",
+    countdown_start: "D-10",
+  } as never;
+  assert.equal(weekLabel(legacy), "Week 1 — Power transfer touch");
+  assert.equal(resolvedWeekPhase(legacy), "SPP");
+});
+
+test("fallback red flags require a real stop or escalation instruction", () => {
+  const plan = {
+    plan_notes: [
+      {
+        category: "weight_cut",
+        label: "Lead notes",
+        text: "Target weight is not set; coach owns the final weight-cut decision.",
+      },
+      {
+        category: "injury",
+        label: "Active notes",
+        text: "Keep the elbow covered and use the programmed support.",
+      },
+      {
+        category: "injury",
+        label: "Safety",
+        text: "Stop training and report any worsening wound or dizziness.",
+      },
+    ],
+  } as never;
+
+  assert.deepEqual(
+    getFallbackSafetyNotes(plan).map((note) => note.label),
+    ["Safety"],
+  );
+  assert.deepEqual(
+    getActiveNotesExcludingRedFlags(plan).map((note) => note.label),
+    ["Lead notes", "Active notes"],
+  );
 });
 
 test("formatMacroRange handles full / max-only / min-only / empty", () => {

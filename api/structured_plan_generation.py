@@ -691,12 +691,39 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     for list_key in ("coaching_cues", "regression_options", "substitutions"):
         if list_key in out:
             out[list_key] = _coerce_str_list(out.get(list_key))
+    # Late-fight prose occasionally arrives as two fake cue bullets:
+    # ``Regression /`` and ``Stop: ...``. The former is only a dangling source
+    # label; the latter belongs in progression_rule so the card renders it as a
+    # labelled stop instruction rather than ordinary coaching.
+    cues = _coerce_str_list(out.get("coaching_cues"))
+    cleaned_cues: list[str] = []
+    stop_cues: list[str] = []
+    for cue in cues:
+        if re.fullmatch(
+            r"\s*(?:progress(?:ion)?\s*/\s*)?regress(?:ion)?\s*(?:/\s*)?\s*",
+            cue,
+            re.IGNORECASE,
+        ):
+            continue
+        if re.match(r"^\s*stop(?:\s+rule)?\s*:", cue, re.IGNORECASE):
+            stop_cues.append(cue.strip())
+            continue
+        cleaned_cues.append(cue)
+    if "coaching_cues" in out or cleaned_cues != cues:
+        out["coaching_cues"] = cleaned_cues
     if "red_flags" in out:
         out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]
     if "effort" in out:
         out["effort"] = _normalize_effort(out.get("effort"))
-    if out.get("progression_rule") is not None:
-        out["progression_rule"] = _coerce_str(out.get("progression_rule"))
+    progression_rule = _coerce_str(out.get("progression_rule")).strip()
+    if stop_cues:
+        stop_text = " ".join(stop_cues)
+        if not progression_rule:
+            progression_rule = stop_text
+        elif stop_text.lower() not in progression_rule.lower():
+            progression_rule = f"{progression_rule.rstrip('.')} — {stop_text}"
+    if out.get("progression_rule") is not None or progression_rule:
+        out["progression_rule"] = progression_rule
     return out
 
 
@@ -1364,6 +1391,166 @@ def _strip_and_normalize(data: Any) -> Any:
         return stripped
 
 
+def _progression_week_for_countdown(
+    progression_weeks: list[dict[str, Any]],
+    *,
+    week_index: int,
+    countdown_start: int | None,
+) -> dict[str, Any] | None:
+    """Resolve the deterministic progression entry that owns a rendered week."""
+
+    if countdown_start is not None:
+        for entry in progression_weeks:
+            span = entry.get("countdown_span")
+            if not isinstance(span, dict):
+                continue
+            try:
+                start_day = int(span.get("start_day"))
+                end_day = int(span.get("end_day"))
+            except (TypeError, ValueError):
+                continue
+            upper, lower = max(start_day, end_day), min(start_day, end_day)
+            if lower <= countdown_start <= upper:
+                return entry
+    for entry in progression_weeks:
+        try:
+            entry_week_index = int(entry.get("week_index") or 0)
+        except (TypeError, ValueError):
+            continue
+        if entry_week_index == week_index:
+            return entry
+    return None
+
+
+def _late_fight_stage_label_for_countdown(countdown_start: int | None) -> str | None:
+    if countdown_start is None or not 0 <= countdown_start <= 21:
+        return None
+    if countdown_start >= 14:
+        return "Bridge Compression Week"
+    if countdown_start >= 8:
+        return "Compressed Pre-Fight Week"
+    if countdown_start == 7:
+        return "Sharpness Week"
+    if countdown_start >= 5:
+        return "Sharpness & Freshness Window"
+    if countdown_start >= 2:
+        return "Sharpness Sessions"
+    if countdown_start == 1:
+        return "Primer Day"
+    return "Fight-Day Protocol"
+
+
+def reconcile_late_fight_week_context(
+    structured_plan: Any,
+    planning_brief: Any,
+) -> Any:
+    """Fill missing late-fight week display context from deterministic Stage 2.
+
+    Countdown-led Stage 2 text intentionally suppresses week scaffolding. The
+    structured viewer still needs a short week goal and phase for its overview
+    and week rail, so use ``week_by_week_progression`` as the source of truth.
+    Existing non-empty values are preserved.
+    """
+
+    if not isinstance(structured_plan, dict) or not isinstance(planning_brief, dict):
+        return structured_plan
+    if isinstance(planning_brief.get("open_plan_spec"), dict):
+        return structured_plan
+    progression = planning_brief.get("week_by_week_progression")
+    progression_weeks = [
+        entry
+        for entry in _as_list(progression.get("weeks") if isinstance(progression, dict) else None)
+        if isinstance(entry, dict)
+    ]
+    late_fight_spec = planning_brief.get("late_fight_plan_spec")
+    payload_mode = (
+        _coerce_str(late_fight_spec.get("payload_mode")).strip()
+        if isinstance(late_fight_spec, dict)
+        else ""
+    )
+    has_late_fight_progression = any(
+        _coerce_str(entry.get("stage_label")).strip() for entry in progression_weeks
+    )
+    plan_weeks = structured_plan.get("weeks")
+    if (
+        not isinstance(plan_weeks, list)
+        or (
+            not has_late_fight_progression
+            and payload_mode in {"", "camp_payload"}
+        )
+    ):
+        return structured_plan
+
+    repaired = copy.deepcopy(structured_plan)
+    changed = False
+    fallback_phase = next(
+        (
+            _coerce_str(entry.get("phase")).strip().upper()
+            for entry in progression_weeks
+            if _coerce_str(entry.get("phase")).strip().upper() in _PHASE_VALUES
+        ),
+        "TAPER",
+    )
+    for position, week in enumerate(repaired.get("weeks") or [], start=1):
+        if not isinstance(week, dict):
+            continue
+        distances = [
+            distance
+            for distance in (
+                _countdown_distance(week.get("countdown_start")),
+                *(
+                    _countdown_distance(day.get("countdown_label"))
+                    for day in _as_list(week.get("days"))
+                    if isinstance(day, dict)
+                ),
+            )
+            if distance is not None
+        ]
+        countdown_start = max(distances) if distances else None
+        try:
+            week_index = int(week.get("week_index") or position)
+        except (TypeError, ValueError):
+            week_index = position
+        source = _progression_week_for_countdown(
+            progression_weeks,
+            week_index=week_index,
+            countdown_start=countdown_start,
+        )
+
+        goal_missing = not _coerce_str(week.get("week_goal")).strip()
+        stage_label = (
+            _coerce_str(source.get("stage_label")).strip()
+            if source is not None
+            else ""
+        ) or _late_fight_stage_label_for_countdown(countdown_start)
+        if goal_missing and stage_label:
+            week["week_goal"] = stage_label
+            changed = True
+
+        phase = (
+            _coerce_str(source.get("phase")).strip().upper()
+            if source is not None
+            else fallback_phase
+        )
+        current_phase = _coerce_str(week.get("phase_label")).strip().upper()
+        # A blank goal is the signature of the broken countdown conversion. In
+        # that case a normalized GPP fallback is not authoritative, so replace it
+        # with Stage 2's phase. Otherwise preserve every valid saved value.
+        if phase in _PHASE_VALUES and (
+            current_phase not in _PHASE_VALUES or (goal_missing and current_phase == "GPP")
+        ):
+            week["phase_label"] = phase
+            changed = True
+            for day in _as_list(week.get("days")):
+                if not isinstance(day, dict):
+                    continue
+                day_phase = _coerce_str(day.get("phase_label")).strip().upper()
+                if day_phase not in _PHASE_VALUES or day_phase == "GPP":
+                    day["phase_label"] = phase
+
+    return repaired if changed else structured_plan
+
+
 # ---------------------------------------------------------------------------
 # Bank → StructuredTrainingPlan adapters
 #
@@ -1653,7 +1840,9 @@ def build_structured_plan_outcome(
     if raw_data is None:
         return StructuredPlanOutcome(status="not_attempted")
 
-    cleaned = _strip_and_normalize(raw_data)
+    cleaned = _strip_and_normalize(
+        reconcile_late_fight_week_context(raw_data, planning_brief)
+    )
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     first_errors = list(first.errors)
@@ -1942,6 +2131,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
 - When the plan states them, carry per-block detail into each block:
   "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or
   alternative exercises the plan offers), and "progression_rule" (how to advance).
+- Treat "Easier:" / "Regression:" content as regression_options and "Stop:" /
+  "Stop rule:" content as progression_rule. Never place those labelled lines in
+  coaching_cues. Ignore a bare separator label such as "Regression /" rather
+  than rendering it as athlete guidance.
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
   the day level (today_card.mindset_anchor), including "confidence_anchor" and
   "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a

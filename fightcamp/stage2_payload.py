@@ -3691,6 +3691,9 @@ Non-negotiable output contract:
    - for D-7 and tighter, never raise a selected drill's RPE or volume; if a selected drill has RPE/rounds/work_sec fields, use those caps
    - the purpose behind the work
    - progression/regression or stop rule; from D-10 to the fight, offer regressions and stop rules only — never a progression/advance option (no "add load/sets", "heavier ball", "stronger band", or "to progress"). From D-13, strength & conditioning sessions (strength, power, alactic, aerobic, fight-pace, neural speed work) also lock to regressions/stop rules only; fillers, rehab, mobility, and light recovery work may still progress on D-13 to D-11. D-14 and earlier may progress everywhere.
+   - render meaningful adjustment lines only: "Easier: <action>" and
+     "Stop: <trigger/action>" on separate lines. Never emit a bare
+     "Regression /", "Regression", or slash-separated structural label.
    - injury/rehab insert when relevant
    - coach call when needed
 6. If session_count_summary.reduced_from_planned is true for a week, include one short reason tied to taper, weight cut, D-17 technical-only rule, injury/cut management, coach-led contact load, fight-week override, or intentional compression.
