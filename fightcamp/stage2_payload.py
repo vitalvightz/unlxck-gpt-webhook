@@ -104,12 +104,17 @@ from .stage2_planning_brief import (  # noqa: F401
     _LIMITER_PROFILES,
     _SPORT_LOAD_PROFILES,
     _UNKNOWN_COMPETITIVE_MATURITY,
+    _WEEKLY_STAGE_TEMPLATES,
     _build_athlete_model,
     _build_limiter_profile,
+    _build_phase_selection_guardrails,
     _build_sport_load_profile,
     _build_weekly_stress_map,
     _conditioning_slot_priority,
+    _derive_athlete_archetype,
     _derive_competitive_maturity,
+    _derive_main_limiter,
+    _derive_main_risks,
     _derive_readiness_flags,
     _downgrade_priority,
     _extract_mechanical_risk_tags,
@@ -117,9 +122,11 @@ from .stage2_planning_brief import (  # noqa: F401
     _is_high_pressure_weight_cut,
     _normalize_limiter_tokens,
     _parse_record,
+    _primary_sport_load_key,
     _priority_bucket,
     _priority_bucket_labels,
     _priority_value,
+    _resolve_phase_rule_state,
     _serialize_restrictions,
     _strength_slot_priority,
 )
@@ -127,19 +134,26 @@ from .stage2_role_map import (  # noqa: F401
     _append_day_hint,
     _athlete_sport_key,
     _apply_short_camp_role_compression,
+    _build_week_by_week_progression,
     _compression_floor_value,
     _compression_summary,
     _compute_intentionally_unused_days,
     _final_week_sparring_cap_summary,
     _hard_sparring_coach_note_flags,
     _hard_sparring_role,
+    _high_fatigue_compression_reason_codes,
     _make_compression_suppression,
+    _make_final_week_sparring_cap_suppression,
     _make_hard_sparring_lock_suppression,
     _next_training_days_after_effective_hard_spar,
     _phase_progression_slot_count,
     _placement_rule_for_anchor,
+    _preferred_boxer_conditioning_sequence,
+    _progression_templates_for_phase,
     _replaceable_role_priority,
     _resequence_session_roles,
+    _role_governance,
+    _rotate_weekdays_from_plan_start,
     _short_camp_priority_catalog,
     _strength_role_key,
     _conditioning_role_key,
@@ -367,21 +381,6 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     }
 
 
-def _build_phase_selection_guardrails(phase: str, training_context: TrainingContext) -> dict:
-    guardrails = dict(PHASE_SELECTION_GUARDRAILS.get(phase, {}))
-    guardrails["conditioning_minimums"] = dict(guardrails.get("conditioning_minimums", {}))
-    guardrails["must_keep_if_present"] = list(guardrails.get("must_keep_if_present", []))
-    guardrails["conditioning_drop_order_if_thin"] = list(guardrails.get("conditioning_drop_order_if_thin", []))
-    guardrails["notes"] = list(guardrails.get("notes", []))
-    guardrails["must_keep_rehab_if_present"] = bool(training_context.injuries)
-    if training_context.weight_cut_risk and phase == "TAPER":
-        guardrails["conditioning_drop_order_if_thin"] = _dedupe_preserve_order(
-            ["glycolytic"] + guardrails.get("conditioning_drop_order_if_thin", [])
-        )
-        guardrails["notes"].append("During a target-weight constraint, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
-    return guardrails
-
-
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
     briefs: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
@@ -406,89 +405,6 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
             "days": phase_weeks.get("days", {}).get(phase, 0),
         }
     return briefs
-
-
-
-def _derive_athlete_archetype(athlete_model: dict) -> dict:
-    technical_styles = _clean_list(athlete_model.get("technical_styles", []))
-    tactical_styles = _clean_list(athlete_model.get("tactical_styles", []))
-    style_identity = _dedupe_preserve_order(technical_styles + tactical_styles) or ["generalist"]
-
-    readiness = "stable"
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    if readiness_flags & {"fight_week", "aggressive_weight_cut", "high_fatigue"}:
-        readiness = "fragile"
-    elif readiness_flags & {"moderate_fatigue", "active_weight_cut", "injury_management", "short_notice"}:
-        readiness = "managed"
-
-    competitive_maturity = athlete_model.get("competitive_maturity") or _UNKNOWN_COMPETITIVE_MATURITY
-    specificity_guidance = {
-        "unknown_competitive_maturity": "Keep style framing conservative and avoid overstating identity-specific reads.",
-        "novice_amateur": "Use clear style labels, but keep tactical wording broad and amateur-safe.",
-        "developing_amateur": "Use moderately specific style framing when it matches declared styles and goals.",
-        "experienced_amateur": "Use confident athlete-specific style framing when it matches the declared style profile.",
-    }.get(competitive_maturity, "Keep style framing conservative and avoid overstating identity-specific reads.")
-
-    return {
-        "style_identity": style_identity,
-        "training_preference": athlete_model.get("training_preference") or "balanced",
-        "experience_band": athlete_model.get("status") or "unspecified",
-        "competitive_maturity": competitive_maturity,
-        "total_bouts": athlete_model.get("total_bouts"),
-        "style_specificity": specificity_guidance,
-        "readiness_state": readiness,
-        "equipment_profile": _clean_list(athlete_model.get("equipment", [])),
-    }
-
-
-def _derive_main_limiter(athlete_model: dict) -> str:
-    compressed = athlete_model.get("compressed_priorities") or {}
-    primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
-    if primary_labels:
-        return f"Primary limiter is {primary_labels[0]}."
-    weaknesses = _clean_list(athlete_model.get("weaknesses", []))
-    goals = _clean_list(athlete_model.get("key_goals", []))
-    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-
-    if weaknesses:
-        return f"Primary limiter is {weaknesses[0].replace('_', ' ')}."
-    if "conditioning" in goals:
-        return "Primary limiter is fight conditioning repeatability."
-    if "power" in goals:
-        return "Primary limiter is power expression under fight fatigue."
-    if readiness_flags & {"moderate_fatigue", "high_fatigue"} or fatigue in {"moderate", "high"}:
-        return "Primary limiter is accumulated fatigue management."
-    return "Primary limiter is general fight-readiness capacity."
-
-
-def _derive_main_risks(athlete_model: dict, restrictions: list[dict]) -> list[str]:
-    risks: list[str] = []
-    injuries = _clean_list(athlete_model.get("injuries", []))
-    hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
-    if injuries:
-        risks.append("Injury management must constrain exercise choice and loading.")
-    if hard_sparring_days:
-        risks.append(
-            "Declared hard sparring days create fixed weekly collision points, so peak glycolytic work and primary neural loading cannot stack blindly."
-        )
-    if athlete_model.get("weight_cut_risk"):
-        pct = athlete_model.get("weight_cut_pct") or 0.0
-        risks.append(
-            f"Weight cut stress is active ({pct:.1f}% body mass target), so recovery margin, strength expression, and conditioning tolerance all tighten."
-        )
-        if _is_high_pressure_weight_cut(athlete_model=athlete_model):
-            risks.append(
-                "This is a high-pressure cut window, so protect freshness and remove optional fatigue before extra density or accessory volume."
-            )
-    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    if fatigue in {"moderate", "high"}:
-        risks.append(f"Current fatigue is {fatigue}, so stacking hard sessions is a risk.")
-    if athlete_model.get("short_notice"):
-        risks.append("Short-notice timeline limits how much new capacity can be built.")
-    if restrictions:
-        risks.append("Restrictions require aggressive pattern filtering, including mechanical equivalents.")
-    return risks or ["No exceptional risk flags beyond normal camp management."]
 
 
 def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
@@ -604,281 +520,6 @@ def _join_rule_parts(*parts: str) -> str:
     return " ".join(cleaned)
 
 
-
-def _primary_sport_load_key(athlete_model: dict) -> str:
-    sport_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("sport")))
-    style_tokens = _normalize_limiter_tokens(
-        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
-    )
-    combined = sport_tokens | style_tokens
-
-    if combined & {"bjj", "jiu_jitsu", "jits", "grappling"}:
-        return "bjj"
-    if combined & {"wrestler", "wrestling", "freestyle", "folkstyle", "greco"}:
-        return "wrestling"
-    if combined & {"muay_thai", "kickboxer", "kickboxing", "karate"}:
-        return "kickboxing_muay_thai"
-    if combined & {"boxing", "boxer"}:
-        return "boxing"
-    if combined & {"mma", "mixed_martial_arts", "cage_wrestling", "sambo", "judo"}:
-        return "mma"
-    return "general_combat"
-
-
-
-def _resolve_phase_rule_state(
-    phase: str,
-    athlete_model: dict,
-    phase_brief: dict,
-    limiter_profile: dict,
-    sport_load_profile: dict,
-) -> dict:
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    short_notice = bool(athlete_model.get("short_notice"))
-    weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
-    guardrails = phase_brief.get("selection_guardrails") or {}
-
-    tissue_protection_priority = (
-        not _all_active_injuries_surface_only(athlete_model)
-        and (bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags)
-    ) or (limiter_profile.get("key") == "tissue_state")
-    freshness_priority = phase == "TAPER" or bool(
-        readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"}
-    )
-    sport_load_owns_density = phase == "TAPER" and bool(sport_load_profile.get("highest_collision_load"))
-
-    protect_first = limiter_profile["protect_first"]
-    if fatigue in {"moderate", "high"}:
-        protect_first = f"Because fatigue is {fatigue}, protect the limiter quality and freshness before adding extra work."
-
-    cut_first = limiter_profile["cut_first"]
-    if short_notice and phase in {"SPP", "TAPER"}:
-        cut_first = (
-            f"Because this is short notice, cut {limiter_profile['cut_first']} before touching phase-critical "
-            "sharpness or boxing quality."
-        )
-    if weight_cut_risk and phase == "TAPER":
-        cut_first = f"{cut_first}; during the cut, remove glycolytic density before alactic sharpness or rehab support."
-    cut_first = _join_rule_parts(
-        cut_first,
-        f"When sport load spikes, cut {sport_load_profile['cut_first_when_sport_load_spikes']} first.",
-    )
-
-    return {
-        "must_keep": _clean_list(guardrails.get("must_keep_if_present", [])),
-        "drop_order_if_thin": _clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
-        "conditioning_sequence": list(limiter_profile["conditioning_sequence"].get(phase, [])),
-        "conditioning_sequence_driver": "main_limiter",
-        "protect_first": protect_first,
-        "protect_first_driver": "safety_and_readiness" if fatigue in {"moderate", "high"} else "main_limiter",
-        "cut_first_when_collisions_rise": cut_first,
-        "cut_first_driver": "sport_load_collision_rules",
-        "tissue_protection_priority": tissue_protection_priority,
-        "freshness_priority": freshness_priority,
-        "sport_load_owns_density": sport_load_owns_density,
-    }
-
-
-_WEEKLY_STAGE_TEMPLATES = {
-    "GPP": {
-        "single": {
-            "key": "foundation_to_repeatability",
-            "label": "foundation / repeatability",
-            "objective": "Use the available base window to restore structure and rebuild repeatability before chasing extra specificity.",
-            "emphasize": ["structural restoration", "repeatability build"],
-            "protect": ["low-damage base work"],
-            "deprioritize": ["fight-pace density", "collision-heavy extras"],
-            "load_bias": "build",
-        },
-        "early": {
-            "key": "foundation_restore",
-            "label": "foundation / structural restoration",
-            "objective": "Restore structural tolerance, aerobic support, and technical rhythm before density rises.",
-            "emphasize": ["structural restoration", "aerobic support"],
-            "protect": ["tissue calm", "technical rhythm"],
-            "deprioritize": ["fight-pace density", "non-essential explosive extras"],
-            "load_bias": "build",
-        },
-        "middle": {
-            "key": "build_repeatability",
-            "label": "build / repeatability",
-            "objective": "Build repeatability and general force without breaking the base the phase is trying to create.",
-            "emphasize": ["repeatability", "general force"],
-            "protect": ["repeatable quality under manageable fatigue"],
-            "deprioritize": ["late-camp sharpness chasing", "redundant accessory fatigue"],
-            "load_bias": "build",
-        },
-        "late": {
-            "key": "general_to_specific_bridge",
-            "label": "bridge / transfer",
-            "objective": "Bridge general work toward specific transfer while keeping the base qualities alive.",
-            "emphasize": ["transfer under fatigue", "specific support"],
-            "protect": ["base qualities"],
-            "deprioritize": ["extra general volume"],
-            "load_bias": "consolidate",
-        },
-    },
-    "SPP": {
-        "single": {
-            "key": "specific_density_to_peak",
-            "label": "specific density / peak",
-            "objective": "Compress specific density build and peak transfer into one focused week because the camp does not have room for separation.",
-            "emphasize": ["fight-pace density", "sharp transfer"],
-            "protect": ["specific quality", "freshness"],
-            "deprioritize": ["non-specific volume", "extra accessory work"],
-            "load_bias": "concentrate",
-        },
-        "early": {
-            "key": "specific_entry",
-            "label": "specific entry",
-            "objective": "Shift the camp from general work into clearly fight-specific stress and sport transfer.",
-            "emphasize": ["specific transfer", "fight-pace entry"],
-            "protect": ["sport quality"],
-            "deprioritize": ["extra general volume"],
-            "load_bias": "build",
-        },
-        "middle": {
-            "key": "specific_density_build",
-            "label": "specific density build",
-            "objective": "Make fight-specific repeatability and density the main developmental job of the week.",
-            "emphasize": ["fight-pace density", "repeatability under sport load"],
-            "protect": ["quality under density"],
-            "deprioritize": ["redundant accessory work"],
-            "load_bias": "concentrate",
-        },
-        "late": {
-            "key": "peak_specificity",
-            "label": "peak specificity",
-            "objective": "Keep specificity high while reducing any work that blunts sharpness or technical quality.",
-            "emphasize": ["sharp transfer", "specific confidence"],
-            "protect": ["freshness", "sport sharpness"],
-            "deprioritize": ["excess fatigue", "generic volume"],
-            "load_bias": "peak",
-        },
-    },
-    "TAPER": {
-        "single": {
-            "key": "taper_to_fight",
-            "label": "taper / fight-readiness",
-            "objective": "Reduce noise, keep rhythm, and arrive at the fight fresh and technically ready.",
-            "emphasize": ["freshness", "rhythm", "confidence"],
-            "protect": ["sharpness", "recovery"],
-            "deprioritize": ["fatigue accumulation", "new drill exposure"],
-            "load_bias": "reduce",
-        },
-        "early": {
-            "key": "taper_freshness",
-            "label": "taper / freshness",
-            "objective": "Strip out fatigue and keep only the minimum work needed to maintain sharpness.",
-            "emphasize": ["freshness", "neural sharpness"],
-            "protect": ["recovery", "confidence"],
-            "deprioritize": ["lactate-heavy density", "soreness-heavy loading"],
-            "load_bias": "reduce",
-        },
-        "late": {
-            "key": "fight_week_survival_rhythm",
-            "label": "fight-week survival / rhythm",
-            "objective": "Protect rhythm, confidence, and freshness while removing anything that can flatten performance.",
-            "emphasize": ["rhythm", "confidence", "freshness"],
-            "protect": ["sharpness", "weight-cut survival"],
-            "deprioritize": ["all avoidable fatigue", "non-essential volume"],
-            "load_bias": "minimal_dose",
-        },
-    },
-}
-
-
-def _progression_templates_for_phase(phase: str, slot_count: int, athlete_model: dict, phase_days: int) -> list[dict]:
-    templates = _WEEKLY_STAGE_TEMPLATES[phase]
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    short_notice = bool(athlete_model.get("short_notice"))
-    fight_week_like = short_notice or phase_days <= 7 or "fight_week" in readiness_flags
-
-    if phase == "GPP":
-        if slot_count <= 1:
-            return [templates["single"]]
-        if slot_count == 2:
-            return [templates["early"], templates["middle"]]
-        return [templates["early"]] + [templates["middle"]] * (slot_count - 2) + [templates["late"]]
-
-    if phase == "SPP":
-        if slot_count <= 1:
-            return [templates["single"]]
-        if slot_count == 2:
-            return [templates["middle"], templates["late"]]
-        return [templates["early"]] + [templates["middle"]] * (slot_count - 2) + [templates["late"]]
-
-    if slot_count <= 1:
-        return [templates["late"] if fight_week_like else templates["single"]]
-    return [templates["early"]] + [templates["late"]] * (slot_count - 1)
-
-
-def _build_week_by_week_progression(
-    athlete_model: dict,
-    phase_briefs: dict[str, dict],
-    weekly_stress_map: dict[str, dict],
-) -> dict:
-    week_entries: list[dict] = []
-    week_index = 1
-
-    for phase in ("GPP", "SPP", "TAPER"):
-        brief = phase_briefs.get(phase)
-        if not brief:
-            continue
-        slot_count = _phase_progression_slot_count(brief)
-        if slot_count <= 0:
-            continue
-
-        phase_days = int(brief.get("days") or 0)
-        stage_templates = _progression_templates_for_phase(phase, slot_count, athlete_model, phase_days)
-        day_spans = _split_phase_days(phase_days, slot_count)
-        stress = weekly_stress_map.get(phase, {})
-        guardrails = brief.get("selection_guardrails") or {}
-
-        for phase_week_index, stage in enumerate(stage_templates, start=1):
-            week_entries.append(
-                {
-                    "week_index": week_index,
-                    "phase": phase,
-                    "phase_week_index": phase_week_index,
-                    "phase_week_total": slot_count,
-                    "span_days": day_spans[phase_week_index - 1] if phase_week_index - 1 < len(day_spans) else 0,
-                    "stage_key": stage["key"],
-                    "stage_label": stage["label"],
-                    "stage_objective": stage["objective"],
-                    "load_bias": stage["load_bias"],
-                    "session_counts": dict(brief.get("session_counts") or {}),
-                    "build": _dedupe_preserve_order(_clean_list(brief.get("emphasize", [])) + list(stage.get("emphasize", []))),
-                    "protect": _dedupe_preserve_order(_clean_list(brief.get("risk_flags", [])) + list(stage.get("protect", []))),
-                    "deprioritize": _dedupe_preserve_order(_clean_list(brief.get("deprioritize", [])) + list(stage.get("deprioritize", []))),
-                    "must_keep": _clean_list(guardrails.get("must_keep_if_present", [])),
-                    "drop_order_if_thin": _clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
-                    "conditioning_sequence": list(stress.get("conditioning_sequence", [])),
-                    "highest_neural_day": stress.get("highest_neural_day", ""),
-                    "highest_glycolytic_day": stress.get("highest_glycolytic_day", ""),
-                    "lowest_load_day": stress.get("lowest_load_day", ""),
-                    "protect_first": stress.get("protect_first", ""),
-                    "cut_first_when_collisions_rise": stress.get("cut_first_when_collisions_rise", ""),
-                    "sport_load_interaction": stress.get("sport_load_interaction", ""),
-                    "highest_collision_sport_load": stress.get("highest_collision_sport_load", ""),
-                    "resolved_rule_state": dict(stress.get("resolved_rule_state", {})),
-                }
-            )
-            week_index += 1
-
-    return {
-        "model": "adaptive_phase_overlay.v1",
-        "source_of_truth": [
-            "Phase order and duration come from the existing deterministic phase allocation.",
-            "Progression jobs compress or expand to fit the active phase duration without rewriting phase boundaries.",
-            "Days refine span reporting so short active phases still get one compressed week entry when needed.",
-        ],
-        "active_week_count": len(week_entries),
-        "weeks": week_entries,
-    }
-
-
 def _role_anchor(role_key: str) -> str:
     if role_key in {
         "primary_strength_day",
@@ -921,88 +562,6 @@ def _role_selection_rule(role_key: str, category: str, system: str | None = None
             return "Prefer compliant glycolytic slots only when phase guardrails still allow density work."
         return "Prefer compliant alactic slots that preserve speed and sharpness."
     return "Use rehab slots first; if rehab is absent, keep this day recovery-only."
-
-
-def _role_governance(
-    week_entry: dict,
-    *,
-    category: str,
-    role_key: str,
-    athlete_model: dict,
-    system: str | None = None,
-    idx: int = 0,
-) -> dict:
-    phase = str(week_entry.get("phase", "")).upper()
-    resolved_rule_state = dict(week_entry.get("resolved_rule_state", {}))
-    must_keep = set(_clean_list(resolved_rule_state.get("must_keep", week_entry.get("must_keep", []))))
-    drop_order = _clean_list(resolved_rule_state.get("drop_order_if_thin", week_entry.get("drop_order_if_thin", [])))
-    cut_first_text = str(
-        resolved_rule_state.get("cut_first_when_collisions_rise", week_entry.get("cut_first_when_collisions_rise", ""))
-    ).lower()
-    highest_collision_load = str(week_entry.get("highest_collision_sport_load", "")).strip()
-    tissue_protection_priority = bool(resolved_rule_state.get("tissue_protection_priority"))
-    freshness_priority = bool(resolved_rule_state.get("freshness_priority"))
-    sport_load_owns_density = bool(resolved_rule_state.get("sport_load_owns_density"))
-
-    hard_suppression: list[str] = []
-    suppression_rules: list[str] = []
-
-    if category == "strength" and phase == "TAPER" and idx > 0:
-        hard_suppression.append(
-            "Taper survival rules suppress extra strength touches once the primary primer already exists."
-        )
-    if category == "strength" and role_key == "neural_primer_day" and tissue_protection_priority:
-        hard_suppression.append(
-            "Safety and readiness prioritize tissue protection, so sharpness-dominant neural primer work is suppressed."
-        )
-
-    if category == "conditioning" and system:
-        if system in drop_order and system not in must_keep:
-            suppression_rules.append(
-                f"{system.replace('_', ' ')} work is optional in this week and must drop before must-keep systems if the plan gets thin."
-            )
-        if role_key == "alactic_sharpness_day" and tissue_protection_priority:
-            hard_suppression.append(
-                "Safety and readiness prioritize tissue protection, so sharpness-dominant alactic work is suppressed."
-            )
-        if system == "glycolytic" and system not in must_keep and (
-            (phase == "TAPER" and sport_load_owns_density and highest_collision_load) or "glycolytic density" in cut_first_text
-        ):
-            hard_suppression.append(
-                "Taper survival and sport-load rules keep glycolytic density optional once live load already owns density."
-            )
-        if system == "aerobic" and phase == "TAPER" and system not in must_keep and freshness_priority:
-            suppression_rules.append(
-                "Optional aerobic work cannot outrank fight-week freshness protection."
-            )
-
-    if category == "recovery":
-        suppression_rules.append(
-            "Recovery roles may replace work, but cannot create extra workload or displace rehab."
-        )
-
-    return {
-        "authority": "execution_layer_only",
-        "execution_only": True,
-        "governed_by": [entry["driver"] for entry in PLANNING_DECISION_HIERARCHY],
-        "cannot_override": [
-            "phase_survival_rules",
-            "safety_and_readiness",
-            "sport_load_collision_rules",
-            "main_limiter",
-            "session_counts",
-            "must_keep",
-            "drop_order_if_thin",
-            "conditioning_sequence",
-        ],
-        "resolved_authority": {
-            "protect_first_driver": resolved_rule_state.get("protect_first_driver"),
-            "cut_first_driver": resolved_rule_state.get("cut_first_driver"),
-            "conditioning_sequence_driver": resolved_rule_state.get("conditioning_sequence_driver"),
-        },
-        "suppression_rules": suppression_rules,
-        "hard_suppression_reasons": hard_suppression,
-    }
 
 
 _PRIMARY_STRENGTH_ROLE_KEYS = {
@@ -1063,22 +622,6 @@ def _normalized_fatigue_level(athlete_model: dict) -> str:
 def _ordered_weekdays(values: list[str]) -> list[str]:
     cleaned = _dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
     return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
-
-def _rotate_weekdays_from_plan_start(weekdays: list[str], plan_creation_weekday: Any) -> list[str]:
-    ordered = _ordered_weekdays(_clean_list(weekdays))
-    creation_day = str(plan_creation_weekday or "").strip().lower()
-    creation_index = _WEEKDAY_ORDER.get(creation_day)
-    if creation_index is None or not ordered:
-        return ordered
-    start_index = (creation_index + 1) % 7
-
-    def relative_position(day: str) -> int:
-        day_index = _WEEKDAY_ORDER.get(str(day).strip().lower(), 99)
-        if day_index == 99:
-            return 99
-        return (day_index - start_index) % 7
-
-    return sorted(ordered, key=lambda day: (relative_position(day), str(day).strip().lower()))
 
 
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:
@@ -1154,34 +697,6 @@ def _is_final_week_capped_sparring_entry(plan_entry: dict[str, Any] | None = Non
     reason_codes = {str(code).strip() for code in _clean_list(plan_entry.get("reason_codes")) if str(code).strip()}
     status = str(plan_entry.get("status") or "").strip()
     return "final_week_sparring_cap" in reason_codes and status != "hard_as_planned"
-
-
-def _make_final_week_sparring_cap_suppression(
-    day: str,
-    plan_entry: dict[str, Any] | None = None,
-    replaced_role: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    reason = str((plan_entry or {}).get("reason") or "").strip()
-    if not reason:
-        reason = (
-            "Final taper week sparring cap allows only one effective hard sparring day; "
-            "this declared hard day must not render as sparring."
-        )
-    return {
-        "category": "sparring",
-        "role_key": "hard_sparring_day",
-        "preferred_pool": "declared_hard_sparring_days",
-        "reasons": [reason],
-        "governance": dict((replaced_role or {}).get("governance", {})),
-        "locked_day": day,
-        "scheduled_day_hint": day,
-        "replacement_role_key": "no_hard_sparring_day",
-        "downgraded_from_role_key": "hard_sparring_day",
-        "hard_sparring_status": str((plan_entry or {}).get("status") or "deload_suggested"),
-        "hard_sparring_reason_codes": _clean_list((plan_entry or {}).get("reason_codes")),
-        "hard_sparring_reason": reason,
-        "coach_note": str((plan_entry or {}).get("coach_note") or ""),
-    }
 
 
 def _lock_declared_hard_sparring_roles(
@@ -1876,17 +1391,6 @@ def _boxing_day_identity_and_spacing_pass(
     return updated_roles, updated_suppressed, sparse_week_active
 
 
-def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
-    phase = str(phase or "").upper()
-    if phase == "GPP":
-        preferred = ["aerobic", "alactic", "glycolytic"]
-    elif phase == "SPP":
-        preferred = ["aerobic", "glycolytic", "alactic"]
-    else:
-        preferred = ["alactic", "aerobic", "glycolytic"]
-    return _dedupe_preserve_order(preferred + list(conditioning_sequence or []))
-
-
 def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str, str]:
     compressed = athlete_model.get("compressed_priorities") or {}
     label_by_kind = _short_camp_priority_catalog(compressed)
@@ -1951,31 +1455,6 @@ def _intentional_compression_stub() -> dict[str, Any]:
         "max_support_roles": None,
         "standalone_glycolytic_allowed": True,
     }
-
-
-def _high_fatigue_compression_reason_codes(
-    athlete_model: dict,
-    *,
-    effective_hard_spar_count: int | None = None,
-) -> list[str]:
-    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    if fatigue != "high" and "high_fatigue" not in readiness_flags:
-        return []
-
-    reason_codes = ["high_fatigue"]
-    hard_spar_count = effective_hard_spar_count
-    if hard_spar_count is None:
-        hard_spar_count = len(_clean_list(athlete_model.get("hard_sparring_days", [])))
-    if hard_spar_count >= 2:
-        reason_codes.append("two_hard_spar_days")
-    if _is_high_pressure_weight_cut(athlete_model=athlete_model):
-        reason_codes.append("high_pressure_weight_cut")
-    elif athlete_model.get("weight_cut_risk") or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}:
-        reason_codes.append("active_weight_cut")
-    if (athlete_model.get("injuries") or "injury_management" in readiness_flags) and not _all_active_injuries_surface_only(athlete_model):
-        reason_codes.append("injury_management")
-    return reason_codes
 
 
 def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
