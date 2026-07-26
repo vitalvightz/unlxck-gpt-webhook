@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { cancelGenerationJob, retryGenerationJob } from "@/lib/api";
+import { humanizeGenerationError } from "@/lib/generation-failure";
 import { useAppSession } from "./auth-provider";
 import { useGenerationStatus } from "./generation-status-provider";
 
@@ -142,10 +143,10 @@ export function getGenerationStatusTarget(
     return `/plans/${planId}`;
   }
 
-  if (phase === "failed") {
-    return "/generate";
-  }
-
+  // A failed build has no live workspace to open: /generate would mount the
+  // build screen ("Saving your intake...") and then bounce back, which reads as
+  // if generation restarted. The failed ribbon renders its own explicit
+  // actions instead of a navigation target.
   return null;
 }
 
@@ -163,6 +164,7 @@ export function GlobalGenerationStatus() {
   const pathname = usePathname();
   const {
     isActive,
+    isStalled,
     statusMessage,
     phase,
     jobId,
@@ -388,26 +390,6 @@ export function GlobalGenerationStatus() {
     return null;
   }
 
-  const mapLatestError = (error?: string | null): string => {
-    if (!error) {
-      return "Generation failed unexpectedly. Retry or contact support.";
-    }
-
-    if (error.includes("Stage 2 first_pass prompt too large")) {
-      return "Your plan was too large to finalize automatically. Retry is available.";
-    }
-
-    if (error.includes("Stage 1 planner timed out")) {
-      return "Generation took too long and stopped. Retry is available.";
-    }
-
-    if (error.includes("Plan generation failed unexpectedly")) {
-      return "Generation failed unexpectedly. Retry or contact support.";
-    }
-
-    return "Generation failed unexpectedly. Retry or contact support.";
-  };
-
   const dismissCurrentBanner = () => {
     setIsDismissed(true);
 
@@ -474,7 +456,7 @@ export function GlobalGenerationStatus() {
             <div className="global-generation-status-content">
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">
-                  {mapLatestError(latestJob.error)}
+                  {humanizeGenerationError(latestJob.error)}
                 </span>
 
                 {latestJob.completed_at ? (
@@ -505,7 +487,11 @@ export function GlobalGenerationStatus() {
                 >
                   {isRetryingLatest ? "Retrying..." : "Retry"}
                 </button>
-              ) : null}
+              ) : (
+                <Link href="/plans" className="global-generation-status-cta-label">
+                  Open plan history
+                </Link>
+              )}
             </div>
 
             {retryLatestError ? (
@@ -628,8 +614,16 @@ export function GlobalGenerationStatus() {
       return (
         <div className="global-generation-status global-generation-status-failed">
           <div className="global-generation-status-main">
-            <div className="global-generation-status-message">
-              Your plan was generated but needs recovery/support
+            <div className="global-generation-status-content">
+              <span className="global-generation-status-text">
+                <span className="global-generation-status-message">
+                  Your plan finished but could not be opened. Support can recover it.
+                </span>
+              </span>
+
+              <Link href="/plans" className="global-generation-status-cta-label">
+                Open plan history
+              </Link>
             </div>
           </div>
 
@@ -661,6 +655,95 @@ export function GlobalGenerationStatus() {
     return null;
   }
 
+  if (isFailed && !isDismissed) {
+    // The /generate screen already owns the full failure story; a second
+    // ribbon on top of it is noise.
+    if (pathname === "/generate") {
+      return null;
+    }
+
+    return (
+      <div className="global-generation-status global-generation-status-failed">
+        <div className="global-generation-status-main">
+          <div className="global-generation-status-content">
+            <span className="global-generation-status-text">
+              <span className="global-generation-status-message">{statusMessage}</span>
+            </span>
+
+            {/*
+              A stalled build is still queued/running server-side, so cancelling
+              it is the action that changes something — the cancel endpoint
+              rejects an already-terminal job. A genuinely failed job gets a
+              retry instead. Neither state offers a "tap to refresh": re-reading
+              a dead job cannot revive it, and swapping the ribbon back to a
+              live-looking status is exactly what made a failure look like a
+              build in progress.
+            */}
+            {jobId && isStalled ? (
+              <button
+                type="button"
+                className="global-generation-status-cta-label"
+                disabled={isCancelling}
+                onClick={() => {
+                  if (!session?.access_token || isCancelling) {
+                    return;
+                  }
+
+                  setCancelError(null);
+                  setIsCancelling(true);
+
+                  void cancelGenerationJob(session.access_token, jobId)
+                    .then(() => refreshStatus())
+                    .catch(() => setCancelError("Cancel failed. Try again."))
+                    .finally(() => setIsCancelling(false));
+                }}
+              >
+                {isCancelling ? "Stopping..." : "Stop build"}
+              </button>
+            ) : null}
+
+            {jobId && !isStalled ? (
+              <button
+                type="button"
+                className="global-generation-status-cta-label"
+                disabled={isRetryingLatest}
+                onClick={() => {
+                  if (!session?.access_token || isRetryingLatest) {
+                    return;
+                  }
+
+                  setRetryLatestError(null);
+                  setIsRetryingLatest(true);
+
+                  void retryGenerationJob(session.access_token, jobId)
+                    .then(() => refreshStatus())
+                    .catch(() => setRetryLatestError("Retry failed. Open Generate and try again."))
+                    .finally(() => setIsRetryingLatest(false));
+                }}
+              >
+                {isRetryingLatest ? "Retrying..." : "Retry"}
+              </button>
+            ) : null}
+          </div>
+
+          {cancelError ? <div className="global-generation-status-message">{cancelError}</div> : null}
+          {retryLatestError ? (
+            <div className="global-generation-status-message">{retryLatestError}</div>
+          ) : null}
+        </div>
+
+        <button
+          type="button"
+          className="global-generation-status-dismiss"
+          aria-label="Hide generation ribbon"
+          onClick={dismissCurrentBanner}
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
+
   if (isDismissed) {
     return (
       <button
@@ -679,7 +762,7 @@ export function GlobalGenerationStatus() {
         onPointerCancel={handleReopenPointerUp}
         onClick={handleReopenClick}
       >
-        Show plan build
+        {isFailed ? "Show build error" : "Show plan build"}
       </button>
     );
   }
@@ -744,11 +827,9 @@ export function GlobalGenerationStatus() {
           type="button"
           className="global-generation-status-main"
           aria-label={
-            isFailed
-              ? "Plan failed. Tap to refresh status."
-              : isCompleted
-                ? "Plan completed. Tap to refresh status."
-                : "Generation in progress. Tap to refresh status."
+            isCompleted
+              ? "Plan completed. Tap to refresh status."
+              : "Generation in progress. Tap to refresh status."
           }
           onClick={() => {
             refreshStatus();
@@ -757,31 +838,6 @@ export function GlobalGenerationStatus() {
           {content}
         </button>
       )}
-
-      {isFailed && jobId ? (
-        <button
-          type="button"
-          className="global-generation-status-cta-label"
-          disabled={isCancelling}
-          onClick={() => {
-            if (!session?.access_token || isCancelling) {
-              return;
-            }
-
-            setCancelError(null);
-            setIsCancelling(true);
-
-            void cancelGenerationJob(session.access_token, jobId)
-              .then(() => refreshStatus())
-              .catch(() => setCancelError("Cancel failed. Try again."))
-              .finally(() => setIsCancelling(false));
-          }}
-        >
-          {isCancelling ? "Cancelling..." : "Cancel build"}
-        </button>
-      ) : null}
-
-      {cancelError ? <div className="global-generation-status-message">{cancelError}</div> : null}
 
       <button
         type="button"

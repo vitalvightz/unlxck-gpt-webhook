@@ -17,6 +17,11 @@ interface GenerationStatusContextValue {
   athleteId: string | null;
   source: string | null;
   isActive: boolean;
+  // True when the phase is "failed" only because the job stopped reporting
+  // progress — the server may still be running it. The ribbon offers "Cancel
+  // build" here and "Retry" for a genuinely terminal failure, because the
+  // cancel endpoint rejects anything that is not queued/running.
+  isStalled: boolean;
   statusMessage: string | null;
   terminalStatus: GlobalTerminalGenerationStatus;
   startedAtMs: number | null;
@@ -110,7 +115,10 @@ function isTerminalStatus(status: GenerationJobStatus): boolean {
   return status === "completed" || status === "review_required" || status === "failed";
 }
 
-export function shouldRetainLatestJob(job: GenerationJobResponse | null | undefined): boolean {
+export function shouldRetainLatestJob(
+  job: GenerationJobResponse | null | undefined,
+  nowMs = Date.now(),
+): boolean {
   if (!job) return false;
   const normalizedStatus = normalizeLegacyGenerationJobStatus(job.status) as GenerationJobStatus;
   // A terminal job with no openable plan (no plan_id and no latest_plan_id) has
@@ -119,9 +127,28 @@ export function shouldRetainLatestJob(job: GenerationJobResponse | null | undefi
   // which case the ribbon must keep surfacing the "admin review required"
   // state so the user can see it and an admin can act on it.
   if (isTerminalStatus(normalizedStatus) && !resolveTerminalJobPlanId(job)) {
-    return job.requires_admin_resume === true;
+    if (job.requires_admin_resume === true) {
+      return true;
+    }
+    // A recent failure the backend says is retryable IS actionable. Dropping it
+    // meant a failed build vanished without trace the moment the user left
+    // /generate: no notice, no retry, nothing in the workspace.
+    if (normalizedStatus === "failed" && job.can_retry === true) {
+      return isRecentTerminalJob(job, nowMs);
+    }
+    return false;
   }
   return true;
+}
+
+export const MAX_PASSIVE_FAILED_JOB_AGE_MS = 24 * 60 * 60 * 1000;
+
+function isRecentTerminalJob(job: GenerationJobResponse, nowMs: number): boolean {
+  const terminalAtMs = Date.parse(job.completed_at || job.updated_at || job.created_at || "");
+  if (!Number.isFinite(terminalAtMs)) {
+    return false;
+  }
+  return nowMs - terminalAtMs <= MAX_PASSIVE_FAILED_JOB_AGE_MS;
 }
 
 function phaseFromStatus(status: GenerationJobStatus): GlobalGenerationPhase {
@@ -143,7 +170,7 @@ function statusMessage(phase: GlobalGenerationPhase, terminalStatus: GlobalTermi
     case "completed":
       return terminalStatus === "review_required" ? "Plan ready for review." : "Plan ready!";
     case "failed":
-      return "Plan failed. Try again.";
+      return "Your plan build stopped.";
     default:
       return "";
   }
@@ -165,6 +192,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [terminalStatus, setTerminalStatus] = useState<GlobalTerminalGenerationStatus>(null);
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
   const [latestJob, setLatestJob] = useState<GenerationJobResponse | null>(null);
+  const [isStalled, setIsStalled] = useState(false);
 
   // Track the clear timeout so we can cancel it on unmount — prevents
   // state updates on an unmounted component
@@ -173,6 +201,9 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const wasAuthenticatedRef = useRef(Boolean(token));
   const latestTokenRef = useRef(token);
   const checkSequenceRef = useRef(0);
+  // Lets the terminal-state clear timer re-run the check without making
+  // checkStatus depend on itself.
+  const checkStatusRef = useRef<(() => Promise<void>) | null>(null);
 
   const resetGenerationState = useCallback(() => {
     setPhase(null);
@@ -185,6 +216,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     setTerminalStatus(null);
     setStartedAtMs(null);
     setLatestJob(null);
+    setIsStalled(false);
   }, []);
 
   useEffect(() => {
@@ -280,6 +312,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setStatusMessageText(null);
         setTerminalStatus(null);
         setStartedAtMs(null);
+        setIsStalled(false);
         return;
       }
 
@@ -299,10 +332,16 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           const normalizedStatus = normalizeLegacyGenerationJobStatus(job.status) as GenerationJobStatus;
           const newPhase = stalledBeforeStart || staleVisibleJob ? "failed" : phaseFromStatus(normalizedStatus);
           const newTerminalStatus = normalizedStatus === "completed" || normalizedStatus === "review_required" ? normalizedStatus : null;
+          const isStalledJob = stalledBeforeStart || staleVisibleJob;
           setPhase(newPhase);
           setJobId(activePending.jobId);
           setTerminalStatus(newTerminalStatus);
-          setStatusMessageText(stalledBeforeStart || staleVisibleJob ? "Build stalled — retry" : statusMessage(newPhase, newTerminalStatus));
+          setIsStalled(isStalledJob);
+          setStatusMessageText(
+            isStalledJob
+              ? "This build stopped responding."
+              : statusMessage(newPhase, newTerminalStatus),
+          );
 
           if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
             setPlanId(job.plan_id || null);
@@ -342,6 +381,12 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
               setStatusMessageText(null);
               setTerminalStatus(null);
               setStartedAtMs(null);
+              setIsStalled(false);
+              // Hand off to the passive latest-job ribbon (a failed build the
+              // user can still retry). Clearing the pending record just
+              // stopped the interval poll, so without this re-check the
+              // failure would stay invisible until the next navigation.
+              void checkStatusRef.current?.();
             }, delay);
           }
         } catch {
@@ -356,6 +401,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           setTerminalStatus(null);
           setStartedAtMs(null);
           setLatestJob(null);
+          setIsStalled(false);
         }
       } else {
         clearPendingGenerations();
@@ -368,11 +414,16 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setStatusMessageText(null);
         setTerminalStatus(null);
         setStartedAtMs(null);
+        setIsStalled(false);
       }
     } finally {
       isCheckingRef.current = false;
     }
   }, [token, resetGenerationState]);
+
+  useEffect(() => {
+    checkStatusRef.current = checkStatus;
+  }, [checkStatus]);
 
   useEffect(() => {
     const initialCheckTimer = window.setTimeout(() => {
@@ -414,6 +465,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     athleteId,
     source,
     isActive: phase !== null,
+    isStalled,
     statusMessage: statusMessageText,
     terminalStatus,
     startedAtMs,
