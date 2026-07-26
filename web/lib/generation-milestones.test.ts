@@ -19,22 +19,13 @@ test("queued/running start at early milestone", () => {
   assert.equal(running.currentIndex, 0);
 });
 
-// TODO(web-test-reconcile): DOMAIN DECISION — running milestone ceiling.
-//   File/test: lib/generation-milestones.test.ts, "running never reaches final
-//     saving milestone".
-//   Current behaviour: for a very long-running job (~11.5 days elapsed) the
-//     "running" view's currentIndex advances past 17 (the list runs 0–19, per the
-//     sibling "completed" test asserting index 19).
-//   Expected by test: currentIndex stays <= 17 while running, reserving the final
-//     "saving" milestones for the finalizing/completed states.
-//   Risk: LOW — cosmetic progress indicator only. Either the milestone list grew
-//     (magic 17 is stale) or the running-state ceiling changed. Needs an owner
-//     call on whether "running" should ever surface the final saving milestones;
-//     not fixed here without that intent.
-test.skip("running never reaches final saving milestone", () => {
+// The invariant is that "running" stops one short of the last milestone, which
+// belongs to the finalizing/completed states. Asserting the ceiling relative to
+// the list length keeps this honest if the milestone list grows again.
+test("running never reaches final saving milestone", () => {
   const startedAt = Date.now() - 999_999_999;
   const view = getGenerationMilestoneView("running", startedAt, Date.now());
-  assert.ok(view.currentIndex <= 17);
+  assert.equal(view.currentIndex, GENERATION_MILESTONES.length - 2);
   assert.notEqual(view.current.title, "Saving finished plan");
 });
 

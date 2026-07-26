@@ -997,13 +997,23 @@ class PlanRequest(BaseModel):
 
         return self
 
+    @property
+    def effective_fight_date(self) -> str:
+        """The fight date that actually counts, or "" for an open camp.
+
+        An open camp can still carry a stale ``fight_date`` from an earlier
+        submission, so every fight-date-driven decision must read this instead of
+        the raw field.
+        """
+        return "" if self.no_scheduled_fight else self.fight_date
+
     @model_validator(mode="after")
     def normalize_strength_focus_for_hard_sparring(self) -> "PlanRequest":
         if not self.hard_sparring_days:
             return self
 
         cap = get_performance_focus_cap(
-            None if self.no_scheduled_fight else self.fight_date,
+            self.effective_fight_date,
             time_zone=self.athlete.athlete_timezone,
         )
         if cap is None or cap.days_until_fight > _HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT:
@@ -1052,7 +1062,7 @@ class PlanRequest(BaseModel):
             }
 
         athlete = self.athlete
-        normalized_fight_date = "" if self.no_scheduled_fight else self.fight_date
+        normalized_fight_date = self.effective_fight_date
         fields = [
             _field("Full name", athlete.full_name),
             _field("Sex", athlete.sex),
