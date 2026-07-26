@@ -455,9 +455,10 @@ test("does not duplicate a rehab insert as a summary once the blocks are expande
   assert.equal(html.includes("Rehab / Mobility"), false);
 });
 
-test("renders a lower-case session objective sentence-cased under the title", () => {
+test("labels the session objective as the Why and sentence-cases it", () => {
   // Objectives arrive from the plan conversion in mixed casing (usually all
-  // lower-case), which read as a typo under the Title Case session name.
+  // lower-case), which read as a typo under the Title Case session name — and
+  // unlabelled they read as a description of the work rather than its reason.
   const session = {
     session_id: "ses-1",
     session_type: "mixed",
@@ -469,7 +470,8 @@ test("renders a lower-case session objective sentence-cased under the title", ()
   const html = renderToStaticMarkup(<SessionCard session={session} />);
 
   assert.equal(html.includes("Refine motor plan and composure without physical load"), true);
-  assert.equal(html.includes(">refine motor plan"), false);
+  assert.equal(html.includes("refine motor plan and composure"), false);
+  assert.equal(html.includes(">Why<"), true);
 });
 
 test("drops a mindset Context line that only restates the session objective", () => {

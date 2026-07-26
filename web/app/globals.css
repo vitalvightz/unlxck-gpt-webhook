@@ -17675,6 +17675,17 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-secondary);
   font-size: 0.88rem;
 }
+/* The subtitle under a session title is the plan's reason for the session, but
+   it read as an unlabelled description. The inline "WHY" tag names it so the
+   athlete sees the justification rather than more prescription text. */
+.sp-session-why-label {
+  margin-right: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--brand-red);
+}
 .sp-mindset {
   background: var(--bg-support);
   border-radius: var(--radius-stat);
