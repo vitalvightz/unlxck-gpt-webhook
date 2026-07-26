@@ -221,23 +221,19 @@ test("validateQuickBuildInput allows open camp focus values", () => {
   assert.equal(errors.weak_areas, undefined);
 });
 
-// TODO(web-test-reconcile): DOMAIN DECISION — focus-cap sizing.
-//   Current behaviour: validateQuickBuildInput returns no `focus_cap` error for
-//     4 focus items (3 key goals + 1 weak area) at ~D-27.
-//   Expected by test: a `focus_cap` string error (4 items exceeds the cap).
-//   These tests encode an older, smaller focus cap; the current days-out policy
-//   appears to permit this selection. Left skipped pending product confirmation
-//   of the intended cap size at this days-out band — do NOT change production cap
-//   logic to force the old assertion. See also
-//   lib/performance-focus-cap.test.ts ("does not flag selections … within cap").
-test.skip("validateQuickBuildInput keeps shared focus cap active with days-out filtering", () => {
+// D-27 is the "Short camp" band, capped at 4 shared focus picks. 3 goals + 1
+// weak area sits exactly on that cap, so the shared cap stays quiet here while
+// the days-out filtering still applies.
+test("validateQuickBuildInput keeps shared focus cap active with days-out filtering", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = false;
   input.fight_date = "2026-06-20";
   input.key_goals = ["conditioning", "power", "mobility"];
   input.weak_areas = ["gas_tank"];
   const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
-  assert.equal(typeof errors.focus_cap, "string");
+  assert.equal(errors.focus_cap, undefined);
+  assert.equal(errors.key_goals, undefined);
+  assert.equal(errors.weak_areas, undefined);
 });
 
 test("D-1 blocks gas_tank and conditioning availability", () => {
@@ -315,14 +311,16 @@ test("sanitizeQuickBuildFocusByDaysOut does not auto-readd strength when hard sp
   assert.deepEqual(sanitized.weak_areas, ["mobility"]);
 });
 
-// TODO(web-test-reconcile): DOMAIN DECISION — see the focus-cap note above.
-// Same cap-sizing question; skipped pending the same product confirmation.
-test.skip("validateQuickBuildInput blocks generation when focus cap is exceeded", () => {
+// One pick past the D-27 short-camp cap of 4.
+test("validateQuickBuildInput blocks generation when focus cap is exceeded", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = false;
   input.fight_date = "2026-06-20";
   input.key_goals = ["conditioning", "power", "mobility"];
-  input.weak_areas = ["gas_tank"];
+  input.weak_areas = ["gas_tank", "mobility"];
   const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
-  assert.equal(typeof errors.focus_cap, "string");
+  assert.equal(
+    errors.focus_cap,
+    "This camp allows 4 total focus picks. Remove 1 goal or weak-area selection before generating.",
+  );
 });

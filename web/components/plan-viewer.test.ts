@@ -814,17 +814,11 @@ test("labeled session-level notes keep their label", () => {
   assert.deepEqual(session.notes, ["Note: keep it light today."]);
 });
 
-// TODO(web-test-reconcile): DOMAIN DECISION — plan-text dose vs. labelled detail.
-//   File/test: components/plan-viewer.test.ts, "compact labelled late-camp output
-//     parses into clean session blocks".
-//   Current behaviour: parsePlanText splits the trailing "intensity: RPE 6-7."
-//     out of the block dose (the dose becomes "3 x 4-6 reps per side; full
-//     recovery 90-120 s;"), treating "intensity:" as its own labelled segment.
-//   Expected by test: the whole "…; intensity: RPE 6-7." stays inside the dose.
-//   Risk: LOW-MEDIUM — display grouping of an already-parsed block; no data lost.
-//     Whether "intensity:" should be its own detail is a parser-design choice.
-//     Needs an owner call on the intended dose boundary; not changed here.
-test.skip("compact labelled late-camp output parses into clean session blocks", () => {
+// "intensity:" is a recognised session label, so it becomes its own labelled
+// detail rather than staying buried in the dose — the same treatment Purpose /
+// Why / Progress get, which is what makes the block render consistently. The
+// dose keeps only the sets/reps/recovery, with no dangling separator.
+test("compact labelled late-camp output parses into clean session blocks", () => {
   const groups = parsePlanText(
     [
       "D-18 (Wednesday) — Power Transfer Touch",
@@ -851,12 +845,13 @@ test.skip("compact labelled late-camp output parses into clean session blocks", 
       ],
       [
         "Band-Resisted Jab-Cross Primer",
-        "3 x 4-6 reps per side; full recovery 90-120 s; intensity: RPE 6-7.",
+        "3 x 4-6 reps per side; full recovery 90-120 s",
       ],
       ["Reset (2-3 min)", "slow mobility flow for hips and thoracic rotation."],
     ],
   );
   assert.deepEqual(session.blocks[1].details, [
+    { label: "Intensity", text: "RPE 6-7." },
     { label: "Purpose", text: "preserve punch speed and transfer strength with minimal metabolic cost." },
     { label: "Why", text: "one meaningful strength touch early in the bridge window." },
     { label: "Progress", text: "reduce band tension if technique breaks." },

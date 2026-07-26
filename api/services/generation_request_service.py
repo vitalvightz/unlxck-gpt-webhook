@@ -69,7 +69,7 @@ async def generate_plan_for_current_user(
     is_exempt_from_daily_generation_cap: Callable[[str], bool],
 ) -> GenerationJobResponse:
     focus_validation = validate_performance_focus_selections(
-        request_body.fight_date,
+        request_body.effective_fight_date,
         key_goals=request_body.key_goals,
         weak_areas=request_body.weak_areas,
         time_zone=request_body.athlete.athlete_timezone,

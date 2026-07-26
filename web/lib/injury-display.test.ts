@@ -37,19 +37,32 @@ test("falls back to the condition alone when no location remains", () => {
   assert.equal(normalizeInjuryLabel("it is bruised"), "Bruise");
 });
 
-// TODO(web-test-reconcile): DOMAIN DECISION — injury-label normalisation.
-//   File/test: lib/injury-display.test.ts, "preserves numbers and acronyms".
-//   Current behaviour: normalizeInjuryLabel("L5-S1 stiffness") → "L -s stiffness"
-//     (digits stripped, casing lowered) — anatomical levels/grades are mangled.
-//   Expected by test: "L5-S1 stiffness" / "ACL grade 2 tear" preserved verbatim.
-//   Risk: MEDIUM — this looks like a genuine display defect (spine levels, grade
-//     numbers matter clinically), but the normaliser strips digits deliberately
-//     for other messy-parser cases, so a fix must be scoped so it does not
-//     re-admit the debris the sibling tests guard against. Needs an owner call on
-//     the digit-stripping rule; not fixed here to avoid a blind production change.
-test.skip("preserves numbers and acronyms in the location", () => {
+test("preserves numbers and acronyms in the location", () => {
   assert.equal(normalizeInjuryLabel("L5-S1 stiffness"), "L5-S1 stiffness");
   assert.equal(normalizeInjuryLabel("ACL grade 2 tear"), "ACL grade 2 tear");
+});
+
+test("normalizes the casing of spinal levels and known acronyms", () => {
+  assert.equal(normalizeInjuryLabel("l5-s1 stiffness"), "L5-S1 stiffness");
+  assert.equal(normalizeInjuryLabel("acl tear"), "ACL tear");
+  assert.equal(normalizeInjuryLabel("left ACL tear"), "Left ACL tear");
+});
+
+test("keeps single spinal levels and injury grades", () => {
+  assert.equal(normalizeInjuryLabel("C5 nerve pain"), "C5 nerve pain");
+  assert.equal(normalizeInjuryLabel("T4 stiffness"), "T4 stiffness");
+  assert.equal(normalizeInjuryLabel("grade 1 hamstring strain"), "Grade 1 hamstring strain");
+});
+
+// "IT" (iliotibial) is the one acronym that collides with a filler word, so the
+// uppercase form must survive where the lowercase pronoun is still stripped.
+test("keeps an uppercase IT band but still strips the pronoun 'it'", () => {
+  assert.equal(normalizeInjuryLabel("IT band pain"), "IT band pain");
+  assert.equal(normalizeInjuryLabel("it is bruised"), "Bruise");
+});
+
+test("does not preserve shouty input as an acronym", () => {
+  assert.equal(normalizeInjuryLabel("LEFT SHOULDER IS BRUISED"), "Left shoulder bruise");
 });
 
 test("strips duplicated condition debris from messy parser strings", () => {

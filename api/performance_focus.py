@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
@@ -7,8 +8,9 @@ from zoneinfo import ZoneInfo
 
 @dataclass(frozen=True)
 class PerformanceFocusCap:
-    days_until_fight: int
-    weeks_out: int
+    # ``math.inf`` for open plans, which have no fight-date countdown.
+    days_until_fight: int | float
+    weeks_out: int | float
     max_selections: int
     window_label: str
     reason: str
@@ -31,7 +33,16 @@ class _PerformanceFocusCapWindow:
     reason: str
 
 
-# Keep in sync with web/lib/performance-focus-cap.ts
+# Keep the cap below and the windows that follow in sync with
+# web/lib/performance-focus-cap.ts.
+_OPEN_PLAN_FOCUS_CAP = PerformanceFocusCap(
+    days_until_fight=math.inf,
+    weeks_out=math.inf,
+    max_selections=5,
+    window_label="Open plan",
+    reason="Open plans use a focused cap to keep goals and weak areas clear without a fight-date countdown.",
+)
+
 _PERFORMANCE_FOCUS_CAP_WINDOWS: tuple[_PerformanceFocusCapWindow, ...] = (
     _PerformanceFocusCapWindow(
         max_days_until_fight=7,
@@ -104,7 +115,10 @@ def get_performance_focus_cap(
 ) -> PerformanceFocusCap | None:
     parsed_fight_date = _parse_date_only(fight_date)
     if parsed_fight_date is None:
-        return None
+        # No usable fight date: an open plan (or an unparseable one). These still
+        # get a cap — the web client has always enforced one here, and leaving the
+        # server uncapped meant a direct API call could ship unlimited focus picks.
+        return _OPEN_PLAN_FOCUS_CAP
 
     today = _get_today(now=now, time_zone=time_zone)
     days_until_fight = (parsed_fight_date - today).days

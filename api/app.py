@@ -1515,7 +1515,7 @@ def create_app(
                 detail="latest intake is invalid and cannot be used for generation",
             ) from exc
         focus_validation = validate_performance_focus_selections(
-            request_body.fight_date,
+            request_body.effective_fight_date,
             key_goals=request_body.key_goals,
             weak_areas=request_body.weak_areas,
             time_zone=request_body.athlete.athlete_timezone,
@@ -1642,7 +1642,7 @@ def create_app(
         except ValidationError as exc:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()) from exc
         focus_validation = validate_performance_focus_selections(
-            request_body.fight_date,
+            request_body.effective_fight_date,
             key_goals=request_body.key_goals,
             weak_areas=request_body.weak_areas,
             time_zone=request_body.athlete.athlete_timezone,
@@ -1654,7 +1654,7 @@ def create_app(
         refreshed = store.update_intake(
             latest_intake_id,
             intake=request_body.model_dump(mode="json"),
-            fight_date=None if request_body.no_scheduled_fight else (request_body.fight_date.strip() or None),
+            fight_date=request_body.effective_fight_date.strip() or None,
             technical_style=list(request_body.athlete.technical_style),
         )
         return _map_admin_athlete(row, latest_intake=refreshed)

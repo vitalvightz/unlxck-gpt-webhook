@@ -144,6 +144,13 @@ function normalizeSessionLabel(raw: string): string {
  * Progress/regress: add 5 min. Stop rule: stop if dizzy." becomes three
  * labelled details; an unlabelled line returns a single `label: null` segment.
  */
+// Splitting on a label leaves the separator that introduced it dangling on the
+// end of the previous segment ("… full recovery 90-120 s;" before "intensity:").
+// Trim it so doses and details never render with a trailing semicolon or comma.
+function trimTrailingSeparator(value: string): string {
+  return value.replace(/[;,]+$/, "").trim();
+}
+
 export function splitLabeledSegments(text: string): PlanTextDetail[] {
   const clean = text.trim();
   if (!clean) {
@@ -154,7 +161,7 @@ export function splitLabeledSegments(text: string): PlanTextDetail[] {
     return [{ label: null, text: clean }];
   }
   const segments: PlanTextDetail[] = [];
-  const lead = clean.slice(0, matches[0].index ?? 0).trim();
+  const lead = trimTrailingSeparator(clean.slice(0, matches[0].index ?? 0).trim());
   if (lead) {
     segments.push({ label: null, text: lead });
   }
@@ -162,10 +169,12 @@ export function splitLabeledSegments(text: string): PlanTextDetail[] {
     const match = matches[i];
     const start = (match.index ?? 0) + match[0].length;
     const end = i + 1 < matches.length ? matches[i + 1].index ?? clean.length : clean.length;
-    const body = clean
-      .slice(start, end)
-      .trim()
-      .replace(/^[-–—]\s*/, "");
+    const body = trimTrailingSeparator(
+      clean
+        .slice(start, end)
+        .trim()
+        .replace(/^[-–—]\s*/, ""),
+    );
     if (body) {
       segments.push({ label: normalizeSessionLabel(match[1]), text: body });
     }
