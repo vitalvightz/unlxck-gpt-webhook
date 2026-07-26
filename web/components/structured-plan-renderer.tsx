@@ -19,6 +19,7 @@ import {
   isDeEmphasisedWeightCutSafety,
   progressionRuleLabel,
   planNoteLabel,
+  formatSessionObjective,
   formatWeightCutBand,
   getDeterministicNutritionPhases,
   getDeterministicRecoveryPhases,
@@ -409,7 +410,7 @@ export function SessionCard({
     cleanText(card?.headline) ||
     titleize(cleanText(session.session_type) || "Session");
   const sessionType = cleanText(session.session_type);
-  const objective = cleanText(session.objective);
+  const objective = formatSessionObjective(session.objective);
   const duration = formatMeasured(session.planned_duration);
   const date = cleanText(day?.date);
   const countdown = cleanText(day?.countdown_label);

@@ -1977,6 +1977,16 @@ session title/objective, plan_notes, mindset_anchor, nutrition prose):
   No semicolons, no "while …" tails, no second clause. Compress the source goal
   to its single most important driver (e.g. "Build single-leg drive and balance",
   "Sharpen punch speed, stay fresh"). Do NOT add content — only shorten.
+- The session "objective" is the coach talking to the athlete about THIS session.
+  It carries the plan's "Why:" / "Purpose:" line — the reason the session exists
+  today — NOT a summary of the blocks (those render directly underneath it) and
+  not a restatement of the session title. Write it as ONE short coaching line in
+  second person, ideally opening with a verb, AT MOST 12 words, starting with a
+  capital letter ("Rehearse the opening exchange — no physical load today.", not
+  "refine motor plan and composure without physical load"). Prefer the athlete's
+  own language over textbook terms ("rehearse the sequence" over "refine motor
+  plan"). Keep every constraint the plan states; never invent a reason it does
+  not give.
 - Keep every athlete-facing string tight: prefer short phrases over full
   sentences, drop filler and hedging, and never repeat the same point across two
   fields.

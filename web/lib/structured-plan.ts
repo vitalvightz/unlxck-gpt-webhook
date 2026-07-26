@@ -46,6 +46,16 @@ function capitalizeFirst(value: string): string {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 }
 
+/** The session objective — the plan's "Why:" line, shown as the subtitle under
+ * the session title. Like the mindset cues it is authored inconsistently (mostly
+ * lower-case, occasionally sentence-case), which reads as a typo next to the
+ * Title Case session name, so normalise the first letter for display and leave
+ * the rest of the phrase exactly as authored. */
+export function formatSessionObjective(value: unknown): string | null {
+  const text = cleanText(value);
+  return text ? capitalizeFirst(text) : null;
+}
+
 /**
  * Whether to render the structured UI instead of the plan_text fallback.
  * True only when structured_plan is an object with at least one week. Malformed

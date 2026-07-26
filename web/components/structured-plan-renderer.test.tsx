@@ -455,6 +455,23 @@ test("does not duplicate a rehab insert as a summary once the blocks are expande
   assert.equal(html.includes("Rehab / Mobility"), false);
 });
 
+test("renders a lower-case session objective sentence-cased under the title", () => {
+  // Objectives arrive from the plan conversion in mixed casing (usually all
+  // lower-case), which read as a typo under the Title Case session name.
+  const session = {
+    session_id: "ses-1",
+    session_type: "mixed",
+    title: "Neural Visualization",
+    objective: "refine motor plan and composure without physical load",
+    blocks: [{ block_id: "b1", display_name: "Quiet rehearsal" }],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} />);
+
+  assert.equal(html.includes("Refine motor plan and composure without physical load"), true);
+  assert.equal(html.includes(">refine motor plan"), false);
+});
+
 test("drops a mindset Context line that only restates the session objective", () => {
   // The objective already prints under the title; a Context anchor that repeats
   // it (bar casing/trailing period) must not print the same sentence twice, but

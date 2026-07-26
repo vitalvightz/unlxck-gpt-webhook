@@ -11,6 +11,7 @@ import {
   isNonFiniteNumericToken,
   formatMacroRange,
   formatMeasured,
+  formatSessionObjective,
   formatWeightCutBand,
   macroLine,
   getActiveNotesExcludingRedFlags,
@@ -619,6 +620,20 @@ test("getMindsetLines capitalises the first letter of each cue for display", () 
       "Short band work and mobility",
     ],
   );
+});
+
+test("formatSessionObjective capitalises the subtitle without touching the rest", () => {
+  assert.equal(
+    formatSessionObjective("refine motor plan and composure without physical load"),
+    "Refine motor plan and composure without physical load",
+  );
+  // Already sentence-case / acronym-led text is returned untouched.
+  assert.equal(formatSessionObjective("Hold RPE 6 and stay smooth"), "Hold RPE 6 and stay smooth");
+  assert.equal(formatSessionObjective("  keep the pace honest  "), "Keep the pace honest");
+  // Blank / non-string objectives stay hidden.
+  assert.equal(formatSessionObjective("   "), null);
+  assert.equal(formatSessionObjective(null), null);
+  assert.equal(formatSessionObjective(42), null);
 });
 
 // --- deterministic (Stage 1) nutrition + recovery (PR-6) -------------------
