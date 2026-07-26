@@ -2299,6 +2299,13 @@ _LATE_FIGHT_PROGRESSION_LINE = re.compile(
     re.IGNORECASE,
 )
 
+_LATE_FIGHT_BARE_ADJUSTMENT_LABEL = re.compile(
+    r"^\s*(?:[-*]\s*)?(?:\*\*)?\s*"
+    r"(?:progress(?:ion)?\s*/\s*)?regress(?:ion)?\s*/?\s*"
+    r"(?:\*\*)?\s*$",
+    re.IGNORECASE,
+)
+
 # Negators that, when they immediately precede the progression cue, mean the
 # line is stating *not* to progress (e.g. "do not progress the drill").
 _LATE_FIGHT_PROGRESSION_NEGATOR_PATTERN = re.compile(
@@ -2429,6 +2436,26 @@ def _late_fight_progression_lockout_warnings(
                 }
             )
     return warnings
+
+
+def _late_fight_bare_adjustment_label_warnings(plan_lines: list[str]) -> list[dict]:
+    matched_lines = [
+        line for line in plan_lines if _LATE_FIGHT_BARE_ADJUSTMENT_LABEL.match(line)
+    ]
+    if not matched_lines:
+        return []
+    return [
+        {
+            "code": "late_fight_bare_adjustment_label",
+            "message": (
+                "Late-fight adjustment labels must include an actionable Easier "
+                "or Stop instruction; bare Regression labels are not renderable."
+            ),
+            "line": matched_lines[0],
+            "matched_lines": matched_lines[:3],
+            "blocking": True,
+        }
+    ]
 
 
 def _normalize_exercise_key(value: str) -> str:
@@ -2940,6 +2967,7 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                     }
                 )
 
+    warnings.extend(_late_fight_bare_adjustment_label_warnings(plan_lines))
     warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_countdown_banded_lockout_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_progression_lockout_warnings(spec, final_plan_text, plan_lines))

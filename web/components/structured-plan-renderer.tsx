@@ -9,7 +9,7 @@ import {
   formatEffort,
   formatMeasured,
   getBlocks,
-  getCoachingCues,
+  getBlockCoachingDisplay,
   getActiveNotesExcludingRedFlags,
   getCoachLedContactView,
   getDays,
@@ -32,6 +32,7 @@ import {
   nutritionPhaseRows,
   recoveryPhaseView,
   redFlagView,
+  resolvedWeekPhase,
   selectBlockMetric,
   shouldShowRest,
   weekLabel,
@@ -251,7 +252,7 @@ export function BlockCard({
   const rest = shouldShowRest(block.rest) ? formatMeasured(block.rest) : null;
   const effort = formatEffort(block);
   const purpose = cleanText(block.purpose);
-  const cues = getCoachingCues(block);
+  const { cues, stopRules } = getBlockCoachingDisplay(block);
   const substitutions = getStringList(block.substitutions);
   const regressions = getStringList(block.regression_options);
   const progression = cleanText(block.progression_rule);
@@ -261,6 +262,14 @@ export function BlockCard({
   // hides. A stop rule is safety wording and always stays.
   const showProgressionAside = Boolean(
     progression && (!weekDirective || progressionRuleLabel(progression) === "Stop rule"),
+  );
+  const adjustmentRules = [
+    ...(showProgressionAside && progression ? [progression] : []),
+    ...stopRules,
+  ].filter(
+    (rule, index, rules) =>
+      rules.findIndex((candidate) => candidate.trim().toLowerCase() === rule.trim().toLowerCase()) ===
+      index,
   );
 
   return (
@@ -329,12 +338,12 @@ export function BlockCard({
           {regressions.join(", ")}
         </p>
       ) : null}
-      {progression && showProgressionAside ? (
-        <p className="sp-block-aside">
-          <span className="sp-stat-label">{progressionRuleLabel(progression)}</span>
-          {progression}
+      {adjustmentRules.map((rule) => (
+        <p key={rule} className="sp-block-aside">
+          <span className="sp-stat-label">{progressionRuleLabel(rule)}</span>
+          {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
         </p>
-      ) : null}
+      ))}
     </div>
   );
 }
@@ -1480,7 +1489,7 @@ function WeekStrip({
         const completion = weekCompletion(week, completionIndex);
         const phase = openOngoing
           ? OPEN_BLOCK_WEEK_LABELS[pos] || `Week ${pos + 1}`
-          : cleanText(week.phase_label);
+          : resolvedWeekPhase(week);
         const index =
           typeof week.week_index === "number" && Number.isFinite(week.week_index)
             ? week.week_index
@@ -1775,7 +1784,7 @@ export function StructuredPlanRenderer({
       cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
       (calendarDay ? toLocalIsoDay(calendarDay) : null));
   // Open the support phase that matches the week the athlete is viewing.
-  const activeSupportPhaseKey = normalizeSupportPhaseKey(selectedWeek?.phase_label);
+  const activeSupportPhaseKey = normalizeSupportPhaseKey(resolvedWeekPhase(selectedWeek));
 
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>

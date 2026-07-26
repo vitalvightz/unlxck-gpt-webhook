@@ -613,6 +613,35 @@ test("labels a stop rule stored in progression_rule as Stop rule, not Progress",
   assert.equal(html.includes("Stop the set if ankle pain increases"), true);
 });
 
+test("cleans malformed Regression and Stop coaching cues at render time", () => {
+  const session = {
+    session_id: "ses-legacy",
+    session_type: "mobility",
+    title: "Mobility reset",
+    blocks: [
+      {
+        block_id: "mobility",
+        block_type: "mobility",
+        display_name: "Mobility Reset Flow",
+        coaching_cues: [
+          "Regression /",
+          "Stay smooth through the range.",
+          "Stop: switch to breathing only if shoulder pain rises.",
+        ],
+        regression_options: ["Use a smaller range."],
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes("Regression /"), false);
+  assert.equal(html.includes("Stay smooth through the range."), true);
+  assert.equal(html.includes(">Easier</span>"), true);
+  assert.equal(html.includes(">Stop rule</span>"), true);
+  assert.equal(countOccurrences(html, "switch to breathing only if shoulder pain rises."), 1);
+});
+
 test("renders fallback safety card from active notes when red flag rules are absent", () => {
   const plan = {
     schema_version: "1.0",
@@ -639,7 +668,31 @@ test("renders fallback safety card from active notes when red flag rules are abs
   assert.equal(html.includes("Safety priority"), true);
   assert.equal(html.includes("Red flags - stop"), true);
   assert.equal(html.includes("Safety note"), true);
-  assert.equal(html.includes("Stop immediately and report"), true);
+  assert.equal(countOccurrences(html, "Stop immediately and report"), 1);
+});
+
+test("keeps calm lead notes out of Red Flags while retaining the safety disclaimer", () => {
+  const leadText =
+    "Target weight is not set; coach owns the final call and programmed support stays active.";
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    plan_notes: [
+      {
+        category: "weight_cut",
+        label: "Lead notes",
+        text: leadText,
+      },
+    ],
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "TAPER", days: [] }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(countOccurrences(html, leadText), 1);
+  assert.equal(html.includes("Active notes"), true);
+  assert.equal(html.includes("Red flags - stop"), true);
+  assert.equal(countOccurrences(html, 'class="safety-note '), 1);
 });
 
 test("collapses deterministic nutrition and recovery into a support section at the bottom", () => {
@@ -1666,6 +1719,37 @@ test("week rail scrolls once there are more than four weeks", () => {
       `${count} weeks should scroll`,
     );
   }
+});
+
+test("D-10 countdown plans render a mini-title for every dated week", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Late Fight", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        countdown_start: "D-10",
+        countdown_end: "D-5",
+        days: [{ date: "2026-07-27", countdown_label: "D-10", sessions: [] }],
+      },
+      {
+        week_id: "wk-2",
+        week_index: 2,
+        countdown_start: "D-4",
+        countdown_end: "D-0",
+        days: [{ date: "2026-08-02", countdown_label: "D-4", sessions: [] }],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} today={new Date(2026, 6, 27)} />,
+  );
+
+  assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 2);
+  assert.equal(countOccurrences(html, 'title="Taper"'), 2);
+  assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), true);
 });
 
 test("a long phase label is kept on one line with the full text available on hover/AT", () => {

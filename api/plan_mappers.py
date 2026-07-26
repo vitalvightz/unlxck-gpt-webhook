@@ -41,6 +41,7 @@ from .structured_card_lifecycle import (
     parse_structured_card_attempt_started_at,
 )
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
+from .structured_plan_generation import reconcile_late_fight_week_context
 from .services.open_plan_timeline import project_open_structured_plan
 
 logger = logging.getLogger(__name__)
@@ -559,6 +560,18 @@ def _map_plan_detail(
     structured_payload = (
         structured_plan.model_dump(mode="json") if structured_plan is not None else {}
     )
+    reconciled_payload = reconcile_late_fight_week_context(
+        structured_payload,
+        planning_brief,
+    )
+    if structured_plan is not None and reconciled_payload != structured_payload:
+        reconciled_result = safe_parse_structured_plan(
+            reconciled_payload,
+            raw_markdown=display_plan_text or None,
+        )
+        if reconciled_result.ok and reconciled_result.plan is not None:
+            structured_plan = reconciled_result.plan
+            structured_payload = reconciled_payload
     projected_payload, raw_schedule_context = project_open_structured_plan(
         row,
         structured_payload,

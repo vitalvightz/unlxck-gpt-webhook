@@ -320,7 +320,7 @@ function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
     const labels = group.days
       .map((day) => cleanText(day.countdown_label))
       .filter((value): value is string => value !== null);
-    return {
+    const splitWeek = {
       ...week,
       week_id: `${cleanText(week.week_id) || "week"}-${group.monday}-cw${index + 1}`,
 
@@ -331,6 +331,19 @@ function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
       countdown_start: labels[0] ?? week.countdown_start,
       countdown_end: labels[labels.length - 1] ?? week.countdown_end,
     };
+    const inheritedGoal = cleanText(week.week_goal);
+    const inheritedLateFightGoal = inferredLateFightWeekContext(week).goal;
+    if (
+      inheritedGoal &&
+      inheritedLateFightGoal &&
+      inheritedGoal.toLowerCase() === inheritedLateFightGoal.toLowerCase()
+    ) {
+      return {
+        ...splitWeek,
+        week_goal: inferredLateFightWeekContext(splitWeek).goal || inheritedGoal,
+      };
+    }
+    return splitWeek;
   });
 }
 
@@ -379,6 +392,30 @@ export function getRehabOrMobilityBlocks(
 
 export function getCoachingCues(block: StructuredBlock | null | undefined): string[] {
   return getStringList(block?.coaching_cues);
+}
+
+const BARE_ADJUSTMENT_LABEL_RE =
+  /^\s*(?:progress(?:ion)?\s*\/\s*)?regress(?:ion)?\s*\/?\s*$/i;
+const COACHING_STOP_CUE_RE = /^\s*stop(?:\s+rule)?\s*:/i;
+
+/** Clean legacy converter leakage out of coaching cues while retaining any
+ * actionable stop instruction for a labelled Stop rule aside. */
+export function getBlockCoachingDisplay(
+  block: StructuredBlock | null | undefined,
+): { cues: string[]; stopRules: string[] } {
+  const cues: string[] = [];
+  const stopRules: string[] = [];
+  for (const cue of getCoachingCues(block)) {
+    if (BARE_ADJUSTMENT_LABEL_RE.test(cue)) {
+      continue;
+    }
+    if (COACHING_STOP_CUE_RE.test(cue)) {
+      stopRules.push(cue);
+      continue;
+    }
+    cues.push(cue);
+  }
+  return { cues, stopRules };
 }
 
 // A stop rule reads like "Stop on sharp pain." / "Stop the set if punch speed
@@ -838,13 +875,16 @@ export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteV
  * stop/escalate rule); the renderer de-emphasises it below moderate risk rather
  * than hiding it. */
 export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
-  const safetyCategories = new Set(["injury", "weight_cut", "recovery"]);
-  return getPlanNotes(plan).filter((note) => {
-    if (safetyCategories.has(note.category)) {
-      return true;
-    }
-    return /\b(stop|report|medical|coach|bleed|pain|dehydrat(?:ed|ion|e)?|wound)\b/i.test(note.text);
-  });
+  const safetyAction =
+    /(?:\bstop\s*:|\bstop\s+(?:training|the (?:exercise|session|set)|immediately|if|when|on)\b|\bseek (?:urgent )?medical (?:help|attention|review)\b|\breport (?:to|any|new|worsening)\b|\bdo not train\b|\bno training\b)/i;
+  const symptomEscalation =
+    /\b(?:dizz(?:y|iness)|faint(?:ing)?|lightheaded(?:ness)?|chest pain|shortness of breath|breathing (?:difficulty|worsens)|bleed(?:ing)?|wound (?:opens|worsens)|pain (?:increases|worsens|above|over)|dehydrat(?:ed|ion)|vomit(?:ing)?|confus(?:ed|ion))\b/i;
+  const escalationVerb = /\b(?:stop|report|seek|urgent|worsen|escalat)\b/i;
+  return getPlanNotes(plan).filter(
+    (note) =>
+      safetyAction.test(note.text) ||
+      (symptomEscalation.test(note.text) && escalationVerb.test(note.text)),
+  );
 }
 
 /** Red-flag rules that have something to display. Explicit symptom-based safety
@@ -885,10 +925,15 @@ export function getActiveNotesExcludingRedFlags(
   // No risk-gated hiding of weight-cut symptom notes here: a symptom-based
   // safety line is never suppressed by risk band (see isDeEmphasisedWeightCutSafety).
   // Duplication with the Red Flags card is prevented by the exact-match dedup
-  // below, so a weight-cut note that is NOT already a red flag still shows.
+  // below, including when a genuine stop/escalation note supplies the fallback
+  // Red Flags content because no explicit rule exists.
   const notes = getPlanNotes(plan);
-  const flagTexts = getDisplayableRedFlags(plan)
-    .map((rule) => cleanText(rule.display_text))
+  const explicitFlags = getDisplayableRedFlags(plan);
+  const fallbackFlags = explicitFlags.length === 0 ? getFallbackSafetyNotes(plan) : [];
+  const flagTexts = [
+    ...explicitFlags.map((rule) => cleanText(rule.display_text)),
+    ...fallbackFlags.map((note) => note.text),
+  ]
     .filter((text): text is string => text !== null)
     .map(normalizeForDup)
     .filter((text) => text.length >= 12);
@@ -924,8 +969,56 @@ function shortenWeekGoal(goal: string): string {
   return `${words.slice(0, WEEK_GOAL_MAX_WORDS).join(" ")}…`;
 }
 
+function lateFightCountdownStart(week: StructuredWeek | null | undefined): number | null {
+  const labels = [
+    cleanText(week?.countdown_start),
+    ...getDays(week).map((day) => cleanText(day.countdown_label)),
+  ];
+  const distances = labels
+    .map((label) => {
+      const match = label?.match(/\bD-(\d+)\b/i);
+      return match ? Number(match[1]) : null;
+    })
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+  return distances.length > 0 ? Math.max(...distances) : null;
+}
+
+/** Display-only fallback for countdown-led late-fight payloads saved before
+ * week context repair existed. Explicit saved titles/phases always win. */
+export function inferredLateFightWeekContext(
+  week: StructuredWeek | null | undefined,
+): { goal: string | null; phase: string | null } {
+  const countdownStart = lateFightCountdownStart(week);
+  if (countdownStart === null || countdownStart < 0 || countdownStart > 21) {
+    return { goal: null, phase: null };
+  }
+  if (countdownStart >= 14) {
+    return { goal: "Bridge Compression Week", phase: "TAPER" };
+  }
+  if (countdownStart >= 8) {
+    return { goal: "Compressed Pre-Fight Week", phase: "TAPER" };
+  }
+  if (countdownStart === 7) {
+    return { goal: "Sharpness Week", phase: "TAPER" };
+  }
+  if (countdownStart >= 5) {
+    return { goal: "Sharpness & Freshness Window", phase: "TAPER" };
+  }
+  if (countdownStart >= 2) {
+    return { goal: "Sharpness Sessions", phase: "TAPER" };
+  }
+  if (countdownStart === 1) {
+    return { goal: "Primer Day", phase: "TAPER" };
+  }
+  return { goal: "Fight-Day Protocol", phase: "TAPER" };
+}
+
+export function resolvedWeekPhase(week: StructuredWeek | null | undefined): string | null {
+  return cleanText(week?.phase_label) || inferredLateFightWeekContext(week).phase;
+}
+
 export function weekLabel(week: StructuredWeek | null | undefined): string {
-  const goal = cleanText(week?.week_goal);
+  const goal = cleanText(week?.week_goal) || inferredLateFightWeekContext(week).goal;
   const index =
     typeof week?.week_index === "number" && Number.isFinite(week.week_index)
       ? week.week_index

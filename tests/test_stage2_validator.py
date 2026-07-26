@@ -2704,6 +2704,36 @@ def test_late_fight_regression_only_line_is_not_flagged():
     assert "late_fight_progression_suggested" not in warning_codes
 
 
+def test_late_fight_bare_regression_label_is_blocking():
+    brief = _late_fight_planning_brief("D-7")
+    brief["late_fight_plan_spec"].update(
+        {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-10",
+            "max_active_roles": 8,
+        }
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-10 (Friday) — Neural Speed Touch
+        - Staggered-Stance Medicine-Ball Punch Throw — 3 x 3
+        Regression /
+        Stop: reduce to 2 x 3 if shoulder soreness rises.
+        """,
+    )
+
+    warnings = [
+        warning
+        for warning in report["warnings"]
+        if warning["code"] == "late_fight_bare_adjustment_label"
+    ]
+    assert len(warnings) == 1
+    assert warnings[0]["blocking"] is True
+    assert warnings[0]["line"].strip() == "Regression /"
+
+
 def test_late_fight_flags_strength_conditioning_progression_from_d13():
     brief = _late_fight_planning_brief("D-7")
     brief["late_fight_plan_spec"].update(

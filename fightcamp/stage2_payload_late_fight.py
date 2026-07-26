@@ -4680,6 +4680,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
         "From D-10 to the fight, the progression/regression line offers regressions and stop rules only — never a progression/advance option (no add load/sets, heavier ball, stronger band, or \"to progress\").\n"
+        "Write meaningful adjustment lines as \"Easier: <action>\" and \"Stop: <trigger/action>\". Never emit a bare \"Regression /\", \"Regression\", or slash-separated structural label.\n"
         "From D-13, strength & conditioning sessions (strength, power, alactic, aerobic, fight-pace, neural speed work) also lock to regressions and stop rules only; fillers, rehab, mobility, and light recovery work may still progress on D-13 to D-11.\n"
         "Declared hard-spar days are fixed coach-owned combat locks. Never move, drop, or deload them; from D-17 onward they render as coach-led technical-only combat.\n"
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
