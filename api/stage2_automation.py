@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
@@ -15,6 +14,7 @@ from fightcamp.stage2_policy import (
     is_hard_stage2_blocker,
 )
 
+from .generation.time_utils import utc_now_iso as _utc_now_iso
 from .state_machine import is_athlete_displayable_plan_status
 from .structured_card_lifecycle import (
     clear_structured_card_attempt_started,
@@ -211,10 +211,6 @@ def _stage2_structured_timeout_seconds() -> float:
             default_timeout,
         )
         return default_timeout
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _estimated_input_tokens(prompt: str) -> int:
@@ -600,8 +596,6 @@ def _strip_wrapping_code_fence(text: str) -> str:
     if first_newline == -1:
         return normalized.strip("`").strip()
     return normalized[first_newline + 1 : -3].strip()
-
-
 
 
 def _response_is_incomplete(response: Any) -> bool:

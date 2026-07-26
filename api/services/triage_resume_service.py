@@ -23,54 +23,13 @@ from ..models import (
     GenerationJobResponse,
     ProfileRecord,
 )
+from ..generation.lazy_scheduler import schedule_generation_job_if_needed
 from ..store import AppStore
 
 if TYPE_CHECKING:
     from ..stage2_automation import Stage2Automator
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
-
-
-async def schedule_generation_job_if_needed(**kwargs: Any) -> dict[str, Any]:
-    """Create-only in the default (worker) path; schedule in-process on demand.
-
-    Mirrors api.app.schedule_generation_job_if_needed: in worker-only mode this
-    returns without importing the scheduler, so the generation runtime — and
-    through it fightcamp.main — never loads into a web process that only creates
-    jobs. The scheduler (and its planner/orchestrator surface) is imported only
-    when in-process generation is explicitly enabled.
-    """
-    job = kwargs["job"]
-    current_status = str(job.get("status") or "queued")
-    if current_status == "running":
-        stale_job_checker = kwargs.get("stale_job_checker")
-        stale_after_seconds = int(kwargs.get("stale_after_seconds") or 90)
-        if callable(stale_job_checker) and stale_job_checker(job, stale_after_seconds=stale_after_seconds):
-            from ..generation.heartbeat import recover_stale_running_job
-
-            job = await asyncio.to_thread(
-                recover_stale_running_job,
-                job=job,
-                store=kwargs["store"],
-                stale_after_seconds=stale_after_seconds,
-            )
-            kwargs["job"] = job
-            current_status = str(job.get("status") or "")
-            if current_status != "queued":
-                return job
-        else:
-            return job
-    if not bool(kwargs.get("enable_in_process_generation")):
-        return job
-    if kwargs.get("stage2") is None:
-        from ..stage2_automation import build_default_stage2_automator
-
-        kwargs["stage2"] = build_default_stage2_automator()
-    from ..generation.scheduler import (
-        schedule_generation_job_if_needed as _schedule_generation_job_if_needed,
-    )
-
-    return await _schedule_generation_job_if_needed(**kwargs)
 
 
 def _is_correctly_linked_admin_resume_job(

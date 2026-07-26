@@ -24,6 +24,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, get_args
 
+from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekday
+
 from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_faithfulness import check_structured_faithfulness
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
@@ -250,25 +252,6 @@ _EFFORT_METHOD_VALUES = frozenset(get_args(EffortMethod))
 
 _OPEN_PLAN_TYPE = "open_ongoing_system"
 _OPEN_PLAN_WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-_OPEN_PLAN_WEEKDAY_ALIASES = {
-    "mon": "Mon",
-    "monday": "Mon",
-    "tue": "Tue",
-    "tues": "Tue",
-    "tuesday": "Tue",
-    "wed": "Wed",
-    "wednesday": "Wed",
-    "thu": "Thu",
-    "thur": "Thu",
-    "thurs": "Thu",
-    "thursday": "Thu",
-    "fri": "Fri",
-    "friday": "Fri",
-    "sat": "Sat",
-    "saturday": "Sat",
-    "sun": "Sun",
-    "sunday": "Sun",
-}
 
 # Conservative enum aliases for the most common loose values.
 _SESSION_TYPE_ALIASES = {
@@ -1529,7 +1512,7 @@ def _open_plan_training_weekdays(spec: dict[str, Any]) -> list[str]:
     normalized = {
         day
         for value in raw_days
-        if (day := _OPEN_PLAN_WEEKDAY_ALIASES.get(str(value or "").strip().lower()))
+        if (day := _normalize_weekday(value))
     }
     return [day for day in _OPEN_PLAN_WEEKDAYS if day in normalized]
 
@@ -1600,7 +1583,7 @@ def _open_plan_contract_errors(
             continue
 
         actual_weekdays = [
-            _OPEN_PLAN_WEEKDAY_ALIASES.get(str(day.get("weekday") or "").strip().lower())
+            _normalize_weekday(day.get("weekday"))
             if isinstance(day, dict)
             else None
             for day in days

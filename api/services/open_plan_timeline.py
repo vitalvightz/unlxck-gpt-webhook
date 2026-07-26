@@ -19,27 +19,10 @@ import re
 from datetime import date, timedelta
 from typing import Any, Mapping
 
+from fightcamp.weekly_schedule_view import normalize_weekday
+
 
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-_WEEKDAY_ALIASES = {
-    "mon": "Mon",
-    "monday": "Mon",
-    "tue": "Tue",
-    "tues": "Tue",
-    "tuesday": "Tue",
-    "wed": "Wed",
-    "wednesday": "Wed",
-    "thu": "Thu",
-    "thur": "Thu",
-    "thurs": "Thu",
-    "thursday": "Thu",
-    "fri": "Fri",
-    "friday": "Fri",
-    "sat": "Sat",
-    "saturday": "Sat",
-    "sun": "Sun",
-    "sunday": "Sun",
-}
 _COACH_LED_RE = re.compile(r"\b(coach|spar|boxing|pads?|mitts?|technical\s+only)\b", re.I)
 
 
@@ -60,10 +43,6 @@ def _parse_date(value: Any) -> date | None:
         return date.fromisoformat(str(value or "").strip()[:10])
     except (ValueError, AttributeError):
         return None
-
-
-def normalize_weekday(value: Any) -> str | None:
-    return _WEEKDAY_ALIASES.get(str(value or "").strip().lower())
 
 
 def _ordered_weekdays(values: Any) -> list[str]:

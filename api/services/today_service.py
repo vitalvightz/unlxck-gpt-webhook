@@ -134,10 +134,6 @@ BODY_MAP_ZONE_LABELS = {
 }
 
 
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 def _require_valid_plan_id(plan_id: str) -> None:
     """422 on a malformed plan_id so it never reaches the DB as a uuid syntax error."""
     try:
