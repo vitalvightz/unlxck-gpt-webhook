@@ -2,8 +2,16 @@
 
 This document describes the live, day-to-day layer that turns UNLXCK from a
 one-shot plan generator into a daily athlete operating system: persistent
-plans, daily check-ins, session logs, injury flags, rule-based adaptations,
-and the admin attention queue.
+plans, injury flags, rule-based adaptations, and the admin attention queue.
+
+> **Status:** the athlete-facing daily loop moved to the Today surface
+> (`GET /api/today`, `api/services/today_service.py`), which owns its own
+> `today_checkins` and `session_completions` tables. The original
+> `/api/dashboard`, `/api/checkins` and `/api/session-logs` endpoints described
+> here were removed once nothing called them. The `daily_checkins` and
+> `session_logs` tables still exist and hold historical rows, but no longer
+> have an HTTP surface. Injury flags and the admin review queue below are
+> current.
 
 > **See also:** `docs/block-4-ux-hierarchy-addendum.md` locks the Today/Overview
 > UX contracts (state-dependent landing, read-only Overview, recommendation TTL
@@ -21,8 +29,8 @@ and the admin attention queue.
 | training plans     | `plans` (existing — plans are persisted permanently at generation time)         |
 | training weeks     | derived from `plans.planning_brief` via the weekly-schedule mapper (existing)   |
 | training sessions  | derived per-day entries of the weekly schedule (existing)                       |
-| daily check-ins    | `daily_checkins` (new)                                                          |
-| session logs       | `session_logs` (new)                                                            |
+| daily check-ins    | `today_checkins` (`/api/today`); legacy `daily_checkins` retained, unused       |
+| session logs       | `session_completions` (`/api/today`); legacy `session_logs` retained, unused    |
 | injury flags       | `injury_flags` (new)                                                            |
 | adaptation notes   | `adaptation_notes` (new, append-only)                                           |
 | generation jobs    | `generation_jobs` (existing, worker-owned)                                      |
@@ -43,20 +51,15 @@ service-role backend**. `admin_reviews` is admin-read-only.
 
 1. Athlete completes onboarding/intake (existing flow).
 2. Worker generates the plan; the plan row is persisted permanently (existing).
-3. `GET /api/dashboard` returns the live state: current plan, current week
-   (resolved from calendar dates, falling back to weeks elapsed since plan
-   creation for open-ended camps), today's session, next loaded session,
-   readiness status, open injury flags, recent adaptation notes, and 7-day
-   completion stats.
-4. Athlete submits a daily check-in (`POST /api/checkins`) with 1–5 scales for
-   readiness, fatigue, soreness, sleep quality, plus optional sleep hours,
-   injury note, and notes. One row per athlete per UTC day (upsert).
-5. Athlete logs sessions (`POST /api/session-logs`) with type, completed flag,
-   RPE (1–10), and duration. Logs attach to the latest visible plan unless an
-   explicit owned `plan_id` is supplied.
-6. The safe rules layer (`api/readiness.py`) evaluates the new data and
-   records every decision as an `adaptation_notes` row. Decisions that need a
-   human open an `admin_reviews` row (deduped while one is already pending).
+3. `GET /api/today` returns the live state: today's session, readiness,
+   recommendation state, risk watch, and completion status. See
+   `docs/block-4-ux-hierarchy-addendum.md` for that contract.
+4. Athlete check-ins and session completions are submitted through the Today
+   surface and stored in `today_checkins` / `session_completions`.
+5. Athlete reports an injury (`POST /api/injury-flags`), which records the flag
+   and opens an admin review.
+6. Decisions are recorded as `adaptation_notes` rows; those needing a human
+   open an `admin_reviews` row (deduped while one is already pending).
 7. Admins work the queue at `GET /api/admin/reviews` and resolve items with
    `POST /api/admin/reviews/{id}/resolve`. Injury flags are resolved with
    `PATCH /api/admin/injury-flags/{id}`.
@@ -67,8 +70,11 @@ athlete has an adaptation note explaining which rule fired.
 
 ## Readiness states
 
-Computed server-side by `api.readiness.compute_readiness_summary` and stored
-on each check-in (`daily_checkins.readiness_state`) for history:
+> Historical: these were computed by `api.readiness.compute_readiness_summary`
+> for the removed `/api/dashboard` and `/api/checkins` endpoints and stored on
+> `daily_checkins.readiness_state`. The Today surface computes its own
+> readiness (`api/services/today_readiness_boundary.py`). The table below
+> documents the legacy rules, which no longer run.
 
 | State          | Trigger                                                                     |
 | -------------- | --------------------------------------------------------------------------- |
@@ -97,33 +103,29 @@ unchanged.
 
 Athlete (Bearer token, own data only):
 
-- `GET  /api/dashboard` — full dashboard state
-- `POST /api/checkins`, `GET /api/checkins?limit=`
-- `POST /api/session-logs`, `GET /api/session-logs?limit=`
 - `POST /api/injury-flags`, `GET /api/injury-flags?include_resolved=`
+- `GET  /api/today` — the live daily surface (see the Block 4 addendum)
 
 Admin only:
 
 - `GET  /api/admin/reviews?status=pending|acknowledged|resolved|all`
 - `POST /api/admin/reviews/{review_id}/resolve`
 - `PATCH /api/admin/injury-flags/{flag_id}`
-- `GET  /api/admin/athletes/{athlete_id}/daily-status`
 
 ## Frontend
 
-- `/dashboard` — athlete daily page: readiness badge (Ready / Caution / High
-  Fatigue / Injury Flag), today's and next session, check-in form, session-log
-  form, week overview, recent adjustments. Linked as "Today" in the sidebar
-  and mobile tab bar.
+- `/today` — the athlete daily surface. `/dashboard` renders the same
+  `TodayScreen`. Linked as "Today" in the sidebar and mobile tab bar.
 - `/admin` — "Needs attention" panel showing pending reviews with athlete
   context and one-click resolve, polling on the same interval as the
   generation queues.
 
 ## Tests
 
-- `tests/test_readiness_rules.py` — unit tests for the readiness calculation
-  and rule decisions.
-- `tests/test_api_daily_flow.py` — API tests for check-in creation/upsert,
-  session logging, dashboard retrieval, injury flagging, admin review queue
-  and resolution, and plan persistence into the dashboard.
-- `FakeStore` in `tests/support.py` mirrors the new store methods.
+- `tests/test_readiness_rules.py` — unit tests for the legacy readiness
+  calculation and rule decisions in `api/readiness.py`. That module is now
+  reachable only via `AdaptationDecision`; the rest is retained but unused.
+- `tests/test_api_daily_flow.py` — API tests for injury flagging, the admin
+  review queue, and review resolution.
+- `tests/test_today_service.py` — the live daily surface.
+- `FakeStore` in `tests/support.py` mirrors the store methods.

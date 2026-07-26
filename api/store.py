@@ -434,18 +434,6 @@ class AppStore(Protocol):
 
     def clear_onboarding_draft(self, athlete_id: str) -> None: ...
 
-    # --- live athlete daily tracking (api/routes/daily.py) ---
-
-    def upsert_daily_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
-
-    def get_daily_checkin(self, athlete_id: str, checkin_date: str) -> dict[str, Any] | None: ...
-
-    def list_daily_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict[str, Any]]: ...
-
-    def create_session_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
-
-    def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict[str, Any]]: ...
-
     # --- Block 4 Today/Overview persistence (api/routes/today.py) ---
 
     def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
@@ -503,8 +491,6 @@ class AppStore(Protocol):
     def update_injury_flag(self, flag_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
-
-    def list_adaptation_notes(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
 
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -4227,7 +4213,7 @@ class SupabaseAppStore:
             )
 
     # ------------------------------------------------------------------
-    # Live athlete daily tracking (api/routes/daily.py)
+    # Injury flags, adaptation notes, admin reviews (api/routes/daily.py)
     # ------------------------------------------------------------------
 
     def _insert_row(self, table: str, payload: dict[str, Any], *, operation: str) -> dict[str, Any]:
@@ -4249,69 +4235,6 @@ class SupabaseAppStore:
                 detail=f"failed to persist {table} row",
                 exc=exc,
             )
-
-    def upsert_daily_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-        payload = {"athlete_id": athlete_id, **fields}
-        try:
-            response = (
-                self.client.table("daily_checkins")
-                .upsert(payload, on_conflict="athlete_id,checkin_date")
-                .execute()
-            )
-            rows = getattr(response, "data", None) or []
-            if not rows:
-                logger.error("[store] upsert_daily_checkin:no_rows athlete_id=%s", athlete_id)
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="failed to persist daily check-in",
-                )
-            return rows[0]
-        except HTTPException:
-            raise
-        except _STORE_CLIENT_ERRORS as exc:
-            self._raise_operation_http_error(
-                operation=f"upsert_daily_checkin athlete_id={athlete_id}",
-                detail="failed to persist daily check-in",
-                exc=exc,
-            )
-
-    def get_daily_checkin(self, athlete_id: str, checkin_date: str) -> dict[str, Any] | None:
-        return self._select_first(
-            self.client.table("daily_checkins")
-            .select("*")
-            .eq("athlete_id", athlete_id)
-            .eq("checkin_date", checkin_date)
-        )
-
-    def list_daily_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict[str, Any]]:
-        response = (
-            self.client.table("daily_checkins")
-            .select("*")
-            .eq("athlete_id", athlete_id)
-            .order("checkin_date", desc=True)
-            .limit(limit)
-            .execute()
-        )
-        return getattr(response, "data", None) or []
-
-    def create_session_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-        return self._insert_row(
-            "session_logs",
-            {"athlete_id": athlete_id, **fields},
-            operation=f"create_session_log athlete_id={athlete_id}",
-        )
-
-    def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict[str, Any]]:
-        response = (
-            self.client.table("session_logs")
-            .select("*")
-            .eq("athlete_id", athlete_id)
-            .order("session_date", desc=True)
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
-        return getattr(response, "data", None) or []
 
     def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         payload = {"athlete_id": athlete_id, **fields}
@@ -4484,17 +4407,6 @@ class SupabaseAppStore:
             {"athlete_id": athlete_id, **fields},
             operation=f"create_adaptation_note athlete_id={athlete_id}",
         )
-
-    def list_adaptation_notes(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]:
-        response = (
-            self.client.table("adaptation_notes")
-            .select("*")
-            .eq("athlete_id", athlete_id)
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
-        return getattr(response, "data", None) or []
 
     def upsert_push_subscription(self, profile_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         payload = {"profile_id": profile_id, **fields}

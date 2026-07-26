@@ -164,7 +164,7 @@ Beta screenshot retention is scheduled on the Hetzner host and runs inside the A
 | Profile and onboarding | `/api/me`, `/api/me/username`, `/api/onboarding/draft` |
 | Generation | `/api/plans/generate`, `/api/generation-jobs/*` |
 | Plans | `/api/plans`, `/api/plans/{id}`, weekly schedule and active-plan routes |
-| Daily flow | `/api/dashboard`, `/api/today`, `/api/checkins`, `/api/session-logs`, `/api/injury-flags` |
+| Daily flow | `/api/today`, `/api/today/landing`, `/api/injury-flags` |
 | Nutrition | `/api/nutrition/current` |
 | Feedback | `/api/plans/{id}/feedback`, `/api/today/feedback`, `/api/feedback/global` |
 | Admin | `/api/admin/athletes/*`, `/api/admin/plans/*`, `/api/admin/generation-jobs/*`, `/api/admin/feedback` |

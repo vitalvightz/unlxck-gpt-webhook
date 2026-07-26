@@ -108,8 +108,6 @@ class FakeStore:
         self.plans: dict[str, dict] = {}
         self.active_plan_ids: dict[str, str] = {}
         self.generation_jobs: dict[str, dict] = {}
-        self.daily_checkins: dict[str, list[dict]] = {}
-        self.session_logs: dict[str, list[dict]] = {}
         self.today_checkins: dict[str, list[dict]] = {}
         self.session_completions: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
@@ -1351,43 +1349,8 @@ class FakeStore:
         self.profiles[athlete_id]["onboarding_draft"] = None
 
     # ------------------------------------------------------------------
-    # Live athlete daily tracking (api/routes/daily.py)
+    # Today persistence, injury flags, adaptation notes, admin reviews
     # ------------------------------------------------------------------
-
-    def upsert_daily_checkin(self, athlete_id: str, fields: dict) -> dict:
-        bucket = self.daily_checkins.setdefault(athlete_id, [])
-        for row in bucket:
-            if row["checkin_date"] == fields["checkin_date"]:
-                row.update(fields)
-                row["updated_at"] = _now()
-                return dict(row)
-        row = {
-            "id": str(uuid4()),
-            "athlete_id": athlete_id,
-            "sleep_hours": None,
-            "injury_note": "",
-            "notes": "",
-            "readiness_state": "ready",
-            **fields,
-            "created_at": _now(),
-            "updated_at": _now(),
-        }
-        bucket.append(row)
-        return dict(row)
-
-    def get_daily_checkin(self, athlete_id: str, checkin_date: str) -> dict | None:
-        for row in self.daily_checkins.get(athlete_id, []):
-            if row["checkin_date"] == checkin_date:
-                return dict(row)
-        return None
-
-    def list_daily_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict]:
-        rows = sorted(
-            self.daily_checkins.get(athlete_id, []),
-            key=lambda row: row["checkin_date"],
-            reverse=True,
-        )
-        return [dict(row) for row in rows[:limit]]
 
     def upsert_today_checkin(self, athlete_id: str, fields: dict) -> dict:
         bucket = self.today_checkins.setdefault(athlete_id, [])
@@ -1526,31 +1489,6 @@ class FakeStore:
                 row["updated_at"] = _now()
                 return
 
-    def create_session_log(self, athlete_id: str, fields: dict) -> dict:
-        row = {
-            "id": str(uuid4()),
-            "athlete_id": athlete_id,
-            "plan_id": None,
-            "session_type": "training",
-            "completed": True,
-            "rpe": None,
-            "duration_minutes": None,
-            "notes": "",
-            **fields,
-            "created_at": _now(),
-            "updated_at": _now(),
-        }
-        self.session_logs.setdefault(athlete_id, []).append(row)
-        return dict(row)
-
-    def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict]:
-        rows = sorted(
-            self.session_logs.get(athlete_id, []),
-            key=lambda row: (row["session_date"], row["created_at"]),
-            reverse=True,
-        )
-        return [dict(row) for row in rows[:limit]]
-
     def create_injury_flag(self, athlete_id: str, fields: dict) -> dict:
         row = {
             "id": str(uuid4()),
@@ -1601,10 +1539,6 @@ class FakeStore:
         }
         self.adaptation_notes.setdefault(athlete_id, []).append(row)
         return dict(row)
-
-    def list_adaptation_notes(self, athlete_id: str, *, limit: int = 10) -> list[dict]:
-        rows = list(reversed(self.adaptation_notes.get(athlete_id, [])))
-        return [dict(row) for row in rows[:limit]]
 
     def create_admin_review(self, athlete_id: str, fields: dict) -> dict:
         row = {

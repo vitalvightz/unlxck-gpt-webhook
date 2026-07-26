@@ -1,93 +1,37 @@
-"""Live athlete daily flow: dashboard state, check-ins, session logs, injury
-flags, and the admin review queue.
+"""Athlete injury flags and the admin review queue.
 
-Weeks and sessions are derived from the persisted plan (the same weekly
-schedule mapper the plan viewer uses); this module layers the athlete's logged
-reality on top and records every rule decision as an ``adaptation_notes`` row.
+Every rule decision is recorded as an ``adaptation_notes`` row, and one admin
+review is opened per athlete while decisions requiring coach attention are
+outstanding.
+
+The dashboard / check-in / session-log endpoints that used to live here were
+removed once the Today surface (``/api/today``, api/services/today_service.py)
+became the only consumer path; it owns its own ``today_checkins`` and
+``session_completions`` tables. The legacy ``daily_checkins`` and
+``session_logs`` tables are intentionally left in place but no longer have an
+HTTP surface.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.models import (
     AdaptationNoteRecord,
-    AdminAthleteDailyStatus,
     AdminReviewRecord,
     AdminReviewResolveRequest,
-    AthleteDashboardState,
-    DailyCheckinRecord,
-    DailyCheckinRequest,
-    DailyCheckinResponse,
-    DashboardCompletionStats,
     InjuryFlagCreateRequest,
     InjuryFlagRecord,
     InjuryFlagUpdateRequest,
     ProfileRecord,
-    SessionLogRecord,
-    SessionLogRequest,
-    SessionLogResponse,
-    WeeklySchedule,
 )
-from api.plan_mappers import _map_plan_summary
-from api.readiness import (
-    AdaptationDecision,
-    compute_readiness_summary,
-    evaluate_checkin_adaptations,
-    evaluate_session_log_adaptations,
-)
-from api.services.plan_schedule import (
-    latest_visible_plan_row,
-    parse_iso_date,
-    resolve_current_week,
-    resolve_today_and_next,
-)
+from api.readiness import AdaptationDecision
+from api.services.plan_schedule import latest_visible_plan_row
 from api.store import AppStore
-
-RECENT_SESSION_LOG_WINDOW = 20
-COMPLETION_WINDOW_DAYS = 7
-
-
-def _today_utc() -> date:
-    return datetime.now(timezone.utc).date()
-
-
-def _map_checkin(row: dict[str, Any]) -> DailyCheckinRecord:
-    return DailyCheckinRecord(
-        id=str(row["id"]),
-        athlete_id=str(row["athlete_id"]),
-        checkin_date=str(row.get("checkin_date") or ""),
-        readiness=int(row.get("readiness") or 3),
-        fatigue=int(row.get("fatigue") or 3),
-        soreness=int(row.get("soreness") or 3),
-        sleep_quality=int(row.get("sleep_quality") or 3),
-        sleep_hours=float(row["sleep_hours"]) if row.get("sleep_hours") is not None else None,
-        injury_note=str(row.get("injury_note") or ""),
-        notes=str(row.get("notes") or ""),
-        readiness_state=str(row.get("readiness_state") or "ready"),
-        created_at=str(row.get("created_at") or ""),
-        updated_at=str(row.get("updated_at") or ""),
-    )
-
-
-def _map_session_log(row: dict[str, Any]) -> SessionLogRecord:
-    return SessionLogRecord(
-        id=str(row["id"]),
-        athlete_id=str(row["athlete_id"]),
-        plan_id=str(row["plan_id"]) if row.get("plan_id") else None,
-        session_date=str(row.get("session_date") or ""),
-        session_type=str(row.get("session_type") or "training"),
-        completed=bool(row.get("completed", True)),
-        rpe=int(row["rpe"]) if row.get("rpe") is not None else None,
-        duration_minutes=int(row["duration_minutes"]) if row.get("duration_minutes") is not None else None,
-        notes=str(row.get("notes") or ""),
-        created_at=str(row.get("created_at") or ""),
-        updated_at=str(row.get("updated_at") or ""),
-    )
 
 
 def _map_injury_flag(row: dict[str, Any]) -> InjuryFlagRecord:
@@ -135,24 +79,6 @@ def _map_admin_review(row: dict[str, Any], *, athlete_email: str = "", athlete_n
         resolved_by=str(row.get("resolved_by") or ""),
         resolved_at=str(row["resolved_at"]) if row.get("resolved_at") else None,
         created_at=str(row.get("created_at") or ""),
-    )
-
-
-def _completion_stats(
-    *, checkins: list[dict[str, Any]], session_logs: list[dict[str, Any]], today: date
-) -> DashboardCompletionStats:
-    cutoff = today - timedelta(days=COMPLETION_WINDOW_DAYS - 1)
-
-    def _in_window(value: Any) -> bool:
-        parsed = parse_iso_date(value)
-        return parsed is not None and cutoff <= parsed <= today
-
-    window_logs = [log for log in session_logs if _in_window(log.get("session_date"))]
-    return DashboardCompletionStats(
-        logged_sessions_7d=len(window_logs),
-        completed_sessions_7d=sum(1 for log in window_logs if log.get("completed", True)),
-        missed_sessions_7d=sum(1 for log in window_logs if log.get("completed") is False),
-        checkins_7d=sum(1 for c in checkins if _in_window(c.get("checkin_date"))),
     )
 
 
@@ -211,176 +137,6 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
     # ------------------------------------------------------------------
     # Athlete endpoints
     # ------------------------------------------------------------------
-
-    @router.get("/api/dashboard", response_model=AthleteDashboardState)
-    def get_dashboard(
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> AthleteDashboardState:
-        today = _today_utc()
-        plan_row = latest_visible_plan_row(store, profile.athlete_id)
-        week_index: int | None = None
-        week: WeeklySchedule | None = None
-        if plan_row is not None:
-            week_index, week = resolve_current_week(plan_row, today=today)
-        today_entry, next_entry = resolve_today_and_next(week, today=today)
-
-        checkins = store.list_daily_checkins(profile.athlete_id, limit=14)
-        session_logs = store.list_session_logs(profile.athlete_id, limit=RECENT_SESSION_LOG_WINDOW)
-        open_flags = store.list_injury_flags(profile.athlete_id, statuses=("open", "monitoring"))
-        latest_checkin = checkins[0] if checkins else None
-
-        readiness = compute_readiness_summary(
-            latest_checkin=latest_checkin,
-            open_injury_flag_count=sum(1 for f in open_flags if f.get("status") == "open"),
-            recent_session_logs=session_logs,
-        )
-        return AthleteDashboardState(
-            plan=_map_plan_summary(plan_row) if plan_row else None,
-            current_week_index=week_index,
-            current_week=week,
-            today=today_entry,
-            next_session=next_entry,
-            readiness=readiness,
-            latest_checkin=_map_checkin(latest_checkin) if latest_checkin else None,
-            checked_in_today=bool(latest_checkin and str(latest_checkin.get("checkin_date")) == today.isoformat()),
-            open_injury_flags=[_map_injury_flag(row) for row in open_flags],
-            recent_adaptation_notes=[
-                _map_adaptation_note(row) for row in store.list_adaptation_notes(profile.athlete_id, limit=5)
-            ],
-            completion=_completion_stats(checkins=checkins, session_logs=session_logs, today=today),
-        )
-
-    @router.post("/api/checkins", response_model=DailyCheckinResponse, status_code=status.HTTP_201_CREATED)
-    def submit_checkin(
-        request_body: DailyCheckinRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> DailyCheckinResponse:
-        checkin_date = request_body.checkin_date or _today_utc().isoformat()
-        plan_row = latest_visible_plan_row(store, profile.athlete_id)
-        plan_id = str(plan_row["id"]) if plan_row else None
-
-        open_flags = store.list_injury_flags(profile.athlete_id, statuses=("open",))
-        fields = {
-            "checkin_date": checkin_date,
-            "readiness": request_body.readiness,
-            "fatigue": request_body.fatigue,
-            "soreness": request_body.soreness,
-            "sleep_quality": request_body.sleep_quality,
-            "sleep_hours": request_body.sleep_hours,
-            "injury_note": request_body.injury_note,
-            "notes": request_body.notes,
-        }
-
-        injury_flag_row: dict[str, Any] | None = None
-        if request_body.injury_note:
-            duplicate = any(
-                str(flag.get("description") or "").strip() == request_body.injury_note for flag in open_flags
-            )
-            if not duplicate:
-                injury_flag_row = store.create_injury_flag(
-                    profile.athlete_id,
-                    {
-                        "plan_id": plan_id,
-                        "source": "checkin",
-                        "description": request_body.injury_note,
-                        "severity": "moderate",
-                        "status": "open",
-                    },
-                )
-                open_flags = [injury_flag_row, *open_flags]
-
-        readiness = compute_readiness_summary(
-            latest_checkin=fields,
-            open_injury_flag_count=len(open_flags),
-            recent_session_logs=store.list_session_logs(profile.athlete_id, limit=RECENT_SESSION_LOG_WINDOW),
-        )
-        fields["readiness_state"] = readiness.state
-        checkin_row = store.upsert_daily_checkin(profile.athlete_id, fields)
-
-        decisions = evaluate_checkin_adaptations(
-            checkin=fields,
-            open_injury_flag_count=len(open_flags),
-        )
-        notes, review_created = _persist_decisions(
-            store,
-            athlete_id=profile.athlete_id,
-            decisions=decisions,
-            plan_id=plan_id,
-            checkin_id=str(checkin_row["id"]),
-            injury_flag_id=str(injury_flag_row["id"]) if injury_flag_row else None,
-        )
-        return DailyCheckinResponse(
-            checkin=_map_checkin(checkin_row),
-            readiness=readiness,
-            adaptation_notes=notes,
-            injury_flag=_map_injury_flag(injury_flag_row) if injury_flag_row else None,
-            admin_review_created=review_created,
-        )
-
-    @router.get("/api/checkins", response_model=list[DailyCheckinRecord])
-    def list_checkins(
-        limit: int = Query(14, ge=1, le=90),
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> list[DailyCheckinRecord]:
-        return [_map_checkin(row) for row in store.list_daily_checkins(profile.athlete_id, limit=limit)]
-
-    @router.post("/api/session-logs", response_model=SessionLogResponse, status_code=status.HTTP_201_CREATED)
-    def submit_session_log(
-        request_body: SessionLogRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> SessionLogResponse:
-        plan_id: str | None = None
-        if request_body.plan_id:
-            try:
-                uuid.UUID(request_body.plan_id)
-            except (ValueError, AttributeError):
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-            plan_row = store.get_plan_for_athlete(request_body.plan_id, profile.athlete_id)
-            if not plan_row:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-            plan_id = request_body.plan_id
-        else:
-            latest = latest_visible_plan_row(store, profile.athlete_id)
-            plan_id = str(latest["id"]) if latest else None
-
-        log_row = store.create_session_log(
-            profile.athlete_id,
-            {
-                "plan_id": plan_id,
-                "session_date": request_body.session_date or _today_utc().isoformat(),
-                "session_type": request_body.session_type,
-                "completed": request_body.completed,
-                "rpe": request_body.rpe,
-                "duration_minutes": request_body.duration_minutes,
-                "notes": request_body.notes,
-            },
-        )
-        recent_logs = store.list_session_logs(profile.athlete_id, limit=RECENT_SESSION_LOG_WINDOW)
-        decisions = evaluate_session_log_adaptations(log=log_row, recent_session_logs=recent_logs)
-        notes, review_created = _persist_decisions(
-            store,
-            athlete_id=profile.athlete_id,
-            decisions=decisions,
-            plan_id=plan_id,
-            session_log_id=str(log_row["id"]),
-        )
-        return SessionLogResponse(
-            log=_map_session_log(log_row),
-            adaptation_notes=notes,
-            admin_review_created=review_created,
-        )
-
-    @router.get("/api/session-logs", response_model=list[SessionLogRecord])
-    def list_session_logs(
-        limit: int = Query(20, ge=1, le=90),
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> list[SessionLogRecord]:
-        return [_map_session_log(row) for row in store.list_session_logs(profile.athlete_id, limit=limit)]
 
     @router.post("/api/injury-flags", response_model=InjuryFlagRecord, status_code=status.HTTP_201_CREATED)
     def report_injury(
@@ -496,39 +252,5 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
             datetime.now(timezone.utc).isoformat() if request_body.status == "resolved" else None
         )
         return _map_injury_flag(store.update_injury_flag(flag_id, fields))
-
-    @router.get("/api/admin/athletes/{athlete_id}/daily-status", response_model=AdminAthleteDailyStatus)
-    def get_admin_athlete_daily_status(
-        athlete_id: str,
-        _: ProfileRecord = Depends(require_admin),
-        store: AppStore = Depends(get_store),
-    ) -> AdminAthleteDailyStatus:
-        try:
-            uuid.UUID(athlete_id)
-        except (ValueError, AttributeError):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-        athlete = store.get_admin_athlete(athlete_id)
-        if not athlete:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-        checkins = store.list_daily_checkins(athlete_id, limit=14)
-        session_logs = store.list_session_logs(athlete_id, limit=RECENT_SESSION_LOG_WINDOW)
-        open_flags = store.list_injury_flags(athlete_id, statuses=("open", "monitoring"))
-        latest_checkin = checkins[0] if checkins else None
-        readiness = compute_readiness_summary(
-            latest_checkin=latest_checkin,
-            open_injury_flag_count=sum(1 for f in open_flags if f.get("status") == "open"),
-            recent_session_logs=session_logs,
-        )
-        return AdminAthleteDailyStatus(
-            athlete_id=athlete_id,
-            readiness=readiness,
-            latest_checkin=_map_checkin(latest_checkin) if latest_checkin else None,
-            open_injury_flags=[_map_injury_flag(row) for row in open_flags],
-            recent_session_logs=[_map_session_log(row) for row in session_logs[:10]],
-            recent_adaptation_notes=[
-                _map_adaptation_note(row) for row in store.list_adaptation_notes(athlete_id, limit=10)
-            ],
-            pending_review_count=store.count_pending_admin_reviews_for_athlete(athlete_id),
-        )
 
     return router
