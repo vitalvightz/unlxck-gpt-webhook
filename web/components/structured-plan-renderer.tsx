@@ -19,6 +19,7 @@ import {
   isDeEmphasisedWeightCutSafety,
   progressionRuleLabel,
   planNoteLabel,
+  formatSessionObjective,
   formatWeightCutBand,
   getDeterministicNutritionPhases,
   getDeterministicRecoveryPhases,
@@ -409,7 +410,7 @@ export function SessionCard({
     cleanText(card?.headline) ||
     titleize(cleanText(session.session_type) || "Session");
   const sessionType = cleanText(session.session_type);
-  const objective = cleanText(session.objective);
+  const objective = formatSessionObjective(session.objective);
   const duration = formatMeasured(session.planned_duration);
   const date = cleanText(day?.date);
   const countdown = cleanText(day?.countdown_label);
@@ -437,7 +438,15 @@ export function SessionCard({
             </div>
           ) : null}
           <h3 className="sp-session-title">{title}</h3>
-          {objective ? <p className="sp-session-objective">{objective}</p> : null}
+          {/* The objective is the plan's "Why:" line, not a description of the
+              work — the blocks below already carry that. Labelling it says so
+              outright, so the reason for the session is impossible to miss. */}
+          {objective ? (
+            <p className="sp-session-objective">
+              <span className="sp-session-why-label">Why</span>
+              {objective}
+            </p>
+          ) : null}
         </div>
         <div className="sp-session-meta">
           {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}

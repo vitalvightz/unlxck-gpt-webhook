@@ -580,14 +580,16 @@ export function getSessionTitle(session: TodaySession): string {
  * load value, then coach copy. Shared by Today and Overview so both agree.
  */
 export function getSessionFocus(session: TodaySession): string {
-  return (
+  const focus =
     session.primary_focus?.trim() ||
     session.emphasis?.trim() ||
     formatSessionValue(session.effective_load) ||
     session.reason?.trim() ||
+    // Falls back to the session objective ("Why:" line), which is authored
+    // lower-case, so capitalise the first letter to match the other sources.
     session.coach_note?.trim() ||
-    "Follow the current plan guidance."
-  );
+    "Follow the current plan guidance.";
+  return focus ? focus.charAt(0).toUpperCase() + focus.slice(1) : focus;
 }
 
 /**

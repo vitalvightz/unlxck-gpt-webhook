@@ -7,6 +7,7 @@ import { formatPlanLabel } from "./plan-labels.ts";
 import {
   cleanText,
   classifySessionlessDay,
+  formatSessionObjective,
   getBlocks,
   getCoachLedContactView,
   getDays,
@@ -1014,7 +1015,7 @@ export function getReadinessStrip(
   let focus = cleanText(snapshot?.focus) || cleanText(card?.headline);
   if (!focus) {
     const firstSession = getSessions(currentDay)[0];
-    focus = cleanText(firstSession?.objective) || cleanText(firstSession?.title);
+    focus = formatSessionObjective(firstSession?.objective) || cleanText(firstSession?.title);
   }
 
   // Injury watch is a SHORT cue — the watch areas only, never the full

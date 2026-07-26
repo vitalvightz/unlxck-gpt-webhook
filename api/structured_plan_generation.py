@@ -1977,6 +1977,24 @@ session title/objective, plan_notes, mindset_anchor, nutrition prose):
   No semicolons, no "while …" tails, no second clause. Compress the source goal
   to its single most important driver (e.g. "Build single-leg drive and balance",
   "Sharpen punch speed, stay fresh"). Do NOT add content — only shorten.
+- The session "objective" carries the plan's "Why:" / "Purpose:" line and MUST
+  stay a WHY. It is the reason this session is on the calendar today — NOT a
+  summary of the blocks (those render directly underneath it) and NOT a
+  restatement of the session title. The athlete reads it under the title and
+  decides whether to do the session, so the payoff has to be obvious without any
+  training knowledge:
+  * Name the benefit the athlete gets, in plain words they would use themselves
+    ("keeps your opening sequence sharp", not "refines motor planning").
+  * Tie it to the fight, the week, or how they will feel/perform — a why the
+    athlete can check against their own goal.
+  * State the trade-off when the plan gives one, especially why the session is
+    EASY or short, since that is what athletes skip or doubt ("…without adding
+    fatigue this close to the fight", "…so the legs are fresh for Saturday").
+  * ONE line, AT MOST 14 words, starting with a capital letter. No jargon, no
+    hedging, no "the plan says".
+  Good: "Keeps your opening sequence sharp while the body recovers for
+  Saturday." Bad: "refine motor plan and composure without physical load."
+  Keep every constraint the plan states; never invent a reason it does not give.
 - Keep every athlete-facing string tight: prefer short phrases over full
   sentences, drop filler and hedging, and never repeat the same point across two
   fields.
