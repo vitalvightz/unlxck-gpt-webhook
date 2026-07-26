@@ -345,8 +345,8 @@ select:focus-visible {
 }
 
 .sidebar-tagline,
-.sidebar-user-email,
-.sidebar-link-meta,
+/* .sidebar-user-email / .sidebar-link-meta are deliberately absent here: they
+   render at --type-meta, set with the rest of their sidebar styling below. */
 .muted,
 .summary-list li,
 .auth-flow li {
@@ -576,7 +576,7 @@ select:focus-visible {
 .sidebar-link-meta,
 .sidebar-user-email {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--type-meta);
 }
 
 .panel,
@@ -6123,6 +6123,10 @@ button.mobile-step-rail-item {
   align-self: center;
 }
 
+/* Intentionally overrides the shared heading rule's --type-title-md
+   (clamp(20px, 2.2vw, 24px)): plan card titles hold a flat 20px with tighter
+   leading instead of scaling with the viewport. This predates the type-scale
+   migration — it overrode the same clamp when it was still a literal. */
 .plan-card-title {
   font-size: 20px;
   line-height: 1.08;
@@ -12318,11 +12322,6 @@ html[data-theme="light"] .injury-trend-badge-improving {
   color: #0f6e56;
 }
 
-html[data-theme="light"] .injury-trend-badge-worsening {
-  background: var(--danger-soft);
-  color: #bd1020;
-}
-
 html[data-theme="light"] .injury-severity-chip,
 html[data-theme="light"] .injury-trend-chip {
   border-color: rgba(80, 81, 84, 0.1);
@@ -13053,38 +13052,6 @@ html[data-theme="light"] .gi-notes-toggle:hover {
   text-transform: uppercase;
 }
 
-html[data-theme="light"] {
-  /* Cool crisp neutral light theme (see also the authoritative block below). */
-  --bg-app: #f4f5f7;
-  --bg-panel: #ffffff;
-  --bg-surface: #fafbfc;
-  --bg-surface-alt: #eef0f3;
-  --bg-support: #f7f8fa;
-  --bg-stat: #eceef1;
-  --bg-input: #ffffff;
-  --bg-overlay: rgba(17, 19, 24, 0.12);
-  --text-primary: #17181b;
-  --text-secondary: #474b53;
-  --text-muted: #767c86;
-  --border-default: #e3e5ea;
-  --border-strong: #d0d3da;
-  --border-subtle: rgba(23, 26, 33, 0.08);
-  --border-active: #bd1020;
-  --brand-red: #bd1020;
-  --brand-red-hover: #d21327;
-  --brand-red-soft: rgba(189, 16, 32, 0.09);
-  --progress-gold: #96713b;
-  --progress-gold-soft: rgba(150, 113, 59, 0.12);
-  --progress-gold-border: rgba(150, 113, 59, 0.22);
-  --success-soft: rgba(22, 128, 82, 0.1);
-  --success-ink: #157046;
-  --danger-soft: rgba(189, 16, 32, 0.09);
-  --danger-ink: #a50f1e;
-  --shadow-standard: 0 18px 40px rgba(20, 24, 34, 0.1);
-  --shadow-support: 0 12px 28px rgba(20, 24, 34, 0.08);
-  --shadow-stat: 0 8px 18px rgba(20, 24, 34, 0.06);
-}
-
 html[data-theme="light"],
 html[data-theme="light"] body {
   background:
@@ -13790,7 +13757,11 @@ html[data-theme="light"] .plan-dialog {
 }
 
 html[data-theme="light"] {
-  /* Cool crisp neutral light theme — authoritative palette (wins the cascade). */
+  /* Cool crisp neutral light theme — the single source for every light-mode
+     token. There was a second, near-identical copy of this block earlier in the
+     file; it lost the cascade on all 28 tokens and had drifted on four, so the
+     values here are the ones that were already rendering. Keep light-mode
+     palette changes in this block only. */
   --bg-app: #f4f5f7;
   --bg-panel: #ffffff;
   --bg-surface: #fafbfc;
@@ -14619,10 +14590,6 @@ html[data-theme="light"] .settings-toggle-row input[type="checkbox"]::after {
 html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked {
   border-color: color-mix(in srgb, var(--brand-red) 34%, transparent);
   background: color-mix(in srgb, var(--brand-red) 18%, transparent);
-}
-
-html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked::after {
-  background: var(--brand-red);
 }
 
 html[data-theme="light"] .settings-segmented-control button:hover,
@@ -18793,6 +18760,9 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   gap: 10px;
 }
 
+/* The button-shaped base for the feedback controls. `.feedback-link` shares it
+   for sizing/cursor only — the rule further down restyles it as an underlined
+   text link, so border/background/colour here apply to the other three. */
 .feedback-choice,
 .feedback-chip,
 .feedback-category,
