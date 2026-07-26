@@ -42,6 +42,7 @@ from .models import (
     ProfileUpdateRequest,
 )
 from .performance_focus import validate_performance_focus_selections
+from .generation.lazy_scheduler import schedule_generation_job_if_needed
 from .generation.time_utils import utc_now_iso
 from .store import AppStore, SupabaseAppStore, is_effective_admin_profile, is_startup_stale_generation_job
 from .sentry_config import init_sentry
@@ -149,53 +150,6 @@ def is_in_process_generation_enabled() -> bool:
 
 def _admin_structured_prewarm_enabled() -> bool:
     return os.getenv("APP_ADMIN_STRUCTURED_PREWARM_ENABLED", "0").strip() == "1"
-
-
-async def schedule_generation_job_if_needed(**kwargs: Any) -> dict[str, Any]:
-    """Create-only in the default (worker) path; schedule in-process on demand.
-
-    The web service creates generation jobs and lets the worker run them, so
-    this stays free of the heavy generation runtime unless in-process generation
-    is explicitly enabled. Only then do we import the scheduler (which pulls the
-    planner/orchestrator surface) and, if the caller did not supply one, build a
-    Stage 2 automator lazily.
-    """
-    enable_in_process_generation = bool(kwargs.get("enable_in_process_generation"))
-    job = kwargs["job"]
-    current_status = str(job.get("status") or "queued")
-    if current_status == "running":
-        stale_job_checker = kwargs.get("stale_job_checker")
-        stale_after_seconds = int(kwargs.get("stale_after_seconds") or 90)
-        if callable(stale_job_checker) and stale_job_checker(job, stale_after_seconds=stale_after_seconds):
-            from .generation.heartbeat import recover_stale_running_job
-
-            job = await asyncio.to_thread(
-                recover_stale_running_job,
-                job=job,
-                store=kwargs["store"],
-                stale_after_seconds=stale_after_seconds,
-            )
-            kwargs["job"] = job
-            current_status = str(job.get("status") or "")
-            if current_status != "queued":
-                return job
-        else:
-            return job
-    if not enable_in_process_generation:
-        logger.info(
-            "[api] generation:job_created_worker_will_process job_id=%s",
-            str(job.get("id") or ""),
-        )
-        return job
-    if kwargs.get("stage2") is None:
-        from .stage2_automation import build_default_stage2_automator
-
-        kwargs["stage2"] = build_default_stage2_automator()
-    from .generation.scheduler import (
-        schedule_generation_job_if_needed as _schedule_generation_job_if_needed,
-    )
-
-    return await _schedule_generation_job_if_needed(**kwargs)
 
 
 def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:

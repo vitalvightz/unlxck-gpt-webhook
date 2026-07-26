@@ -1,6 +1,10 @@
 from .injury_synonyms import parse_injury_phrase
 from .rehab_protocols import get_rehab_bank, normalize_rehab_location
-from .weight_cut import weight_cut_risk_band, weight_cut_supervision_required
+from .weight_cut import (
+    is_high_pressure_weight_cut,
+    weight_cut_risk_band,
+    weight_cut_supervision_required,
+)
 
 
 def _fetch_injury_drills(injuries: list, phase: str) -> list:
@@ -56,19 +60,7 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
     return drills[:2]
 
 
-def _is_high_pressure_weight_cut(training_context: dict) -> bool:
-    if not training_context.get("weight_cut_risk", False):
-        return False
-    if float(training_context.get("weight_cut_pct", 0.0) or 0.0) >= 5.0:
-        return True
-    fatigue = str(training_context.get("fatigue", "")).strip().lower()
-    days_until_fight = training_context.get("days_until_fight")
-    # A low-fatigue, non-aggressive active cut only counts as high-pressure inside
-    # the final two weeks (<=14). Aggressive cuts (>=5%) and moderate+ fatigue stay
-    # high-pressure at any distance via the clauses above. (Was <=28.)
-    return fatigue in {"moderate", "high"} or (
-        isinstance(days_until_fight, int) and days_until_fight <= 14
-    )
+_is_high_pressure_weight_cut = is_high_pressure_weight_cut
 
 
 def compute_recovery_plan(training_context: dict) -> dict:

@@ -7,7 +7,9 @@ from .normalization import clean_list as _clean_list
 
 WEEKDAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-_WEEKDAY_ALIASES = {
+# Canonical weekday alias table. Stage 1 and the API weekday normalizers both
+# read this so a spelling accepted in one path is accepted in all of them.
+WEEKDAY_ALIASES = {
     "mon": "Mon",
     "monday": "Mon",
     "tue": "Tue",
@@ -31,11 +33,15 @@ _SPARRING_DAY_CLASSES = {"primary_hard", "secondary_hard", "managed_hard", "tech
 _EFFECTIVE_LOADS = {"hard", "technical", "reduced", "none"}
 
 
-def _normalize_weekday(value: Any) -> str | None:
+def normalize_weekday(value: Any) -> str | None:
+    """Map a loose weekday spelling onto its canonical ``Mon``..``Sun`` short form."""
     normalized = str(value or "").strip().lower().rstrip(".")
     if not normalized:
         return None
-    return _WEEKDAY_ALIASES.get(normalized)
+    return WEEKDAY_ALIASES.get(normalized)
+
+
+_normalize_weekday = normalize_weekday
 
 
 def _empty_day(weekday: str) -> dict[str, Any]:

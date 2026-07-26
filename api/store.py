@@ -21,6 +21,7 @@ from .environment import is_production_environment
 from .error_sanitizer import sanitize_error_text
 from .generation_config import generation_job_stale_after_seconds, generation_worker_id
 from .generation.payloads import _stable_payload_hash
+from .generation.time_utils import utc_now_iso as _utc_now_iso
 from .json_limits import (
     MAX_CLIENT_JSON_BYTES,
     MAX_JSON_DEPTH,
@@ -557,10 +558,6 @@ def _admin_search_clause(columns: tuple[str, ...], q: str | None) -> str | None:
         return None
     pattern = f"*{term}*"
     return ",".join(f"{column}.ilike.{pattern}" for column in columns)
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _parse_datetime(value: Any) -> datetime | None:

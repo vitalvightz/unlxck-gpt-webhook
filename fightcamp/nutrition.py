@@ -4,6 +4,7 @@ from .weight_cut import (
     WEIGHT_CUT_INPUTS_MISSING_CURRENT,
     WEIGHT_CUT_INPUTS_MISSING_TARGET,
     WEIGHT_CUT_INPUTS_UNKNOWN_STATUSES,
+    is_high_pressure_weight_cut,
     parse_weight_value,
     weight_cut_risk_band,
     weight_cut_supervision_required,
@@ -25,20 +26,7 @@ _WEIGHT_CUT_UNKNOWN_NOTES = {
 }
 
 
-def _is_high_pressure_weight_cut(flags: dict) -> bool:
-    if not flags.get("weight_cut_risk", False):
-        return False
-    if float(flags.get("weight_cut_pct", 0.0) or 0.0) >= 5.0:
-        return True
-    fatigue = str(flags.get("fatigue", "")).strip().lower()
-    days_until_fight = flags.get("days_until_fight")
-    # A low-fatigue, non-aggressive active cut only counts as high-pressure inside
-    # the final two weeks (<=14). Aggressive cuts (>=5%) and moderate+ fatigue stay
-    # high-pressure at any distance via the clauses above. (Was <=28, which flagged
-    # a routine 3-3.5% cut at D-21 as high-pressure even at low fatigue.)
-    return fatigue in {"moderate", "high"} or (
-        isinstance(days_until_fight, int) and days_until_fight <= 14
-    )
+_is_high_pressure_weight_cut = is_high_pressure_weight_cut
 
 
 def _resolve_weight(flags: dict) -> float | None:

@@ -4,13 +4,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from .generation.time_utils import utc_now_iso
+
 
 STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY = "structured_card_attempt_started_at"
 STRUCTURED_CARD_BUILD_STALE_AFTER = timedelta(minutes=25)
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def mark_structured_card_attempt_started(

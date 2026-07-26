@@ -24,6 +24,7 @@ from .generation.stage2_runner import (
     _OPENAI_QUOTA_ATHLETE_ERROR,
 )
 from .generation.heartbeat import is_stale_job as runtime_is_stale_job
+from .generation.time_utils import utc_now_iso as _utc_now_iso
 from .models import (
     PROFILE_REFRESH_FAILED_WARNING,
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
@@ -63,10 +64,6 @@ def resolve_viewer_role(profile: Any, *, is_admin: bool) -> str:
     if not role or role == "admin":
         return "athlete"
     return role
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 _DAILY_LIMIT_DETAIL_TZ_AWARE = (
