@@ -1722,6 +1722,12 @@ export function StructuredPlanRenderer({
   const focusProgress = resolvedFocusDay
     ? resolvePlanProgress(plan, resolvedFocusDay, { openWeekNumber })
     : calendarProgress;
+  // The calendar owns the truthful active week while today is inside the camp.
+  // Just before a dated camp starts, there is no calendar match yet; in that
+  // case the already-resolved next-session focus supplies the actionable week
+  // for the red live marker. Manual week selection never changes this value.
+  const activeWeekPos =
+    calendarProgress.currentWeekPos ?? focusProgress.currentWeekPos;
 
   // `selectedPos` holds ONLY an explicit manual week choice; while it is null the
   // view auto-follows the plan's current week via the fallback in `effectivePos`
@@ -1803,7 +1809,7 @@ export function StructuredPlanRenderer({
           <WeekStrip
             weeks={weeks}
             selectedPos={safePos}
-            currentPos={calendarProgress.currentWeekPos}
+            currentPos={activeWeekPos}
             onSelect={handleSelectWeek}
             completionIndex={completionIndex}
             openOngoing={openOngoing}
