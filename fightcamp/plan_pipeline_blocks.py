@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import re
 from time import perf_counter
-from typing import Any, Callable
 
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
@@ -15,8 +14,10 @@ from .plan_pipeline_runtime import (
     PHASE_COLORS,
     PlanBlocksBundle,
     PlanRuntimeContext,
+    ProgressCallback,
     TimingRecorder,
     _apply_muay_thai_filters,
+    _emit_progress,
 )
 from .plan_rendering_utils import sanitize_phase_text
 from .recovery import generate_recovery_block
@@ -27,24 +28,6 @@ from .rehab_protocols import (
 )
 from .strength import generate_strength_block
 from .training_context import TrainingContext, allocate_sessions
-
-ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
-
-
-def _emit_progress(
-    callback: ProgressCallback | None,
-    code: str,
-    label: str,
-    detail: str = "",
-    **meta: Any,
-) -> None:
-    if callback is None:
-        return
-    try:
-        callback(code, label, detail, dict(meta))
-    except Exception:
-        logging.getLogger(__name__).exception("[progress] callback_failed code=%s", code)
-
 
 def _run_stage1_module(
     *,
