@@ -110,6 +110,29 @@ export function latestCompletedJobOpenablePlanId(
   return latestJob.latest_plan_id || null;
 }
 
+export function getPassiveLatestJobPlanTarget(
+  latestJob:
+    | { status?: string | null; plan_id?: string | null; latest_plan_id?: string | null }
+    | null
+    | undefined,
+): `/plans/${string}` | null {
+  if (!latestJob) {
+    return null;
+  }
+
+  if (latestJob.status === "failed") {
+    const planId = latestJob.plan_id || latestJob.latest_plan_id;
+    return planId ? `/plans/${planId}` : null;
+  }
+
+  if (latestJob.status === "review_required" && latestJob.plan_id) {
+    return `/plans/${latestJob.plan_id}`;
+  }
+
+  const completedPlanId = latestCompletedJobOpenablePlanId(latestJob);
+  return completedPlanId ? `/plans/${completedPlanId}` : null;
+}
+
 export function getGenerationStatusTarget(
   phase: string | null,
   planId: string | null,
@@ -180,6 +203,7 @@ export function GlobalGenerationStatus() {
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [resolvedDismissKey, setResolvedDismissKey] = useState<string | null>(null);
   const [isRetryingLatest, setIsRetryingLatest] = useState(false);
   const [retryLatestError, setRetryLatestError] = useState<string | null>(null);
   const [reopenPos, setReopenPos] = useState<{ x: number; y: number } | null>(null);
@@ -306,6 +330,9 @@ export function GlobalGenerationStatus() {
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
   const navigationTarget = getGenerationStatusTarget(phase, planId, terminalStatus, source, athleteId);
+  const passivePlanTarget = !isActive ? getPassiveLatestJobPlanTarget(latestJob) : null;
+  const acknowledgementTarget = isCompleted ? navigationTarget : passivePlanTarget;
+  const isAcknowledgementRoute = isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
   const ctaLabel = isCompleted && planId ? "View" : navigationTarget ? "Open" : "Refresh";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 
@@ -353,12 +380,33 @@ export function GlobalGenerationStatus() {
   }, [phase]);
 
   useEffect(() => {
-    try {
-      setIsDismissed(window.localStorage.getItem(dismissKey) === "1");
-    } catch {
-      setIsDismissed(false);
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        setIsDismissed(window.localStorage.getItem(dismissKey) === "1");
+      } catch {
+        setIsDismissed(false);
+      }
+      setResolvedDismissKey(dismissKey);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [dismissKey]);
+
+  useEffect(() => {
+    if (!isAcknowledgementRoute) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(dismissKey, "1");
+    } catch {}
+
+    const timer = window.setTimeout(() => {
+      setIsDismissed(true);
+      setResolvedDismissKey(dismissKey);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [dismissKey, isAcknowledgementRoute]);
 
   useEffect(() => {
     if (!isActive) {
@@ -392,6 +440,7 @@ export function GlobalGenerationStatus() {
 
   const dismissCurrentBanner = () => {
     setIsDismissed(true);
+    setResolvedDismissKey(dismissKey);
 
     try {
       window.localStorage.setItem(dismissKey, "1");
@@ -400,11 +449,16 @@ export function GlobalGenerationStatus() {
 
   const reopenCurrentBanner = () => {
     setIsDismissed(false);
+    setResolvedDismissKey(dismissKey);
 
     try {
       window.localStorage.removeItem(dismissKey);
     } catch {}
   };
+
+  if (resolvedDismissKey !== dismissKey || isAcknowledgementRoute) {
+    return null;
+  }
 
   if (!isActive && latestJob) {
     if (!shouldRenderPassiveLatestJobRibbon(latestJob)) {
@@ -419,7 +473,7 @@ export function GlobalGenerationStatus() {
       const failedPlanId = latestJob.plan_id || latestJob.latest_plan_id || null;
 
       if (latestFailedJobHasOpenablePlan(latestJob) && failedPlanId) {
-        const target = `/plans/${failedPlanId}`;
+        const target = getPassiveLatestJobPlanTarget(latestJob) || `/plans/${failedPlanId}`;
         if (isGenerationRibbonTargetRedundant(pathname, target)) {
           return null;
         }
@@ -427,7 +481,7 @@ export function GlobalGenerationStatus() {
         const isProtectedTriage = isProtectedTriageLatestJob(latestJob);
         return (
           <div className="global-generation-status global-generation-status-completed">
-            <Link href={target} className="global-generation-status-main">
+            <Link href={target} className="global-generation-status-main" onClick={dismissCurrentBanner}>
               <div className="global-generation-status-message">
                 {isProtectedTriage
                   ? "Plan is held for admin review."
@@ -512,14 +566,14 @@ export function GlobalGenerationStatus() {
     }
 
     if (latestJob.status === "review_required" && latestJob.plan_id) {
-      const target = `/plans/${latestJob.plan_id}`;
+      const target = getPassiveLatestJobPlanTarget(latestJob) || `/plans/${latestJob.plan_id}`;
       if (isGenerationRibbonTargetRedundant(pathname, target)) {
         return null;
       }
 
       return (
         <div className="global-generation-status global-generation-status-completed">
-          <Link href={target} className="global-generation-status-main">
+          <Link href={target} className="global-generation-status-main" onClick={dismissCurrentBanner}>
             <div className="global-generation-status-message">Review saved plan</div>
             <span className="global-generation-status-cta-label">Open plan</span>
           </Link>
@@ -588,7 +642,7 @@ export function GlobalGenerationStatus() {
         const isProtectedTriage = isProtectedTriageLatestJob(latestJob);
         return (
           <div className="global-generation-status global-generation-status-completed">
-            <Link href={target} className="global-generation-status-main">
+            <Link href={target} className="global-generation-status-main" onClick={dismissCurrentBanner}>
               <div className="global-generation-status-message">
                 {isProtectedTriage
                   ? "Plan is held for admin review."
@@ -814,6 +868,7 @@ export function GlobalGenerationStatus() {
         <Link
           href={navigationTarget}
           className="global-generation-status-main"
+          onClick={isCompleted ? dismissCurrentBanner : undefined}
           aria-label={
             isCompleted
               ? "Plan ready. Tap to view."

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  getPassiveLatestJobPlanTarget,
   getGenerationStatusTarget,
   isGenerationRibbonTargetRedundant,
   isProtectedTriageLatestJob,
@@ -9,6 +10,25 @@ import {
   latestFailedJobHasOpenablePlan,
   shouldRenderPassiveLatestJobRibbon,
 } from "./global-generation-status";
+
+test("passive ready-plan ribbons resolve the plan target used for acknowledgement", () => {
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "failed", plan_id: "plan_failed" }),
+    "/plans/plan_failed",
+  );
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "review_required", plan_id: "plan_review" }),
+    "/plans/plan_review",
+  );
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "completed", plan_id: null, latest_plan_id: "plan_latest" }),
+    "/plans/plan_latest",
+  );
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "completed", plan_id: "plan_complete" }),
+    null,
+  );
+});
 
 test("active generation states route to generate workspace", () => {
   assert.equal(getGenerationStatusTarget("queued", null, null, "self_serve", null), "/generate");

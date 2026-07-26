@@ -33,6 +33,13 @@ export function cleanText(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+/** Athlete-facing countdown label. Older structured plans can carry the event
+ * day as `D0`; keep the UI contract consistent by always rendering it as `D-0`. */
+export function formatCountdownLabel(value: unknown): string | null {
+  const text = cleanText(value);
+  return text ? text.replace(/^D0\b/i, "D-0") : null;
+}
+
 /** A safe array (never throws on null/non-array); empty arrays stay empty. */
 export function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value.filter((item) => item != null) : [];
@@ -318,7 +325,7 @@ function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
       .filter((value): value is string => value !== null)
       .sort();
     const labels = group.days
-      .map((day) => cleanText(day.countdown_label))
+      .map((day) => formatCountdownLabel(day.countdown_label))
       .filter((value): value is string => value !== null);
     const splitWeek = {
       ...week,
@@ -971,8 +978,8 @@ function shortenWeekGoal(goal: string): string {
 
 function lateFightCountdownStart(week: StructuredWeek | null | undefined): number | null {
   const labels = [
-    cleanText(week?.countdown_start),
-    ...getDays(week).map((day) => cleanText(day.countdown_label)),
+    formatCountdownLabel(week?.countdown_start),
+    ...getDays(week).map((day) => formatCountdownLabel(day.countdown_label)),
   ];
   const distances = labels
     .map((label) => {
