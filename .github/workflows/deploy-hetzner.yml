@@ -94,7 +94,7 @@ jobs:
             "EXPECTED_COMMIT='$EXPECTED_COMMIT' BUNDLE_PATH='$REMOTE_BUNDLE' bash -s" <<'REMOTE_SCRIPT'
               set -Eeuo pipefail
 
-              HEALTH_URL="https://unlxck-staging.167.233.47.121.sslip.io/health"
+              HEALTH_URL="https://api.unlxck.com/health"
 
               worker_running() { [ -n "$(docker compose ps --status running -q worker)" ]; }
               caddy_running()  { [ -n "$(docker compose ps --status running -q caddy)" ]; }
@@ -288,4 +288,4 @@ jobs:
             --retry 5 \
             --retry-delay 5 \
             --max-time 15 \
-            https://unlxck-staging.167.233.47.121.sslip.io/health
+            https://api.unlxck.com/health
