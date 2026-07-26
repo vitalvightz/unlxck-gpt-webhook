@@ -6,6 +6,7 @@ import {
   classifySessionlessDay,
   cleanText,
   formatBlockLoad,
+  formatCountdownLabel,
   formatEffort,
   formatMeasured,
   getBlocks,
@@ -422,7 +423,7 @@ export function SessionCard({
   const objective = formatSessionObjective(session.objective);
   const duration = formatMeasured(session.planned_duration);
   const date = cleanText(day?.date);
-  const countdown = cleanText(day?.countdown_label);
+  const countdown = formatCountdownLabel(day?.countdown_label);
   const warning = showDayContext ? cleanText(card?.primary_warning) : null;
   const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
   const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
@@ -581,7 +582,7 @@ export function SessionlessDayCard({
   showDayLabels?: boolean;
 }) {
   const date = cleanText(day.date);
-  const countdown = cleanText(day.countdown_label);
+  const countdown = formatCountdownLabel(day.countdown_label);
   const card = day.today_card;
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
@@ -767,8 +768,8 @@ function gapRowsBetween(prev: StructuredDay, next: StructuredDay): TimelineEntry
   if (diff < 2 || diff > 7) {
     return [];
   }
-  const prevMatch = cleanText(prev.countdown_label)?.match(COUNTDOWN_LABEL_RE);
-  const nextMatch = cleanText(next.countdown_label)?.match(COUNTDOWN_LABEL_RE);
+  const prevMatch = formatCountdownLabel(prev.countdown_label)?.match(COUNTDOWN_LABEL_RE);
+  const nextMatch = formatCountdownLabel(next.countdown_label)?.match(COUNTDOWN_LABEL_RE);
   const prevN = prevMatch ? Number(prevMatch[1]) : null;
   const nextN = nextMatch ? Number(nextMatch[1]) : null;
   const countdownConsistent = prevN != null && nextN != null && prevN - diff === nextN;
@@ -921,7 +922,7 @@ export function CampDayCard({
   const sessions = getSessions(day);
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
-  const countdown = cleanText(day.countdown_label);
+  const countdown = formatCountdownLabel(day.countdown_label);
   const timelineLabel = openOngoing
     ? openTimelineDayLabel(day, weekNumber, fallbackLabel || `Week ${weekNumber} training day`)
     : weekday || date || fallbackLabel || "Training day";
@@ -1552,8 +1553,8 @@ function WeekOverview({
   const load = openOngoing ? null : weekLoadProxy(week);
   const completion = weekCompletion(week, completionIndex);
   const sessionSummary = weekSessionSummary(week);
-  const countdownStart = cleanText(week.countdown_start);
-  const countdownEnd = cleanText(week.countdown_end);
+  const countdownStart = formatCountdownLabel(week.countdown_start);
+  const countdownEnd = formatCountdownLabel(week.countdown_end);
   const countdownRange =
     countdownStart && countdownEnd
       ? `${countdownStart} → ${countdownEnd}`
@@ -1864,7 +1865,7 @@ export function StructuredPlanRenderer({
                   return (
                     <RestDayRow
                       key={restDate || `day-${index}`}
-                      countdown={cleanText(day.countdown_label)}
+                      countdown={formatCountdownLabel(day.countdown_label)}
                       weekday={weekdayLabel(restDate)}
                       label="Rest"
                       isCurrent={isCurrent}

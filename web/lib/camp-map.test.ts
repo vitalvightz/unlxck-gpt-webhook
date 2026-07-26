@@ -111,8 +111,8 @@ test("resolvePlanProgress tolerates an empty/missing plan", () => {
   assert.equal(progress.dLabel, null);
 });
 
-test("deriveCountdownLabel returns D0 on event day and null after it", () => {
-  assert.equal(deriveCountdownLabel(campPlan(), new Date(2026, 6, 17)), "D0");
+test("deriveCountdownLabel returns D-0 on event day and null after it", () => {
+  assert.equal(deriveCountdownLabel(campPlan(), new Date(2026, 6, 17)), "D-0");
   assert.equal(deriveCountdownLabel(campPlan(), new Date(2026, 6, 18)), null);
 });
 

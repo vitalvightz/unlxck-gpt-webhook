@@ -89,6 +89,34 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Rounds are banked"), true);
 });
 
+test("structured renderer normalizes legacy D0 event-day labels to D-0", () => {
+  const plan = {
+    schema_version: "1.0",
+    event_context: { fight_date: "2026-07-17" },
+    weeks: [
+      {
+        week_id: "fight-week",
+        week_index: 1,
+        countdown_start: "D0",
+        countdown_end: "D0",
+        days: [
+          {
+            date: "2026-07-17",
+            countdown_label: "D0",
+            day_type: "rest",
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes(">D0<"), false);
+  assert.equal(html.includes("D-0"), true);
+});
+
 test("open ongoing renderer uses renewable block labels instead of fight-camp phases", () => {
   const plan = {
     schema_version: "1.0",

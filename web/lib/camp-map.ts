@@ -7,6 +7,7 @@ import { formatPlanLabel } from "./plan-labels.ts";
 import {
   cleanText,
   classifySessionlessDay,
+  formatCountdownLabel,
   formatSessionObjective,
   getBlocks,
   getCoachLedContactView,
@@ -282,7 +283,7 @@ export function resolvePlanProgress(
   }
 
   const currentDay = findDayByISO(plan, currentDayDate);
-  const dLabel = cleanText(currentDay?.countdown_label) || deriveCountdownLabel(plan, today);
+  const dLabel = formatCountdownLabel(currentDay?.countdown_label) || deriveCountdownLabel(plan, today);
 
   return { weekCount: weeks.length, currentWeekPos, currentDayDate, currentDayPos, dLabel };
 }
@@ -383,7 +384,7 @@ export function deriveCountdownLabel(
   if (diffDays < 0) {
     return null;
   }
-  return diffDays === 0 ? "D0" : `D-${diffDays}`;
+  return `D-${diffDays}`;
 }
 
 export type Completion = { done: number; total: number };
@@ -916,7 +917,7 @@ export function resolveCurrentDay(
           week: weeks[weekPos],
           day,
           sessions: getSessions(day),
-          dLabel: cleanText(day.countdown_label) || deriveCountdownLabel(plan, today),
+          dLabel: formatCountdownLabel(day.countdown_label) || deriveCountdownLabel(plan, today),
           inRange: true,
         };
       }
@@ -932,7 +933,7 @@ export function resolveCurrentDay(
       week: weekdayMatch.week,
       day: weekdayMatch.day,
       sessions: getSessions(weekdayMatch.day),
-      dLabel: cleanText(weekdayMatch.day.countdown_label) || deriveCountdownLabel(plan, today),
+      dLabel: formatCountdownLabel(weekdayMatch.day.countdown_label) || deriveCountdownLabel(plan, today),
       inRange: true,
     };
   }

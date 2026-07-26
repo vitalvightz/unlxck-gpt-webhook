@@ -2,13 +2,34 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  getPassiveLatestJobPlanTarget,
   getGenerationStatusTarget,
+  isGenerationRibbonAcknowledgedRoute,
   isGenerationRibbonTargetRedundant,
   isProtectedTriageLatestJob,
   latestCompletedJobOpenablePlanId,
   latestFailedJobHasOpenablePlan,
   shouldRenderPassiveLatestJobRibbon,
 } from "./global-generation-status";
+
+test("passive ready-plan ribbons resolve the plan target used for acknowledgement", () => {
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "failed", plan_id: "plan_failed" }),
+    "/plans/plan_failed",
+  );
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "review_required", plan_id: "plan_review" }),
+    "/plans/plan_review",
+  );
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "completed", plan_id: null, latest_plan_id: "plan_latest" }),
+    "/plans/plan_latest",
+  );
+  assert.equal(
+    getPassiveLatestJobPlanTarget({ status: "completed", plan_id: "plan_complete" }),
+    null,
+  );
+});
 
 test("active generation states route to generate workspace", () => {
   assert.equal(getGenerationStatusTarget("queued", null, null, "self_serve", null), "/generate");
@@ -34,6 +55,16 @@ test("generation ribbon target is redundant when path matches target without que
 
 test("generation ribbon target is redundant on the plan dashboard for plan detail links", () => {
   assert.equal(isGenerationRibbonTargetRedundant("/plans", "/plans/plan_123"), true);
+});
+
+test("generation ribbon acknowledgement requires the exact plan route", () => {
+  assert.equal(isGenerationRibbonAcknowledgedRoute("/plans/plan_123", "/plans/plan_123"), true);
+  assert.equal(
+    isGenerationRibbonAcknowledgedRoute("/plans/plan_123", "/plans/plan_123?review_required=1"),
+    true,
+  );
+  assert.equal(isGenerationRibbonAcknowledgedRoute("/plans", "/plans/plan_123"), false);
+  assert.equal(isGenerationRibbonAcknowledgedRoute("/plans/plan_456", "/plans/plan_123"), false);
 });
 
 test("generation ribbon target is not redundant when route is unrelated", () => {

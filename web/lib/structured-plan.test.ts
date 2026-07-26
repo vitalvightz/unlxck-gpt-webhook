@@ -7,6 +7,7 @@ import {
   cleanText,
   finitePositiveNumber,
   formatBlockLoad,
+  formatCountdownLabel,
   formatEffort,
   isNonFiniteNumericToken,
   formatMacroRange,
@@ -48,6 +49,13 @@ import {
   splitMindsetLines,
   weekLabel,
 } from "./structured-plan.ts";
+
+test("formatCountdownLabel normalizes legacy event-day labels for display", () => {
+  assert.equal(formatCountdownLabel("D0"), "D-0");
+  assert.equal(formatCountdownLabel("d0"), "D-0");
+  assert.equal(formatCountdownLabel("D-12"), "D-12");
+  assert.equal(formatCountdownLabel("  "), null);
+});
 
 // An athlete-safe deterministic_support projection (as the backend emits it,
 // with coach_gated already stripped).

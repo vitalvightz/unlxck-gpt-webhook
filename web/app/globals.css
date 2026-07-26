@@ -8169,6 +8169,11 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   padding-top: 8px;
 }
 
+.plans-history-block:has(.plans-history-menu[open]) {
+  position: relative;
+  z-index: 3;
+}
+
 .plans-history-header {
   display: flex;
   align-items: flex-end;
