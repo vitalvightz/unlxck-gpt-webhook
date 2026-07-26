@@ -182,6 +182,17 @@ export function isGenerationRibbonTargetRedundant(pathname: string | null, targe
   return pathname === targetPath || (pathname === "/plans" && targetPath.startsWith("/plans/"));
 }
 
+export function isGenerationRibbonAcknowledgedRoute(
+  pathname: string | null,
+  target: string | null,
+): boolean {
+  if (!pathname || !target) {
+    return false;
+  }
+
+  return pathname === target.split("?", 1)[0];
+}
+
 export function GlobalGenerationStatus() {
   const { session } = useAppSession();
   const pathname = usePathname();
@@ -332,7 +343,8 @@ export function GlobalGenerationStatus() {
   const navigationTarget = getGenerationStatusTarget(phase, planId, terminalStatus, source, athleteId);
   const passivePlanTarget = !isActive ? getPassiveLatestJobPlanTarget(latestJob) : null;
   const acknowledgementTarget = isCompleted ? navigationTarget : passivePlanTarget;
-  const isAcknowledgementRoute = isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
+  const isRedundantRoute = isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
+  const isAcknowledgementRoute = isGenerationRibbonAcknowledgedRoute(pathname, acknowledgementTarget);
   const ctaLabel = isCompleted && planId ? "View" : navigationTarget ? "Open" : "Refresh";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 
@@ -456,7 +468,7 @@ export function GlobalGenerationStatus() {
     } catch {}
   };
 
-  if (resolvedDismissKey !== dismissKey || isAcknowledgementRoute) {
+  if (resolvedDismissKey !== dismissKey || isRedundantRoute) {
     return null;
   }
 

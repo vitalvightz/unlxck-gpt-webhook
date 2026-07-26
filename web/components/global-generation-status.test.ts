@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   getPassiveLatestJobPlanTarget,
   getGenerationStatusTarget,
+  isGenerationRibbonAcknowledgedRoute,
   isGenerationRibbonTargetRedundant,
   isProtectedTriageLatestJob,
   latestCompletedJobOpenablePlanId,
@@ -54,6 +55,16 @@ test("generation ribbon target is redundant when path matches target without que
 
 test("generation ribbon target is redundant on the plan dashboard for plan detail links", () => {
   assert.equal(isGenerationRibbonTargetRedundant("/plans", "/plans/plan_123"), true);
+});
+
+test("generation ribbon acknowledgement requires the exact plan route", () => {
+  assert.equal(isGenerationRibbonAcknowledgedRoute("/plans/plan_123", "/plans/plan_123"), true);
+  assert.equal(
+    isGenerationRibbonAcknowledgedRoute("/plans/plan_123", "/plans/plan_123?review_required=1"),
+    true,
+  );
+  assert.equal(isGenerationRibbonAcknowledgedRoute("/plans", "/plans/plan_123"), false);
+  assert.equal(isGenerationRibbonAcknowledgedRoute("/plans/plan_456", "/plans/plan_123"), false);
 });
 
 test("generation ribbon target is not redundant when route is unrelated", () => {
