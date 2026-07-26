@@ -1752,6 +1752,55 @@ test("D-10 countdown plans render a mini-title for every dated week", () => {
   assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), true);
 });
 
+test("next-session focus marks the active week before a dated camp starts", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Late Fight", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-07-27",
+            countdown_label: "D-10",
+            sessions: [{ session_id: "s1", title: "Power Transfer Touch", blocks: [] }],
+          },
+        ],
+      },
+      {
+        week_id: "wk-2",
+        week_index: 2,
+        phase_label: "TAPER",
+        days: [
+          {
+            date: "2026-08-03",
+            countdown_label: "D-3",
+            sessions: [{ session_id: "s2", title: "Primer", blocks: [] }],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 6, 26)}
+      focusDay={new Date(2026, 6, 27)}
+      currentDayLabel="Next session"
+    />,
+  );
+
+  assert.equal(countOccurrences(html, "cm-week-pill-current"), 1);
+  assert.equal(countOccurrences(html, "cm-week-pill-dot"), 1);
+  assert.equal(
+    html.includes("cm-week-pill cm-week-pill-selected cm-week-pill-current"),
+    true,
+  );
+});
+
 test("a long phase label is kept on one line with the full text available on hover/AT", () => {
   const longPhase = "Accumulation Overreaching Realisation Block";
   const plan = weeksPlan(3, longPhase);
