@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { AUTH_FEEDBACK } from "@/lib/auth-feedback";
+import { AUTH_LINK_FEEDBACK, clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+
+// How long to wait for Supabase to judge a PKCE recovery code before telling
+// the athlete we could not reach it.
+const CODE_EXCHANGE_TIMEOUT_MS = 8_000;
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -16,18 +22,21 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isReady, setIsReady] = useState(false);
+  const [canChangeInSettings, setCanChangeInSettings] = useState(false);
   const passwordStrength = evaluatePasswordStrength(password);
   const passwordsMatch = password === confirmPassword;
+  // Read during the first render: supabase-js strips the recovery token from
+  // the URL as soon as it initializes, which can happen before this effect runs.
+  const [linkStatus] = useState(() =>
+    typeof window === "undefined"
+      ? ({ kind: "none" } as const)
+      : readAuthLinkStatus({ hash: window.location.hash, search: window.location.search }),
+  );
 
   useEffect(() => {
-    // Supabase detects the recovery token from the URL hash and fires an
-    // AUTH_STATE_CHANGE with event "PASSWORD_RECOVERY". We just need to confirm
-    // the client has parsed the session before allowing the form to submit.
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const hashError = hashParams.get("error_description") || hashParams.get("error");
-
-    if (hashError) {
-      setError("This reset link is expired or invalid. Please request a new one.");
+    if (linkStatus.kind === "error") {
+      setError(linkStatus.message);
+      clearAuthLinkParams();
       return;
     }
 
@@ -35,37 +44,118 @@ export default function ResetPasswordPage() {
     try {
       client = getSupabaseBrowserClient();
     } catch {
-      setError("We're having trouble connecting. Please try again in a minute.");
+      setError(AUTH_FEEDBACK.connectionFailure);
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setError("This reset link is expired or invalid. Please request a new one.");
-    }, 8000);
+    // This route exists to spend a recovery link, so it unlocks only on proof
+    // that Supabase verified one. An unrelated signed-in session must not open
+    // the form — /settings owns ordinary password changes and asks for the
+    // current password, which this form deliberately does not.
+    //
+    // The presence of a credential-shaped param is NOT that proof. supabase-js
+    // keeps an existing session when it fails to consume a URL ("Don't remove
+    // existing session on URL login failure"), so `?code=arbitrary` on a
+    // signed-in browser would otherwise hand over the form. Proof is one of:
+    //
+    //   1. a PASSWORD_RECOVERY event, which fires only after supabase-js has
+    //      validated and stored a recovery session;
+    //   2. a stored session whose access token is the one this URL carried,
+    //      which means supabase-js minted it from this link;
+    //   3. a code that Supabase itself accepts in exchange for a session.
+    const urlAccessToken = linkStatus.kind === "credentials" ? linkStatus.accessToken : null;
+    const urlCode = linkStatus.kind === "credentials" ? linkStatus.code : null;
+    let settled = false;
+    let exchangeTimeoutId: number | undefined;
 
-    const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        window.clearTimeout(timeoutId);
-        setError(null);
-        setIsReady(true);
+    function markReady() {
+      settled = true;
+      setError(null);
+      setIsReady(true);
+      clearAuthLinkParams();
+    }
+
+    // Scrub on the failure paths too. supabase-js only strips the fragment for
+    // a token it successfully exchanged, so a stale one would otherwise sit in
+    // the address bar and leak into history and the next Referer.
+    function failWith(message: string) {
+      settled = true;
+      setError(message);
+      clearAuthLinkParams();
+    }
+
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      // Proof 1. Deferred by a macrotask inside supabase-js, so this can land
+      // after getSession() below has already resolved.
+      if (event === "PASSWORD_RECOVERY" && session) {
+        markReady();
       }
     });
 
-    // Also handle the case where the session is already established from the
-    // URL hash before this component mounts.
-    client.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        window.clearTimeout(timeoutId);
-        setError(null);
-        setIsReady(true);
-      }
-    });
+    // getSession() resolves only after supabase-js has finished parsing the
+    // URL, so its answer already reflects any token this link carried.
+    client.auth
+      .getSession()
+      .then(async ({ data: { session } }) => {
+        if (settled) {
+          return;
+        }
+
+        // Proof 2. This session is the one the link minted.
+        if (session && urlAccessToken && session.access_token === urlAccessToken) {
+          markReady();
+          return;
+        }
+
+        // Proof 3. Let Supabase decide whether the code is real. Only reachable
+        // under the PKCE flow; an arbitrary code fails here.
+        if (urlCode) {
+          // Bounded on purpose. auth-js retries a failed fetch with backoff, so
+          // an unreachable Supabase would otherwise leave the athlete watching
+          // "Verifying your reset link..." forever.
+          const outcome = await Promise.race([
+            client.auth.exchangeCodeForSession(urlCode).catch(() => null),
+            new Promise<"timed-out">((resolve) => {
+              exchangeTimeoutId = window.setTimeout(() => resolve("timed-out"), CODE_EXCHANGE_TIMEOUT_MS);
+            }),
+          ]);
+          window.clearTimeout(exchangeTimeoutId);
+
+          if (settled) {
+            return;
+          }
+          if (outcome === "timed-out") {
+            failWith(AUTH_FEEDBACK.connectionFailure);
+            return;
+          }
+          if (outcome?.data?.session && !outcome.error) {
+            markReady();
+            return;
+          }
+          failWith(AUTH_LINK_FEEDBACK.expired);
+          return;
+        }
+
+        if (session) {
+          // Signed in, but not here via a verified reset link. Point at the
+          // route that can actually help rather than round the email loop.
+          setCanChangeInSettings(true);
+          failWith(AUTH_LINK_FEEDBACK.missing);
+          return;
+        }
+        failWith(urlAccessToken ? AUTH_LINK_FEEDBACK.expired : AUTH_LINK_FEEDBACK.missing);
+      })
+      .catch(() => {
+        if (!settled) {
+          failWith(AUTH_FEEDBACK.connectionFailure);
+        }
+      });
 
     return () => {
-      window.clearTimeout(timeoutId);
+      window.clearTimeout(exchangeTimeoutId);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [linkStatus]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -135,19 +225,36 @@ export default function ResetPasswordPage() {
           <div className="auth-success-state">
             <div className="success-banner">{message}</div>
           </div>
-        ) : (
-          <>
+        ) : !isReady ? (
+          // The link either failed or has not been verified yet. Showing the
+          // password fields here would only offer a form that cannot submit.
+          <div className="auth-form-grid">
             {error ? (
-              <div className="auth-form-grid">
-                <div className="error-banner">{error}</div>
+              <>
+                <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
+                  {error}
+                </div>
+                {canChangeInSettings ? (
+                  <Link href="/settings" className="cta cta-secondary">
+                    Change your password in Settings
+                  </Link>
+                ) : null}
                 <Link href="/forgot-password" className="cta cta-secondary">
                   Request a new reset link
                 </Link>
+              </>
+            ) : (
+              <p className="muted" role="status" aria-live="polite">
+                Verifying your reset link...
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            {error ? (
+              <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
+                {error}
               </div>
-            ) : null}
-
-            {!isReady && !error ? (
-              <p className="muted">Verifying your reset link...</p>
             ) : null}
 
             <form onSubmit={handleSubmit} className="auth-form-grid">
@@ -170,7 +277,6 @@ export default function ResetPasswordPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   required
                   minLength={8}
-                  disabled={!isReady}
                 />
                 <PasswordStrengthMeter strength={passwordStrength} />
               </div>
@@ -185,7 +291,6 @@ export default function ResetPasswordPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   required
                   minLength={8}
-                  disabled={!isReady}
                 />
                 {confirmPassword && !passwordsMatch ? <p className="error-text">Passwords do not match.</p> : null}
               </div>
@@ -194,7 +299,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="submit"
                   className="cta"
-                  disabled={isPending || !isReady || !passwordStrength.isAcceptable || !passwordsMatch}
+                  disabled={isPending || !passwordStrength.isAcceptable || !passwordsMatch}
                 >
                   {isPending ? "Updating..." : "Update password"}
                 </button>

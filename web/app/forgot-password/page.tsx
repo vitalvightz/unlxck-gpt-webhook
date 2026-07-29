@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 
-import { getSiteOrigin } from "@/lib/site-url";
+import { AUTH_FEEDBACK, getPasswordResetErrorMessage } from "@/lib/auth-feedback";
+import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
@@ -22,17 +23,16 @@ export default function ForgotPasswordPage() {
       try {
         client = getSupabaseBrowserClient();
       } catch {
-        setError("We're having trouble connecting. Please try again in a minute.");
+        setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
 
-      const siteOrigin = getSiteOrigin();
-      const { error: resetError } = await client.auth.resetPasswordForEmail(email, {
-        redirectTo: siteOrigin ? `${siteOrigin}/reset-password` : undefined,
+      const { error: resetError } = await client.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: buildAuthRedirectUrl("/reset-password"),
       });
 
       if (resetError) {
-        setError(resetError.message);
+        setError(getPasswordResetErrorMessage(resetError));
         return;
       }
 
