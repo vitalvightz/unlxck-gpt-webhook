@@ -116,7 +116,17 @@ Suggested subject lines:
    already been used" on the UNLXCK page rather than a blank form.
 4. Repeat 1–3 for the email sign-in link, which lands on `/login`, and for the
    signup confirmation link.
-5. While signed in, open `/reset-password` directly. It must refuse the form and
-   offer Settings — that route only opens for a genuine recovery link, and
-   `/settings` owns ordinary password changes because it asks for the current
-   password first.
+5. While signed in, open `/reset-password` directly, and again with
+   `?code=arbitrary`. Both must refuse the form and offer Settings.
+
+`/reset-password` opens only on proof that Supabase verified a recovery link: a
+`PASSWORD_RECOVERY` event, a stored session carrying the access token the URL
+supplied, or a code Supabase accepts in exchange for a session. A
+credential-shaped parameter is not proof — supabase-js keeps an existing session
+when it fails to consume a URL, so pairing one with `?code=anything` would
+otherwise open a form that never asks for the current password. `/settings` owns
+ordinary password changes and does ask.
+
+Steps 2–5 are covered automatically by `web/e2e/auth-links.spec.ts`
+(`npm run test:e2e`), including both bypass vectors. Only the real email
+delivery in step 1 needs a human.

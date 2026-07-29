@@ -29,8 +29,17 @@ export type AuthLinkLocation = {
 export type AuthLinkStatus =
   /** No auth link params at all — an ordinary page visit. */
   | { kind: "none" }
-  /** The URL carries credentials for supabase-js to exchange for a session. */
-  | { kind: "credentials"; type: string | null }
+  /**
+   * The URL *claims* to carry credentials.
+   *
+   * This is a shape check, not verification. Anyone can type
+   * `?code=arbitrary`, and supabase-js deliberately keeps an existing session
+   * when it fails to consume a URL, so a caller must never treat this as proof
+   * that a link was genuine. `accessToken` and `code` are exposed precisely so
+   * callers can go on to verify — by matching the resulting session's token
+   * against `accessToken`, or by exchanging `code` and letting Supabase judge.
+   */
+  | { kind: "credentials"; type: string | null; accessToken: string | null; code: string | null }
   /** Supabase rejected the link. `message` is safe to show to the athlete. */
   | { kind: "error"; code: string | null; message: string };
 
@@ -85,7 +94,12 @@ export function readAuthLinkStatus(location: AuthLinkLocation): AuthLinkStatus {
   }
 
   if (params.has("access_token") || params.has("code")) {
-    return { kind: "credentials", type: params.get("type") };
+    return {
+      kind: "credentials",
+      type: params.get("type"),
+      accessToken: params.get("access_token"),
+      code: params.get("code"),
+    };
   }
 
   return { kind: "none" };

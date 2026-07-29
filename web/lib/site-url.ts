@@ -6,8 +6,9 @@
 const VERCEL_HOST_PATTERN = /(^|\.)vercel\.app$/i;
 
 // Hosts where falling back to the browser's own origin is safe, because there
-// is no deployment indirection to get wrong.
-const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "0.0.0.0"]);
+// is no deployment indirection to get wrong. 0.0.0.0 is deliberately absent —
+// it is a bind address, not somewhere a link can send anyone.
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**
  * Parse a configured value into a bare `https://host[:port]` origin, or "" if

@@ -10,6 +10,10 @@ import { AUTH_LINK_FEEDBACK, clearAuthLinkParams, readAuthLinkStatus } from "@/l
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
+// How long to wait for Supabase to judge a PKCE recovery code before telling
+// the athlete we could not reach it.
+const CODE_EXCHANGE_TIMEOUT_MS = 8_000;
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -45,11 +49,24 @@ export default function ResetPasswordPage() {
     }
 
     // This route exists to spend a recovery link, so it unlocks only on proof
-    // that one was followed. An unrelated signed-in session must not open the
-    // form — /settings owns ordinary password changes and asks for the current
-    // password, which this form deliberately does not.
-    const cameFromRecoveryLink = linkStatus.kind === "credentials";
+    // that Supabase verified one. An unrelated signed-in session must not open
+    // the form — /settings owns ordinary password changes and asks for the
+    // current password, which this form deliberately does not.
+    //
+    // The presence of a credential-shaped param is NOT that proof. supabase-js
+    // keeps an existing session when it fails to consume a URL ("Don't remove
+    // existing session on URL login failure"), so `?code=arbitrary` on a
+    // signed-in browser would otherwise hand over the form. Proof is one of:
+    //
+    //   1. a PASSWORD_RECOVERY event, which fires only after supabase-js has
+    //      validated and stored a recovery session;
+    //   2. a stored session whose access token is the one this URL carried,
+    //      which means supabase-js minted it from this link;
+    //   3. a code that Supabase itself accepts in exchange for a session.
+    const urlAccessToken = linkStatus.kind === "credentials" ? linkStatus.accessToken : null;
+    const urlCode = linkStatus.kind === "credentials" ? linkStatus.code : null;
     let settled = false;
+    let exchangeTimeoutId: number | undefined;
 
     function markReady() {
       settled = true;
@@ -68,32 +85,65 @@ export default function ResetPasswordPage() {
     }
 
     const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || (session && cameFromRecoveryLink)) {
+      // Proof 1. Deferred by a macrotask inside supabase-js, so this can land
+      // after getSession() below has already resolved.
+      if (event === "PASSWORD_RECOVERY" && session) {
         markReady();
       }
     });
 
     // getSession() resolves only after supabase-js has finished parsing the
-    // URL, so a null session here means the link really did carry nothing
-    // usable. Say so straight away instead of stalling behind a timeout.
+    // URL, so its answer already reflects any token this link carried.
     client.auth
       .getSession()
-      .then(({ data: { session } }) => {
+      .then(async ({ data: { session } }) => {
         if (settled) {
           return;
         }
-        if (session && cameFromRecoveryLink) {
+
+        // Proof 2. This session is the one the link minted.
+        if (session && urlAccessToken && session.access_token === urlAccessToken) {
           markReady();
           return;
         }
+
+        // Proof 3. Let Supabase decide whether the code is real. Only reachable
+        // under the PKCE flow; an arbitrary code fails here.
+        if (urlCode) {
+          // Bounded on purpose. auth-js retries a failed fetch with backoff, so
+          // an unreachable Supabase would otherwise leave the athlete watching
+          // "Verifying your reset link..." forever.
+          const outcome = await Promise.race([
+            client.auth.exchangeCodeForSession(urlCode).catch(() => null),
+            new Promise<"timed-out">((resolve) => {
+              exchangeTimeoutId = window.setTimeout(() => resolve("timed-out"), CODE_EXCHANGE_TIMEOUT_MS);
+            }),
+          ]);
+          window.clearTimeout(exchangeTimeoutId);
+
+          if (settled) {
+            return;
+          }
+          if (outcome === "timed-out") {
+            failWith(AUTH_FEEDBACK.connectionFailure);
+            return;
+          }
+          if (outcome?.data?.session && !outcome.error) {
+            markReady();
+            return;
+          }
+          failWith(AUTH_LINK_FEEDBACK.expired);
+          return;
+        }
+
         if (session) {
-          // Signed in, but not here via a reset link. Point at the route that
-          // can actually help rather than sending them round the email loop.
+          // Signed in, but not here via a verified reset link. Point at the
+          // route that can actually help rather than round the email loop.
           setCanChangeInSettings(true);
           failWith(AUTH_LINK_FEEDBACK.missing);
           return;
         }
-        failWith(cameFromRecoveryLink ? AUTH_LINK_FEEDBACK.expired : AUTH_LINK_FEEDBACK.missing);
+        failWith(urlAccessToken ? AUTH_LINK_FEEDBACK.expired : AUTH_LINK_FEEDBACK.missing);
       })
       .catch(() => {
         if (!settled) {
@@ -102,6 +152,7 @@ export default function ResetPasswordPage() {
       });
 
     return () => {
+      window.clearTimeout(exchangeTimeoutId);
       subscription.unsubscribe();
     };
   }, [linkStatus]);

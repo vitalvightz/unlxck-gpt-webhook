@@ -44,18 +44,32 @@ test("never surfaces the raw provider description", () => {
   assert.equal(status.kind === "error" && status.message, AUTH_LINK_FEEDBACK.invalid);
 });
 
-test("detects implicit-flow credentials and the recovery type", () => {
+test("detects implicit-flow credentials and exposes the token for verification", () => {
   const status = readAuthLinkStatus({
     hash: "#access_token=abc&refresh_token=def&expires_in=3600&type=recovery",
     search: "",
   });
   assert.equal(status.kind, "credentials");
   assert.equal(status.kind === "credentials" && status.type, "recovery");
+  // Callers must be able to check the resulting session against this value —
+  // "a token is present" is not proof that Supabase accepted it.
+  assert.equal(status.kind === "credentials" && status.accessToken, "abc");
+  assert.equal(status.kind === "credentials" && status.code, null);
 });
 
-test("detects PKCE credentials on the query string", () => {
+test("detects PKCE credentials on the query string and exposes the code", () => {
   const status = readAuthLinkStatus({ hash: "", search: "?code=abc123" });
   assert.equal(status.kind, "credentials");
+  assert.equal(status.kind === "credentials" && status.code, "abc123");
+  assert.equal(status.kind === "credentials" && status.accessToken, null);
+});
+
+test("classifies an arbitrary attacker-supplied code as unverified credentials", () => {
+  // /reset-password?code=arbitrary must reach the caller as something still
+  // needing verification, never as a settled "this link was genuine".
+  const status = readAuthLinkStatus({ hash: "", search: "?code=arbitrary" });
+  assert.equal(status.kind, "credentials");
+  assert.equal(status.kind === "credentials" && status.code, "arbitrary");
 });
 
 test("reports a plain page visit as none", () => {

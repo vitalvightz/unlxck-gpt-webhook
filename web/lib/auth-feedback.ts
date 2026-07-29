@@ -49,18 +49,22 @@ export function getLoginErrorMessage(error: AuthErrorLike): string {
   return AUTH_FEEDBACK.signInFailure;
 }
 
-export function getMagicLinkErrorMessage(error: AuthErrorLike): string {
+/**
+ * Rate limits and connection failures read the same whatever the athlete was
+ * trying to send, so only the last-resort message differs per action.
+ */
+function getEmailSendErrorMessage(error: AuthErrorLike, fallback: string): string {
   if (isRateLimitError(error)) {
     return AUTH_FEEDBACK.tooManyAttempts;
   }
 
-  return isConnectionError(error) ? AUTH_FEEDBACK.connectionFailure : AUTH_FEEDBACK.magicLinkFailure;
+  return isConnectionError(error) ? AUTH_FEEDBACK.connectionFailure : fallback;
+}
+
+export function getMagicLinkErrorMessage(error: AuthErrorLike): string {
+  return getEmailSendErrorMessage(error, AUTH_FEEDBACK.magicLinkFailure);
 }
 
 export function getPasswordResetErrorMessage(error: AuthErrorLike): string {
-  if (isRateLimitError(error)) {
-    return AUTH_FEEDBACK.tooManyAttempts;
-  }
-
-  return isConnectionError(error) ? AUTH_FEEDBACK.connectionFailure : AUTH_FEEDBACK.passwordResetFailure;
+  return getEmailSendErrorMessage(error, AUTH_FEEDBACK.passwordResetFailure);
 }

@@ -64,8 +64,26 @@ def test_reset_password_expired_link_fallback_is_statically_present():
     assert "expired" in auth_link
     assert 'href="/forgot-password"' in reset_password
     assert "Request a new reset link" in reset_password
-    # The form must stay closed unless a recovery link was actually followed.
-    assert "cameFromRecoveryLink" in reset_password
+
+
+def test_reset_password_requires_a_verified_recovery_link():
+    reset_password = _read("web/app/reset-password/page.tsx")
+
+    # A credential-shaped param is not proof. supabase-js keeps an existing
+    # session when it fails to consume a URL, so "?code=arbitrary" on a
+    # signed-in browser must not unlock the form. Only a PASSWORD_RECOVERY
+    # event, a session whose token is the one the URL carried, or a code
+    # Supabase itself accepts may open it.
+    assert 'event === "PASSWORD_RECOVERY" && session' in reset_password
+    assert "session.access_token === urlAccessToken" in reset_password
+    assert "client.auth.exchangeCodeForSession(urlCode)" in reset_password
+    # The weaker "any session plus any credential param" gate must not return.
+    assert "cameFromRecoveryLink" not in reset_password
+    assert 'linkStatus.kind === "credentials";' not in reset_password
+    # An unrelated signed-in session gets sent to the route that asks for the
+    # current password instead.
+    assert "setCanChangeInSettings(true)" in reset_password
+    assert 'href="/settings"' in reset_password
 
 
 def test_login_surfaces_failed_email_link_outcomes():
