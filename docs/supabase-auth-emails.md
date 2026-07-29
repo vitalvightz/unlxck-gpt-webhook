@@ -15,15 +15,32 @@ athlete. Those hostnames are per-deployment and sit behind Vercel's deployment
 protection, so the athlete opened the link and got Vercel's own branded gate
 instead of UNLXCK.
 
-`buildAuthRedirectUrl()` now resolves the origin in this order:
+An emailed link is opened minutes or hours later, from another device, so an
+origin that merely works in the current tab is not good enough.
+`buildAuthRedirectUrl()` therefore accepts an origin only from:
 
-1. `NEXT_PUBLIC_SITE_URL`
-2. `NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL` — Vercel's stable production
-   domain, never a preview host
-3. `window.location.origin` — local development only
+1. **`NEXT_PUBLIC_SITE_URL`** — an explicit operator decision, always honoured
+   (including a `*.vercel.app` value, since the stable production alias is not
+   deployment protected).
+2. **`NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL`** — used only when it is a
+   custom domain. A `*.vercel.app` value here is rejected, because it is
+   auto-detected rather than chosen. Treat this as a bonus, never the plan: it
+   exists only when the project has *Automatically expose System Environment
+   Variables* enabled, so it may simply be absent.
+3. **`window.location.origin`** — local development hosts only (`localhost`,
+   `127.0.0.1`, `[::1]`, `*.localhost`).
 
-If none resolves it returns `undefined`, which makes supabase-js fall back to
-the project's Site URL rather than emailing a malformed link.
+Anything else yields `undefined`, and supabase-js falls back to the project's
+Site URL. **Landing on production is always better than landing on a protected
+preview host, so refusing to answer is the safe failure.** A preview deployment
+with no `NEXT_PUBLIC_SITE_URL` now sends athletes to production rather than to a
+dead preview URL, and logs a console warning naming the missing variable.
+
+Values are also scheme-checked. A configured value that already carries a scheme
+must use `http` or `https`; only genuine bare hostnames get `https://` added.
+Blindly prefixing turned `ftp://app.unlxck.com` into `https://ftp` and
+`mailto:ops@unlxck.com` into `https://unlxck.com` — silently wrong hosts in a
+link that had already been emailed.
 
 There is a second, independent cause with the same symptom: **Supabase silently
 rewrites any `redirect_to` that is not on the Redirect URLs allow list to the
@@ -38,9 +55,8 @@ there no matter what the frontend sends. Check both.
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | The production frontend origin, no trailing slash |
 
-Set it for **Production, Preview, and Development**. Leaving it unset on Preview
-is what puts a deployment host into a link that was requested from a preview
-build.
+Set it for **Production, Preview, and Development**. This is the only reliable
+input — everything else is a fallback that may legitimately refuse to answer.
 
 ### Supabase dashboard — Authentication → URL Configuration
 
@@ -98,4 +114,9 @@ Suggested subject lines:
 2. Open the link and confirm the UNLXCK reset form renders.
 3. Open the same link a second time. It must show "This link has expired or has
    already been used" on the UNLXCK page rather than a blank form.
-4. Repeat 1–3 for the email sign-in link, which lands on `/login`.
+4. Repeat 1–3 for the email sign-in link, which lands on `/login`, and for the
+   signup confirmation link.
+5. While signed in, open `/reset-password` directly. It must refuse the form and
+   offer Settings — that route only opens for a genuine recovery link, and
+   `/settings` owns ordinary password changes because it asks for the current
+   password first.

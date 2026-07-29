@@ -20,22 +20,61 @@ def test_supabase_auth_redirects_use_configured_site_origin():
     reset_password = _read("web/app/reset-password/page.tsx")
 
     assert "NEXT_PUBLIC_SITE_URL=http://localhost:3000" in env_example
-    assert 'import { getSiteOrigin } from "@/lib/site-url";' in auth_form
-    assert 'import { getSiteOrigin } from "@/lib/site-url";' in forgot_password
-    assert "emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined" in auth_form
-    assert "redirectTo: siteOrigin ? `${siteOrigin}/reset-password` : undefined" in forgot_password
+    # Every emailed link is built by the one helper that refuses untrusted
+    # origins. Reintroducing a raw origin here is how reset links ended up
+    # pointing at protected *.vercel.app preview deployments.
+    assert 'import { buildAuthRedirectUrl } from "@/lib/site-url";' in auth_form
+    assert 'import { buildAuthRedirectUrl } from "@/lib/site-url";' in forgot_password
+    assert 'emailRedirectTo: buildAuthRedirectUrl("/login")' in auth_form
+    assert 'buildAuthRedirectUrl("/login")' in auth_form
+    assert 'redirectTo: buildAuthRedirectUrl("/reset-password")' in forgot_password
+    assert "getSiteOrigin" not in auth_form
+    assert "getSiteOrigin" not in forgot_password
     assert 'router.replace("/login")' in reset_password
     assert "client.auth.updateUser({ password })" in reset_password
     assert "client.auth.signOut()" in reset_password
 
 
+def test_auth_email_origin_rejects_untrusted_hosts():
+    site_url = _read("web/lib/site-url.ts")
+
+    # Auth emails are opened later, from another device, so the current
+    # deployment host is not good enough. Only an explicit configuration, a
+    # non-Vercel production domain, or local development may be emailed.
+    assert "function resolveAuthEmailOrigin" in site_url
+    assert "isVercelDeploymentOrigin(vercelProduction)" in site_url
+    assert "isLocalDevelopmentOrigin(currentOrigin)" in site_url
+    # A scheme that is present must be http(s); prefixing https:// onto
+    # "ftp://app.unlxck.com" silently yields the host "ftp".
+    assert 'scheme !== "http" && scheme !== "https"' in site_url
+
+
 def test_reset_password_expired_link_fallback_is_statically_present():
     reset_password = _read("web/app/reset-password/page.tsx")
+    auth_link = _read("web/lib/auth-link.ts")
 
-    assert 'hashParams.get("error_description") || hashParams.get("error")' in reset_password
-    assert "This reset link is expired or invalid. Please request a new one." in reset_password
+    # Supabase reports failures on the fragment (implicit flow) and on the
+    # query string (PKCE and /auth/v1/verify). Reading only one half is how an
+    # expired link came to render a blank form.
+    assert "readAuthLinkStatus" in reset_password
+    assert "location.hash" in reset_password
+    assert "location.search" in reset_password
+    assert "location.hash" in auth_link
+    assert "location.search" in auth_link
+    assert "expired" in auth_link
     assert 'href="/forgot-password"' in reset_password
     assert "Request a new reset link" in reset_password
+    # The form must stay closed unless a recovery link was actually followed.
+    assert "cameFromRecoveryLink" in reset_password
+
+
+def test_login_surfaces_failed_email_link_outcomes():
+    auth_form = _read("web/components/auth-form.tsx")
+
+    # Magic links and signup confirmations land on /login; a rejected token
+    # must say so instead of silently rendering an empty form.
+    assert "readAuthLinkStatus" in auth_form
+    assert "clearAuthLinkParams" in auth_form
 
 
 def test_settings_page_keeps_username_and_password_sections():

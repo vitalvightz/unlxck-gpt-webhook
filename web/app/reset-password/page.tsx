@@ -18,6 +18,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isReady, setIsReady] = useState(false);
+  const [canChangeInSettings, setCanChangeInSettings] = useState(false);
   const passwordStrength = evaluatePasswordStrength(password);
   const passwordsMatch = password === confirmPassword;
   // Read during the first render: supabase-js strips the recovery token from
@@ -43,7 +44,13 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    // This route exists to spend a recovery link, so it unlocks only on proof
+    // that one was followed. An unrelated signed-in session must not open the
+    // form — /settings owns ordinary password changes and asks for the current
+    // password, which this form deliberately does not.
+    const cameFromRecoveryLink = linkStatus.kind === "credentials";
     let settled = false;
+
     function markReady() {
       settled = true;
       setError(null);
@@ -51,11 +58,17 @@ export default function ResetPasswordPage() {
       clearAuthLinkParams();
     }
 
-    // Supabase exchanges the recovery token from the URL and fires
-    // "PASSWORD_RECOVERY". Accept any resulting session, since an athlete who
-    // is already signed in may reach this page to change their own password.
+    // Scrub on the failure paths too. supabase-js only strips the fragment for
+    // a token it successfully exchanged, so a stale one would otherwise sit in
+    // the address bar and leak into history and the next Referer.
+    function failWith(message: string) {
+      settled = true;
+      setError(message);
+      clearAuthLinkParams();
+    }
+
     const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || session) {
+      if (event === "PASSWORD_RECOVERY" || (session && cameFromRecoveryLink)) {
         markReady();
       }
     });
@@ -66,19 +79,25 @@ export default function ResetPasswordPage() {
     client.auth
       .getSession()
       .then(({ data: { session } }) => {
-        if (session) {
+        if (settled) {
+          return;
+        }
+        if (session && cameFromRecoveryLink) {
           markReady();
           return;
         }
-        if (!settled) {
-          setError(
-            linkStatus.kind === "credentials" ? AUTH_LINK_FEEDBACK.expired : AUTH_LINK_FEEDBACK.missing,
-          );
+        if (session) {
+          // Signed in, but not here via a reset link. Point at the route that
+          // can actually help rather than sending them round the email loop.
+          setCanChangeInSettings(true);
+          failWith(AUTH_LINK_FEEDBACK.missing);
+          return;
         }
+        failWith(cameFromRecoveryLink ? AUTH_LINK_FEEDBACK.expired : AUTH_LINK_FEEDBACK.missing);
       })
       .catch(() => {
         if (!settled) {
-          setError(AUTH_FEEDBACK.connectionFailure);
+          failWith(AUTH_FEEDBACK.connectionFailure);
         }
       });
 
@@ -164,6 +183,11 @@ export default function ResetPasswordPage() {
                 <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
                   {error}
                 </div>
+                {canChangeInSettings ? (
+                  <Link href="/settings" className="cta cta-secondary">
+                    Change your password in Settings
+                  </Link>
+                ) : null}
                 <Link href="/forgot-password" className="cta cta-secondary">
                   Request a new reset link
                 </Link>
