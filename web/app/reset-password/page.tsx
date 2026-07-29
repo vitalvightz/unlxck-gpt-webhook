@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { AUTH_FEEDBACK } from "@/lib/auth-feedback";
+import { AUTH_LINK_FEEDBACK, clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -18,16 +20,18 @@ export default function ResetPasswordPage() {
   const [isReady, setIsReady] = useState(false);
   const passwordStrength = evaluatePasswordStrength(password);
   const passwordsMatch = password === confirmPassword;
+  // Read during the first render: supabase-js strips the recovery token from
+  // the URL as soon as it initializes, which can happen before this effect runs.
+  const [linkStatus] = useState(() =>
+    typeof window === "undefined"
+      ? ({ kind: "none" } as const)
+      : readAuthLinkStatus({ hash: window.location.hash, search: window.location.search }),
+  );
 
   useEffect(() => {
-    // Supabase detects the recovery token from the URL hash and fires an
-    // AUTH_STATE_CHANGE with event "PASSWORD_RECOVERY". We just need to confirm
-    // the client has parsed the session before allowing the form to submit.
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const hashError = hashParams.get("error_description") || hashParams.get("error");
-
-    if (hashError) {
-      setError("This reset link is expired or invalid. Please request a new one.");
+    if (linkStatus.kind === "error") {
+      setError(linkStatus.message);
+      clearAuthLinkParams();
       return;
     }
 
@@ -35,37 +39,53 @@ export default function ResetPasswordPage() {
     try {
       client = getSupabaseBrowserClient();
     } catch {
-      setError("We're having trouble connecting. Please try again in a minute.");
+      setError(AUTH_FEEDBACK.connectionFailure);
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setError("This reset link is expired or invalid. Please request a new one.");
-    }, 8000);
+    let settled = false;
+    function markReady() {
+      settled = true;
+      setError(null);
+      setIsReady(true);
+      clearAuthLinkParams();
+    }
 
-    const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        window.clearTimeout(timeoutId);
-        setError(null);
-        setIsReady(true);
+    // Supabase exchanges the recovery token from the URL and fires
+    // "PASSWORD_RECOVERY". Accept any resulting session, since an athlete who
+    // is already signed in may reach this page to change their own password.
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) {
+        markReady();
       }
     });
 
-    // Also handle the case where the session is already established from the
-    // URL hash before this component mounts.
-    client.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        window.clearTimeout(timeoutId);
-        setError(null);
-        setIsReady(true);
-      }
-    });
+    // getSession() resolves only after supabase-js has finished parsing the
+    // URL, so a null session here means the link really did carry nothing
+    // usable. Say so straight away instead of stalling behind a timeout.
+    client.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (session) {
+          markReady();
+          return;
+        }
+        if (!settled) {
+          setError(
+            linkStatus.kind === "credentials" ? AUTH_LINK_FEEDBACK.expired : AUTH_LINK_FEEDBACK.missing,
+          );
+        }
+      })
+      .catch(() => {
+        if (!settled) {
+          setError(AUTH_FEEDBACK.connectionFailure);
+        }
+      });
 
     return () => {
-      window.clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [linkStatus]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -135,19 +155,31 @@ export default function ResetPasswordPage() {
           <div className="auth-success-state">
             <div className="success-banner">{message}</div>
           </div>
-        ) : (
-          <>
+        ) : !isReady ? (
+          // The link either failed or has not been verified yet. Showing the
+          // password fields here would only offer a form that cannot submit.
+          <div className="auth-form-grid">
             {error ? (
-              <div className="auth-form-grid">
-                <div className="error-banner">{error}</div>
+              <>
+                <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
+                  {error}
+                </div>
                 <Link href="/forgot-password" className="cta cta-secondary">
                   Request a new reset link
                 </Link>
+              </>
+            ) : (
+              <p className="muted" role="status" aria-live="polite">
+                Verifying your reset link...
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            {error ? (
+              <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
+                {error}
               </div>
-            ) : null}
-
-            {!isReady && !error ? (
-              <p className="muted">Verifying your reset link...</p>
             ) : null}
 
             <form onSubmit={handleSubmit} className="auth-form-grid">
@@ -170,7 +202,6 @@ export default function ResetPasswordPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   required
                   minLength={8}
-                  disabled={!isReady}
                 />
                 <PasswordStrengthMeter strength={passwordStrength} />
               </div>
@@ -185,7 +216,6 @@ export default function ResetPasswordPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   required
                   minLength={8}
-                  disabled={!isReady}
                 />
                 {confirmPassword && !passwordsMatch ? <p className="error-text">Passwords do not match.</p> : null}
               </div>
@@ -194,7 +224,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="submit"
                   className="cta"
-                  disabled={isPending || !isReady || !passwordStrength.isAcceptable || !passwordsMatch}
+                  disabled={isPending || !passwordStrength.isAcceptable || !passwordsMatch}
                 >
                   {isPending ? "Updating..." : "Update password"}
                 </button>

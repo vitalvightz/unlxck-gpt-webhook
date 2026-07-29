@@ -15,7 +15,10 @@ Use this checklist for beta-readiness verification against the production fronte
 
 ### Vercel Environment Variables
 
-- [ ] `NEXT_PUBLIC_SITE_URL` is set to the production frontend URL.
+- [ ] `NEXT_PUBLIC_SITE_URL` is set to the production frontend URL for **every**
+      environment (Production, Preview, Development). Unset on Preview means auth
+      emails link to a `*.vercel.app` deployment host — see
+      [`docs/supabase-auth-emails.md`](../supabase-auth-emails.md).
 - [ ] `NEXT_PUBLIC_API_BASE_URL` points to the production Render API.
 - [ ] `NEXT_PUBLIC_SUPABASE_URL` points to the production Supabase project.
 - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` is present and scoped as anon/public.
@@ -27,6 +30,10 @@ Use this checklist for beta-readiness verification against the production fronte
 - [ ] Redirect URLs include the production `/reset-password` route.
 - [ ] Email confirmation links open the production app, not localhost or a preview domain.
 - [ ] Password reset links open the production app, not localhost or a preview domain.
+- [ ] Branded email templates from `supabase/templates/` are pasted into
+      Authentication -> Emails -> Templates.
+- [ ] Re-opening an already-used reset link shows the UNLXCK "expired or already
+      used" state, not a blank form.
 
 ### Supabase DB Migrations
 

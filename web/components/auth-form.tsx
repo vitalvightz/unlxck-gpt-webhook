@@ -8,10 +8,11 @@ import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { getMe } from "@/lib/api";
 import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@/lib/auth-feedback";
+import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
-import { getSiteOrigin } from "@/lib/site-url";
+import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { UserRole } from "@/lib/types";
 
@@ -64,6 +65,21 @@ export function AuthForm({
     }
   }, [mode]);
 
+  // Sign-in links and signup confirmations land back here. When Supabase
+  // rejects the token it appends the reason to the URL and creates no session,
+  // so without this the athlete is dropped on a blank form with no explanation
+  // of why the link they just clicked did nothing.
+  useEffect(() => {
+    const linkStatus = readAuthLinkStatus({
+      hash: window.location.hash,
+      search: window.location.search,
+    });
+    if (linkStatus.kind === "error") {
+      setError(linkStatus.message);
+      clearAuthLinkParams();
+    }
+  }, []);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
@@ -84,7 +100,6 @@ export function AuthForm({
       }
 
       if (mode === "signup") {
-        const siteOrigin = getSiteOrigin();
         // Only athlete is currently selectable; persist the chosen role in user
         // metadata so the role foundation is explicit. The backend still owns the
         // authoritative profiles.role (athlete by default, admin only via the
@@ -94,7 +109,7 @@ export function AuthForm({
           email,
           password,
           options: {
-            emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
+            emailRedirectTo: buildAuthRedirectUrl("/login"),
             data: {
               full_name: fullName,
               role: selectedRole,
@@ -154,8 +169,7 @@ export function AuthForm({
         setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
-      const siteOrigin = getSiteOrigin();
-      const redirectTo = siteOrigin ? `${siteOrigin}/login` : undefined;
+      const redirectTo = buildAuthRedirectUrl("/login");
       let magicLinkResult;
       try {
         magicLinkResult = await client.auth.signInWithOtp({

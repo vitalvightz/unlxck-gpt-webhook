@@ -10,6 +10,7 @@ export const AUTH_FEEDBACK = {
   incorrectCredentials: "Email or password is incorrect.",
   magicLinkFailure: "UNLXCK could not send a sign-in link. Try again.",
   magicLinkSent: "Sign-in link sent. Check your inbox.",
+  passwordResetFailure: "UNLXCK could not send a reset link. Try again.",
   signInFailure: "UNLXCK could not sign you in. Try again.",
   tooManyAttempts: "Too many attempts. Try again shortly.",
 } as const;
@@ -54,4 +55,12 @@ export function getMagicLinkErrorMessage(error: AuthErrorLike): string {
   }
 
   return isConnectionError(error) ? AUTH_FEEDBACK.connectionFailure : AUTH_FEEDBACK.magicLinkFailure;
+}
+
+export function getPasswordResetErrorMessage(error: AuthErrorLike): string {
+  if (isRateLimitError(error)) {
+    return AUTH_FEEDBACK.tooManyAttempts;
+  }
+
+  return isConnectionError(error) ? AUTH_FEEDBACK.connectionFailure : AUTH_FEEDBACK.passwordResetFailure;
 }
