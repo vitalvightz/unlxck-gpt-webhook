@@ -60,6 +60,7 @@ import {
   buildDaysOutContext,
   computeDaysUntilFight,
   isFightDateInPast,
+  getFightDayLockedWeekday,
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
   HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE,
@@ -915,13 +916,17 @@ export function PlanIntakeForm() {
   const hasHardSparring = form.hard_sparring_days.length > 0;
   const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight, { hasHardSparring });
   const fightDateWeekday = noScheduledFight ? null : getWeekdayFromIsoDate(form.fight_date);
+  // Only fight week locks the weekday out of the combat-load tags. Earlier
+  // instances of the same weekday are ordinary training days, and the backend
+  // fight-day override already clamps the real fight day on the final week.
+  const lockedFightWeekday = getFightDayLockedWeekday(fightDateWeekday, daysUntilFight);
 
   useEffect(() => {
-    if (!fightDateWeekday) {
+    if (!lockedFightWeekday) {
       return;
     }
 
-    const lockedDay = fightDateWeekday.trim().toLowerCase();
+    const lockedDay = lockedFightWeekday.trim().toLowerCase();
 
     setForm((current) => {
       const hardSparringDays = current.hard_sparring_days.filter(
@@ -944,7 +949,7 @@ export function PlanIntakeForm() {
         support_work_days: supportWorkDays,
       };
     });
-  }, [fightDateWeekday]);
+  }, [lockedFightWeekday]);
 
   useEffect(() => {
     if (!me || hydrated) {
@@ -2020,11 +2025,17 @@ export function PlanIntakeForm() {
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
   const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No Light Combat days selected");
   const remainingHardSparringDays = TRAINING_AVAILABILITY_OPTIONS
-    .filter((option) => form.training_availability.includes(option.value) && !form.support_work_days.includes(option.value) && !form.hard_sparring_days.includes(option.value))
+    .filter((option) => option.value !== lockedFightWeekday && form.training_availability.includes(option.value) && !form.support_work_days.includes(option.value) && !form.hard_sparring_days.includes(option.value))
     .map((option) => option.value);
   const remainingSupportWorkDays = TRAINING_AVAILABILITY_OPTIONS
     .map((option) => option.value)
-    .filter((day) => form.training_availability.includes(day) && !form.hard_sparring_days.includes(day));
+    .filter((day) => day !== lockedFightWeekday && form.training_availability.includes(day) && !form.hard_sparring_days.includes(day));
+  const fightDayLockReason = `Fight day — ${formatFightDateValue(form.fight_date)}`;
+  // Far-out camps keep every instance of the fight weekday available; say so
+  // explicitly so the lock's absence does not read as a bug either.
+  const fightWeekdayNote = fightDateWeekday && !lockedFightWeekday
+    ? `Your fight lands on a ${fightDateWeekday}. Earlier ${fightDateWeekday}s train as normal — fight week's ${fightDateWeekday} is replaced by the fight-day protocol automatically.`
+    : null;
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
   const performanceFocusCapTitle = performanceFocusCapValue === null
@@ -2752,6 +2763,7 @@ export function PlanIntakeForm() {
                 <p className="muted">
                   These selections do not add extra sessions. They mark which available days carry hard contact versus lighter technical combat work inside the same weekly total.
                 </p>
+                {fightWeekdayNote ? <p className="muted">{fightWeekdayNote}</p> : null}
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
                     <p className="muted" style={{ opacity: 0.5 }}>Hard sparring day selection is not used for planning at this stage.</p>
@@ -2767,8 +2779,8 @@ export function PlanIntakeForm() {
                   getOptionDisabledReason={(option, checked) =>
                     checked
                       ? null
-                      : fightDateWeekday === option.value
-                        ? "Fight day is locked"
+                      : lockedFightWeekday === option.value
+                        ? fightDayLockReason
                         : !form.training_availability.includes(option.value)
                           ? "Add to availability first"
                           : form.support_work_days.includes(option.value)
@@ -2829,8 +2841,8 @@ export function PlanIntakeForm() {
                   getOptionDisabledReason={(option, checked) =>
                     checked
                       ? null
-                      : fightDateWeekday === option.value
-                        ? "Fight day is locked"
+                      : lockedFightWeekday === option.value
+                        ? fightDayLockReason
                         : !form.training_availability.includes(option.value)
                           ? "Add to availability first"
                           : form.hard_sparring_days.includes(option.value)

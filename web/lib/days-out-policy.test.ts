@@ -6,6 +6,7 @@ import {
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
   isFightDateInPast,
+  getFightDayLockedWeekday,
   HARD_SPARRING_STRENGTH_BLOCK_REASON,
 } from "./days-out-policy.ts";
 
@@ -161,4 +162,26 @@ test("treats empty or malformed fight dates as not in the past", () => {
   assert.equal(isFightDateInPast(null, now), false);
   assert.equal(isFightDateInPast(undefined, now), false);
   assert.equal(isFightDateInPast("not-a-date", now), false);
+});
+
+test("locks the fight weekday only inside fight week", () => {
+  assert.equal(getFightDayLockedWeekday("Monday", 0), "Monday");
+  assert.equal(getFightDayLockedWeekday("Monday", 3), "Monday");
+  assert.equal(getFightDayLockedWeekday("Monday", 6), "Monday");
+});
+
+test("leaves the fight weekday taggable from seven days out", () => {
+  assert.equal(getFightDayLockedWeekday("Monday", 7), null);
+  assert.equal(getFightDayLockedWeekday("Monday", 21), null);
+  // Regression: an ~18-month camp must not lose every Monday.
+  assert.equal(getFightDayLockedWeekday("Monday", 550), null);
+});
+
+test("applies no fight-day lock without a resolvable weekday or day count", () => {
+  assert.equal(getFightDayLockedWeekday(null, 3), null);
+  assert.equal(getFightDayLockedWeekday("", 3), null);
+  assert.equal(getFightDayLockedWeekday(undefined, 3), null);
+  // computeDaysUntilFight returns null for missing and past fight dates.
+  assert.equal(getFightDayLockedWeekday("Monday", null), null);
+  assert.equal(getFightDayLockedWeekday("Monday", undefined), null);
 });
