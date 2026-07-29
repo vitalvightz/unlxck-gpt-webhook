@@ -39,6 +39,29 @@ export function computeDaysUntilFight(
   return diffDays < 0 ? null : diffDays;
 }
 
+export const FIGHT_WEEK_LOCK_THRESHOLD_DAYS = 7;
+
+/**
+ * Return the weekday that must be locked out of the combat-load tag pickers,
+ * or null when no lock applies.
+ *
+ * The fight weekday is only locked inside fight week, where it occurs exactly
+ * once and that occurrence is the fight itself. At 7+ days out the same weekday
+ * recurs on ordinary training days, and the backend fight-day override
+ * (fightcamp/fight_day_override.py) already clamps the real fight day on the
+ * final camp week.
+ */
+export function getFightDayLockedWeekday(
+  fightDateWeekday: string | null | undefined,
+  daysUntilFight: number | null | undefined,
+): string | null {
+  if (!fightDateWeekday) return null;
+  // null covers "no fight date" and "fight date already passed".
+  if (daysUntilFight === null || daysUntilFight === undefined) return null;
+  if (daysUntilFight >= FIGHT_WEEK_LOCK_THRESHOLD_DAYS) return null;
+  return fightDateWeekday;
+}
+
 export function isFightDateInPast(
   fightDate: string | null | undefined,
   nowInput?: Date,
