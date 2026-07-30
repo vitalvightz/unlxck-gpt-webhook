@@ -457,9 +457,18 @@ def _reband_confidence(view: CommandView, context_status: ReadinessContextStatus
     Contributors and sources are left alone: they describe why the stored
     decision was made, and that is unchanged. The band is not, because it reports
     how much could be verified, and right now some of it could not be.
+
+    At an EQUAL band the live failure still replaces the stored qualifier. Two
+    different problems can both be "moderate": an athlete with little history,
+    and an athlete whose history could not be loaded. Keeping the stored wording
+    there told someone with a failed read that they had "no recent days to
+    compare", which is both untrue and the wrong remedy — it says check in
+    tomorrow, when nothing the athlete does will fix a read that broke.
     """
     banded = confidence_band(context_status.reason_codes)
-    if _CONFIDENCE_RANK[banded] <= _CONFIDENCE_RANK[view.today.recommendation_confidence]:
+    if _CONFIDENCE_RANK[banded] < _CONFIDENCE_RANK[view.today.recommendation_confidence]:
+        # This read is genuinely better than the one that stored the decision, so
+        # the stored band stands: worst-of, never raised.
         return
     view.today.recommendation_confidence = banded
     view.today.recommendation_confidence_note = confidence_note(context_status.reason_codes)

@@ -499,3 +499,29 @@ def test_a_complete_context_leaves_the_explanation_untouched():
     assert view.today.recommendation_confidence == "high"
     assert view.today.recommendation_confidence_note == ""
     assert "Fight week" in view.today.recommendation_contributors
+
+
+def test_an_equal_band_still_adopts_the_live_failure_reason():
+    # Two different problems both rank moderate: an athlete with little history,
+    # and an athlete whose history could not be loaded. Keeping the stored wording
+    # at an equal band told someone with a failed read that they had "no recent
+    # days to compare" — untrue, and the wrong remedy, since checking in tomorrow
+    # cannot fix a read that broke.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "modify",
+            "recommendation_reason": "Session reduced.\nPoor sleep.",
+            "recommendation_triggers": ["poor_sleep", "sparse_history"],
+        },
+    )
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_confidence == "moderate"
+    assert "check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+    assert "no recent days to compare" not in view.today.recommendation_confidence_note

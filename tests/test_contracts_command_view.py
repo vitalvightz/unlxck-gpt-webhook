@@ -422,3 +422,41 @@ class TestContributorLimit:
 
         assert contributor_labels(("poor_sleep", "flat_body"), limit=0) == ()
         assert contributor_labels(("poor_sleep", "flat_body"), limit=1) == ("Poor sleep",)
+
+
+class TestSelfSufficientDecisions:
+    """A decision that needs no history to stand keeps its full band.
+
+    Thin data takes nothing away from a red-flag stop. Tagging it anyway produced
+    the worst reading on the card: "STOP TODAY" beside a lowered band, which says
+    the stop is uncertain when it is the most certain call the engine makes.
+    """
+
+    def _band_for(self, checkin_kwargs) -> tuple[str, str]:
+        from api.contracts.readiness_message import (
+            ReadinessCheckin,
+            ReadinessContext,
+            build_readiness_adjustment,
+            confidence_band,
+        )
+
+        # A brand-new athlete: no prior check-ins, no resolvable session.
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(**checkin_kwargs), ReadinessContext(training_day=TODAY)
+        )
+        return adjustment.decision, confidence_band(adjustment.triggers)
+
+    def test_a_red_flag_stop_is_not_reported_as_uncertain(self):
+        assert self._band_for({"sharp_pain": True}) == ("pull_back", "high")
+        assert self._band_for({"neurological_symptoms": True}) == ("pull_back", "high")
+
+    def test_an_injury_stop_is_not_reported_as_uncertain(self):
+        assert self._band_for({"active_injury": "worse"}) == ("pull_back", "high")
+
+    def test_a_high_pain_stop_is_not_reported_as_uncertain(self):
+        assert self._band_for({"pain": "high"}) == ("pull_back", "high")
+
+    def test_an_ordinary_fatigue_call_still_reflects_thin_data(self):
+        # Poor sleep genuinely reads differently against a history, so the band
+        # still drops. Only the self-sufficient signals are exempt.
+        assert self._band_for({"sleep": "poor"}) == ("modify", "moderate")

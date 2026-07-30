@@ -1651,6 +1651,8 @@ def build_readiness_adjustment(
     """
     context = context or ReadinessContext()
     adjustment = _resolve_readiness_adjustment(checkin, context)
+    if _is_self_sufficient(adjustment.triggers):
+        return adjustment
     completeness = _completeness_triggers(context)
     if not completeness:
         return adjustment
@@ -1665,6 +1667,21 @@ def build_readiness_adjustment(
 # api/services/readiness_failsafe.py).
 SPARSE_HISTORY = "sparse_history"
 SESSION_UNRESOLVED = "session_unresolved"
+
+# Signals that decide the day on their own. A red-flag symptom, a worsening or
+# severe injury, or high pain is a stop whatever the history says, so thin data
+# takes nothing away from it. Tagging these anyway produced the worst reading on
+# the card: a new athlete reporting sharp pain saw "STOP TODAY" next to a lowered
+# band, which says the stop is uncertain when it is the most certain call the
+# engine makes.
+_SELF_SUFFICIENT_TRIGGERS = frozenset(
+    {"red_flag", "active_injury_worse", "pain_high", "injury_hold", *_SAFETY_FLAG_LABELS}
+)
+
+
+def _is_self_sufficient(triggers: Sequence[str]) -> bool:
+    """True when the decision rests on a signal that needs no history to stand."""
+    return any(str(trigger).strip() in _SELF_SUFFICIENT_TRIGGERS for trigger in triggers)
 
 
 def _completeness_triggers(context: ReadinessContext) -> tuple[str, ...]:

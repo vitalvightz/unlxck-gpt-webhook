@@ -10,9 +10,11 @@ from __future__ import annotations
 from api.contracts.readiness_message import ReadinessAdjustment
 from api.services.readiness_failsafe import (
     CHECKINS_UNAVAILABLE,
+    COMPLETIONS_UNAVAILABLE,
     CONTEXT_UNAVAILABLE,
     INJURY_CONTEXT_UNAVAILABLE,
     INTAKE_UNAVAILABLE,
+    SESSION_UNAVAILABLE,
     COMPLETE_STATUS,
     ContextStatusBuilder,
     ReadinessContextStatus,
@@ -198,3 +200,45 @@ class TestPreservedDecisionsCarryTheirStatusCodes:
     def test_a_complete_context_leaves_the_decision_untouched(self):
         original = self._cautious()
         assert apply_context_failsafe(original, COMPLETE_STATUS) is original
+
+
+class TestReplacedDecisionsKeepTheSpecificFailureCode:
+    """A replaced decision carries the component code, not just the umbrella.
+
+    The fallbacks carry only "degraded"/"unavailable", and that is what gets
+    persisted on the check-in row. Without the merge, a failed session-history or
+    profile read read back later as "check-in history incomplete", and a failed
+    schedule read read back as a claim about training and injury history that was
+    never true.
+    """
+
+    def _green(self) -> ReadinessAdjustment:
+        return ReadinessAdjustment(
+            decision="train_as_planned",
+            title="Full session.",
+            reason="All clear.",
+            action="Run the planned work.",
+            triggers=("phase_gpp",),
+        )
+
+    def test_a_failed_completions_read_is_named(self):
+        out = apply_context_failsafe(self._green(), status_from_components(["recent_sessions"]))
+        assert out.decision == "modify"
+        assert COMPLETIONS_UNAVAILABLE in out.triggers
+
+    def test_a_failed_intake_read_is_named(self):
+        out = apply_context_failsafe(self._green(), status_from_components(["intake"]))
+        assert INTAKE_UNAVAILABLE in out.triggers
+
+    def test_a_failed_schedule_read_is_named(self):
+        out = apply_context_failsafe(self._green(), status_from_components(["schedule"]))
+        assert out.decision == "pull_back"
+        assert SESSION_UNAVAILABLE in out.triggers
+
+    def test_the_fallback_copy_names_no_particular_input(self):
+        # Several different reads reach the same fallback, so its prose must not
+        # claim one of them. The specific component rides in the triggers.
+        for component in ("recent_sessions", "intake", "schedule", "injury_flags"):
+            out = apply_context_failsafe(self._green(), status_from_components([component]))
+            assert "injury history" not in out.reason
+            assert "check-in history" not in out.reason
