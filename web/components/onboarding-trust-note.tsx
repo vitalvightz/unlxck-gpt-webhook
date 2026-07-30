@@ -1,8 +1,4 @@
-import {
-  TRUST_INTRO_BODY,
-  TRUST_INTRO_HEADING,
-  TRUST_POINTS,
-} from "@/lib/trust-copy";
+import { TRUST_INTRO_HEADING, TRUST_POINTS } from "@/lib/trust-copy";
 
 /**
  * Sets expectations at the start of intake: what the camp is built from, that
@@ -23,10 +19,9 @@ export function OnboardingTrustNote() {
           {TRUST_INTRO_HEADING}
         </h2>
       </div>
-      <p className="muted">{TRUST_INTRO_BODY}</p>
       <ul className="onboarding-trust-points">
         {TRUST_POINTS.map((point) => (
-          <li key={point.title}>
+          <li key={point.title} className="onboarding-trust-point">
             <p className="onboarding-trust-point-title">{point.title}</p>
             <p className="onboarding-trust-point-body">{point.body}</p>
           </li>

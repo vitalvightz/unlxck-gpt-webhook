@@ -8,7 +8,7 @@ decision plus the athlete-facing adjustment message.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Any, Callable, Literal, Mapping, Sequence
 
@@ -1641,7 +1641,52 @@ def build_readiness_adjustment(
     checkin: ReadinessCheckin,
     context: ReadinessContext | None = None,
 ) -> ReadinessAdjustment:
+    """The readiness decision, tagged with how much data it rests on.
+
+    Thin wrapper over :func:`_resolve_readiness_adjustment` so the completeness
+    codes are appended once, on every path. The inner function returns early in
+    several places (red flags, safe fillers, injury floors) and each of those
+    decisions rests on data of a different thickness, so tagging inside it would
+    mean remembering to tag five separate returns.
+    """
     context = context or ReadinessContext()
+    adjustment = _resolve_readiness_adjustment(checkin, context)
+    completeness = _completeness_triggers(context)
+    if not completeness:
+        return adjustment
+    merged = tuple(dict.fromkeys([*adjustment.triggers, *completeness]))
+    return replace(adjustment, triggers=merged)
+
+
+# Data-thinness codes. These say nothing about the athlete: they record that the
+# decision was made from less than the usual amount of data, which is what the
+# card's confidence band reports. A failed READ is a different thing and is
+# tracked separately (``context_degraded`` / ``context_unavailable`` in
+# api/services/readiness_failsafe.py).
+SPARSE_HISTORY = "sparse_history"
+SESSION_UNRESOLVED = "session_unresolved"
+
+
+def _completeness_triggers(context: ReadinessContext) -> tuple[str, ...]:
+    """Codes recording which usual inputs this decision did NOT have.
+
+    Two cases, both of which leave a decision resting on today's check-in alone:
+    no prior check-in inside the recency window (a new athlete, or one who has
+    not logged in days), and no resolvable session for today (so exposure could
+    not be graded).
+    """
+    codes: list[str] = []
+    if not _prior_unique_checkins(context):
+        codes.append(SPARSE_HISTORY)
+    if classify_session_risk(context.today_session) == "unknown":
+        codes.append(SESSION_UNRESOLVED)
+    return tuple(codes)
+
+
+def _resolve_readiness_adjustment(
+    checkin: ReadinessCheckin,
+    context: ReadinessContext,
+) -> ReadinessAdjustment:
     phase = _normalize_phase(context.phase or checkin.phase)
     session_risk = classify_session_risk(context.today_session)
     session_modality = classify_session_modality(context.today_session)
@@ -1901,3 +1946,58 @@ def decision_sources(
     if codes & _PHASE_TRIGGERS:
         sources.append("your camp phase")
     return tuple(sources)
+
+
+# ---------------------------------------------------------------------------
+# Confidence band
+#
+# This reports DATA COMPLETENESS, not predictive accuracy. It answers "how much
+# did this call have to go on", which the engine knows for certain, and not "how
+# likely is this call to be right", which would need outcome data the product
+# does not yet collect. The copy is worded to keep that distinction visible: a
+# band below high always names the missing input rather than hedging vaguely.
+#
+# Three bands rather than a percentage. A number implies a calibration that does
+# not exist behind it, and reads as false precision to an athlete deciding
+# whether to spar.
+# ---------------------------------------------------------------------------
+
+ConfidenceBand = Literal["high", "moderate", "low"]
+
+# Code -> what was missing, in the athlete's words. Ordered by how much it costs
+# the decision, strongest first, since the qualifier line names one reason only.
+_CONFIDENCE_GAPS: tuple[tuple[str, str], ...] = (
+    ("context_unavailable", "we couldn't load your training and injury history"),
+    ("context_degraded", "some of your recent history couldn't be loaded"),
+    ("session_unresolved", "today's session isn't resolved yet"),
+    (SPARSE_HISTORY, "this is based on today's check-in alone, with no recent days to compare"),
+)
+
+_LOW_CONFIDENCE_TRIGGERS = frozenset({"context_unavailable"})
+_MODERATE_CONFIDENCE_TRIGGERS = frozenset(
+    {"context_degraded", "session_unresolved", SPARSE_HISTORY}
+)
+
+
+def confidence_band(triggers: Sequence[str]) -> ConfidenceBand:
+    """How much data this decision rests on, as a three-way band."""
+    codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    if codes & _LOW_CONFIDENCE_TRIGGERS:
+        return "low"
+    if codes & _MODERATE_CONFIDENCE_TRIGGERS:
+        return "moderate"
+    return "high"
+
+
+def confidence_note(triggers: Sequence[str]) -> str:
+    """One line naming what the decision was missing, or "" at high confidence.
+
+    Naming the specific gap is the whole point. "Moderate confidence" on its own
+    tells an athlete nothing they can act on; "no recent days to compare" tells
+    them that checking in tomorrow fixes it.
+    """
+    codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    for code, gap in _CONFIDENCE_GAPS:
+        if code in codes:
+            return f"Lower confidence today: {gap}."
+    return ""

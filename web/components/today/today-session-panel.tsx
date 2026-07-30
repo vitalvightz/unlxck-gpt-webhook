@@ -385,6 +385,8 @@ export function TodaySessionPanel({
           tier={decisionTier}
           contributors={state.today.recommendation_contributors}
           sources={state.today.recommendation_sources}
+          confidence={state.today.recommendation_confidence}
+          confidenceNote={state.today.recommendation_confidence_note}
         />
         {recommendationState !== "not_checked_in" ? (
           <ContextualFeedback
@@ -437,6 +439,8 @@ export function TodaySessionPanel({
         tier={decisionTier}
         contributors={state.today.recommendation_contributors}
         sources={state.today.recommendation_sources}
+        confidence={state.today.recommendation_confidence}
+        confidenceNote={state.today.recommendation_confidence_note}
       />
       {recommendationState !== "not_checked_in" ? (
         <ContextualFeedback

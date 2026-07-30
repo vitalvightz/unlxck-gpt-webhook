@@ -18,7 +18,13 @@ from typing import Any, Literal, Mapping, Sequence
 from pydantic import BaseModel, Field
 
 from .completion import CompletionStatus, completion_status_of
-from .readiness_message import contributor_labels, decision_sources
+from .readiness_message import (
+    ConfidenceBand,
+    confidence_band,
+    confidence_note,
+    contributor_labels,
+    decision_sources,
+)
 from .recommendation import RecommendationState, resolve_recommendation_state
 
 # ---------------------------------------------------------------------------
@@ -248,6 +254,12 @@ class CommandViewToday(BaseModel):
     # decision it explains. Both are empty until the athlete has checked in.
     recommendation_contributors: list[str] = Field(default_factory=list)
     recommendation_sources: list[str] = Field(default_factory=list)
+    # How much data the decision rests on, and what it was missing. This is data
+    # completeness, NOT predictive accuracy — see readiness_message. Defaults to
+    # "high" with an empty note before check-in, when there is no decision to
+    # qualify and nothing is rendered anyway.
+    recommendation_confidence: ConfidenceBand = "high"
+    recommendation_confidence_note: str = ""
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"
@@ -365,6 +377,8 @@ def build_command_view(
             if rec_view.triggers
             else []
         ),
+        recommendation_confidence=confidence_band(rec_view.triggers),
+        recommendation_confidence_note=confidence_note(rec_view.triggers),
         warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},
         session_scope=resolved_session_scope,

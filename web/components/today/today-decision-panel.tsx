@@ -6,6 +6,17 @@ import {
   type TodayDecisionBanner,
   type TodayDecisionTier,
 } from "@/lib/today";
+import type { TodayCommandView } from "@/lib/types";
+
+type TodayDecisionConfidence = NonNullable<
+  TodayCommandView["today"]["recommendation_confidence"]
+>;
+
+const CONFIDENCE_LABELS: Record<TodayDecisionConfidence, string> = {
+  high: "High",
+  moderate: "Moderate",
+  low: "Low",
+};
 
 /**
  * Compact train/modify/pull-back banner shown above today's blocks once the
@@ -19,23 +30,41 @@ import {
  * They are worded as CONTRIBUTORS, never causes. The engine records which
  * signals were present when it decided; it does not establish that any one of
  * them caused the change, so the heading must not claim it did.
+ *
+ * `confidence` is DATA COMPLETENESS, not predictive accuracy. It reports how
+ * much the call had to go on, which the engine knows; it does not claim how
+ * likely the call is to be right, which would need outcome data the product does
+ * not collect yet.
+ *
+ * Order matters here. The action reads before the reasoning because an athlete
+ * standing in a gym scans for what to do first, and only then asks why. The
+ * evidence (signals, confidence, sources) follows both, as support rather than
+ * as competition for the instruction.
  */
 export function TodayDecisionPanel({
   banner,
   tier,
   contributors,
   sources,
+  confidence = "high",
+  confidenceNote,
 }: {
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
   contributors?: string[];
   sources?: string[];
+  confidence?: TodayDecisionConfidence;
+  confidenceNote?: string;
 }) {
   if (!banner) {
     return null;
   }
   const signals = (contributors ?? []).filter((value) => value.trim());
   const usedSources = (sources ?? []).filter((value) => value.trim());
+  const note = (confidenceNote ?? "").trim();
+  // A live backend decision always resolves at least one source, so this is the
+  // signal that there is a real decision to qualify rather than a preview.
+  const hasBackendDecision = usedSources.length > 0;
   // Headline the tier ("Stop today" etc.) so Today matches the Overview action
   // framing; the chip carries the tier marker and the detail keeps the specifics.
   // Prefer the authoritative backend tier when supplied so the headline can never
@@ -53,23 +82,36 @@ export function TodayDecisionPanel({
       </span>
       <div className="today-decision-body">
         <p className="today-decision-title">{tierLabel}</p>
+        {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
         <p className="today-decision-detail">{banner.detail}</p>
-        {banner.action ? <p className="today-decision-detail">{banner.action}</p> : null}
         {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
-        {signals.length ? (
-          <div className="today-decision-signals">
-            <p className="today-decision-signals-label" id="today-decision-signals-label">
-              What moved this
-            </p>
-            <ul aria-labelledby="today-decision-signals-label">
-              {signals.map((signal) => (
-                <li key={signal}>{signal}</li>
-              ))}
-            </ul>
+        {signals.length || hasBackendDecision ? (
+          <div className="today-decision-evidence">
+            {signals.length ? (
+              <div className="today-decision-signals">
+                <p className="today-decision-signals-label" id="today-decision-signals-label">
+                  What moved this
+                </p>
+                <ul aria-labelledby="today-decision-signals-label">
+                  {signals.map((signal) => (
+                    <li key={signal}>{signal}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {hasBackendDecision ? (
+              <p className="today-decision-confidence" data-band={confidence}>
+                <span className="today-decision-confidence-label">Confidence</span>
+                <span className="today-decision-confidence-band">
+                  {CONFIDENCE_LABELS[confidence]}
+                </span>
+                {note ? <span className="today-decision-confidence-note">{note}</span> : null}
+              </p>
+            ) : null}
+            {usedSources.length ? (
+              <p className="today-decision-sources">Based on {formatSourceList(usedSources)}.</p>
+            ) : null}
           </div>
-        ) : null}
-        {usedSources.length ? (
-          <p className="today-decision-sources">Based on {formatSourceList(usedSources)}.</p>
         ) : null}
       </div>
     </div>

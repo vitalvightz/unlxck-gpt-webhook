@@ -12,31 +12,26 @@
 //   change, and the copy must not claim more than the engine knows.
 // - Nothing here is a safety claim. Medical wording belongs in safety-copy.ts.
 
-export const TRUST_INTRO_HEADING = "How Unlxck builds your camp";
+export const TRUST_INTRO_HEADING = "How Unlxck works";
 
-export const TRUST_INTRO_BODY =
-  "Your answers here shape the whole camp: your sport, fight date, schedule, equipment, goals, " +
-  "and anything you are carrying. Nothing is generated until you review it.";
-
-// Shown during intake, before the athlete has ever seen a daily recommendation,
-// so the daily flow is not a surprise later.
+// Four cards, not four paragraphs. Nobody reads prose on an intake screen, and
+// an explanation that goes unread builds no trust at all. Every body line is one
+// or two short sentences so the whole block can be scanned in a few seconds.
 export const TRUST_POINTS: readonly { title: string; body: string }[] = [
   {
-    title: "Your plan stays your plan",
-    body:
-      "Daily check-ins never rewrite your saved camp. They adjust the session in front of you, and " +
-      "every adjustment is recorded so you can see what changed and when.",
+    title: "Your answers build your camp",
+    body: "Everything starts with your sport, fight date, schedule, equipment and goals.",
   },
   {
-    title: "Changed sessions show their reasons",
-    body:
-      "When a session changes, you see the signals behind it and what it was based on: today's " +
-      "check-in, your recent check-ins and sessions, and any injuries you are tracking.",
+    title: "Daily check-ins adjust today",
+    body: "Your camp stays the same. Today's session changes only when it needs to.",
   },
   {
-    title: "You stay in control",
-    body:
-      "You can follow the adjusted session, log what you actually did instead, or flag an injury " +
-      "for review. Your coach's call always beats the app's.",
+    title: "Every change has a reason",
+    body: "You always see the signals behind a change, and what it was based on.",
+  },
+  {
+    title: "You're always in control",
+    body: "Follow the change, log what you actually did, or take your coach's call instead.",
   },
 ];

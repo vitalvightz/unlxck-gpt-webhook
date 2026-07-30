@@ -178,6 +178,8 @@ class TestShape:
             "injury_hold_exempt",
             "recommendation_contributors",
             "recommendation_sources",
+            "recommendation_confidence",
+            "recommendation_confidence_note",
             "warnings",
             "next_session",
             "session_scope",
@@ -326,3 +328,65 @@ class TestContributorsAndSources:
         view = build_command_view(current_training_day=TODAY, plan=PLAN)
         assert view.today.recommendation_contributors == []
         assert view.today.recommendation_sources == []
+
+
+class TestConfidenceBand:
+    """Confidence reports DATA COMPLETENESS, not predictive accuracy. It answers
+    "how much did this call have to go on", which the engine knows for certain."""
+
+    def test_a_complete_context_is_high_confidence_with_no_qualifier(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "session_risk_high"]),
+        )
+        assert view.today.recommendation_confidence == "high"
+        assert view.today.recommendation_confidence_note == ""
+
+    def test_no_prior_checkins_drops_confidence_to_moderate(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "sparse_history"]),
+        )
+        assert view.today.recommendation_confidence == "moderate"
+        assert "no recent days to compare" in view.today.recommendation_confidence_note
+
+    def test_an_unresolved_session_drops_confidence_to_moderate(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "session_unresolved"]),
+        )
+        assert view.today.recommendation_confidence == "moderate"
+
+    def test_an_unavailable_context_is_low_confidence(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(decision="pull_back", triggers=["context_unavailable"]),
+        )
+        assert view.today.recommendation_confidence == "low"
+
+    def test_the_qualifier_names_the_strongest_gap_only(self):
+        # One reason, not a list of everything missing: the athlete needs the thing
+        # to act on, and a stacked list reads as an error log.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["context_degraded", "sparse_history"]),
+        )
+        note = view.today.recommendation_confidence_note
+        assert note.count("Lower confidence today") == 1
+        assert "recent history couldn't be loaded" in note
+
+    def test_completeness_codes_never_render_as_contributors(self):
+        # They describe the DATA, not the athlete. "Sparse history" in the "what
+        # moved this" list would read as a reason the session changed, which it is
+        # not — the confidence band is where it belongs.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "sparse_history", "session_unresolved"]),
+        )
+        assert view.today.recommendation_contributors == ["Poor sleep"]

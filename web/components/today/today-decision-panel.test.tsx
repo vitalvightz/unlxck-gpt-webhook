@@ -66,6 +66,40 @@ test("the panel stays null before check-in even with contributors supplied", () 
   assert.equal(html, "");
 });
 
+test("the action reads before the reason", () => {
+  // An athlete in a gym scans for what to do first. If the reason lands above the
+  // instruction, the instruction is what gets skipped.
+  const html = renderToStaticMarkup(<TodayDecisionPanel banner={BANNER} />);
+  assert.ok(html.indexOf(BANNER.action!) < html.indexOf(BANNER.detail));
+});
+
+test("confidence renders whenever there is a live backend decision", () => {
+  const html = renderToStaticMarkup(
+    <TodayDecisionPanel banner={BANNER} sources={["today's check-in"]} confidence="high" />,
+  );
+  assert.ok(html.includes("Confidence"));
+  assert.ok(html.includes("High"));
+});
+
+test("a below-high band names the missing input", () => {
+  const html = renderToStaticMarkup(
+    <TodayDecisionPanel
+      banner={BANNER}
+      sources={["today's check-in"]}
+      confidence="moderate"
+      confidenceNote="Lower confidence today: no recent days to compare."
+    />,
+  );
+  assert.ok(html.includes("Moderate"));
+  assert.ok(html.includes("no recent days to compare"));
+  assert.ok(html.includes('data-band="moderate"'));
+});
+
+test("confidence is hidden when there is no backend decision to qualify", () => {
+  const html = renderToStaticMarkup(<TodayDecisionPanel banner={BANNER} />);
+  assert.ok(!html.includes("Confidence"));
+});
+
 test("the explanation never claims a signal caused the change", () => {
   const html = renderToStaticMarkup(
     <TodayDecisionPanel banner={BANNER} contributors={["Poor sleep"]} sources={["today's check-in"]} />,
