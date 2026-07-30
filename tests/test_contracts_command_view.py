@@ -401,7 +401,7 @@ class TestConfidenceBand:
             recommendation=_rec(triggers=["context_degraded", "sparse_history"]),
         )
         note = view.today.recommendation_confidence_note
-        assert note.count("Lower confidence today") == 1
+        assert note.count("Less to go on today") == 1
         assert "recent history couldn't be loaded" in note
 
     def test_completeness_codes_never_render_as_contributors(self):

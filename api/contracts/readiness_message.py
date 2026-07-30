@@ -1969,13 +1969,15 @@ def decision_sources(
 
 
 # ---------------------------------------------------------------------------
-# Confidence band
+# Confidence band, shown to the athlete as "Data coverage"
 #
 # This reports DATA COMPLETENESS, not predictive accuracy. It answers "how much
 # did this call have to go on", which the engine knows for certain, and not "how
 # likely is this call to be right", which would need outcome data the product
-# does not yet collect. The copy is worded to keep that distinction visible: a
-# band below high always names the missing input rather than hedging vaguely.
+# does not yet collect. The athlete-facing label says coverage for exactly that
+# reason; calling it confidence invited the opposite reading. The copy keeps the
+# distinction too: a band below high always names the missing input rather than
+# hedging vaguely.
 #
 # Three bands rather than a percentage. A number implies a calibration that does
 # not exist behind it, and reads as false precision to an athlete deciding
@@ -2042,5 +2044,5 @@ def confidence_note(triggers: Sequence[str]) -> str:
     codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
     for code, gap in _CONFIDENCE_GAPS:
         if code in codes:
-            return f"Lower confidence today: {gap}."
+            return f"Less to go on today: {gap}."
     return ""

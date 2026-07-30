@@ -20,14 +20,14 @@ test("contributors render as the 'what moved this' signal list", () => {
   const html = renderToStaticMarkup(
     <TodayDecisionPanel banner={BANNER} contributors={["Poor sleep", "Heavy recent load"]} />,
   );
-  assert.ok(html.includes("What moved this"));
+  assert.ok(html.includes("Signals considered"));
   assert.ok(html.includes("Poor sleep"));
   assert.ok(html.includes("Heavy recent load"));
 });
 
 test("the signal list is omitted when the backend sends no contributors", () => {
   const html = renderToStaticMarkup(<TodayDecisionPanel banner={BANNER} />);
-  assert.ok(!html.includes("What moved this"));
+  assert.ok(!html.includes("Signals considered"));
   assert.ok(!html.includes("today-decision-signals"));
 });
 
@@ -35,7 +35,7 @@ test("blank contributors never render an empty chip", () => {
   const html = renderToStaticMarkup(
     <TodayDecisionPanel banner={BANNER} contributors={["", "   "]} />,
   );
-  assert.ok(!html.includes("What moved this"));
+  assert.ok(!html.includes("Signals considered"));
 });
 
 test("sources render as a spoken 'Based on' line", () => {
@@ -77,7 +77,7 @@ test("confidence renders whenever there is a live backend decision", () => {
   const html = renderToStaticMarkup(
     <TodayDecisionPanel banner={BANNER} sources={["today's check-in"]} confidence="high" />,
   );
-  assert.ok(html.includes("Confidence"));
+  assert.ok(html.includes("Data coverage"));
   assert.ok(html.includes("High"));
 });
 
@@ -100,12 +100,12 @@ test("confidence is hidden when the backend sends no band", () => {
   // judge it by. Rendering a default "High" there would put the most confident
   // claim on the one decision nothing is known about.
   const html = renderToStaticMarkup(<TodayDecisionPanel banner={BANNER} />);
-  assert.ok(!html.includes("Confidence"));
+  assert.ok(!html.includes("Data coverage"));
 
   const withSources = renderToStaticMarkup(
     <TodayDecisionPanel banner={BANNER} sources={["today's check-in"]} confidence={null} />,
   );
-  assert.ok(!withSources.includes("Confidence"));
+  assert.ok(!withSources.includes("Data coverage"));
   assert.ok(withSources.includes("Based on today&#x27;s check-in."));
 });
 

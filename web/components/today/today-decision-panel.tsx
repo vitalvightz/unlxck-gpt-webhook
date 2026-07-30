@@ -27,19 +27,21 @@ const CONFIDENCE_LABELS: Record<TodayDecisionConfidence, string> = {
  * what moved today's call, and what it was read from. Both are computed by the
  * backend from the engine's own trigger codes, so this panel only renders them.
  *
- * They are worded as CONTRIBUTORS, never causes. The engine records which
- * signals were present when it decided; it does not establish that any one of
- * them caused the change, so the heading must not claim it did.
+ * They render under "Signals considered", never as causes. The engine records
+ * which signals were present when it decided; it does not establish that any one
+ * of them caused the change, so the heading must not claim it did.
  *
- * `confidence` is DATA COMPLETENESS, not predictive accuracy. It reports how
- * much the call had to go on, which the engine knows; it does not claim how
- * likely the call is to be right, which would need outcome data the product does
- * not collect yet.
+ * `confidence` renders as "Data coverage" because that is what it measures: how
+ * much the call had to go on, which the engine knows for certain. It is not
+ * confidence that the call is RIGHT, which would need outcome data the product
+ * does not collect yet. Labelling it "Confidence" invited the opposite reading,
+ * worst of all on a red-flag stop, where a lowered band appeared to cast doubt
+ * on the most certain decision the engine makes.
  *
  * Order matters here. The action reads before the reasoning because an athlete
  * standing in a gym scans for what to do first, and only then asks why. The
- * evidence (signals, confidence, sources) follows both, as support rather than
- * as competition for the instruction.
+ * evidence (signals, coverage, sources) follows both, as support rather than as
+ * competition for the instruction.
  */
 export function TodayDecisionPanel({
   banner,
@@ -93,7 +95,7 @@ export function TodayDecisionPanel({
             {signals.length ? (
               <div className="today-decision-signals">
                 <p className="today-decision-signals-label" id="today-decision-signals-label">
-                  What moved this
+                  Signals considered
                 </p>
                 <ul aria-labelledby="today-decision-signals-label">
                   {signals.map((signal) => (
@@ -104,7 +106,7 @@ export function TodayDecisionPanel({
             ) : null}
             {band ? (
               <p className="today-decision-confidence" data-band={band}>
-                <span className="today-decision-confidence-label">Confidence</span>
+                <span className="today-decision-confidence-label">Data coverage</span>
                 <span className="today-decision-confidence-band">
                   {CONFIDENCE_LABELS[band]}
                 </span>
