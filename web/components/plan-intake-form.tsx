@@ -41,6 +41,7 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
+import { OnboardingTrustNote } from "@/components/onboarding-trust-note";
 import { SafetyNote } from "@/components/safety-note";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { INJURY_INTAKE_SAFETY } from "@/lib/safety-copy";
@@ -2416,6 +2417,7 @@ export function PlanIntakeForm() {
                   Refining your Quick Build plan. Your existing plan stays until you generate again.
                 </p>
               ) : null}
+              <OnboardingTrustNote />
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Identity</p>

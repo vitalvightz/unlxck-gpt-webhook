@@ -19,8 +19,13 @@ READINESS_REASON = "\n".join(
 )
 
 
-def _rec(training_day=TODAY, decision="modify", reason=READINESS_REASON):
-    return {"training_day": training_day, "decision": decision, "reason": reason}
+def _rec(training_day=TODAY, decision="modify", reason=READINESS_REASON, triggers=None):
+    return {
+        "training_day": training_day,
+        "decision": decision,
+        "reason": reason,
+        "triggers": list(triggers or []),
+    }
 
 
 class TestEmptyState:
@@ -171,6 +176,8 @@ class TestShape:
             "recommendation_reason",
             "decision_tier",
             "injury_hold_exempt",
+            "recommendation_contributors",
+            "recommendation_sources",
             "warnings",
             "next_session",
             "session_scope",
@@ -225,3 +232,97 @@ class TestDecisionTier:
             recommendation=_rec(decision="modify"),
         )
         assert view.today.decision_tier == "modify"
+
+
+class TestContributorsAndSources:
+    """The card's "why today changed" chips and its "Based on" line, both derived
+    from the engine's own trigger codes so they cannot drift from the decision."""
+
+    def test_contributors_are_exposed_for_a_live_recommendation(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "flat_body", "phase_spp"]),
+        )
+        assert view.today.recommendation_contributors == ["Poor sleep", "Body feels flat"]
+
+    def test_context_markers_never_render_as_contributors(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["phase_taper", "contact_sport", "session_risk_low"]),
+        )
+        assert view.today.recommendation_contributors == []
+
+    def test_contributors_are_capped_at_three(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(
+                triggers=[
+                    "poor_sleep",
+                    "flat_body",
+                    "manageable_pain",
+                    "recent_hard_session",
+                    "fight_week",
+                ]
+            ),
+        )
+        assert len(view.today.recommendation_contributors) == 3
+
+    def test_a_streak_absorbs_the_single_day_signal_it_covers(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "poor_sleep_3_day_streak"]),
+        )
+        assert view.today.recommendation_contributors == ["Poor sleep, 3 days"]
+
+    def test_sources_name_only_the_inputs_the_decision_used(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["repeated_poor_readiness", "session_risk_high"]),
+        )
+        assert view.today.recommendation_sources == [
+            "today's check-in",
+            "your last few check-ins",
+            "today's planned session",
+        ]
+
+    def test_open_injuries_are_named_as_a_source(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep"]),
+            open_injuries=[{"severity": "moderate", "status": "open", "label": "left knee"}],
+        )
+        assert "your tracked injuries" in view.today.recommendation_sources
+
+    def test_a_degraded_context_hold_claims_no_history_it_could_not_read(self):
+        # The hold exists BECAUSE the history failed to load, so the card must not
+        # then claim it was based on that history.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["context_degraded"]),
+        )
+        assert view.today.recommendation_contributors == ["Check-in history incomplete"]
+        assert view.today.recommendation_sources == ["today's check-in"]
+
+    def test_an_expired_recommendation_exposes_no_contributors(self):
+        # Expired recommendations are history, never live readiness — and an
+        # explanation of a decision that is no longer in force is worse than none.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(training_day="2026-06-17", triggers=["poor_sleep"]),
+        )
+        assert view.today.recommendation_state == "not_checked_in"
+        assert view.today.recommendation_contributors == []
+        assert view.today.recommendation_sources == []
+
+    def test_no_recommendation_yields_empty_lists(self):
+        view = build_command_view(current_training_day=TODAY, plan=PLAN)
+        assert view.today.recommendation_contributors == []
+        assert view.today.recommendation_sources == []

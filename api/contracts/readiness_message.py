@@ -1755,3 +1755,149 @@ def build_readiness_adjustment(
         ),
         session_risk=session_risk,
     )
+
+
+# ---------------------------------------------------------------------------
+# Athlete-facing contributors and sources ("why today changed", "what we used")
+#
+# The engine already records WHY it decided, as trigger codes. These turn that
+# record into the two short athlete-facing lists the Today decision card shows,
+# so the card explains itself from the same data the decision was made from and
+# can never drift from it.
+#
+# Deliberately worded as CONTRIBUTORS, not causes. The engine records which
+# signals were present when it decided; it does not establish that any one of
+# them caused the change, and the copy must not imply that it did.
+# ---------------------------------------------------------------------------
+
+# Trigger code -> short chip label. Codes absent here are context markers
+# (phase_*, contact_sport, low/medium session risk) or generic umbrellas
+# (red_flag) that say nothing specific to an athlete, so they never render.
+_CONTRIBUTOR_LABELS: dict[str, str] = {
+    # Red-flag symptoms.
+    "sharp_pain": "Sharp pain",
+    "instability": "Instability",
+    "swelling": "Swelling",
+    "neurological_symptoms": "Neurological symptoms",
+    "illness_symptoms": "Illness symptoms",
+    "cannot_warm_into_movement": "Can't warm into movement",
+    "worse_next_day_pain": "Worse next-day pain",
+    # Injury state.
+    "active_injury_worse": "Injury reported worse",
+    "active_injury_restriction": "Active injury",
+    "tracked_injury_high_risk_session": "Active injury",
+    # Today's check-in.
+    "pain_high": "High pain",
+    "manageable_pain": "Manageable pain",
+    "poor_sleep": "Poor sleep",
+    "flat_body": "Body feels flat",
+    # Accumulated history.
+    "poor_sleep_3_day_streak": "Poor sleep, 3 days",
+    "flat_body_3_day_streak": "Flat body, 3 days",
+    "pain_3_day_streak": "Pain, 3 days",
+    "pain_worsening_trend": "Pain getting worse",
+    "repeated_poor_readiness": "Repeated poor check-ins",
+    "recent_hard_session": "Recent hard session",
+    "recent_hard_load_plus_poor_today": "Heavy recent load",
+    # Camp context that changed the call on its own.
+    "taper_poor_readiness": "Taper phase",
+    "reintegration_poor_readiness": "Return phase",
+    "fight_week": "Fight week",
+    # Today's planned work. Only the high tier is a contributor: a low or medium
+    # session did not push the decision anywhere.
+    "session_risk_high": "Hard session planned",
+    # Degraded safety context. Named plainly so a held-back athlete can see the
+    # hold came from missing data, not from their own readiness.
+    "context_degraded": "Check-in history incomplete",
+    "context_unavailable": "Safety history unavailable",
+}
+
+# When both codes fire, the first is fully covered by the second and would read
+# as the same thing twice ("Poor sleep" next to "Poor sleep, 3 days").
+_CONTRIBUTOR_SUPERSEDED_BY: tuple[tuple[str, str], ...] = (
+    ("poor_sleep", "poor_sleep_3_day_streak"),
+    ("flat_body", "flat_body_3_day_streak"),
+    ("manageable_pain", "pain_3_day_streak"),
+    ("manageable_pain", "pain_worsening_trend"),
+    ("pain_3_day_streak", "pain_worsening_trend"),
+    ("recent_hard_session", "recent_hard_load_plus_poor_today"),
+)
+
+# How many contributors the card shows. The report's "top contributors", not a
+# full audit trail: three is what an athlete reads before training.
+MAX_CONTRIBUTORS = 3
+
+
+def contributor_labels(
+    triggers: Sequence[str], *, limit: int = MAX_CONTRIBUTORS
+) -> tuple[str, ...]:
+    """The top athlete-facing contributor labels behind a readiness decision.
+
+    Preserves the engine's own trigger order (most decisive first), drops context
+    markers and codes covered by a stronger co-occurring signal, de-duplicates by
+    label so two codes sharing one label ("Active injury") render once, and caps
+    the result at ``limit``.
+    """
+    present = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    superseded = {weaker for weaker, stronger in _CONTRIBUTOR_SUPERSEDED_BY if stronger in present}
+
+    labels: list[str] = []
+    for trigger in triggers:
+        code = str(trigger).strip()
+        if code in superseded:
+            continue
+        label = _CONTRIBUTOR_LABELS.get(code)
+        if label and label not in labels:
+            labels.append(label)
+        if len(labels) >= limit:
+            break
+    return tuple(labels)
+
+
+# Which inputs a trigger proves were actually read. Keyed to the source line the
+# athlete sees, so the card never claims to have used data it did not have.
+_HISTORY_CHECKIN_TRIGGERS = frozenset(
+    {
+        "poor_sleep_3_day_streak",
+        "flat_body_3_day_streak",
+        "pain_3_day_streak",
+        "pain_worsening_trend",
+        "repeated_poor_readiness",
+    }
+)
+_RECENT_SESSION_TRIGGERS = frozenset({"recent_hard_session", "recent_hard_load_plus_poor_today"})
+_INJURY_TRIGGERS = frozenset(
+    {"active_injury_worse", "active_injury_restriction", "tracked_injury_high_risk_session"}
+)
+_PHASE_TRIGGERS = frozenset({"taper_poor_readiness", "reintegration_poor_readiness", "fight_week"})
+_SESSION_RISK_TRIGGERS = frozenset({"session_risk_low", "session_risk_medium", "session_risk_high"})
+
+
+def decision_sources(
+    triggers: Sequence[str], *, has_open_injuries: bool = False
+) -> tuple[str, ...]:
+    """The inputs behind a decision, for the card's "Based on" line.
+
+    Every input UNLXCK holds today is athlete-reported, so this is a short honest
+    provenance list rather than a device audit. A source is named only when the
+    decision actually consulted it: a signal that fired proves the data was read,
+    and a degraded-context hold names nothing beyond today's check-in because the
+    history is exactly what failed to load.
+    """
+    codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    # An injury hold supersedes the daily readiness copy and fires whether or not
+    # the athlete has checked in today, so it rests on the tracked injury alone.
+    if "injury_hold" in codes:
+        return ("your tracked injuries",)
+    sources = ["today's check-in"]
+    if codes & _HISTORY_CHECKIN_TRIGGERS:
+        sources.append("your last few check-ins")
+    if codes & _RECENT_SESSION_TRIGGERS:
+        sources.append("your recent sessions")
+    if has_open_injuries or (codes & _INJURY_TRIGGERS):
+        sources.append("your tracked injuries")
+    if codes & _SESSION_RISK_TRIGGERS:
+        sources.append("today's planned session")
+    if codes & _PHASE_TRIGGERS:
+        sources.append("your camp phase")
+    return tuple(sources)

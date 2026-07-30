@@ -18,6 +18,7 @@ from typing import Any, Literal, Mapping, Sequence
 from pydantic import BaseModel, Field
 
 from .completion import CompletionStatus, completion_status_of
+from .readiness_message import contributor_labels, decision_sources
 from .recommendation import RecommendationState, resolve_recommendation_state
 
 # ---------------------------------------------------------------------------
@@ -241,6 +242,12 @@ class CommandViewToday(BaseModel):
     # True when today's scheduled session is a low-cost support / filler that an
     # injury hold does not apply to, so the UI must not block it for an injury.
     injury_hold_exempt: bool = False
+    # The top athlete-facing signals behind today's decision, and the inputs it
+    # was made from. Computed on the backend from the engine's own trigger codes
+    # (like decision_tier) so the card's explanation can never drift from the
+    # decision it explains. Both are empty until the athlete has checked in.
+    recommendation_contributors: list[str] = Field(default_factory=list)
+    recommendation_sources: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"
@@ -352,6 +359,12 @@ def build_command_view(
             injury_hold_exempt=injury_hold_exempt,
         ),
         injury_hold_exempt=injury_hold_exempt,
+        recommendation_contributors=list(contributor_labels(rec_view.triggers)),
+        recommendation_sources=(
+            list(decision_sources(rec_view.triggers, has_open_injuries=bool(open_injuries)))
+            if rec_view.triggers
+            else []
+        ),
         warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},
         session_scope=resolved_session_scope,
