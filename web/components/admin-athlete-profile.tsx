@@ -171,7 +171,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
       : []),
     { label: "Stance", value: formatValue(getOptionLabel(STANCE_OPTIONS, athlete.stance || "")) },
     {
-      label: "Technical style",
+      label: "Combat sport",
       value: <InlinePills items={getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style)} />,
     },
     {

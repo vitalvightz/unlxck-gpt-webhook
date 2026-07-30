@@ -36,7 +36,7 @@ test("validateQuickBuildInput rejects multiple technical styles", () => {
   const input = buildValidInput();
   input.technical_style = ["boxing", "muay_thai"];
   const errors = validateQuickBuildInput(input);
-  assert.equal(errors.technical_style, "Pick only one technical style.");
+  assert.equal(errors.technical_style, "Pick only one combat sport.");
 });
 
 test("validateQuickBuildInput rejects multiple tactical styles", () => {

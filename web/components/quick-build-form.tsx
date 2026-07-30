@@ -827,12 +827,12 @@ function QuickBuildFormInner() {
           <FieldError message={visibleError("full_name")} />
         </div>
         <div className="field">
-          <label htmlFor="qb-technical-style">Technical style</label>
+          <label htmlFor="qb-technical-style">Combat sport</label>
           <CustomSelect
             id="qb-technical-style"
             value={input.technical_style[0] ?? ""}
             options={TECHNICAL_STYLE_OPTIONS}
-            placeholder="Select technical style"
+            placeholder="Select combat sport"
             includeEmptyOption
             onChange={(value) => patch("technical_style", value ? [value] : [])}
           />

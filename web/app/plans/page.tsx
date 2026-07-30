@@ -124,7 +124,7 @@ function summarizeProfile(me: MeResponse | null): SummaryLine[] {
 
   const lines: SummaryLine[] = [
     { label: "Athlete", value: athleteName },
-    { label: "Technical style", value: formatCompactList(technicalStyle, "Not set yet") },
+    { label: "Combat sport", value: formatCompactList(technicalStyle, "Not set yet") },
   ];
 
   if (tacticalStyle.length) {

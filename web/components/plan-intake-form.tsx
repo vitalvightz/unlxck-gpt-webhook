@@ -822,7 +822,7 @@ function getReviewStepBlockingIssue(
   },
 ): { message: string; step: number; fieldId: string } | null {
   if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return { message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.", step: 0, fieldId: "record" };
-  if (!nextForm.athlete.technical_style.length) return { message: "Select a technical style before continuing to review.", step: 0, fieldId: "technicalStyle" };
+  if (!nextForm.athlete.technical_style.length) return { message: "Select a combat sport before continuing to review.", step: 0, fieldId: "technicalStyle" };
   if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose your fight date or mark \"No scheduled fight\" before continuing to review.", step: 1, fieldId: "fightDate" };
   if (!options.noScheduledFight && isFightDateInPast(nextForm.fight_date)) return { message: FIGHT_DATE_IN_PAST_MESSAGE, step: 1, fieldId: "fightDate" };
   if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2, fieldId: "trainingAvailabilityGroup" };
@@ -1656,7 +1656,7 @@ export function PlanIntakeForm() {
       }
       if (!nextForm.athlete.technical_style.length) {
         return reportInvalidField({
-          message: "Select a technical style before continuing.",
+          message: "Select a combat sport before continuing.",
           fieldId: "technicalStyle",
         });
       }
@@ -1737,7 +1737,7 @@ export function PlanIntakeForm() {
     }
     if (!nextForm.athlete.technical_style.length) {
       return reportInvalidField({
-        message: "Select a technical style before generating your plan.",
+        message: "Select a combat sport before generating your plan.",
         fieldId: "technicalStyle",
         step: 0,
       });
@@ -2106,7 +2106,7 @@ export function PlanIntakeForm() {
     ...(hasValue(form.athlete.weight_kg) ? [{ label: "Current weight", value: `${form.athlete.weight_kg} kg` }] : []),
     ...(hasValue(form.athlete.target_weight_kg) ? [{ label: "Target weight", value: `${form.athlete.target_weight_kg} kg` }] : []),
     { label: "Stance", value: stanceLabel },
-    { label: "Technical style", value: technicalStyleLabel },
+    { label: "Combat sport", value: technicalStyleLabel },
     { label: "Tactical style", value: tacticalStyleLabel },
     { label: "Professional status", value: statusLabel },
     { label: "Record", value: formatValue(form.athlete.record) },
@@ -2167,7 +2167,7 @@ export function PlanIntakeForm() {
   ];
   const reviewChecklistItems: StepValidationCheck[] = [
     {
-      label: form.athlete.technical_style.length ? "Technical style is selected." : "Technical style must be selected before generation.",
+      label: form.athlete.technical_style.length ? "Combat sport is selected." : "Combat sport must be selected before generation.",
       status: form.athlete.technical_style.length ? "done" : "pending",
     },
     {
@@ -2232,7 +2232,7 @@ export function PlanIntakeForm() {
               status: recordHasError ? "pending" : "done",
             },
             {
-              label: form.athlete.technical_style.length ? "Technical style is selected." : "Select at least one technical style.",
+              label: form.athlete.technical_style.length ? "Combat sport is selected." : "Select a combat sport.",
               status: form.athlete.technical_style.length ? "done" : "pending",
             },
           ] satisfies StepValidationCheck[],
@@ -2421,7 +2421,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Identity</p>
                   <h2 className="form-section-title">Core athlete details</h2>
                 </div>
-                <p className="muted">Only your name and technical style are required here. Everything else is optional.</p>
+                <p className="muted">Only your name and combat sport are required here. Everything else is optional.</p>
                 <div className="form-grid onboarding-profile-core-grid">
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
@@ -2436,18 +2436,17 @@ export function PlanIntakeForm() {
                     />
                   </div>
                   <div className={`field${invalidFieldId === "technicalStyle" ? " field-invalid" : ""}`}>
-                    <label htmlFor="technicalStyle">Technical Style</label>
+                    <label htmlFor="technicalStyle">Combat sport</label>
                     <CustomSelect
                       id="technicalStyle"
                       value={form.athlete.technical_style?.[0] ?? ""}
                       options={TECHNICAL_STYLE_OPTIONS}
-                      placeholder="Select technical style"
+                      placeholder="Select combat sport"
                       includeEmptyOption
                       invalid={invalidFieldId === "technicalStyle"}
                       describedBy={invalidFieldId === "technicalStyle" ? "technicalStyle-error" : undefined}
                       onChange={(value) => updateAthlete("technical_style", value ? [value] : [])}
                     />
-                    <p className="muted">Technical style = your sport or rule set.</p>
                     {invalidFieldId === "technicalStyle" && error ? (
                       <p id="technicalStyle-error" className="error-text" role="alert">{error}</p>
                     ) : null}

@@ -142,9 +142,9 @@ export function validateQuickBuildInput(
     errors.full_name = "Add your full name.";
   }
   if (input.technical_style.length === 0) {
-    errors.technical_style = "Choose a style.";
+    errors.technical_style = "Choose a combat sport.";
   } else if (input.technical_style.length > 1) {
-    errors.technical_style = "Pick only one technical style.";
+    errors.technical_style = "Pick only one combat sport.";
   }
   if (input.tactical_style.length > 1) {
     errors.tactical_style = "Pick only one tactical style.";
