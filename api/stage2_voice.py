@@ -51,9 +51,17 @@ _UNICODE_DASH_CLASS = (
 # also means the range rules in stage 2 have a single form to match, instead of
 # every rule having to repeat the unicode alternation.
 
-# A label separator between a letter and its number: "D-10", "Week-3". Letter to
-# LETTER is deliberately excluded, since "round—remove" is a real clause break.
-_LABEL_SEPARATOR = re.compile(rf"(?<=[A-Za-z]){_UNICODE_DASH_CLASS}(?=\d)")
+# A label separator between a label word and its number: "D-10", "Week-3".
+#
+# Restricted to the label vocabulary the plan actually uses rather than any
+# letter. "Any letter followed by a digit" also matches ordinary prose that
+# happens to run into a number, so "Rest—2 minutes" came out as "Rest-2 minutes":
+# a dash that was clause punctuation reissued as a hyphen, inventing a label that
+# was never written. A closed vocabulary cannot make that mistake.
+_LABEL_WORDS = "Weeks?|Wk|Days?|Block|Phase|Round|D|W"
+_LABEL_SEPARATOR = re.compile(
+    rf"\b({_LABEL_WORDS}){_UNICODE_DASH_CLASS}(?=\d)", re.IGNORECASE
+)
 
 # A sign bound to the digits that follow it: "-5 kg" is a prescription. Requires
 # a non-word character before, so "coach-led" and "D-10" can never match.
@@ -82,12 +90,16 @@ _NUMERIC_RANGE = re.compile(r"(?<=\d)[ \t]*-[ \t]*(?=\d)")
 # span into two sentences. Rendered as "to", which is how the plan prompt already
 # writes countdown spans.
 #
-# The back-references require the SAME label word and the SAME separator style on
-# both sides, which is what keeps this off ordinary prose. One label with a
-# number is a common enough shape that matching it alone would be reckless; the
-# same label repeated on both sides of a dash is a range and very little else.
+# The back-reference requires the SAME label word on both sides, which is what
+# keeps this off ordinary prose. One label with a number is a common enough shape
+# that matching it alone would be reckless; the same label repeated on both sides
+# of a dash is a range and very little else.
+#
+# The separator style is NOT required to match. Insisting on it split "Week-3 -
+# Week 4" into two sentences over nothing more than inconsistent spelling of the
+# same label, and the repeated word is already carrying the safety here.
 _LABELLED_RANGE = re.compile(
-    rf"\b([A-Za-z]+)([- ])(\d+)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=\1\2\d)",
+    rf"\b([A-Za-z]+)([- ])(\d+)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=\1[- ]\d)",
     re.IGNORECASE,
 )
 
@@ -170,7 +182,7 @@ def strip_model_dashes(text: str) -> str:
     # hyphen first, then the ranges are read off that single form, and only what
     # survives both is treated as punctuation. A label, a sign, or a range can
     # therefore never be rewritten into a comma.
-    text = _LABEL_SEPARATOR.sub("-", text)
+    text = _LABEL_SEPARATOR.sub(r"\1-", text)
     text = _SIGNED_NUMBER.sub("-", text)
     text = _RANGE_SEPARATOR.sub("-", text)
 

@@ -89,6 +89,22 @@ class TestPreservedHyphens:
         )
         assert strip_model_dashes("Day 2 – Day 5 is recovery.") == "Day 2 to Day 5 is recovery."
 
+    def test_a_range_survives_inconsistent_label_spelling(self):
+        # Requiring the same separator on both sides split a valid range over
+        # nothing but inconsistent spelling of the same label. The repeated word
+        # is what makes the match safe, not the punctuation style.
+        assert strip_model_dashes("Week-3 - Week 4 ramps up.") == "Week-3 to Week 4 ramps up."
+        assert strip_model_dashes("Week 3 - Week-4 ramps up.") == "Week 3 to Week-4 ramps up."
+
+    def test_prose_running_into_a_number_stays_punctuation(self):
+        # "Any letter before a digit" also matches ordinary prose, which reissued
+        # a clause dash as a hyphen and invented a label nobody wrote.
+        assert strip_model_dashes("Rest—2 minutes between sets.") == (
+            "Rest, 2 minutes between sets."
+        )
+        assert strip_model_dashes("Rest–90 seconds.") == "Rest, 90 seconds."
+        assert strip_model_dashes("Cut—3 rounds today.") == "Cut, 3 rounds today."
+
     def test_a_lone_label_is_still_ordinary_prose(self):
         # One label with a number is a common shape. Only the SAME label repeated on
         # both sides is a range; anything else stays punctuation.
