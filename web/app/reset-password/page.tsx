@@ -38,6 +38,10 @@ export default function ResetPasswordPage() {
     if (linkStatus.kind === "error") {
       setError(linkStatus.message);
       clearAuthLinkParams();
+      // A rejected link spends any earlier recovery too. Without this, opening
+      // a stale link after a good one left the marker live, and simply
+      // revisiting /reset-password within its TTL reopened the form.
+      clearPasswordRecovery();
       return;
     }
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { afterEach, beforeEach } from "node:test";
+import test, { afterEach, beforeEach, mock } from "node:test";
 
 import {
   clearPasswordRecovery,
@@ -31,13 +31,26 @@ function installStorage(): Map<string, string> {
   return store;
 }
 
+/** A window whose sessionStorage throws on every access. */
+function installBlockedStorage(): void {
+  (globalThis as MutableGlobal).window = {
+    get sessionStorage(): Storage {
+      throw new Error("blocked by policy");
+    },
+  } as unknown as MutableGlobal["window"];
+}
+
 let store: Map<string, string>;
 
 beforeEach(() => {
   store = installStorage();
+  // The in-memory mirror is module state, so it must not leak between tests.
+  clearPasswordRecovery();
 });
 
 afterEach(() => {
+  clearPasswordRecovery();
+  mock.timers.reset();
   delete (globalThis as MutableGlobal).window;
 });
 
@@ -125,15 +138,60 @@ test("is safe with no window at all", () => {
   assert.doesNotThrow(() => clearPasswordRecovery());
 });
 
-test("is safe when storage access throws", () => {
-  // Private mode / blocked storage must degrade, not crash the page.
-  (globalThis as MutableGlobal).window = {
-    get sessionStorage(): Storage {
-      throw new Error("blocked by policy");
-    },
-  } as unknown as MutableGlobal["window"];
+test("still vouches for the user when sessionStorage is blocked", () => {
+  // The reason this matters: the app redirects to /reset-password as soon as
+  // Supabase verifies the link. If a blocked write meant no proof, that
+  // redirect would land on a form that refuses the athlete for "missing"
+  // verification — a dead end for anyone on a restrictive browser, which is
+  // exactly where email links tend to open.
+  installBlockedStorage();
 
   assert.doesNotThrow(() => markPasswordRecovery(USER));
-  assert.equal(readPasswordRecovery(), null);
+  assert.equal(readPasswordRecovery()?.userId, USER);
+  assert.equal(hasPasswordRecoveryFor(USER), true);
+  // Still bound to one user, with no storage involved.
+  assert.equal(hasPasswordRecoveryFor(OTHER_USER), false);
+});
+
+test("clears the in-memory fallback even when storage is blocked", () => {
+  installBlockedStorage();
+  markPasswordRecovery(USER);
   assert.doesNotThrow(() => clearPasswordRecovery());
+  assert.equal(readPasswordRecovery(), null);
+});
+
+test("expires the in-memory fallback on the same TTL as storage", () => {
+  installBlockedStorage();
+  mock.timers.enable({ apis: ["Date"] });
+  markPasswordRecovery(USER);
+  assert.equal(hasPasswordRecoveryFor(USER), true);
+
+  mock.timers.tick(PASSWORD_RECOVERY_TTL_MS + 1_000);
+  assert.equal(readPasswordRecovery(), null);
+  assert.equal(hasPasswordRecoveryFor(USER), false);
+});
+
+test("prefers a live in-memory marker over a stale stored one", () => {
+  store.set(
+    PASSWORD_RECOVERY_STORAGE_KEY,
+    JSON.stringify({ userId: OTHER_USER, at: Date.now() - PASSWORD_RECOVERY_TTL_MS - 1_000 }),
+  );
+  markPasswordRecovery(USER);
+  assert.equal(readPasswordRecovery()?.userId, USER);
+});
+
+test("falls back to storage when there is no in-memory marker", () => {
+  // A reload of /reset-password drops module state; the stored copy is what
+  // keeps that case working.
+  store.set(PASSWORD_RECOVERY_STORAGE_KEY, JSON.stringify({ userId: USER, at: Date.now() }));
+  assert.equal(hasPasswordRecoveryFor(USER), true);
+});
+
+test("is safe with no window at all, even after a mark", () => {
+  markPasswordRecovery(USER);
+  delete (globalThis as MutableGlobal).window;
+  // Module state is shared across requests on the server, so it must never be
+  // read there.
+  assert.equal(readPasswordRecovery(), null);
+  assert.equal(hasPasswordRecoveryFor(USER), false);
 });

@@ -113,6 +113,17 @@ def test_recovery_marker_is_only_written_from_the_supabase_event():
     # this callback, and the reset page calls getSession() as it mounts.
     assert "setTimeout(() => router.replace(RESET_PASSWORD_ROUTE), 0)" in redirect
 
+    # The redirect fires as soon as Supabase verifies the link, so the proof
+    # cannot depend on sessionStorage being writable — email clients open links
+    # in restrictive in-app browsers. Mirrors lib/generation-intent.ts.
+    assert "memoryMarker" in recovery
+    assert "memoryMarker = marker" in recovery
+
+    # Every terminal branch spends the marker, including the early return for a
+    # URL that Supabase rejected.
+    error_branch = reset_password.split('if (linkStatus.kind === "error")', 1)[1].split("return;", 1)[0]
+    assert "clearPasswordRecovery();" in error_branch
+
 
 def test_reset_password_leads_with_a_new_link_not_settings():
     reset_password = _read("web/app/reset-password/page.tsx")

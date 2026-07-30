@@ -59,11 +59,21 @@ async function signIn(page: Page, accessToken = EXISTING_TOKEN): Promise<void> {
  * Plant a recovery marker directly. Only for the negative cases — the happy
  * path deliberately lets the app write its own via a real PASSWORD_RECOVERY
  * event, so the tests never assume the wiring they are meant to prove.
+ *
+ * Seeds once per context. `addInitScript` re-runs on every navigation, so
+ * without the sentinel a test that navigates twice would silently re-plant the
+ * marker and could never observe one being spent.
  */
 async function seedRecoveryMarker(page: Page, userId: string, ageMs = 0): Promise<void> {
   await page.addInitScript(
-    ([key, value]) => window.sessionStorage.setItem(key, value),
-    [RECOVERY_KEY, JSON.stringify({ userId, at: Date.now() - ageMs })] as const,
+    ([key, value, sentinel]) => {
+      if (window.localStorage.getItem(sentinel)) {
+        return;
+      }
+      window.localStorage.setItem(sentinel, "1");
+      window.sessionStorage.setItem(key, value);
+    },
+    [RECOVERY_KEY, JSON.stringify({ userId, at: Date.now() - ageMs }), "e2e.recovery-seeded"] as const,
   );
 }
 
@@ -201,6 +211,46 @@ test.describe("a recovery session reaches the reset form wherever it lands", () 
       await expect(page.getByRole("button", { name: "Update password" })).toBeVisible();
     });
   }
+
+  test("completes even when sessionStorage is blocked", async ({ page, baseURL }) => {
+    // The redirect fires as soon as Supabase verifies the link, so if a blocked
+    // write meant no proof, the athlete would land on a form that refuses them
+    // for "missing" verification. Email clients open links in exactly the kind
+    // of restrictive in-app browser where this bites.
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "sessionStorage", {
+        configurable: true,
+        get() {
+          throw new DOMException("storage blocked by policy", "SecurityError");
+        },
+      });
+    });
+    await isolateWithSupabaseUser(page, baseURL ?? BASE_URL);
+    await page.goto(`/${recoveryFragment("RECOVERY_MINTED_TOKEN")}`, { waitUntil: "domcontentloaded" });
+
+    await expect(page).toHaveURL(/\/reset-password$/);
+    await expect(passwordFields(page)).toHaveCount(2);
+  });
+
+  test("a rejected link spends an earlier recovery marker", async ({ page, baseURL }) => {
+    // Opening a stale link after a good one must not leave the marker live —
+    // otherwise simply revisiting /reset-password inside the TTL reopens the
+    // form on an ordinary session.
+    await signIn(page);
+    await seedRecoveryMarker(page, USER_ID);
+    await isolateFromNetwork(page, baseURL ?? BASE_URL);
+
+    await page.goto("/reset-password#error=access_denied&error_code=otp_expired", {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.getByText(EXPIRED_MESSAGE)).toBeVisible();
+    await expect(passwordFields(page)).toHaveCount(0);
+
+    // Same tab, same session, marker still inside its TTL had it survived.
+    await page.goto("/reset-password", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText(MISSING_MESSAGE)).toBeVisible();
+    await expect(passwordFields(page)).toHaveCount(0);
+  });
 
   test("does not leave the marker usable once the recovery is refused", async ({ page, baseURL }) => {
     // A marker aged past its TTL is dead, so the form must stay closed.
