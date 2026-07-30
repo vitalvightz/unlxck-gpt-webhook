@@ -28,7 +28,6 @@ from .structured_plan_generation import (
     parse_structured_json,
     should_attempt_structured_plan,
 )
-from .stage2_voice import strip_model_dashes
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
@@ -623,7 +622,7 @@ def _response_is_incomplete(response: Any) -> bool:
 def _extract_response_text(response: Any) -> str:
     output_text = getattr(response, "output_text", None)
     if isinstance(output_text, str) and output_text.strip():
-        return strip_model_dashes(_strip_wrapping_code_fence(output_text))
+        return _strip_wrapping_code_fence(output_text)
 
     payload = response.model_dump(mode="python") if hasattr(response, "model_dump") else response
     if not isinstance(payload, dict):
@@ -642,7 +641,7 @@ def _extract_response_text(response: Any) -> str:
     combined = "\n".join(parts).strip()
     if not combined:
         raise Stage2AutomationError("Stage 2 model returned no plan text.")
-    return strip_model_dashes(_strip_wrapping_code_fence(combined))
+    return _strip_wrapping_code_fence(combined)
 
 
 def _base_result(
