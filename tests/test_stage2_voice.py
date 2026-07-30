@@ -71,11 +71,30 @@ class TestPreservedHyphens:
     def test_a_countdown_range_is_kept_as_a_range(self):
         # The digits sit on the wrong side of the dash for the numeric rule, so
         # without explicit handling the clause rule sees a capital D and splits
-        # the span into two sentences.
+        # the span into two sentences. Every D-day, not one hard-coded span.
         assert strip_model_dashes("Taper runs D-10 – D-1.") == "Taper runs D-10 to D-1."
         assert strip_model_dashes("Weeks D-19 — D-13 build volume.") == (
             "Weeks D-19 to D-13 build volume."
         )
+        assert strip_model_dashes("Base D-42 – D-28.") == "Base D-42 to D-28."
+        assert strip_model_dashes("Final D-3 – D-0.") == "Final D-3 to D-0."
+        assert strip_model_dashes("Chain D-19 – D-13 – D-7.") == "Chain D-19 to D-13 to D-7."
+        assert strip_model_dashes("Lowercase d-9 – d-4.") == "Lowercase d-9 to d-4."
+
+    def test_any_repeated_label_forms_a_range_not_only_countdowns(self):
+        # Week/Day labels are used throughout the plan, and they split the same way
+        # a countdown does. The rule keys off the label repeating, not off "D".
+        assert strip_model_dashes("Week 1 – Week 3 builds base.") == (
+            "Week 1 to Week 3 builds base."
+        )
+        assert strip_model_dashes("Day 2 – Day 5 is recovery.") == "Day 2 to Day 5 is recovery."
+
+    def test_a_lone_label_is_still_ordinary_prose(self):
+        # One label with a number is a common shape. Only the SAME label repeated on
+        # both sides is a range; anything else stays punctuation.
+        assert strip_model_dashes("Fight is D-10 — stay sharp.") == "Fight is D-10, stay sharp."
+        assert strip_model_dashes("Week 1 – Day 3 is odd.") == "Week 1. Day 3 is odd."
+        assert strip_model_dashes("Taper — Week 3 begins.") == "Taper. Week 3 begins."
 
     def test_a_signed_number_keeps_its_sign(self):
         # This changes a NUMBER, not typography. A prescription that reads "-5 kg"

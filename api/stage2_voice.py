@@ -75,13 +75,20 @@ _SIGNED_RANGE = re.compile(r"(?<=\d)[ \t]*-[ \t]*(?=-\d)")
 # A plain range tightens to a bare hyphen: "45 - 60 sec" -> "45-60 sec".
 _NUMERIC_RANGE = re.compile(r"(?<=\d)[ \t]*-[ \t]*(?=\d)")
 
-# A range between two countdown labels ("D-10 - D-1"). Its separator sits
-# between a digit and a LETTER, the one range position no stage-1 rule
-# normalises, so it still has to match both dash forms itself. Without it the
-# clause rule sees a capital D next and splits the span into two sentences.
-# Rendered as "to", which is how the plan prompt already writes countdown spans.
-_COUNTDOWN_RANGE = re.compile(
-    rf"(D-\d+)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=D-\d)", re.IGNORECASE
+# A range between two LABELLED numbers: "D-10 - D-1", "Week 1 - Week 3",
+# "Day 2 - Day 5". Its separator sits between a digit and a letter, the one range
+# position no stage-1 rule normalises, so it still has to match both dash forms
+# itself. Without it the clause rule sees a capital letter next and splits the
+# span into two sentences. Rendered as "to", which is how the plan prompt already
+# writes countdown spans.
+#
+# The back-references require the SAME label word and the SAME separator style on
+# both sides, which is what keeps this off ordinary prose. One label with a
+# number is a common enough shape that matching it alone would be reckless; the
+# same label repeated on both sides of a dash is a range and very little else.
+_LABELLED_RANGE = re.compile(
+    rf"\b([A-Za-z]+)([- ])(\d+)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=\1\2\d)",
+    re.IGNORECASE,
 )
 
 # A dash opening a line is a bullet, not punctuation. The Stage 2 prompt itself
@@ -169,7 +176,7 @@ def strip_model_dashes(text: str) -> str:
 
     text = _SIGNED_RANGE.sub(" to ", text)
     text = _NUMERIC_RANGE.sub("-", text)
-    text = _COUNTDOWN_RANGE.sub(r"\1 to ", text)
+    text = _LABELLED_RANGE.sub(r"\1\2\3 to ", text)
 
     text = _LEADING_BULLET.sub(r"\1- ", text)
     return _CLAUSE_DASH.sub(_replace_clause_dash, text)
