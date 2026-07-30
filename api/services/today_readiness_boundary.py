@@ -471,7 +471,15 @@ def _reband_confidence(view: CommandView, context_status: ReadinessContextStatus
         # the stored band stands: worst-of, never raised.
         return
     view.today.recommendation_confidence = banded
-    view.today.recommendation_confidence_note = confidence_note(context_status.reason_codes)
+    # A re-check, not a fresh decision: the data was there when the call was made
+    # and only the re-read failed. The sources are marked historical for the same
+    # reason, so the card reads "was based on your last few check-ins" instead of
+    # claiming in the present tense to have used what it just said it could not
+    # load.
+    view.today.recommendation_confidence_note = confidence_note(
+        context_status.reason_codes, re_check=True
+    )
+    view.today.recommendation_sources_are_historical = True
 
 
 def build_today_command_view(

@@ -888,6 +888,9 @@ export type TodayCommandView = {
     recommendation_confidence?: "high" | "moderate" | "low" | null;
     /** Names the missing input when confidence is below high. Empty at high. */
     recommendation_confidence_note?: string;
+    /** True when the sources describe a decision made earlier that a re-check
+     * could not fully verify, so the card must use past tense. */
+    recommendation_sources_are_historical?: boolean;
     warnings?: string[];
     next_session: TodaySession;
     session_scope: "today" | "next" | "none";

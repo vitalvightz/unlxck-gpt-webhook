@@ -117,3 +117,28 @@ test("the explanation never claims a signal caused the change", () => {
     assert.ok(!html.toLowerCase().includes(causal), `explanation must not claim cause: ${causal}`);
   }
 });
+
+test("historical sources read in the past tense", () => {
+  // A failed re-read beside a present-tense "Based on your last few check-ins"
+  // reads as: you couldn't load them, yet you say you used them.
+  const html = renderToStaticMarkup(
+    <TodayDecisionPanel
+      banner={BANNER}
+      sources={["today's check-in", "your last few check-ins"]}
+      confidence="moderate"
+      confidenceNote="We couldn't refresh your recent check-ins just now."
+      sourcesAreHistorical
+    />,
+  );
+  assert.ok(
+    html.includes("Today&#x27;s call was based on today&#x27;s check-in and your last few check-ins."),
+  );
+});
+
+test("a decision made now stays in the present tense", () => {
+  const html = renderToStaticMarkup(
+    <TodayDecisionPanel banner={BANNER} sources={["today's check-in"]} confidence="moderate" />,
+  );
+  assert.ok(html.includes("Based on today&#x27;s check-in."));
+  assert.ok(!html.includes("was based on"));
+});

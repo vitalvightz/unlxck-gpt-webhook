@@ -264,6 +264,11 @@ class CommandViewToday(BaseModel):
     # confident claim on the one decision nothing is known about.
     recommendation_confidence: ConfidenceBand | None = None
     recommendation_confidence_note: str = ""
+    # True when the sources describe a decision made EARLIER and a re-check could
+    # not verify all of them. The card then has to say the decision "was based
+    # on" them rather than "based on" them: present tense next to a note about a
+    # failed read says we used data we also said we could not load.
+    recommendation_sources_are_historical: bool = False
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"

@@ -180,6 +180,7 @@ class TestShape:
             "recommendation_sources",
             "recommendation_confidence",
             "recommendation_confidence_note",
+            "recommendation_sources_are_historical",
             "warnings",
             "next_session",
             "session_scope",
@@ -356,7 +357,7 @@ class TestConfidenceBand:
             recommendation=_rec(triggers=["checkins_unavailable", "poor_sleep", "sparse_history"]),
         )
         assert view.today.recommendation_confidence == "moderate"
-        assert "recent check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+        assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
 
     def test_a_complete_context_is_high_confidence_with_no_qualifier(self):
         view = build_command_view(
@@ -402,7 +403,7 @@ class TestConfidenceBand:
         )
         note = view.today.recommendation_confidence_note
         assert note.count("Less to go on today") == 1
-        assert "recent history couldn't be loaded" in note
+        assert "couldn't load some of your recent history" in note
 
     def test_completeness_codes_never_render_as_contributors(self):
         # They describe the DATA, not the athlete. "Sparse history" in the "what

@@ -50,6 +50,7 @@ export function TodayDecisionPanel({
   sources,
   confidence,
   confidenceNote,
+  sourcesAreHistorical = false,
 }: {
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
@@ -57,6 +58,7 @@ export function TodayDecisionPanel({
   sources?: string[];
   confidence?: TodayDecisionConfidence | null;
   confidenceNote?: string;
+  sourcesAreHistorical?: boolean;
 }) {
   if (!banner) {
     return null;
@@ -114,7 +116,11 @@ export function TodayDecisionPanel({
               </p>
             ) : null}
             {usedSources.length ? (
-              <p className="today-decision-sources">Based on {formatSourceList(usedSources)}.</p>
+              <p className="today-decision-sources">
+                {sourcesAreHistorical
+                  ? `Today's call was based on ${formatSourceList(usedSources)}.`
+                  : `Based on ${formatSourceList(usedSources)}.`}
+              </p>
             ) : null}
           </div>
         ) : null}

@@ -387,6 +387,7 @@ export function TodaySessionPanel({
           sources={state.today.recommendation_sources}
           confidence={state.today.recommendation_confidence}
           confidenceNote={state.today.recommendation_confidence_note}
+        sourcesAreHistorical={state.today.recommendation_sources_are_historical}
         />
         {recommendationState !== "not_checked_in" ? (
           <ContextualFeedback
@@ -441,6 +442,7 @@ export function TodaySessionPanel({
         sources={state.today.recommendation_sources}
         confidence={state.today.recommendation_confidence}
         confidenceNote={state.today.recommendation_confidence_note}
+        sourcesAreHistorical={state.today.recommendation_sources_are_historical}
       />
       {recommendationState !== "not_checked_in" ? (
         <ContextualFeedback

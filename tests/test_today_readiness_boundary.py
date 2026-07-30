@@ -448,7 +448,7 @@ def test_degraded_context_reports_moderate_confidence_and_incomplete_history():
 
     assert view.today.recommendation_state == "modify"
     assert view.today.recommendation_confidence == "moderate"
-    assert "check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+    assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
     assert view.today.recommendation_contributors == ["Check-in history incomplete"]
     assert not _stored_green_explanation_is_stale(view)
 
@@ -486,7 +486,7 @@ def test_a_preserved_conservative_decision_keeps_its_reasons_but_loses_confidenc
     assert view.today.recommendation_state == "modify"
     assert view.today.recommendation_contributors == ["Poor sleep", "Hard session planned"]
     assert view.today.recommendation_confidence == "moderate"
-    assert "check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
 
 
 def test_a_complete_context_leaves_the_explanation_untouched():
@@ -523,5 +523,43 @@ def test_an_equal_band_still_adopts_the_live_failure_reason():
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
     assert view.today.recommendation_confidence == "moderate"
-    assert "check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
     assert "no recent days to compare" not in view.today.recommendation_confidence_note
+
+
+def test_a_re_check_never_claims_to_have_used_what_it_could_not_reload():
+    # The stored decision genuinely used the athlete's recent check-ins, so they
+    # stay in the sources. But a failed RE-READ next to a present-tense "based on
+    # your last few check-ins" reads as: you couldn't load them, yet you say you
+    # used them. The tense has to move, and the note has to say refresh, not load.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "modify",
+            "recommendation_reason": "Session reduced.\nPoor sleep for 3 days.",
+            "recommendation_triggers": ["poor_sleep_3_day_streak", "repeated_poor_readiness"],
+        },
+    )
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert "your last few check-ins" in view.today.recommendation_sources
+    assert view.today.recommendation_sources_are_historical is True
+    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
+    assert "couldn't be loaded" not in view.today.recommendation_confidence_note
+
+
+def test_a_replaced_decision_is_made_now_and_stays_present_tense():
+    # Nothing historical here: the fail-safe made this call in this request, and
+    # its sources were rebuilt to match. Past tense would be wrong.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_sources_are_historical is False
+    assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note

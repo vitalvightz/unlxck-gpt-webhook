@@ -1996,14 +1996,24 @@ ConfidenceBand = Literal["high", "moderate", "low"]
 # Within a severity level the SPECIFIC code is listed before its umbrella, so the
 # line names the read that actually failed and falls back to the general wording
 # only when nothing more precise is known.
-_CONFIDENCE_GAPS: tuple[tuple[str, str], ...] = (
-    ("injury_context_unavailable", "we couldn't load your injury history"),
-    ("session_unavailable", "we couldn't load today's session"),
-    ("context_unavailable", "we couldn't load your training and injury history"),
-    ("checkins_unavailable", "your recent check-ins couldn't be loaded"),
-    ("completions_unavailable", "your recent sessions couldn't be loaded"),
-    ("intake_unavailable", "part of your profile couldn't be loaded"),
-    ("context_degraded", "some of your recent history couldn't be loaded"),
+# A read that FAILED, held as the thing that failed rather than a whole sentence,
+# because it has to be said two ways. When the decision is being made now, the
+# data could not be loaded. When an existing decision is being re-checked, the
+# data loaded fine at the time and could not be REFRESHED, which is a different
+# thing and must not read as "you don't have any".
+_CONFIDENCE_GAP_SUBJECTS: tuple[tuple[str, str], ...] = (
+    ("injury_context_unavailable", "your injury history"),
+    ("session_unavailable", "today's session"),
+    ("context_unavailable", "your training and injury history"),
+    ("checkins_unavailable", "your recent check-ins"),
+    ("completions_unavailable", "your recent sessions"),
+    ("intake_unavailable", "part of your profile"),
+    ("context_degraded", "some of your recent history"),
+)
+
+# Data that is simply THIN rather than unreadable. Nothing failed, so there is no
+# refreshing to talk about and these only ever read one way.
+_CONFIDENCE_THINNESS_GAPS: tuple[tuple[str, str], ...] = (
     ("session_unresolved", "today's session isn't resolved yet"),
     (SPARSE_HISTORY, "this is based on today's check-in alone, with no recent days to compare"),
 )
@@ -2034,15 +2044,25 @@ def confidence_band(triggers: Sequence[str]) -> ConfidenceBand:
     return "high"
 
 
-def confidence_note(triggers: Sequence[str]) -> str:
-    """One line naming what the decision was missing, or "" at high confidence.
+def confidence_note(triggers: Sequence[str], *, re_check: bool = False) -> str:
+    """One line naming what was missing, or "" when nothing was.
 
-    Naming the specific gap is the whole point. "Moderate confidence" on its own
-    tells an athlete nothing they can act on; "no recent days to compare" tells
-    them that checking in tomorrow fixes it.
+    Naming the specific gap is the whole point. A band on its own tells an
+    athlete nothing they can act on; "no recent days to compare" tells them that
+    checking in tomorrow fixes it.
+
+    ``re_check`` is for an EXISTING decision being re-verified, where the data
+    was there when the call was made and only the re-read failed. Saying it
+    "couldn't be loaded" there reads as though the athlete has no history, and
+    sits flatly against the card's own "based on your last few check-ins".
     """
     codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
-    for code, gap in _CONFIDENCE_GAPS:
+    for code, subject in _CONFIDENCE_GAP_SUBJECTS:
+        if code in codes:
+            if re_check:
+                return f"We couldn't refresh {subject} just now."
+            return f"Less to go on today: we couldn't load {subject}."
+    for code, gap in _CONFIDENCE_THINNESS_GAPS:
         if code in codes:
             return f"Less to go on today: {gap}."
     return ""
