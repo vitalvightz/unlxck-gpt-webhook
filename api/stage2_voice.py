@@ -43,24 +43,46 @@ _UNICODE_DASH_CLASS = (
     f"(?:[{_UNICODE_DASHES}]|" + "|".join(re.escape(seq) for seq in _ESCAPED_DASHES) + ")"
 )
 
-# A range between two numbers is the one place a dash between values is correct.
-# Normalising it to a plain hyphen keeps "3-5 reps" and "45-60 sec" readable and,
-# importantly, takes it out of reach of the clause rules below.
-_NUMERIC_RANGE = re.compile(rf"(?<=\d)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=\d)")
+# --- Stage 1: every dash that belongs to a VALUE becomes a plain hyphen -------
+#
+# Run before anything treats a dash as punctuation. Each of these is a position
+# where a dash carries meaning, so rewriting one into a comma would change what
+# the plan prescribes rather than how it reads. Normalising them to ASCII first
+# also means the range rules in stage 2 have a single form to match, instead of
+# every rule having to repeat the unicode alternation.
 
-# A range between two countdown labels ("D-10 – D-1"). The digits sit on the
-# wrong side of the dash for the numeric rule, so without this the clause rule
-# sees a capital D next and splits the range into two sentences. Rendered as
-# "to", which is how the plan prompt already writes countdown spans.
+# A label separator between a letter and its number: "D-10", "Week-3". Letter to
+# LETTER is deliberately excluded, since "round—remove" is a real clause break.
+_LABEL_SEPARATOR = re.compile(rf"(?<=[A-Za-z]){_UNICODE_DASH_CLASS}(?=\d)")
+
+# A sign bound to the digits that follow it: "-5 kg" is a prescription. Requires
+# a non-word character before, so "coach-led" and "D-10" can never match.
+_SIGNED_NUMBER = re.compile(rf"(?<![\w\d]){_UNICODE_DASH_CLASS}(?=\d)")
+
+# A separator with a number on both sides: "3–5", "45 – 60", "-5 – -1". The
+# lookahead allows a sign so a range of negative values is still recognised as
+# one range. A digit is required BEFORE, which is what keeps this off ordinary
+# prose that happens to be followed by a number ("cut a round — 5 left").
+_RANGE_SEPARATOR = re.compile(
+    rf"(?<=\d)[ \t]*{_UNICODE_DASH_CLASS}[ \t]*(?=-?\d)"
+)
+
+# --- Stage 2: ranges, now uniformly ASCII ------------------------------------
+
+# A signed range renders as "to": "-5 - -1" is unreadable, and "-5--1" worse.
+_SIGNED_RANGE = re.compile(r"(?<=\d)[ \t]*-[ \t]*(?=-\d)")
+
+# A plain range tightens to a bare hyphen: "45 - 60 sec" -> "45-60 sec".
+_NUMERIC_RANGE = re.compile(r"(?<=\d)[ \t]*-[ \t]*(?=\d)")
+
+# A range between two countdown labels ("D-10 - D-1"). Its separator sits
+# between a digit and a LETTER, the one range position no stage-1 rule
+# normalises, so it still has to match both dash forms itself. Without it the
+# clause rule sees a capital D next and splits the span into two sentences.
+# Rendered as "to", which is how the plan prompt already writes countdown spans.
 _COUNTDOWN_RANGE = re.compile(
     rf"(D-\d+)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=D-\d)", re.IGNORECASE
 )
-
-# A signed number: a dash bound to the digits that follow it, with no value
-# before it to form a range. "-5 kg" is a prescription, not punctuation, so this
-# normalises the sign and takes it out of reach of the clause rules. Requires a
-# non-word character before, so "coach-led" and "3-5" can never match.
-_SIGNED_NUMBER = re.compile(rf"(?<![\w\d]){_UNICODE_DASH_CLASS}(?=\d)")
 
 # A dash opening a line is a bullet, not punctuation. The Stage 2 prompt itself
 # writes fight-week rules this way, so the model copies the habit. The trailing
@@ -137,11 +159,17 @@ def strip_model_dashes(text: str) -> str:
     ):
         return text
 
-    # Order matters: every rule that recognises a dash as part of a VALUE runs
-    # before the rule that treats a dash as punctuation, so a range or a sign can
-    # never be rewritten into a comma.
+    # Order matters. Every dash belonging to a value is normalised to a plain
+    # hyphen first, then the ranges are read off that single form, and only what
+    # survives both is treated as punctuation. A label, a sign, or a range can
+    # therefore never be rewritten into a comma.
+    text = _LABEL_SEPARATOR.sub("-", text)
+    text = _SIGNED_NUMBER.sub("-", text)
+    text = _RANGE_SEPARATOR.sub("-", text)
+
+    text = _SIGNED_RANGE.sub(" to ", text)
     text = _NUMERIC_RANGE.sub("-", text)
     text = _COUNTDOWN_RANGE.sub(r"\1 to ", text)
-    text = _SIGNED_NUMBER.sub("-", text)
+
     text = _LEADING_BULLET.sub(r"\1- ", text)
     return _CLAUSE_DASH.sub(_replace_clause_dash, text)

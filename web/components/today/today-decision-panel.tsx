@@ -46,14 +46,14 @@ export function TodayDecisionPanel({
   tier,
   contributors,
   sources,
-  confidence = "high",
+  confidence,
   confidenceNote,
 }: {
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
   contributors?: string[];
   sources?: string[];
-  confidence?: TodayDecisionConfidence;
+  confidence?: TodayDecisionConfidence | null;
   confidenceNote?: string;
 }) {
   if (!banner) {
@@ -62,9 +62,12 @@ export function TodayDecisionPanel({
   const signals = (contributors ?? []).filter((value) => value.trim());
   const usedSources = (sources ?? []).filter((value) => value.trim());
   const note = (confidenceNote ?? "").trim();
-  // A live backend decision always resolves at least one source, so this is the
-  // signal that there is a real decision to qualify rather than a preview.
-  const hasBackendDecision = usedSources.length > 0;
+  // The backend sends a band only when it has trigger codes to judge the
+  // decision by, so its presence is the signal that there is something real to
+  // qualify. Gating on the banner alone would put a confident "High" on a
+  // recommendation stored before the engine recorded triggers, which is the one
+  // decision nothing is known about.
+  const band = confidence ?? null;
   // Headline the tier ("Stop today" etc.) so Today matches the Overview action
   // framing; the chip carries the tier marker and the detail keeps the specifics.
   // Prefer the authoritative backend tier when supplied so the headline can never
@@ -85,7 +88,7 @@ export function TodayDecisionPanel({
         {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
         <p className="today-decision-detail">{banner.detail}</p>
         {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
-        {signals.length || hasBackendDecision ? (
+        {signals.length || band || usedSources.length ? (
           <div className="today-decision-evidence">
             {signals.length ? (
               <div className="today-decision-signals">
@@ -99,11 +102,11 @@ export function TodayDecisionPanel({
                 </ul>
               </div>
             ) : null}
-            {hasBackendDecision ? (
-              <p className="today-decision-confidence" data-band={confidence}>
+            {band ? (
+              <p className="today-decision-confidence" data-band={band}>
                 <span className="today-decision-confidence-label">Confidence</span>
                 <span className="today-decision-confidence-band">
-                  {CONFIDENCE_LABELS[confidence]}
+                  {CONFIDENCE_LABELS[band]}
                 </span>
                 {note ? <span className="today-decision-confidence-note">{note}</span> : null}
               </p>

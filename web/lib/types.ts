@@ -885,7 +885,7 @@ export type TodayCommandView = {
     recommendation_sources?: string[];
     /** How much data the decision rests on. Data completeness, NOT predictive
      * accuracy — the product has no outcome data to calibrate against yet. */
-    recommendation_confidence?: "high" | "moderate" | "low";
+    recommendation_confidence?: "high" | "moderate" | "low" | null;
     /** Names the missing input when confidence is below high. Empty at high. */
     recommendation_confidence_note?: string;
     warnings?: string[];

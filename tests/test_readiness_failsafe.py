@@ -13,10 +13,12 @@ from api.services.readiness_failsafe import (
     CONTEXT_UNAVAILABLE,
     INJURY_CONTEXT_UNAVAILABLE,
     INTAKE_UNAVAILABLE,
+    COMPLETE_STATUS,
     ContextStatusBuilder,
     ReadinessContextStatus,
     apply_context_failsafe,
     build_readiness_signal,
+    status_from_components,
 )
 
 
@@ -89,12 +91,20 @@ def test_degraded_context_blocks_train_as_planned():
 
 
 def test_degraded_context_preserves_already_conservative_decision():
+    # The decision and its specific copy survive untouched. Only the trigger list
+    # grows, so the record of the failed read travels with the decision.
     pull_back = _pull_back()
     out = apply_context_failsafe(
         pull_back, ReadinessContextStatus("degraded", (CHECKINS_UNAVAILABLE,))
     )
-    assert out is pull_back
     assert out.decision == "pull_back"
+    assert (out.title, out.reason, out.action) == (
+        pull_back.title,
+        pull_back.reason,
+        pull_back.action,
+    )
+    assert set(pull_back.triggers) <= set(out.triggers)
+    assert CHECKINS_UNAVAILABLE in out.triggers
 
 
 def test_unavailable_context_forces_hold():
@@ -114,7 +124,13 @@ def test_unavailable_context_keeps_specific_pull_back_copy():
         pull_back,
         ReadinessContextStatus("unavailable", (CONTEXT_UNAVAILABLE, INJURY_CONTEXT_UNAVAILABLE)),
     )
-    assert out is pull_back
+    assert out.decision == "pull_back"
+    assert (out.title, out.reason, out.action) == (
+        pull_back.title,
+        pull_back.reason,
+        pull_back.action,
+    )
+    assert CONTEXT_UNAVAILABLE in out.triggers
 
 
 def test_signal_typed_fields_for_normal_ready():
@@ -144,3 +160,41 @@ def test_signal_display_state_unavailable_and_reason_codes():
     assert signal.blocks_training is True
     assert CONTEXT_UNAVAILABLE in signal.reason_codes
     assert INJURY_CONTEXT_UNAVAILABLE in signal.reason_codes
+
+
+class TestPreservedDecisionsCarryTheirStatusCodes:
+    """A preserved decision keeps its own copy but inherits the codes for the
+    reads that failed, so the record of what broke travels with the decision."""
+
+    def _cautious(self) -> ReadinessAdjustment:
+        return ReadinessAdjustment(
+            decision="modify",
+            title="Session reduced.",
+            reason="Poor sleep.",
+            action="Cut a round.",
+            triggers=("poor_sleep", "sparse_history"),
+        )
+
+    def test_a_degraded_read_tags_a_preserved_modify(self):
+        result = apply_context_failsafe(self._cautious(), status_from_components(["recent_checkins"]))
+        assert result.decision == "modify"
+        assert result.triggers[0] == CHECKINS_UNAVAILABLE
+        assert "poor_sleep" in result.triggers
+
+    def test_an_unavailable_read_tags_a_preserved_pull_back(self):
+        stop = ReadinessAdjustment(
+            decision="pull_back",
+            title="No training today.",
+            reason="Red flag.",
+            action="Seek medical advice.",
+            triggers=("sharp_pain", "red_flag"),
+        )
+        result = apply_context_failsafe(stop, status_from_components(["injury_flags"]))
+        assert result.decision == "pull_back"
+        assert result.title == "No training today."  # its own copy is preserved
+        assert CONTEXT_UNAVAILABLE in result.triggers
+        assert "sharp_pain" in result.triggers
+
+    def test_a_complete_context_leaves_the_decision_untouched(self):
+        original = self._cautious()
+        assert apply_context_failsafe(original, COMPLETE_STATUS) is original

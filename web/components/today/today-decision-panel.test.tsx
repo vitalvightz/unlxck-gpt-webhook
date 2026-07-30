@@ -95,9 +95,18 @@ test("a below-high band names the missing input", () => {
   assert.ok(html.includes('data-band="moderate"'));
 });
 
-test("confidence is hidden when there is no backend decision to qualify", () => {
+test("confidence is hidden when the backend sends no band", () => {
+  // A recommendation stored before the engine recorded triggers has nothing to
+  // judge it by. Rendering a default "High" there would put the most confident
+  // claim on the one decision nothing is known about.
   const html = renderToStaticMarkup(<TodayDecisionPanel banner={BANNER} />);
   assert.ok(!html.includes("Confidence"));
+
+  const withSources = renderToStaticMarkup(
+    <TodayDecisionPanel banner={BANNER} sources={["today's check-in"]} confidence={null} />,
+  );
+  assert.ok(!withSources.includes("Confidence"));
+  assert.ok(withSources.includes("Based on today&#x27;s check-in."));
 });
 
 test("the explanation never claims a signal caused the change", () => {

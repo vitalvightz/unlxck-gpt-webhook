@@ -1969,16 +1969,36 @@ ConfidenceBand = Literal["high", "moderate", "low"]
 
 # Code -> what was missing, in the athlete's words. Ordered by how much it costs
 # the decision, strongest first, since the qualifier line names one reason only.
+#
+# A FAILED READ always outranks the thinness it causes. When a history read
+# fails, the engine also sees no history and tags it as sparse; reporting the
+# thinness would tell the athlete their history is missing when it exists and
+# could not be loaded, and would point them at a fix that cannot work.
 _CONFIDENCE_GAPS: tuple[tuple[str, str], ...] = (
     ("context_unavailable", "we couldn't load your training and injury history"),
+    ("injury_context_unavailable", "we couldn't load your injury history"),
+    ("session_unavailable", "we couldn't load today's session"),
     ("context_degraded", "some of your recent history couldn't be loaded"),
+    ("checkins_unavailable", "your recent check-ins couldn't be loaded"),
+    ("completions_unavailable", "your recent sessions couldn't be loaded"),
+    ("intake_unavailable", "part of your profile couldn't be loaded"),
     ("session_unresolved", "today's session isn't resolved yet"),
     (SPARSE_HISTORY, "this is based on today's check-in alone, with no recent days to compare"),
 )
 
-_LOW_CONFIDENCE_TRIGGERS = frozenset({"context_unavailable"})
+# Anything that means a safety read failed outright.
+_LOW_CONFIDENCE_TRIGGERS = frozenset(
+    {"context_unavailable", "injury_context_unavailable", "session_unavailable"}
+)
 _MODERATE_CONFIDENCE_TRIGGERS = frozenset(
-    {"context_degraded", "session_unresolved", SPARSE_HISTORY}
+    {
+        "context_degraded",
+        "checkins_unavailable",
+        "completions_unavailable",
+        "intake_unavailable",
+        "session_unresolved",
+        SPARSE_HISTORY,
+    }
 )
 
 

@@ -255,10 +255,14 @@ class CommandViewToday(BaseModel):
     recommendation_contributors: list[str] = Field(default_factory=list)
     recommendation_sources: list[str] = Field(default_factory=list)
     # How much data the decision rests on, and what it was missing. This is data
-    # completeness, NOT predictive accuracy — see readiness_message. Defaults to
-    # "high" with an empty note before check-in, when there is no decision to
-    # qualify and nothing is rendered anyway.
-    recommendation_confidence: ConfidenceBand = "high"
+    # completeness, NOT predictive accuracy — see readiness_message.
+    #
+    # ``None`` when the decision carries no trigger codes to judge it by, which
+    # covers both "no decision yet" and a recommendation stored before the engine
+    # recorded triggers. Deliberately not defaulted to "high": absent evidence is
+    # not evidence of completeness, and asserting a band there would put a
+    # confident claim on the one decision nothing is known about.
+    recommendation_confidence: ConfidenceBand | None = None
     recommendation_confidence_note: str = ""
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
@@ -377,7 +381,9 @@ def build_command_view(
             if rec_view.triggers
             else []
         ),
-        recommendation_confidence=confidence_band(rec_view.triggers),
+        recommendation_confidence=(
+            confidence_band(rec_view.triggers) if rec_view.triggers else None
+        ),
         recommendation_confidence_note=confidence_note(rec_view.triggers),
         warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},

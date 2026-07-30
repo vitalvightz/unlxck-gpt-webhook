@@ -21,7 +21,7 @@ The module is pure (no I/O) so it is trivially testable.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable, Literal
 
 from api.contracts.readiness_message import ReadinessAdjustment
@@ -179,19 +179,44 @@ def apply_context_failsafe(
     * ``degraded``   -> a ``train_as_planned`` result is raised to ``modify`` (a
       failed read must never read as readiness); an already-conservative
       ``modify`` / ``pull_back`` is preserved.
+
+    A PRESERVED decision keeps its own copy but inherits the status reason codes,
+    so the record of what failed travels with it. Without that, a failed read on
+    an already-cautious day left the decision tagged only with the engine's
+    data-thinness codes, and the card explained the resulting low confidence as
+    "no recent days to compare" — telling the athlete their history is missing
+    when in fact it exists and could not be loaded. That is a false account of
+    the system's own state, and it points the athlete at a fix (check in
+    tomorrow) that would not have helped.
     """
     if status.status == "complete":
         return adjustment
 
     if status.status == "unavailable":
         if adjustment.decision == "pull_back":
-            return adjustment
+            return _with_status_codes(adjustment, status)
         return _UNAVAILABLE_ADJUSTMENT
 
     # degraded
     if adjustment.decision == "train_as_planned":
         return _DEGRADED_ADJUSTMENT
-    return adjustment
+    return _with_status_codes(adjustment, status)
+
+
+def _with_status_codes(
+    adjustment: ReadinessAdjustment, status: ReadinessContextStatus
+) -> ReadinessAdjustment:
+    """Tag a preserved decision with the codes for the reads that failed.
+
+    Status codes lead, so a consumer reporting one reason reports the failed read
+    rather than a thinness it caused.
+    """
+    if not status.reason_codes:
+        return adjustment
+    merged = tuple(dict.fromkeys([*status.reason_codes, *adjustment.triggers]))
+    if merged == adjustment.triggers:
+        return adjustment
+    return replace(adjustment, triggers=merged)
 
 
 # ---------------------------------------------------------------------------

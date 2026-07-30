@@ -334,6 +334,30 @@ class TestConfidenceBand:
     """Confidence reports DATA COMPLETENESS, not predictive accuracy. It answers
     "how much did this call have to go on", which the engine knows for certain."""
 
+    def test_no_triggers_yields_no_band_rather_than_a_confident_default(self):
+        # A recommendation stored before the engine recorded triggers has nothing
+        # to judge it by. Defaulting to "high" would put the most confident claim
+        # on the one decision nothing is known about.
+        view = build_command_view(
+            current_training_day=TODAY, plan=PLAN, recommendation=_rec(triggers=[])
+        )
+        assert view.today.recommendation_state == "modify"
+        assert view.today.recommendation_confidence is None
+        assert view.today.recommendation_confidence_note == ""
+
+    def test_a_failed_read_outranks_the_thinness_it_causes(self):
+        # A failed history read leaves the engine seeing no history, so it also
+        # tags sparse_history. Reporting the thinness would tell the athlete their
+        # history is missing when it exists and could not be loaded, and would
+        # point them at a fix (check in tomorrow) that cannot help.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["checkins_unavailable", "poor_sleep", "sparse_history"]),
+        )
+        assert view.today.recommendation_confidence == "moderate"
+        assert "recent check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+
     def test_a_complete_context_is_high_confidence_with_no_qualifier(self):
         view = build_command_view(
             current_training_day=TODAY,
