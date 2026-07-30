@@ -47,3 +47,8 @@ test("the copy makes no medical or safety claim", () => {
     assert.ok(!html.includes(phrase), `trust copy must not make a safety claim: ${phrase}`);
   }
 });
+
+test("no first-run eyebrow, since intake is also where a plan is refined", () => {
+  const html = renderText();
+  assert.ok(!html.includes("Before you start"));
+});
