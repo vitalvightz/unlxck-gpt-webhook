@@ -183,7 +183,13 @@ test.describe("a recovery session reaches the reset form wherever it lands", () 
   // list is rewritten to the project Site URL. That is what shipped to
   // production — the link consumed its tokens on the homepage, the athlete was
   // simply signed in, and the reset never happened.
-  for (const landing of ["/", "/login", "/today"]) {
+  //
+  // These are the routes Supabase can actually deliver to: the Site URL and the
+  // allow-listed public ones. A protected route is deliberately not covered —
+  // it can be neither a Site URL nor a sensible Redirect URL, and its own guard
+  // bounces an unhydrated session to /login, so a test there races app
+  // behaviour unrelated to recovery.
+  for (const landing of ["/", "/login", "/forgot-password"]) {
     test(`carries a recovery landing on ${landing} to the reset form`, async ({ page, baseURL }) => {
       await isolateWithSupabaseUser(page, baseURL ?? BASE_URL);
       await page.goto(`${landing}${recoveryFragment("RECOVERY_MINTED_TOKEN")}`, {

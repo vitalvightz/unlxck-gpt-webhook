@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { markPasswordRecovery } from "@/lib/password-recovery";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -27,6 +27,16 @@ const RESET_PASSWORD_ROUTE = "/reset-password";
 export function PasswordRecoveryRedirect() {
   const router = useRouter();
   const pathname = usePathname();
+  // Read through a ref so the subscription below does not depend on the route.
+  // With `pathname` in the dependency list, any navigation that happened while
+  // a redirect was pending tore the effect down and its cleanup cancelled that
+  // redirect — losing the recovery exactly as before. A protected route
+  // bouncing an unhydrated session to /login is enough to trigger it.
+  const pathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     let client;
@@ -37,6 +47,8 @@ export function PasswordRecoveryRedirect() {
       return;
     }
 
+    // Only cleared when this component unmounts, i.e. the whole app is going
+    // away. A queued redirect must outlive any navigation in between.
     let navigationId: number | undefined;
 
     const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
@@ -44,12 +56,14 @@ export function PasswordRecoveryRedirect() {
         return;
       }
 
-      // Writing the marker is pure storage, so it is safe to do inline.
+      // Writing the marker is pure storage, so it is safe to do inline. It also
+      // means the reset form still opens if the navigation below is beaten by
+      // another redirect — the proof is already recorded.
       markPasswordRecovery(session.user.id);
 
       // Already on the form (the link landed correctly) — it reads the event
       // itself, so leave the history entry alone.
-      if (pathname === RESET_PASSWORD_ROUTE) {
+      if (pathnameRef.current === RESET_PASSWORD_ROUTE) {
         return;
       }
 
@@ -65,7 +79,7 @@ export function PasswordRecoveryRedirect() {
       window.clearTimeout(navigationId);
       subscription.unsubscribe();
     };
-  }, [pathname, router]);
+  }, [router]);
 
   return null;
 }
