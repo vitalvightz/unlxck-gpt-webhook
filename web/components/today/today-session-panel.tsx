@@ -380,7 +380,15 @@ export function TodaySessionPanel({
             </h2>
           </div>
         </div>
-        <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
+        <TodayDecisionPanel
+          banner={decisionBanner}
+          tier={decisionTier}
+          contributors={state.today.recommendation_contributors}
+          sources={state.today.recommendation_sources}
+          confidence={state.today.recommendation_confidence}
+          confidenceNote={state.today.recommendation_confidence_note}
+        sourcesAreHistorical={state.today.recommendation_sources_are_historical}
+        />
         {recommendationState !== "not_checked_in" ? (
           <ContextualFeedback
             key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
@@ -427,7 +435,15 @@ export function TodaySessionPanel({
           <h2 id="today-session-heading">{headline}</h2>
         </div>
       </div>
-      <TodayDecisionPanel banner={decisionBanner} tier={decisionTier} />
+      <TodayDecisionPanel
+        banner={decisionBanner}
+        tier={decisionTier}
+        contributors={state.today.recommendation_contributors}
+        sources={state.today.recommendation_sources}
+        confidence={state.today.recommendation_confidence}
+        confidenceNote={state.today.recommendation_confidence_note}
+        sourcesAreHistorical={state.today.recommendation_sources_are_historical}
+      />
       {recommendationState !== "not_checked_in" ? (
         <ContextualFeedback
           key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}

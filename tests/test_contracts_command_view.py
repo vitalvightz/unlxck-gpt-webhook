@@ -19,8 +19,13 @@ READINESS_REASON = "\n".join(
 )
 
 
-def _rec(training_day=TODAY, decision="modify", reason=READINESS_REASON):
-    return {"training_day": training_day, "decision": decision, "reason": reason}
+def _rec(training_day=TODAY, decision="modify", reason=READINESS_REASON, triggers=None):
+    return {
+        "training_day": training_day,
+        "decision": decision,
+        "reason": reason,
+        "triggers": list(triggers or []),
+    }
 
 
 class TestEmptyState:
@@ -171,6 +176,11 @@ class TestShape:
             "recommendation_reason",
             "decision_tier",
             "injury_hold_exempt",
+            "recommendation_contributors",
+            "recommendation_sources",
+            "recommendation_confidence",
+            "recommendation_confidence_note",
+            "recommendation_sources_are_historical",
             "warnings",
             "next_session",
             "session_scope",
@@ -225,3 +235,229 @@ class TestDecisionTier:
             recommendation=_rec(decision="modify"),
         )
         assert view.today.decision_tier == "modify"
+
+
+class TestContributorsAndSources:
+    """The card's "why today changed" chips and its "Based on" line, both derived
+    from the engine's own trigger codes so they cannot drift from the decision."""
+
+    def test_contributors_are_exposed_for_a_live_recommendation(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "flat_body", "phase_spp"]),
+        )
+        assert view.today.recommendation_contributors == ["Poor sleep", "Body feels flat"]
+
+    def test_context_markers_never_render_as_contributors(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["phase_taper", "contact_sport", "session_risk_low"]),
+        )
+        assert view.today.recommendation_contributors == []
+
+    def test_contributors_are_capped_at_three(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(
+                triggers=[
+                    "poor_sleep",
+                    "flat_body",
+                    "manageable_pain",
+                    "recent_hard_session",
+                    "fight_week",
+                ]
+            ),
+        )
+        assert len(view.today.recommendation_contributors) == 3
+
+    def test_a_streak_absorbs_the_single_day_signal_it_covers(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "poor_sleep_3_day_streak"]),
+        )
+        assert view.today.recommendation_contributors == ["Poor sleep, 3 days"]
+
+    def test_sources_name_only_the_inputs_the_decision_used(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["repeated_poor_readiness", "session_risk_high"]),
+        )
+        assert view.today.recommendation_sources == [
+            "today's check-in",
+            "your last few check-ins",
+            "today's planned session",
+        ]
+
+    def test_open_injuries_are_named_as_a_source(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep"]),
+            open_injuries=[{"severity": "moderate", "status": "open", "label": "left knee"}],
+        )
+        assert "your tracked injuries" in view.today.recommendation_sources
+
+    def test_a_degraded_context_hold_claims_no_history_it_could_not_read(self):
+        # The hold exists BECAUSE the history failed to load, so the card must not
+        # then claim it was based on that history.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["context_degraded"]),
+        )
+        assert view.today.recommendation_contributors == ["Check-in history incomplete"]
+        assert view.today.recommendation_sources == ["today's check-in"]
+
+    def test_an_expired_recommendation_exposes_no_contributors(self):
+        # Expired recommendations are history, never live readiness — and an
+        # explanation of a decision that is no longer in force is worse than none.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(training_day="2026-06-17", triggers=["poor_sleep"]),
+        )
+        assert view.today.recommendation_state == "not_checked_in"
+        assert view.today.recommendation_contributors == []
+        assert view.today.recommendation_sources == []
+
+    def test_no_recommendation_yields_empty_lists(self):
+        view = build_command_view(current_training_day=TODAY, plan=PLAN)
+        assert view.today.recommendation_contributors == []
+        assert view.today.recommendation_sources == []
+
+
+class TestConfidenceBand:
+    """Confidence reports DATA COMPLETENESS, not predictive accuracy. It answers
+    "how much did this call have to go on", which the engine knows for certain."""
+
+    def test_no_triggers_yields_no_band_rather_than_a_confident_default(self):
+        # A recommendation stored before the engine recorded triggers has nothing
+        # to judge it by. Defaulting to "high" would put the most confident claim
+        # on the one decision nothing is known about.
+        view = build_command_view(
+            current_training_day=TODAY, plan=PLAN, recommendation=_rec(triggers=[])
+        )
+        assert view.today.recommendation_state == "modify"
+        assert view.today.recommendation_confidence is None
+        assert view.today.recommendation_confidence_note == ""
+
+    def test_a_failed_read_outranks_the_thinness_it_causes(self):
+        # A failed history read leaves the engine seeing no history, so it also
+        # tags sparse_history. Reporting the thinness would tell the athlete their
+        # history is missing when it exists and could not be loaded, and would
+        # point them at a fix (check in tomorrow) that cannot help.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["checkins_unavailable", "poor_sleep", "sparse_history"]),
+        )
+        assert view.today.recommendation_confidence == "moderate"
+        assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
+
+    def test_a_complete_context_is_high_confidence_with_no_qualifier(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "session_risk_high"]),
+        )
+        assert view.today.recommendation_confidence == "high"
+        assert view.today.recommendation_confidence_note == ""
+
+    def test_no_prior_checkins_drops_confidence_to_moderate(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "sparse_history"]),
+        )
+        assert view.today.recommendation_confidence == "moderate"
+        assert "no recent days to compare" in view.today.recommendation_confidence_note
+
+    def test_an_unresolved_session_drops_confidence_to_moderate(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "session_unresolved"]),
+        )
+        assert view.today.recommendation_confidence == "moderate"
+
+    def test_an_unavailable_context_is_low_confidence(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(decision="pull_back", triggers=["context_unavailable"]),
+        )
+        assert view.today.recommendation_confidence == "low"
+
+    def test_the_qualifier_names_the_strongest_gap_only(self):
+        # One reason, not a list of everything missing: the athlete needs the thing
+        # to act on, and a stacked list reads as an error log.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["context_degraded", "sparse_history"]),
+        )
+        note = view.today.recommendation_confidence_note
+        assert note.count("Less to go on today") == 1
+        assert "couldn't load some of your recent history" in note
+
+    def test_completeness_codes_never_render_as_contributors(self):
+        # They describe the DATA, not the athlete. "Sparse history" in the "what
+        # moved this" list would read as a reason the session changed, which it is
+        # not — the confidence band is where it belongs.
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "sparse_history", "session_unresolved"]),
+        )
+        assert view.today.recommendation_contributors == ["Poor sleep"]
+
+
+class TestContributorLimit:
+    def test_a_zero_limit_suppresses_the_list(self):
+        from api.contracts.readiness_message import contributor_labels
+
+        assert contributor_labels(("poor_sleep", "flat_body"), limit=0) == ()
+        assert contributor_labels(("poor_sleep", "flat_body"), limit=1) == ("Poor sleep",)
+
+
+class TestSelfSufficientDecisions:
+    """A decision that needs no history to stand keeps its full band.
+
+    Thin data takes nothing away from a red-flag stop. Tagging it anyway produced
+    the worst reading on the card: "STOP TODAY" beside a lowered band, which says
+    the stop is uncertain when it is the most certain call the engine makes.
+    """
+
+    def _band_for(self, checkin_kwargs) -> tuple[str, str]:
+        from api.contracts.readiness_message import (
+            ReadinessCheckin,
+            ReadinessContext,
+            build_readiness_adjustment,
+            confidence_band,
+        )
+
+        # A brand-new athlete: no prior check-ins, no resolvable session.
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(**checkin_kwargs), ReadinessContext(training_day=TODAY)
+        )
+        return adjustment.decision, confidence_band(adjustment.triggers)
+
+    def test_a_red_flag_stop_is_not_reported_as_uncertain(self):
+        assert self._band_for({"sharp_pain": True}) == ("pull_back", "high")
+        assert self._band_for({"neurological_symptoms": True}) == ("pull_back", "high")
+
+    def test_an_injury_stop_is_not_reported_as_uncertain(self):
+        assert self._band_for({"active_injury": "worse"}) == ("pull_back", "high")
+
+    def test_a_high_pain_stop_is_not_reported_as_uncertain(self):
+        assert self._band_for({"pain": "high"}) == ("pull_back", "high")
+
+    def test_an_ordinary_fatigue_call_still_reflects_thin_data(self):
+        # Poor sleep genuinely reads differently against a history, so the band
+        # still drops. Only the self-sufficient signals are exempt.
+        assert self._band_for({"sleep": "poor"}) == ("modify", "moderate")

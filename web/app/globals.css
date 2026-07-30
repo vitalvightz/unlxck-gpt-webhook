@@ -6840,6 +6840,16 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   color: var(--text-primary);
 }
 
+/* The instruction. An athlete in a gym scans for what to do before asking why,
+   so this reads first and carries the most weight of anything under the tier. */
+.today-decision-action {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .today-decision-detail {
   margin: 0;
   color: var(--text-secondary, rgba(255, 255, 255, 0.72));
@@ -6853,6 +6863,97 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   font-size: 13px;
   line-height: 1.4;
   opacity: 0.85;
+}
+
+/* Evidence: the signals behind today's call, how much data it rests on, and the
+   inputs it read. Separated by a rule and set quieter than the action, so it
+   reads as support for the instruction rather than competition with it. */
+.today-decision-evidence {
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.today-decision-signals {
+  margin: 0;
+}
+
+.today-decision-signals-label {
+  margin: 0 0 5px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.today-decision-signals ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-decision-signals li {
+  padding: 3px 9px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+/* Confidence in the DATA, not in the prediction. The band is shown at every
+   level, including high: a qualifier that only ever appears when something is
+   wrong teaches the athlete to read its presence as a warning. */
+.today-decision-confidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.today-decision-confidence-label {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.today-decision-confidence-band {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.today-decision-confidence[data-band="moderate"] .today-decision-confidence-band {
+  color: var(--progress-gold);
+}
+
+.today-decision-confidence[data-band="low"] .today-decision-confidence-band {
+  color: var(--danger-ink);
+}
+
+.today-decision-confidence-note {
+  flex-basis: 100%;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  opacity: 0.8;
+}
+
+.today-decision-sources {
+  margin: 8px 0 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 12.5px;
+  line-height: 1.4;
+  opacity: 0.8;
 }
 
 /* Today's resolved session blocks reuse the structured-plan (camp map) cards so
@@ -18964,4 +19065,59 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   .feedback-attachment-meta .ghost-button {
     width: 100%;
   }
+}
+
+/* Intake trust note — how Unlxck builds the camp and what the athlete controls.
+   Sits above the first question, styled as supporting context rather than a
+   warning, so it reads as an explanation and not as a disclaimer. */
+.onboarding-trust-note {
+  display: block;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-support);
+  background: var(--bg-surface);
+}
+
+.onboarding-trust-note .form-section-header {
+  margin-bottom: var(--space-2);
+}
+
+/* Four scannable cards rather than a wall of prose. Two columns wherever there
+   is room; a single column on a phone, which is where intake actually happens. */
+.onboarding-trust-points {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 640px) {
+  .onboarding-trust-points {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.onboarding-trust-point {
+  padding: var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-support);
+  background: var(--bg-panel);
+}
+
+.onboarding-trust-point-title {
+  margin: 0 0 3px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.onboarding-trust-point-body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
 }

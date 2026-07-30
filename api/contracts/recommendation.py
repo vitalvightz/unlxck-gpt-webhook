@@ -40,6 +40,9 @@ class RecommendationView:
     * ``is_history`` is ``True`` when a stored recommendation exists but has
       expired — the consumer may show it as labelled history only.
     * ``history_reason`` is the expired recommendation's reason (history only).
+    * ``triggers`` are the engine's trigger codes behind a LIVE decision, from
+      which the consumer derives the athlete-facing contributors. Empty whenever
+      the recommendation is not current, for the same reason ``reason`` is.
     """
 
     state: RecommendationState
@@ -47,6 +50,7 @@ class RecommendationView:
     training_day: str | None
     is_history: bool
     history_reason: str | None = None
+    triggers: tuple[str, ...] = ()
 
 
 def _as_iso(day: date | str) -> str:
@@ -76,6 +80,15 @@ def _recommendation_reason(recommendation: Mapping[str, Any]) -> str | None:
     if raw is None:
         raw = recommendation.get("recommendation_reason")
     return _clean_str(raw)
+
+
+def _recommendation_triggers(recommendation: Mapping[str, Any]) -> tuple[str, ...]:
+    raw = recommendation.get("triggers")
+    if raw is None:
+        raw = recommendation.get("recommendation_triggers")
+    if not isinstance(raw, (list, tuple)):
+        return ()
+    return tuple(text for text in (_clean_str(item) for item in raw) if text)
 
 
 def is_recommendation_valid(
@@ -124,6 +137,7 @@ def resolve_recommendation_state(
             reason=reason,
             training_day=rec_day,
             is_history=False,
+            triggers=_recommendation_triggers(recommendation),
         )
 
     # Stored but not current: expired (or malformed). Never surface as live

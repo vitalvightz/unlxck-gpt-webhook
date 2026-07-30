@@ -8,7 +8,7 @@ decision plus the athlete-facing adjustment message.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Any, Callable, Literal, Mapping, Sequence
 
@@ -1641,7 +1641,69 @@ def build_readiness_adjustment(
     checkin: ReadinessCheckin,
     context: ReadinessContext | None = None,
 ) -> ReadinessAdjustment:
+    """The readiness decision, tagged with how much data it rests on.
+
+    Thin wrapper over :func:`_resolve_readiness_adjustment` so the completeness
+    codes are appended once, on every path. The inner function returns early in
+    several places (red flags, safe fillers, injury floors) and each of those
+    decisions rests on data of a different thickness, so tagging inside it would
+    mean remembering to tag five separate returns.
+    """
     context = context or ReadinessContext()
+    adjustment = _resolve_readiness_adjustment(checkin, context)
+    if _is_self_sufficient(adjustment.triggers):
+        return adjustment
+    completeness = _completeness_triggers(context)
+    if not completeness:
+        return adjustment
+    merged = tuple(dict.fromkeys([*adjustment.triggers, *completeness]))
+    return replace(adjustment, triggers=merged)
+
+
+# Data-thinness codes. These say nothing about the athlete: they record that the
+# decision was made from less than the usual amount of data, which is what the
+# card's confidence band reports. A failed READ is a different thing and is
+# tracked separately (``context_degraded`` / ``context_unavailable`` in
+# api/services/readiness_failsafe.py).
+SPARSE_HISTORY = "sparse_history"
+SESSION_UNRESOLVED = "session_unresolved"
+
+# Signals that decide the day on their own. A red-flag symptom, a worsening or
+# severe injury, or high pain is a stop whatever the history says, so thin data
+# takes nothing away from it. Tagging these anyway produced the worst reading on
+# the card: a new athlete reporting sharp pain saw "STOP TODAY" next to a lowered
+# band, which says the stop is uncertain when it is the most certain call the
+# engine makes.
+_SELF_SUFFICIENT_TRIGGERS = frozenset(
+    {"red_flag", "active_injury_worse", "pain_high", "injury_hold", *_SAFETY_FLAG_LABELS}
+)
+
+
+def _is_self_sufficient(triggers: Sequence[str]) -> bool:
+    """True when the decision rests on a signal that needs no history to stand."""
+    return any(str(trigger).strip() in _SELF_SUFFICIENT_TRIGGERS for trigger in triggers)
+
+
+def _completeness_triggers(context: ReadinessContext) -> tuple[str, ...]:
+    """Codes recording which usual inputs this decision did NOT have.
+
+    Two cases, both of which leave a decision resting on today's check-in alone:
+    no prior check-in inside the recency window (a new athlete, or one who has
+    not logged in days), and no resolvable session for today (so exposure could
+    not be graded).
+    """
+    codes: list[str] = []
+    if not _prior_unique_checkins(context):
+        codes.append(SPARSE_HISTORY)
+    if classify_session_risk(context.today_session) == "unknown":
+        codes.append(SESSION_UNRESOLVED)
+    return tuple(codes)
+
+
+def _resolve_readiness_adjustment(
+    checkin: ReadinessCheckin,
+    context: ReadinessContext,
+) -> ReadinessAdjustment:
     phase = _normalize_phase(context.phase or checkin.phase)
     session_risk = classify_session_risk(context.today_session)
     session_modality = classify_session_modality(context.today_session)
@@ -1755,3 +1817,252 @@ def build_readiness_adjustment(
         ),
         session_risk=session_risk,
     )
+
+
+# ---------------------------------------------------------------------------
+# Athlete-facing contributors and sources ("why today changed", "what we used")
+#
+# The engine already records WHY it decided, as trigger codes. These turn that
+# record into the two short athlete-facing lists the Today decision card shows,
+# so the card explains itself from the same data the decision was made from and
+# can never drift from it.
+#
+# Deliberately worded as CONTRIBUTORS, not causes. The engine records which
+# signals were present when it decided; it does not establish that any one of
+# them caused the change, and the copy must not imply that it did.
+# ---------------------------------------------------------------------------
+
+# Trigger code -> short chip label. Codes absent here are context markers
+# (phase_*, contact_sport, low/medium session risk) or generic umbrellas
+# (red_flag) that say nothing specific to an athlete, so they never render.
+_CONTRIBUTOR_LABELS: dict[str, str] = {
+    # Red-flag symptoms.
+    "sharp_pain": "Sharp pain",
+    "instability": "Instability",
+    "swelling": "Swelling",
+    "neurological_symptoms": "Neurological symptoms",
+    "illness_symptoms": "Illness symptoms",
+    "cannot_warm_into_movement": "Can't warm into movement",
+    "worse_next_day_pain": "Worse next-day pain",
+    # Injury state.
+    "active_injury_worse": "Injury reported worse",
+    "active_injury_restriction": "Active injury",
+    "tracked_injury_high_risk_session": "Active injury",
+    # Today's check-in.
+    "pain_high": "High pain",
+    "manageable_pain": "Manageable pain",
+    "poor_sleep": "Poor sleep",
+    "flat_body": "Body feels flat",
+    # Accumulated history.
+    "poor_sleep_3_day_streak": "Poor sleep, 3 days",
+    "flat_body_3_day_streak": "Flat body, 3 days",
+    "pain_3_day_streak": "Pain, 3 days",
+    "pain_worsening_trend": "Pain getting worse",
+    "repeated_poor_readiness": "Repeated poor check-ins",
+    "recent_hard_session": "Recent hard session",
+    "recent_hard_load_plus_poor_today": "Heavy recent load",
+    # Camp context that changed the call on its own.
+    "taper_poor_readiness": "Taper phase",
+    "reintegration_poor_readiness": "Return phase",
+    "fight_week": "Fight week",
+    # Today's planned work. Only the high tier is a contributor: a low or medium
+    # session did not push the decision anywhere.
+    "session_risk_high": "Hard session planned",
+    # Degraded safety context. Named plainly so a held-back athlete can see the
+    # hold came from missing data, not from their own readiness.
+    "context_degraded": "Check-in history incomplete",
+    "context_unavailable": "Safety history unavailable",
+}
+
+# When both codes fire, the first is fully covered by the second and would read
+# as the same thing twice ("Poor sleep" next to "Poor sleep, 3 days").
+_CONTRIBUTOR_SUPERSEDED_BY: tuple[tuple[str, str], ...] = (
+    ("poor_sleep", "poor_sleep_3_day_streak"),
+    ("flat_body", "flat_body_3_day_streak"),
+    ("manageable_pain", "pain_3_day_streak"),
+    ("manageable_pain", "pain_worsening_trend"),
+    ("pain_3_day_streak", "pain_worsening_trend"),
+    ("recent_hard_session", "recent_hard_load_plus_poor_today"),
+)
+
+# How many contributors the card shows. The report's "top contributors", not a
+# full audit trail: three is what an athlete reads before training.
+MAX_CONTRIBUTORS = 3
+
+
+def contributor_labels(
+    triggers: Sequence[str], *, limit: int = MAX_CONTRIBUTORS
+) -> tuple[str, ...]:
+    """The top athlete-facing contributor labels behind a readiness decision.
+
+    Preserves the engine's own trigger order (most decisive first), drops context
+    markers and codes covered by a stronger co-occurring signal, de-duplicates by
+    label so two codes sharing one label ("Active injury") render once, and caps
+    the result at ``limit``.
+    """
+    if limit <= 0:
+        return ()
+
+    present = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    superseded = {weaker for weaker, stronger in _CONTRIBUTOR_SUPERSEDED_BY if stronger in present}
+
+    labels: list[str] = []
+    for trigger in triggers:
+        code = str(trigger).strip()
+        if code in superseded:
+            continue
+        label = _CONTRIBUTOR_LABELS.get(code)
+        if label and label not in labels:
+            labels.append(label)
+        if len(labels) >= limit:
+            break
+    return tuple(labels)
+
+
+# Which inputs a trigger proves were actually read. Keyed to the source line the
+# athlete sees, so the card never claims to have used data it did not have.
+_HISTORY_CHECKIN_TRIGGERS = frozenset(
+    {
+        "poor_sleep_3_day_streak",
+        "flat_body_3_day_streak",
+        "pain_3_day_streak",
+        "pain_worsening_trend",
+        "repeated_poor_readiness",
+    }
+)
+_RECENT_SESSION_TRIGGERS = frozenset({"recent_hard_session", "recent_hard_load_plus_poor_today"})
+_INJURY_TRIGGERS = frozenset(
+    {"active_injury_worse", "active_injury_restriction", "tracked_injury_high_risk_session"}
+)
+_PHASE_TRIGGERS = frozenset({"taper_poor_readiness", "reintegration_poor_readiness", "fight_week"})
+_SESSION_RISK_TRIGGERS = frozenset({"session_risk_low", "session_risk_medium", "session_risk_high"})
+
+
+def decision_sources(
+    triggers: Sequence[str], *, has_open_injuries: bool = False
+) -> tuple[str, ...]:
+    """The inputs behind a decision, for the card's "Based on" line.
+
+    Every input UNLXCK holds today is athlete-reported, so this is a short honest
+    provenance list rather than a device audit. A source is named only when the
+    decision actually consulted it: a signal that fired proves the data was read,
+    and a degraded-context hold names nothing beyond today's check-in because the
+    history is exactly what failed to load.
+    """
+    codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    # An injury hold supersedes the daily readiness copy and fires whether or not
+    # the athlete has checked in today, so it rests on the tracked injury alone.
+    if "injury_hold" in codes:
+        return ("your tracked injuries",)
+    sources = ["today's check-in"]
+    if codes & _HISTORY_CHECKIN_TRIGGERS:
+        sources.append("your last few check-ins")
+    if codes & _RECENT_SESSION_TRIGGERS:
+        sources.append("your recent sessions")
+    if has_open_injuries or (codes & _INJURY_TRIGGERS):
+        sources.append("your tracked injuries")
+    if codes & _SESSION_RISK_TRIGGERS:
+        sources.append("today's planned session")
+    if codes & _PHASE_TRIGGERS:
+        sources.append("your camp phase")
+    return tuple(sources)
+
+
+# ---------------------------------------------------------------------------
+# Confidence band, shown to the athlete as "Data coverage"
+#
+# This reports DATA COMPLETENESS, not predictive accuracy. It answers "how much
+# did this call have to go on", which the engine knows for certain, and not "how
+# likely is this call to be right", which would need outcome data the product
+# does not yet collect. The athlete-facing label says coverage for exactly that
+# reason; calling it confidence invited the opposite reading. The copy keeps the
+# distinction too: a band below high always names the missing input rather than
+# hedging vaguely.
+#
+# Three bands rather than a percentage. A number implies a calibration that does
+# not exist behind it, and reads as false precision to an athlete deciding
+# whether to spar.
+# ---------------------------------------------------------------------------
+
+ConfidenceBand = Literal["high", "moderate", "low"]
+
+# Code -> what was missing, in the athlete's words. Ordered by how much it costs
+# the decision, strongest first, since the qualifier line names one reason only.
+#
+# A FAILED READ always outranks the thinness it causes. When a history read
+# fails, the engine also sees no history and tags it as sparse; reporting the
+# thinness would tell the athlete their history is missing when it exists and
+# could not be loaded, and would point them at a fix that cannot work.
+# Within a severity level the SPECIFIC code is listed before its umbrella, so the
+# line names the read that actually failed and falls back to the general wording
+# only when nothing more precise is known.
+# A read that FAILED, held as the thing that failed rather than a whole sentence,
+# because it has to be said two ways. When the decision is being made now, the
+# data could not be loaded. When an existing decision is being re-checked, the
+# data loaded fine at the time and could not be REFRESHED, which is a different
+# thing and must not read as "you don't have any".
+_CONFIDENCE_GAP_SUBJECTS: tuple[tuple[str, str], ...] = (
+    ("injury_context_unavailable", "your injury history"),
+    ("session_unavailable", "today's session"),
+    ("context_unavailable", "your training and injury history"),
+    ("checkins_unavailable", "your recent check-ins"),
+    ("completions_unavailable", "your recent sessions"),
+    ("intake_unavailable", "part of your profile"),
+    ("context_degraded", "some of your recent history"),
+)
+
+# Data that is simply THIN rather than unreadable. Nothing failed, so there is no
+# refreshing to talk about and these only ever read one way.
+_CONFIDENCE_THINNESS_GAPS: tuple[tuple[str, str], ...] = (
+    ("session_unresolved", "today's session isn't resolved yet"),
+    (SPARSE_HISTORY, "this is based on today's check-in alone, with no recent days to compare"),
+)
+
+# Anything that means a safety read failed outright.
+_LOW_CONFIDENCE_TRIGGERS = frozenset(
+    {"context_unavailable", "injury_context_unavailable", "session_unavailable"}
+)
+_MODERATE_CONFIDENCE_TRIGGERS = frozenset(
+    {
+        "context_degraded",
+        "checkins_unavailable",
+        "completions_unavailable",
+        "intake_unavailable",
+        "session_unresolved",
+        SPARSE_HISTORY,
+    }
+)
+
+
+def confidence_band(triggers: Sequence[str]) -> ConfidenceBand:
+    """How much data this decision rests on, as a three-way band."""
+    codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    if codes & _LOW_CONFIDENCE_TRIGGERS:
+        return "low"
+    if codes & _MODERATE_CONFIDENCE_TRIGGERS:
+        return "moderate"
+    return "high"
+
+
+def confidence_note(triggers: Sequence[str], *, re_check: bool = False) -> str:
+    """One line naming what was missing, or "" when nothing was.
+
+    Naming the specific gap is the whole point. A band on its own tells an
+    athlete nothing they can act on; "no recent days to compare" tells them that
+    checking in tomorrow fixes it.
+
+    ``re_check`` is for an EXISTING decision being re-verified, where the data
+    was there when the call was made and only the re-read failed. Saying it
+    "couldn't be loaded" there reads as though the athlete has no history, and
+    sits flatly against the card's own "based on your last few check-ins".
+    """
+    codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    for code, subject in _CONFIDENCE_GAP_SUBJECTS:
+        if code in codes:
+            if re_check:
+                return f"We couldn't refresh {subject} just now."
+            return f"Less to go on today: we couldn't load {subject}."
+    for code, gap in _CONFIDENCE_THINNESS_GAPS:
+        if code in codes:
+            return f"Less to go on today: {gap}."
+    return ""

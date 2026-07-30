@@ -32,7 +32,13 @@ from fastapi import HTTPException, status
 
 from api.contracts.command_view import CommandView, make_risk, sort_risk_watch
 from api.contracts.injury_checkin import injury_consequence_tier
-from api.contracts.readiness_message import ReadinessAdjustment
+from api.contracts.readiness_message import (
+    ReadinessAdjustment,
+    confidence_band,
+    confidence_note,
+    contributor_labels,
+    decision_sources,
+)
 from api.services import today_service as _today_service
 from api.services.plan_schedule import (
     parse_iso_date,
@@ -61,6 +67,11 @@ _GREEN_BASE_ADJUSTMENT = ReadinessAdjustment(
 )
 
 _COMMAND_VIEW_REMINDER = "Safety context is unavailable, so hard training is not cleared."
+
+# Worst-of ordering for the confidence band. ``None`` (no band, nothing known to
+# judge by) ranks lowest so any real band replaces it, and a band is only ever
+# lowered, never raised.
+_CONFIDENCE_RANK: dict[str | None, int] = {None: 0, "high": 1, "moderate": 2, "low": 3}
 
 
 @dataclass
@@ -401,6 +412,10 @@ def _apply_fail_safe_to_command_view(
     # Only a STALE green recommendation needs revoking; an already-conservative
     # stored state is preserved.
     if str(view.today.recommendation_state) != "train_as_planned":
+        # Its own explanation still holds — the signals that made it conservative
+        # are still why it is conservative — but the confidence band was computed
+        # from the context that STORED it, and this read could not be verified.
+        _reband_confidence(view, context_status)
         return view
 
     floored = apply_context_failsafe(_GREEN_BASE_ADJUSTMENT, context_status)
@@ -409,9 +424,62 @@ def _apply_fail_safe_to_command_view(
     # Map the canonical decision onto the command view's decision tier: degraded
     # softens to MODIFY, unavailable holds at PULL BACK.
     view.today.decision_tier = "pull_back" if floored.decision == "pull_back" else "modify"
+    # The explanation has to be revoked with the decision it explained. Left
+    # alone, the card would pair a fail-safe hold with the green decision's own
+    # contributors and a "high" confidence band — the exact contradiction
+    # ("PULL BACK / Confidence: High") this feature exists to prevent.
+    _explain_from_triggers(
+        view,
+        tuple(dict.fromkeys([*context_status.reason_codes, *floored.triggers])),
+    )
     reminder = make_risk("reminder", text=_COMMAND_VIEW_REMINDER)
     view.risk_watch = sort_risk_watch([*view.risk_watch, reminder])
     return view
+
+
+def _explain_from_triggers(view: CommandView, triggers: tuple[str, ...]) -> None:
+    """Rebuild the whole explanation from the fail-safe's own trigger codes.
+
+    Status reason codes lead, so the qualifier names the read that actually
+    failed rather than the umbrella code.
+    """
+    view.today.recommendation_contributors = list(contributor_labels(triggers))
+    view.today.recommendation_sources = list(
+        decision_sources(triggers, has_open_injuries=bool(view.open_injuries))
+    )
+    view.today.recommendation_confidence = confidence_band(triggers)
+    view.today.recommendation_confidence_note = confidence_note(triggers)
+
+
+def _reband_confidence(view: CommandView, context_status: ReadinessContextStatus) -> None:
+    """Lower a preserved decision's confidence to match THIS read.
+
+    Contributors and sources are left alone: they describe why the stored
+    decision was made, and that is unchanged. The band is not, because it reports
+    how much could be verified, and right now some of it could not be.
+
+    At an EQUAL band the live failure still replaces the stored qualifier. Two
+    different problems can both be "moderate": an athlete with little history,
+    and an athlete whose history could not be loaded. Keeping the stored wording
+    there told someone with a failed read that they had "no recent days to
+    compare", which is both untrue and the wrong remedy — it says check in
+    tomorrow, when nothing the athlete does will fix a read that broke.
+    """
+    banded = confidence_band(context_status.reason_codes)
+    if _CONFIDENCE_RANK[banded] < _CONFIDENCE_RANK[view.today.recommendation_confidence]:
+        # This read is genuinely better than the one that stored the decision, so
+        # the stored band stands: worst-of, never raised.
+        return
+    view.today.recommendation_confidence = banded
+    # A re-check, not a fresh decision: the data was there when the call was made
+    # and only the re-read failed. The sources are marked historical for the same
+    # reason, so the card reads "was based on your last few check-ins" instead of
+    # claiming in the present tense to have used what it just said it could not
+    # load.
+    view.today.recommendation_confidence_note = confidence_note(
+        context_status.reason_codes, re_check=True
+    )
+    view.today.recommendation_sources_are_historical = True
 
 
 def build_today_command_view(

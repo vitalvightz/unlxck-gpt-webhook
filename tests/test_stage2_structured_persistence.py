@@ -80,11 +80,11 @@ def _faithful_source(plan: dict) -> str:
     lines = ["# FIGHT CAMP PLAN", ""]
     for week in plan.get("weeks") or []:
         lines.append(
-            f"## Week — SPP ({week.get('countdown_start')} to {week.get('countdown_end')})"
+            f"## Week: SPP ({week.get('countdown_start')} to {week.get('countdown_end')})"
         )
         lines.append("")
         for day in week.get("days") or []:
-            lines.append(f"### Day ({day.get('countdown_label') or ''}) — Session")
+            lines.append(f"### Day ({day.get('countdown_label') or ''}): Session")
             for session in day.get("sessions") or []:
                 for block in session.get("blocks") or []:
                     name = block.get("display_name")

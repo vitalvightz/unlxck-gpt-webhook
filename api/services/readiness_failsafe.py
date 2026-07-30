@@ -21,7 +21,7 @@ The module is pure (no I/O) so it is trivially testable.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable, Literal
 
 from api.contracts.readiness_message import ReadinessAdjustment
@@ -134,12 +134,17 @@ def status_from_components(components: Iterable[str]) -> ReadinessContextStatus:
 # Conservative fallback copy. These never claim a clean check — they explain
 # that the app is holding back BECAUSE it could not verify the athlete's data.
 # ---------------------------------------------------------------------------
+# The fallback copy names no particular input. Any one of several reads can
+# trigger it, so naming one would be wrong for the rest: a failed SCHEDULE read
+# used to tell the athlete their "training and injury history" was unavailable.
+# The specific component is carried in the triggers instead, where the confidence
+# qualifier can name the read that actually failed.
 _UNAVAILABLE_ADJUSTMENT = ReadinessAdjustment(
     decision="pull_back",
     title="Safety check unavailable.",
     reason=(
-        "We couldn't load the training and injury history needed to clear you to "
-        "train, so we're holding you back as a precaution."
+        "We couldn't load the information needed to clear you to train, so we're "
+        "holding you back as a precaution."
     ),
     action=(
         "Skip hard training for now. Retry your check-in shortly, or keep it to "
@@ -154,8 +159,8 @@ _DEGRADED_ADJUSTMENT = ReadinessAdjustment(
     decision="modify",
     title="Training reduced.",
     reason=(
-        "Some of your recent check-in history couldn't be loaded, so we can't "
-        "fully confirm you're fresh today."
+        "Some of the information behind today's check couldn't be loaded, so we "
+        "can't fully confirm you're fresh today."
     ),
     action=(
         "Train lighter than planned: cut volume and skip hard sparring, heavy "
@@ -179,19 +184,53 @@ def apply_context_failsafe(
     * ``degraded``   -> a ``train_as_planned`` result is raised to ``modify`` (a
       failed read must never read as readiness); an already-conservative
       ``modify`` / ``pull_back`` is preserved.
+
+    EVERY outcome carries the status reason codes, whether the decision is
+    preserved or replaced, so the record of which read failed travels with it and
+    is persisted alongside the decision.
+
+    A preserved decision needs them because otherwise a failed read on an
+    already-cautious day left the decision tagged only with the engine's
+    data-thinness codes, and the card explained the resulting low confidence as
+    "no recent days to compare" — telling the athlete their history is missing
+    when in fact it exists and could not be loaded, and pointing them at a fix
+    (check in tomorrow) that would not have helped.
+
+    A REPLACED decision needs them because the fallbacks carry only the umbrella
+    code. Without the merge, a failed session-history or profile read persisted
+    as the generic "degraded" and later read back as "check-in history
+    incomplete", and a failed schedule read persisted as the generic
+    "unavailable" and read back as a claim about training and injury history that
+    was never true.
     """
     if status.status == "complete":
         return adjustment
 
     if status.status == "unavailable":
         if adjustment.decision == "pull_back":
-            return adjustment
-        return _UNAVAILABLE_ADJUSTMENT
+            return _with_status_codes(adjustment, status)
+        return _with_status_codes(_UNAVAILABLE_ADJUSTMENT, status)
 
     # degraded
     if adjustment.decision == "train_as_planned":
-        return _DEGRADED_ADJUSTMENT
-    return adjustment
+        return _with_status_codes(_DEGRADED_ADJUSTMENT, status)
+    return _with_status_codes(adjustment, status)
+
+
+def _with_status_codes(
+    adjustment: ReadinessAdjustment, status: ReadinessContextStatus
+) -> ReadinessAdjustment:
+    """Tag a preserved decision with the codes for the reads that failed.
+
+    Status codes lead, so a consumer reporting one reason reports the failed read
+    rather than a thinness it caused.
+    """
+    if not status.reason_codes:
+        return adjustment
+    merged = tuple(dict.fromkeys([*status.reason_codes, *adjustment.triggers]))
+    if merged == adjustment.triggers:
+        return adjustment
+    return replace(adjustment, triggers=merged)
 
 
 # ---------------------------------------------------------------------------

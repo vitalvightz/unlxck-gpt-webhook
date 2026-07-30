@@ -568,6 +568,7 @@ def _recommendation_mapping(checkin: Mapping[str, Any] | None) -> dict[str, Any]
         "training_day": checkin.get("training_day"),
         "decision": checkin.get("recommendation_state"),
         "reason": checkin.get("recommendation_reason"),
+        "triggers": checkin.get("recommendation_triggers") or [],
     }
 
 
@@ -612,7 +613,16 @@ def _severe_injury_recommendation(
             "Clear it or get it medically cleared before training — marking it easing does not lift the hold.",
         ]
     )
-    return {"decision": "pull_back", "reason": reason, "training_day": training_day}
+    return {
+        "decision": "pull_back",
+        "reason": reason,
+        "training_day": training_day,
+        # The hold is injury-driven and supersedes the daily readiness copy, so the
+        # card names the injury as its contributor. ``injury_hold`` marks it as a
+        # recommendation that does NOT rest on today's check-in — it fires whether
+        # or not one exists, so the card must not claim a check-in it never read.
+        "triggers": ["injury_hold", "active_injury_worse"],
+    }
 
 
 def _completion_session_is_support(

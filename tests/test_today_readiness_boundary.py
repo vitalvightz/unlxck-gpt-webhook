@@ -393,3 +393,173 @@ def test_injury_reconciliation_blocked_on_failed_flag_read():
     assert exc.value.headers == {"Retry-After": "30"}
     # A failed read must not have created any injury (no duplicate / phantom state).
     assert not store.injury_flags.get(ATHLETE)
+
+
+# ---------------------------------------------------------------------------
+# The explanation is revoked with the decision it explained
+#
+# The fail-safe can turn a stored "train as planned" into a hold. If only the
+# decision moved, the card would pair that hold with the GREEN decision's own
+# contributors and confidence — "PULL BACK / Confidence: High / Fight week" —
+# which is precisely the contradiction the explanation feature exists to prevent.
+# ---------------------------------------------------------------------------
+def _seed_stored_green_with_explanation(store) -> None:
+    """A green check-in whose triggers produce real contributors and a high band."""
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "train_as_planned",
+            "recommendation_reason": "Sharp work only.\nFight week rewards freshness.",
+            "recommendation_triggers": ["fight_week", "session_risk_high", "phase_taper"],
+        },
+    )
+
+
+def _stored_green_explanation_is_stale(view) -> bool:
+    """True when any part of the green decision's explanation survived the hold."""
+    return (
+        "Fight week" in view.today.recommendation_contributors
+        or "Hard session planned" in view.today.recommendation_contributors
+        or view.today.recommendation_confidence == "high"
+    )
+
+
+def test_unavailable_context_reports_low_confidence_and_names_the_safety_context():
+    store = _store_with_plan(FailingInjuryFlagsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "pull_back"
+    assert view.today.recommendation_confidence == "low"
+    assert "injury history" in view.today.recommendation_confidence_note
+    assert view.today.recommendation_contributors == ["Safety history unavailable"]
+    assert not _stored_green_explanation_is_stale(view)
+
+
+def test_degraded_context_reports_moderate_confidence_and_incomplete_history():
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "modify"
+    assert view.today.recommendation_confidence == "moderate"
+    assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
+    assert view.today.recommendation_contributors == ["Check-in history incomplete"]
+    assert not _stored_green_explanation_is_stale(view)
+
+
+def test_the_hold_never_claims_a_source_it_could_not_read():
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    # The read that failed is exactly the history, so it cannot be named as an
+    # input the hold was based on.
+    assert "your last few check-ins" not in view.today.recommendation_sources
+
+
+def test_a_preserved_conservative_decision_keeps_its_reasons_but_loses_confidence():
+    # Its contributors still describe why it is conservative, so they stand. The
+    # band does not: it reports how much could be verified, and this read could
+    # not verify the history.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "modify",
+            "recommendation_reason": "Session reduced.\nPoor sleep.",
+            "recommendation_triggers": ["poor_sleep", "session_risk_high", "phase_spp"],
+        },
+    )
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "modify"
+    assert view.today.recommendation_contributors == ["Poor sleep", "Hard session planned"]
+    assert view.today.recommendation_confidence == "moderate"
+    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
+
+
+def test_a_complete_context_leaves_the_explanation_untouched():
+    store = _store_with_plan()
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "train_as_planned"
+    assert view.today.recommendation_confidence == "high"
+    assert view.today.recommendation_confidence_note == ""
+    assert "Fight week" in view.today.recommendation_contributors
+
+
+def test_an_equal_band_still_adopts_the_live_failure_reason():
+    # Two different problems both rank moderate: an athlete with little history,
+    # and an athlete whose history could not be loaded. Keeping the stored wording
+    # at an equal band told someone with a failed read that they had "no recent
+    # days to compare" — untrue, and the wrong remedy, since checking in tomorrow
+    # cannot fix a read that broke.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "modify",
+            "recommendation_reason": "Session reduced.\nPoor sleep.",
+            "recommendation_triggers": ["poor_sleep", "sparse_history"],
+        },
+    )
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_confidence == "moderate"
+    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
+    assert "no recent days to compare" not in view.today.recommendation_confidence_note
+
+
+def test_a_re_check_never_claims_to_have_used_what_it_could_not_reload():
+    # The stored decision genuinely used the athlete's recent check-ins, so they
+    # stay in the sources. But a failed RE-READ next to a present-tense "based on
+    # your last few check-ins" reads as: you couldn't load them, yet you say you
+    # used them. The tense has to move, and the note has to say refresh, not load.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "modify",
+            "recommendation_reason": "Session reduced.\nPoor sleep for 3 days.",
+            "recommendation_triggers": ["poor_sleep_3_day_streak", "repeated_poor_readiness"],
+        },
+    )
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert "your last few check-ins" in view.today.recommendation_sources
+    assert view.today.recommendation_sources_are_historical is True
+    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
+    assert "couldn't be loaded" not in view.today.recommendation_confidence_note
+
+
+def test_a_replaced_decision_is_made_now_and_stays_present_tense():
+    # Nothing historical here: the fail-safe made this call in this request, and
+    # its sources were rebuilt to match. Past tense would be wrong.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_sources_are_historical is False
+    assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note

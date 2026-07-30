@@ -878,6 +878,19 @@ export type TodayCommandView = {
     // True when today's scheduled session is a low-cost support / filler that an
     // injury hold does not apply to (mental cue, breathing/mobility reset).
     injury_hold_exempt?: boolean;
+    /** Top athlete-facing signals behind today's decision, backend-derived from
+     * the engine's own trigger codes. Empty until the athlete has checked in. */
+    recommendation_contributors?: string[];
+    /** The inputs the decision was made from, for the card's "Based on" line. */
+    recommendation_sources?: string[];
+    /** How much data the decision rests on. Data completeness, NOT predictive
+     * accuracy — the product has no outcome data to calibrate against yet. */
+    recommendation_confidence?: "high" | "moderate" | "low" | null;
+    /** Names the missing input when confidence is below high. Empty at high. */
+    recommendation_confidence_note?: string;
+    /** True when the sources describe a decision made earlier that a re-check
+     * could not fully verify, so the card must use past tense. */
+    recommendation_sources_are_historical?: boolean;
     warnings?: string[];
     next_session: TodaySession;
     session_scope: "today" | "next" | "none";
