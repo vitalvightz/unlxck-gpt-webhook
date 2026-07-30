@@ -6871,7 +6871,7 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 .today-decision-evidence {
   margin: 12px 0 0;
   padding: 10px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-default);
 }
 
 .today-decision-signals {
@@ -6899,9 +6899,9 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 
 .today-decision-signals li {
   padding: 3px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--border-default);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface);
   color: var(--text-primary);
   font-size: 12.5px;
   line-height: 1.35;
@@ -6935,11 +6935,11 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 }
 
 .today-decision-confidence[data-band="moderate"] .today-decision-confidence-band {
-  color: var(--warning-ink, #f2c14e);
+  color: var(--progress-gold);
 }
 
 .today-decision-confidence[data-band="low"] .today-decision-confidence-band {
-  color: var(--danger-ink, #ff6b6b);
+  color: var(--danger-ink);
 }
 
 .today-decision-confidence-note {
@@ -19076,7 +19076,7 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   padding: var(--space-3);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-support);
-  background: var(--surface-raised, rgba(255, 255, 255, 0.03));
+  background: var(--bg-surface);
 }
 
 .onboarding-trust-note .form-section-header {
@@ -19104,7 +19104,7 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   padding: var(--space-2);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-support);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-panel);
 }
 
 .onboarding-trust-point-title {

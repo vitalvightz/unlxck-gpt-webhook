@@ -1883,6 +1883,9 @@ def contributor_labels(
     label so two codes sharing one label ("Active injury") render once, and caps
     the result at ``limit``.
     """
+    if limit <= 0:
+        return ()
+
     present = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
     superseded = {weaker for weaker, stronger in _CONTRIBUTOR_SUPERSEDED_BY if stronger in present}
 

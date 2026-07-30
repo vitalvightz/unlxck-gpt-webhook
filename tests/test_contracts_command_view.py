@@ -390,3 +390,11 @@ class TestConfidenceBand:
             recommendation=_rec(triggers=["poor_sleep", "sparse_history", "session_unresolved"]),
         )
         assert view.today.recommendation_contributors == ["Poor sleep"]
+
+
+class TestContributorLimit:
+    def test_a_zero_limit_suppresses_the_list(self):
+        from api.contracts.readiness_message import contributor_labels
+
+        assert contributor_labels(("poor_sleep", "flat_body"), limit=0) == ()
+        assert contributor_labels(("poor_sleep", "flat_body"), limit=1) == ("Poor sleep",)

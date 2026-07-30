@@ -68,6 +68,29 @@ class TestPreservedHyphens:
         text = "Run the planned work and keep the rounds clean."
         assert strip_model_dashes(text) is text
 
+    def test_a_countdown_range_is_kept_as_a_range(self):
+        # The digits sit on the wrong side of the dash for the numeric rule, so
+        # without explicit handling the clause rule sees a capital D and splits
+        # the span into two sentences.
+        assert strip_model_dashes("Taper runs D-10 – D-1.") == "Taper runs D-10 to D-1."
+        assert strip_model_dashes("Weeks D-19 — D-13 build volume.") == (
+            "Weeks D-19 to D-13 build volume."
+        )
+
+    def test_a_signed_number_keeps_its_sign(self):
+        # This changes a NUMBER, not typography. A prescription that reads "-5 kg"
+        # must never come out as ", 5 kg".
+        assert strip_model_dashes("Cut — use −5 kg today.") == "Cut, use -5 kg today."
+        assert strip_model_dashes("Target: –2 kg by Friday.") == "Target: -2 kg by Friday."
+
+    def test_an_ellipsis_is_not_collapsed(self):
+        assert strip_model_dashes("Keep it light — wait... then go.") == (
+            "Keep it light, wait... then go."
+        )
+
+    def test_punctuation_the_model_already_wrote_is_not_doubled(self):
+        assert strip_model_dashes("Keep it light —, then go.") == "Keep it light, then go."
+
 
 class TestStructure:
     def test_a_line_leading_dash_becomes_a_markdown_bullet(self):
@@ -138,3 +161,12 @@ class TestEdges:
 
     def test_a_leading_dash_on_the_first_line_becomes_a_bullet(self):
         assert strip_model_dashes("— Cut one round.") == "- Cut one round."
+
+    def test_indented_bullets_keep_their_markers_and_their_lines(self):
+        # The converted "  - bar" is itself a spaced hyphen, so without a guard the
+        # clause rule re-matches it and flattens a nested list into one line.
+        source = "Fight week:\n  — no training\n  — one primer"
+        assert strip_model_dashes(source) == "Fight week:\n  - no training\n  - one primer"
+
+    def test_a_line_leading_dash_with_no_following_space_still_becomes_a_bullet(self):
+        assert strip_model_dashes("Rules:\n  —no training") == "Rules:\n  - no training"

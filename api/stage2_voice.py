@@ -27,6 +27,11 @@ import re
 
 # Em dash, en dash, horizontal bar, and the "minus sign" a model occasionally
 # reaches for. All read as the same punctuation to an athlete.
+#
+# The minus sign earns its place here and is also the reason the signed-number
+# and range rules below run FIRST. Any of these characters can be a minus or a
+# range separator instead of punctuation, and rewriting one of those as a comma
+# does not change the plan's typography, it changes its numbers.
 _UNICODE_DASHES = "—―–−"
 
 # A structured response may carry the same characters as JSON escapes rather than
@@ -38,27 +43,43 @@ _UNICODE_DASH_CLASS = (
     f"(?:[{_UNICODE_DASHES}]|" + "|".join(re.escape(seq) for seq in _ESCAPED_DASHES) + ")"
 )
 
-# A range is the one place a dash between two values is correct. Normalising it
-# to a plain hyphen keeps "3-5 reps" and "45-60 sec" readable and, importantly,
-# takes it out of reach of the clause rules below.
+# A range between two numbers is the one place a dash between values is correct.
+# Normalising it to a plain hyphen keeps "3-5 reps" and "45-60 sec" readable and,
+# importantly, takes it out of reach of the clause rules below.
 _NUMERIC_RANGE = re.compile(rf"(?<=\d)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=\d)")
 
+# A range between two countdown labels ("D-10 – D-1"). The digits sit on the
+# wrong side of the dash for the numeric rule, so without this the clause rule
+# sees a capital D next and splits the range into two sentences. Rendered as
+# "to", which is how the plan prompt already writes countdown spans.
+_COUNTDOWN_RANGE = re.compile(
+    rf"(D-\d+)[ \t]*(?:{_UNICODE_DASH_CLASS}|-)[ \t]*(?=D-\d)", re.IGNORECASE
+)
+
+# A signed number: a dash bound to the digits that follow it, with no value
+# before it to form a range. "-5 kg" is a prescription, not punctuation, so this
+# normalises the sign and takes it out of reach of the clause rules. Requires a
+# non-word character before, so "coach-led" and "3-5" can never match.
+_SIGNED_NUMBER = re.compile(rf"(?<![\w\d]){_UNICODE_DASH_CLASS}(?=\d)")
+
 # A dash opening a line is a bullet, not punctuation. The Stage 2 prompt itself
-# writes fight-week rules this way, so the model copies the habit.
-_LEADING_BULLET = re.compile(rf"(?m)^([ \t]*)(?:{_UNICODE_DASH_CLASS})+[ \t]+")
+# writes fight-week rules this way, so the model copies the habit. The trailing
+# space is optional so that every line-leading dash is converted here; anything
+# left behind would be picked up by the clause rule and flattened into prose.
+# The lookahead keeps a bare dash with nothing after it from becoming an empty
+# bullet; it falls through to the clause rule, which drops it.
+_LEADING_BULLET = re.compile(rf"(?m)^([ \t]*)(?:{_UNICODE_DASH_CLASS})+[ \t]*(?=\S)")
 
 # Everything left is a clause break. A unicode dash counts with or without
-# surrounding spaces; an ASCII hyphen only counts when spaced on BOTH sides,
-# which is never true of a compound word or a range.
-_CLAUSE_DASH = re.compile(rf"[ \t]*{_UNICODE_DASH_CLASS}+[ \t]*|[ \t]+-+[ \t]+")
+# surrounding spaces; an ASCII hyphen only counts when spaced on both sides AND
+# preceded by a non-space on the same line. That last guard is what stops this
+# rule eating the indented bullets _LEADING_BULLET has just written: "  - bar"
+# is spaced-hyphen-spaced too, and without the guard a nested fight-week list
+# collapses into one comma-joined line.
+_CLAUSE_DASH = re.compile(rf"[ \t]*{_UNICODE_DASH_CLASS}+[ \t]*|(?<=\S)[ \t]+-+[ \t]+")
 
 # Punctuation that already closes the clause, so the dash was decoration.
 _CLOSING_PUNCTUATION = ",;:.!?"
-
-# Tidy-ups for the few cases where a replacement meets punctuation the model
-# had already written.
-_DOUBLED_PUNCTUATION = re.compile(r"([,.;:])[ \t]*([,.;:])")
-_SPACE_BEFORE_PUNCTUATION = re.compile(r"[ \t]+([,.;:!?])")
 
 
 def _is_heading_line(source: str, position: int) -> bool:
@@ -76,12 +97,21 @@ def _replace_clause_dash(match: re.Match[str]) -> str:
     the work of a comma. Where the sentence is already punctuated, or the dash
     dangles at the edge of the text or a line, it is dropped rather than
     replaced, so no punctuation is invented.
+
+    Punctuation the model already wrote always wins. Deciding that here, at the
+    replacement boundary, is what keeps this from needing a global cleanup pass
+    afterwards: one that collapsed adjacent punctuation across the whole
+    response would also flatten legitimate ellipses into "..".
     """
     source = match.string
     before = source[: match.start()].rstrip()
     after = source[match.end() :]
 
     if not before or not after or after[0] == "\n":
+        return ""
+    if after[0] in _CLOSING_PUNCTUATION:
+        # The clause is already closed on the far side; adding to it would double
+        # the punctuation.
         return ""
     if before[-1] in _CLOSING_PUNCTUATION:
         return " "
@@ -107,9 +137,11 @@ def strip_model_dashes(text: str) -> str:
     ):
         return text
 
+    # Order matters: every rule that recognises a dash as part of a VALUE runs
+    # before the rule that treats a dash as punctuation, so a range or a sign can
+    # never be rewritten into a comma.
     text = _NUMERIC_RANGE.sub("-", text)
+    text = _COUNTDOWN_RANGE.sub(r"\1 to ", text)
+    text = _SIGNED_NUMBER.sub("-", text)
     text = _LEADING_BULLET.sub(r"\1- ", text)
-    text = _CLAUSE_DASH.sub(_replace_clause_dash, text)
-    text = _DOUBLED_PUNCTUATION.sub(r"\1", text)
-    text = _SPACE_BEFORE_PUNCTUATION.sub(r"\1", text)
-    return text
+    return _CLAUSE_DASH.sub(_replace_clause_dash, text)
