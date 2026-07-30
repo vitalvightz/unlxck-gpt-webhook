@@ -12,8 +12,11 @@
 export type ShellSurface = "brand" | "workspace";
 
 // Fully public authentication routes. These render only the brand/auth shell:
-// the auth form owns all navigation on them, and a signed-in visitor is
-// redirected away, so they resolve to the brand surface regardless of session.
+// the auth form owns all navigation on them, so they resolve to the brand
+// surface regardless of session. Note that only /login and /signup send a
+// signed-in visitor away (AuthForm does it); /reset-password and
+// /forgot-password stay reachable while signed in, because a recovery session
+// is itself a signed-in session.
 export const AUTH_SURFACE_ROUTES: ReadonlySet<string> = new Set([
   "/login",
   "/signup",

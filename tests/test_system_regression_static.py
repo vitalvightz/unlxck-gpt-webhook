@@ -86,6 +86,46 @@ def test_reset_password_requires_a_verified_recovery_link():
     assert 'href="/settings"' in reset_password
 
 
+def test_recovery_marker_is_only_written_from_the_supabase_event():
+    redirect = _read("web/components/password-recovery-redirect.tsx")
+    reset_password = _read("web/app/reset-password/page.tsx")
+    layout = _read("web/app/layout.tsx")
+    recovery = _read("web/lib/password-recovery.ts")
+
+    # Supabase rewrites any non-allow-listed redirect_to to the project Site
+    # URL, so a recovery link routinely lands somewhere other than
+    # /reset-password. Listening app-wide is what stops that from silently
+    # degrading into a plain sign-in.
+    assert "PasswordRecoveryRedirect" in layout
+    assert 'event !== "PASSWORD_RECOVERY"' in redirect
+    assert "markPasswordRecovery(session.user.id)" in redirect
+
+    # The marker is proof, so it must never be derived from the URL — that is
+    # the "?code=arbitrary unlocks the form" bypass in another shape. Only the
+    # redirect component writes it, and only from the Supabase event.
+    assert "markPasswordRecovery" not in reset_password
+    assert "clearPasswordRecovery" in reset_password
+    # Bound to one user and time limited.
+    assert "readPasswordRecovery()?.userId === userId" in recovery
+    assert "RECOVERY_TTL_MS" in recovery
+
+    # Navigating inline would deadlock: supabase-js holds its auth lock across
+    # this callback, and the reset page calls getSession() as it mounts.
+    assert "setTimeout(() => router.replace(RESET_PASSWORD_ROUTE), 0)" in redirect
+
+
+def test_reset_password_leads_with_a_new_link_not_settings():
+    reset_password = _read("web/app/reset-password/page.tsx")
+
+    # /settings requires the current password, which is the one thing an
+    # athlete in the reset flow does not have, so it can only ever be the
+    # secondary suggestion.
+    primary = reset_password.index("Request a new reset link")
+    secondary = reset_password.index("Change it in Settings")
+    assert primary < secondary
+    assert "Change your password in Settings" not in reset_password
+
+
 def test_login_surfaces_failed_email_link_outcomes():
     auth_form = _read("web/components/auth-form.tsx")
 

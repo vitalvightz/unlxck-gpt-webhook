@@ -47,6 +47,27 @@ rewrites any `redirect_to` that is not on the Redirect URLs allow list to the
 project Site URL.** If Site URL is still a `*.vercel.app` value, every link lands
 there no matter what the frontend sends. Check both.
 
+## The app recovers from a wrong landing route
+
+Supabase, not the app, picks where a recovery link lands: any `redirect_to` that
+is not on the Redirect URLs allow list is rewritten to the project Site URL. When
+that happened in production the tokens were consumed on the homepage, supabase-js
+signed the athlete in, and the reset silently never happened — they just found
+themselves logged in.
+
+`web/components/password-recovery-redirect.tsx` now listens for
+`PASSWORD_RECOVERY` app-wide, records a tab-scoped marker
+(`web/lib/password-recovery.ts`) and sends the athlete to `/reset-password`,
+which accepts that marker as proof. So the flow completes from any route in the
+app even when the configuration below is wrong.
+
+Two properties keep that safe rather than a repeat of the `?code=arbitrary`
+bypass: the marker is written **only** from the Supabase event, never from URL
+contents, and it is bound to one user id with a 15-minute TTL.
+
+Fix the configuration anyway — the safety net costs a redirect, and it cannot
+help a link that never reaches the app at all.
+
 ## Required configuration
 
 ### Vercel project environment variables

@@ -17,6 +17,24 @@ const EXISTING_TOKEN = "PRE_EXISTING_SESSION_ACCESS_TOKEN";
 const EXPIRED_MESSAGE = "This link has expired or has already been used.";
 const MISSING_MESSAGE = "This link is missing its verification token.";
 
+const USER_ID = "00000000-0000-4000-8000-000000000001";
+const OTHER_USER_ID = "00000000-0000-4000-8000-000000000002";
+// Mirrors web/lib/password-recovery.ts.
+const RECOVERY_KEY = "unlxck.password-recovery";
+const RECOVERY_TTL_MS = 15 * 60 * 1000;
+
+function seededUser(id = USER_ID) {
+  return {
+    id,
+    aud: "authenticated",
+    role: "authenticated",
+    email: "athlete@example.com",
+    created_at: new Date().toISOString(),
+    app_metadata: {},
+    user_metadata: {},
+  };
+}
+
 function seededSession(accessToken: string): string {
   return JSON.stringify({
     access_token: accessToken,
@@ -25,15 +43,7 @@ function seededSession(accessToken: string): string {
     // Far enough out that supabase-js does not attempt a refresh.
     expires_at: Math.floor(Date.now() / 1000) + 86_400,
     refresh_token: "seeded-refresh-token",
-    user: {
-      id: "00000000-0000-4000-8000-000000000001",
-      aud: "authenticated",
-      role: "authenticated",
-      email: "athlete@example.com",
-      created_at: new Date().toISOString(),
-      app_metadata: {},
-      user_metadata: {},
-    },
+    user: seededUser(),
   });
 }
 
@@ -43,6 +53,68 @@ async function signIn(page: Page, accessToken = EXISTING_TOKEN): Promise<void> {
     ([key, value]) => window.localStorage.setItem(key, value),
     [STORAGE_KEY, seededSession(accessToken)] as const,
   );
+}
+
+/**
+ * Plant a recovery marker directly. Only for the negative cases — the happy
+ * path deliberately lets the app write its own via a real PASSWORD_RECOVERY
+ * event, so the tests never assume the wiring they are meant to prove.
+ */
+async function seedRecoveryMarker(page: Page, userId: string, ageMs = 0): Promise<void> {
+  await page.addInitScript(
+    ([key, value]) => window.sessionStorage.setItem(key, value),
+    [RECOVERY_KEY, JSON.stringify({ userId, at: Date.now() - ageMs })] as const,
+  );
+}
+
+/**
+ * Network isolation that additionally answers the two Supabase auth endpoints a
+ * real recovery callback needs.
+ *
+ * - `GET /auth/v1/user`: supabase-js calls it from `_getSessionFromURL` to build
+ *   the session behind an implicit-grant callback. Answering it is what lets a
+ *   recovery fragment be consumed for real, so `PASSWORD_RECOVERY` is genuinely
+ *   emitted rather than simulated.
+ * - `POST /auth/v1/token`: the app's `/api/*` calls are stubbed 401 here, which
+ *   sends AuthProvider down its refresh path. Left aborted, auth-js retries that
+ *   refresh with backoff **while holding its auth lock**, and every other
+ *   `getSession()` in the app queues behind it for longer than the test timeout.
+ *   Answering it keeps the lock moving. The refreshed session deliberately keeps
+ *   the same user id, so this also proves the recovery marker survives a token
+ *   refresh.
+ *
+ * Registered after `isolateFromNetwork` because Playwright gives the most
+ * recently added handler priority.
+ */
+async function isolateWithSupabaseUser(page: Page, baseURL: string, id = USER_ID): Promise<void> {
+  await isolateFromNetwork(page, baseURL);
+
+  await page.route("**/auth/v1/user**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(seededUser(id)),
+    });
+  });
+
+  await page.route("**/auth/v1/token**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        access_token: "REFRESHED_ACCESS_TOKEN",
+        token_type: "bearer",
+        expires_in: 3_600,
+        expires_at: Math.floor(Date.now() / 1000) + 3_600,
+        refresh_token: "REFRESHED_REFRESH_TOKEN",
+        user: seededUser(id),
+      }),
+    });
+  });
+}
+
+function recoveryFragment(accessToken: string): string {
+  return `#access_token=${accessToken}&refresh_token=seeded-refresh-token&expires_in=3600&token_type=bearer&type=recovery`;
 }
 
 function passwordFields(page: Page) {
@@ -102,7 +174,62 @@ test.describe("password reset requires a verified recovery link", () => {
     await page.goto("/reset-password", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByText(MISSING_MESSAGE)).toBeVisible();
-    await expect(page.getByRole("link", { name: "Change your password in Settings" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Change it in Settings" })).toBeVisible();
+  });
+});
+
+test.describe("a recovery session reaches the reset form wherever it lands", () => {
+  // Supabase picks the landing route: any redirect_to that is not on its allow
+  // list is rewritten to the project Site URL. That is what shipped to
+  // production — the link consumed its tokens on the homepage, the athlete was
+  // simply signed in, and the reset never happened.
+  for (const landing of ["/", "/login", "/today"]) {
+    test(`carries a recovery landing on ${landing} to the reset form`, async ({ page, baseURL }) => {
+      await isolateWithSupabaseUser(page, baseURL ?? BASE_URL);
+      await page.goto(`${landing}${recoveryFragment("RECOVERY_MINTED_TOKEN")}`, {
+        waitUntil: "domcontentloaded",
+      });
+
+      await expect(page).toHaveURL(/\/reset-password$/);
+      await expect(passwordFields(page)).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "Update password" })).toBeVisible();
+    });
+  }
+
+  test("does not leave the marker usable once the recovery is refused", async ({ page, baseURL }) => {
+    // A marker aged past its TTL is dead, so the form must stay closed.
+    await signIn(page);
+    await seedRecoveryMarker(page, USER_ID, RECOVERY_TTL_MS + 60_000);
+    await isolateFromNetwork(page, baseURL ?? BASE_URL);
+    await page.goto("/reset-password", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByText(MISSING_MESSAGE)).toBeVisible();
+    await expect(passwordFields(page)).toHaveCount(0);
+  });
+
+  test("refuses a marker belonging to a different athlete", async ({ page, baseURL }) => {
+    // One athlete's recovery must never open the form against another's
+    // session, even inside the same tab.
+    await signIn(page);
+    await seedRecoveryMarker(page, OTHER_USER_ID);
+    await isolateFromNetwork(page, baseURL ?? BASE_URL);
+    await page.goto("/reset-password", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByText(MISSING_MESSAGE)).toBeVisible();
+    await expect(passwordFields(page)).toHaveCount(0);
+  });
+
+  test("leads with a new reset link rather than Settings", async ({ page, baseURL }) => {
+    // /settings asks for the current password, which is exactly what an athlete
+    // in this flow does not have.
+    await signIn(page);
+    await isolateFromNetwork(page, baseURL ?? BASE_URL);
+    await page.goto("/reset-password", { waitUntil: "domcontentloaded" });
+
+    const primary = page.getByRole("link", { name: "Request a new reset link" });
+    await expect(primary).toBeVisible();
+    await expect(primary).toHaveClass(/(^|\s)cta(\s|$)/);
+    await expect(page.getByRole("link", { name: "Change it in Settings" })).toBeVisible();
   });
 });
 
