@@ -20,14 +20,14 @@ test("contributors render as the 'what moved this' signal list", () => {
   const html = renderToStaticMarkup(
     <TodayDecisionPanel banner={BANNER} contributors={["Poor sleep", "Heavy recent load"]} />,
   );
-  assert.ok(html.includes("Signals considered"));
+  assert.ok(html.includes("What moved this"));
   assert.ok(html.includes("Poor sleep"));
   assert.ok(html.includes("Heavy recent load"));
 });
 
 test("the signal list is omitted when the backend sends no contributors", () => {
   const html = renderToStaticMarkup(<TodayDecisionPanel banner={BANNER} />);
-  assert.ok(!html.includes("Signals considered"));
+  assert.ok(!html.includes("What moved this"));
   assert.ok(!html.includes("today-decision-signals"));
 });
 
@@ -35,7 +35,7 @@ test("blank contributors never render an empty chip", () => {
   const html = renderToStaticMarkup(
     <TodayDecisionPanel banner={BANNER} contributors={["", "   "]} />,
   );
-  assert.ok(!html.includes("Signals considered"));
+  assert.ok(!html.includes("What moved this"));
 });
 
 test("sources render as a spoken 'Based on' line", () => {

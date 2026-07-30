@@ -27,9 +27,9 @@ const CONFIDENCE_LABELS: Record<TodayDecisionConfidence, string> = {
  * what moved today's call, and what it was read from. Both are computed by the
  * backend from the engine's own trigger codes, so this panel only renders them.
  *
- * They render under "Signals considered", never as causes. The engine records
- * which signals were present when it decided; it does not establish that any one
- * of them caused the change, so the heading must not claim it did.
+ * The heading is "What moved this": it names what moved the DECISION, which is
+ * exactly what the engine recorded. It is not a claim that any one signal caused
+ * the athlete's state, and the copy must never drift into one.
  *
  * `confidence` renders as "Data coverage" because that is what it measures: how
  * much the call had to go on, which the engine knows for certain. It is not
@@ -95,7 +95,7 @@ export function TodayDecisionPanel({
             {signals.length ? (
               <div className="today-decision-signals">
                 <p className="today-decision-signals-label" id="today-decision-signals-label">
-                  Signals considered
+                  What moved this
                 </p>
                 <ul aria-labelledby="today-decision-signals-label">
                   {signals.map((signal) => (
