@@ -1974,14 +1974,17 @@ ConfidenceBand = Literal["high", "moderate", "low"]
 # fails, the engine also sees no history and tags it as sparse; reporting the
 # thinness would tell the athlete their history is missing when it exists and
 # could not be loaded, and would point them at a fix that cannot work.
+# Within a severity level the SPECIFIC code is listed before its umbrella, so the
+# line names the read that actually failed and falls back to the general wording
+# only when nothing more precise is known.
 _CONFIDENCE_GAPS: tuple[tuple[str, str], ...] = (
-    ("context_unavailable", "we couldn't load your training and injury history"),
     ("injury_context_unavailable", "we couldn't load your injury history"),
     ("session_unavailable", "we couldn't load today's session"),
-    ("context_degraded", "some of your recent history couldn't be loaded"),
+    ("context_unavailable", "we couldn't load your training and injury history"),
     ("checkins_unavailable", "your recent check-ins couldn't be loaded"),
     ("completions_unavailable", "your recent sessions couldn't be loaded"),
     ("intake_unavailable", "part of your profile couldn't be loaded"),
+    ("context_degraded", "some of your recent history couldn't be loaded"),
     ("session_unresolved", "today's session isn't resolved yet"),
     (SPARSE_HISTORY, "this is based on today's check-in alone, with no recent days to compare"),
 )

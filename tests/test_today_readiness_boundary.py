@@ -393,3 +393,109 @@ def test_injury_reconciliation_blocked_on_failed_flag_read():
     assert exc.value.headers == {"Retry-After": "30"}
     # A failed read must not have created any injury (no duplicate / phantom state).
     assert not store.injury_flags.get(ATHLETE)
+
+
+# ---------------------------------------------------------------------------
+# The explanation is revoked with the decision it explained
+#
+# The fail-safe can turn a stored "train as planned" into a hold. If only the
+# decision moved, the card would pair that hold with the GREEN decision's own
+# contributors and confidence — "PULL BACK / Confidence: High / Fight week" —
+# which is precisely the contradiction the explanation feature exists to prevent.
+# ---------------------------------------------------------------------------
+def _seed_stored_green_with_explanation(store) -> None:
+    """A green check-in whose triggers produce real contributors and a high band."""
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "train_as_planned",
+            "recommendation_reason": "Sharp work only.\nFight week rewards freshness.",
+            "recommendation_triggers": ["fight_week", "session_risk_high", "phase_taper"],
+        },
+    )
+
+
+def _stored_green_explanation_is_stale(view) -> bool:
+    """True when any part of the green decision's explanation survived the hold."""
+    return (
+        "Fight week" in view.today.recommendation_contributors
+        or "Hard session planned" in view.today.recommendation_contributors
+        or view.today.recommendation_confidence == "high"
+    )
+
+
+def test_unavailable_context_reports_low_confidence_and_names_the_safety_context():
+    store = _store_with_plan(FailingInjuryFlagsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "pull_back"
+    assert view.today.recommendation_confidence == "low"
+    assert "injury history" in view.today.recommendation_confidence_note
+    assert view.today.recommendation_contributors == ["Safety history unavailable"]
+    assert not _stored_green_explanation_is_stale(view)
+
+
+def test_degraded_context_reports_moderate_confidence_and_incomplete_history():
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "modify"
+    assert view.today.recommendation_confidence == "moderate"
+    assert "check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+    assert view.today.recommendation_contributors == ["Check-in history incomplete"]
+    assert not _stored_green_explanation_is_stale(view)
+
+
+def test_the_hold_never_claims_a_source_it_could_not_read():
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    # The read that failed is exactly the history, so it cannot be named as an
+    # input the hold was based on.
+    assert "your last few check-ins" not in view.today.recommendation_sources
+
+
+def test_a_preserved_conservative_decision_keeps_its_reasons_but_loses_confidence():
+    # Its contributors still describe why it is conservative, so they stand. The
+    # band does not: it reports how much could be verified, and this read could
+    # not verify the history.
+    store = _store_with_plan(FailingRecentCheckinsStore)
+    store.upsert_today_checkin(
+        ATHLETE,
+        {
+            **_checkin_payload(),
+            "training_day": NOW.date().isoformat(),
+            "athlete_timezone": "",
+            "recommendation_state": "modify",
+            "recommendation_reason": "Session reduced.\nPoor sleep.",
+            "recommendation_triggers": ["poor_sleep", "session_risk_high", "phase_spp"],
+        },
+    )
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "modify"
+    assert view.today.recommendation_contributors == ["Poor sleep", "Hard session planned"]
+    assert view.today.recommendation_confidence == "moderate"
+    assert "check-ins couldn't be loaded" in view.today.recommendation_confidence_note
+
+
+def test_a_complete_context_leaves_the_explanation_untouched():
+    store = _store_with_plan()
+    _seed_stored_green_with_explanation(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
+
+    assert view.today.recommendation_state == "train_as_planned"
+    assert view.today.recommendation_confidence == "high"
+    assert view.today.recommendation_confidence_note == ""
+    assert "Fight week" in view.today.recommendation_contributors
