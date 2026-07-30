@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { AUTH_FEEDBACK } from "@/lib/auth-feedback";
 import { AUTH_LINK_FEEDBACK, clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
+import { clearPasswordRecovery, hasPasswordRecoveryFor } from "@/lib/password-recovery";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -37,6 +38,10 @@ export default function ResetPasswordPage() {
     if (linkStatus.kind === "error") {
       setError(linkStatus.message);
       clearAuthLinkParams();
+      // A rejected link spends any earlier recovery too. Without this, opening
+      // a stale link after a good one left the marker live, and simply
+      // revisiting /reset-password within its TTL reopened the form.
+      clearPasswordRecovery();
       return;
     }
 
@@ -62,7 +67,10 @@ export default function ResetPasswordPage() {
     //      validated and stored a recovery session;
     //   2. a stored session whose access token is the one this URL carried,
     //      which means supabase-js minted it from this link;
-    //   3. a code that Supabase itself accepts in exchange for a session.
+    //   3. a code that Supabase itself accepts in exchange for a session;
+    //   4. a recovery marker for this exact user, written by
+    //      PasswordRecoveryRedirect when it saw event 1 on another route —
+    //      the case where Supabase sent the link somewhere else entirely.
     const urlAccessToken = linkStatus.kind === "credentials" ? linkStatus.accessToken : null;
     const urlCode = linkStatus.kind === "credentials" ? linkStatus.code : null;
     let settled = false;
@@ -82,6 +90,9 @@ export default function ResetPasswordPage() {
       settled = true;
       setError(message);
       clearAuthLinkParams();
+      // A refused attempt spends the marker too, so a stale one cannot sit in
+      // the tab waiting to open the form on a later visit.
+      clearPasswordRecovery();
     }
 
     const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
@@ -103,6 +114,14 @@ export default function ResetPasswordPage() {
 
         // Proof 2. This session is the one the link minted.
         if (session && urlAccessToken && session.access_token === urlAccessToken) {
+          markReady();
+          return;
+        }
+
+        // Proof 4. The recovery happened on another route and was vouched for
+        // there. Bound to this user, so one athlete's recovery can never open
+        // the form against another's session.
+        if (session && hasPasswordRecoveryFor(session.user?.id)) {
           markReady();
           return;
         }
@@ -137,8 +156,9 @@ export default function ResetPasswordPage() {
         }
 
         if (session) {
-          // Signed in, but not here via a verified reset link. Point at the
-          // route that can actually help rather than round the email loop.
+          // Signed in, but not here via a verified reset link. A new reset link
+          // is still the primary way out — someone who forgot their password
+          // cannot use /settings, which asks for the current one.
           setCanChangeInSettings(true);
           failWith(AUTH_LINK_FEEDBACK.missing);
           return;
@@ -188,6 +208,9 @@ export default function ResetPasswordPage() {
         return;
       }
 
+      // The recovery is spent — do not leave a marker that would reopen this
+      // form for the rest of the tab's life.
+      clearPasswordRecovery();
       await client.auth.signOut();
       setMessage("Password updated successfully. Redirecting to log in...");
       setTimeout(() => router.replace("/login"), 1500);
@@ -234,14 +257,21 @@ export default function ResetPasswordPage() {
                 <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
                   {error}
                 </div>
-                {canChangeInSettings ? (
-                  <Link href="/settings" className="cta cta-secondary">
-                    Change your password in Settings
-                  </Link>
-                ) : null}
-                <Link href="/forgot-password" className="cta cta-secondary">
+                {/* A new link is the primary way out. Settings is only useful
+                    to someone who still knows their current password, which is
+                    not the athlete who asked for a reset. */}
+                <Link href="/forgot-password" className="cta">
                   Request a new reset link
                 </Link>
+                {canChangeInSettings ? (
+                  <p className="muted">
+                    Know your current password?{" "}
+                    <Link href="/settings" className="auth-text-link">
+                      Change it in Settings
+                    </Link>
+                    .
+                  </p>
+                ) : null}
               </>
             ) : (
               <p className="muted" role="status" aria-live="polite">
