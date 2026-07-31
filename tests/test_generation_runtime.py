@@ -417,6 +417,19 @@ def _run_stage2_failure_job(store, stage2, *, client_request_id, planner_fn=None
     return store.get_generation_job(job["id"])
 
 
+# Milestones that assert Stage 2 actually returned something. None of them can
+# be true when the finalizer never produced a plan, so the fallback path must
+# not emit any of them.
+_STAGE2_RESPONSE_MILESTONES = (
+    "stage2_model_response_received",
+    "stage2_response_parse_started",
+    "stage2_response_parsed",
+    "stage2_result_ready",
+    "stage2_validated",
+    "stage2_review_required",
+)
+
+
 def _assert_completed_on_stage1_plan(store, saved, *, reason):
     assert saved["status"] == "completed"
     assert not saved["error"]
@@ -427,6 +440,8 @@ def _assert_completed_on_stage1_plan(store, saved, *, reason):
     assert plan["stage2_validator_report"]["stage2_fallback"]["reason"] == reason
     codes = [milestone["code"] for milestone in saved["progress_milestones"]]
     assert "stage2_stage1_fallback" in codes
+    # The run must not claim a response it never got.
+    assert [code for code in _STAGE2_RESPONSE_MILESTONES if code in codes] == []
     return plan
 
 

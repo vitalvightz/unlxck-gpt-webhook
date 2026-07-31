@@ -26,7 +26,6 @@ from ..models import (
     ProfileUpdateRequest,
 )
 from ..stage2_automation import (
-    STAGE2_STAGE1_FALLBACK,
     Stage1FallbackUnavailableError,
     Stage2AutomationError,
     Stage2AutomationUnavailableError,
@@ -524,6 +523,7 @@ async def run_generation_job(
                     **stage1_result,
                     "_generation_source": str(job.get("source") or ""),
                 }
+                stage2_fell_back = False
                 try:
                     finalized_result = await finalize_stage2_with_timeout(
                         stage2=stage2,
@@ -562,6 +562,7 @@ async def run_generation_job(
                             safe_error,
                         )
                         raise exc from None
+                    stage2_fell_back = True
                     logger.error(
                         "[jobs] generation:stage2_failed_stage1_completed athlete_id=%s job_id=%s "
                         "exc_type=%s error=%s",
@@ -571,46 +572,50 @@ async def run_generation_job(
                         safe_error,
                     )
                 await _touch_heartbeat()
-                _emit_milestone(
-                    "stage2_model_response_received",
-                    "Stage 2 model response received",
-                    "AI finalizer returned a response.",
-                )
-                _emit_milestone(
-                    "stage2_response_parse_started",
-                    "Stage 2 response parsing started",
-                    "Preparing finalizer output for validation and persistence.",
-                )
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
-                _emit_milestone(
-                    "stage2_response_parsed",
-                    "Stage 2 response parsed",
-                    "Finalizer output was parsed.",
-                )
-                _emit_milestone(
-                    "stage2_result_ready",
-                    "Stage 2 result ready",
-                    "Finalizer result returned; saving review state.",
-                )
-                if final_result.get("stage2_status") == STAGE2_STAGE1_FALLBACK:
+                if stage2_fell_back:
+                    # There was no response to receive and nothing to parse, so the
+                    # response/parse milestones would be false. The fallback
+                    # milestone is the only true statement about this run.
                     _emit_milestone(
                         "stage2_stage1_fallback",
                         "Plan ready from Stage 1",
                         "The AI finalizer did not return a usable pass, so the Stage 1 plan "
                         "was completed unchanged.",
                     )
-                elif str(final_result.get("status") or "").strip().lower() == "ready":
-                    _emit_milestone(
-                        "stage2_validated",
-                        "Stage 2 finalizer complete",
-                        "Validator passed. Final coach-voice plan ready for handoff.",
-                    )
                 else:
                     _emit_milestone(
-                        "stage2_review_required",
-                        "Stage 2 needs review",
-                        "First-pass finalizer output did not pass validation. No automatic retry was sent.",
+                        "stage2_model_response_received",
+                        "Stage 2 model response received",
+                        "AI finalizer returned a response.",
                     )
+                    _emit_milestone(
+                        "stage2_response_parse_started",
+                        "Stage 2 response parsing started",
+                        "Preparing finalizer output for validation and persistence.",
+                    )
+                    _emit_milestone(
+                        "stage2_response_parsed",
+                        "Stage 2 response parsed",
+                        "Finalizer output was parsed.",
+                    )
+                    _emit_milestone(
+                        "stage2_result_ready",
+                        "Stage 2 result ready",
+                        "Finalizer result returned; saving review state.",
+                    )
+                    if str(final_result.get("status") or "").strip().lower() == "ready":
+                        _emit_milestone(
+                            "stage2_validated",
+                            "Stage 2 finalizer complete",
+                            "Validator passed. Final coach-voice plan ready for handoff.",
+                        )
+                    else:
+                        _emit_milestone(
+                            "stage2_review_required",
+                            "Stage 2 needs review",
+                            "First-pass finalizer output did not pass validation. No automatic retry was sent.",
+                        )
         # Triage-blocked Stage 1 outcomes are protected review states, not
         # plans. They live exclusively on the generation job — no plan row
         # is created or updated. The admin "Approve & Resume" flow drives
