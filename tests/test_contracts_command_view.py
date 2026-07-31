@@ -1,5 +1,7 @@
 """Tests for the normalized command-view builder + risk watch (Block 4 §6, §7)."""
 
+import pytest
+
 from api.contracts.command_view import (
     build_command_view,
     make_risk,
@@ -7,6 +9,7 @@ from api.contracts.command_view import (
     sort_risk_watch,
     visible_risk_watch,
 )
+from api.contracts.readiness_message import trigger_labels
 
 TODAY = "2026-06-18"
 PLAN = {"id": "plan-1", "name": "Camp A", "phase": "SPP"}
@@ -201,7 +204,13 @@ class TestDecisionTier:
     def test_plain_pull_back_is_pull_back_not_stop(self):
         # A soft-warning pull-back ("Pull back today.") is a PULL BACK tier, never a
         # STOP — this is the exact banner/footer contradiction being closed.
-        reason = "\n".join(["Pull back today.", "Several warnings are showing.", "Skip combat work."])
+        reason = "\n".join(
+            [
+                "Pull back today.",
+                "Your readiness is too low for hard combat work today.",
+                "Skip hard combat work today. Use recovery or light mobility instead.",
+            ]
+        )
         assert resolve_decision_tier(recommendation_state="pull_back", recommendation_reason=reason) == "pull_back"
 
     def test_rehab_only_and_no_training_are_stop(self):
@@ -237,6 +246,44 @@ class TestDecisionTier:
         assert view.today.decision_tier == "modify"
 
 
+@pytest.mark.parametrize(
+    ("code", "label"),
+    [
+        ("sharp_pain", "Sharp pain"),
+        ("instability", "Joint feels unstable"),
+        ("swelling", "Swelling"),
+        ("neurological_symptoms", "Head or nerve symptoms"),
+        ("illness_symptoms", "Feeling unwell"),
+        ("cannot_warm_into_movement", "Can't warm up"),
+        ("worse_next_day_pain", "Pain worse next day"),
+        ("active_injury_worse", "Injury getting worse"),
+        ("active_injury_restriction", "Active injury"),
+        ("tracked_injury_high_risk_session", "Active injury"),
+        ("pain_high", "High pain"),
+        ("manageable_pain", "Manageable pain"),
+        ("poor_sleep", "Poor sleep"),
+        ("flat_body", "Feeling flat"),
+        ("poor_sleep_3_day_streak", "Poor sleep for 3 days"),
+        ("flat_body_3_day_streak", "Feeling flat for 3 days"),
+        ("pain_3_day_streak", "Pain for 3 days"),
+        ("pain_worsening_trend", "Pain getting worse"),
+        ("repeated_poor_readiness", "Low readiness lately"),
+        ("recent_hard_session", "Recent hard session"),
+        ("recent_hard_load_plus_poor_today", "Heavy recent load"),
+        ("context_degraded", "Recent history incomplete"),
+        ("context_unavailable", "Safety history unavailable"),
+    ],
+)
+def test_every_trigger_code_has_the_expected_human_label(code, label):
+    assert trigger_labels((code,)) == (label,)
+
+
+def test_the_two_active_injury_codes_share_one_deduplicated_label():
+    assert trigger_labels(
+        ("active_injury_restriction", "tracked_injury_high_risk_session")
+    ) == ("Active injury",)
+
+
 class TestContributorsAndSources:
     """The card's "why today changed" chips and its "Based on" line, both derived
     from the engine's own trigger codes so they cannot drift from the decision."""
@@ -247,7 +294,7 @@ class TestContributorsAndSources:
             plan=PLAN,
             recommendation=_rec(triggers=["poor_sleep", "flat_body", "phase_spp"]),
         )
-        assert view.today.recommendation_trigger_labels == ["Poor sleep", "Body feels flat"]
+        assert view.today.recommendation_trigger_labels == ["Poor sleep", "Feeling flat"]
 
     def test_context_markers_never_render_as_contributors(self):
         view = build_command_view(
@@ -279,7 +326,7 @@ class TestContributorsAndSources:
             plan=PLAN,
             recommendation=_rec(triggers=["poor_sleep", "poor_sleep_3_day_streak"]),
         )
-        assert view.today.recommendation_trigger_labels == ["Poor sleep, 3 days"]
+        assert view.today.recommendation_trigger_labels == ["Poor sleep for 3 days"]
 
     def test_sources_name_only_the_inputs_the_decision_used(self):
         view = build_command_view(
@@ -310,7 +357,7 @@ class TestContributorsAndSources:
             plan=PLAN,
             recommendation=_rec(triggers=["context_degraded"]),
         )
-        assert view.today.recommendation_trigger_labels == ["Check-in history incomplete"]
+        assert view.today.recommendation_trigger_labels == ["Recent history incomplete"]
         assert view.today.recommendation_sources == ["today's check-in"]
 
     def test_an_expired_recommendation_exposes_no_contributors(self):

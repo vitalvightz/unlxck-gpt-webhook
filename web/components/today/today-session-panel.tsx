@@ -12,8 +12,6 @@ import {
   SessionCard as StructuredSessionCard,
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
-import { TodayDecisionPanel } from "@/components/today/today-decision-panel";
-import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { formatTrainingDay } from "@/components/today/format";
 import { useToast } from "@/components/toast-provider";
 import { submitTodaySessionCompletion } from "@/lib/api";
@@ -29,17 +27,12 @@ import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
-  canCompleteTodaySession,
   getCompletionLabel,
-  getInjuryOverrideBanner,
   getSafeSessionView,
   getSessionFocus,
   getSessionTitle,
-  getTodayDecisionBanner,
   isHardCombatSession,
-  isSessionToday,
-  hasTodaySession,
-  resolveDecisionTier,
+  resolveTodayDecision,
   resolveSessionFocusDate,
   type SafeSessionView,
 } from "@/lib/today";
@@ -250,7 +243,8 @@ export function TodaySessionPanel({
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
-  const hasSession = hasTodaySession(session);
+  const resolvedDecision = resolveTodayDecision(state);
+  const hasSession = resolvedDecision.hasSession;
   // Resolve today's day/session from the structured plan through the shared
   // 04:00 rollover, exactly as Plan Detail does. These blocks — not the backend
   // session summary — are the "what exact blocks apply today" answer. The
@@ -284,49 +278,35 @@ export function TodaySessionPanel({
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
   const isNextSessionPreview = session.session_relation === "next";
-  const isRecommendationPreview = isNextSessionPreview || !hasSession;
   const relationCopy = getSessionRelationCopy(session, status);
-  const recommendationState = state.today.recommendation_state;
-  const dailyDecisionBanner = getTodayDecisionBanner(recommendationState, state.today.recommendation_reason, {
-    isPreview: isRecommendationPreview,
-  });
-  // A severe active injury is the highest-priority constraint for today and must
-  // lead the card, superseding the daily readiness adjustment (which stays in
-  // data/history). When there is no severe injury this is null and the normal
-  // daily decision banner is shown.
-  const injuryOverride = getInjuryOverrideBanner(state, getSessionTitle(session));
-  const decisionBanner = injuryOverride ?? dailyDecisionBanner;
-  const decisionBlocksTraining = Boolean(decisionBanner?.blocksTraining);
-  const decisionTier = resolveDecisionTier(state.today, decisionBanner);
-  const sessionIsToday = isSessionToday(session, state.today.session_scope);
+  const decisionBlocksTraining = resolvedDecision.blocksTraining;
   // STOP + the scheduled session is today: show the recovery/mobility safe
   // session in place of the real blocks so Today never displays hard combat as
   // available under a stop. Future sessions stay visible but read as pending.
   const safeSession =
-    decisionTier === "stop" && hasSession && sessionIsToday ? getSafeSessionView(getSessionTitle(session)) : null;
+    resolvedDecision.useSafeReplacement
+      ? getSafeSessionView(getSessionTitle(session))
+      : null;
   const nextIsHardCombat = isHardCombatSession(session);
   // Gate completion on the scope-aware "is this today" check, not just the
   // session_relation stamp: a session that reaches the card without an explicit
   // session_relation but whose scope is not "today" must still read as pending,
   // never completable.
-  const canCompleteSession =
-    canCompleteTodaySession(session) && sessionIsToday && !decisionBlocksTraining;
+  const canCompleteSession = resolvedDecision.canCompleteSession;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.
   const cardTone =
-    decisionBanner?.tone === "green" ||
-    decisionBanner?.tone === "amber" ||
-    decisionBanner?.tone === "red"
-      ? decisionBanner.tone
+    resolvedDecision.tone === "green" ||
+    resolvedDecision.tone === "amber" ||
+    resolvedDecision.tone === "red"
+      ? resolvedDecision.tone
       : undefined;
-  const terminalStatusCopy = injuryOverride
-    ? "Held by an active severe injury. Clear it (or get it medically cleared) in the injury check-in above — marking it easing does not lift the hold, and this is not a load-reduced session."
-    : decisionBlocksTraining
-      ? "Follow the recommendation above. Do not start this session from Today."
-      : isNextSessionPreview
-        ? "Preview only. Completion opens on the matched training day."
-        : "Session details available, but completion is unavailable for this entry.";
+  const terminalStatusCopy = decisionBlocksTraining
+    ? "Follow the recommendation above. Do not start this session from Today."
+    : isNextSessionPreview
+      ? "Preview only. Completion opens on the matched training day."
+      : "Session details available, but completion is unavailable for this entry.";
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -380,22 +360,6 @@ export function TodaySessionPanel({
             </h2>
           </div>
         </div>
-        <TodayDecisionPanel
-          banner={decisionBanner}
-          tier={decisionTier}
-          triggers={state.today.recommendation_trigger_labels}
-          context={state.today.recommendation_context_labels}
-          sources={state.today.recommendation_sources}
-          confidence={state.today.recommendation_confidence}
-          confidenceNote={state.today.recommendation_confidence_note}
-        />
-        {recommendationState !== "not_checked_in" ? (
-          <ContextualFeedback
-            key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
-            token={token}
-            surface="daily_recommendation"
-          />
-        ) : null}
         {showStructuredBlocks ? (
           <TodaySessionBlocks
             planId={state.active_plan?.id}
@@ -435,22 +399,6 @@ export function TodaySessionPanel({
           <h2 id="today-session-heading">{headline}</h2>
         </div>
       </div>
-      <TodayDecisionPanel
-        banner={decisionBanner}
-        tier={decisionTier}
-        triggers={state.today.recommendation_trigger_labels}
-        context={state.today.recommendation_context_labels}
-        sources={state.today.recommendation_sources}
-        confidence={state.today.recommendation_confidence}
-        confidenceNote={state.today.recommendation_confidence_note}
-      />
-      {recommendationState !== "not_checked_in" ? (
-        <ContextualFeedback
-          key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
-          token={token}
-          surface="daily_recommendation"
-        />
-      ) : null}
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (
@@ -512,11 +460,6 @@ export function TodaySessionPanel({
           <p className="today-terminal-status" data-tone={decisionBlocksTraining ? "blocked" : "neutral"}>
             {terminalStatusCopy}
           </p>
-          {injuryOverride ? (
-            <a href="#today-injury" className="secondary-button today-terminal-action">
-              Open injury check-in
-            </a>
-          ) : null}
         </div>
       ) : null}
 

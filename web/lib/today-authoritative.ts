@@ -1,7 +1,12 @@
 import {
+  canCompleteTodaySession,
+  getTierMeta,
   getTodayDecisionBanner as getLegacyTodayDecisionBanner,
+  hasTodaySession,
+  isSessionToday,
   type TodayDecisionBanner,
   type TodayDecisionDisplayState,
+  type TodayDecisionTier,
   type TodayDecisionTone,
 } from "./today";
 import type { TodayCommandView, TodayRecommendationState } from "./types";
@@ -73,7 +78,79 @@ export function getTodayDecisionBanner(
     displayState,
     chip: CHIP_BY_DISPLAY[displayState],
     tone: TONE_BY_DISPLAY[displayState],
-    blocksTraining: displayState === "pull_back",
+  };
+}
+
+export type AuthoritativeTodayTier = Exclude<TodayDecisionTier, "preview">;
+
+export type ResolvedTodayDecision = {
+  recommendationState: TodayRecommendationState;
+  authoritativeTier: AuthoritativeTodayTier;
+  displayTier: TodayDecisionTier;
+  banner: TodayDecisionBanner | null;
+  tone: TodayDecisionTone;
+  hasSession: boolean;
+  sessionIsToday: boolean;
+  blocksTraining: boolean;
+  canCompleteSession: boolean;
+  useSafeReplacement: boolean;
+};
+
+const FALLBACK_TIER_BY_RECOMMENDATION: Record<
+  TodayRecommendationState,
+  AuthoritativeTodayTier
+> = {
+  train_as_planned: "green",
+  modify: "modify",
+  pull_back: "pull_back",
+  not_checked_in: "not_checked_in",
+};
+
+/**
+ * Resolve Today once for both presentation and session safety.
+ *
+ * The backend tier is authoritative. Older payloads fall back only to the
+ * structured recommendation state; rendered titles, reasons and actions are
+ * deliberately absent from every safety decision below.
+ */
+export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDecision {
+  const recommendationState = state.today.recommendation_state;
+  const authoritativeTier =
+    state.today.decision_tier ?? FALLBACK_TIER_BY_RECOMMENDATION[recommendationState];
+  const hasSession = hasTodaySession(state.today.next_session);
+  const isPreview = state.today.next_session.session_relation === "next" || !hasSession;
+  const displayTier: TodayDecisionTier = isPreview ? "preview" : authoritativeTier;
+  const tone = getTierMeta(displayTier).tone;
+  const copy = getTodayDecisionBanner(
+    recommendationState,
+    state.today.recommendation_reason,
+    { isPreview },
+  );
+  const banner = copy ? { ...copy, tone } : null;
+  const sessionIsToday = isSessionToday(
+    state.today.next_session,
+    state.today.session_scope,
+  );
+  const blocksTraining =
+    authoritativeTier === "stop" || authoritativeTier === "pull_back";
+  const canCompleteSession =
+    canCompleteTodaySession(state.today.next_session) &&
+    sessionIsToday &&
+    !blocksTraining;
+  const useSafeReplacement =
+    authoritativeTier === "stop" && hasSession && sessionIsToday;
+
+  return {
+    recommendationState,
+    authoritativeTier,
+    displayTier,
+    banner,
+    tone,
+    hasSession,
+    sessionIsToday,
+    blocksTraining,
+    canCompleteSession,
+    useSafeReplacement,
   };
 }
 

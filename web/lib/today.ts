@@ -69,7 +69,7 @@ export function getRecommendationCopy(state: TodayRecommendationState): {
       label: "Pull back",
       icon: "PULL",
       tone: "red",
-      actionText: "Use recovery or light mobility today.",
+      actionText: "Skip hard combat work today. Use recovery or light mobility instead.",
     };
   }
   return {
@@ -104,7 +104,6 @@ export type TodayDecisionBanner = {
   /** Optional safety sentence, shown only when the backend sends one. */
   safety?: string;
   tone: TodayDecisionTone;
-  blocksTraining: boolean;
 };
 
 const DECISION_BANNERS: Record<
@@ -126,7 +125,7 @@ const DECISION_BANNERS: Record<
   pull_back: {
     title: "Pull back today",
     detail: "Your body is not ready for hard combat work.",
-    action: "Use recovery or light mobility instead.",
+    action: "Skip hard combat work today. Use recovery or light mobility instead.",
     tone: "red",
   },
 };
@@ -327,10 +326,6 @@ function getDisplayChip(displayState: TodayDecisionDisplayState): TodayDecisionB
   return "PREVIEW";
 }
 
-function displayBlocksTraining(displayState: TodayDecisionDisplayState): boolean {
-  return displayState === "pull_back" || displayState === "rehab_only" || displayState === "no_training";
-}
-
 /**
  * The compact decision banner shown above today's session blocks once the
  * athlete has checked in. Returns null before check-in (no decision yet). The
@@ -370,7 +365,6 @@ export function getTodayDecisionBanner(
     action: backend.action || banner.action,
     safety: backend.safety,
     tone: getDisplayTone(displayState),
-    blocksTraining: displayBlocksTraining(displayState),
   };
 }
 
@@ -452,7 +446,6 @@ export function getInjuryOverrideBanner(
         ? "Previous readiness guidance is superseded by the injury warning."
         : undefined,
     tone: "red",
-    blocksTraining: true,
   };
 }
 
@@ -744,17 +737,15 @@ export type TodayTierMeta = {
   /** Eyebrow above the headline. */
   eyebrow: string;
   tone: TodayDecisionTone;
-  /** Whether hard training is blocked at this tier. */
-  blocks: boolean;
 };
 
 const TIER_META: Record<TodayDecisionTier, TodayTierMeta> = {
-  stop: { label: "Stop today", eyebrow: "Today's action", tone: "red", blocks: true },
-  pull_back: { label: "Pull back today", eyebrow: "Today's action", tone: "red", blocks: false },
-  modify: { label: "Modify today", eyebrow: "Today's action", tone: "amber", blocks: false },
-  green: { label: "Green light", eyebrow: "Today's action", tone: "green", blocks: false },
-  preview: { label: "Session preview", eyebrow: "Next session", tone: "neutral", blocks: false },
-  not_checked_in: { label: "Check in required", eyebrow: "Today's action", tone: "neutral", blocks: false },
+  stop: { label: "Stop today", eyebrow: "Today's action", tone: "red" },
+  pull_back: { label: "Pull back today", eyebrow: "Today's action", tone: "red" },
+  modify: { label: "Modify today", eyebrow: "Today's action", tone: "amber" },
+  green: { label: "Green light", eyebrow: "Today's action", tone: "green" },
+  preview: { label: "Session preview", eyebrow: "Next session", tone: "neutral" },
+  not_checked_in: { label: "Check in required", eyebrow: "Today's action", tone: "neutral" },
 };
 
 export function getTierMeta(tier: TodayDecisionTier): TodayTierMeta {

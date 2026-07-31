@@ -1334,14 +1334,6 @@ def _soft_warning_message(
     # message instead of claiming "multiple" and then listing one.
     warnings = _filter_warnings(warnings)
     warning_count = len(warnings)
-    # Keep the reason's "reduce X" clause on the same lever(s) as the action so the
-    # card never says "reduce combat work" above a "cut your sets" action.
-    reduce_clause = _for_modality(
-        modality,
-        strength="Heavy loading should be reduced today.",
-        mixed="Hard combat work and heavy loading should be reduced today.",
-        default="Hard combat work should be reduced today.",
-    )
     # The reason no longer lists what fired. The card's TRIGGER row enumerates the
     # signals and its CONTEXT row the camp context, so repeating them here read as
     # the same thing twice — and the old lead-in ("Multiple warning signs are
@@ -1359,18 +1351,28 @@ def _soft_warning_message(
             return (
                 "pull_back",
                 "Pull back today.",
-                f"Several signals are stacking up. {reduce_clause}",
                 _for_modality(
                     modality,
-                    strength="Skip the loaded work today and use recovery or light mobility instead.",
-                    mixed="Skip the combat and loaded work today; use recovery or light mobility instead.",
-                    default="Skip combat work and use recovery or light mobility instead.",
+                    strength="Your readiness is too low for heavy loading today.",
+                    mixed="Your readiness is too low for hard combat work or heavy loading today.",
+                    default="Your readiness is too low for hard combat work today.",
+                ),
+                _for_modality(
+                    modality,
+                    strength="Skip heavy loading today. Use recovery or light mobility instead.",
+                    mixed="Skip hard combat work and heavy loading today. Use recovery or light mobility instead.",
+                    default="Skip hard combat work today. Use recovery or light mobility instead.",
                 ),
             )
         return (
             "modify",
             "Session reduced.",
-            "Several signals are stacking up, so today needs a safer dose.",
+            _for_modality(
+                modality,
+                strength="Your readiness is down, so reduce heavy loading today.",
+                mixed="Your readiness is down, so reduce hard combat work and heavy loading today.",
+                default="Your readiness is down, so reduce hard combat work today.",
+            ),
             _for_modality(
                 modality,
                 strength="Cut sets, cap load, and add no extra work.",
@@ -1383,7 +1385,12 @@ def _soft_warning_message(
         return (
             "modify",
             "Session reduced.",
-            f"Two signals are stacking up. {reduce_clause}",
+            _for_modality(
+                modality,
+                strength="Your readiness is down, so reduce heavy loading today.",
+                mixed="Your readiness is down, so reduce hard combat work and heavy loading today.",
+                default="Your readiness is down, so reduce hard combat work today.",
+            ),
             _for_modality(
                 modality,
                 strength="Cut the heavy top sets and back-off volume, and keep the remaining lifts controlled.",
@@ -1886,10 +1893,9 @@ def _resolve_readiness_adjustment(
             title = "Pull back today."
             action = _for_modality(
                 session_modality,
-                strength="Skip the loaded work today and use recovery or light mobility instead.",
-                mixed="Skip the combat and loaded work today; use recovery or light mobility instead.",
-                default="Use recovery or light mobility today, and avoid hard combat work "
-                "unless your coach has already planned it.",
+                strength="Skip heavy loading today. Use recovery or light mobility instead.",
+                mixed="Skip hard combat work and heavy loading today. Use recovery or light mobility instead.",
+                default="Skip hard combat work today. Use recovery or light mobility instead.",
             )
 
     triggers = list(soft_warnings.triggers)
@@ -1950,32 +1956,32 @@ def _resolve_readiness_adjustment(
 _TRIGGER_LABELS: dict[str, str] = {
     # Red-flag symptoms.
     "sharp_pain": "Sharp pain",
-    "instability": "Instability",
+    "instability": "Joint feels unstable",
     "swelling": "Swelling",
-    "neurological_symptoms": "Neurological symptoms",
-    "illness_symptoms": "Illness symptoms",
-    "cannot_warm_into_movement": "Can't warm into movement",
-    "worse_next_day_pain": "Worse next-day pain",
+    "neurological_symptoms": "Head or nerve symptoms",
+    "illness_symptoms": "Feeling unwell",
+    "cannot_warm_into_movement": "Can't warm up",
+    "worse_next_day_pain": "Pain worse next day",
     # Injury state.
-    "active_injury_worse": "Injury reported worse",
+    "active_injury_worse": "Injury getting worse",
     "active_injury_restriction": "Active injury",
     "tracked_injury_high_risk_session": "Active injury",
     # Today's check-in.
     "pain_high": "High pain",
     "manageable_pain": "Manageable pain",
     "poor_sleep": "Poor sleep",
-    "flat_body": "Body feels flat",
+    "flat_body": "Feeling flat",
     # Accumulated history.
-    "poor_sleep_3_day_streak": "Poor sleep, 3 days",
-    "flat_body_3_day_streak": "Flat body, 3 days",
-    "pain_3_day_streak": "Pain, 3 days",
+    "poor_sleep_3_day_streak": "Poor sleep for 3 days",
+    "flat_body_3_day_streak": "Feeling flat for 3 days",
+    "pain_3_day_streak": "Pain for 3 days",
     "pain_worsening_trend": "Pain getting worse",
-    "repeated_poor_readiness": "Repeated poor check-ins",
+    "repeated_poor_readiness": "Low readiness lately",
     "recent_hard_session": "Recent hard session",
     "recent_hard_load_plus_poor_today": "Heavy recent load",
     # Degraded safety context. Named plainly so a held-back athlete can see the
     # hold came from missing data, not from their own readiness.
-    "context_degraded": "Check-in history incomplete",
+    "context_degraded": "Recent history incomplete",
     "context_unavailable": "Safety history unavailable",
 }
 
@@ -1991,7 +1997,7 @@ _CONTEXT_LABELS: dict[str, str] = {
 }
 
 # When both codes fire, the first is fully covered by the second and would read
-# as the same thing twice ("Poor sleep" next to "Poor sleep, 3 days").
+# as the same thing twice ("Poor sleep" next to "Poor sleep for 3 days").
 _CONTRIBUTOR_SUPERSEDED_BY: tuple[tuple[str, str], ...] = (
     ("poor_sleep", "poor_sleep_3_day_streak"),
     ("flat_body", "flat_body_3_day_streak"),

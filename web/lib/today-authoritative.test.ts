@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   getInjuryOverrideBanner,
   getTodayDecisionBanner,
+  resolveTodayDecision,
 } from "./today-authoritative.ts";
 import type { TodayCommandView } from "./types.ts";
 
@@ -26,42 +27,84 @@ const BASE_STATE: TodayCommandView = {
   quick_actions: [],
 };
 
-test("prose cannot turn a backend green decision into a training block", () => {
-  const banner = getTodayDecisionBanner(
-    "train_as_planned",
-    "No training today.\nRed flag detected. Seek medical advice.",
-  );
-
-  assert.ok(banner);
-  assert.equal(banner.displayState, "go");
-  assert.equal(banner.chip, "GO");
-  assert.equal(banner.tone, "green");
-  assert.equal(banner.blocksTraining, false);
-});
-
-test("prose cannot weaken a backend pull-back decision", () => {
-  const banner = getTodayDecisionBanner(
-    "pull_back",
-    "Sharp work ready.\nEverything feels good.\nTrain normally.",
-  );
-
-  assert.ok(banner);
-  assert.equal(banner.displayState, "pull_back");
-  assert.equal(banner.chip, "PULL BACK");
-  assert.equal(banner.tone, "red");
-  assert.equal(banner.blocksTraining, true);
-});
-
-test("preview scope is display-only and never training-cleared", () => {
-  const banner = getTodayDecisionBanner("train_as_planned", "Train as planned.", {
-    isPreview: true,
+test("green remains completable despite stop-sounding prose", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_reason: "No training today.\nRed flag detected. Seek medical advice.",
+      decision_tier: "green",
+    },
   });
 
+  assert.equal(resolved.authoritativeTier, "green");
+  assert.equal(resolved.blocksTraining, false);
+  assert.equal(resolved.canCompleteSession, true);
+  assert.ok(resolved.banner);
+  assert.equal(resolved.banner.displayState, "go");
+  assert.equal(resolved.banner.tone, "green");
+  assert.equal("blocksTraining" in resolved.banner, false);
+});
+
+test("pull-back remains blocking despite green-sounding prose", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      recommendation_reason: "Sharp work ready.\nEverything feels good.\nTrain normally.",
+      decision_tier: "pull_back",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "pull_back");
+  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.canCompleteSession, false);
+});
+
+test("STOP uses a safe replacement only for today's matched session", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "stop",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "stop");
+  assert.equal(resolved.sessionIsToday, true);
+  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, true);
+});
+
+test("future previews remain non-completable and never get today's replacement", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "stop",
+      next_session: {
+        ...BASE_STATE.today.next_session,
+        session_relation: "next",
+      },
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(resolved.displayTier, "preview");
+  assert.equal(resolved.sessionIsToday, false);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, false);
+  assert.equal(resolved.tone, "neutral");
+});
+
+test("the banner adapter stays presentation-only", () => {
+  const banner = getTodayDecisionBanner("pull_back", "Train normally.");
   assert.ok(banner);
-  assert.equal(banner.displayState, "preview");
-  assert.equal(banner.chip, "PREVIEW");
-  assert.equal(banner.tone, "neutral");
-  assert.equal(banner.blocksTraining, false);
+  assert.equal("blocksTraining" in banner, false);
 });
 
 test("frontend does not create a separate severe-injury override", () => {
