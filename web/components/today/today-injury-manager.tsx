@@ -302,8 +302,9 @@ export function TodayInjuryManager({
     : [];
 
   async function submit(injuries: TodayInjuryDeclaration[]) {
-    await submitTodayInjuryCheckin(token, { injuries });
+    const response = await submitTodayInjuryCheckin(token, { injuries });
     await onRefresh();
+    return response;
   }
 
   /** Send one per-injury update. The button only reads as selected AFTER the
@@ -320,11 +321,36 @@ export function TodayInjuryManager({
     }
     setPendingFlagId(flagId);
     try {
-      await submit([declaration ?? { flag_id: flagId, status }]);
+      const response = await submit([declaration ?? { flag_id: flagId, status }]);
       setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
-      showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
-        tone: "success",
-      });
+      const previous = openInjuries.find((injury) => injury.id === flagId);
+      const updated = response.open_injuries.find((injury) => injury.id === flagId);
+      const severityRaised =
+        previous && updated
+          ? INJURY_SEVERITY_OPTIONS.findIndex((option) => option.value === updated.severity) >
+            INJURY_SEVERITY_OPTIONS.findIndex((option) => option.value === previous.severity)
+          : false;
+      if (status !== "resolved" && updated?.surface_class === "surface_medical_review") {
+        showToast(
+          severityRaised
+            ? `Severity raised to ${updated.severity}. This skin injury needs checking.`
+            : "This skin injury needs checking before training.",
+          { tone: "info" },
+        );
+      } else if (status !== "resolved" && updated?.surface_class === "surface_no_contact") {
+        showToast("Injury updated. Keep contact off it until the skin is closed and coverable.", {
+          tone: "info",
+        });
+      } else if (
+        status !== "resolved" &&
+        updated?.surface_class === "surface_local_restriction"
+      ) {
+        showToast("Injury updated. Protect it from rubbing or contact.", { tone: "info" });
+      } else {
+        showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
+          tone: "success",
+        });
+      }
       return true;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Injury update failed.", { tone: "error" });

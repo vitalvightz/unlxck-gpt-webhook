@@ -1251,6 +1251,129 @@ class TestCommandView:
 
         assert updated["open_injuries"][0]["severity"] == "severe"
 
+    def test_worse_surface_answers_raise_severity_from_canonical_surface_class(self):
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "body_area": "left hand",
+                        "description": "left hand cut",
+                        "severity": "mild",
+                        "status": "ongoing",
+                    }
+                ]
+            },
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        opened_wound = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "bleeding_status": "controlled",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                        "friction_or_contact_problem": "yes",
+                    }
+                ]
+            },
+        )
+        assert opened_wound["open_injuries"][0]["severity"] == "moderate"
+        assert opened_wound["open_injuries"][0]["surface_class"] == "surface_no_contact"
+
+        infected = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "bleeding_status": "controlled",
+                        "drainage": "present",
+                        "infection_signs": ["pus"],
+                        "coverable": "no",
+                        "friction_or_contact_problem": "yes",
+                    }
+                ]
+            },
+        )
+        assert infected["open_injuries"][0]["severity"] == "severe"
+        assert infected["open_injuries"][0]["surface_class"] == "surface_medical_review"
+
+    def test_surface_medical_review_is_visible_without_session_or_daily_checkin(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {
+                        "body_area": "left hand",
+                        "description": "left hand cut",
+                        "severity": "mild",
+                        "status": "ongoing",
+                    }
+                ]
+            },
+            now=now,
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        result = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "bleeding_status": "controlled",
+                        "drainage": "present",
+                        "infection_signs": ["pus"],
+                        "coverable": "no",
+                        "friction_or_contact_problem": "yes",
+                    }
+                ]
+            },
+            now=now,
+        )
+
+        # No daily readiness check-in exists, so the write itself has no stored
+        # recommendation to refresh. The command view must still surface the
+        # medical-review guidance from the tracked wound.
+        assert result["recommendation"] is None
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+        assert view.today.session_scope == "none"
+        assert view.today.recommendation_state == "pull_back"
+        assert "Get this checked." in (view.today.recommendation_reason or "")
+        assert "showing infection signs" in (view.today.recommendation_reason or "")
+        assert "Left hand cut — needs medical review" in view.today.recommendation_trigger_labels
+        assert view.today.recommendation_safety_checks == [
+            {
+                "code": "surface_injury",
+                "label": "Skin injury",
+                "result": "medical_review",
+                "result_label": "Needs checking",
+            }
+        ]
+
     def test_worse_injury_refreshes_existing_readiness_recommendation(self):
         store = _store_with_plan()
         now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)

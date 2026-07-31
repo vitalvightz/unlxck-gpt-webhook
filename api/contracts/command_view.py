@@ -65,6 +65,16 @@ _RISK_PRESENTATION: dict[str, tuple[str, str, str]] = {
 
 VISIBLE_RISK_LIMIT = 2
 
+_ACTIVE_INJURY_STATUSES = frozenset({"open", "monitoring"})
+_SURFACE_CLASSES = frozenset(
+    {
+        "stable_surface",
+        "surface_local_restriction",
+        "surface_no_contact",
+        "surface_medical_review",
+    }
+)
+
 
 class RiskWatchItem(BaseModel):
     category: RiskCategory
@@ -336,6 +346,104 @@ def _as_iso(day: date | str) -> str:
     return str(day or "").strip()
 
 
+def _injury_name(injury: Mapping[str, Any]) -> str:
+    """Use the server-normalized injury label; keep a safe legacy fallback."""
+    raw = str(
+        injury.get("label")
+        or injury.get("description")
+        or injury.get("body_area")
+        or "Injury"
+    ).strip()
+    return raw[:1].upper() + raw[1:]
+
+
+def _active_injury_rows(
+    open_injuries: Sequence[Mapping[str, Any]] | None,
+) -> list[Mapping[str, Any]]:
+    return [
+        injury
+        for injury in (open_injuries or [])
+        if str(injury.get("status") or "").strip().lower() in _ACTIVE_INJURY_STATUSES
+    ]
+
+
+def _specific_trigger_labels(
+    triggers: Sequence[str],
+    open_injuries: Sequence[Mapping[str, Any]] | None,
+) -> list[str]:
+    """Replace generic injury contributors with the exact tracked injuries.
+
+    The engine still owns the structured trigger codes. This presentation layer
+    joins those codes to the already-normalized injury records, so the client is
+    told *which* injury contributed and whether it is worsening, severe, needs
+    review, or is relevant to hard work. It never parses recommendation prose.
+    """
+    base_labels = list(trigger_labels(triggers))
+    if not base_labels:
+        return []
+
+    codes = {str(trigger).strip() for trigger in triggers}
+    active = _active_injury_rows(open_injuries)
+    replacements: dict[str, list[str]] = {}
+
+    if "active_injury_worse" in codes:
+        worse = [
+            injury
+            for injury in active
+            if str(injury.get("latest_reported_status") or "").strip().lower() == "worse"
+        ]
+        candidates = worse or [
+            injury
+            for injury in active
+            if str(injury.get("severity") or "").strip().lower() == "severe"
+        ]
+        replacements["Injury getting worse"] = [
+            (
+                f"{_injury_name(injury)} — needs medical review"
+                if str(injury.get("surface_class") or "") == "surface_medical_review"
+                else f"{_injury_name(injury)} — getting worse"
+                if str(injury.get("latest_reported_status") or "").strip().lower() == "worse"
+                else f"{_injury_name(injury)} — severe"
+            )
+            for injury in candidates
+        ]
+
+    if {"active_injury_restriction", "tracked_injury_high_risk_session"} & codes:
+        load_relevant = [
+            injury
+            for injury in active
+            if str(injury.get("surface_class") or "non_surface") not in _SURFACE_CLASSES
+        ]
+        reason = (
+            "active for hard session"
+            if "tracked_injury_high_risk_session" in codes
+            else "restricts today's training"
+        )
+        replacements["Active injury"] = [
+            f"{_injury_name(injury)} — {reason}" for injury in load_relevant
+        ]
+
+    if "surface_injury_medical_review" in codes:
+        surface_reviews = [
+            injury
+            for injury in active
+            if str(injury.get("surface_class") or "") == "surface_medical_review"
+        ]
+        replacements["Skin injury needs review"] = [
+            f"{_injury_name(injury)} — needs medical review" for injury in surface_reviews
+        ]
+
+    resolved: list[str] = []
+    for label in base_labels:
+        specifics = replacements.get(label) or [label]
+        for specific in specifics:
+            if specific not in resolved:
+                resolved.append(specific)
+            if len(resolved) >= 3:
+                return resolved
+    return resolved
+
+
 def build_command_view(
     *,
     current_training_day: date | str,
@@ -385,7 +493,9 @@ def build_command_view(
             injury_hold_exempt=injury_hold_exempt,
         ),
         injury_hold_exempt=injury_hold_exempt,
-        recommendation_trigger_labels=list(trigger_labels(rec_view.triggers)),
+        recommendation_trigger_labels=_specific_trigger_labels(
+            rec_view.triggers, open_injuries
+        ),
         recommendation_context_labels=list(context_labels(rec_view.triggers)),
         recommendation_safety_checks=[dict(check) for check in safety_checks(rec_view.triggers)],
         # Sources come from the decision's own trigger codes. An open injury is

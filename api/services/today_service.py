@@ -322,6 +322,78 @@ _SURFACE_ROUTED_CLASSES = frozenset(
     {"stable_surface", "surface_local_restriction", "surface_no_contact"}
 )
 
+_INJURY_SEVERITY_RANK = {"mild": 0, "moderate": 1, "severe": 2}
+_SURFACE_SEVERITY_FLOOR = {
+    "stable_surface": "mild",
+    "surface_local_restriction": "moderate",
+    "surface_no_contact": "moderate",
+    "surface_medical_review": "severe",
+}
+
+
+def _sync_surface_severity_from_checkin(
+    declared: Sequence[DeclaredInjury],
+    open_flags: Sequence[Mapping[str, Any]],
+) -> list[DeclaredInjury]:
+    """Apply a server-owned severity floor from explicit wound answers.
+
+    The follow-up answers already determine the canonical surface class. Reuse
+    that result instead of trusting the browser to choose a matching severity:
+    local/open-wound restrictions are at least moderate, while infection,
+    uncontrolled bleeding, drainage, or another medical-review result is severe.
+    Worsening reports only raise severity. A later recheck that explicitly says
+    the skin is closed/clean can lower an earlier automatic floor, so the injury
+    does not remain trapped in medical review after the concerning signs clear.
+    """
+    current_by_id = {
+        str(flag.get("id")): dict(flag)
+        for flag in open_flags
+        if str(flag.get("id") or "").strip()
+    }
+    raised: list[DeclaredInjury] = []
+    for injury in declared:
+        surface_fields = injury.surface_safety_fields()
+        if injury.status != "worse" and not surface_fields:
+            raised.append(injury)
+            continue
+
+        current = current_by_id.get(str(injury.flag_id or ""), {})
+        candidate = {
+            **current,
+            **surface_fields,
+            "latest_reported_status": injury.status,
+            # Classify the wound answers themselves. A previously auto-raised
+            # severe value would otherwise force medical review before the now-
+            # clean answers are considered, making recovery impossible.
+            "severity": "mild",
+        }
+        if injury.body_area.strip():
+            candidate["body_area"] = injury.body_area.strip()
+        if injury.description.strip():
+            candidate["description"] = injury.description.strip()
+        try:
+            surface_class = classify_injury_surface(candidate)
+        except Exception:
+            logger.exception("[today] surface_severity_classification_failed")
+            raised.append(injury)
+            continue
+
+        floor = _SURFACE_SEVERITY_FLOOR.get(surface_class)
+        if floor is None:
+            raised.append(injury)
+            continue
+
+        current_severity = str(current.get("severity") or "mild").strip().lower()
+        requested_severity = str(injury.severity or current_severity).strip().lower()
+        candidates = (
+            (current_severity, requested_severity, floor)
+            if injury.status == "worse"
+            else ((requested_severity, floor) if injury.severity is not None else (floor,))
+        )
+        target = max(candidates, key=lambda value: _INJURY_SEVERITY_RANK.get(value, -1))
+        raised.append(injury.model_copy(update={"severity": target}))
+    return raised
+
 
 def _with_surface_class(injuries: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     """Stamp each open injury with its canonical surface classification.
@@ -677,6 +749,49 @@ def _severe_injury_recommendation(
     }
 
 
+def _surface_medical_review_recommendation(
+    injury: Mapping[str, Any], training_day: str
+) -> dict[str, Any] | None:
+    """Visible wound guidance even when there is no session or daily check-in."""
+    try:
+        if classify_injury_surface(injury) != "surface_medical_review":
+            return None
+    except Exception:
+        logger.exception("[today] surface_review_classification_failed")
+        return None
+
+    label = injury.get("label") or build_injury_label(
+        injury.get("body_area"), injury.get("description")
+    )
+    natural_label = str(label or "wound").strip().lower()
+    infection_signs = injury.get("infection_signs") or []
+    if infection_signs:
+        reason = f"Your {natural_label} is showing infection signs."
+        safety = "Seek medical advice for spreading redness, pus, swelling, or fever."
+    elif str(injury.get("bleeding_status") or "").strip().lower() == "uncontrolled":
+        reason = f"Your {natural_label} is bleeding and not under control."
+        safety = "Get bleeding controlled and seek medical advice before training."
+    else:
+        reason = f"Your {natural_label} needs checking before you train through it."
+        safety = "Seek medical advice for spreading redness, pus, drainage, or fever."
+    return {
+        "decision": "pull_back",
+        "reason": "\n".join(
+            (
+                "Get this checked.",
+                reason,
+                "Keep it clean and covered, and keep direct contact or rubbing off that area.",
+                safety,
+            )
+        ),
+        "training_day": training_day,
+        "triggers": [
+            "surface_injury_medical_review",
+            "safety_check:surface_injury:medical_review",
+        ],
+    }
+
+
 def _completion_session_is_support(
     plan_row: Mapping[str, Any], training_day: str, session_id: str
 ) -> bool:
@@ -922,6 +1037,7 @@ def submit_today_injury_checkin(
 
     open_flags = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
     open_flag_ids = [str(flag.get("id")) for flag in open_flags if flag.get("id")]
+    declared = _sync_surface_severity_from_checkin(declared, open_flags)
     try:
         plan = reconcile_injury_checkin(declared=declared, open_flag_ids=open_flag_ids)
     except ValueError as exc:
@@ -1863,6 +1979,18 @@ def build_today_command_view(
     )
     severe_injury = _active_severe_injury(open_injuries)
     current_decision = str((recommendation or {}).get("decision") or "")
+    surface_review_recommendation = next(
+        (
+            review
+            for injury in open_injuries
+            if (review := _surface_medical_review_recommendation(injury, training_day))
+            is not None
+        ),
+        None,
+    )
+    if surface_review_recommendation is not None and current_decision != "pull_back":
+        recommendation = surface_review_recommendation
+        current_decision = "pull_back"
     if severe_injury is not None and current_decision != "pull_back" and not today_is_support_filler:
         recommendation = _severe_injury_recommendation(severe_injury, training_day)
 
