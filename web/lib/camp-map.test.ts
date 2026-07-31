@@ -497,6 +497,34 @@ test("resolveCurrentDay matches a coach-led weekday-only day with no sessions", 
   assert.equal(current.sessions.length, 0);
 });
 
+test("projected open-plan dates still match the live recurring weekday", () => {
+  const plan = openPlan();
+  const weekdayOffsets = [0, 2, 5];
+  for (const [weekPos, week] of (plan.weeks ?? []).entries()) {
+    for (const [dayPos, day] of (week.days ?? []).entries()) {
+      day.date = `2026-08-${String(3 + weekPos * 7 + weekdayOffsets[dayPos]!).padStart(2, "0")}`;
+    }
+  }
+
+  // The projected rows begin in August, but the renewable schedule is already
+  // in week 2 on Saturday 18 July. Only an explicitly open plan may use this.
+  const current = resolveCurrentDay(plan, new Date(2026, 6, 18), {
+    openWeekNumber: 2,
+    allowDatedWeekdayMatch: true,
+  });
+  const progress = resolvePlanProgress(plan, new Date(2026, 6, 18), {
+    openWeekNumber: 2,
+    allowDatedWeekdayMatch: true,
+  });
+
+  assert.equal(current.inRange, true);
+  assert.equal(current.weekPos, 1);
+  assert.equal(current.dayPos, 2);
+  assert.equal(progress.currentWeekPos, 1);
+  assert.equal(progress.currentDayPos, 2);
+  assert.equal(progress.currentDayDate, null);
+});
+
 test("resolveCurrentDay falls back to the first matching week without a week hint", () => {
   const current = resolveCurrentDay(openPlan(), new Date(2026, 6, 18));
   assert.equal(current.inRange, true);

@@ -102,10 +102,14 @@ function weekdayTokenFor(date: Date): WeekdayToken {
   return WEEKDAY_TOKENS[(date.getDay() + 6) % 7];
 }
 
-/** True when the day can only be matched by weekday: it has a weekday but no
- * parseable calendar date. Dated camp days never take the weekday path. */
-function isWeekdayOnlyDay(day: StructuredDay | null | undefined): boolean {
-  return dayISO(day) === null && dayWeekdayToken(day) !== null;
+/** True when a day can use the open-plan weekday path. Legacy open plans are
+ * undated; projected renewable plans may carry future dates but still repeat by
+ * weekday inside the server-selected block week. Dated fight camps never opt in. */
+function isWeekdayMatchableDay(
+  day: StructuredDay | null | undefined,
+  allowDatedDays = false,
+): boolean {
+  return dayWeekdayToken(day) !== null && (allowDatedDays || dayISO(day) === null);
 }
 
 export type OpenScheduleHints = {
@@ -190,17 +194,18 @@ type WeekdayOnlyMatch = {
  * an open plan still resolves when no anchor is available (all weeks of an
  * open block share the same weekly rhythm). Dated days never match here.
  */
-function findWeekdayOnlyDay(
+function findWeekdayDay(
   weeks: StructuredWeek[],
   today: Date,
   openWeekNumber?: number | null,
+  allowDatedDays = false,
 ): WeekdayOnlyMatch | null {
   const target = weekdayTokenFor(today);
   const matchIn = (weekPos: number): WeekdayOnlyMatch | null => {
     const days = getDays(weeks[weekPos]);
     for (let dayPos = 0; dayPos < days.length; dayPos += 1) {
       const day = days[dayPos];
-      if (isWeekdayOnlyDay(day) && dayWeekdayToken(day) === target) {
+      if (isWeekdayMatchableDay(day, allowDatedDays) && dayWeekdayToken(day) === target) {
         return { weekPos, dayPos, week: weeks[weekPos], day };
       }
     }
@@ -254,7 +259,7 @@ export type PlanProgress = {
 export function resolvePlanProgress(
   plan: StructuredPlan | null | undefined,
   today: Date | null,
-  options?: { openWeekNumber?: number | null },
+  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean },
 ): PlanProgress {
   const weeks = getWeeks(plan);
   const todayIso = today ? toISODate(today) : null;
@@ -275,7 +280,12 @@ export function resolvePlanProgress(
   });
 
   if (currentWeekPos === null && today) {
-    const weekdayMatch = findWeekdayOnlyDay(weeks, today, options?.openWeekNumber);
+    const weekdayMatch = findWeekdayDay(
+      weeks,
+      today,
+      options?.openWeekNumber,
+      options?.allowDatedWeekdayMatch,
+    );
     if (weekdayMatch) {
       currentWeekPos = weekdayMatch.weekPos;
       currentDayPos = weekdayMatch.dayPos;
@@ -580,7 +590,7 @@ export function resolveNextPlanFocusDay(
   plan: StructuredPlan | null | undefined,
   trainingDay: Date | null,
   fallbackFocusDay: Date | null | undefined,
-  options?: { openWeekNumber?: number | null },
+  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean },
 ): Date | undefined {
   if (!trainingDay || !fallbackFocusDay) {
     return fallbackFocusDay ?? undefined;
@@ -901,7 +911,7 @@ export type CurrentDayResolution = {
 export function resolveCurrentDay(
   plan: StructuredPlan | null | undefined,
   today: Date | null,
-  options?: { openWeekNumber?: number | null },
+  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean },
 ): CurrentDayResolution {
   const trainingDayISO = today ? toISODate(today) : null;
   const weeks = getWeeks(plan);
@@ -924,7 +934,14 @@ export function resolveCurrentDay(
     }
   }
 
-  const weekdayMatch = today ? findWeekdayOnlyDay(weeks, today, options?.openWeekNumber) : null;
+  const weekdayMatch = today
+    ? findWeekdayDay(
+        weeks,
+        today,
+        options?.openWeekNumber,
+        options?.allowDatedWeekdayMatch,
+      )
+    : null;
   if (weekdayMatch) {
     return {
       trainingDayISO,

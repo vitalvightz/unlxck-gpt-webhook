@@ -1716,12 +1716,21 @@ export function StructuredPlanRenderer({
 
   // The real calendar training day owns the truthful current week marker.
   // `focusDay` only advances the opened week/day highlight.
-  const calendarProgress = resolvePlanProgress(plan, calendarDay, { openWeekNumber });
+  const calendarProgress = resolvePlanProgress(plan, calendarDay, {
+    openWeekNumber,
+    allowDatedWeekdayMatch: openOngoing,
+  });
   const resolvedFocusDay = focusDay
-    ? resolveNextPlanFocusDay(plan, calendarDay, focusDay, { openWeekNumber })
+    ? resolveNextPlanFocusDay(plan, calendarDay, focusDay, {
+        openWeekNumber,
+        allowDatedWeekdayMatch: openOngoing,
+      })
     : undefined;
   const focusProgress = resolvedFocusDay
-    ? resolvePlanProgress(plan, resolvedFocusDay, { openWeekNumber })
+    ? resolvePlanProgress(plan, resolvedFocusDay, {
+        openWeekNumber,
+        allowDatedWeekdayMatch: openOngoing,
+      })
     : calendarProgress;
   // The calendar owns the truthful active week while today is inside the camp.
   // Just before a dated camp starts, there is no calendar match yet; in that
