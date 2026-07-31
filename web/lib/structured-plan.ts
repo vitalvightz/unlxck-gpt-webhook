@@ -139,7 +139,13 @@ export function isTimeLikeReps(reps: unknown): boolean {
   }
   return /\b(s|sec|secs|second|seconds|min|mins|minute|minutes|hr|hrs|hour|hours)\b/i.test(
     reps,
-  ) || /\d\s*s\b/i.test(reps);
+  ) || /\d\s*s\b/i.test(reps) || /\b\d{1,2}:\d{2}\b/.test(reps);
+}
+
+/** A prescription mode stored in `reps` by some structured-plan payloads.
+ * These values describe how work is performed, not a repetition count. */
+function isModeLikeReps(reps: string): boolean {
+  return /\b(continuous|amrap|emom)\b/i.test(reps);
 }
 
 export type BlockMetric = { label: string; value: string };
@@ -180,8 +186,9 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   }
   // The set multiplier must be a finite positive number, or it is omitted.
   const sets = finitePositiveNumber(block.sets) ? (block.sets as number) : null;
+  const modeLikeReps = repsText ? isModeLikeReps(repsText) : false;
 
-  if ((!repsText || isTimeLikeReps(repsText)) && duration) {
+  if ((!repsText || isTimeLikeReps(repsText) || modeLikeReps) && duration) {
     metrics.push({ label: "Duration", value: duration });
   } else if (repsText && isTimeLikeReps(repsText)) {
     // The reps value is itself a duration ("30 seconds") and no separate
@@ -189,6 +196,14 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
     // ("5 × 30 seconds") is semantically wrong. Surface it as Duration, keeping
     // any sets multiplier for the interval count.
     metrics.push({ label: "Duration", value: sets ? `${sets} × ${repsText}` : repsText });
+  } else if (repsText && modeLikeReps) {
+    // "continuous" / AMRAP / EMOM are execution modes, not volume. When the
+    // payload omitted a quantitative duration, keep the card truthful instead
+    // of inventing minutes from progression or regression prose.
+    metrics.push({
+      label: "Mode",
+      value: `${repsText.charAt(0).toUpperCase()}${repsText.slice(1)}`,
+    });
   } else if (repsText) {
     metrics.push({ label: "Volume", value: sets ? `${sets} × ${repsText}` : repsText });
   } else if (duration) {

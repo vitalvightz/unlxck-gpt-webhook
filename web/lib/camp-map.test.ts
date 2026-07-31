@@ -402,6 +402,7 @@ test("resolveCurrentDay locates today's week, day, sessions and countdown", () =
   assert.equal(current.sessions.length, 1);
   assert.equal(current.sessions[0]?.title, "Upper strength");
   assert.equal(current.dLabel, "D-28");
+  assert.equal(current.matchType, "calendar");
 });
 
 test("resolveCurrentDay reports an in-range off day with no sessions", () => {
@@ -486,6 +487,7 @@ test("resolveCurrentDay matches a weekday-only open plan by today's weekday", ()
   assert.equal(current.dayPos, 2);
   assert.equal(current.sessions[0]?.title, "Primary Strength + Fight-pace Conditioning");
   assert.equal(current.dLabel, null);
+  assert.equal(current.matchType, "weekday");
 });
 
 test("resolveCurrentDay matches a coach-led weekday-only day with no sessions", () => {
@@ -495,6 +497,38 @@ test("resolveCurrentDay matches a coach-led weekday-only day with no sessions", 
   assert.equal(current.weekPos, 1);
   assert.equal(current.dayPos, 1);
   assert.equal(current.sessions.length, 0);
+});
+
+test("projected open-plan dates still match the live recurring weekday", () => {
+  const plan = openPlan();
+  const weekdayOffsets = [0, 2, 5];
+  for (const [weekPos, week] of (plan.weeks ?? []).entries()) {
+    for (const [dayPos, day] of (week.days ?? []).entries()) {
+      day.date = `2026-08-${String(3 + weekPos * 7 + weekdayOffsets[dayPos]!).padStart(2, "0")}`;
+    }
+  }
+
+  // The projected rows begin in August, but the renewable schedule is already
+  // in week 2 on Saturday 18 July. Only an explicitly open plan may use this.
+  const current = resolveCurrentDay(plan, new Date(2026, 6, 18), {
+    openWeekNumber: 2,
+    allowDatedWeekdayMatch: true,
+  });
+  const progress = resolvePlanProgress(plan, new Date(2026, 6, 18), {
+    openWeekNumber: 2,
+    allowDatedWeekdayMatch: true,
+  });
+
+  assert.equal(current.inRange, true);
+  assert.equal(current.weekPos, 1);
+  assert.equal(current.dayPos, 2);
+  assert.equal(current.trainingDayISO, "2026-07-18");
+  assert.equal(current.matchType, "weekday");
+  assert.equal(progress.currentWeekPos, 1);
+  assert.equal(progress.currentDayPos, 2);
+  assert.equal(progress.currentDayDate, null);
+  assert.equal(progress.trainingDayISO, "2026-07-18");
+  assert.equal(progress.matchType, "weekday");
 });
 
 test("resolveCurrentDay falls back to the first matching week without a week hint", () => {
@@ -509,6 +543,7 @@ test("resolveCurrentDay leaves a weekday-only non-training day out of range", ()
   const current = resolveCurrentDay(openPlan(), new Date(2026, 6, 14), { openWeekNumber: 2 });
   assert.equal(current.inRange, false);
   assert.equal(current.weekPos, null);
+  assert.equal(current.matchType, null);
 });
 
 test("resolveCurrentDay never matches a dated camp by weekday", () => {
@@ -530,6 +565,8 @@ test("resolvePlanProgress marks the weekday-only current week and day position",
   assert.equal(progress.currentDayPos, 2);
   // Weekday-only matches carry no calendar date.
   assert.equal(progress.currentDayDate, null);
+  assert.equal(progress.trainingDayISO, "2026-07-18");
+  assert.equal(progress.matchType, "weekday");
 });
 
 test("resolveOpenPlanWeekNumber prefers the server-computed week number", () => {

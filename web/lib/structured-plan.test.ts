@@ -555,6 +555,7 @@ test("formatMeasured renders value + unit, or null", () => {
 test("prefers duration over reps when reps looks like a time string", () => {
   assert.equal(isTimeLikeReps("5-6 min"), true);
   assert.equal(isTimeLikeReps("30s"), true);
+  assert.equal(isTimeLikeReps("2:00 rounds"), true);
   assert.equal(isTimeLikeReps("4-6"), false);
 
   const timeReps = selectBlockMetric({
@@ -568,6 +569,20 @@ test("prefers duration over reps when reps looks like a time string", () => {
 
   assert.deepEqual(selectBlockMetric({} as never), []);
   assert.deepEqual(selectBlockMetric(null), []);
+});
+
+test("continuous prescriptions prefer duration and never render as volume", () => {
+  assert.deepEqual(
+    selectBlockMetric({
+      sets: 1,
+      reps: "continuous",
+      duration: { value: 20, unit: "minutes" },
+    } as never),
+    [{ label: "Duration", value: "20 minutes" }],
+  );
+  assert.deepEqual(selectBlockMetric({ sets: 1, reps: "continuous" } as never), [
+    { label: "Mode", value: "Continuous" },
+  ]);
 });
 
 test("isTimeLikeReps treats bare metres as NOT time (metres/minutes ambiguity)", () => {
@@ -1005,6 +1020,8 @@ test("formatMeasured rejects non-finite and negative values", () => {
 test("time-like reps without a separate duration are labelled Duration, not Volume", () => {
   const timeReps = selectBlockMetric({ display_name: "Hold", sets: 5, reps: "30 seconds" } as never);
   assert.deepEqual(timeReps[0], { label: "Duration", value: "5 × 30 seconds" });
+  const roundTime = selectBlockMetric({ display_name: "Bag", sets: 5, reps: "2:00 rounds" } as never);
+  assert.deepEqual(roundTime[0], { label: "Duration", value: "5 × 2:00 rounds" });
   // A genuine rep count still reads as Volume.
   const repCount = selectBlockMetric({ display_name: "Squat", sets: 3, reps: "8" } as never);
   assert.deepEqual(repCount[0], { label: "Volume", value: "3 × 8" });

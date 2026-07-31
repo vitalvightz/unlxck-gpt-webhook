@@ -89,6 +89,43 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Rounds are banked"), true);
 });
 
+test("open-plan weekday fallback labels today with the live date, not the projected date", () => {
+  const plan = {
+    schema_version: "text-adapter.v1",
+    plan_metadata: { title: "Open plan", plan_type: "open_ongoing_system" },
+    weeks: [
+      { week_id: "week-1", week_index: 1, days: [] },
+      {
+        week_id: "week-2",
+        week_index: 2,
+        days: [
+          {
+            date: "2026-08-15",
+            weekday: "Sat",
+            sessions: [{ session_id: "sat-strength", title: "Saturday strength", blocks: [] }],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 6, 18)}
+      openOngoing
+      scheduleContext={{
+        schedule_mode: "open_recurring",
+        projection_status: "projected",
+        current_week_number: 2,
+      }}
+    />,
+  );
+
+  assert.equal(html.includes("SAT 18 JUL"), true);
+  assert.equal(html.includes("SAT 15 AUG"), false);
+});
+
 test("structured renderer normalizes legacy D0 event-day labels to D-0", () => {
   const plan = {
     schema_version: "1.0",
