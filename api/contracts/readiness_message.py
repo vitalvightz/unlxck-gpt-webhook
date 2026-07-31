@@ -852,6 +852,7 @@ _CONTACT_EXPOSURE_TERMS = (
     "live round",
     "live work",
     "contact",
+    "impact",
     "competition",
 )
 # Repeated friction / direct impact over a covered area: enough to lift a dressing
