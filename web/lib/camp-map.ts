@@ -234,16 +234,21 @@ function findWeekdayDay(
   return null;
 }
 
+export type PlanMatchType = "calendar" | "weekday";
+
 export type PlanProgress = {
   weekCount: number;
   /** Array index of the week containing today, or null when out of camp range. */
   currentWeekPos: number | null;
-  /** ISO date of today's day inside the plan, or null when out of range (always
-   * null for a weekday-only match — those days carry no calendar date). */
+  /** Stored ISO date of today's exact calendar row, or null for a weekday
+   * fallback or when out of range. */
   currentDayDate: string | null;
-  /** Array index of today's day within its week, or null when out of range.
-   * The only current-day marker a weekday-only (open plan) match can provide. */
+  /** Array index of today's day within its week, or null when out of range. */
   currentDayPos: number | null;
+  /** The athlete-local date being resolved, including for weekday fallbacks. */
+  trainingDayISO: string | null;
+  /** Whether the plan row matched its stored date or only its recurring weekday. */
+  matchType: PlanMatchType | null;
   /** "D-28" style countdown for today (from the day, else derived), or null. */
   dLabel: string | null;
 };
@@ -266,6 +271,7 @@ export function resolvePlanProgress(
   let currentWeekPos: number | null = null;
   let currentDayDate: string | null = null;
   let currentDayPos: number | null = null;
+  let matchType: PlanMatchType | null = null;
 
   // A null `today` (e.g. before client mount) resolves to "no current day" so
   // the server and first client render agree — never match days on a null date.
@@ -275,6 +281,7 @@ export function resolvePlanProgress(
         currentWeekPos = weekPos;
         currentDayDate = todayIso;
         currentDayPos = dayPos;
+        matchType = "calendar";
       }
     });
   });
@@ -289,13 +296,22 @@ export function resolvePlanProgress(
     if (weekdayMatch) {
       currentWeekPos = weekdayMatch.weekPos;
       currentDayPos = weekdayMatch.dayPos;
+      matchType = "weekday";
     }
   }
 
   const currentDay = findDayByISO(plan, currentDayDate);
   const dLabel = formatCountdownLabel(currentDay?.countdown_label) || deriveCountdownLabel(plan, today);
 
-  return { weekCount: weeks.length, currentWeekPos, currentDayDate, currentDayPos, dLabel };
+  return {
+    weekCount: weeks.length,
+    currentWeekPos,
+    currentDayDate,
+    currentDayPos,
+    trainingDayISO: todayIso,
+    matchType,
+    dLabel,
+  };
 }
 
 export type CampProgress = {
@@ -881,6 +897,8 @@ export type CurrentDayResolution = {
   /** The athlete-local training-day ISO date used for the match (null until the
    * client has mounted and resolved the current day). */
   trainingDayISO: string | null;
+  /** Whether the plan row matched its stored date or only its recurring weekday. */
+  matchType: PlanMatchType | null;
   /** Array index of the matched week, or null when today is out of camp range. */
   weekPos: number | null;
   /** Array index of the matched day within its week, or null when out of range. */
@@ -902,11 +920,12 @@ export type CurrentDayResolution = {
  * day. The matched day is the source of truth for its sessions — a session's own
  * date is never used to override the parent day (parent day wins).
  *
- * Dated camps match on the calendar date. When no date matches, weekday-only
- * days (open / renewable plans — "WEEK 2 · SAT") match on today's weekday, with
+ * Dated camps match on the calendar date. When no date matches, open / renewable
+ * plans may match their recurring rows on today's weekday ("WEEK 2 · SAT"), with
  * `options.openWeekNumber` (see `resolveOpenPlanWeekNumber`) picking the week
- * of the renewable block. Dated days are never matched by weekday, so a camp
- * whose dates are simply out of range stays out of range.
+ * of the renewable block. That fallback is explicit in `matchType`, so callers
+ * never mistake a projected row date for the live training day. Dated fight
+ * camps never use this fallback and remain out of range when their dates miss.
  */
 export function resolveCurrentDay(
   plan: StructuredPlan | null | undefined,
@@ -922,6 +941,7 @@ export function resolveCurrentDay(
       if (dayISO(day) === trainingDayISO) {
         return {
           trainingDayISO,
+          matchType: "calendar",
           weekPos,
           dayPos,
           week: weeks[weekPos],
@@ -945,6 +965,7 @@ export function resolveCurrentDay(
   if (weekdayMatch) {
     return {
       trainingDayISO,
+      matchType: "weekday",
       weekPos: weekdayMatch.weekPos,
       dayPos: weekdayMatch.dayPos,
       week: weekdayMatch.week,
@@ -957,6 +978,7 @@ export function resolveCurrentDay(
 
   return {
     trainingDayISO,
+    matchType: null,
     weekPos: null,
     dayPos: null,
     week: null,

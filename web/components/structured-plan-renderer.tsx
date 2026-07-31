@@ -883,6 +883,7 @@ function CompletionTag({ completion }: { completion: Completion }) {
  */
 export function CampDayCard({
   day,
+  displayDate,
   fallbackLabel,
   openOngoing = false,
   weekNumber = 1,
@@ -894,6 +895,9 @@ export function CampDayCard({
   onLogSession,
 }: {
   day: StructuredDay;
+  /** Truthful calendar date for a recurring weekday match. The stored projected
+   * date remains untouched for completion and logging identity. */
+  displayDate?: string | null;
   fallbackLabel?: string;
   openOngoing?: boolean;
   weekNumber?: number;
@@ -920,15 +924,20 @@ export function CampDayCard({
   }, [defaultOpen]);
 
   const sessions = getSessions(day);
-  const date = cleanText(day.date);
+  const storedDate = cleanText(day.date);
+  const date = cleanText(displayDate) || storedDate;
   const weekday = weekdayLabel(date);
   const countdown = formatCountdownLabel(day.countdown_label);
   const timelineLabel = openOngoing
-    ? openTimelineDayLabel(day, weekNumber, fallbackLabel || `Week ${weekNumber} training day`)
+    ? openTimelineDayLabel(
+        displayDate ? { ...day, date: displayDate } : day,
+        weekNumber,
+        fallbackLabel || `Week ${weekNumber} training day`,
+      )
     : weekday || date || fallbackLabel || "Training day";
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
   const completion = dayCompletion(day, completionIndex);
-  const dayIso = date ? date.slice(0, 10) : null;
+  const dayIso = storedDate ? storedDate.slice(0, 10) : null;
 
   const completionInfoFor = (session: StructuredSession): SessionCompletionInfo | undefined => {
     if (!completionIndex) {
@@ -1887,6 +1896,11 @@ export function StructuredPlanRenderer({
                   <CampDayCard
                     key={cleanText(day.date) || `day-${index}`}
                     day={day}
+                    displayDate={
+                      isCurrent && focusProgress.matchType === "weekday"
+                        ? focusProgress.trainingDayISO
+                        : null
+                    }
                     fallbackLabel={`Training day ${index + 1}`}
                     openOngoing={openOngoing}
                     weekNumber={safePos + 1}

@@ -158,7 +158,7 @@ function SafeSessionCard({ view }: { view: SafeSessionView }) {
  * and their counts — Today simply scopes the view to today's day only (no week
  * strip, no other days, no full camp map).
  */
-function TodaySessionBlocks({
+export function TodaySessionBlocks({
   planId,
   current,
   openWeekIntent,
@@ -178,6 +178,13 @@ function TodaySessionBlocks({
   if (!current.inRange || !current.day) {
     return null;
   }
+  // A renewable plan may resolve today's weekday against a projected template
+  // row from another month. Keep that row for plan identity, but never present
+  // its projected date as today's calendar date.
+  const displayDay =
+    current.matchType === "weekday" && current.trainingDayISO
+      ? { ...current.day, date: current.trainingDayISO }
+      : current.day;
   const weekIntentNote = openWeekIntent ? (
     <p className="today-open-week-note">
       <span className="sp-tag sp-accent">
@@ -190,7 +197,7 @@ function TodaySessionBlocks({
     return (
       <div className="today-blocks">
         {weekIntentNote}
-        <SessionlessDayCard day={current.day} />
+        <SessionlessDayCard day={displayDay} />
       </div>
     );
   }
@@ -198,7 +205,7 @@ function TodaySessionBlocks({
     <RehabLabelProvider policy={rehabLabelPolicy}>
       <div className="today-blocks">
         {weekIntentNote}
-        <DaySessionContext day={current.day} />
+        <DaySessionContext day={displayDay} />
         {current.sessions.map((session, index) => (
           <StructuredSessionCard
             key={sessionIdentity({
@@ -211,7 +218,7 @@ function TodaySessionBlocks({
               session,
             })}
             session={session}
-            day={index === 0 ? current.day ?? undefined : undefined}
+            day={index === 0 ? displayDay : undefined}
             defaultOpenBlocks
             showDayContext={false}
             openWeekIntent={openWeekIntent}
