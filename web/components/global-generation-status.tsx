@@ -5,21 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { cancelGenerationJob, retryGenerationJob } from "@/lib/api";
+import { formatGenerationElapsedLabel } from "@/lib/generation-elapsed";
 import { humanizeGenerationError } from "@/lib/generation-failure";
 import { useAppSession } from "./auth-provider";
 import { useGenerationStatus } from "./generation-status-provider";
-
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  if (minutes === 0) {
-    return `${seconds}s`;
-  }
-
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-}
 
 const CELEBRATION_DURATION_MS = 1_600;
 const RIBBON_DISMISSED_KEY = "unlxck:generation-ribbon-dismissed";
@@ -205,6 +194,7 @@ export function GlobalGenerationStatus() {
     planId,
     terminalStatus,
     startedAtMs,
+    endedAtMs,
     refreshStatus,
     latestJob,
     source,
@@ -346,7 +336,11 @@ export function GlobalGenerationStatus() {
   const isRedundantRoute = isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
   const isAcknowledgementRoute = isGenerationRibbonAcknowledgedRoute(pathname, acknowledgementTarget);
   const ctaLabel = isCompleted && planId ? "View" : navigationTarget ? "Open" : "Refresh";
-  const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
+  // The elapsed reading survives into the terminal states instead of vanishing
+  // — a finished build should say how long it took. It stops moving because
+  // `endedAtMs` replaces `now` in the subtraction, not because it is hidden.
+  const showElapsed = isActive && startedAtMs !== null;
+  const isElapsedRunning = showElapsed && endedAtMs === null;
 
   const dismissKey =
     !isActive && latestJob?.job_id
@@ -356,7 +350,7 @@ export function GlobalGenerationStatus() {
         : RIBBON_DISMISSED_KEY;
 
   useEffect(() => {
-    if (!showElapsed) {
+    if (!isElapsedRunning) {
       return;
     }
 
@@ -364,7 +358,7 @@ export function GlobalGenerationStatus() {
 
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
-  }, [showElapsed]);
+  }, [isElapsedRunning]);
 
   useEffect(() => {
     if (previousPhaseRef.current !== "completed" && phase === "completed") {
@@ -707,7 +701,9 @@ export function GlobalGenerationStatus() {
   }
 
   const canNavigateToPlan = Boolean(navigationTarget);
-  const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
+  const elapsedLabel = showElapsed
+    ? formatGenerationElapsedLabel({ startedAtMs, endedAtMs, nowMs: now })
+    : null;
   const className = [
     "global-generation-status",
     isFailed ? "global-generation-status-failed" : "",
@@ -848,7 +844,10 @@ export function GlobalGenerationStatus() {
           <span className="global-generation-status-message">{statusMessage}</span>
 
           {elapsedLabel ? (
-            <span className="global-generation-status-elapsed" aria-label={`Elapsed time ${elapsedLabel}`}>
+            <span
+              className="global-generation-status-elapsed"
+              aria-label={`${isElapsedRunning ? "Elapsed time" : "Total build time"} ${elapsedLabel}`}
+            >
               {elapsedLabel}
             </span>
           ) : null}

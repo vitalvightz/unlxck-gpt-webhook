@@ -11,6 +11,11 @@ import {
   type GenerationFailureAction,
   type GenerationFailureKind,
 } from "@/lib/generation-failure";
+import { formatGenerationElapsedLabel } from "@/lib/generation-elapsed";
+import {
+  formatMilestoneDurationLabel,
+  resolveMilestoneDurations,
+} from "@/lib/generation-milestone-duration";
 import { buildStageOnePreview } from "@/lib/stage-one-preview";
 import type { PlanRequest, ProgressMilestone } from "@/lib/types";
 
@@ -141,16 +146,6 @@ export const PHASE_CONTENT: Record<
   },
 };
 
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) {
-    return `${seconds}s`;
-  }
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-}
-
 const ESTIMATE_COPY = "Plan build has started. You can leave and return later; the saved build keeps running.";
 
 interface PremiumLoadingScreenProps {
@@ -158,6 +153,10 @@ interface PremiumLoadingScreenProps {
   error?: string | null;
   statusMessage?: string | null;
   startedAtMs?: number | null;
+  // Backend-derived instant the job stopped. Once set, every clock on this
+  // screen — total elapsed and the active stage's duration — reads from it
+  // instead of Date.now().
+  endedAtMs?: number | null;
   milestones?: ProgressMilestone[];
   intake?: PlanRequest | null;
   failureKind?: GenerationFailureKind | null;
@@ -168,28 +167,12 @@ interface PremiumLoadingScreenProps {
   onRefineIntake?: (() => void) | null;
 }
 
-function formatRelativeTimestamp(at: string, baseMs: number | null): string {
-  const eventMs = Date.parse(at || "");
-  if (!Number.isFinite(eventMs)) {
-    return "";
-  }
-  if (baseMs === null) {
-    return "";
-  }
-  const diffSeconds = Math.max(0, Math.floor((eventMs - baseMs) / 1000));
-  if (diffSeconds < 60) {
-    return `+${diffSeconds}s`;
-  }
-  const minutes = Math.floor(diffSeconds / 60);
-  const seconds = diffSeconds % 60;
-  return `+${minutes}m ${String(seconds).padStart(2, "0")}s`;
-}
-
 export function PremiumLoadingScreen({
   phase,
   error = null,
   statusMessage = null,
   startedAtMs = null,
+  endedAtMs = null,
   milestones = [],
   intake = null,
   failureKind = null,
@@ -217,23 +200,34 @@ export function PremiumLoadingScreen({
     ? Array.from(new Set<GenerationFailureAction>([failure.primary, ...failure.secondary, "workspace"]))
         .filter((action) => failureHandlers[action] !== null)
     : [];
-  const showElapsed = !isTerminalNonProgress && phase !== "finalizing" && startedAtMs !== null;
+  // A stopped build still says how long it ran. The reading freezes because
+  // `endedAtMs` replaces `now` in the subtraction, not because it is hidden —
+  // hiding it is what left the screen with no account of the time it spent.
+  const showElapsed = startedAtMs !== null;
+  const isElapsedRunning = showElapsed && endedAtMs === null;
   const [now, setNow] = useState(() => Date.now());
   const stageOnePreview = isTerminalNonProgress ? null : buildStageOnePreview(intake, milestones);
 
   useEffect(() => {
-    if (!showElapsed) {
+    if (!isElapsedRunning) {
       return;
     }
     setNow(Date.now());
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
-  }, [showElapsed]);
+  }, [isElapsedRunning]);
 
-  const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
+  const elapsedLabel = showElapsed
+    ? formatGenerationElapsedLabel({ startedAtMs, endedAtMs, nowMs: now })
+    : null;
   const showMilestones = phase !== "submitting" && milestones.length > 0;
-  const visibleMilestones = milestones.slice(-6);
-  const latestMilestone = milestones.length ? milestones[milestones.length - 1] : null;
+  // Durations are resolved across the whole feed before slicing, so the last
+  // visible row still knows which milestone actually ended it.
+  const milestoneDurations = resolveMilestoneDurations(milestones, {
+    nowMs: now,
+    endedAtMs,
+    startedAtMs,
+  }).slice(-6);
 
   return (
     <section className={`panel loading-shell loading-phase-${phase}`}>
@@ -272,7 +266,7 @@ export function PremiumLoadingScreen({
                 <span className="loading-operational-value">{phaseContent.buildState}</span>
               </div>
               <div className="loading-operational-item">
-                <span className="loading-operational-label">Elapsed</span>
+                <span className="loading-operational-label">{isElapsedRunning ? "Elapsed" : "Total time"}</span>
                 <span className="loading-operational-value loading-operational-value-mono" aria-live="polite">
                   {elapsedLabel ?? "--"}
                 </span>
@@ -287,9 +281,13 @@ export function PremiumLoadingScreen({
                   {isFailed ? "Where the build stopped" : "Plan activity"}
                 </p>
                 <ol className="loading-milestone-list">
-                  {visibleMilestones.map((milestone, index) => {
-                    const isLatest = milestone === latestMilestone;
-                    const relativeLabel = formatRelativeTimestamp(milestone.at, startedAtMs);
+                  {milestoneDurations.map((view, index) => {
+                    const { milestone } = view;
+                    // The row that is still open is the one with no milestone
+                    // after it on an unfinished job — the same condition that
+                    // makes its duration a live count rather than a total.
+                    const isLatest = view.isRunning;
+                    const durationLabel = formatMilestoneDurationLabel(view);
                     return (
                       <li
                         key={`${milestone.code}-${milestone.at || index}`}
@@ -302,8 +300,13 @@ export function PremiumLoadingScreen({
                             <span className="loading-milestone-detail">{milestone.detail}</span>
                           ) : null}
                         </div>
-                        {relativeLabel ? (
-                          <span className="loading-milestone-time">{relativeLabel}</span>
+                        {durationLabel ? (
+                          <span
+                            className={`loading-milestone-time${view.isRunning ? " loading-milestone-time-running" : ""}`}
+                            title={view.offsetLabel ? `Started ${view.offsetLabel} into the build` : undefined}
+                          >
+                            {durationLabel}
+                          </span>
                         ) : null}
                       </li>
                     );

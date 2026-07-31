@@ -225,6 +225,7 @@ export default function GeneratePage() {
         error={controller.error}
         statusMessage={controller.statusMessage}
         startedAtMs={controller.startedAtMs}
+        endedAtMs={controller.endedAtMs}
         milestones={controller.milestones}
         intake={payload}
         failureKind={controller.failureKind}

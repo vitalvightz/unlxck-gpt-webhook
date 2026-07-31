@@ -21,6 +21,7 @@ globalAny.HTMLElement = window.HTMLElement;
 globalAny.Element = window.Element;
 globalAny.Node = window.Node;
 globalAny.Event = window.Event;
+globalAny.CustomEvent = window.CustomEvent;
 globalAny.MouseEvent = window.MouseEvent;
 globalAny.getComputedStyle = window.getComputedStyle.bind(window);
 
