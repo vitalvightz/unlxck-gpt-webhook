@@ -1,6 +1,8 @@
 import {
   canCompleteTodaySession,
   getActiveSevereInjury,
+  getInjuryOverrideBanner as getLegacyInjuryOverrideBanner,
+  getSessionTitle,
   getTierMeta,
   getTodayDecisionBanner as getLegacyTodayDecisionBanner,
   hasTodaySession,
@@ -154,6 +156,7 @@ function resolvePresentationBanner(
   recommendationState: TodayRecommendationState,
   reason: string | null | undefined,
   displayTier: TodayDecisionTier,
+  injuryPresentation?: TodayDecisionBanner | null,
 ): TodayDecisionBanner | null {
   if (displayTier === "not_checked_in") {
     return null;
@@ -174,16 +177,18 @@ function resolvePresentationBanner(
       : getTodayDecisionBanner(recommendationState, reason, {
           isPreview: displayTier === "preview",
         });
-  const copy = recommendationCopy ?? fallback;
+  const injuryCopy =
+    displayTier === "stop" ? injuryPresentation ?? null : null;
+  const copy = injuryCopy ?? recommendationCopy ?? fallback;
 
   return {
     state: recommendationState,
     displayState,
     chip: CHIP_BY_DISPLAY[displayState],
-    title: copy.title,
+    title: injuryCopy ? fallback.title : copy.title,
     detail: copy.detail,
     action: copy.action,
-    safety: recommendationCopy?.safety,
+    safety: injuryCopy?.safety ?? recommendationCopy?.safety,
     tone: TONE_BY_DISPLAY[displayState],
   };
 }
@@ -207,10 +212,21 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const isPreview = !hasSession || !sessionIsToday;
   const displayTier: TodayDecisionTier = isPreview ? "preview" : authoritativeTier;
   const tone = getTierMeta(displayTier).tone;
+  // Injury data can make a backend-authoritative STOP more specific, but it
+  // never creates the STOP. This preserves truthful injury presentation while
+  // keeping the server decision tier as the sole safety authority.
+  const injuryPresentation =
+    authoritativeTier === "stop" && !isPreview
+      ? getLegacyInjuryOverrideBanner(
+          state,
+          hasSession ? getSessionTitle(state.today.next_session) : undefined,
+        )
+      : null;
   const banner = resolvePresentationBanner(
     recommendationState,
     state.today.recommendation_reason,
     displayTier,
+    injuryPresentation,
   );
   const blocksCurrentSession =
     sessionIsToday &&
@@ -242,13 +258,13 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
 }
 
 /**
- * Severe-injury and safety authority lives in the backend readiness decision and
- * command-view decision tier. The frontend must not reclassify open injuries or
- * override a server decision from severity/status fields.
+ * Preserve the legacy presentation helper for consumers outside the shared
+ * resolver. Its result is display data only and must never determine session
+ * safety; resolveTodayDecision keeps that authority with decision_tier.
  */
 export function getInjuryOverrideBanner(
-  _state: TodayCommandView,
-  _sessionName?: string,
+  state: TodayCommandView,
+  sessionName?: string,
 ): TodayDecisionBanner | null {
-  return null;
+  return getLegacyInjuryOverrideBanner(state, sessionName);
 }

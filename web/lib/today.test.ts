@@ -760,6 +760,15 @@ test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () 
   });
 });
 
+test("Overview consumes the shared authoritative resolver", () => {
+  const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.equal(source.includes("resolveTodayDecision(commandState)"), true);
+  assert.equal(source.includes("resolvedDecision?.severeInjuryBlocksCurrentSession"), true);
+  assert.equal(source.includes("getInjuryOverrideBanner(commandState"), false);
+  assert.equal(source.includes("resolveDecisionTier(commandState?.today"), false);
+});
+
 // ---------------------------------------------------------------------------
 // Decision-tier unification: the banner and the risk-watch footer both render
 // from one authoritative tier, so they can never contradict.

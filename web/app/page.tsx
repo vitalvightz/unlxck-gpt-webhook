@@ -24,7 +24,6 @@ import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName, isOpenOng
 import {
   getCampDayLabel,
   getCompletionLabel,
-  getInjuryOverrideBanner,
   getOverviewPrimaryAction,
   getRiskWatchSummary,
   getRiskWatchText,
@@ -33,11 +32,8 @@ import {
   getSessionFocus,
   getSessionTitle,
   getTierMeta,
-  getTodayDecisionBanner,
-  hasTodaySession,
   isHardCombatSession,
-  isSessionToday,
-  resolveDecisionTier,
+  resolveTodayDecision,
   type TodayDecisionTier,
 } from "@/lib/today";
 import {
@@ -473,7 +469,8 @@ export default function HomePage() {
     // on: saved plans exist (pick one) vs no plans at all (build the first).
     const hasSavedPlans = (me.plan_count ?? 0) > 0;
     const sessionPreview = (commandState?.today?.next_session ?? {}) as TodaySession;
-    const hasNextSession = hasTodaySession(sessionPreview);
+    const resolvedDecision = commandState ? resolveTodayDecision(commandState) : null;
+    const hasNextSession = resolvedDecision?.hasSession ?? false;
     const nextSessionTitle = hasNextSession ? getSessionTitle(sessionPreview) : "No upcoming session";
     const nextSessionDay = hasNextSession ? getSessionDayLabel(sessionPreview) : "";
     const nextSessionFocus = hasNextSession
@@ -485,26 +482,12 @@ export default function HomePage() {
           : "Build a plan to see your first session.";
     const risks = commandState?.risk_watch ?? [];
     const recommendation = commandState?.today?.recommendation_state ?? "not_checked_in";
-    // Reuse the same decision framing as the Today screen so the title, the
-    // deduped body copy, and the block/allow meaning stay identical across
-    // screens. Null before check-in (no decision yet).
-    const dailyDecisionBanner = getTodayDecisionBanner(
-      recommendation,
-      commandState?.today?.recommendation_reason ?? null,
-    );
-    // A severe active injury is the highest-priority constraint and supersedes
-    // the daily readiness copy here too, so Overview and Today agree on the
-    // block. Null when there is no severe injury.
-    const injuryOverride = commandState
-      ? getInjuryOverrideBanner(commandState, hasNextSession ? nextSessionTitle : undefined)
-      : null;
-    const decisionBanner = injuryOverride ?? dailyDecisionBanner;
-    // The tier is the strongest-decision framing shared with Today: STOP (hard
-    // block) overrides everything, then PULL BACK / MODIFY / GREEN. The eyebrow +
-    // uppercase label come from the tier, the body from the resolved banner.
-    const decisionTier = resolveDecisionTier(commandState?.today, decisionBanner);
+    // Overview consumes the same authoritative resolver as Today. The backend
+    // tier controls safety; structured severe-injury data only supplies truthful
+    // STOP presentation and the injury check-in action.
+    const decisionBanner = resolvedDecision?.banner ?? null;
+    const decisionTier = resolvedDecision?.displayTier ?? "not_checked_in";
     const tierMeta = getTierMeta(decisionTier);
-    const isStop = decisionTier === "stop";
     const decisionTitle = tierMeta.label;
     const decisionLines = decisionBanner
       ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
@@ -531,11 +514,13 @@ export default function HomePage() {
     // (vs a future planned day that must read as pending, not cleared).
     const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
     const openOngoing = hasActivePlan && isOpenOngoingPlan(activePlan.fight_date);
-    const sessionIsToday = isSessionToday(sessionPreview, commandState?.today?.session_scope);
+    const sessionIsToday = resolvedDecision?.sessionIsToday ?? false;
     const nextIsHardCombat = hasNextSession && isHardCombatSession(sessionPreview);
     // STOP + the scheduled session is today -> replace it with a safe session.
     // Any future scheduled session -> show it as pending clearance, never cleared.
-    const safeSession = isStop && hasNextSession && sessionIsToday ? getSafeSessionView(nextSessionTitle) : null;
+    const safeSession = resolvedDecision?.useSafeReplacement
+      ? getSafeSessionView(nextSessionTitle)
+      : null;
     const showNextPlanned = hasNextSession && !sessionIsToday;
     // When today's session has already been logged (modified / done / skipped),
     // surface that state on the session card so a modified day reads clearly and
@@ -559,7 +544,7 @@ export default function HomePage() {
     const primaryAction = getOverviewPrimaryAction({
       hasActivePlan,
       planCount: me.plan_count ?? 0,
-      hasInjuryOverride: Boolean(injuryOverride),
+      hasInjuryOverride: Boolean(resolvedDecision?.severeInjuryBlocksCurrentSession),
       recommendation,
       decisionTier,
       hasSafeSession: Boolean(safeSession),

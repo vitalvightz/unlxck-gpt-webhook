@@ -110,9 +110,45 @@ test("backend STOP remains visible before check-in when a severe injury is activ
   assert.equal(resolved.banner.chip, "STOP");
   assert.equal(resolved.banner.title, "Stop today");
   assert.equal(resolved.banner.tone, "red");
+  assert.match(resolved.banner.detail, /Active severe injury: Knee/);
+  assert.match(resolved.banner.detail, /marking it easing does not lift the hold/);
+  assert.doesNotMatch(resolved.banner.detail, /Train as planned|Everything feels good/);
   assert.equal(resolved.blocksCurrentSession, true);
   assert.equal(resolved.severeInjuryBlocksCurrentSession, true);
   assert.equal(resolved.canCompleteSession, false);
+});
+
+test("severe-injury STOP copy never leaks stale recommendation text", () => {
+  const staleRecommendations: Array<{
+    state: TodayCommandView["today"]["recommendation_state"];
+    reason: string | null;
+  }> = [
+    { state: "train_as_planned", reason: "Everything feels good. Train normally." },
+    { state: "pull_back", reason: "Only readiness load needs adjusting." },
+    { state: "not_checked_in", reason: null },
+  ];
+
+  for (const recommendation of staleRecommendations) {
+    const resolved = resolveTodayDecision({
+      ...BASE_STATE,
+      today: {
+        ...BASE_STATE.today,
+        recommendation_state: recommendation.state,
+        recommendation_reason: recommendation.reason,
+        decision_tier: "stop",
+      },
+      open_injuries: [ACTIVE_SEVERE_INJURY],
+    });
+
+    assert.equal(resolved.authoritativeTier, "stop");
+    assert.equal(resolved.banner?.chip, "STOP");
+    assert.match(resolved.banner?.detail ?? "", /Active severe injury: Knee/);
+    assert.doesNotMatch(
+      resolved.banner?.detail ?? "",
+      /Everything feels good|Only readiness load|Train normally/,
+    );
+    assert.equal(resolved.blocksCurrentSession, true);
+  }
 });
 
 test("authoritative STOP overrides pull-back presentation as well as session safety", () => {
@@ -220,7 +256,7 @@ test("the banner adapter stays presentation-only", () => {
   assert.equal("blocksTraining" in banner, false);
 });
 
-test("frontend does not create a separate severe-injury override", () => {
+test("the legacy injury presentation export is preserved without overriding backend safety", () => {
   const state: TodayCommandView = {
     ...BASE_STATE,
     open_injuries: [
@@ -238,5 +274,12 @@ test("frontend does not create a separate severe-injury override", () => {
     ],
   };
 
-  assert.equal(getInjuryOverrideBanner(state, "Boxing conditioning"), null);
+  const injuryBanner = getInjuryOverrideBanner(state, "Boxing conditioning");
+  const resolved = resolveTodayDecision(state);
+
+  assert.equal(injuryBanner?.chip, "INJURY HOLD");
+  assert.match(injuryBanner?.detail ?? "", /Active severe injury: Knee/);
+  assert.equal(resolved.authoritativeTier, "green");
+  assert.equal(resolved.banner?.chip, "GO");
+  assert.equal(resolved.blocksCurrentSession, false);
 });
