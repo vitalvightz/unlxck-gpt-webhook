@@ -900,6 +900,24 @@ class TestInfectionSignsValidation:
     def test_omitted_stays_omitted(self):
         assert TodayInjuryDeclaration(flag_id="flag-1", status="worse").infection_signs is None
 
+    def test_an_explicit_null_is_absent_not_malformed(self):
+        # Every surface answer is optional by design. Rejecting null would 422 a
+        # client that sends the field for a question it did not ask — including
+        # the plain {flag_id, status} update the contract promises stays valid.
+        declaration = TodayInjuryDeclaration(
+            flag_id="flag-1", status="worse", infection_signs=None
+        )
+
+        assert declaration.infection_signs is None
+
+    def test_a_plain_status_update_is_still_accepted(self):
+        assert (
+            TodayInjuryDeclaration.model_validate(
+                {"flag_id": "flag-1", "status": "worse", "infection_signs": None}
+            ).infection_signs
+            is None
+        )
+
 
 class TestLegacyInjuryResponseMapping:
     """/api/injury-flags must not report a blank wound state.
