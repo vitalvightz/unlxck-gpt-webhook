@@ -36,8 +36,9 @@ from api.contracts.readiness_message import (
     ReadinessAdjustment,
     confidence_band,
     confidence_note,
-    contributor_labels,
+    context_labels,
     decision_sources,
+    trigger_labels,
 )
 from api.services import today_service as _today_service
 from api.services.plan_schedule import (
@@ -443,7 +444,8 @@ def _explain_from_triggers(view: CommandView, triggers: tuple[str, ...]) -> None
     Status reason codes lead, so the qualifier names the read that actually
     failed rather than the umbrella code.
     """
-    view.today.recommendation_contributors = list(contributor_labels(triggers))
+    view.today.recommendation_trigger_labels = list(trigger_labels(triggers))
+    view.today.recommendation_context_labels = list(context_labels(triggers))
     view.today.recommendation_sources = list(
         decision_sources(triggers, has_open_injuries=bool(view.open_injuries))
     )
@@ -472,14 +474,12 @@ def _reband_confidence(view: CommandView, context_status: ReadinessContextStatus
         return
     view.today.recommendation_confidence = banded
     # A re-check, not a fresh decision: the data was there when the call was made
-    # and only the re-read failed. The sources are marked historical for the same
-    # reason, so the card reads "was based on your last few check-ins" instead of
-    # claiming in the present tense to have used what it just said it could not
-    # load.
+    # and only the re-read failed, so the qualifier says refresh rather than load.
+    # Nothing has to mark the sources as historical any more: the card only shows
+    # them at HIGH confidence, and a failed re-read always lands below that.
     view.today.recommendation_confidence_note = confidence_note(
         context_status.reason_codes, re_check=True
     )
-    view.today.recommendation_sources_are_historical = True
 
 
 def build_today_command_view(

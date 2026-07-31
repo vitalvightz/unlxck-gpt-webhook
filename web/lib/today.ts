@@ -665,7 +665,6 @@ export function getVisibleRiskWatch(risks: TodayCommandView["risk_watch"]): {
  */
 const RISK_WATCH_TEXT_OVERRIDES: Record<string, string> = {
   stop_red_flag: "Hard combat work is blocked today.",
-  phase_taper: "Protect freshness. Do not chase fatigue.",
 };
 
 export function getRiskWatchText(risk: { category?: string | null; text?: string | null }): string {
@@ -902,7 +901,6 @@ const RISK_SIGNAL_LABELS: Record<string, string> = {
   active_injury_worse: "INJURY",
   high_pain: "PAIN",
   weight_cut: "WEIGHT",
-  phase_taper: "TAPER",
   fatigue: "FATIGUE",
   reminder: "REMINDER",
 };

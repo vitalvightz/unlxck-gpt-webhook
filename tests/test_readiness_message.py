@@ -9,7 +9,9 @@ from api.contracts.readiness_message import (
     build_readiness_adjustment,
     classify_session_modality,
     classify_session_risk,
+    context_labels,
     is_support_session,
+    trigger_labels,
 )
 
 
@@ -653,8 +655,8 @@ def test_poor_sleep_plus_flat_body_stacks_two_warnings():
 
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
-    assert "Multiple warning signs are showing" in adjustment.reason
-    assert "poor sleep and flat body" in adjustment.reason
+    assert "signals are stacking up" in adjustment.reason
+    assert trigger_labels(adjustment.triggers) == ("Poor sleep", "Body feels flat")
     assert "Cut the heavy top sets and back-off volume" in adjustment.action
     assert "keep the remaining lifts controlled" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
@@ -670,7 +672,7 @@ def test_hard_sparring_only_has_no_warning_sources_or_modify_card():
 
     assert adjustment.decision == "train_as_planned"
     assert "Warning sources:" not in adjustment.message
-    assert "Multiple warning signs are showing" not in adjustment.message
+    assert "signals are stacking up" not in adjustment.message
     assert "session_risk_high" in adjustment.triggers
     _assert_card_shape(adjustment)
 
@@ -722,11 +724,11 @@ def test_resetting_checkin_clears_stale_warning_state():
     )
 
     assert poor.decision == "modify"
-    assert "Multiple warning signs are showing" in poor.reason
+    assert "signals are stacking up" in poor.reason
     assert reset.decision == "train_as_planned"
     assert "poor_sleep" not in reset.triggers
     assert "flat_body" not in reset.triggers
-    assert "Multiple warning signs are showing" not in reset.message
+    assert "signals are stacking up" not in reset.message
     _assert_card_shape(poor)
     _assert_card_shape(reset)
 
@@ -739,19 +741,25 @@ def test_one_manageable_pain_warning_does_not_claim_multiple_sources():
 
     assert adjustment.decision == "modify"
     assert "Manageable pain means the area needs protection today." in adjustment.reason
-    assert "Multiple warning signs are showing" not in adjustment.message
+    assert "signals are stacking up" not in adjustment.message
     _assert_card_shape(adjustment)
 
 
-def test_hidden_context_warning_is_surfaced_in_source_list():
+def test_taper_is_recorded_as_context_and_never_as_a_warning():
+    # Being in taper is a plan, not a symptom. It is still recorded, so the card
+    # can show it as CONTEXT, but it must not count as a signal or appear in the
+    # reason as though something were wrong.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor", phase="TAPER"),
         ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
     )
 
     assert adjustment.decision == "modify"
-    assert "Multiple warning signs are showing: poor sleep and the taper phase." in adjustment.reason
     assert "taper_poor_readiness" in adjustment.triggers
+    assert context_labels(adjustment.triggers) == ("Taper phase",)
+    assert trigger_labels(adjustment.triggers) == ("Poor sleep",)
+    assert "taper" not in adjustment.reason.lower()
+    assert "warning sign" not in adjustment.message.lower()
     _assert_card_shape(adjustment)
 
 
@@ -777,7 +785,7 @@ def test_taper_poor_flat_manageable_pain_pulls_back_without_modify_copy():
 
     assert adjustment.decision == "pull_back"
     assert "Pull back today." in adjustment.message
-    assert "Multiple warning signs are showing" in adjustment.message
+    assert "signals are stacking up" in adjustment.message
     assert "Skip the loaded work" in adjustment.message
     assert "Keep sharp work only" not in adjustment.message
     assert "Remove 1 set" not in adjustment.message
@@ -799,7 +807,7 @@ def test_repeated_poor_readiness_adds_stronger_warning():
     )
 
     assert adjustment.decision == "modify"
-    assert "Multiple warning signs are showing" in adjustment.reason
+    assert "signals are stacking up" in adjustment.reason
     assert "Cut the heavy top sets and back-off volume" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "repeated_poor_readiness" in adjustment.triggers
@@ -972,7 +980,7 @@ def test_three_soft_warnings_pull_back_before_high_risk_combat_work():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "Multiple warning signs are showing" in adjustment.reason
+    assert "signals are stacking up" in adjustment.reason
     assert "Skip combat work" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "flat_body" in adjustment.triggers
@@ -999,7 +1007,7 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
     )
 
     assert adjustment.decision == "modify"
-    assert "Multiple warning signs are showing" in adjustment.reason
+    assert "signals are stacking up" in adjustment.reason
     assert "Cut sets, cap load, and add no extra work" in adjustment.action
     assert "poor_sleep_3_day_streak" in adjustment.triggers
     assert "flat_body_3_day_streak" in adjustment.triggers
@@ -1007,20 +1015,21 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
     _assert_card_shape(adjustment)
 
 
-def test_poor_sleep_in_taper_uses_taper_specific_copy():
+def test_poor_sleep_in_taper_reads_as_one_signal_not_two():
+    # One poor night is one signal. Counting the phase alongside it is what used
+    # to tier this as "multiple warning signs" and pull the athlete off combat.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor", phase="TAPER"),
         ReadinessContext(phase="TAPER", today_session=_session(title="Primer")),
     )
 
     assert adjustment.decision == "modify"
-    assert "taper_poor_readiness" in adjustment.triggers
-    assert "poor sleep and the taper phase" in adjustment.reason
-    assert "Multiple warning signs are showing" in adjustment.message
+    assert "Poor sleep means your body has less room to recover today." in adjustment.reason
+    assert "stacking up" not in adjustment.reason
     _assert_card_shape(adjustment)
 
 
-def test_flat_body_in_reintegration_uses_reintegration_specific_copy():
+def test_flat_body_in_reintegration_reads_as_one_signal_not_two():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(body="flat", phase="REINTEGRATION"),
         ReadinessContext(phase="REINTEGRATION", today_session=_session(title="Mobility")),
@@ -1028,8 +1037,8 @@ def test_flat_body_in_reintegration_uses_reintegration_specific_copy():
 
     assert adjustment.decision == "modify"
     assert "reintegration_poor_readiness" in adjustment.triggers
-    assert "flat body and the return phase" in adjustment.reason
-    assert "Multiple warning signs are showing" in adjustment.message
+    assert context_labels(adjustment.triggers) == ("Return phase",)
+    assert "stacking up" not in adjustment.reason
     _assert_card_shape(adjustment)
 
 
@@ -1040,7 +1049,7 @@ def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "Multiple warning signs are showing" in adjustment.message
+    assert "signals are stacking up" in adjustment.message
     assert "Skip the loaded work" in adjustment.message
     _assert_card_shape(adjustment)
 
@@ -1229,13 +1238,13 @@ def test_collapsing_warning_pair_does_not_claim_multiple_sources():
         _, _, reason, _ = _soft_warning_message(
             warnings, session_risk="medium", phase="SPP", fight_week=False
         )
-        assert "Multiple warning signs are showing" not in reason
+        assert "stacking up" not in reason
 
-    # A genuine two-source pair still reads as multiple.
+    # A genuine two-signal pair still reads as more than one.
     _, _, reason, _ = _soft_warning_message(
         ("poor_sleep", "flat_body"), session_risk="medium", phase="GPP", fight_week=False
     )
-    assert "Multiple warning signs are showing: poor sleep and flat body." in reason
+    assert "Two signals are stacking up." in reason
 
 
 def test_session_modality_reads_the_structured_session_type_tag():
@@ -1481,3 +1490,105 @@ def test_high_risk_strength_day_names_maxes_and_grinders():
     assert "maxes or grinders" in adjustment.action.lower()
     assert "round" not in adjustment.action.lower()
     _assert_card_shape(adjustment)
+
+
+class TestContextIsNotASignal:
+    """Camp phase and fight week change how cautious a call is. They are not
+    evidence that anything is wrong with the athlete, and must never be counted
+    as one of the signals that set the decision."""
+
+    def _adjust(self, *, phase="GPP", fight_date=None, session=None, **checkin):
+        return build_readiness_adjustment(
+            ReadinessCheckin(phase=phase, **checkin),
+            ReadinessContext(
+                training_day="2026-08-02",
+                phase=phase,
+                active_plan={"fight_date": fight_date} if fight_date else None,
+                today_session=session,
+            ),
+        )
+
+    def test_the_same_check_in_is_not_harsher_just_because_of_the_calendar(self):
+        # The regression this class exists for: one poor night read as three
+        # warning signs in taper and pulled the athlete off combat work, while the
+        # identical check-in in GPP only reduced the session.
+        technical = _session(title="Technical drilling", session_type="skill")
+        gpp = self._adjust(sleep="poor", phase="GPP", session=technical)
+        taper = self._adjust(
+            sleep="poor", phase="TAPER", fight_date="2026-08-06", session=technical
+        )
+        assert gpp.decision == taper.decision == "modify"
+
+    def test_context_never_appears_in_the_trigger_list(self):
+        adjustment = self._adjust(
+            sleep="poor", phase="TAPER", fight_date="2026-08-06",
+            session=_session(title="Technical drilling", session_type="skill"),
+        )
+        assert trigger_labels(adjustment.triggers) == ("Poor sleep",)
+        assert context_labels(adjustment.triggers) == ("Fight week", "Taper phase")
+
+    def test_context_alone_is_a_planned_reduction_not_a_problem(self):
+        adjustment = self._adjust(
+            phase="TAPER", fight_date="2026-08-06",
+            session=_session(title="Technical drilling", session_type="skill"),
+        )
+        assert adjustment.decision == "train_as_planned"
+        assert trigger_labels(adjustment.triggers) == ()
+
+    def test_no_athlete_facing_copy_calls_context_a_warning(self):
+        for phase, fight_date in (("TAPER", "2026-08-06"), ("REINTEGRATION", None), ("GPP", None)):
+            adjustment = self._adjust(
+                sleep="poor", body="flat", pain="manageable",
+                phase=phase, fight_date=fight_date,
+            )
+            assert "warning" not in adjustment.message.lower()
+
+
+class TestStakesEscalation:
+    """Context raises the decision one level only where being wrong is expensive.
+    The calendar is not what makes a day risky: exposure is."""
+
+    SPAR = {"session_type": "sparring", "title": "Hard sparring"}
+    TECHNICAL = {"session_type": "skill", "title": "Technical drilling"}
+
+    def _decision(self, *, phase, fight_date=None, session=None, **checkin):
+        return build_readiness_adjustment(
+            ReadinessCheckin(phase=phase, **checkin),
+            ReadinessContext(
+                training_day="2026-08-02",
+                phase=phase,
+                active_plan={"fight_date": fight_date} if fight_date else None,
+                today_session=session,
+            ),
+        ).decision
+
+    def test_no_elevated_stakes_means_no_escalation(self):
+        assert self._decision(sleep="poor", phase="GPP", session=self.TECHNICAL) == "modify"
+
+    def test_hard_exposure_in_fight_week_escalates(self):
+        assert self._decision(
+            sleep="poor", phase="TAPER", fight_date="2026-08-06", session=self.SPAR
+        ) == "pull_back"
+
+    def test_an_unconfirmed_session_in_fight_week_escalates(self):
+        # We cannot grade what we cannot resolve, so this is the "safer option
+        # rather than guessing" case.
+        assert self._decision(
+            sleep="poor", phase="TAPER", fight_date="2026-08-06"
+        ) == "pull_back"
+
+    def test_light_exposure_in_fight_week_does_not_escalate(self):
+        # The distinction that matters: fight week does not escalate on its own.
+        assert self._decision(
+            sleep="poor", phase="TAPER", fight_date="2026-08-06", session=self.TECHNICAL
+        ) == "modify"
+
+    def test_competition_tomorrow_escalates_whatever_the_session(self):
+        assert self._decision(
+            sleep="poor", phase="TAPER", fight_date="2026-08-03", session=self.TECHNICAL
+        ) == "pull_back"
+
+    def test_a_clean_check_in_never_escalates(self):
+        assert self._decision(
+            phase="TAPER", fight_date="2026-08-03", session=self.SPAR
+        ) == "train_as_planned"

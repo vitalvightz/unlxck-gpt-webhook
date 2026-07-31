@@ -421,8 +421,8 @@ def _seed_stored_green_with_explanation(store) -> None:
 def _stored_green_explanation_is_stale(view) -> bool:
     """True when any part of the green decision's explanation survived the hold."""
     return (
-        "Fight week" in view.today.recommendation_contributors
-        or "Hard session planned" in view.today.recommendation_contributors
+        "Fight week" in view.today.recommendation_context_labels
+        or "Hard session planned" in view.today.recommendation_context_labels
         or view.today.recommendation_confidence == "high"
     )
 
@@ -436,7 +436,7 @@ def test_unavailable_context_reports_low_confidence_and_names_the_safety_context
     assert view.today.recommendation_state == "pull_back"
     assert view.today.recommendation_confidence == "low"
     assert "injury history" in view.today.recommendation_confidence_note
-    assert view.today.recommendation_contributors == ["Safety history unavailable"]
+    assert view.today.recommendation_trigger_labels == ["Safety history unavailable"]
     assert not _stored_green_explanation_is_stale(view)
 
 
@@ -449,7 +449,7 @@ def test_degraded_context_reports_moderate_confidence_and_incomplete_history():
     assert view.today.recommendation_state == "modify"
     assert view.today.recommendation_confidence == "moderate"
     assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
-    assert view.today.recommendation_contributors == ["Check-in history incomplete"]
+    assert view.today.recommendation_trigger_labels == ["Check-in history incomplete"]
     assert not _stored_green_explanation_is_stale(view)
 
 
@@ -484,7 +484,8 @@ def test_a_preserved_conservative_decision_keeps_its_reasons_but_loses_confidenc
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
     assert view.today.recommendation_state == "modify"
-    assert view.today.recommendation_contributors == ["Poor sleep", "Hard session planned"]
+    assert view.today.recommendation_trigger_labels == ["Poor sleep"]
+    assert view.today.recommendation_context_labels == ["Hard session planned"]
     assert view.today.recommendation_confidence == "moderate"
     assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
 
@@ -498,7 +499,7 @@ def test_a_complete_context_leaves_the_explanation_untouched():
     assert view.today.recommendation_state == "train_as_planned"
     assert view.today.recommendation_confidence == "high"
     assert view.today.recommendation_confidence_note == ""
-    assert "Fight week" in view.today.recommendation_contributors
+    assert "Fight week" in view.today.recommendation_context_labels
 
 
 def test_an_equal_band_still_adopts_the_live_failure_reason():
@@ -547,8 +548,9 @@ def test_a_re_check_never_claims_to_have_used_what_it_could_not_reload():
 
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
-    assert "your last few check-ins" in view.today.recommendation_sources
-    assert view.today.recommendation_sources_are_historical is True
+    # The band drops below high, which is what stops the card rendering the source
+    # list at all — so it can no longer sit under a note about a failed re-read.
+    assert view.today.recommendation_confidence == "moderate"
     assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
     assert "couldn't be loaded" not in view.today.recommendation_confidence_note
 
@@ -561,5 +563,4 @@ def test_a_replaced_decision_is_made_now_and_stays_present_tense():
 
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
-    assert view.today.recommendation_sources_are_historical is False
     assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note

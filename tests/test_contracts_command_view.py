@@ -176,11 +176,11 @@ class TestShape:
             "recommendation_reason",
             "decision_tier",
             "injury_hold_exempt",
-            "recommendation_contributors",
+            "recommendation_trigger_labels",
+            "recommendation_context_labels",
             "recommendation_sources",
             "recommendation_confidence",
             "recommendation_confidence_note",
-            "recommendation_sources_are_historical",
             "warnings",
             "next_session",
             "session_scope",
@@ -247,7 +247,7 @@ class TestContributorsAndSources:
             plan=PLAN,
             recommendation=_rec(triggers=["poor_sleep", "flat_body", "phase_spp"]),
         )
-        assert view.today.recommendation_contributors == ["Poor sleep", "Body feels flat"]
+        assert view.today.recommendation_trigger_labels == ["Poor sleep", "Body feels flat"]
 
     def test_context_markers_never_render_as_contributors(self):
         view = build_command_view(
@@ -255,7 +255,7 @@ class TestContributorsAndSources:
             plan=PLAN,
             recommendation=_rec(triggers=["phase_taper", "contact_sport", "session_risk_low"]),
         )
-        assert view.today.recommendation_contributors == []
+        assert view.today.recommendation_trigger_labels == []
 
     def test_contributors_are_capped_at_three(self):
         view = build_command_view(
@@ -271,7 +271,7 @@ class TestContributorsAndSources:
                 ]
             ),
         )
-        assert len(view.today.recommendation_contributors) == 3
+        assert len(view.today.recommendation_trigger_labels) == 3
 
     def test_a_streak_absorbs_the_single_day_signal_it_covers(self):
         view = build_command_view(
@@ -279,7 +279,7 @@ class TestContributorsAndSources:
             plan=PLAN,
             recommendation=_rec(triggers=["poor_sleep", "poor_sleep_3_day_streak"]),
         )
-        assert view.today.recommendation_contributors == ["Poor sleep, 3 days"]
+        assert view.today.recommendation_trigger_labels == ["Poor sleep, 3 days"]
 
     def test_sources_name_only_the_inputs_the_decision_used(self):
         view = build_command_view(
@@ -310,7 +310,7 @@ class TestContributorsAndSources:
             plan=PLAN,
             recommendation=_rec(triggers=["context_degraded"]),
         )
-        assert view.today.recommendation_contributors == ["Check-in history incomplete"]
+        assert view.today.recommendation_trigger_labels == ["Check-in history incomplete"]
         assert view.today.recommendation_sources == ["today's check-in"]
 
     def test_an_expired_recommendation_exposes_no_contributors(self):
@@ -322,12 +322,12 @@ class TestContributorsAndSources:
             recommendation=_rec(training_day="2026-06-17", triggers=["poor_sleep"]),
         )
         assert view.today.recommendation_state == "not_checked_in"
-        assert view.today.recommendation_contributors == []
+        assert view.today.recommendation_trigger_labels == []
         assert view.today.recommendation_sources == []
 
     def test_no_recommendation_yields_empty_lists(self):
         view = build_command_view(current_training_day=TODAY, plan=PLAN)
-        assert view.today.recommendation_contributors == []
+        assert view.today.recommendation_trigger_labels == []
         assert view.today.recommendation_sources == []
 
 
@@ -414,15 +414,15 @@ class TestConfidenceBand:
             plan=PLAN,
             recommendation=_rec(triggers=["poor_sleep", "sparse_history", "session_unresolved"]),
         )
-        assert view.today.recommendation_contributors == ["Poor sleep"]
+        assert view.today.recommendation_trigger_labels == ["Poor sleep"]
 
 
 class TestContributorLimit:
     def test_a_zero_limit_suppresses_the_list(self):
-        from api.contracts.readiness_message import contributor_labels
+        from api.contracts.readiness_message import trigger_labels
 
-        assert contributor_labels(("poor_sleep", "flat_body"), limit=0) == ()
-        assert contributor_labels(("poor_sleep", "flat_body"), limit=1) == ("Poor sleep",)
+        assert trigger_labels(("poor_sleep", "flat_body"), limit=0) == ()
+        assert trigger_labels(("poor_sleep", "flat_body"), limit=1) == ("Poor sleep",)
 
 
 class TestSelfSufficientDecisions:

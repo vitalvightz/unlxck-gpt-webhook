@@ -383,11 +383,11 @@ export function TodaySessionPanel({
         <TodayDecisionPanel
           banner={decisionBanner}
           tier={decisionTier}
-          contributors={state.today.recommendation_contributors}
+          triggers={state.today.recommendation_trigger_labels}
+          context={state.today.recommendation_context_labels}
           sources={state.today.recommendation_sources}
           confidence={state.today.recommendation_confidence}
           confidenceNote={state.today.recommendation_confidence_note}
-        sourcesAreHistorical={state.today.recommendation_sources_are_historical}
         />
         {recommendationState !== "not_checked_in" ? (
           <ContextualFeedback
@@ -438,11 +438,11 @@ export function TodaySessionPanel({
       <TodayDecisionPanel
         banner={decisionBanner}
         tier={decisionTier}
-        contributors={state.today.recommendation_contributors}
+        triggers={state.today.recommendation_trigger_labels}
+        context={state.today.recommendation_context_labels}
         sources={state.today.recommendation_sources}
         confidence={state.today.recommendation_confidence}
         confidenceNote={state.today.recommendation_confidence_note}
-        sourcesAreHistorical={state.today.recommendation_sources_are_historical}
       />
       {recommendationState !== "not_checked_in" ? (
         <ContextualFeedback

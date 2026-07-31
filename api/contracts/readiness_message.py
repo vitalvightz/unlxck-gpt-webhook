@@ -169,8 +169,21 @@ class ReadinessAdjustment:
 
 @dataclass(frozen=True)
 class _SoftWarningState:
+    """What fired, split by the part it plays in the decision.
+
+    ``signals`` are reactive: something about the athlete's readiness, injuries
+    or recent load changed. They alone set the decision.
+
+    ``modifiers`` are camp context: fight week, taper, the return phase. They
+    change how cautious that decision should be and nothing else. Counting them
+    as signals is what made one poor night's sleep in taper read as three
+    warning signs and pull the athlete off combat work entirely, while the same
+    check-in in GPP only reduced the session.
+    """
+
     triggers: tuple[str, ...]
-    effective: tuple[str, ...]
+    signals: tuple[str, ...]
+    modifiers: tuple[str, ...]
 
 
 def _clean(value: Any) -> str:
@@ -968,21 +981,28 @@ def _collect_soft_warnings(
             current_effective.clear()
         _append_unique(context_effective, "recent_hard_load_plus_poor_today")
 
-    has_soft_warning = bool(current_effective or trend_effective or context_effective)
-    if phase == "TAPER" and has_soft_warning:
-        _append_unique(triggers, "taper_poor_readiness")
-        _append_unique(context_effective, "taper_poor_readiness")
-    elif phase == "REINTEGRATION" and has_soft_warning:
-        _append_unique(triggers, "reintegration_poor_readiness")
-        _append_unique(context_effective, "reintegration_poor_readiness")
-
-    if fight_week and (current_effective or trend_effective or context_effective):
+    # Camp context, recorded separately from here on. It is still only attached
+    # when a real signal fired, because on a clean day the phase is just the
+    # plan and there is nothing for it to qualify.
+    modifiers: list[str] = []
+    has_signal = bool(current_effective or trend_effective or context_effective)
+    # Fight week leads: it is the more immediate fact, and the phase mostly
+    # follows from it.
+    if fight_week and has_signal:
         _append_unique(triggers, "fight_week")
-        _append_unique(context_effective, "fight_week")
+        _append_unique(modifiers, "fight_week")
+
+    if phase == "TAPER" and has_signal:
+        _append_unique(triggers, "taper_poor_readiness")
+        _append_unique(modifiers, "taper_poor_readiness")
+    elif phase == "REINTEGRATION" and has_signal:
+        _append_unique(triggers, "reintegration_poor_readiness")
+        _append_unique(modifiers, "reintegration_poor_readiness")
 
     return _SoftWarningState(
         triggers=tuple(dict.fromkeys(triggers)),
-        effective=tuple(dict.fromkeys([*trend_effective, *current_effective, *context_effective])),
+        signals=tuple(dict.fromkeys([*trend_effective, *current_effective, *context_effective])),
+        modifiers=tuple(dict.fromkeys(modifiers)),
     )
 
 
@@ -1322,12 +1342,17 @@ def _soft_warning_message(
         mixed="Hard combat work and heavy loading should be reduced today.",
         default="Hard combat work should be reduced today.",
     )
+    # The reason no longer lists what fired. The card's TRIGGER row enumerates the
+    # signals and its CONTEXT row the camp context, so repeating them here read as
+    # the same thing twice — and the old lead-in ("Multiple warning signs are
+    # showing: poor sleep, the taper phase, and fight week") swept the phase into
+    # the list as though being close to a fight were a symptom.
     if warning_count >= 3:
         if session_risk == "high" or _has_pain_warning(warnings) or phase in {"TAPER", "REINTEGRATION"} or fight_week:
             return (
                 "pull_back",
                 "Pull back today.",
-                f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. {reduce_clause}",
+                f"Several signals are stacking up. {reduce_clause}",
                 _for_modality(
                     modality,
                     strength="Skip the loaded work today and use recovery or light mobility instead.",
@@ -1338,7 +1363,7 @@ def _soft_warning_message(
         return (
             "modify",
             "Session reduced.",
-            f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. Today needs a safer dose.",
+            "Several signals are stacking up, so today needs a safer dose.",
             _for_modality(
                 modality,
                 strength="Cut sets, cap load, and add no extra work.",
@@ -1351,7 +1376,7 @@ def _soft_warning_message(
         return (
             "modify",
             "Session reduced.",
-            f"Multiple warning signs are showing: {_join_warning_labels(warnings)}. {reduce_clause}",
+            f"Two signals are stacking up. {reduce_clause}",
             _for_modality(
                 modality,
                 strength="Cut the heavy top sets and back-off volume, and keep the remaining lifts controlled.",
@@ -1684,6 +1709,57 @@ def _is_self_sufficient(triggers: Sequence[str]) -> bool:
     return any(str(trigger).strip() in _SELF_SUFFICIENT_TRIGGERS for trigger in triggers)
 
 
+# Camp context raises the decision one level, but only where being wrong is
+# expensive. The calendar is not what makes a day risky: exposure is. A poor
+# night before technical drilling in fight week is still a reduced session, while
+# the same night before hard sparring, or before a session we cannot grade at
+# all, is not worth guessing on.
+_ESCALATED: dict[RecommendationDecision, RecommendationDecision] = {
+    "train_as_planned": "modify",
+    "modify": "pull_back",
+}
+_ELEVATED_STAKES_PHASES = frozenset({"TAPER", "REINTEGRATION"})
+# Exposure we cannot afford to be wrong about: known-hard work, or work we could
+# not resolve well enough to grade.
+_COSTLY_EXPOSURE: frozenset[SessionRisk] = frozenset({"high", "unknown"})
+# Inside this many days of competition, any real signal is worth protecting
+# against regardless of what today's session looks like.
+_IMMINENT_COMPETITION_DAYS = 1
+
+
+def _escalate_for_stakes(
+    decision: RecommendationDecision,
+    *,
+    has_signal: bool,
+    session_risk: SessionRisk,
+    phase: str,
+    fight_week: bool,
+    days_until_fight: int | None,
+) -> RecommendationDecision:
+    """Raise the decision one level when the cost of being wrong is high.
+
+    Requires a real signal. Context on its own never means something is wrong,
+    so a clean check-in in fight week stays exactly where the signals left it.
+    """
+    if not has_signal or decision not in _ESCALATED:
+        return decision
+    imminent = (
+        days_until_fight is not None and 0 <= days_until_fight <= _IMMINENT_COMPETITION_DAYS
+    )
+    elevated = fight_week or phase in _ELEVATED_STAKES_PHASES
+    if imminent or (elevated and session_risk in _COSTLY_EXPOSURE):
+        return _ESCALATED[decision]
+    return decision
+
+
+def _stakes_clause(session_risk: SessionRisk, *, fight_week: bool, phase: str) -> str:
+    """One short sentence naming why the call was set more cautiously."""
+    when = "Fight week" if fight_week else ("Taper" if phase == "TAPER" else "The return phase")
+    if session_risk == "unknown":
+        return f"{when} and an unconfirmed session mean we're taking the safer option."
+    return f"{when} and hard work planned mean we're taking the safer option."
+
+
 def _completeness_triggers(context: ReadinessContext) -> tuple[str, ...]:
     """Codes recording which usual inputs this decision did NOT have.
 
@@ -1748,7 +1824,7 @@ def _resolve_readiness_adjustment(
     )
 
     decision, title, reason, action = _soft_warning_message(
-        soft_warnings.effective,
+        soft_warnings.signals,
         session_risk=session_risk,
         phase=phase,
         fight_week=fight_week,
@@ -1760,12 +1836,12 @@ def _resolve_readiness_adjustment(
     # match the action (fixes the amber-state / stop-action contradiction). Only
     # promote when the soft-warning stack has not already pulled back, so the
     # richer "several warnings" copy is preserved.
-    if decision != "pull_back" and _has_pain_warning(soft_warnings.effective) and session_risk == "high":
+    if decision != "pull_back" and _has_pain_warning(soft_warnings.signals) and session_risk == "high":
         decision = "pull_back"
         title = "Pull back today."
         reason = (
             "Pain is getting worse, so hard combat work is not safe today."
-            if "pain_worsening_trend" in soft_warnings.effective
+            if "pain_worsening_trend" in soft_warnings.signals
             else "Pain before hard combat work is not safe today."
         )
         action = "Skip sparring and hard work; use recovery, rehab, or light mobility instead."
@@ -1785,10 +1861,34 @@ def _resolve_readiness_adjustment(
             reason = f"Your sleep, body, and pain checks are all clear — just protect your {green_label} today."
             action = "Run the planned work, keep the area clean, and stop if it flares."
 
+    # Context escalation, last, so it acts on the decision the signals produced
+    # rather than pretending to be one of them.
+    escalated = _escalate_for_stakes(
+        decision,
+        has_signal=bool(soft_warnings.signals),
+        session_risk=session_risk,
+        phase=phase,
+        fight_week=fight_week,
+        days_until_fight=_days_until_fight(context, context.training_day),
+    )
+    if escalated != decision:
+        decision = escalated
+        stakes = _stakes_clause(session_risk, fight_week=fight_week, phase=phase)
+        reason = f"{reason} {stakes}" if reason else stakes
+        if decision == "pull_back":
+            title = "Pull back today."
+            action = _for_modality(
+                session_modality,
+                strength="Skip the loaded work today and use recovery or light mobility instead.",
+                mixed="Skip the combat and loaded work today; use recovery or light mobility instead.",
+                default="Use recovery or light mobility today, and avoid hard combat work "
+                "unless your coach has already planned it.",
+            )
+
     triggers = list(soft_warnings.triggers)
     if injury_floor == "modify" and "active_injury_restriction" not in triggers:
         triggers.append("active_injury_restriction")
-    if fight_week and not soft_warnings.effective:
+    if fight_week and not soft_warnings.signals:
         triggers.append("fight_week")
 
     if (
@@ -1820,22 +1920,27 @@ def _resolve_readiness_adjustment(
 
 
 # ---------------------------------------------------------------------------
-# Athlete-facing contributors and sources ("why today changed", "what we used")
+# Athlete-facing explanation ("what moved this", "what we used")
 #
 # The engine already records WHY it decided, as trigger codes. These turn that
-# record into the two short athlete-facing lists the Today decision card shows,
-# so the card explains itself from the same data the decision was made from and
-# can never drift from it.
+# record into the short athlete-facing lists the Today decision card shows, so
+# the card explains itself from the same data the decision was made from and can
+# never drift from it.
 #
-# Deliberately worded as CONTRIBUTORS, not causes. The engine records which
+# The lists are split by the ROLE each code played, because a flat list made
+# "Fight week" a peer of "High pain". A trigger is something about the athlete
+# that changed. Context is the camp around it. They are not the same kind of
+# thing and must not read as though they were.
+#
+# Triggers are worded as CONTRIBUTORS, not causes. The engine records which
 # signals were present when it decided; it does not establish that any one of
 # them caused the change, and the copy must not imply that it did.
 # ---------------------------------------------------------------------------
 
-# Trigger code -> short chip label. Codes absent here are context markers
-# (phase_*, contact_sport, low/medium session risk) or generic umbrellas
-# (red_flag) that say nothing specific to an athlete, so they never render.
-_CONTRIBUTOR_LABELS: dict[str, str] = {
+# Code -> short label. Codes absent from both maps are internal markers (phase_*,
+# contact_sport, low/medium session risk) or generic umbrellas (red_flag) that
+# say nothing specific to an athlete, so they never render.
+_TRIGGER_LABELS: dict[str, str] = {
     # Red-flag symptoms.
     "sharp_pain": "Sharp pain",
     "instability": "Instability",
@@ -1861,17 +1966,21 @@ _CONTRIBUTOR_LABELS: dict[str, str] = {
     "repeated_poor_readiness": "Repeated poor check-ins",
     "recent_hard_session": "Recent hard session",
     "recent_hard_load_plus_poor_today": "Heavy recent load",
-    # Camp context that changed the call on its own.
-    "taper_poor_readiness": "Taper phase",
-    "reintegration_poor_readiness": "Return phase",
-    "fight_week": "Fight week",
-    # Today's planned work. Only the high tier is a contributor: a low or medium
-    # session did not push the decision anywhere.
-    "session_risk_high": "Hard session planned",
     # Degraded safety context. Named plainly so a held-back athlete can see the
     # hold came from missing data, not from their own readiness.
     "context_degraded": "Check-in history incomplete",
     "context_unavailable": "Safety history unavailable",
+}
+
+# The camp around the decision. None of these say anything is wrong with the
+# athlete, so none of them belong in the trigger list.
+_CONTEXT_LABELS: dict[str, str] = {
+    "fight_week": "Fight week",
+    "taper_poor_readiness": "Taper phase",
+    "reintegration_poor_readiness": "Return phase",
+    # Today's planned work. Only the high tier is worth naming: a low or medium
+    # session did not change how cautious the call had to be.
+    "session_risk_high": "Hard session planned",
 }
 
 # When both codes fire, the first is fully covered by the second and would read
@@ -1890,15 +1999,15 @@ _CONTRIBUTOR_SUPERSEDED_BY: tuple[tuple[str, str], ...] = (
 MAX_CONTRIBUTORS = 3
 
 
-def contributor_labels(
-    triggers: Sequence[str], *, limit: int = MAX_CONTRIBUTORS
+def _labels_from(
+    triggers: Sequence[str], labels_by_code: dict[str, str], *, limit: int
 ) -> tuple[str, ...]:
-    """The top athlete-facing contributor labels behind a readiness decision.
+    """Athlete-facing labels for one role, in the engine's own trigger order.
 
-    Preserves the engine's own trigger order (most decisive first), drops context
-    markers and codes covered by a stronger co-occurring signal, de-duplicates by
-    label so two codes sharing one label ("Active injury") render once, and caps
-    the result at ``limit``.
+    Trigger order is decision order (most decisive first), so the cap keeps what
+    mattered most. Codes covered by a stronger co-occurring signal are dropped,
+    and labels are de-duplicated so two codes sharing one label ("Active injury")
+    render once.
     """
     if limit <= 0:
         return ()
@@ -1911,12 +2020,31 @@ def contributor_labels(
         code = str(trigger).strip()
         if code in superseded:
             continue
-        label = _CONTRIBUTOR_LABELS.get(code)
+        label = labels_by_code.get(code)
         if label and label not in labels:
             labels.append(label)
         if len(labels) >= limit:
             break
     return tuple(labels)
+
+
+def trigger_labels(
+    triggers: Sequence[str], *, limit: int = MAX_CONTRIBUTORS
+) -> tuple[str, ...]:
+    """What changed about the athlete: the signals that set the decision."""
+    return _labels_from(triggers, _TRIGGER_LABELS, limit=limit)
+
+
+def context_labels(
+    triggers: Sequence[str], *, limit: int = MAX_CONTRIBUTORS
+) -> tuple[str, ...]:
+    """The camp around the decision: what made it more or less cautious.
+
+    Never a claim that anything is wrong. Being in taper is a plan, not a
+    symptom, and this list exists so it can be shown without being mistaken for
+    one.
+    """
+    return _labels_from(triggers, _CONTEXT_LABELS, limit=limit)
 
 
 # Which inputs a trigger proves were actually read. Keyed to the source line the

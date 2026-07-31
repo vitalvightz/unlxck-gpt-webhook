@@ -22,8 +22,9 @@ from .readiness_message import (
     ConfidenceBand,
     confidence_band,
     confidence_note,
-    contributor_labels,
+    context_labels,
     decision_sources,
+    trigger_labels,
 )
 from .recommendation import RecommendationState, resolve_recommendation_state
 
@@ -36,7 +37,6 @@ RiskCategory = Literal[
     "active_injury_worse",
     "high_pain",
     "weight_cut",
-    "phase_taper",
     "fatigue",
     "reminder",
 ]
@@ -47,7 +47,6 @@ RISK_PRIORITY: dict[str, int] = {
     "active_injury_worse": 2,
     "high_pain": 3,
     "weight_cut": 4,
-    "phase_taper": 5,
     "fatigue": 6,
     "reminder": 7,
 }
@@ -59,7 +58,6 @@ _RISK_PRESENTATION: dict[str, tuple[str, str, str]] = {
     "active_injury_worse": ("bandage", "Injury worsening", "stop"),
     "high_pain": ("alert-triangle", "High pain", "warning"),
     "weight_cut": ("scale", "Weight cut", "warning"),
-    "phase_taper": ("calendar-clock", "Taper", "caution"),
     "fatigue": ("battery-low", "Fatigue", "caution"),
     "reminder": ("info", "Reminder", "info"),
 }
@@ -248,11 +246,16 @@ class CommandViewToday(BaseModel):
     # True when today's scheduled session is a low-cost support / filler that an
     # injury hold does not apply to, so the UI must not block it for an injury.
     injury_hold_exempt: bool = False
-    # The top athlete-facing signals behind today's decision, and the inputs it
-    # was made from. Computed on the backend from the engine's own trigger codes
-    # (like decision_tier) so the card's explanation can never drift from the
-    # decision it explains. Both are empty until the athlete has checked in.
-    recommendation_contributors: list[str] = Field(default_factory=list)
+    # The explanation, split by the role each part played. Computed on the
+    # backend from the engine's own trigger codes (like decision_tier) so it can
+    # never drift from the decision it explains. All empty until check-in.
+    #
+    # Triggers are what changed about the ATHLETE and set the decision. Context
+    # is the camp around it, which only changes how cautious that decision is.
+    # Holding them apart is what stops "Fight week" reading as a peer of
+    # "High pain".
+    recommendation_trigger_labels: list[str] = Field(default_factory=list)
+    recommendation_context_labels: list[str] = Field(default_factory=list)
     recommendation_sources: list[str] = Field(default_factory=list)
     # How much data the decision rests on, and what it was missing. This is data
     # completeness, NOT predictive accuracy — see readiness_message.
@@ -264,11 +267,6 @@ class CommandViewToday(BaseModel):
     # confident claim on the one decision nothing is known about.
     recommendation_confidence: ConfidenceBand | None = None
     recommendation_confidence_note: str = ""
-    # True when the sources describe a decision made EARLIER and a re-check could
-    # not verify all of them. The card then has to say the decision "was based
-    # on" them rather than "based on" them: present tense next to a note about a
-    # failed read says we used data we also said we could not load.
-    recommendation_sources_are_historical: bool = False
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"
@@ -380,7 +378,8 @@ def build_command_view(
             injury_hold_exempt=injury_hold_exempt,
         ),
         injury_hold_exempt=injury_hold_exempt,
-        recommendation_contributors=list(contributor_labels(rec_view.triggers)),
+        recommendation_trigger_labels=list(trigger_labels(rec_view.triggers)),
+        recommendation_context_labels=list(context_labels(rec_view.triggers)),
         recommendation_sources=(
             list(decision_sources(rec_view.triggers, has_open_injuries=bool(open_injuries)))
             if rec_view.triggers
