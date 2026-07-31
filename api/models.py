@@ -1428,6 +1428,7 @@ class ProfileRecord(BaseModel):
     username: str | None = None
     username_change_history: list[str] = Field(default_factory=list)
     role: UserRole
+    access_status: Literal["pending", "approved"] = "pending"
     full_name: str
     technical_style: list[str] = Field(default_factory=list)
     tactical_style: list[str] = Field(default_factory=list)
@@ -1708,6 +1709,7 @@ class AdminAthleteRecord(BaseModel):
     athlete_id: str
     email: str
     role: UserRole
+    access_status: Literal["pending", "approved"] = "pending"
     full_name: str
     technical_style: list[str] = Field(default_factory=list)
     tactical_style: list[str] = Field(default_factory=list)

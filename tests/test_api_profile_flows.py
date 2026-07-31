@@ -8,6 +8,30 @@ from api.models import ProfileUpdateRequest
 from support import _build_client, _build_request, finalized_result
 
 
+@pytest.mark.parametrize("raw_status", ["pending", None, "missing"])
+def test_unapproved_account_cannot_access_app_until_admin_approves(raw_status):
+    client, store, _ = _build_client()
+    if raw_status == "missing":
+        store.profiles["athlete-1"].pop("access_status")
+    else:
+        store.profiles["athlete-1"]["access_status"] = raw_status
+
+    blocked = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+
+    assert blocked.status_code == 403
+    assert blocked.json()["detail"]["code"] == "account_pending_approval"
+
+    approved = client.post(
+        "/api/admin/athletes/athlete-1/approve",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert approved.status_code == 200
+    assert approved.json()["access_status"] == "approved"
+
+    allowed = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert allowed.status_code == 200
+
+
 def test_admin_athlete_profile_includes_latest_intake_details():
     client, store, _ = _build_client()
 

@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/empty-state";
 import { AdminFeedbackPanel } from "@/components/admin-feedback-panel";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
+  approveAdminAthlete,
   approveAndResumeGenerationFromJob,
   backfillStructuredPlans,
   bulkPermanentlyDeleteArchivedPlans,
@@ -153,6 +154,7 @@ export default function AdminPage() {
   const [attentionReviews, setAttentionReviews] = useState<AdminReviewRecord[]>([]);
   const [attentionWarning, setAttentionWarning] = useState<string | null>(null);
   const [resolvingReviewId, setResolvingReviewId] = useState<string | null>(null);
+  const [approvingAthleteId, setApprovingAthleteId] = useState<string | null>(null);
   const [isDirectoryLoading, setIsDirectoryLoading] = useState(true);
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -440,6 +442,24 @@ export default function AdminPage() {
       setError(resolveError instanceof Error ? resolveError.message : "Failed to resolve review.");
     } finally {
       setResolvingReviewId(null);
+    }
+  }
+
+  async function handleApproveAthlete(athleteId: string) {
+    if (!session?.access_token || approvingAthleteId) return;
+    setApprovingAthleteId(athleteId);
+    setError(null);
+    setMessage(null);
+    try {
+      const approved = await approveAdminAthlete(session.access_token, athleteId);
+      setAthletes((current) =>
+        current.map((athlete) => athlete.athlete_id === athleteId ? approved : athlete),
+      );
+      setMessage(`${approved.full_name || approved.email} approved.`);
+    } catch (approveError) {
+      setError(approveError instanceof Error ? approveError.message : "Failed to approve account.");
+    } finally {
+      setApprovingAthleteId(null);
     }
   }
 
@@ -1060,10 +1080,24 @@ export default function AdminPage() {
                           </Link>
                           <p className="muted">{athlete.email}</p>
                         </div>
-                        <span className="badge">{athlete.plan_count} plan{athlete.plan_count === 1 ? "" : "s"}</span>
+                        <span className="badge">
+                          {athlete.access_status === "pending"
+                            ? "Approval needed"
+                            : `${athlete.plan_count} plan${athlete.plan_count === 1 ? "" : "s"}`}
+                        </span>
                       </div>
                       <p className="muted">Created {formatDateTime(athlete.created_at)}</p>
                       <div className="plan-card-actions">
+                        {athlete.access_status === "pending" ? (
+                          <button
+                            type="button"
+                            className="cta"
+                            onClick={() => void handleApproveAthlete(athlete.athlete_id)}
+                            disabled={approvingAthleteId !== null}
+                          >
+                            {approvingAthleteId === athlete.athlete_id ? "Approving…" : "Approve access"}
+                          </button>
+                        ) : null}
                         <Link href={`/admin/athletes/${athlete.athlete_id}`} className="ghost-button">
                           View profile
                         </Link>

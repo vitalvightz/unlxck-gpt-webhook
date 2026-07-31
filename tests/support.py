@@ -207,6 +207,7 @@ class FakeStore:
             "username": None,
             "username_change_history": [],
             "role": role,
+            "access_status": "approved",
             "full_name": user.full_name,
             "technical_style": [],
             "tactical_style": [],
@@ -1325,6 +1326,14 @@ class FakeStore:
             "plan_count": len(plans),
             "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
         }
+
+    def approve_profile_access(self, athlete_id: str) -> dict:
+        profile = self.profiles.get(athlete_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="athlete not found")
+        profile["access_status"] = "approved"
+        profile["updated_at"] = _now()
+        return profile
 
     def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict]:
         self.list_admin_athletes_by_ids_calls += 1

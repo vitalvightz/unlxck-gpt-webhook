@@ -157,6 +157,7 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "email",
     "full_name",
     "role",
+    "access_status",
     "username",
     "username_change_history",
     "avatar_url",
