@@ -26,6 +26,7 @@ type AppSessionValue = {
   isReady: boolean;
   isMeHydrated: boolean;
   hasTransientMeError: boolean;
+  isAccessPending?: boolean;
   session: AppSession | null;
   me: MeResponse | null;
   previewAppearanceMode: Dispatch<SetStateAction<AppearanceMode | null>>;
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [session, setSession] = useState<AppSession | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
   const [hasTransientMeError, setHasTransientMeError] = useState(false);
+  const [isAccessPending, setIsAccessPending] = useState(false);
   const [appearancePreview, setAppearancePreview] = useState<AppearanceMode | null>(null);
   const handledAccessTokenRef = useRef<string | null>(null);
   const hydratedAccessTokenRef = useRef<string | null>(null);
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (loadGenerationRef.current === currentLoadId) {
         clearRetryTimer();
         setHasTransientMeError(false);
+        setIsAccessPending(false);
         setAppearancePreview(null);
         setMe(null);
         hydratedAccessTokenRef.current = null;
@@ -128,7 +131,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           break;
         } catch (err) {
           lastError = err;
-          if (err instanceof ApiError && err.status === 401) {
+          if (
+            err instanceof ApiError &&
+            (err.status === 401 || err.code === "account_pending_approval")
+          ) {
             throw err;
           }
           if (attempt < ME_RETRY_ATTEMPTS) {
@@ -145,11 +151,21 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       }
       clearRetryTimer();
       setHasTransientMeError(false);
+      setIsAccessPending(false);
       setMe(nextMe);
       hydratedAccessTokenRef.current = nextSession.access_token;
       setSession(nextSession);
     } catch (err) {
       if (loadGenerationRef.current !== currentLoadId) {
+        return;
+      }
+
+      if (err instanceof ApiError && err.status === 403 && err.code === "account_pending_approval") {
+        clearRetryTimer();
+        setHasTransientMeError(false);
+        setIsAccessPending(true);
+        setMe(null);
+        hydratedAccessTokenRef.current = nextSession.access_token;
         return;
       }
 
@@ -210,6 +226,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (err instanceof ApiError && err.status === 401) {
         clearRetryTimer();
         setHasTransientMeError(false);
+        setIsAccessPending(false);
         setAppearancePreview(null);
         setSession(null);
         setMe(null);
@@ -282,6 +299,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         handledAccessTokenRef.current = null;
         clearRetryTimer();
         setHasTransientMeError(false);
+        setIsAccessPending(false);
         setAppearancePreview(null);
         setSession(null);
         setMe(null);
@@ -355,6 +373,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     hydratedAccessTokenRef.current = null;
     clearRetryTimer();
     setHasTransientMeError(false);
+    setIsAccessPending(false);
     setAppearancePreview(null);
     setSession(null);
     setMe(null);
@@ -369,6 +388,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         isReady,
         isMeHydrated,
         hasTransientMeError,
+        isAccessPending,
         session,
         me,
         previewAppearanceMode: setAppearancePreview,

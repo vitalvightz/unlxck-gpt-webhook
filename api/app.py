@@ -769,6 +769,14 @@ def create_app(
         request_id = getattr(request.state, "request_id", "")
         try:
             profile = _map_profile_row(store.ensure_profile(user))
+            if profile.access_status != "approved":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "code": "account_pending_approval",
+                        "message": "Your account is waiting for admin approval.",
+                    },
+                )
             logger.info(
                 "[auth] profile_resolved request_id=%s athlete_id=%s auth_event=%s status=%s",
                 request_id,
@@ -1385,6 +1393,15 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         latest_intake = store.get_latest_intake(athlete_id)
         return _map_admin_athlete(row, latest_intake=latest_intake)
+
+    @app.post("/api/admin/athletes/{athlete_id}/approve", response_model=AdminAthleteRecord)
+    def approve_admin_athlete(
+        athlete_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> AdminAthleteRecord:
+        row = store.approve_profile_access(athlete_id)
+        return _map_admin_athlete(row, latest_intake=store.get_latest_intake(athlete_id))
 
     @app.get("/api/admin/athletes/{athlete_id}/generation-jobs", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_athlete_generation_jobs(

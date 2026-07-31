@@ -240,6 +240,8 @@ class AppStore(Protocol):
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]: ...
 
+    def approve_profile_access(self, athlete_id: str) -> dict[str, Any]: ...
+
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]: ...
 
     def change_username(self, athlete_id: str, username: str) -> dict[str, Any]: ...
@@ -1358,6 +1360,9 @@ class SupabaseAppStore:
             "username_change_history": existing.get("username_change_history") or [],
             "full_name": existing.get("full_name") or user.full_name,
             "role": existing.get("role") or self._default_role_for(user),
+            "access_status": existing.get("access_status") or (
+                "approved" if self.is_admin_email(user.email) else "pending"
+            ),
             "technical_style": existing.get("technical_style") or [],
             "tactical_style": existing.get("tactical_style") or [],
             "stance": existing.get("stance") or "",
@@ -4185,6 +4190,22 @@ class SupabaseAppStore:
         return self._select_first(
             self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
         )
+
+    def approve_profile_access(self, athlete_id: str) -> dict[str, Any]:
+        response = (
+            self.client.table("profiles")
+            .update({"access_status": "approved"})
+            .eq("id", athlete_id)
+            .execute()
+        )
+        rows = getattr(response, "data", None) or []
+        if not rows:
+            # Supabase may omit updated rows depending on representation settings.
+            profile = self._get_profile_by_id(athlete_id)
+            if not profile:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+            return profile
+        return rows[0]
 
     def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict[str, Any]]:
         if not athlete_ids:

@@ -3,12 +3,23 @@ from pathlib import Path
 
 
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "supabase" / "schema.sql"
+MIGRATIONS_PATH = Path(__file__).resolve().parents[1] / "supabase" / "migrations"
 USERNAME_MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
     / "supabase"
     / "migrations"
     / "20260518000000_add_profile_username.sql"
 )
+
+
+def test_supabase_migration_versions_are_unique():
+    versions: dict[str, list[str]] = {}
+    for migration in MIGRATIONS_PATH.glob("*.sql"):
+        version = migration.name.split("_", 1)[0]
+        versions.setdefault(version, []).append(migration.name)
+
+    duplicates = {version: names for version, names in versions.items() if len(names) > 1}
+    assert duplicates == {}
 USERNAME_ATOMIC_MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
     / "supabase"
