@@ -6734,18 +6734,26 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   background: radial-gradient(circle at top left, rgba(39, 174, 96, 0.13), transparent 46%);
 }
 
-/* Compact train/modify/pull-back decision banner shown above today's blocks. */
+/* Instruction-first decision card. Tone is carried by one precise rail and the
+   status chip; the surface stays calm while evidence gets the full width. */
 .today-decision-banner {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 10px;
+  --decision-accent: rgba(255, 255, 255, 0.5);
+  --decision-wash: rgba(255, 255, 255, 0.018);
+  --decision-chip-bg: rgba(255, 255, 255, 0.07);
+  --decision-chip-border: rgba(255, 255, 255, 0.12);
+  display: block;
+  position: relative;
+  overflow: hidden;
   margin: 0 0 12px;
-  padding: 11px 12px;
+  padding: 20px 22px 0;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-left-width: 3px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.025);
+  border-radius: 16px;
+  background:
+    linear-gradient(105deg, var(--decision-wash), transparent 34%),
+    rgba(255, 255, 255, 0.025);
+  box-shadow:
+    inset 3px 0 0 var(--decision-accent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
   animation: today-banner-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -6760,10 +6768,16 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   }
 }
 
-.today-decision-body {
+.today-decision-command {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  min-width: 0;
+}
+
+.today-decision-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   min-width: 0;
 }
 
@@ -6771,139 +6785,145 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: start;
   flex: 0 0 auto;
   min-width: 0;
   min-height: 24px;
   padding: 5px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--decision-chip-border);
   border-radius: 999px;
   font-family: var(--font-mono), monospace;
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--decision-accent);
+  background: var(--decision-chip-bg);
 }
 
 .today-decision-banner[data-tone="neutral"] {
-  border-left-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.025);
+  --decision-accent: rgba(255, 255, 255, 0.62);
+  --decision-wash: rgba(255, 255, 255, 0.018);
 }
 
 .today-decision-banner[data-tone="neutral"] .today-decision-icon {
   color: rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.07);
 }
 
 .today-decision-banner[data-tone="red"] {
-  border-left-color: #ff6b75;
-  background: rgba(219, 47, 64, 0.08);
+  --decision-accent: #ff6b75;
+  --decision-wash: rgba(219, 47, 64, 0.085);
+  --decision-chip-bg: rgba(226, 58, 76, 0.16);
+  --decision-chip-border: rgba(255, 107, 117, 0.3);
 }
 
 .today-decision-banner[data-tone="red"] .today-decision-icon {
-  border-color: rgba(255, 107, 117, 0.34);
-  background: rgba(226, 58, 76, 0.22);
   color: #ffd8dc;
 }
 
 .today-decision-banner[data-tone="amber"] {
-  border-left-color: #f1bd61;
-  background: rgba(214, 175, 106, 0.08);
+  --decision-accent: #f1bd61;
+  --decision-wash: rgba(214, 175, 106, 0.08);
+  --decision-chip-bg: rgba(241, 189, 97, 0.14);
+  --decision-chip-border: rgba(241, 189, 97, 0.32);
 }
 
 .today-decision-banner[data-tone="amber"] .today-decision-icon {
-  border-color: rgba(241, 189, 97, 0.36);
-  background: rgba(241, 189, 97, 0.2);
   color: #ffe2a6;
 }
 
 .today-decision-banner[data-tone="green"] {
-  border-left-color: #76d393;
-  background: rgba(39, 174, 96, 0.08);
+  --decision-accent: #76d393;
+  --decision-wash: rgba(39, 174, 96, 0.08);
+  --decision-chip-bg: rgba(76, 196, 126, 0.13);
+  --decision-chip-border: rgba(118, 211, 147, 0.3);
 }
 
 .today-decision-banner[data-tone="green"] .today-decision-icon {
-  border-color: rgba(118, 211, 147, 0.34);
-  background: rgba(76, 196, 126, 0.18);
   color: #d7ffe5;
 }
 
 .today-decision-title {
   margin: 0;
-  font-size: 17px;
+  min-width: 0;
+  font-size: 16px;
   font-weight: 800;
-  line-height: 1.18;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
 /* The instruction. An athlete in a gym scans for what to do before asking why,
    so this reads first and carries the most weight of anything under the tier. */
 .today-decision-action {
-  margin: 0;
+  max-width: 760px;
+  margin: 14px 0 0;
   color: var(--text-primary);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.35;
+  font-size: clamp(17px, 1.7vw, 19px);
+  font-weight: 750;
+  line-height: 1.32;
+  letter-spacing: -0.015em;
 }
 
 .today-decision-detail {
-  margin: 0;
+  max-width: 760px;
+  margin: 6px 0 0;
   color: var(--text-secondary, rgba(255, 255, 255, 0.72));
-  font-size: 14.5px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .today-decision-safety {
-  margin: 2px 0 0;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
-  font-size: 13px;
-  line-height: 1.4;
-  opacity: 0.85;
+  max-width: 760px;
+  margin: 9px 0 0;
+  color: var(--decision-accent);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
-/* The explanation, as a compact label/value grid: Trigger, Context, Decision based on.
-   Micro-labels rather than section headings, so the four blocks read in one pass
-   without the card growing a table of contents. Sits behind a rule and set
-   quieter than the action, as support for the instruction rather than
-   competition with it. */
+/* Supporting evidence uses the width the old label/value table left empty. Each
+   semantic group remains a stacked list; only the groups become a responsive
+   rail. auto-fit lets sparse states expand without empty columns. */
 .today-decision-evidence {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 5px 12px;
-  margin: 12px 0 0;
-  padding: 10px 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin: 20px -22px 0;
+  padding: 0;
   border-top: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.018);
 }
 
 .today-decision-row {
-  display: contents;
+  min-width: 0;
+  padding: 16px 18px 18px;
+}
+
+.today-decision-row + .today-decision-row {
+  border-left: 1px solid var(--border-default);
 }
 
 .today-decision-row dt {
   color: var(--text-secondary, rgba(255, 255, 255, 0.72));
-  font-size: 11px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  line-height: 1.5;
+  line-height: 1.3;
   text-transform: uppercase;
-  opacity: 0.7;
+  opacity: 0.78;
 }
 
 .today-decision-row dd {
-  margin: 0;
+  margin: 9px 0 0;
   color: var(--text-primary);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 /* A missing-data note sits beneath the inputs it qualifies. */
 .today-decision-gap {
   display: block;
-  margin-top: 2px;
+  margin-top: 8px;
   color: var(--text-secondary, rgba(255, 255, 255, 0.72));
   font-size: 12.5px;
   opacity: 0.85;
@@ -6912,14 +6932,13 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 .today-decision-values,
 .today-decision-inputs {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .today-decision-inputs {
-  margin-top: 2px;
   color: var(--text-secondary, rgba(255, 255, 255, 0.72));
   font-size: 12.5px;
   opacity: 0.85;
@@ -6927,8 +6946,36 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
 
 .today-decision-inputs li::before {
   content: "✓";
-  margin-right: 4px;
-  opacity: 0.8;
+  margin-right: 7px;
+  color: var(--decision-accent);
+  font-weight: 800;
+  opacity: 0.9;
+}
+
+@media (max-width: 720px) {
+  .today-decision-banner {
+    padding: 17px 18px 0;
+    border-radius: 14px;
+  }
+
+  .today-decision-action {
+    margin-top: 12px;
+    font-size: 17px;
+  }
+
+  .today-decision-evidence {
+    grid-template-columns: 1fr;
+    margin: 18px -18px 0;
+  }
+
+  .today-decision-row {
+    padding: 14px 18px 16px;
+  }
+
+  .today-decision-row + .today-decision-row {
+    border-top: 1px solid var(--border-default);
+    border-left: 0;
+  }
 }
 
 
@@ -14793,6 +14840,47 @@ html[data-theme="light"] .today-decision-banner[data-tone="green"] .today-decisi
   border-color: color-mix(in srgb, var(--success-ink) 32%, transparent);
   background: color-mix(in srgb, var(--success-ink) 10%, white);
   color: var(--success-ink, #1f7a44);
+}
+
+/* Keep the light card mostly white: the old full-card pink/amber/green wash made
+   every line feel like an alert. A faint leading wash plus the tone rail is
+   enough to communicate severity without overpowering the instruction. */
+html[data-theme="light"] .today-decision-banner {
+  background:
+    linear-gradient(105deg, var(--decision-wash), transparent 34%),
+    rgba(255, 255, 255, 0.88);
+  box-shadow:
+    inset 3px 0 0 var(--decision-accent),
+    0 10px 26px rgba(63, 64, 67, 0.045);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="neutral"] {
+  --decision-accent: rgba(35, 36, 39, 0.42);
+  --decision-wash: rgba(35, 36, 39, 0.025);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="red"] {
+  --decision-accent: var(--brand-red);
+  --decision-wash: color-mix(in srgb, var(--brand-red) 7%, transparent);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="amber"] {
+  --decision-accent: var(--progress-gold);
+  --decision-wash: color-mix(in srgb, var(--progress-gold) 7%, transparent);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="green"] {
+  --decision-accent: var(--success-ink);
+  --decision-wash: color-mix(in srgb, var(--success-ink) 6%, transparent);
+}
+
+html[data-theme="light"] .today-decision-evidence {
+  border-top-color: rgba(80, 81, 84, 0.1);
+  background: rgba(35, 36, 39, 0.022);
+}
+
+html[data-theme="light"] .today-decision-row + .today-decision-row {
+  border-color: rgba(80, 81, 84, 0.1);
 }
 
 html[data-theme="light"] .today-risk-item[data-tone="info"] {

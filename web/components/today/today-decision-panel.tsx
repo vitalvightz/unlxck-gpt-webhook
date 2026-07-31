@@ -60,6 +60,10 @@ export function TodayDecisionPanel({
     contextLabels.length > 0 ||
     usedSources.length > 0 ||
     Boolean(note);
+  const evidenceCount =
+    Number(triggerLabels.length > 0) +
+    Number(contextLabels.length > 0) +
+    Number(usedSources.length > 0 || Boolean(note));
   // Headline the tier ("Stop today" etc.) so Today matches the Overview action
   // framing; the chip carries the tier marker and the detail keeps the specifics.
   // Prefer the authoritative backend tier when supplied so the headline can never
@@ -72,60 +76,60 @@ export function TodayDecisionPanel({
       data-tone={banner.tone}
       role="status"
     >
-      <span className="today-decision-icon" aria-hidden="true">
-        {banner.chip}
-      </span>
-      <div className="today-decision-body">
-        <p className="today-decision-title">{tierLabel}</p>
+      <div className="today-decision-command">
+        <div className="today-decision-heading">
+          <span className="today-decision-icon" aria-hidden="true">
+            {banner.chip}
+          </span>
+          <p className="today-decision-title">{tierLabel}</p>
+        </div>
         {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
         <p className="today-decision-detail">{banner.detail}</p>
         {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
-        {hasEvidence ? (
-          <dl className="today-decision-evidence">
-            {triggerLabels.length ? (
-              <div className="today-decision-row">
-                <dt>Trigger</dt>
-                <dd>
-                  <ul className="today-decision-values">
-                    {triggerLabels.map((trigger) => (
-                      <li key={trigger}>{trigger}</li>
-                    ))}
-                  </ul>
-                </dd>
-              </div>
-            ) : null}
-            {contextLabels.length ? (
-              <div className="today-decision-row">
-                <dt>Context</dt>
-                <dd>
-                  <ul className="today-decision-values">
-                    {contextLabels.map((contextLabel) => (
-                      <li key={contextLabel}>{contextLabel}</li>
-                    ))}
-                  </ul>
-                </dd>
-              </div>
-            ) : null}
-            {usedSources.length || note ? (
-              <div className="today-decision-row">
-                <dt>Decision based on</dt>
-                <dd>
-                  {usedSources.length ? (
-                    <ul className="today-decision-inputs">
-                      {usedSources.map((source) => (
-                        <li key={source}>{source}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {note ? (
-                    <span className="today-decision-gap">{note}</span>
-                  ) : null}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-        ) : null}
       </div>
+      {hasEvidence ? (
+        <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
+          {triggerLabels.length ? (
+            <div className="today-decision-row">
+              <dt>Trigger</dt>
+              <dd>
+                <ul className="today-decision-values">
+                  {triggerLabels.map((trigger) => (
+                    <li key={trigger}>{trigger}</li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          ) : null}
+          {contextLabels.length ? (
+            <div className="today-decision-row">
+              <dt>Context</dt>
+              <dd>
+                <ul className="today-decision-values">
+                  {contextLabels.map((contextLabel) => (
+                    <li key={contextLabel}>{contextLabel}</li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          ) : null}
+          {usedSources.length || note ? (
+            <div className="today-decision-row">
+              <dt>Decision based on</dt>
+              <dd>
+                {usedSources.length ? (
+                  <ul className="today-decision-inputs">
+                    {usedSources.map((source) => (
+                      <li key={source}>{source}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {note ? <span className="today-decision-gap">{note}</span> : null}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
     </div>
   );
 }
