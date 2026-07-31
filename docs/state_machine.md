@@ -16,7 +16,7 @@ status is also a job status.
 |---|---|---|---|
 | **Generation job status** | `generation_jobs.status` | `queued`, `running`, `completed`, `review_required`, `failed` | `GENERATION_JOB_STATUSES` |
 | **Plan status** | `plans.status` | `generated`, `ready`, `review_required`, `held_for_review`, `publishable_with_flags`, `triage_blocked`, `medical_hold`, `restricted_rehab_only`, `needs_review`, `archived` | `PLAN_STATUSES` |
-| **`stage2_status`** | plan `admin_outputs.stage2_status` (audit only) | `stage2_pass`, `stage2_failed`, `admin_review_approved`, `admin_review_rejected`, `admin_archived`, `triage_resume_approved`, `manual_stage2_pass`, `manual_stage2_retry_pass`, `manual_stage2_retry_required`, `""` (not run) | `api/stage2_automation.py`, admin services |
+| **`stage2_status`** | plan `admin_outputs.stage2_status` (audit only) | `stage2_pass`, `stage2_failed`, `stage2_failed_stage1_fallback`, `admin_review_approved`, `admin_review_rejected`, `admin_archived`, `triage_resume_approved`, `manual_stage2_pass`, `manual_stage2_retry_pass`, `manual_stage2_retry_required`, `""` (not run) | `api/stage2_automation.py`, admin services |
 
 Key trap that prompted this section: **`review_required` exists as both a job
 status and a plan status, and `held_for_review` exists only as a plan status.**
@@ -100,6 +100,8 @@ still shows up in the admin review surface with every finding attached.
 | Validator has an admin-review blocking context/programme finding | `publishable_with_flags` | `stage2_failed` | `completed` |
 | Validator fails on a hard blocker (safety / output integrity) | `publishable_with_flags` | `stage2_failed` | `completed` |
 | No clean structured card | unchanged (card status logged; plan_text is the fallback) | unchanged | `completed` |
+| **Technical failure** — timeout, provider error, unavailable finalizer, incomplete/empty output | `ready` (Stage 1 plan) | `stage2_failed_stage1_fallback` | `completed` |
+| Technical failure **and** Stage 1 produced no plan text | no plan row | — | `failed` |
 | Injury triage blocks Stage 2 | `triage_blocked` (or `medical_hold` / `restricted_rehab_only` / `needs_review`) | unchanged / `""` | `review_required` |
 
 The shared Stage 2 policy still has three explicit classes:
@@ -119,6 +121,27 @@ released-with-flags values so the report agrees with the saved plan status.
 `publishable_with_flags` remains in the admin review surface for asynchronous
 audit. This policy removes athlete release delay; it does not remove flagged
 plans from the admin queue or reduce review volume.
+
+#### Technical Stage 2 failures
+
+The rows above are about a Stage 2 plan that *exists*. When the finalizer never
+produces one — it times out, throws, is unavailable, or returns incomplete or
+empty output — there is nothing to publish or flag. Stage 1 has already built a
+complete deterministic plan, so the job completes on that instead of failing
+generation (`build_stage1_fallback_result` in `api/stage2_automation.py`).
+
+Such a plan is `ready`, not `publishable_with_flags`: the validator never ran
+against the Stage 1 body and has no findings to report on it. Its report is
+clean apart from a `stage2_fallback` entry carrying the reason
+(`stage2_timeout`, `stage2_model_error`, `stage2_unavailable`) and the sanitized
+error detail. The failure is logged as
+`generation:stage2_failed_stage1_completed`. `stage2_status` is
+`stage2_failed_stage1_fallback`, distinguishing it from `stage2_failed`, which
+means Stage 2 DID produce a plan that the validator flagged.
+
+The one case that still fails the job: Stage 1 produced no plan text either, so
+there is nothing to fall back to. That is a Stage 1 failure, and Stage 1
+failures still block.
 
 ### Plan status → generation job status
 

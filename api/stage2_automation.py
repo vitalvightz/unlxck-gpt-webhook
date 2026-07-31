@@ -38,6 +38,14 @@ _APP_STATUS_READY = "ready"
 _APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
+# `stage2_status` audit value for a technical Stage 2 failure — the finalizer
+# never produced a usable plan (timeout, provider error, unavailable, incomplete
+# output) — so the deterministic Stage 1 plan was completed instead. Distinct
+# from `stage2_failed`, which means Stage 2 DID produce a plan that the validator
+# flagged. Never a plan or job status.
+STAGE2_STAGE1_FALLBACK = "stage2_failed_stage1_fallback"
+# Key under `stage2_validator_report` recording why Stage 2 was unusable.
+STAGE2_FALLBACK_REPORT_KEY = "stage2_fallback"
 
 logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
@@ -642,6 +650,65 @@ def _approved_result(
         "stage2_validator_report": validator_report,
         "stage2_retry_text": retry_text,
         "stage2_attempt_count": attempt_count,
+    }
+
+
+class Stage1FallbackUnavailableError(RuntimeError):
+    """Raised when Stage 2 failed and Stage 1 left no plan body to fall back to."""
+
+
+def build_stage1_fallback_result(
+    stage1_result: dict[str, Any],
+    *,
+    reason: str,
+    detail: str = "",
+    stage2_cost: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Complete the job on the Stage 1 plan after a technical Stage 2 failure.
+
+    Used when the finalizer never produced a usable plan — it timed out, threw,
+    was unavailable, or returned incomplete/empty output. Stage 1 has already
+    built a complete deterministic plan, so the job completes on that instead of
+    failing generation and stranding the athlete.
+
+    This is not the validator path: a Stage 2 plan that exists but trips the
+    validator is published as `publishable_with_flags` (see `finalize`). Here
+    there is no Stage 2 plan at all, so the Stage 1 body is published as `ready`
+    with a clean report — the validator never ran against it and has nothing to
+    say about it. The failure is recorded under `stage2_fallback` and logged.
+
+    Raises :class:`Stage1FallbackUnavailableError` when Stage 1 produced no plan
+    text, so the caller keeps its existing failure handling rather than
+    publishing an empty plan. That is a Stage 1 failure, which still blocks.
+    """
+
+    plan_text = str(stage1_result.get("plan_text") or "").strip()
+    if not plan_text:
+        raise Stage1FallbackUnavailableError(
+            "Stage 1 produced no plan text; nothing to fall back to."
+        )
+    return {
+        **_base_result(stage1_result, draft_plan_text=plan_text, stage2_cost=stage2_cost),
+        "status": _APP_STATUS_READY,
+        "plan_text": plan_text,
+        "final_plan_text": plan_text,
+        "stage2_status": STAGE2_STAGE1_FALLBACK,
+        "stage2_validator_report": {
+            "errors": [],
+            "warnings": [],
+            "blocking_warnings": [],
+            "review_flags": [],
+            "release_decision": "publish",
+            "is_athlete_releasable": True,
+            "is_publishable": True,
+            STAGE2_FALLBACK_REPORT_KEY: {
+                "reason": reason,
+                "detail": detail,
+                "at": _utc_now_iso(),
+            },
+        },
+        "stage2_retry_text": "",
+        "stage2_attempt_count": 0,
     }
 
 

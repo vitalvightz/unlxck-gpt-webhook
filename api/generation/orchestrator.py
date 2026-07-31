@@ -26,9 +26,12 @@ from ..models import (
     ProfileUpdateRequest,
 )
 from ..stage2_automation import (
+    STAGE2_STAGE1_FALLBACK,
+    Stage1FallbackUnavailableError,
     Stage2AutomationError,
     Stage2AutomationUnavailableError,
     Stage2Automator,
+    build_stage1_fallback_result,
 )
 from ..store import AppStore
 from .admin_linkage import (
@@ -521,11 +524,52 @@ async def run_generation_job(
                     **stage1_result,
                     "_generation_source": str(job.get("source") or ""),
                 }
-                finalized_result = await finalize_stage2_with_timeout(
-                    stage2=stage2,
-                    stage1_result=stage1_result,
-                    log_context={"job_id": job_id, "athlete_id": athlete_id},
-                )
+                try:
+                    finalized_result = await finalize_stage2_with_timeout(
+                        stage2=stage2,
+                        stage1_result=stage1_result,
+                        log_context={"job_id": job_id, "athlete_id": athlete_id},
+                    )
+                except (Stage2AutomationError, asyncio.TimeoutError) as exc:
+                    # A technical Stage 2 failure — timeout, provider error,
+                    # unavailable finalizer, or incomplete/empty output. Stage 1
+                    # already built a complete plan, so complete the job on that
+                    # instead of failing generation. The failure is logged, not
+                    # escalated. If Stage 1 left nothing to fall back to,
+                    # build_stage1_fallback_result raises and the handlers below
+                    # fail the job exactly as before.
+                    safe_error, _ = _safe_error_and_frame(exc)
+                    try:
+                        finalized_result = build_stage1_fallback_result(
+                            stage1_result,
+                            reason=(
+                                "stage2_timeout"
+                                if isinstance(exc, asyncio.TimeoutError)
+                                else "stage2_unavailable"
+                                if isinstance(exc, Stage2AutomationUnavailableError)
+                                else "stage2_model_error"
+                            ),
+                            detail=safe_error,
+                            stage2_cost=getattr(exc, "stage2_cost", None),
+                        )
+                    except Stage1FallbackUnavailableError:
+                        logger.error(
+                            "[jobs] generation:stage2_failed_no_stage1_plan athlete_id=%s job_id=%s "
+                            "exc_type=%s error=%s",
+                            athlete_id,
+                            job_id,
+                            type(exc).__name__,
+                            safe_error,
+                        )
+                        raise exc from None
+                    logger.error(
+                        "[jobs] generation:stage2_failed_stage1_completed athlete_id=%s job_id=%s "
+                        "exc_type=%s error=%s",
+                        athlete_id,
+                        job_id,
+                        type(exc).__name__,
+                        safe_error,
+                    )
                 await _touch_heartbeat()
                 _emit_milestone(
                     "stage2_model_response_received",
@@ -548,7 +592,14 @@ async def run_generation_job(
                     "Stage 2 result ready",
                     "Finalizer result returned; saving review state.",
                 )
-                if str(final_result.get("status") or "").strip().lower() == "ready":
+                if final_result.get("stage2_status") == STAGE2_STAGE1_FALLBACK:
+                    _emit_milestone(
+                        "stage2_stage1_fallback",
+                        "Plan ready from Stage 1",
+                        "The AI finalizer did not return a usable pass, so the Stage 1 plan "
+                        "was completed unchanged.",
+                    )
+                elif str(final_result.get("status") or "").strip().lower() == "ready":
                     _emit_milestone(
                         "stage2_validated",
                         "Stage 2 finalizer complete",
@@ -607,6 +658,9 @@ async def run_generation_job(
             to_thread_with_heartbeat=_to_thread_with_heartbeat,
             t_start=t_start,
         )
+    # The Stage 2 handlers below now only fire when there was no Stage 1 plan to
+    # complete the job with (or the failure came from outside the Stage 2 call).
+    # A Stage 2 failure over a usable Stage 1 plan is absorbed at the call site.
     except asyncio.TimeoutError as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.error(
