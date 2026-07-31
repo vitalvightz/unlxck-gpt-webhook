@@ -2073,7 +2073,7 @@ def _safe_filler_adjustment(
 # inferred from whether the existing action text happens to mention sparring:
 # reading athlete-facing prose to decide what a safety restriction already
 # covers is a guess, and the failure mode is silently dropping the instruction.
-_CONTACT_RESTRICTION_INSTRUCTION = "Skip all sparring, clinch, and grappling today."
+_CONTACT_RESTRICTION_INSTRUCTION = "Skip all contact work, including sparring, clinch, and grappling today."
 _SURFACE_PROTECTION_INSTRUCTION = "Keep it taped and off direct friction."
 
 # Why contact is out, keyed to the classifier's own reason code rather than
