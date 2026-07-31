@@ -850,6 +850,10 @@ export type TodayActivePlan = {
 export type TodaySession = {
   session_id?: string;
   session_relation?: "today" | "next" | string;
+  session_type?: string | null;
+  category?: string | null;
+  support_insert_category?: string | null;
+  stress_class?: string | null;
   title?: string;
   label?: string;
   weekday?: string;
@@ -867,6 +871,7 @@ export type TodaySession = {
   estimated_duration?: string | number | null;
   duration_minutes?: number | null;
   planned_duration?: { value?: number | null; unit?: string | null; display?: string | null } | null;
+  blocks?: StructuredBlock[] | null;
 };
 
 export type TodayCommandView = {

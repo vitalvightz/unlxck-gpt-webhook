@@ -102,6 +102,30 @@ test("decision based on always lists the available sources", () => {
   assert.ok(!html.includes("Confidence"));
 });
 
+test("preview evidence names only the next session and drops today's readiness context", () => {
+  const html = render({
+    banner: {
+      ...BANNER,
+      displayState: "preview",
+      chip: "PREVIEW",
+      detail: "Mobility Reset is next on your plan.",
+      action: "Review the mobility and recovery work before it opens.",
+      tone: "neutral",
+    },
+    triggers: ["Pain reported today"],
+    context: ["Taper phase"],
+    sources: ["today's check-in", "today's planned session"],
+    confidenceNote: "Less to go on today.",
+  });
+
+  assert.ok(html.includes("next planned session"));
+  assert.ok(!html.includes("Pain reported today"));
+  assert.ok(!html.includes("Taper phase"));
+  assert.ok(!html.includes("today's check-in"));
+  assert.ok(!html.includes("today's planned session"));
+  assert.ok(!html.includes("Less to go on today"));
+});
+
 test("the status chip is the only decision-state label", () => {
   const html = render({ banner: STOP_BANNER, tier: "stop" });
 
