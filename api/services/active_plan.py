@@ -2,14 +2,12 @@
 
 Implementation note (PR #1800): active plan selection is centralized here.
 If ``profiles.active_plan_id`` exists, that explicit plan wins only when it
-belongs to the athlete and has an athlete-displayable status. This PR also
-supports a temporary derived fallback: when no valid explicit active plan is
-stored, the latest eligible saved plan is auto-selected by created time. New
-eligible plans therefore become active only when the athlete has no valid active
-plan; unrelated ready plans do not silently replace an existing explicit active
-plan. Archiving makes a plan ineligible; the resolver will not return it, and it
-falls back to the next eligible plan only through the same explicit fallback
-rule. Deleted or unavailable active plans are treated the same. Overlapping saved
+belongs to the athlete, has an athlete-displayable status and has not passed its
+fight date in the athlete-local training day. When no valid explicit active plan
+is stored, the earliest upcoming fight camp wins; without one, the newest open
+plan wins. Archiving, a malformed scheduled date, or a passed fight date makes a
+plan ineligible without mutating its persisted status or the stored pointer.
+Deleted or unavailable active plans are treated the same. Overlapping saved
 or draft plans are allowed, but activating an overlapping second plan requires an
 explicit pause or replacement choice. ``pause`` preserves the previous plan row
 unchanged and switches the single active pointer to the selected plan, allowing
@@ -27,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 import json
-from typing import Any, Mapping, Protocol
+from typing import Any, Literal, Mapping, Protocol
 
 from fastapi import HTTPException, status
 
@@ -38,6 +36,9 @@ ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE = (
 )
 ACTIVE_PLAN_OVERLAP_CONFLICT_CODE = "active_plan_overlap"
 ACTIVE_PLAN_REPLACE_FAILED_MESSAGE = "Unable to replace the current active plan. The original active plan was restored."
+PLAN_HAS_ENDED_CODE = "plan_has_ended"
+PLAN_HAS_ENDED_MESSAGE = "This fight camp has ended and cannot be activated."
+PlanActivationState = Literal["eligible", "fight_date_passed", "status_ineligible"]
 NEVER_ACTIVE_PLAN_STATUSES = {
     "generated",
     "review_required",
@@ -76,8 +77,15 @@ def normalize_plan_status(row: dict[str, Any] | None) -> str:
     return str((row or {}).get("status") or "").strip().lower()
 
 
-def is_active_plan_eligible(row: dict[str, Any] | None) -> bool:
-    return normalize_plan_status(row) in ELIGIBLE_ACTIVE_PLAN_STATUSES
+def is_active_plan_eligible(
+    row: dict[str, Any] | None,
+    *,
+    current_training_day: date | str | None = None,
+) -> bool:
+    return get_plan_activation_state(
+        row,
+        current_training_day=current_training_day,
+    ) == "eligible"
 
 
 def _created_sort_key(row: dict[str, Any]) -> tuple[str, str]:
@@ -117,6 +125,38 @@ def _parse_date(value: Any) -> date | None:
         return date.fromisoformat(text[:10])
     except ValueError:
         return None
+
+
+def get_plan_activation_state(
+    row: dict[str, Any] | None,
+    *,
+    current_training_day: date | str | None = None,
+) -> PlanActivationState:
+    """Return the server-authoritative activation state for one saved plan.
+
+    A scheduled fight camp remains eligible throughout its athlete-local fight
+    day. Blank fight dates are ongoing plans. Non-empty malformed legacy dates
+    fail closed so they can remain viewable without becoming operational.
+    """
+
+    if normalize_plan_status(row) not in ELIGIBLE_ACTIVE_PLAN_STATUSES:
+        return "status_ineligible"
+
+    raw_fight_date = (row or {}).get("fight_date")
+    fight_date_text = str(raw_fight_date or "").strip()
+    if not fight_date_text:
+        return "eligible"
+
+    fight_date = _parse_date(fight_date_text)
+    if fight_date is None:
+        return "status_ineligible"
+
+    training_day = _parse_date(current_training_day) if current_training_day is not None else date.today()
+    if training_day is None:
+        training_day = date.today()
+    if fight_date < training_day:
+        return "fight_date_passed"
+    return "eligible"
 
 
 def _int_or_none(value: Any) -> int | None:
@@ -211,11 +251,17 @@ def _active_plan_overlap(
     store: ActivePlanStore,
     athlete_id: str,
     candidate: dict[str, Any],
+    *,
+    current_training_day: date | str | None,
 ) -> dict[str, Any] | None:
-    current = resolve_active_plan(store, athlete_id).plan
+    current = resolve_active_plan(
+        store,
+        athlete_id,
+        current_training_day=current_training_day,
+    ).plan
     if not current or str(current.get("id") or "") == str(candidate.get("id") or ""):
         return None
-    if not is_active_plan_eligible(current):
+    if not is_active_plan_eligible(current, current_training_day=current_training_day):
         return None
 
     # The resolver may have selected from a summary projection. Re-read the row
@@ -233,17 +279,42 @@ def _active_plan_overlap(
     return current if _ranges_overlap(current_range, candidate_range) else None
 
 
-def resolve_active_plan(store: ActivePlanStore, athlete_id: str) -> ActivePlanResolution:
+def resolve_active_plan(
+    store: ActivePlanStore,
+    athlete_id: str,
+    *,
+    current_training_day: date | str | None = None,
+) -> ActivePlanResolution:
     explicit_id = _explicit_active_plan_id(store, athlete_id)
     if explicit_id:
         explicit = store.get_plan_for_athlete(explicit_id, athlete_id)
-        if is_active_plan_eligible(explicit):
+        if is_active_plan_eligible(explicit, current_training_day=current_training_day):
             return ActivePlanResolution(plan=explicit, source="explicit")
 
-    eligible = [row for row in store.list_user_plans(athlete_id) if is_active_plan_eligible(row)]
+    eligible = [
+        row
+        for row in store.list_user_plans(athlete_id)
+        if is_active_plan_eligible(row, current_training_day=current_training_day)
+    ]
     if not eligible:
         return ActivePlanResolution(plan=None, source="none")
-    return ActivePlanResolution(plan=max(eligible, key=_created_sort_key), source="auto_latest_eligible")
+
+    future_camps = [row for row in eligible if str(row.get("fight_date") or "").strip()]
+    if future_camps:
+        fight_dates = [_parse_date(row.get("fight_date")) for row in future_camps]
+        earliest_fight_date = min(parsed for parsed in fight_dates if parsed is not None)
+        earliest_camps = [
+            row for row in future_camps if _parse_date(row.get("fight_date")) == earliest_fight_date
+        ]
+        return ActivePlanResolution(
+            plan=max(earliest_camps, key=_created_sort_key),
+            source="auto_earliest_future_fight",
+        )
+
+    return ActivePlanResolution(
+        plan=max(eligible, key=_created_sort_key),
+        source="auto_latest_open_plan",
+    )
 
 
 def set_active_plan(
@@ -252,16 +323,35 @@ def set_active_plan(
     plan_id: str,
     *,
     overlap_action: str | None = None,
+    current_training_day: date | str | None = None,
 ) -> dict[str, Any]:
     plan = store.get_plan_for_athlete(plan_id, athlete_id)
     if plan is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-    if not is_active_plan_eligible(plan):
+    activation_state = get_plan_activation_state(
+        plan,
+        current_training_day=current_training_day,
+    )
+    if activation_state == "fight_date_passed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": PLAN_HAS_ENDED_CODE,
+                "message": PLAN_HAS_ENDED_MESSAGE,
+                "activation_state": activation_state,
+            },
+        )
+    if activation_state != "eligible":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is not eligible to become active")
     normalized_action = str(overlap_action or "").strip().lower() or None
     if normalized_action is not None and normalized_action not in ACTIVE_PLAN_OVERLAP_ACTIONS:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid overlap action")
-    overlapping_active = _active_plan_overlap(store, athlete_id, plan)
+    overlapping_active = _active_plan_overlap(
+        store,
+        athlete_id,
+        plan,
+        current_training_day=current_training_day,
+    )
     if overlapping_active and normalized_action is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

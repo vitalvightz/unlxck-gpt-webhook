@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -524,14 +525,14 @@ def test_set_active_endpoint_blocks_overlapping_active_plan_until_user_chooses()
     current = store.create_plan(
         athlete_id="athlete-1",
         intake_id="intake_current",
-        request=_build_request({"fight_date": "2026-07-12"}),
-        result=finalized_result(structured_plan=_structured_date_range("2026-06-12", "2026-07-12")),
+        request=_build_request({"fight_date": "2026-08-12"}),
+        result=finalized_result(structured_plan=_structured_date_range("2026-07-12", "2026-08-12")),
     )
     draft = store.create_plan(
         athlete_id="athlete-1",
         intake_id="intake_draft",
-        request=_build_request({"fight_date": "2026-07-20"}),
-        result=finalized_result(structured_plan=_structured_date_range("2026-06-20", "2026-07-20")),
+        request=_build_request({"fight_date": "2026-08-20"}),
+        result=finalized_result(structured_plan=_structured_date_range("2026-07-20", "2026-08-20")),
     )
     store.set_active_plan_id("athlete-1", current["id"])
 
@@ -554,8 +555,65 @@ def test_set_active_endpoint_blocks_overlapping_active_plan_until_user_chooses()
 
     assert paused.status_code == 200
     assert paused.json()["plan_id"] == draft["id"]
+    assert paused.json()["activation_state"] == "eligible"
     assert store.get_active_plan_id("athlete-1") == draft["id"]
     assert store.get_plan(current["id"])["status"] == "ready"
+
+
+def test_passed_camp_is_completed_history_and_cannot_be_activated():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_passed",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    plan["fight_date"] = (date.today() - timedelta(days=2)).isoformat()
+    store.set_active_plan_id("athlete-1", plan["id"])
+
+    listed = client.get("/api/plans", headers={"Authorization": "Bearer athlete-token"})
+    detail = client.get(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    active = client.get("/api/plans/active", headers={"Authorization": "Bearer athlete-token"})
+    rejected = client.post(
+        f"/api/plans/{plan['id']}/set-active",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert listed.status_code == 200
+    assert next(item for item in listed.json() if item["plan_id"] == plan["id"])["activation_state"] == "fight_date_passed"
+    assert detail.status_code == 200
+    assert detail.json()["activation_state"] == "fight_date_passed"
+    assert active.status_code == 404
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"] == {
+        "code": "plan_has_ended",
+        "message": "This fight camp has ended and cannot be activated.",
+        "activation_state": "fight_date_passed",
+    }
+    assert store.get_active_plan_id("athlete-1") == plan["id"]
+
+    renamed = client.patch(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"plan_name": "Completed camp"},
+    )
+    archived = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["activation_state"] == "fight_date_passed"
+    assert archived.status_code in {200, 204}
 
 
 def test_athlete_can_rename_their_saved_plan():
@@ -625,13 +683,13 @@ def test_archived_plan_is_preview_only_for_athlete_history():
     visible_plan = store.create_plan(
         athlete_id="athlete-1",
         intake_id="intake_visible",
-        request=_build_request({"fight_date": "2026-05-01"}),
+        request=_build_request({"fight_date": "2098-05-01"}),
         result=finalized_result(status="ready", plan_text="# Visible", final_plan_text="# Visible"),
     )
     archived_plan = store.create_plan(
         athlete_id="athlete-1",
         intake_id="intake_archived",
-        request=_build_request({"fight_date": "2026-06-01"}),
+        request=_build_request({"fight_date": "2099-06-01"}),
         result=finalized_result(
             status="archived",
             plan_text="",

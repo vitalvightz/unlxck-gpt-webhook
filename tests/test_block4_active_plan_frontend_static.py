@@ -20,9 +20,19 @@ def test_plan_manager_renders_active_and_set_active_states():
     helper = _read("web/lib/plan-active.ts")
     assert "ACTIVE" in source
     assert "Activate" in source
+    assert "COMPLETED" in source
+    assert "Camp complete" in source
     assert "Cannot be active" in source
     assert "function canSetActivePlan" in helper
-    assert 'normalized === "ready" || normalized === "publishable_with_flags"' in helper
+    assert 'activationState === "eligible"' in helper
+    assert "plan.activation_state" in source
+
+
+def test_plan_detail_uses_server_activation_state_for_completed_history():
+    source = _read("web/components/plan-viewer.tsx")
+    assert "isCompletedFightCamp(plan.activation_state)" in source
+    assert "This fight camp has ended." in source
+    assert "canSetActivePlan(plan.activation_state)" in source
 
 
 def test_today_view_full_plan_uses_active_plan_detail_route():

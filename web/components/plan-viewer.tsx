@@ -25,6 +25,7 @@ import {
   ACTIVE_PLAN_OVERLAP_MESSAGE,
   type ActivePlanOverlapAction,
   canSetActivePlan,
+  isCompletedFightCamp,
   isActivePlanOverlapError,
   isArchivedPlan,
 } from "@/lib/plan-active";
@@ -1513,6 +1514,7 @@ export function PlanViewer({
     plan.athlete_id,
   );
   const archivedPreview = isArchivedPlan(plan.status);
+  const completedFightCamp = isCompletedFightCamp(plan.activation_state);
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
   const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
@@ -1551,25 +1553,29 @@ export function PlanViewer({
         ? "Clearance required"
         : "Planning paused";
 
-  const statusLabel = isTriageBlocked
-    ? blockedTitle
-    : viewerRole === "athlete"
-      ? formatAthletePlanStatus(plan.status || "generated")
-      : formatPlanStatus(plan.status || "generated");
+  const statusLabel = completedFightCamp
+    ? "Completed"
+    : isTriageBlocked
+      ? blockedTitle
+      : viewerRole === "athlete"
+        ? formatAthletePlanStatus(plan.status || "generated")
+        : formatPlanStatus(plan.status || "generated");
 
   const stage2Status = isTriageBlocked
     ? "Stage 2 skipped intentionally"
     : titleizeToken(plan.admin_outputs?.stage2_status || "legacy");
 
-  const heroSummary = isTriageBlocked
-    ? injuryTriage?.mode === "medical_hold"
-      ? "The planner intentionally blocked this intake before finalization because it contains urgent or medically disqualifying signals."
-      : "The planner intentionally paused normal release because this intake contains structural injury signals that require clearance."
-    : hasPublishedPlan
-      ? openOngoing
-        ? "Your rolling four-week performance block, ready for the next prescribed dose."
-        : "Your validated camp plan, ready for the next training decision."
-      : "This plan is held back from the athlete view until Stage 2 clears review.";
+  const heroSummary = completedFightCamp
+    ? "This fight camp has ended and remains available as completed training history."
+    : isTriageBlocked
+      ? injuryTriage?.mode === "medical_hold"
+        ? "The planner intentionally blocked this intake before finalization because it contains urgent or medically disqualifying signals."
+        : "The planner intentionally paused normal release because this intake contains structural injury signals that require clearance."
+      : hasPublishedPlan
+        ? openOngoing
+          ? "Your rolling four-week performance block, ready for the next prescribed dose."
+          : "Your validated camp plan, ready for the next training decision."
+        : "This plan is held back from the athlete view until Stage 2 clears review.";
 
   const handoffText = plan.admin_outputs?.stage2_handoff_text || "";
   const retryText = plan.admin_outputs?.stage2_retry_text || "";
@@ -2173,7 +2179,7 @@ export function PlanViewer({
       setSetActiveError("Session expired. Sign in again.");
       return;
     }
-    if (!canSetActivePlan(plan.status)) {
+    if (!canSetActivePlan(plan.activation_state)) {
       setSetActiveError("This plan cannot be set active from its current state.");
       return;
     }
@@ -2504,6 +2510,12 @@ export function PlanViewer({
           </div>
         ) : null}
 
+        {completedFightCamp && !archivedPreview ? (
+          <div className="quick-build-refine-banner cm-archived-banner" role="status">
+            This fight camp has ended. It remains available as completed history and cannot be set active.
+          </div>
+        ) : null}
+
         {planHasProfileRefreshFailed(plan) ? (
           <div
             className="quick-build-refine-banner cm-profile-refresh-notice"
@@ -2528,7 +2540,7 @@ export function PlanViewer({
         ) : null}
 
         <div className="plan-summary-actions plan-detail-actions">
-          {canManagePlan && !activePlanStateResolved ? (
+          {canManagePlan && !completedFightCamp && !activePlanStateResolved ? (
             <button type="button" className="cta" disabled>
               Checking plan state…
             </button>
@@ -2538,7 +2550,7 @@ export function PlanViewer({
               Open Today
             </Link>
           ) : null}
-          {canManagePlan && activePlanStateResolved && !isCurrentActivePlan && canSetActivePlan(plan.status) ? (
+          {canManagePlan && activePlanStateResolved && !isCurrentActivePlan && canSetActivePlan(plan.activation_state) ? (
             <button
               type="button"
               className="cta"

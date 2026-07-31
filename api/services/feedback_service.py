@@ -327,7 +327,11 @@ def _today_recommendation_context(
     for today, fall back to today's stored check-ins so a stale pointer or a
     same-day plan switch cannot orphan a recommendation already on screen.
     """
-    plan = resolve_active_plan(store, profile.profile_id).plan
+    plan = resolve_active_plan(
+        store,
+        profile.profile_id,
+        current_training_day=training_day,
+    ).plan
     if plan:
         checkin = store.get_feedback_today_checkin(
             profile.profile_id, str(plan.get("id") or ""), training_day

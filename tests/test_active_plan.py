@@ -1,10 +1,16 @@
+from datetime import datetime, timezone
+
 import pytest
 from fastapi import HTTPException
 
+from api.contracts.training_day import current_training_day
 from api.services.active_plan import (
     ACTIVE_PLAN_OVERLAP_CONFLICT_CODE,
     ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE,
     ACTIVE_PLAN_REPLACE_FAILED_MESSAGE,
+    PLAN_HAS_ENDED_CODE,
+    PLAN_HAS_ENDED_MESSAGE,
+    get_plan_activation_state,
     resolve_active_plan,
     set_active_plan,
 )
@@ -88,7 +94,7 @@ def test_multiple_ready_plans_are_deterministic_latest_fallback():
     store = Store([plan("old", created_at="2026-01-01"), plan("new", created_at="2026-02-01")])
     result = resolve_active_plan(store, "ath")
     assert result.plan_id == "new"
-    assert result.source == "auto_latest_eligible"
+    assert result.source == "auto_latest_open_plan"
 
 
 def test_explicit_active_plan_wins_over_newer_unrelated_ready_plan():
@@ -115,7 +121,7 @@ def test_overlapping_dates_do_not_block_selection():
         {**plan("p1", created_at="2026-01-01"), "fight_date": "2026-07-01"},
         {**plan("p2", created_at="2026-02-01"), "fight_date": "2026-07-01"},
     ])
-    assert resolve_active_plan(store, "ath").plan_id == "p2"
+    assert resolve_active_plan(store, "ath", current_training_day="2026-06-01").plan_id == "p2"
 
 
 def test_set_active_blocks_overlapping_current_active_plan_without_choice():
@@ -128,7 +134,7 @@ def test_set_active_blocks_overlapping_current_active_plan_without_choice():
     )
 
     with pytest.raises(HTTPException) as exc:
-        set_active_plan(store, "ath", "draft")
+        set_active_plan(store, "ath", "draft", current_training_day="2026-06-15")
 
     assert exc.value.status_code == 409
     assert exc.value.detail == {
@@ -147,7 +153,7 @@ def test_set_active_allows_non_overlapping_plan():
         active="active",
     )
 
-    assert set_active_plan(store, "ath", "next")["id"] == "next"
+    assert set_active_plan(store, "ath", "next", current_training_day="2026-06-15")["id"] == "next"
     assert store.active == "next"
 
 
@@ -161,7 +167,13 @@ def test_set_active_pause_choice_switches_active_pointer_without_archiving_curre
         active="active",
     )
 
-    assert set_active_plan(store, "ath", "draft", overlap_action="pause")["id"] == "draft"
+    assert set_active_plan(
+        store,
+        "ath",
+        "draft",
+        overlap_action="pause",
+        current_training_day="2026-06-15",
+    )["id"] == "draft"
     assert store.active == "draft"
     assert current["status"] == "ready"
 
@@ -176,7 +188,13 @@ def test_set_active_replace_choice_sets_new_active_then_archives_current_plan():
         active="active",
     )
 
-    assert set_active_plan(store, "ath", "draft", overlap_action="replace")["id"] == "draft"
+    assert set_active_plan(
+        store,
+        "ath",
+        "draft",
+        overlap_action="replace",
+        current_training_day="2026-06-15",
+    )["id"] == "draft"
     assert store.active == "draft"
     assert store.set_calls == ["draft"]
     assert current["status"] == "archived"
@@ -194,7 +212,13 @@ def test_set_active_replace_choice_rolls_back_if_archive_fails():
     store.fail_archive = True
 
     with pytest.raises(HTTPException) as exc:
-        set_active_plan(store, "ath", "draft", overlap_action="replace")
+        set_active_plan(
+            store,
+            "ath",
+            "draft",
+            overlap_action="replace",
+            current_training_day="2026-06-15",
+        )
 
     assert exc.value.status_code == 503
     assert exc.value.detail == ACTIVE_PLAN_REPLACE_FAILED_MESSAGE
@@ -207,7 +231,13 @@ def test_set_active_rejects_unknown_overlap_action():
     store = Store([ranged_plan("p1")])
 
     with pytest.raises(HTTPException) as exc:
-        set_active_plan(store, "ath", "p1", overlap_action="start_after_current")
+        set_active_plan(
+            store,
+            "ath",
+            "p1",
+            overlap_action="start_after_current",
+            current_training_day="2026-06-15",
+        )
 
     assert exc.value.status_code == 422
 
@@ -253,3 +283,106 @@ def test_today_command_view_and_active_resolver_use_same_plan():
     today = build_today_command_view(store, athlete_id="ath", athlete_timezone="", now=None)
     assert resolved.plan_id == "old"
     assert today.active_plan.get("id") == "old"
+
+
+def test_activation_state_precedence_and_legacy_date_handling():
+    assert get_plan_activation_state(
+        {**plan("archived", status="archived"), "fight_date": "2026-06-01"},
+        current_training_day="2026-06-02",
+    ) == "status_ineligible"
+    assert get_plan_activation_state(
+        {**plan("malformed"), "fight_date": "not-a-date"},
+        current_training_day="2026-06-02",
+    ) == "status_ineligible"
+    assert get_plan_activation_state(
+        {**plan("open"), "fight_date": None},
+        current_training_day="2026-06-02",
+    ) == "eligible"
+    assert get_plan_activation_state(
+        {**plan("fight-day"), "fight_date": "2026-06-02"},
+        current_training_day="2026-06-02",
+    ) == "eligible"
+    assert get_plan_activation_state(
+        {**plan("passed"), "fight_date": "2026-06-01"},
+        current_training_day="2026-06-02",
+    ) == "fight_date_passed"
+
+
+def test_training_day_rollover_keeps_fight_camp_eligible_until_0400_local():
+    before_rollover = current_training_day(
+        now=datetime(2026, 6, 2, 2, 30, tzinfo=timezone.utc),
+        athlete_timezone="Europe/London",
+    )
+    after_rollover = current_training_day(
+        now=datetime(2026, 6, 2, 3, 0, tzinfo=timezone.utc),
+        athlete_timezone="Europe/London",
+    )
+    camp = {**plan("camp"), "fight_date": "2026-06-01"}
+
+    assert before_rollover.isoformat() == "2026-06-01"
+    assert after_rollover.isoformat() == "2026-06-02"
+    assert get_plan_activation_state(camp, current_training_day=before_rollover) == "eligible"
+    assert get_plan_activation_state(camp, current_training_day=after_rollover) == "fight_date_passed"
+
+
+def test_expired_pointer_falls_back_to_earliest_future_fight_then_latest_open():
+    passed = {**plan("passed", created_at="2026-05-01"), "fight_date": "2026-06-01"}
+    later = {**plan("later", created_at="2026-06-03"), "fight_date": "2026-08-01"}
+    earliest_old = {**plan("earliest-old", created_at="2026-06-01"), "fight_date": "2026-07-01"}
+    earliest_new = {**plan("earliest-new", created_at="2026-06-02"), "fight_date": "2026-07-01"}
+    open_old = {**plan("open-old", created_at="2026-05-01"), "fight_date": ""}
+    open_new = {**plan("open-new", created_at="2026-05-02"), "fight_date": None}
+    store = Store(
+        [passed, later, earliest_old, earliest_new, open_old, open_new],
+        active="passed",
+    )
+
+    resolved = resolve_active_plan(store, "ath", current_training_day="2026-06-02")
+    assert resolved.plan_id == "earliest-new"
+    assert resolved.source == "auto_earliest_future_fight"
+
+    future_ids = {"later", "earliest-old", "earliest-new"}
+    open_only_store = Store(
+        [row for row in store.plans if row["id"] not in future_ids],
+        active="passed",
+    )
+    open_resolved = resolve_active_plan(
+        open_only_store,
+        "ath",
+        current_training_day="2026-06-02",
+    )
+    assert open_resolved.plan_id == "open-new"
+    assert open_resolved.source == "auto_latest_open_plan"
+
+
+def test_passed_active_pointer_without_fallback_resolves_none_without_mutation():
+    store = Store(
+        [{**plan("passed"), "fight_date": "2026-06-01"}],
+        active="passed",
+    )
+
+    assert resolve_active_plan(store, "ath", current_training_day="2026-06-02").plan is None
+    assert store.active == "passed"
+    assert store.set_calls == []
+
+
+def test_set_active_rejects_passed_camp_without_changing_pointer():
+    store = Store(
+        [
+            {**plan("current"), "fight_date": ""},
+            {**plan("passed"), "fight_date": "2026-06-01"},
+        ],
+        active="current",
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        set_active_plan(store, "ath", "passed", current_training_day="2026-06-02")
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == {
+        "code": PLAN_HAS_ENDED_CODE,
+        "message": PLAN_HAS_ENDED_MESSAGE,
+        "activation_state": "fight_date_passed",
+    }
+    assert store.active == "current"
+    assert store.set_calls == []

@@ -29,6 +29,7 @@ import {
   ACTIVE_PLAN_OVERLAP_MESSAGE,
   type ActivePlanOverlapAction,
   canSetActivePlan,
+  isCompletedFightCamp,
   isActivePlanOverlapError,
   isArchivedPlan,
 } from "@/lib/plan-active";
@@ -49,7 +50,7 @@ function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
 }
 
 function canSetActive(plan: PlanSummary): boolean {
-  return canSetActivePlan(plan.status);
+  return canSetActivePlan(plan.activation_state);
 }
 
 function isActivePlan(plan: PlanSummary, activePlanId: string | null): boolean {
@@ -240,6 +241,7 @@ function PlanCard({
   const active = isActivePlan(plan, activePlanId);
   const eligibleForActive = canSetActive(plan);
   const archived = isArchivedPlan(plan.status);
+  const completed = isCompletedFightCamp(plan.activation_state);
   const reviewReason = getPlanReviewReason(plan);
 
   useEffect(() => {
@@ -445,10 +447,11 @@ function PlanCard({
           {reviewReason ? <p className="muted">{reviewReason}</p> : null}
         </div>
         <div className="plan-history-meta">
-          <span className={`badge${archived ? " status-badge-neutral plan-archived-badge" : ""}`}>
-            {active ? "ACTIVE" : archived ? "ARCHIVED" : statusLabel}
+          <span className={`badge${archived || completed ? " status-badge-neutral plan-archived-badge" : ""}`}>
+            {active ? "ACTIVE" : archived ? "ARCHIVED" : completed ? "COMPLETED" : statusLabel}
           </span>
-          {!active && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
+          {!active && completed ? <span className="muted">Camp complete</span> : null}
+          {!active && !completed && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
               {archived ? "Preview" : "Open"}
