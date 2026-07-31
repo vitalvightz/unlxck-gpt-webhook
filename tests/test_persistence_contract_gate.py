@@ -7,6 +7,7 @@ from api.generation.persistence import (
     _apply_plan_contract_validation,
     _contract_fight_date,
     _contract_report_is_card_rescuable,
+    _contract_report_is_flaggable,
 )
 
 
@@ -37,7 +38,10 @@ def _result(status, weeks, **extra):
     return payload
 
 
-def test_visible_plan_with_blank_week_is_routed_to_review():
+def test_visible_plan_with_blank_week_is_flagged_not_withheld():
+    # A degraded calendar render still leaves the athlete readable plan text, and
+    # most athletes have no coach to escalate to — so it flags for admin audit
+    # and stays visible rather than being withheld.
     emit, events = _emit_collector()
     result = _apply_plan_contract_validation(
         _result("ready", [{"phase": "camp"}]),  # blank week => drift
@@ -46,10 +50,31 @@ def test_visible_plan_with_blank_week_is_routed_to_review():
         job_id="job-1",
         emit_milestone=emit,
     )
-    assert result["status"] == "review_required"
+    assert result["status"] == "publishable_with_flags"
     report = result["why_log"]["plan_contract_validation"]
     assert report["has_errors"] is True
-    assert any(code == "plan_contract_review_required" for code, _ in events)
+    assert any(code == "plan_contract_flagged" for code, _ in events)
+    assert not any(code == "plan_contract_review_required" for code, _ in events)
+
+
+def test_flagged_contract_milestone_copy_stays_neutral_for_the_athlete():
+    # This milestone renders on the athlete's generation screen.
+    events: list[tuple] = []
+
+    def emit(code, title, detail, **kwargs):
+        events.append((code, title, detail))
+
+    _apply_plan_contract_validation(
+        _result("ready", [{"phase": "camp"}]),
+        fight_date=FIGHT_DATE,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=emit,
+    )
+    _, title, detail = next(e for e in events if e[0] == "plan_contract_flagged")
+    blurb = f"{title} {detail}".lower()
+    for leak in ("contract", "violation", "issue", "review", "fail", "drift", "calendar"):
+        assert leak not in blurb, f"athlete-visible milestone leaks {leak!r}: {blurb}"
 
 
 def test_healthy_visible_plan_keeps_its_status():
@@ -114,9 +139,52 @@ def test_blocked_by_safety_audit_card_is_not_clean_and_cannot_rescue():
         job_id="job-1",
         emit_milestone=emit,
     )
-    assert result["status"] == "review_required"
+    # The blocked card cannot vouch for the plan, but a blank week is still only
+    # a flaggable finding, so the plan is flagged rather than withheld.
+    assert result["status"] == "publishable_with_flags"
     assert not any(code == "plan_contract_structured_card_rescue" for code, _ in events)
+    assert any(code == "plan_contract_flagged" for code, _ in events)
+
+
+def test_empty_plan_text_is_withheld_even_without_a_card():
+    # The one contract finding that must still withhold: there is genuinely
+    # nothing to show the athlete, so flagging it would ship a blank plan.
+    emit, events = _emit_collector()
+    result = _apply_plan_contract_validation(
+        {
+            "status": "ready",
+            "plan_text": "",
+            "final_plan_text": "",
+            "draft_plan_text": "",
+            "planning_brief": {
+                "fight_date": FIGHT_DATE,
+                "weekly_role_map": {"weeks": [{"phase": "fight", "countdown_range": [6, 0]}]},
+            },
+        },
+        fight_date=FIGHT_DATE,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=emit,
+    )
+    assert result["status"] == "review_required"
     assert any(code == "plan_contract_review_required" for code, _ in events)
+    assert not any(code == "plan_contract_flagged" for code, _ in events)
+
+
+def test_unknown_contract_code_still_withholds():
+    # Fails closed: a future contract finding nobody has classified must not
+    # silently become a flag.
+    assert _contract_report_is_flaggable(
+        {"violations": [{"code": "brand_new_code", "severity": "error"}]}
+    ) is False
+    assert _contract_report_is_flaggable(
+        {
+            "violations": [
+                {"code": "weekly_schedule_blank", "severity": "error"},
+                {"code": "brand_new_code", "severity": "error"},
+            ]
+        }
+    ) is False
 
 
 def test_empty_plan_text_is_not_rescued_even_with_card():
@@ -195,13 +263,14 @@ def test_gate_never_raises_when_emit_milestone_throws():
         raise RuntimeError("milestone sink exploded")
 
     result = _apply_plan_contract_validation(
-        _result("ready", [{"phase": "camp"}]),  # blank week => routes to review
+        _result("ready", [{"phase": "camp"}]),  # blank week => flagged
         fight_date=FIGHT_DATE,
         athlete_id="ath-1",
         job_id="job-1",
         emit_milestone=boom,
     )
-    assert result["status"] == "review_required"
+    # The flag is applied before the sink is called, so it survives the throw.
+    assert result["status"] == "publishable_with_flags"
 
 
 def test_gate_never_raises_on_garbage_final_result():

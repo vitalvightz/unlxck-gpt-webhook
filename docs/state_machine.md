@@ -145,28 +145,39 @@ failures still block.
 
 #### What can still block a release
 
-"Stage 2 never blocks" is exact, but it is not the same as "nothing blocks".
-Two Stage 1 gates remain, and both are deliberate:
+Two Stage 1 gates remain. Both are deliberately narrow.
 
 1. **Injury triage** — `triage_blocked` / `medical_hold` /
    `restricted_rehab_only` / `needs_review`.
 2. **The post-generation plan-contract gate**
-   (`_apply_plan_contract_validation` in `api/generation/persistence.py`), which
-   downgrades a would-be-visible plan to `review_required` on an error-severity
-   contract violation.
+   (`_apply_plan_contract_validation` in `api/generation/persistence.py`), but
+   only for an unrecoverable finding.
 
-The second one is easy to mistake for a Stage 2 gate because it runs after
-Stage 2 and inspects the finalized result. It is not. Every error-severity check
-it makes — `weekly_schedule_blank`, `calendar_unrenderable`, `fight_day_missing`,
-`late_fight_session_sequence_empty` — reads `planning_brief` or `stage2_payload`,
-both of which are Stage 1 outputs. The only plan-text check, `plan_text_empty`,
-already falls back through `plan_text` → `final_plan_text` → `draft_plan_text`,
-so it cannot trip while any body exists.
+The contract gate runs after Stage 2 and validates the finalized result: the
+calendar rendered from `planning_brief`, the `stage2_payload` late-fight
+sequence, and the athlete-facing plan text. Its error-severity findings are split
+by consequence, not by which stage produced them:
 
-The consequence: substituting the Stage 1 body for the Stage 2 body cannot clear
-a contract violation, because the violation was never about the body. When this
-gate fires it is reporting a genuine Stage 1 structural failure, so routing to
-review is correct and no Stage 1 fallback belongs here.
+| Finding | Outcome |
+|---|---|
+| `weekly_schedule_blank` | `publishable_with_flags` |
+| `calendar_unrenderable` | `publishable_with_flags` |
+| `fight_day_missing` | `publishable_with_flags` |
+| `late_fight_session_sequence_empty` | `publishable_with_flags` |
+| `plan_text_empty` | `review_required` |
+| `validator_error`, or any unknown code | `review_required` |
+
+The first four describe a degraded calendar render. The athlete still has
+readable plan text, and most athletes have no coach to escalate to, so
+withholding the plan helps nobody — the finding is flagged for admin audit and
+the plan stays visible. `plan_text_empty` is the one that must still withhold:
+there is genuinely nothing to show, and flagging it would ship a blank plan.
+
+The allowlist (`_CONTRACT_FLAGGABLE_ERROR_CODES`) fails closed, so a future
+contract finding nobody has classified withholds rather than silently becoming a
+flag. The same list decides which findings a clean structured card can vouch for
+outright — a schema-valid card proves the plan is well-formed, so those keep
+`ready` rather than dropping to `publishable_with_flags`.
 
 ### Plan status → generation job status
 

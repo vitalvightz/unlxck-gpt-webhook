@@ -32,22 +32,45 @@ _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 _ADMIN_CANCELLED_JOB_ERROR = "Generation cancelled by admin."
 
 # Statuses that surface the plan to the athlete. A contract violation on one of
-# these is routed to review_required (an admin sees it first); a violation on an
-# already-non-visible status is recorded without changing the status.
+# these either flags the plan (keeping it visible) or, for an unrecoverable
+# finding, routes it to review_required; a violation on an already-non-visible
+# status is recorded without changing the status.
 _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
+_CONTRACT_FLAGGED_PLAN_STATUS = "publishable_with_flags"
 
-# Contract findings a clean structured card CAN vouch for: markdown
-# render/extraction misses where a schema-valid card already proves the plan is
-# well-formed. This is an explicit allowlist - anything not listed here
-# (notably ``plan_text_empty``, which is unrecoverable output integrity, plus
-# any future/unknown contract code) routes to review by default.
-_CONTRACT_CARD_RESCUABLE_ERROR_CODES = {
+# Contract findings that must NOT withhold a plan. These describe a degraded
+# calendar render, not an unusable plan: the athlete still has readable plan
+# text, and most athletes have no coach to escalate to, so holding the plan
+# helps nobody. They flag the plan for admin audit and it stays visible.
+#
+# This is an explicit allowlist and it fails closed. Anything not listed here —
+# notably ``plan_text_empty`` (there is genuinely nothing to show), plus
+# ``validator_error`` and any future/unknown contract code — still routes to
+# review. The same list decides which findings a clean structured card can vouch
+# for outright, since a schema-valid card proves the plan is well-formed.
+_CONTRACT_FLAGGABLE_ERROR_CODES = {
     "weekly_schedule_blank",
     "calendar_unrenderable",
     "fight_day_missing",
     "late_fight_session_sequence_empty",
 }
+# Back-compat alias: this set has always been the card-rescue allowlist too.
+_CONTRACT_CARD_RESCUABLE_ERROR_CODES = _CONTRACT_FLAGGABLE_ERROR_CODES
+
+
+def _contract_report_is_flaggable(report: Any) -> bool:
+    """Whether every error-level contract finding is safe to flag rather than hold.
+
+    Same defensive, allowlisted shape as the card-rescue check: True only when
+    ``report`` is a dict with a well-formed ``violations`` list, there is at
+    least one error-level finding, and every error-level code is in
+    :data:`_CONTRACT_FLAGGABLE_ERROR_CODES`. A malformed report, an unknown code,
+    or an unrecoverable one (``plan_text_empty``) all return False so the plan
+    routes to review.
+    """
+
+    return _contract_report_is_card_rescuable(report)
 
 
 def _contract_report_is_card_rescuable(report: Any) -> bool:
@@ -186,6 +209,32 @@ def _apply_plan_contract_validation(
                 "Plan kept publishable",
                 "Post-generation contract checks flagged the rendered calendar, but the plan "
                 "has a schema-valid structured card; trusting the card instead of routing to review.",
+                violation_codes=error_codes,
+            )
+            return final_result
+
+        # A degraded calendar render is not a reason to withhold the plan. The
+        # athlete still has readable plan text, and most athletes have no coach to
+        # escalate to, so the finding is flagged for admin audit and the plan stays
+        # visible. Fails closed: an unrecoverable finding (plan_text_empty, where
+        # there is genuinely nothing to show) or any unknown code still routes to
+        # review.
+        if _contract_report_is_flaggable(report):
+            # Rebind before emitting, so a throwing milestone sink cannot lose the
+            # flag (the outer handler returns the latest binding).
+            final_result = {**final_result, "status": _CONTRACT_FLAGGED_PLAN_STATUS}
+            logger.warning(
+                "[jobs] generation:plan_contract_flagged athlete_id=%s job_id=%s "
+                "from_status=%s codes=%s",
+                athlete_id,
+                job_id,
+                current_status,
+                error_codes,
+            )
+            emit_milestone(
+                "plan_contract_flagged",
+                "Final checks complete",
+                "Your plan is complete and ready to save.",
                 violation_codes=error_codes,
             )
             return final_result
