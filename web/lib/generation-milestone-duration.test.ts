@@ -65,8 +65,49 @@ test("a milestone the backend wrote without a timestamp does not swallow the sta
   // The untimed row cannot end stage 2, so stage 2 is still the running one.
   assert.equal(views[0].isRunning, true);
   assert.equal(views[0].durationLabel, "3m 46s");
+  // ...and the untimed row is not itself running: it has no start, so there is
+  // nothing to count from.
+  assert.equal(views[1].isRunning, false);
   assert.equal(views[1].durationLabel, null);
   assert.equal(formatMilestoneDurationLabel(views[1]), null);
+});
+
+test("only one timed row can be running, whatever untimed rows trail it", () => {
+  // A trailing untimed milestone used to claim "running" alongside the real
+  // last timed stage, so two rows were live at once.
+  const untimed = (code: string): ProgressMilestone => ({ code, label: code, detail: "", at: "" });
+  const views = resolveMilestoneDurations(
+    [milestone("a", 0), milestone("b", 66), untimed("c"), untimed("d")],
+    { nowMs: START + 292_000, startedAtMs: START },
+  );
+
+  assert.deepEqual(
+    views.map((view) => view.isRunning),
+    [false, true, false, false],
+  );
+  assert.equal(views.filter((view) => view.isRunning).length, 1);
+});
+
+test("a feed of only untimed rows has nothing running", () => {
+  const views = resolveMilestoneDurations(
+    [{ code: "a", label: "a", detail: "", at: "" }],
+    { nowMs: START + 292_000, startedAtMs: START },
+  );
+
+  assert.deepEqual(
+    views.map((view) => view.isRunning),
+    [false],
+  );
+});
+
+test("a finished job has no running row at all", () => {
+  const views = resolveMilestoneDurations([milestone("a", 0), milestone("b", 66)], {
+    nowMs: START + 600_000,
+    endedAtMs: START + 279_000,
+    startedAtMs: START,
+  });
+
+  assert.equal(views.filter((view) => view.isRunning).length, 0);
 });
 
 test("only the last stage of a live job is running", () => {

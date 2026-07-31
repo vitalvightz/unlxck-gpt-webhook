@@ -64,7 +64,11 @@ export function resolveMilestoneDurations(
       }
     }
 
-    const isRunning = nextStartMs === null && !hasEnded;
+    // A row with no timestamp of its own cannot be the stage in flight — it has
+    // no duration to count. Without this guard a trailing untimed milestone
+    // claimed "running" alongside the real last timed stage, so two rows were
+    // live at once and the untimed one took the latest-row marker.
+    const isRunning = milestoneStartMs !== null && nextStartMs === null && !hasEnded;
     const endMs = nextStartMs ?? jobEndMs;
     const durationMs =
       milestoneStartMs === null ? null : Math.max(0, endMs - milestoneStartMs);

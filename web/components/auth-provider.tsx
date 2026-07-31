@@ -34,7 +34,9 @@ type AppSessionValue = {
   signOut: () => Promise<void>;
 };
 
-const AppSessionContext = createContext<AppSessionValue | undefined>(undefined);
+// Exported so component tests can mount a subtree that consumes the session
+// without standing up the whole auth provider (and its network calls).
+export const AppSessionContext = createContext<AppSessionValue | undefined>(undefined);
 
 function applyAppearanceMode(mode: AppearanceMode) {
   if (typeof document === "undefined") {

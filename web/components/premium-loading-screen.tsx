@@ -283,10 +283,10 @@ export function PremiumLoadingScreen({
                 <ol className="loading-milestone-list">
                   {milestoneDurations.map((view, index) => {
                     const { milestone } = view;
-                    // The row that is still open is the one with no milestone
-                    // after it on an unfinished job — the same condition that
-                    // makes its duration a live count rather than a total.
-                    const isLatest = view.isRunning;
+                    // The marker follows the newest row in the feed, which is
+                    // not the same question as which stage is still running —
+                    // a finished build has a newest row and no running one.
+                    const isLatest = index === milestoneDurations.length - 1;
                     const durationLabel = formatMilestoneDurationLabel(view);
                     return (
                       <li
