@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { shouldRetainLatestJob, shouldUseLocalPendingForRecovery } from "./generation-status-provider";
+import {
+  RECOVERED_PLAN_STATUS_MESSAGE,
+  resolveTerminalGenerationView,
+  shouldRetainLatestJob,
+  shouldUseLocalPendingForRecovery,
+} from "./generation-status-provider";
+import type { GenerationJobResponse } from "../lib/types";
 
 const baseJob = {
   job_id: "job-1",
@@ -124,6 +130,92 @@ test("terminal latest job with a plan id is retained", () => {
 test("non-terminal latest job is retained", () => {
   assert.equal(shouldRetainLatestJob({ ...baseJob, status: "queued" }), true);
   assert.equal(shouldRetainLatestJob({ ...baseJob, status: "running" }), true);
+});
+
+const terminalJob = (overrides: Partial<GenerationJobResponse>): GenerationJobResponse =>
+  ({
+    ...baseJob,
+    status: "completed",
+    completed_at: "2026-01-01T00:05:00Z",
+    ...overrides,
+  }) as GenerationJobResponse;
+
+test("a live job produces no terminal view", () => {
+  assert.equal(resolveTerminalGenerationView(terminalJob({ status: "running" })), null);
+  assert.equal(resolveTerminalGenerationView(terminalJob({ status: "queued" })), null);
+});
+
+test("a failed job that saved a plan is presented as an openable plan, not a failure", () => {
+  // The controller already opens this plan (resolveFailedJobWithSavedPlan) and
+  // reports it as `completed`. If the ribbon read the raw `failed` status it
+  // would drop the plan id and cover the athlete's finished plan with a build
+  // failure notice.
+  const view = resolveTerminalGenerationView(
+    terminalJob({ status: "failed", plan_id: "plan_recovered", error: "stage2 worker crashed" }),
+  );
+
+  assert.ok(view);
+  assert.equal(view.phase, "completed");
+  assert.equal(view.terminalStatus, "completed");
+  assert.equal(view.planId, "plan_recovered");
+  assert.equal(view.recoveredPlanFromFailure, true);
+  assert.equal(view.statusMessage, RECOVERED_PLAN_STATUS_MESSAGE);
+  assert.notEqual(view.statusMessage, "Your plan build stopped.");
+});
+
+test("a failed job recovers a plan from latest_plan_id too", () => {
+  const view = resolveTerminalGenerationView(
+    terminalJob({ status: "failed", plan_id: null, latest_plan_id: "plan_latest" }),
+  );
+
+  assert.ok(view);
+  assert.equal(view.phase, "completed");
+  assert.equal(view.planId, "plan_latest");
+  assert.equal(view.recoveredPlanFromFailure, true);
+});
+
+test("a failed job with no plan anywhere is still a failure", () => {
+  const view = resolveTerminalGenerationView(
+    terminalJob({ status: "failed", plan_id: null, latest_plan_id: null }),
+  );
+
+  assert.ok(view);
+  assert.equal(view.phase, "failed");
+  assert.equal(view.terminalStatus, null);
+  assert.equal(view.planId, null);
+  assert.equal(view.recoveredPlanFromFailure, false);
+  assert.equal(view.statusMessage, "Your plan build stopped.");
+});
+
+test("a triage hold outranks the recovered-plan copy", () => {
+  // "Saved and ready" would promise an outcome the athlete cannot act on
+  // while an admin still has to approve it — but the plan id is preserved so
+  // the ribbon can still link to it.
+  const view = resolveTerminalGenerationView(
+    terminalJob({
+      status: "failed",
+      plan_id: "plan_held",
+      requires_admin_resume: true,
+      stage2_status: "triage_blocked",
+    }),
+  );
+
+  assert.ok(view);
+  assert.equal(view.phase, "completed");
+  assert.equal(view.planId, "plan_held");
+  assert.equal(view.statusMessage, "Admin review required.");
+});
+
+test("a completed job keeps its plan id and end timestamp", () => {
+  const view = resolveTerminalGenerationView(terminalJob({ plan_id: "plan_done" }));
+
+  assert.ok(view);
+  assert.equal(view.phase, "completed");
+  assert.equal(view.terminalStatus, "completed");
+  assert.equal(view.planId, "plan_done");
+  assert.equal(view.recoveredPlanFromFailure, false);
+  assert.equal(view.statusMessage, "Plan ready!");
+  assert.equal(view.endedAtMs, Date.parse("2026-01-01T00:05:00Z"));
 });
 
 test("triage-blocked terminal job without plan id is retained for admin-review ribbon", () => {

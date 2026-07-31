@@ -14,6 +14,7 @@ import {
   useGenerationStatus,
   type GenerationStatusContextValue,
 } from "./generation-status-provider";
+import { getGenerationStatusTarget } from "./global-generation-status";
 
 // The split-brain race this file exists for:
 //
@@ -46,6 +47,9 @@ type RaceFixture = {
   reviewAtMs: number;
   runningJob: GenerationJobResponse;
   reviewRequiredJob: GenerationJobResponse;
+  // The backend reported `failed`, but a plan was written anyway — the
+  // controller opens it and reports `completed`.
+  failedWithSavedPlanJob: GenerationJobResponse;
 };
 
 function buildRaceFixture(nowMs = Date.now()): RaceFixture {
@@ -85,6 +89,16 @@ function buildRaceFixture(nowMs = Date.now()): RaceFixture {
       latest_plan_id: null,
       requires_admin_resume: true,
       stage2_status: "triage_blocked",
+    },
+    failedWithSavedPlanJob: {
+      ...runningJob,
+      status: "failed",
+      updated_at: iso(reviewAtMs),
+      completed_at: iso(reviewAtMs),
+      plan_id: "plan-recovered-1",
+      latest_plan_id: null,
+      error: "Stage 2 worker exited before reporting success.",
+      can_retry: true,
     },
   };
 }
@@ -295,6 +309,96 @@ test("a job that resolves with no in-tab event is still reconciled from the reta
     assert.equal(settled.statusMessage, "Admin review required.");
     assert.equal(settled.endedAtMs, reviewAtMs);
     assert.equal(elapsedLabelFor(settled, startedAtMs + 3_600_000), "4m 39s");
+  } finally {
+    await harness.unmount();
+    restoreFetch();
+    clearPendingRecords();
+  }
+});
+
+test("a failed job that saved a plan reaches the ribbon as a ready plan, not a failure", async () => {
+  // The controller resolves this outcome as `completed` and navigates to the
+  // plan, but the job it publishes still says `failed`. Reading that status
+  // literally put a build-failure ribbon on top of the athlete's finished
+  // plan, and dropped the plan id the ribbon needed to link to it.
+  clearPendingRecords();
+  const { startedAtMs, reviewAtMs, runningJob, failedWithSavedPlanJob } = buildRaceFixture();
+  const state: BackendState = { active: runningJob, job: runningJob, latest: null };
+  const restoreFetch = installFetchStub(state);
+  const harness = await mountProvider();
+
+  try {
+    await harness.refresh();
+    assert.equal(harness.read().phase, "running");
+
+    // The controller finishes: plan saved, pending record cleared, terminal
+    // job published in-tab.
+    state.active = null;
+    state.job = failedWithSavedPlanJob;
+    state.latest = failedWithSavedPlanJob;
+    clearPendingRecords();
+
+    await act(async () => {
+      publishGenerationTerminalJob(failedWithSavedPlanJob);
+    });
+    await settle();
+
+    const settled = harness.read();
+    assert.notEqual(settled.phase, "failed");
+    assert.equal(settled.phase, "completed");
+    assert.equal(settled.terminalStatus, "completed");
+    assert.equal(settled.isStalled, false);
+    // The plan id survives, so the ribbon can open the recovered plan.
+    assert.equal(settled.planId, "plan-recovered-1");
+    assert.equal(settled.statusMessage, "Your plan is saved and ready.");
+    assert.notEqual(settled.statusMessage, "Your plan build stopped.");
+    // The ribbon links to the plan instead of rendering its failure branch,
+    // which offers only "Retry" / "Stop build".
+    assert.equal(
+      getGenerationStatusTarget(
+        settled.phase,
+        settled.planId,
+        settled.terminalStatus,
+        settled.source,
+        settled.athleteId,
+      ),
+      "/plans/plan-recovered-1",
+    );
+    // And the clock still froze on the backend's terminal timestamp.
+    assert.equal(settled.endedAtMs, reviewAtMs);
+    assert.equal(elapsedLabelFor(settled, startedAtMs + 3_600_000), "4m 39s");
+  } finally {
+    await harness.unmount();
+    restoreFetch();
+    clearPendingRecords();
+  }
+});
+
+test("the poll reaches the same verdict on a failed job that saved a plan", async () => {
+  // The event is the fast path; a provider that only ever polls must not
+  // disagree with it about what this job means.
+  clearPendingRecords();
+  const { runningJob, failedWithSavedPlanJob } = buildRaceFixture();
+  const state: BackendState = { active: runningJob, job: runningJob, latest: null };
+  const restoreFetch = installFetchStub(state);
+  const harness = await mountProvider();
+
+  try {
+    await harness.refresh();
+    assert.equal(harness.read().phase, "running");
+
+    state.active = null;
+    state.job = failedWithSavedPlanJob;
+    state.latest = failedWithSavedPlanJob;
+    clearPendingRecords();
+
+    await harness.refresh();
+
+    const settled = harness.read();
+    assert.equal(settled.phase, "completed");
+    assert.equal(settled.terminalStatus, "completed");
+    assert.equal(settled.planId, "plan-recovered-1");
+    assert.equal(settled.statusMessage, "Your plan is saved and ready.");
   } finally {
     await harness.unmount();
     restoreFetch();

@@ -2,7 +2,11 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { getActiveGenerationJob, getGenerationJob, getLatestGenerationJob } from "@/lib/api";
-import { isPreStartStaleGenerationJob, resolveTerminalJobPlanId } from "@/lib/generation-controller";
+import {
+  isPreStartStaleGenerationJob,
+  resolveFailedJobWithSavedPlan,
+  resolveTerminalJobPlanId,
+} from "@/lib/generation-controller";
 import { isExpiredPendingGeneration, isStaleVisibleGenerationJob, normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
 import {
   resolveGenerationEndedAtMs,
@@ -212,6 +216,12 @@ export function statusMessage(
   }
 }
 
+// Copy for a build the backend marked `failed` that nevertheless saved an
+// openable plan. The generate controller already treats this as a success and
+// navigates to the plan; the ribbon has to agree, or the user lands on their
+// finished plan with a red "your plan build stopped" banner over it.
+export const RECOVERED_PLAN_STATUS_MESSAGE = "Your plan is saved and ready.";
+
 export type TerminalGenerationView = {
   phase: GlobalGenerationPhase;
   terminalStatus: GlobalTerminalGenerationStatus;
@@ -222,6 +232,9 @@ export type TerminalGenerationView = {
   startedAtMs: number | null;
   endedAtMs: number | null;
   requiresAdminResume: boolean;
+  // True when the backend said `failed` but a plan survived. The outcome the
+  // user gets is an openable plan, so the ribbon presents it as one.
+  recoveredPlanFromFailure: boolean;
 };
 
 /**
@@ -241,9 +254,16 @@ export function resolveTerminalGenerationView(
     return null;
   }
 
-  const phase = phaseFromStatus(normalizedStatus);
-  const terminalStatus =
-    normalizedStatus === "completed" || normalizedStatus === "review_required"
+  // `failed` with a saved plan (plan_id or latest_plan_id) is not a failure the
+  // user can act on as one: the plan exists and the controller opens it. The
+  // job status is a build-pipeline detail, not the athlete's outcome.
+  const recoveredPlanId = resolveFailedJobWithSavedPlan(job);
+  const recoveredPlanFromFailure = Boolean(recoveredPlanId);
+
+  const phase = recoveredPlanFromFailure ? "completed" : phaseFromStatus(normalizedStatus);
+  const terminalStatus: GlobalTerminalGenerationStatus = recoveredPlanFromFailure
+    ? "completed"
+    : normalizedStatus === "completed" || normalizedStatus === "review_required"
       ? normalizedStatus
       : null;
   const requiresAdminResume = job.requires_admin_resume === true;
@@ -252,13 +272,19 @@ export function resolveTerminalGenerationView(
   return {
     phase,
     terminalStatus,
-    planId: terminalStatus ? job.plan_id || null : null,
+    planId: recoveredPlanFromFailure ? recoveredPlanId : terminalStatus ? job.plan_id || null : null,
     athleteId: job.athlete_id || null,
     source: job.source || null,
-    statusMessage: statusMessage(phase, terminalStatus, requiresAdminResume),
+    // A triage hold still outranks the recovered-plan copy: "saved and ready"
+    // would promise an outcome the athlete cannot act on yet.
+    statusMessage:
+      recoveredPlanFromFailure && !requiresAdminResume
+        ? RECOVERED_PLAN_STATUS_MESSAGE
+        : statusMessage(phase, terminalStatus, requiresAdminResume),
     startedAtMs: Number.isFinite(createdAtMs) ? createdAtMs : null,
     endedAtMs: resolveGenerationEndedAtMs(job, fallbackEndedAtMs),
     requiresAdminResume,
+    recoveredPlanFromFailure,
   };
 }
 
@@ -453,9 +479,12 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           const newTerminalStatus = normalizedStatus === "completed" || normalizedStatus === "review_required" ? normalizedStatus : null;
           const isStalledJob = stalledBeforeStart || staleVisibleJob;
           const terminalView = isStalledJob ? null : resolveTerminalGenerationView(job, Date.now());
-          setPhase(newPhase);
+          // The view wins whenever it exists: it is the one place that knows a
+          // `failed` job carrying a saved plan is really a completed one, and
+          // the poll must not reach a different verdict than the event path.
+          setPhase(terminalView?.phase ?? newPhase);
           setActiveJobId(activePending.jobId);
-          setTerminalStatus(newTerminalStatus);
+          setTerminalStatus(terminalView?.terminalStatus ?? newTerminalStatus);
           setIsStalled(isStalledJob);
           setRequiresAdminResume(terminalView?.requiresAdminResume ?? false);
           setStatusMessageText(
@@ -475,11 +504,9 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
             setEndedAtMs(terminalView?.endedAtMs ?? null);
           }
 
-          if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
-            setPlanId(job.plan_id || null);
-          } else {
-            setPlanId(null);
-          }
+          // Null for a live or stalled job; for a terminal one this carries the
+          // recovered plan of a `failed` build that still saved something.
+          setPlanId(terminalView?.planId ?? null);
           setAthleteId(job.athlete_id || null);
           setSource(job.source || null);
 
@@ -505,7 +532,9 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
             if (clearTimerRef.current !== null) {
               clearTimeout(clearTimerRef.current);
             }
-            const delay = normalizedStatus === "failed" ? 3000 : 5000;
+            // A recovered plan reads as a success, so it gets the longer
+            // success dwell rather than the short failure one.
+            const delay = terminalView?.phase === "failed" ? 3000 : 5000;
             clearTimerRef.current = setTimeout(() => {
               clearTimerRef.current = null;
               clearActiveJobState();
