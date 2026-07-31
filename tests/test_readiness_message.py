@@ -641,8 +641,8 @@ def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
                 {
                     "status": "open",
                     "severity": "mild",
-                    "body_area": "cut neck",
-                    "description": "cut neck",
+                    "body_area": "strained shoulder",
+                    "description": "strained shoulder",
                     "latest_reported_status": "worse",
                 }
             ],
@@ -650,8 +650,8 @@ def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "The Neck cut injury is worse." in adjustment.reason
-    assert "cut neck" not in adjustment.reason
+    assert "The Shoulder strain injury is worse." in adjustment.reason
+    assert "strained shoulder" not in adjustment.reason
     assert "active_injury_worse" in adjustment.triggers
     _assert_card_shape(adjustment)
 

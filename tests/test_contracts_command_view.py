@@ -181,6 +181,7 @@ class TestShape:
             "injury_hold_exempt",
             "recommendation_trigger_labels",
             "recommendation_context_labels",
+            "recommendation_safety_checks",
             "recommendation_sources",
             "recommendation_confidence",
             "recommendation_confidence_note",

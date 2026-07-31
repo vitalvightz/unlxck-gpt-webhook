@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from datetime import date
+from functools import lru_cache
 from typing import Any, Callable, Literal, Mapping, Sequence
 
 RecommendationDecision = Literal["train_as_planned", "modify", "pull_back"]
@@ -697,19 +698,225 @@ def _with_context_triggers(*triggers: str, session_risk: SessionRisk, phase: str
         values.append("contact_sport")
     return tuple(dict.fromkeys(values))
 
-def _active_context_injury_stop(context: ReadinessContext) -> str | None:
-    """Return the active injury reason that should stop training."""
-    for injury in context.open_injuries:
-        if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
-            continue
-        label = _clean(injury.get("label"))
-        if not label:
-            from api.contracts.injury_checkin import build_injury_label
+# ---------------------------------------------------------------------------
+# Surface (skin) injuries
+#
+# A blister, graze, abrasion or stable covered cut is integumentary, not
+# musculoskeletal. It is a hygiene / friction constraint, so it must not reduce
+# the session, suppress recovery, or trigger rehab. The classification itself is
+# NOT decided here: it comes from the canonical
+# ``fightcamp.injury_registry.classify_surface_injury`` so the Today engine, the
+# check-in contract and the camp-plan gates all route from one source of truth.
+# What this module owns is the *session* half of the question — whether today's
+# planned work actually exposes the wound.
+# ---------------------------------------------------------------------------
 
-            label = build_injury_label(injury.get("body_area"), injury.get("description"))
+_ACTIVE_FLAG_STATUSES = frozenset({"open", "monitoring"})
+
+# Safety checks are recorded in the same trigger list the decision already
+# persists, under a reserved prefix, so no new storage or migration is needed and
+# the record can never drift from the decision. They are STRUCTURED
+# (``safety_check:<code>:<result>``) precisely so no surface has to read prose to
+# find out that a blister was checked and changed nothing.
+SAFETY_CHECK_PREFIX = "safety_check:"
+
+SafetyCheckResult = Literal[
+    "no_session_change", "local_protection_only", "no_contact", "medical_review"
+]
+
+
+def _safety_check_code(code: str, result: str) -> str:
+    return f"{SAFETY_CHECK_PREFIX}{code}:{result}"
+
+
+def _injury_label_of(injury: Mapping[str, Any]) -> str:
+    label = _clean(injury.get("label"))
+    if label:
+        return label
+    from api.contracts.injury_checkin import build_injury_label
+
+    return build_injury_label(injury.get("body_area"), injury.get("description"))
+
+
+def _surface_assessment(injury: Mapping[str, Any]):
+    """Canonical surface assessment for one stored injury flag.
+
+    The taxonomy type is resolved first (structured fields, then the shared
+    deterministic scorer over the stored text) and handed to the registry, so the
+    classifier never has to parse athlete prose itself.
+    """
+    from fightcamp.injury_registry import classify_surface_injury
+
+    return classify_surface_injury(injury, injury_type=_resolved_injury_type(injury))
+
+
+def classify_injury_surface(injury: Mapping[str, Any]) -> str:
+    """Public canonical surface class for one injury flag.
+
+    The single entry point other layers (the Today service, the command view,
+    the UI payload) use, so nobody re-implements the classification.
+    """
+    if not isinstance(injury, Mapping):
+        return "non_surface"
+    return _surface_assessment(injury).classification
+
+
+def _active_open_injuries(context: ReadinessContext) -> list[Mapping[str, Any]]:
+    return [
+        injury
+        for injury in context.open_injuries
+        if _clean(injury.get("status")).lower() in _ACTIVE_FLAG_STATUSES
+    ]
+
+
+def _strongest_surface_state(context: ReadinessContext) -> tuple[str, str, str]:
+    """Strongest surface classification across the athlete's active injuries.
+
+    Returns ``(classification, reason, label)``; ``("non_surface", "", "")`` when
+    no surface injury is open.
+    """
+    from fightcamp.injury_registry import SURFACE_CLASS_RANK
+
+    best_class = "non_surface"
+    best_reason = ""
+    best_label = ""
+    for injury in _active_open_injuries(context):
+        assessment = _surface_assessment(injury)
+        if not assessment.is_surface:
+            continue
+        if SURFACE_CLASS_RANK[assessment.classification] > SURFACE_CLASS_RANK[best_class]:
+            best_class = assessment.classification
+            best_reason = assessment.reason
+            best_label = _injury_label_of(injury)
+    return best_class, best_reason, best_label
+
+
+def _has_load_relevant_injury(checkin: ReadinessCheckin, context: ReadinessContext) -> bool:
+    """True when a genuinely load-relevant injury is being tracked.
+
+    Load-relevant means neurological, structural, load-sensitive, or any other
+    explicitly non-surface injury. A stable blister or graze is a skin constraint
+    and must never read as "an active injury" against a hard session.
+    """
+    active = _active_open_injuries(context)
+    if active:
+        return any(not _surface_assessment(injury).is_surface for injury in active)
+    # No structured injury data to classify: fall back to the check-in's own
+    # declaration so existing behaviour is unchanged for athletes with no flags.
+    return checkin.active_injury == "stable"
+
+
+def _all_active_injuries_are_routable_surface(context: ReadinessContext) -> bool:
+    """True when EVERY active injury is a surface injury the surface evaluator owns.
+
+    Used to keep a blanket "my injury is worse" answer from stopping all training
+    when the only thing being tracked is skin. A medical-review surface wound is
+    deliberately excluded — that keeps its own (stronger) pathway.
+    """
+    active = _active_open_injuries(context)
+    if not active:
+        return False
+    routable = {"stable_surface", "surface_local_restriction", "surface_no_contact"}
+    return all(_surface_assessment(injury).classification in routable for injury in active)
+
+
+def _surface_medical_review(context: ReadinessContext) -> tuple[str, str] | None:
+    """A non-severe surface wound needing the safety/review pathway.
+
+    Severe wounds are excluded on purpose: they already run through the existing
+    severe-injury gates, which own the escalation.
+    """
+    for injury in _active_open_injuries(context):
+        if _clean(injury.get("severity")).lower() == "severe":
+            continue
+        assessment = _surface_assessment(injury)
+        if assessment.needs_medical_review:
+            return _injury_label_of(injury), assessment.reason
+    return None
+
+
+# Session exposure. A surface injury only changes training when today's work
+# actually reaches the wound: contact/impact, grappling and clinch, or repeated
+# friction over it. The body AREA of a skin wound never implies a load
+# restriction, so none of this consults injury regions.
+_CONTACT_SESSION_TYPES = frozenset({"sparring", "spar", "fight_or_match", "fight", "match"})
+_CONTACT_BLOCK_TYPES = frozenset({"sparring"})
+_NEGATIVE_ANSWERS = frozenset({"", "none", "no", "false", "0", "off", "nil"})
+_CONTACT_EXPOSURE_TERMS = (
+    "spar",
+    "clinch",
+    "wrestl",
+    "grappl",
+    "takedown",
+    "sprawl",
+    "live round",
+    "live work",
+    "contact",
+    "competition",
+)
+# Repeated friction / direct impact over a covered area: enough to lift a dressing
+# or rub a blister open, without being contact work.
+_FRICTION_EXPOSURE_TERMS = (
+    "bag work",
+    "bagwork",
+    "heavy bag",
+    "hard bag",
+    "bag round",
+    "pad",
+    "mitt",
+    "skip",
+    "rope",
+    "sprint",
+    "run",
+    "roadwork",
+    "loaded carry",
+    "grip",
+)
+
+
+def _session_contact_exposure(session: Mapping[str, Any] | None) -> bool:
+    """True when today's session puts the athlete in contact / grappling work."""
+    if not isinstance(session, Mapping) or not session:
+        return False
+    for mapping in _iter_session_mappings(session):
+        if _clean(mapping.get("session_type")).lower() in _CONTACT_SESSION_TYPES:
+            return True
+        if _clean(mapping.get("block_type") or mapping.get("type")).lower() in _CONTACT_BLOCK_TYPES:
+            return True
+        for key in ("contact", "coach_led_contact", "contact_level", "sparring"):
+            value = mapping.get(key)
+            if isinstance(value, bool):
+                if value:
+                    return True
+                continue
+            if value is not None and _clean(value).lower() not in _NEGATIVE_ANSWERS:
+                return True
+    text = _session_text(session)
+    return any(term in text for term in _CONTACT_EXPOSURE_TERMS)
+
+
+def _session_friction_exposure(session: Mapping[str, Any] | None) -> bool:
+    """True when the session repeatedly rubs or impacts a covered area."""
+    if _session_contact_exposure(session):
+        return True
+    text = _session_text(session)
+    return any(term in text for term in _FRICTION_EXPOSURE_TERMS)
+
+
+def _active_context_injury_stop(context: ReadinessContext) -> str | None:
+    """Return the active injury reason that should stop training.
+
+    A worsening SURFACE injury is deliberately not a stop: it routes through the
+    surface evaluator instead, which restricts contact rather than the session.
+    Severe injuries — surface or not — keep the existing hard stop.
+    """
+    for injury in _active_open_injuries(context):
+        label = _injury_label_of(injury)
         if _clean(injury.get("severity")).lower() == "severe":
             return f"Active severe injury: {label}."
         if _clean(injury.get("latest_reported_status")).lower() == "worse":
+            if _surface_assessment(injury).is_surface:
+                continue
             return f"The {label} injury is worse."
     return None
 
@@ -755,11 +962,15 @@ def _context_injury_floor(
     best_floor: str | None = None
     best_label = ""
     best_tier = ""
-    for injury in context.open_injuries:
-        if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
-            continue
+    for injury in _active_open_injuries(context):
         tier = _clean(injury.get("consequence")).lower()
         if tier not in {"neuro", "structural", "load_sensitive"}:
+            continue
+        # A skin wound never restricts load by the tissue UNDER it: a graze over
+        # the ribs is a dressing problem, not a rib injury. Only a wound that
+        # needs medical review (or is severe, stopped earlier) keeps a floor.
+        assessment = _surface_assessment(injury)
+        if assessment.is_surface and not assessment.needs_medical_review:
             continue
         severity = _clean(injury.get("severity")).lower() or "moderate"
         floor = _injury_floor_for(tier, severity, session_risk)
@@ -818,6 +1029,48 @@ def _injury_floor_pull_back(
     )
 
 
+def _surface_medical_review_adjustment(
+    label: str,
+    reason_code: str,
+    *,
+    session_risk: SessionRisk,
+    phase: str,
+    contact_sport: bool,
+) -> ReadinessAdjustment:
+    """Safety/review pathway for a wound with infection, bleeding or drainage.
+
+    Contact is blocked and the athlete is sent for review. Escalation beyond this
+    stays with the existing medical-risk rules (severe injuries, red-flag symptoms
+    and the admin/clinical review gates), which this deliberately does not
+    duplicate.
+    """
+    natural_label = _natural_injury_label(label or "wound")
+    if reason_code == "uncontrolled_bleeding":
+        reason = f"Your {natural_label} is bleeding and not under control."
+        safety = "Get bleeding controlled and seek medical advice before training."
+    elif reason_code == "infection_signs":
+        reason = f"Your {natural_label} is showing infection signs."
+        safety = "Seek medical advice for spreading redness, pus, swelling, or fever."
+    else:
+        reason = f"Your {natural_label} needs checking before you train through it."
+        safety = "Seek medical advice for spreading redness, pus, drainage, or fever."
+    return ReadinessAdjustment(
+        decision="pull_back",
+        title="Get this checked.",
+        reason=reason,
+        action="No sparring, clinch, grappling, or bag work today; keep it clean and covered.",
+        safety=safety,
+        triggers=_with_context_triggers(
+            "surface_injury_medical_review",
+            _safety_check_code("surface_injury", "medical_review"),
+            session_risk=session_risk,
+            phase=phase,
+            contact_sport=contact_sport,
+        ),
+        session_risk=session_risk,
+    )
+
+
 def _risk_adjustment(
     checkin: ReadinessCheckin,
     context: ReadinessContext,
@@ -844,6 +1097,21 @@ def _risk_adjustment(
             session_risk=session_risk,
         )
 
+    # A wound showing infection signs, uncontrolled bleeding or drainage is a
+    # medical question, not a dosage one, so it is checked alongside the red flags
+    # (before the safe-filler exemption). Severe wounds are excluded here — they
+    # keep the existing severe-injury gates below.
+    surface_review = _surface_medical_review(context)
+    if surface_review is not None:
+        review_label, review_reason = surface_review
+        return _surface_medical_review_adjustment(
+            review_label,
+            review_reason,
+            session_risk=session_risk,
+            phase=phase,
+            contact_sport=contact_sport,
+        )
+
     # A low-cost support / filler session (mental cue work, breathing/sleep reset,
     # mobility or rehab touch) carries no meaningful physical stress, so an injury
     # or high pain must NOT hard-block it — it is exactly the safe work an injury
@@ -852,7 +1120,13 @@ def _risk_adjustment(
         return None
 
     active_injury_stop_reason = _active_context_injury_stop(context)
-    if checkin.active_injury == "worse" or active_injury_stop_reason is not None:
+    # A blanket "my injury is worse" answer must not stop all training when the
+    # only thing being tracked is skin: that routes through the surface evaluator
+    # (contact restriction), never a rehab-only day.
+    declared_worse = checkin.active_injury == "worse" and not _all_active_injuries_are_routable_surface(
+        context
+    )
+    if declared_worse or active_injury_stop_reason is not None:
         context_reason = active_injury_stop_reason or "The injury is worse."
         reason = f"{context_reason} Hard combat work is not safe today."
         action = "No sparring, live rounds, clinch work, hard bag work, or conditioning."
@@ -916,7 +1190,11 @@ def _collect_soft_warnings(
     manageable_pain = checkin.pain == "manageable"
     recent_hard_count = _recent_hard_session_count(context)
     recent_hard = checkin.previous_session == "very_hard" or recent_hard_count >= 2
-    tracked_injury = checkin.active_injury == "stable" or bool(context.open_injuries)
+    # Only a genuinely load-relevant injury (neurological / structural /
+    # load-sensitive / any other non-surface injury) counts against a hard
+    # session. A stable blister or graze is skin, and must not quietly reduce
+    # sparring through the generic tracked-injury warning.
+    tracked_injury = _has_load_relevant_injury(checkin, context)
     poor_sleep_streak = _three_day_streak(
         checkin.sleep,
         prior_rows,
@@ -1532,8 +1810,6 @@ def _resolved_injury_type(injury: Mapping[str, Any]) -> str:
         if candidate in INJURY_TAXONOMY:
             return candidate
 
-    from fightcamp.injury_scoring import score_injury_phrase
-
     text = " ".join(
         part
         for part in (
@@ -1543,11 +1819,25 @@ def _resolved_injury_type(injury: Mapping[str, Any]) -> str:
         )
         if part
     )
+    return _scored_injury_type(text)
+
+
+@lru_cache(maxsize=512)
+def _scored_injury_type(text: str) -> str:
+    """Canonical taxonomy type scored from an injury's stored text.
+
+    Memoized on the text: the same flag is classified several times while one
+    decision is built (surface routing, load relevance, green-light copy), and
+    the scorer is pure, so scoring it once per distinct string is enough.
+    """
+    from fightcamp.injury_scoring import score_injury_phrase
+    from fightcamp.injury_taxonomy import INJURY_TAXONOMY
+
     scored = score_injury_phrase(text) if text else {}
     # Structural diagnoses are deliberately emitted as triage_category while
     # ordinary rehab types are emitted as injury_type/rehab_type.
     for field_name in ("triage_category", "injury_type", "rehab_type"):
-        candidate = canonical(scored.get(field_name))
+        candidate = _clean(scored.get(field_name)).lower().replace("-", "_").replace(" ", "_")
         if candidate in INJURY_TAXONOMY:
             return candidate
     return "unspecified"
@@ -1778,6 +2068,79 @@ def _safe_filler_adjustment(
     )
 
 
+def _action_excludes_contact(action: str) -> bool:
+    """True when the action already tells the athlete to drop contact work."""
+    lowered = action.lower()
+    return any(term in lowered for term in ("spar", "contact", "clinch", "grappl", "rehab only", "no training"))
+
+
+def _with_safety_check(adjustment: ReadinessAdjustment, result: str) -> ReadinessAdjustment:
+    code = _safety_check_code("surface_injury", result)
+    if code in adjustment.triggers:
+        return adjustment
+    return replace(adjustment, triggers=(*adjustment.triggers, code))
+
+
+def _apply_surface_injury_policy(
+    adjustment: ReadinessAdjustment, context: ReadinessContext
+) -> ReadinessAdjustment:
+    """Record — and where warranted, apply — the surface-injury routing.
+
+    Stable skin injuries leave the decision exactly as the readiness signals set
+    it and are recorded as a safety CHECK with the result ``no_session_change``,
+    so the card can show that the blister was considered without implying it
+    changed anything. Only an open / uncoverable wound against contact work
+    changes the recommendation, and then only by removing contact — never the
+    session.
+    """
+    surface_class, _reason_code, label = _strongest_surface_state(context)
+    if surface_class == "non_surface":
+        return adjustment
+    if surface_class == "surface_medical_review":
+        # The review pathway (or, for a severe wound, the existing severe gates)
+        # already owns the decision; only the record is added here.
+        return _with_safety_check(adjustment, "medical_review")
+
+    natural = _natural_injury_label(label or "skin injury")
+    decision = adjustment.decision
+    title = adjustment.title
+    reason = adjustment.reason
+    action = adjustment.action
+    triggers = list(adjustment.triggers)
+    result = "no_session_change"
+
+    if surface_class == "surface_no_contact":
+        result = "no_contact"
+        if _session_contact_exposure(context.today_session):
+            if decision == "train_as_planned":
+                decision = "modify"
+                title = "Contact off, session on."
+                reason = f"Your {natural} is open, so contact would reopen or contaminate it."
+                action = (
+                    "Skip sparring, clinch, and grappling today; do the rest of the session as planned."
+                )
+                _append_unique(triggers, "surface_injury_contact_restriction")
+            elif not _action_excludes_contact(action):
+                action = f"{action.rstrip('.')}. Keep contact off the {natural} until it closes."
+                _append_unique(triggers, "surface_injury_contact_restriction")
+    elif surface_class == "surface_local_restriction" and _session_friction_exposure(
+        context.today_session
+    ):
+        result = "local_protection_only"
+        if "cover" not in action.lower():
+            action = f"{action.rstrip('.')}. Keep the {natural} covered and off direct friction."
+
+    updated = replace(
+        adjustment,
+        decision=decision,
+        title=title,
+        reason=reason,
+        action=action,
+        triggers=tuple(dict.fromkeys(triggers)),
+    )
+    return _with_safety_check(updated, result)
+
+
 def build_readiness_adjustment(
     checkin: ReadinessCheckin,
     context: ReadinessContext | None = None,
@@ -1792,6 +2155,10 @@ def build_readiness_adjustment(
     """
     context = context or ReadinessContext()
     adjustment = _resolve_readiness_adjustment(checkin, context)
+    # Surface (skin) routing is applied once, here, on whatever the readiness
+    # signals produced — so every return path inside the resolver records the
+    # same structured safety check.
+    adjustment = _apply_surface_injury_policy(adjustment, context)
     if _is_self_sufficient(adjustment.triggers):
         return adjustment
     completeness = _completeness_triggers(context)
@@ -1816,7 +2183,17 @@ SESSION_UNRESOLVED = "session_unresolved"
 # band, which says the stop is uncertain when it is the most certain call the
 # engine makes.
 _SELF_SUFFICIENT_TRIGGERS = frozenset(
-    {"red_flag", "active_injury_worse", "pain_high", "injury_hold", *_SAFETY_FLAG_LABELS}
+    {
+        "red_flag",
+        "active_injury_worse",
+        "pain_high",
+        "injury_hold",
+        # An infected / bleeding wound is a medical fact, not a readiness trend:
+        # no amount of history would change the call, so thin data takes nothing
+        # away from it.
+        "surface_injury_medical_review",
+        *_SAFETY_FLAG_LABELS,
+    }
 )
 
 
@@ -2070,6 +2447,10 @@ _TRIGGER_LABELS: dict[str, str] = {
     "active_injury_worse": "Injury getting worse",
     "active_injury_restriction": "Active injury",
     "tracked_injury_high_risk_session": "Active injury",
+    # Surface (skin) injuries appear here ONLY when they actually changed the
+    # recommendation. The stable case is a safety check, not a cause.
+    "surface_injury_contact_restriction": "Open skin injury",
+    "surface_injury_medical_review": "Skin injury needs review",
     # Today's check-in.
     "pain_high": "High pain",
     "manageable_pain": "Manageable pain",
@@ -2162,6 +2543,70 @@ def context_labels(
     one.
     """
     return _labels_from(triggers, _CONTEXT_LABELS, limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# Safety checks: the third role, alongside causal triggers and context modifiers.
+#
+# A safety check is something the engine LOOKED AT and cleared (or restricted
+# narrowly). A stable blister belongs here — it was assessed and changed nothing
+# — and must never appear as a cause of a reduced session. Emitted structured so
+# no client has to read prose to tell the difference.
+# ---------------------------------------------------------------------------
+
+_SAFETY_CHECK_LABELS: dict[str, str] = {"surface_injury": "Skin injury"}
+
+_SAFETY_CHECK_RESULT_LABELS: dict[str, str] = {
+    "no_session_change": "No session change",
+    "local_protection_only": "Keep it covered",
+    "no_contact": "No contact today",
+    "medical_review": "Needs checking",
+}
+
+
+def safety_checks(triggers: Sequence[str]) -> tuple[dict[str, str], ...]:
+    """Structured safety checks recorded on this decision.
+
+    Each entry is ``{"code", "label", "result", "result_label"}``. The strongest
+    result per code wins, so one skin injury never renders twice.
+    """
+    by_code: dict[str, dict[str, str]] = {}
+    ranking = list(_SAFETY_CHECK_RESULT_LABELS)
+    for trigger in triggers:
+        raw = str(trigger).strip()
+        if not raw.startswith(SAFETY_CHECK_PREFIX):
+            continue
+        parts = raw[len(SAFETY_CHECK_PREFIX) :].split(":", 1)
+        if len(parts) != 2:
+            continue
+        code, result = parts[0].strip(), parts[1].strip()
+        if not code or result not in _SAFETY_CHECK_RESULT_LABELS:
+            continue
+        current = by_code.get(code)
+        if current is not None and ranking.index(current["result"]) >= ranking.index(result):
+            continue
+        by_code[code] = {
+            "code": code,
+            "label": _SAFETY_CHECK_LABELS.get(code, code.replace("_", " ").capitalize()),
+            "result": result,
+            "result_label": _SAFETY_CHECK_RESULT_LABELS[result],
+        }
+    return tuple(by_code.values())
+
+
+def explanation_metadata(
+    triggers: Sequence[str], *, limit: int = MAX_CONTRIBUTORS
+) -> dict[str, Any]:
+    """The decision's explanation, split by the role each part played.
+
+    ``causal_triggers`` changed the recommendation, ``safety_checks`` were
+    assessed (and mostly cleared), ``context_modifiers`` are the camp around it.
+    """
+    return {
+        "causal_triggers": list(trigger_labels(triggers, limit=limit)),
+        "safety_checks": [dict(check) for check in safety_checks(triggers)],
+        "context_modifiers": list(context_labels(triggers, limit=limit)),
+    }
 
 
 # Which inputs a trigger proves were actually read. Keyed to the source line the

@@ -1,6 +1,7 @@
 "use client";
 
 import { type TodayDecisionBanner, type TodayDecisionTier } from "@/lib/today";
+import type { TodaySafetyCheck } from "@/lib/types";
 
 /**
  * Compact train/modify/pull-back banner shown above today's blocks once the
@@ -12,6 +13,7 @@ import { type TodayDecisionBanner, type TodayDecisionTier } from "@/lib/today";
  *
  *   DECISION    what should I do?      -> the tier headline and the action
  *   TRIGGER     why did it change?     -> what changed about the athlete
+ *   CHECKED     what was assessed?     -> safety checks and their outcome
  *   CONTEXT     what influenced that?  -> the camp around the decision
  *   DECISION BASED ON                 -> which inputs were available
  *
@@ -32,6 +34,7 @@ export function TodayDecisionPanel({
   banner,
   tier,
   triggers,
+  safetyChecks,
   context,
   sources,
   confidenceNote,
@@ -39,6 +42,10 @@ export function TodayDecisionPanel({
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
   triggers?: string[];
+  /** Safety questions that were assessed, with their outcome — a stable skin
+   * injury lands here rather than in the triggers, so "checked, no change"
+   * never reads as "this reduced your session". Backend-classified. */
+  safetyChecks?: TodaySafetyCheck[];
   context?: string[];
   sources?: string[];
   confidenceNote?: string;
@@ -51,15 +58,20 @@ export function TodayDecisionPanel({
   // Preview cards explain only which planned session their copy is framing.
   const triggerLabels = clean(isPreview ? undefined : triggers);
   const contextLabels = clean(isPreview ? undefined : context);
+  const checks = (isPreview ? [] : (safetyChecks ?? [])).filter(
+    (check) => check.label?.trim() && check.result_label?.trim(),
+  );
   const usedSources = clean(isPreview ? ["next planned session"] : sources);
   const note = isPreview ? "" : (confidenceNote ?? "").trim();
   const hasEvidence =
     triggerLabels.length > 0 ||
+    checks.length > 0 ||
     contextLabels.length > 0 ||
     usedSources.length > 0 ||
     Boolean(note);
   const evidenceCount =
     Number(triggerLabels.length > 0) +
+    Number(checks.length > 0) +
     Number(contextLabels.length > 0) +
     Number(usedSources.length > 0 || Boolean(note));
   return (
@@ -88,6 +100,18 @@ export function TodayDecisionPanel({
                 <ul className="today-decision-values">
                   {triggerLabels.map((trigger) => (
                     <li key={trigger}>{trigger}</li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          ) : null}
+          {checks.length ? (
+            <div className="today-decision-row">
+              <dt>Checked</dt>
+              <dd>
+                <ul className="today-decision-values">
+                  {checks.map((check) => (
+                    <li key={check.code}>{`${check.label} — ${check.result_label}`}</li>
                   ))}
                 </ul>
               </dd>

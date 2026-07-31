@@ -23,8 +23,11 @@ import {
   limitInjuryEntryText,
 } from "@/lib/today-injury-input";
 import type {
+  Coverable,
+  FrictionOrContactProblem,
   InjuryFlagRecord,
   InjuryFlagSeverity,
+  SkinIntegrity,
   TodayInjuryCheckinStatus,
   TodayInjuryDeclaration,
 } from "@/lib/types";
@@ -35,6 +38,100 @@ const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: str
   { value: "worse", label: "Worse" },
   { value: "resolved", label: "Cleared" },
 ];
+
+// Surface (skin) follow-up ----------------------------------------------------
+// A worsening blister, graze or cut is routed by what the skin is doing, not by
+// a blanket "injury is worse" rule — so a worse report on a KNOWN skin injury
+// asks these five questions first. They are never shown for other injuries, and
+// never on a normal easing/same/cleared update.
+
+/** Backend classes that mean "this is a skin injury we route by skin answers". */
+const SURFACE_FOLLOW_UP_CLASSES = new Set([
+  "stable_surface",
+  "surface_local_restriction",
+  "surface_no_contact",
+]);
+
+function needsSurfaceFollowUp(injury: InjuryFlagRecord): boolean {
+  return SURFACE_FOLLOW_UP_CLASSES.has(injury.surface_class ?? "non_surface");
+}
+
+/** Bleeding and leaking read as one question to the athlete; the answer maps to
+ * the two structured fields the backend routes on. */
+type BleedAnswer = "no" | "controlled" | "leaking" | "uncontrolled";
+
+const BLEED_ANSWER_FIELDS: Record<
+  BleedAnswer,
+  Pick<TodayInjuryDeclaration, "bleeding_status" | "drainage">
+> = {
+  no: { bleeding_status: "none", drainage: "none" },
+  controlled: { bleeding_status: "controlled", drainage: "none" },
+  leaking: { bleeding_status: "controlled", drainage: "present" },
+  uncontrolled: { bleeding_status: "uncontrolled", drainage: "unknown" },
+};
+
+const SKIN_INTEGRITY_OPTIONS: Array<{ value: SkinIntegrity; label: string }> = [
+  { value: "intact", label: "Still closed" },
+  { value: "open", label: "Open or burst" },
+  { value: "unknown", label: "Not sure" },
+];
+
+const BLEED_OPTIONS: Array<{ value: BleedAnswer; label: string }> = [
+  { value: "no", label: "No" },
+  { value: "controlled", label: "A little, stops" },
+  { value: "leaking", label: "Weeping" },
+  { value: "uncontrolled", label: "Won't stop" },
+];
+
+const INFECTION_SIGN_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "spreading_redness", label: "Spreading redness" },
+  { value: "pus", label: "Pus" },
+  { value: "heat_or_swelling", label: "Hot or swollen" },
+  { value: "fever", label: "Fever" },
+];
+
+const COVERABLE_OPTIONS: Array<{ value: Coverable; label: string }> = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+  { value: "unknown", label: "Not sure" },
+];
+
+const FRICTION_OPTIONS: Array<{ value: FrictionOrContactProblem; label: string }> = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+  { value: "unknown", label: "Not sure" },
+];
+
+type SurfaceFollowUpAnswers = {
+  skin_integrity: SkinIntegrity;
+  bleed: BleedAnswer;
+  infection_signs: string[];
+  coverable: Coverable;
+  friction_or_contact_problem: FrictionOrContactProblem;
+};
+
+const EMPTY_SURFACE_ANSWERS: SurfaceFollowUpAnswers = {
+  skin_integrity: "unknown",
+  bleed: "no",
+  infection_signs: [],
+  coverable: "unknown",
+  friction_or_contact_problem: "unknown",
+};
+
+function surfaceDeclaration(
+  flagId: string,
+  answers: SurfaceFollowUpAnswers,
+): TodayInjuryDeclaration {
+  return {
+    flag_id: flagId,
+    status: "worse",
+    skin_integrity: answers.skin_integrity,
+    infection_signs: answers.infection_signs,
+    coverable: answers.coverable,
+    friction_or_contact_problem: answers.friction_or_contact_problem,
+    ...BLEED_ANSWER_FIELDS[answers.bleed],
+  };
+}
 
 const INJURY_SEVERITY_OPTIONS: Array<{ value: InjuryFlagSeverity; label: string }> = [
   { value: "mild", label: "Mild" },
@@ -98,6 +195,13 @@ export function TodayInjuryManager({
   // Clearing an injury removes it from tracking, so it asks for an explicit
   // confirmation first; this holds the flag id awaiting that "are you sure?".
   const [confirmingClearId, setConfirmingClearId] = useState<string | null>(null);
+  // A worse report on a known skin injury needs the surface follow-up before it
+  // can be routed, so it holds the flag id and the answers so far. Nothing is
+  // sent — and nothing is marked selected — until it is submitted.
+  const [surfaceFollowUpId, setSurfaceFollowUpId] = useState<string | null>(null);
+  const [surfaceAnswers, setSurfaceAnswers] = useState<SurfaceFollowUpAnswers>(
+    EMPTY_SURFACE_ANSWERS,
+  );
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
@@ -126,42 +230,78 @@ export function TodayInjuryManager({
     await onRefresh();
   }
 
-  async function updateInjury(flagId: string, status: TodayInjuryCheckinStatus) {
+  /** Send one per-injury update. The button only reads as selected AFTER the
+   * backend confirms it: an optimistic tick on a request that then fails told
+   * the athlete their injury was logged when nothing was saved. Returns whether
+   * the write succeeded so callers can keep a follow-up open on failure. */
+  async function updateInjury(
+    flagId: string,
+    status: TodayInjuryCheckinStatus,
+    declaration?: TodayInjuryDeclaration,
+  ): Promise<boolean> {
     if (pendingFlagId) {
-      return;
+      return false;
     }
     setPendingFlagId(flagId);
-    setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
     try {
-      await submit([{ flag_id: flagId, status }]);
+      await submit([declaration ?? { flag_id: flagId, status }]);
+      setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
       showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
         tone: "success",
       });
+      return true;
     } catch (error) {
-      setSelectedStatusByFlagId((current) => {
-        const next = { ...current };
-        delete next[flagId];
-        return next;
-      });
       showToast(error instanceof Error ? error.message : "Injury update failed.", { tone: "error" });
+      return false;
     } finally {
       setPendingFlagId(null);
     }
   }
 
-  // "Easing" / "Same" / "Worse" apply straight away; "Cleared" routes through an
-  // inline confirmation because it removes the injury from tracking.
-  function handleInjuryAction(flagId: string, status: TodayInjuryCheckinStatus) {
+  // "Easing" / "Same" apply straight away. "Cleared" routes through an inline
+  // confirmation because it removes the injury from tracking, and "Worse" on a
+  // known skin injury routes through the surface follow-up, because how a wound
+  // is worse (open? bleeding? coverable?) is what decides whether anything about
+  // today's session actually changes.
+  function handleInjuryAction(injury: InjuryFlagRecord, status: TodayInjuryCheckinStatus) {
     if (status === "resolved") {
-      setConfirmingClearId(flagId);
+      setSurfaceFollowUpId(null);
+      setConfirmingClearId(injury.id);
       return;
     }
-    void updateInjury(flagId, status);
+    if (status === "worse" && needsSurfaceFollowUp(injury)) {
+      setConfirmingClearId(null);
+      setSurfaceAnswers(EMPTY_SURFACE_ANSWERS);
+      setSurfaceFollowUpId(injury.id);
+      return;
+    }
+    // Choosing a different answer abandons any pending confirmation/follow-up.
+    setConfirmingClearId(null);
+    setSurfaceFollowUpId(null);
+    void updateInjury(injury.id, status);
   }
 
   async function confirmClear(flagId: string) {
-    await updateInjury(flagId, "resolved");
-    setConfirmingClearId(null);
+    const saved = await updateInjury(flagId, "resolved");
+    if (saved) {
+      setConfirmingClearId(null);
+    }
+  }
+
+  async function submitSurfaceFollowUp(flagId: string) {
+    const saved = await updateInjury(flagId, "worse", surfaceDeclaration(flagId, surfaceAnswers));
+    if (saved) {
+      setSurfaceFollowUpId(null);
+    }
+  }
+
+  function toggleInfectionSign(value: string) {
+    setSurfaceAnswers((current) => ({
+      ...current,
+      infection_signs: current.infection_signs.includes(value)
+        ? current.infection_signs.filter((sign) => sign !== value)
+        : [...current.infection_signs, value],
+    }));
   }
 
   async function addInjury(event: FormEvent<HTMLFormElement>) {
@@ -242,23 +382,112 @@ export function TodayInjuryManager({
                 </div>
                 <div className="today-segment-row" role="group" aria-label={`Update ${getInjuryLabel(injury)}`}>
                   {INJURY_STATUS_ACTIONS.map((action) => {
-                    const activeStatus = confirmingClearId === injury.id ? "resolved" : selectedStatus;
-                    const isSelected = action.value === activeStatus;
+                    // A pending confirmation / follow-up shows the option as
+                    // ACTIVE (where the athlete is), not as saved — the saved
+                    // state only comes from selectedStatus, which is set after
+                    // the backend confirms.
+                    const isSelected = action.value === selectedStatus;
+                    const isAwaitingConfirmation =
+                      (confirmingClearId === injury.id && action.value === "resolved") ||
+                      (surfaceFollowUpId === injury.id && action.value === "worse");
 
                     return (
                       <button
                         key={action.value}
                         type="button"
-                        className={`today-segment${isSelected ? " today-segment-active" : ""}`}
+                        className={`today-segment${isSelected || isAwaitingConfirmation ? " today-segment-active" : ""}`}
                         disabled={isPending}
                         aria-pressed={isSelected}
-                        onClick={() => handleInjuryAction(injury.id, action.value)}
+                        data-awaiting-confirmation={isAwaitingConfirmation || undefined}
+                        onClick={() => handleInjuryAction(injury, action.value)}
                       >
                         {action.label}
                       </button>
                     );
                   })}
                 </div>
+                {surfaceFollowUpId === injury.id ? (
+                  <div
+                    className="today-injury-surface-followup"
+                    role="group"
+                    aria-label={`How is the ${getInjuryLabel(injury)} worse?`}
+                  >
+                    <p className="today-injury-confirm-text">
+                      Quick check so we only change what we need to.
+                    </p>
+                    <SegmentGroup
+                      label="Is it open or burst?"
+                      value={surfaceAnswers.skin_integrity}
+                      options={SKIN_INTEGRITY_OPTIONS}
+                      onChange={(value) =>
+                        setSurfaceAnswers((current) => ({ ...current, skin_integrity: value }))
+                      }
+                    />
+                    <SegmentGroup
+                      label="Bleeding or weeping?"
+                      value={surfaceAnswers.bleed}
+                      options={BLEED_OPTIONS}
+                      onChange={(value) => setSurfaceAnswers((current) => ({ ...current, bleed: value }))}
+                      columns={2}
+                    />
+                    <div className="today-field-group">
+                      <p className="today-field-label">Any infection signs?</p>
+                      <div className="today-segment-row today-segment-row-2col">
+                        {INFECTION_SIGN_OPTIONS.map((option) => {
+                          const checked = surfaceAnswers.infection_signs.includes(option.value);
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`today-segment${checked ? " today-segment-active" : ""}`}
+                              aria-pressed={checked}
+                              onClick={() => toggleInfectionSign(option.value)}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <SegmentGroup
+                      label="Can it stay covered?"
+                      value={surfaceAnswers.coverable}
+                      options={COVERABLE_OPTIONS}
+                      onChange={(value) =>
+                        setSurfaceAnswers((current) => ({ ...current, coverable: value }))
+                      }
+                    />
+                    <SegmentGroup
+                      label="Is rubbing or contact the problem?"
+                      value={surfaceAnswers.friction_or_contact_problem}
+                      options={FRICTION_OPTIONS}
+                      onChange={(value) =>
+                        setSurfaceAnswers((current) => ({
+                          ...current,
+                          friction_or_contact_problem: value,
+                        }))
+                      }
+                    />
+                    <div className="today-injury-confirm-actions">
+                      <button
+                        type="button"
+                        className="today-injury-confirm-yes"
+                        disabled={pendingFlagId !== null}
+                        onClick={() => void submitSurfaceFollowUp(injury.id)}
+                      >
+                        {isPending ? "Saving..." : "Save update"}
+                      </button>
+                      <button
+                        type="button"
+                        className="today-injury-confirm-cancel"
+                        disabled={pendingFlagId !== null}
+                        onClick={() => setSurfaceFollowUpId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 {confirmingClearId === injury.id ? (
                   <div
                     className="today-injury-confirm"

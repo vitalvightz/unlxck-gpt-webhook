@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from types import MappingProxyType
+from typing import Any, Mapping
 
 from .injury_taxonomy import INJURY_TAXONOMY, derive_injury_type_severity_map
 
@@ -63,6 +65,253 @@ _SURFACE_TRAIN_THROUGH_RED_FLAG_MARKERS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Canonical surface-injury classification (single source of truth)
+#
+# Every consumer — the Today readiness engine, the daily check-in contract, the
+# camp-plan train-through gates and the rendering layers — routes a skin injury
+# through ``classify_surface_injury``. Duplicating this anywhere else is what let
+# an intact blister read as a musculoskeletal injury in one layer and a hygiene
+# note in another.
+#
+# The five classes, weakest to strongest:
+#   * ``non_surface``               — not a skin injury; normal injury routing.
+#   * ``stable_surface``            — intact, non-severe, no red flag, no session
+#                                     conflict. Never changes readiness or dosage.
+#   * ``surface_local_restriction`` — worse-but-intact, or friction/contact is the
+#                                     problem. Local protection only, when today's
+#                                     session actually exposes the area.
+#   * ``surface_no_contact``        — open, not safely coverable, or likely to
+#                                     reopen. Contact work only is blocked.
+#   * ``surface_medical_review``    — infection signs, uncontrolled bleeding,
+#                                     drainage, or a severe/red-flagged wound.
+#                                     Existing medical-risk rules own the escalation.
+# ---------------------------------------------------------------------------
+
+SURFACE_CLASS_NON_SURFACE = "non_surface"
+SURFACE_CLASS_STABLE = "stable_surface"
+SURFACE_CLASS_LOCAL_RESTRICTION = "surface_local_restriction"
+SURFACE_CLASS_NO_CONTACT = "surface_no_contact"
+SURFACE_CLASS_MEDICAL_REVIEW = "surface_medical_review"
+
+SURFACE_CLASSES = (
+    SURFACE_CLASS_NON_SURFACE,
+    SURFACE_CLASS_STABLE,
+    SURFACE_CLASS_LOCAL_RESTRICTION,
+    SURFACE_CLASS_NO_CONTACT,
+    SURFACE_CLASS_MEDICAL_REVIEW,
+)
+
+# Strength order, used when several surface injuries are open at once.
+SURFACE_CLASS_RANK: dict[str, int] = {
+    SURFACE_CLASS_NON_SURFACE: 0,
+    SURFACE_CLASS_STABLE: 1,
+    SURFACE_CLASS_LOCAL_RESTRICTION: 2,
+    SURFACE_CLASS_NO_CONTACT: 3,
+    SURFACE_CLASS_MEDICAL_REVIEW: 4,
+}
+
+# Structured follow-up vocabulary. Reused verbatim from the guided injury intake
+# (``open_wound`` / ``bleeding_status`` / ``infection_signs``) so the daily
+# check-in and the guided intake never disagree about what a value means.
+SKIN_INTEGRITY_VALUES = frozenset({"intact", "open", "unknown"})
+BLEEDING_STATUS_VALUES = frozenset({"none", "controlled", "uncontrolled"})
+DRAINAGE_VALUES = frozenset({"none", "present", "unknown"})
+COVERABLE_VALUES = frozenset({"yes", "no", "unknown"})
+FRICTION_PROBLEM_VALUES = frozenset({"yes", "no", "unknown"})
+
+# ``open_wound`` (guided intake) is a yes/no answer; map it onto skin_integrity.
+_OPEN_WOUND_TO_SKIN_INTEGRITY = {
+    "yes": "open",
+    "true": "open",
+    "open": "open",
+    "burst": "open",
+    "no": "intact",
+    "false": "intact",
+    "closed": "intact",
+    "intact": "intact",
+}
+
+# Values that mean "the athlete answered nothing here".
+_EMPTY_ANSWERS = frozenset({"", "none", "no", "nil", "n/a", "na", "unknown", "unsure", "not_sure"})
+
+
+@dataclass(frozen=True)
+class SurfaceInjuryAssessment:
+    """The canonical routing decision for one injury.
+
+    ``classification`` is authoritative; ``reason`` is a stable machine code (never
+    prose to be parsed) naming which rule fired.
+    """
+
+    classification: str
+    reason: str = ""
+
+    @property
+    def is_surface(self) -> bool:
+        return self.classification != SURFACE_CLASS_NON_SURFACE
+
+    @property
+    def is_stable(self) -> bool:
+        return self.classification == SURFACE_CLASS_STABLE
+
+    @property
+    def blocks_contact(self) -> bool:
+        """True when contact work — and only contact work — is unsafe."""
+        return self.classification in {SURFACE_CLASS_NO_CONTACT, SURFACE_CLASS_MEDICAL_REVIEW}
+
+    @property
+    def needs_medical_review(self) -> bool:
+        return self.classification == SURFACE_CLASS_MEDICAL_REVIEW
+
+
+def _surface_answer(injury: Mapping[str, Any], *names: str) -> str:
+    for name in names:
+        value = injury.get(name)
+        if isinstance(value, bool):
+            return "yes" if value else "no"
+        text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+        if text:
+            return text
+    return ""
+
+
+def _infection_signs(injury: Mapping[str, Any]) -> list[str]:
+    """Reported infection signs, with the "nothing to report" answers removed."""
+    raw = injury.get("infection_signs")
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, (list, tuple, set, frozenset)):
+        return []
+    signs: list[str] = []
+    for item in raw:
+        token = str(item or "").strip().lower().replace("-", "_").replace(" ", "_")
+        if token and token not in _EMPTY_ANSWERS:
+            signs.append(token)
+    return signs
+
+
+def _surface_flag_red_flag(injury: Mapping[str, Any]) -> bool | None:
+    """``True``/``False`` for the legacy ``flags`` red-flag scan; ``None`` if the
+    field is malformed (which callers treat as a red flag, never as "clear")."""
+    flags = injury.get("flags")
+    if isinstance(flags, str):
+        flags = [flags]
+    elif not isinstance(flags, (list, tuple, set, frozenset)) and flags is not None:
+        return None
+    for flag in flags or []:
+        token = str(flag or "").strip().lower()
+        if token and any(marker in token for marker in _SURFACE_TRAIN_THROUGH_RED_FLAG_MARKERS):
+            return True
+    return False
+
+
+def _resolved_surface_type(injury: Mapping[str, Any], injury_type: str | None) -> str:
+    """Canonical taxonomy type for a possible surface injury, or ``""``.
+
+    ``injury_type`` is the caller's already-resolved type (the Today engine scores
+    it from stored text). Otherwise the structured fields are read in order of
+    authority, including the guided intake's ``surface_type`` subtype.
+    """
+    candidates = [injury_type] if injury_type else []
+    candidates.extend(
+        injury.get(field) for field in ("injury_type", "rehab_type", "surface_type", "guided_surface_type")
+    )
+    for candidate in candidates:
+        normalized = _normalize_injury_type(candidate)
+        if normalized in SURFACE_TISSUE_TYPES:
+            return normalized
+        if normalized in ALL_INJURY_TYPES:
+            # A known non-surface type is authoritative: stop before a weaker
+            # field (a stray guided subtype) can pull a real injury into the
+            # skin path.
+            return ""
+    return ""
+
+
+def classify_surface_injury(
+    injury: Mapping[str, Any] | None,
+    *,
+    injury_type: str | None = None,
+) -> SurfaceInjuryAssessment:
+    """Classify one injury into the canonical surface routing class.
+
+    Deterministic and structured-first: it reads the check-in's follow-up answers
+    (``skin_integrity`` / ``open_wound``, ``bleeding_status``, ``drainage``,
+    ``infection_signs``, ``coverable``, ``friction_or_contact_problem``) and never
+    interprets free text. Anything that is not a taxonomy surface type is
+    ``non_surface`` so existing injury routing is untouched.
+    """
+    if not isinstance(injury, Mapping):
+        return SurfaceInjuryAssessment(SURFACE_CLASS_NON_SURFACE, "not_an_injury")
+
+    resolved_type = _resolved_surface_type(injury, injury_type)
+    if not resolved_type:
+        return SurfaceInjuryAssessment(SURFACE_CLASS_NON_SURFACE, "not_surface_tissue")
+
+    # Severe skin wounds keep their existing review/escalation routing — the
+    # caller's severe-injury gates still own the decision.
+    severity = str(injury.get("severity") or "").strip().lower()
+    if severity in {"high", "severe"}:
+        return SurfaceInjuryAssessment(SURFACE_CLASS_MEDICAL_REVIEW, "severe_surface_injury")
+
+    flag_red_flag = _surface_flag_red_flag(injury)
+    if flag_red_flag is not False:
+        # True (a real red-flag marker) or None (malformed flags) both keep the
+        # cautious route; a malformed field is never read as "clear".
+        return SurfaceInjuryAssessment(SURFACE_CLASS_MEDICAL_REVIEW, "surface_red_flag")
+
+    if _infection_signs(injury):
+        return SurfaceInjuryAssessment(SURFACE_CLASS_MEDICAL_REVIEW, "infection_signs")
+
+    bleeding = _surface_answer(injury, "bleeding_status")
+    if bleeding == "uncontrolled":
+        return SurfaceInjuryAssessment(SURFACE_CLASS_MEDICAL_REVIEW, "uncontrolled_bleeding")
+
+    drainage = _surface_answer(injury, "drainage")
+    if drainage == "present":
+        return SurfaceInjuryAssessment(SURFACE_CLASS_MEDICAL_REVIEW, "drainage")
+
+    skin_integrity = _surface_answer(injury, "skin_integrity")
+    if skin_integrity not in SKIN_INTEGRITY_VALUES:
+        skin_integrity = _OPEN_WOUND_TO_SKIN_INTEGRITY.get(_surface_answer(injury, "open_wound"), "")
+
+    coverable = _surface_answer(injury, "coverable")
+    friction_problem = _surface_answer(injury, "friction_or_contact_problem")
+    reported_worse = _surface_answer(injury, "latest_reported_status", "reported_status") == "worse"
+
+    if skin_integrity == "open":
+        if coverable == "no":
+            return SurfaceInjuryAssessment(SURFACE_CLASS_NO_CONTACT, "open_not_coverable")
+        return SurfaceInjuryAssessment(SURFACE_CLASS_NO_CONTACT, "open_wound")
+
+    if coverable == "no":
+        # It cannot be kept sealed, so contact will reopen or contaminate it.
+        return SurfaceInjuryAssessment(SURFACE_CLASS_NO_CONTACT, "not_coverable")
+
+    if reported_worse and skin_integrity != "intact":
+        # Marked worse with no structured skin answer: keep contact off it until
+        # the follow-up is answered, but never stop the whole session.
+        return SurfaceInjuryAssessment(SURFACE_CLASS_NO_CONTACT, "worse_integrity_unknown")
+
+    if friction_problem == "yes":
+        return SurfaceInjuryAssessment(SURFACE_CLASS_LOCAL_RESTRICTION, "friction_or_contact_problem")
+
+    if reported_worse:
+        return SurfaceInjuryAssessment(SURFACE_CLASS_LOCAL_RESTRICTION, "worse_but_intact")
+
+    return SurfaceInjuryAssessment(SURFACE_CLASS_STABLE, "stable_surface")
+
+
+def surface_injury_class(
+    injury: Mapping[str, Any] | None, *, injury_type: str | None = None
+) -> str:
+    """The canonical class string for one injury (see ``classify_surface_injury``)."""
+    return classify_surface_injury(injury, injury_type=injury_type).classification
+
+
 def is_stable_surface_only_injury(injury: dict | None) -> bool:
     """True for a stable surface (skin) injury that should train through.
 
@@ -78,25 +327,11 @@ def is_stable_surface_only_injury(injury: dict | None) -> bool:
     carrying a red-flag / needs-review / clearance / infection / bleeding /
     needs-stitches / worsening flag. Those deep-wound/danger cases keep their
     normal urgent/red-flag routing (and are routed to review upstream).
+
+    Thin wrapper over :func:`classify_surface_injury` so this gate and the Today
+    readiness engine can never disagree about what "stable" means.
     """
-    if not isinstance(injury, dict):
-        return False
-    injury_type = _normalize_injury_type(injury.get("injury_type") or injury.get("rehab_type"))
-    if injury_type not in SURFACE_TISSUE_TYPES:
-        return False
-    severity = str(injury.get("severity") or "").strip().lower()
-    if severity in {"high", "severe"}:
-        return False
-    flags = injury.get("flags")
-    if isinstance(flags, str):
-        flags = [flags]
-    elif not isinstance(flags, (list, tuple, set)) and flags is not None:
-        return False
-    for flag in flags or []:
-        token = str(flag or "").strip().lower()
-        if token and any(marker in token for marker in _SURFACE_TRAIN_THROUGH_RED_FLAG_MARKERS):
-            return False
-    return True
+    return classify_surface_injury(injury).classification == SURFACE_CLASS_STABLE
 
 
 def is_stable_train_through_surface_injury(injury: dict | None) -> bool:

@@ -192,3 +192,42 @@ test("nothing on the card calls context a warning", () => {
   }).toLowerCase();
   assert.ok(!html.includes("warning"));
 });
+
+test("a cleared safety check renders apart from the triggers, never as one", () => {
+  // A stable blister was assessed and changed nothing. Showing it under Trigger
+  // would tell the athlete their skin injury reduced the session.
+  const html = render({
+    banner: BANNER,
+    triggers: ["Poor sleep"],
+    safetyChecks: [
+      {
+        code: "surface_injury",
+        label: "Skin injury",
+        result: "no_session_change",
+        result_label: "No session change",
+      },
+    ],
+  });
+  const checkedIndex = html.indexOf("Checked");
+  assert.ok(checkedIndex > -1);
+  assert.ok(html.includes("Skin injury — No session change"));
+  // The trigger list holds only the cause.
+  assert.ok(html.indexOf("Poor sleep") < checkedIndex);
+  assert.ok(html.includes('data-evidence-count="2"'));
+});
+
+test("safety checks are omitted on a preview card", () => {
+  const html = render({
+    banner: BANNER,
+    tier: "preview",
+    safetyChecks: [
+      {
+        code: "surface_injury",
+        label: "Skin injury",
+        result: "no_contact",
+        result_label: "No contact today",
+      },
+    ],
+  });
+  assert.ok(!html.includes("Skin injury"));
+});

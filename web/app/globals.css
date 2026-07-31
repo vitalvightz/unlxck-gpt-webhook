@@ -7296,6 +7296,16 @@ html[data-theme="light"] .today-terminal-status {
   background: rgba(255, 90, 90, 0.08);
 }
 
+.today-injury-surface-followup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.14));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .today-injury-confirm-text {
   color: var(--text-primary);
   font-size: 14px;
