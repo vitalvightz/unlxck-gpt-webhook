@@ -235,6 +235,11 @@ function getInjuryLabel(injury: InjuryFlagRecord): string {
   return normalizeInjuryLabel(raw) || "Injury";
 }
 
+function getInjuryType(injury: InjuryFlagRecord): string {
+  const description = injury.description?.trim().replace(/\s+/g, " ");
+  return description || "Type not specified";
+}
+
 /**
  * Daily injury check-in. Each open injury can be marked easing / same / worse /
  * resolved (a per-injury update), and new injuries can be added. Writes reconcile
@@ -271,6 +276,7 @@ export function TodayInjuryManager({
     EMPTY_SURFACE_ANSWERS,
   );
   const isSurfaceRecheck = surfaceFollowUpStatus !== "worse";
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
@@ -283,6 +289,7 @@ export function TodayInjuryManager({
   const [newZone, setNewZone] = useState("");
   const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
+  const addFormId = useId();
   const bodyMapVisibilityId = useId();
   const newInjurySelections: BodyMapSelection[] = newArea.trim()
     ? [
@@ -421,6 +428,7 @@ export function TodayInjuryManager({
       setAreaLimited(false);
       setDetailLimited(false);
       setNewZone("");
+      setIsAddFormOpen(false);
       showToast("Injury added.", { tone: "success" });
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Could not add injury.", { tone: "error" });
@@ -477,7 +485,10 @@ export function TodayInjuryManager({
             return (
               <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
                 <div className="today-injury-meta">
-                  <span className="today-injury-name">{getInjuryLabel(injury)}</span>
+                  <span className="today-injury-name">
+                    <strong>{getInjuryLabel(injury)}</strong>
+                    <small>{getInjuryType(injury)}</small>
+                  </span>
                   <span className="badge status-badge-neutral">{injury.severity}</span>
                   {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
@@ -649,7 +660,27 @@ export function TodayInjuryManager({
         <p className="muted">No injuries are being tracked. Add one below if something is bothering you.</p>
       )}
 
-      <form className="today-injury-add" onSubmit={addInjury}>
+      <button
+        type="button"
+        className="today-risk-more today-injury-add-trigger"
+        aria-controls={addFormId}
+        aria-expanded={isAddFormOpen}
+        data-expanded={isAddFormOpen ? "true" : "false"}
+        onClick={() => setIsAddFormOpen((current) => !current)}
+      >
+        <span>
+          {isAddFormOpen ? "" : "+ "}
+          {openInjuries.length ? "Add another injury" : "Add injury"}
+        </span>
+        <span className="today-injury-add-chevron" aria-hidden="true" />
+      </button>
+
+      <form
+        id={addFormId}
+        className="today-injury-add"
+        hidden={!isAddFormOpen}
+        onSubmit={addInjury}
+      >
         <div className="today-injury-add-toolbar">
           <p className="today-injury-add-title">Add injury</p>
           <div className="field today-injury-map-control">

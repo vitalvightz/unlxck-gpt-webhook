@@ -151,7 +151,7 @@ function SafeSessionCard({ view }: { view: SafeSessionView }) {
  * and their counts — Today simply scopes the view to today's day only (no week
  * strip, no other days, no full camp map).
  */
-function TodaySessionBlocks({
+export function TodaySessionBlocks({
   planId,
   current,
   openWeekIntent,
@@ -171,6 +171,13 @@ function TodaySessionBlocks({
   if (!current.inRange || !current.day) {
     return null;
   }
+  // A renewable plan may resolve today's weekday against a projected template
+  // row from another month. Keep that row for plan identity, but never present
+  // its projected date as today's calendar date.
+  const displayDay =
+    current.matchType === "weekday" && current.trainingDayISO
+      ? { ...current.day, date: current.trainingDayISO }
+      : current.day;
   const weekIntentNote = openWeekIntent ? (
     <p className="today-open-week-note">
       <span className="sp-tag sp-accent">
@@ -183,7 +190,7 @@ function TodaySessionBlocks({
     return (
       <div className="today-blocks">
         {weekIntentNote}
-        <SessionlessDayCard day={current.day} />
+        <SessionlessDayCard day={displayDay} />
       </div>
     );
   }
@@ -191,7 +198,7 @@ function TodaySessionBlocks({
     <RehabLabelProvider policy={rehabLabelPolicy}>
       <div className="today-blocks">
         {weekIntentNote}
-        <DaySessionContext day={current.day} />
+        <DaySessionContext day={displayDay} />
         {current.sessions.map((session, index) => (
           <StructuredSessionCard
             key={sessionIdentity({
@@ -204,7 +211,7 @@ function TodaySessionBlocks({
               session,
             })}
             session={session}
-            day={index === 0 ? current.day ?? undefined : undefined}
+            day={index === 0 ? displayDay : undefined}
             defaultOpenBlocks
             showDayContext={false}
             openWeekIntent={openWeekIntent}
@@ -267,12 +274,18 @@ export function TodaySessionPanel({
     anchorDate: planSchedule?.scheduleContext?.anchor_date,
     createdAt: planSchedule?.createdAt,
   });
-  const current = resolveCurrentDay(structuredPlan, focusDate, { openWeekNumber });
+  const openOngoing = Boolean(
+    state.active_plan && isOpenOngoingPlan(state.active_plan.fight_date),
+  );
+  const current = resolveCurrentDay(structuredPlan, focusDate, {
+    openWeekNumber,
+    allowDatedWeekdayMatch: openOngoing,
+  });
   // Where the resolved day sits in the renewable development block (baseline /
   // progress / peak / deload). The resolved week position wins over the bare
   // anchor-derived number so the note always matches the blocks shown below.
   // Dated camps stay null and render unchanged.
-  const openWeekIntent = state.active_plan && isOpenOngoingPlan(state.active_plan.fight_date)
+  const openWeekIntent = openOngoing
     ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber)
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);

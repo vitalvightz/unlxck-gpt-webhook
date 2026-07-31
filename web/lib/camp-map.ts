@@ -102,10 +102,14 @@ function weekdayTokenFor(date: Date): WeekdayToken {
   return WEEKDAY_TOKENS[(date.getDay() + 6) % 7];
 }
 
-/** True when the day can only be matched by weekday: it has a weekday but no
- * parseable calendar date. Dated camp days never take the weekday path. */
-function isWeekdayOnlyDay(day: StructuredDay | null | undefined): boolean {
-  return dayISO(day) === null && dayWeekdayToken(day) !== null;
+/** True when a day can use the open-plan weekday path. Legacy open plans are
+ * undated; projected renewable plans may carry future dates but still repeat by
+ * weekday inside the server-selected block week. Dated fight camps never opt in. */
+function isWeekdayMatchableDay(
+  day: StructuredDay | null | undefined,
+  allowDatedDays = false,
+): boolean {
+  return dayWeekdayToken(day) !== null && (allowDatedDays || dayISO(day) === null);
 }
 
 export type OpenScheduleHints = {
@@ -190,17 +194,18 @@ type WeekdayOnlyMatch = {
  * an open plan still resolves when no anchor is available (all weeks of an
  * open block share the same weekly rhythm). Dated days never match here.
  */
-function findWeekdayOnlyDay(
+function findWeekdayDay(
   weeks: StructuredWeek[],
   today: Date,
   openWeekNumber?: number | null,
+  allowDatedDays = false,
 ): WeekdayOnlyMatch | null {
   const target = weekdayTokenFor(today);
   const matchIn = (weekPos: number): WeekdayOnlyMatch | null => {
     const days = getDays(weeks[weekPos]);
     for (let dayPos = 0; dayPos < days.length; dayPos += 1) {
       const day = days[dayPos];
-      if (isWeekdayOnlyDay(day) && dayWeekdayToken(day) === target) {
+      if (isWeekdayMatchableDay(day, allowDatedDays) && dayWeekdayToken(day) === target) {
         return { weekPos, dayPos, week: weeks[weekPos], day };
       }
     }
@@ -229,16 +234,21 @@ function findWeekdayOnlyDay(
   return null;
 }
 
+export type PlanMatchType = "calendar" | "weekday";
+
 export type PlanProgress = {
   weekCount: number;
   /** Array index of the week containing today, or null when out of camp range. */
   currentWeekPos: number | null;
-  /** ISO date of today's day inside the plan, or null when out of range (always
-   * null for a weekday-only match — those days carry no calendar date). */
+  /** Stored ISO date of today's exact calendar row, or null for a weekday
+   * fallback or when out of range. */
   currentDayDate: string | null;
-  /** Array index of today's day within its week, or null when out of range.
-   * The only current-day marker a weekday-only (open plan) match can provide. */
+  /** Array index of today's day within its week, or null when out of range. */
   currentDayPos: number | null;
+  /** The athlete-local date being resolved, including for weekday fallbacks. */
+  trainingDayISO: string | null;
+  /** Whether the plan row matched its stored date or only its recurring weekday. */
+  matchType: PlanMatchType | null;
   /** "D-28" style countdown for today (from the day, else derived), or null. */
   dLabel: string | null;
 };
@@ -254,13 +264,14 @@ export type PlanProgress = {
 export function resolvePlanProgress(
   plan: StructuredPlan | null | undefined,
   today: Date | null,
-  options?: { openWeekNumber?: number | null },
+  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean },
 ): PlanProgress {
   const weeks = getWeeks(plan);
   const todayIso = today ? toISODate(today) : null;
   let currentWeekPos: number | null = null;
   let currentDayDate: string | null = null;
   let currentDayPos: number | null = null;
+  let matchType: PlanMatchType | null = null;
 
   // A null `today` (e.g. before client mount) resolves to "no current day" so
   // the server and first client render agree — never match days on a null date.
@@ -270,22 +281,37 @@ export function resolvePlanProgress(
         currentWeekPos = weekPos;
         currentDayDate = todayIso;
         currentDayPos = dayPos;
+        matchType = "calendar";
       }
     });
   });
 
   if (currentWeekPos === null && today) {
-    const weekdayMatch = findWeekdayOnlyDay(weeks, today, options?.openWeekNumber);
+    const weekdayMatch = findWeekdayDay(
+      weeks,
+      today,
+      options?.openWeekNumber,
+      options?.allowDatedWeekdayMatch,
+    );
     if (weekdayMatch) {
       currentWeekPos = weekdayMatch.weekPos;
       currentDayPos = weekdayMatch.dayPos;
+      matchType = "weekday";
     }
   }
 
   const currentDay = findDayByISO(plan, currentDayDate);
   const dLabel = formatCountdownLabel(currentDay?.countdown_label) || deriveCountdownLabel(plan, today);
 
-  return { weekCount: weeks.length, currentWeekPos, currentDayDate, currentDayPos, dLabel };
+  return {
+    weekCount: weeks.length,
+    currentWeekPos,
+    currentDayDate,
+    currentDayPos,
+    trainingDayISO: todayIso,
+    matchType,
+    dLabel,
+  };
 }
 
 export type CampProgress = {
@@ -580,7 +606,7 @@ export function resolveNextPlanFocusDay(
   plan: StructuredPlan | null | undefined,
   trainingDay: Date | null,
   fallbackFocusDay: Date | null | undefined,
-  options?: { openWeekNumber?: number | null },
+  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean },
 ): Date | undefined {
   if (!trainingDay || !fallbackFocusDay) {
     return fallbackFocusDay ?? undefined;
@@ -871,6 +897,8 @@ export type CurrentDayResolution = {
   /** The athlete-local training-day ISO date used for the match (null until the
    * client has mounted and resolved the current day). */
   trainingDayISO: string | null;
+  /** Whether the plan row matched its stored date or only its recurring weekday. */
+  matchType: PlanMatchType | null;
   /** Array index of the matched week, or null when today is out of camp range. */
   weekPos: number | null;
   /** Array index of the matched day within its week, or null when out of range. */
@@ -892,16 +920,17 @@ export type CurrentDayResolution = {
  * day. The matched day is the source of truth for its sessions — a session's own
  * date is never used to override the parent day (parent day wins).
  *
- * Dated camps match on the calendar date. When no date matches, weekday-only
- * days (open / renewable plans — "WEEK 2 · SAT") match on today's weekday, with
+ * Dated camps match on the calendar date. When no date matches, open / renewable
+ * plans may match their recurring rows on today's weekday ("WEEK 2 · SAT"), with
  * `options.openWeekNumber` (see `resolveOpenPlanWeekNumber`) picking the week
- * of the renewable block. Dated days are never matched by weekday, so a camp
- * whose dates are simply out of range stays out of range.
+ * of the renewable block. That fallback is explicit in `matchType`, so callers
+ * never mistake a projected row date for the live training day. Dated fight
+ * camps never use this fallback and remain out of range when their dates miss.
  */
 export function resolveCurrentDay(
   plan: StructuredPlan | null | undefined,
   today: Date | null,
-  options?: { openWeekNumber?: number | null },
+  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean },
 ): CurrentDayResolution {
   const trainingDayISO = today ? toISODate(today) : null;
   const weeks = getWeeks(plan);
@@ -912,6 +941,7 @@ export function resolveCurrentDay(
       if (dayISO(day) === trainingDayISO) {
         return {
           trainingDayISO,
+          matchType: "calendar",
           weekPos,
           dayPos,
           week: weeks[weekPos],
@@ -924,10 +954,18 @@ export function resolveCurrentDay(
     }
   }
 
-  const weekdayMatch = today ? findWeekdayOnlyDay(weeks, today, options?.openWeekNumber) : null;
+  const weekdayMatch = today
+    ? findWeekdayDay(
+        weeks,
+        today,
+        options?.openWeekNumber,
+        options?.allowDatedWeekdayMatch,
+      )
+    : null;
   if (weekdayMatch) {
     return {
       trainingDayISO,
+      matchType: "weekday",
       weekPos: weekdayMatch.weekPos,
       dayPos: weekdayMatch.dayPos,
       week: weekdayMatch.week,
@@ -940,6 +978,7 @@ export function resolveCurrentDay(
 
   return {
     trainingDayISO,
+    matchType: null,
     weekPos: null,
     dayPos: null,
     week: null,

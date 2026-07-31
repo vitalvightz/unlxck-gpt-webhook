@@ -7284,8 +7284,25 @@ html[data-theme="light"] .today-terminal-status {
 }
 
 .today-injury-name {
-  font-weight: 700;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin-right: auto;
   color: var(--text-primary);
+}
+
+.today-injury-name strong {
+  font-weight: 700;
+}
+
+.today-injury-name small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .today-injury-item .today-segment-row {
@@ -7378,9 +7395,39 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 12px;
+}
+
+.today-injury-add[hidden] {
+  display: none;
+}
+
+.today-injury-add-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  text-align: left;
+}
+
+.today-injury-add-trigger:focus-visible {
+  outline: 2px solid rgba(226, 58, 76, 0.78);
+  outline-offset: 2px;
+}
+
+.today-injury-add-chevron {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px, 2px);
+  transition: transform var(--transition-fast);
+}
+
+.today-injury-add-trigger[aria-expanded="true"] .today-injury-add-chevron {
+  transform: rotate(225deg) translate(-2px, 2px);
 }
 
 .today-injury-add-toolbar {
@@ -7879,6 +7926,10 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   }
 
   .today-readiness-strip a::after {
+    transition: none;
+  }
+
+  .today-injury-add-chevron {
     transition: none;
   }
 
@@ -16585,6 +16636,15 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   color: var(--text-muted);
   letter-spacing: 0.04em;
   white-space: nowrap;
+}
+
+/* The stage still in flight reads "running for 3m 46s" — longer than a bare
+   duration, so it is allowed to wrap instead of squeezing the milestone copy. */
+.loading-milestone-time-running {
+  color: var(--text-secondary);
+  white-space: normal;
+  text-align: right;
+  max-width: 96px;
 }
 
 .loading-milestone-rotator {

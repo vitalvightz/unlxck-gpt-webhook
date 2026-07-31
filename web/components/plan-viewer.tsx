@@ -2147,6 +2147,7 @@ export function PlanViewer({
         error={generationController.error}
         statusMessage={generationController.statusMessage}
         startedAtMs={generationController.startedAtMs}
+        endedAtMs={generationController.endedAtMs}
       />
     );
   }
