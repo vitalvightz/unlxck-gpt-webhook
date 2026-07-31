@@ -26,7 +26,6 @@ from api.contracts.readiness_message import (
     classify_injury_surface,
     decision_sources,
     explanation_metadata,
-    has_decision_relevant_injury,
     safety_checks,
 )
 from api.services.today_service import _load_relevant_worse_injury, _with_surface_class
@@ -49,6 +48,12 @@ NON_CONTACT_RECOVERY = {
 STRENGTH_SESSION = {
     "title": "Moderate strength accessories",
     "session_type": "strength_power",
+    "effective_load": "technical",
+}
+# Repeated friction over a covered area without being contact work.
+FRICTION_SESSION = {
+    "title": "Technical pad and bag work",
+    "session_type": "skill",
     "effective_load": "technical",
 }
 
@@ -504,42 +509,87 @@ class TestSurfacePlusRealInjury:
 
 
 class TestDecisionSources:
-    """"Decision based on" names inputs the decision USED, not everything tracked."""
+    """"Decision based on" names inputs the decision USED, not everything tracked.
 
-    def test_a_stable_blister_is_a_safety_check_not_a_decision_source(self):
-        open_injuries = [_blister()]
+    The injury source is read from the decision's own trigger codes, which fire
+    at the point an injury actually acted — so it can never be claimed by an
+    injury that merely exists.
+    """
+
+    @pytest.mark.parametrize(
+        ("case", "injury", "session", "expected"),
+        [
+            ("stable surface", {}, HARD_SPARRING, False),
+            (
+                "local restriction, nothing rubs it",
+                {"latest_reported_status": "worse", "skin_integrity": "intact", "coverable": "yes"},
+                NON_CONTACT_RECOVERY,
+                False,
+            ),
+            (
+                "local restriction, friction exposure",
+                {"latest_reported_status": "worse", "skin_integrity": "intact", "coverable": "yes"},
+                FRICTION_SESSION,
+                True,
+            ),
+            (
+                "open wound, non-contact day",
+                {"skin_integrity": "open", "coverable": "yes"},
+                NON_CONTACT_RECOVERY,
+                False,
+            ),
+            (
+                "open wound, contact day",
+                {"skin_integrity": "open", "coverable": "yes"},
+                HARD_SPARRING,
+                True,
+            ),
+            ("infection signs", {"infection_signs": ["pus"]}, HARD_SPARRING, True),
+        ],
+    )
+    def test_only_an_injury_that_acted_is_named_as_a_source(
+        self, case, injury, session, expected
+    ):
         adjustment = build_readiness_adjustment(
             ReadinessCheckin(sleep="poor"),
-            ReadinessContext(today_session=HARD_SPARRING, open_injuries=open_injuries),
+            ReadinessContext(today_session=session, open_injuries=[_blister(**injury)]),
         )
-        sources = decision_sources(
-            adjustment.triggers,
-            has_open_injuries=has_decision_relevant_injury(open_injuries),
+
+        named = "your tracked injuries" in decision_sources(adjustment.triggers)
+        assert named is expected, case
+        # Either way, the skin injury is recorded as a safety check.
+        assert _surface_check(adjustment) is not None
+
+    def test_a_stable_blister_is_a_safety_check_not_a_decision_source(self):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(sleep="poor"),
+            ReadinessContext(today_session=HARD_SPARRING, open_injuries=[_blister()]),
         )
+        sources = decision_sources(adjustment.triggers)
 
         assert explanation_metadata(adjustment.triggers)["causal_triggers"] == ["Poor sleep"]
         assert _surface_check(adjustment)["result"] == "no_session_change"
         assert "your tracked injuries" not in sources
         assert "today's check-in" in sources
 
-    def test_a_wound_that_acted_is_named_as_a_source(self):
-        open_injuries = [_blister(skin_integrity="open", coverable="yes")]
-        adjustment = build_readiness_adjustment(
-            ReadinessCheckin(sleep="poor"),
-            ReadinessContext(today_session=HARD_SPARRING, open_injuries=open_injuries),
+    def test_a_non_surface_injury_is_named_only_when_it_restricted(self):
+        restricted = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(today_session=HARD_SPARRING, open_injuries=[_shoulder_strain()]),
         )
-        sources = decision_sources(
-            adjustment.triggers,
-            has_open_injuries=has_decision_relevant_injury(open_injuries),
+        quiet = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session=NON_CONTACT_RECOVERY, open_injuries=[_shoulder_strain()]
+            ),
         )
 
-        assert "your tracked injuries" in sources
+        assert "active_injury_restriction" in restricted.triggers
+        assert "your tracked injuries" in decision_sources(restricted.triggers)
+        assert "your tracked injuries" not in decision_sources(quiet.triggers)
 
-    def test_a_load_relevant_injury_is_named_as_a_source(self):
-        assert has_decision_relevant_injury([_shoulder_strain()]) is True
-        assert has_decision_relevant_injury([_blister()]) is False
-        # Resolved flags are not tracked at all.
-        assert has_decision_relevant_injury([_shoulder_strain(status="resolved")]) is False
+    def test_an_injury_hold_still_rests_on_the_tracked_injury_alone(self):
+        assert decision_sources(["injury_hold"]) == ("your tracked injuries",)
 
     def test_the_command_view_does_not_name_a_stable_blister_as_a_source(self):
         view = build_command_view(

@@ -2162,6 +2162,11 @@ def _apply_surface_injury_policy(
     ):
         result = "local_protection_only"
         action = _with_extra_instruction(action, _SURFACE_PROTECTION_INSTRUCTION)
+        # Recorded so the card's "Decision based on" can name the injury: the
+        # wound added an instruction, so the decision did rest on it. It carries
+        # no trigger LABEL on purpose — taping a graze is a local protection,
+        # not a reason the session changed.
+        _append_unique(triggers, "surface_injury_local_restriction")
 
     updated = replace(
         adjustment,
@@ -2659,7 +2664,11 @@ _INJURY_TRIGGERS = frozenset(
         "active_injury_worse",
         "active_injury_restriction",
         "tracked_injury_high_risk_session",
-        # A surface injury names the injury source only when it actually acted.
+        # A surface injury names the injury source only when it actually acted:
+        # each of these is emitted at the point the wound changed the
+        # recommendation, so a stable blister — or an open one on a day with no
+        # contact — never reaches this set.
+        "surface_injury_local_restriction",
         "surface_injury_contact_restriction",
         "surface_injury_medical_review",
     }
@@ -2668,28 +2677,7 @@ _PHASE_TRIGGERS = frozenset({"taper_poor_readiness", "reintegration_poor_readine
 _SESSION_RISK_TRIGGERS = frozenset({"session_risk_low", "session_risk_medium", "session_risk_high"})
 
 
-def has_decision_relevant_injury(open_injuries: Sequence[Mapping[str, Any]] | None) -> bool:
-    """True when a tracked injury could bear on the decision at all.
-
-    "Being tracked" is not the same as "was used". A stable skin injury is
-    recorded as a safety check and cannot move the decision, so listing it under
-    "Decision based on" would claim the call rested on an input it did not.
-    Injuries that CAN act — anything non-surface, plus a wound that is open,
-    uncoverable or needs review — still count.
-    """
-    for injury in open_injuries or []:
-        if not isinstance(injury, Mapping):
-            continue
-        if _clean(injury.get("status")).lower() not in _ACTIVE_FLAG_STATUSES:
-            continue
-        if classify_injury_surface(injury) != "stable_surface":
-            return True
-    return False
-
-
-def decision_sources(
-    triggers: Sequence[str], *, has_open_injuries: bool = False
-) -> tuple[str, ...]:
+def decision_sources(triggers: Sequence[str]) -> tuple[str, ...]:
     """The inputs behind a decision, for the card's "Based on" line.
 
     Every input UNLXCK holds today is athlete-reported, so this is a short honest
@@ -2697,6 +2685,12 @@ def decision_sources(
     decision actually consulted it: a signal that fired proves the data was read,
     and a degraded-context hold names nothing beyond today's check-in because the
     history is exactly what failed to load.
+
+    Injuries are read from the trigger codes alone, never from the fact that an
+    injury is open. Having a tracked injury is not the same as the decision
+    resting on it: the injury codes fire exactly when an injury ACTED (it
+    restricted, held, or removed contact), which is the only thing this line
+    claims.
     """
     codes = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
     # An injury hold supersedes the daily readiness copy and fires whether or not
@@ -2708,7 +2702,7 @@ def decision_sources(
         sources.append("your last few check-ins")
     if codes & _RECENT_SESSION_TRIGGERS:
         sources.append("your recent sessions")
-    if has_open_injuries or (codes & _INJURY_TRIGGERS):
+    if codes & _INJURY_TRIGGERS:
         sources.append("your tracked injuries")
     if codes & _SESSION_RISK_TRIGGERS:
         sources.append("today's planned session")

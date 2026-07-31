@@ -24,7 +24,6 @@ from .readiness_message import (
     confidence_note,
     context_labels,
     decision_sources,
-    has_decision_relevant_injury,
     safety_checks,
     trigger_labels,
 )
@@ -389,17 +388,11 @@ def build_command_view(
         recommendation_trigger_labels=list(trigger_labels(rec_view.triggers)),
         recommendation_context_labels=list(context_labels(rec_view.triggers)),
         recommendation_safety_checks=[dict(check) for check in safety_checks(rec_view.triggers)],
+        # Sources come from the decision's own trigger codes. An open injury is
+        # named only when it ACTED — being tracked is not being used, and a
+        # stable skin injury stays in the safety checks where it belongs.
         recommendation_sources=(
-            list(
-                decision_sources(
-                    rec_view.triggers,
-                    # Being tracked is not being used: a stable skin injury is a
-                    # safety check, so it must not claim the decision rested on it.
-                    has_open_injuries=has_decision_relevant_injury(open_injuries),
-                )
-            )
-            if rec_view.triggers
-            else []
+            list(decision_sources(rec_view.triggers)) if rec_view.triggers else []
         ),
         recommendation_confidence=(
             confidence_band(rec_view.triggers) if rec_view.triggers else None
