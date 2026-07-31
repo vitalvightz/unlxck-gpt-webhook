@@ -341,9 +341,10 @@ def _sync_surface_severity_from_checkin(
     that result instead of trusting the browser to choose a matching severity:
     local/open-wound restrictions are at least moderate, while infection,
     uncontrolled bleeding, drainage, or another medical-review result is severe.
-    Worsening reports only raise severity. A later recheck that explicitly says
-    the skin is closed/clean can lower an earlier automatic floor, so the injury
-    does not remain trapped in medical review after the concerning signs clear.
+    This PR has no persisted provenance for an automatically raised value, so
+    synchronization is deliberately raise-only. A clean recheck may clear the
+    structured wound signals, but it never lowers a severity the athlete may
+    have selected manually.
     """
     current_by_id = {
         str(flag.get("id")): dict(flag)
@@ -358,6 +359,12 @@ def _sync_surface_severity_from_checkin(
             continue
 
         current = current_by_id.get(str(injury.flag_id or ""), {})
+        # The conditional surface follow-up updates an existing tracked wound.
+        # A brand-new API declaration has no prior severity to synchronize and
+        # keeps the normal create/default behavior.
+        if not current:
+            raised.append(injury)
+            continue
         candidate = {
             **current,
             **surface_fields,
@@ -385,12 +392,10 @@ def _sync_surface_severity_from_checkin(
 
         current_severity = str(current.get("severity") or "mild").strip().lower()
         requested_severity = str(injury.severity or current_severity).strip().lower()
-        candidates = (
-            (current_severity, requested_severity, floor)
-            if injury.status == "worse"
-            else ((requested_severity, floor) if injury.severity is not None else (floor,))
+        target = max(
+            (current_severity, requested_severity, floor),
+            key=lambda value: _INJURY_SEVERITY_RANK.get(value, -1),
         )
-        target = max(candidates, key=lambda value: _INJURY_SEVERITY_RANK.get(value, -1))
         raised.append(injury.model_copy(update={"severity": target}))
     return raised
 
@@ -720,6 +725,26 @@ def _active_severe_injury(
     return None
 
 
+def _active_severe_non_surface_injury(
+    open_flags: Sequence[Mapping[str, Any]] | None,
+) -> Mapping[str, Any] | None:
+    """First severe active injury not owned by the surface-wound pathway."""
+    for flag in open_flags or []:
+        if (
+            str(flag.get("severity") or "") != "severe"
+            or str(flag.get("status") or "") not in {"open", "monitoring"}
+        ):
+            continue
+        try:
+            if classify_injury_surface(flag) == "non_surface":
+                return flag
+        except Exception:
+            # Classification failure must not let a severe injury lose priority.
+            logger.exception("[today] severe_injury_surface_classification_failed")
+            return flag
+    return None
+
+
 def _severe_injury_recommendation(
     injury: Mapping[str, Any], training_day: str
 ) -> dict[str, Any]:
@@ -737,6 +762,11 @@ def _severe_injury_recommendation(
             "Clear it or get it medically cleared before training — marking it easing does not lift the hold.",
         ]
     )
+    flag_id = str(injury.get("id") or "").strip()
+    triggers = ["injury_hold"]
+    if flag_id:
+        triggers.append(f"injury_hold:{flag_id}")
+    triggers.append("active_injury_worse")
     return {
         "decision": "pull_back",
         "reason": reason,
@@ -745,7 +775,7 @@ def _severe_injury_recommendation(
         # card names the injury as its contributor. ``injury_hold`` marks it as a
         # recommendation that does NOT rest on today's check-in — it fires whether
         # or not one exists, so the card must not claim a check-in it never read.
-        "triggers": ["injury_hold", "active_injury_worse"],
+        "triggers": triggers,
     }
 
 
@@ -774,6 +804,11 @@ def _surface_medical_review_recommendation(
     else:
         reason = f"Your {natural_label} needs checking before you train through it."
         safety = "Seek medical advice for spreading redness, pus, drainage, or fever."
+    flag_id = str(injury.get("id") or "").strip()
+    triggers = ["surface_injury_medical_review"]
+    if flag_id:
+        triggers.append(f"surface_injury_medical_review:{flag_id}")
+    triggers.append("safety_check:surface_injury:medical_review")
     return {
         "decision": "pull_back",
         "reason": "\n".join(
@@ -785,10 +820,7 @@ def _surface_medical_review_recommendation(
             )
         ),
         "training_day": training_day,
-        "triggers": [
-            "surface_injury_medical_review",
-            "safety_check:surface_injury:medical_review",
-        ],
+        "triggers": triggers,
     }
 
 
@@ -1978,6 +2010,7 @@ def build_today_command_view(
         and is_support_session(_entry_mapping_for_readiness(today_session_entry))
     )
     severe_injury = _active_severe_injury(open_injuries)
+    severe_non_surface_injury = _active_severe_non_surface_injury(open_injuries)
     current_decision = str((recommendation or {}).get("decision") or "")
     surface_review_recommendation = next(
         (
@@ -1988,7 +2021,25 @@ def build_today_command_view(
         ),
         None,
     )
-    if surface_review_recommendation is not None and current_decision != "pull_back":
+    if (
+        severe_non_surface_injury is not None
+        and current_decision != "pull_back"
+        and not today_is_support_filler
+    ):
+        recommendation = _severe_injury_recommendation(
+            severe_non_surface_injury, training_day
+        )
+        if surface_review_recommendation is not None:
+            recommendation["triggers"] = list(
+                dict.fromkeys(
+                    [
+                        *recommendation["triggers"],
+                        "safety_check:surface_injury:medical_review",
+                    ]
+                )
+            )
+        current_decision = "pull_back"
+    elif surface_review_recommendation is not None and current_decision != "pull_back":
         recommendation = surface_review_recommendation
         current_decision = "pull_back"
     if severe_injury is not None and current_decision != "pull_back" and not today_is_support_filler:

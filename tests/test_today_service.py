@@ -1251,6 +1251,47 @@ class TestCommandView:
 
         assert updated["open_injuries"][0]["severity"] == "severe"
 
+    @pytest.mark.parametrize("reported_status", ["ongoing", "improving"])
+    def test_clean_surface_recheck_never_lowers_manual_severe_severity(
+        self, reported_status
+    ):
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "body_area": "left hand",
+                        "description": "left hand cut",
+                        "severity": "severe",
+                        "status": "ongoing",
+                    }
+                ]
+            },
+        )
+
+        updated = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": opened["open_injuries"][0]["id"],
+                        "status": reported_status,
+                        "skin_integrity": "intact",
+                        "bleeding_status": "none",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                        "friction_or_contact_problem": "no",
+                    }
+                ]
+            },
+        )
+
+        assert updated["open_injuries"][0]["severity"] == "severe"
+
     def test_worse_surface_answers_raise_severity_from_canonical_surface_class(self):
         store = _store_with_plan()
         opened = submit_today_injury_checkin(
@@ -1372,6 +1413,92 @@ class TestCommandView:
                 "result": "medical_review",
                 "result_label": "Needs checking",
             }
+        ]
+
+    def test_severe_structural_injury_owns_no_checkin_recommendation_over_surface_review(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        wound = store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "checkin",
+                "plan_id": PLAN,
+                "body_area": "left hand",
+                "description": "infected left hand cut",
+                "severity": "moderate",
+                "status": "open",
+                "skin_integrity": "open",
+                "drainage": "present",
+                "infection_signs": ["pus"],
+            },
+        )
+        shoulder = store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "checkin",
+                "plan_id": PLAN,
+                "body_area": "left shoulder",
+                "description": "left shoulder dislocation",
+                "severity": "severe",
+                "status": "monitoring",
+                "latest_reported_status": "improving",
+            },
+        )
+
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+
+        assert "Active severe injury: Left shoulder dislocation" in (
+            view.today.recommendation_reason or ""
+        )
+        assert view.today.recommendation_trigger_labels == [
+            "Left shoulder dislocation — severe"
+        ]
+        assert view.today.recommendation_safety_checks == [
+            {
+                "code": "surface_injury",
+                "label": "Skin injury",
+                "result": "medical_review",
+                "result_label": "Needs checking",
+            }
+        ]
+        assert wound["id"] != shoulder["id"]
+
+    def test_injury_hold_contributor_uses_responsible_severe_injury_id(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "checkin",
+                "plan_id": PLAN,
+                "body_area": "left shoulder",
+                "description": "left shoulder dislocation",
+                "severity": "severe",
+                "status": "monitoring",
+                "latest_reported_status": "improving",
+            },
+        )
+        store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "checkin",
+                "plan_id": PLAN,
+                "body_area": "right ankle",
+                "description": "minor right ankle sprain",
+                "severity": "mild",
+                "status": "open",
+                "latest_reported_status": "worse",
+            },
+        )
+
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+
+        assert view.today.recommendation_trigger_labels == [
+            "Left shoulder dislocation — severe"
         ]
 
     def test_worse_injury_refreshes_existing_readiness_recommendation(self):

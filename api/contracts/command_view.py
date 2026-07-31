@@ -383,55 +383,80 @@ def _specific_trigger_labels(
         return []
 
     codes = {str(trigger).strip() for trigger in triggers}
-    active = _active_injury_rows(open_injuries)
+    active_by_id = {
+        str(injury.get("id") or "").strip(): injury
+        for injury in _active_injury_rows(open_injuries)
+        if str(injury.get("id") or "").strip()
+    }
     replacements: dict[str, list[str]] = {}
 
     if "active_injury_worse" in codes:
-        worse = [
-            injury
-            for injury in active
-            if str(injury.get("latest_reported_status") or "").strip().lower() == "worse"
+        responsible_ids = [
+            code.split(":", 1)[1]
+            for prefix in ("injury_hold:", "active_injury_worse:")
+            for code in triggers
+            if str(code).startswith(prefix) and str(code).split(":", 1)[1]
         ]
-        candidates = worse or [
-            injury
-            for injury in active
-            if str(injury.get("severity") or "").strip().lower() == "severe"
+        candidates = [
+            active_by_id[flag_id]
+            for flag_id in dict.fromkeys(responsible_ids)
+            if flag_id in active_by_id
         ]
-        replacements["Injury getting worse"] = [
-            (
-                f"{_injury_name(injury)} — needs medical review"
-                if str(injury.get("surface_class") or "") == "surface_medical_review"
-                else f"{_injury_name(injury)} — getting worse"
-                if str(injury.get("latest_reported_status") or "").strip().lower() == "worse"
-                else f"{_injury_name(injury)} — severe"
-            )
-            for injury in candidates
-        ]
+        if candidates:
+            replacements["Injury getting worse"] = [
+                (
+                    f"{_injury_name(injury)} — needs medical review"
+                    if str(injury.get("surface_class") or "") == "surface_medical_review"
+                    else f"{_injury_name(injury)} — getting worse"
+                    if str(injury.get("latest_reported_status") or "").strip().lower()
+                    == "worse"
+                    else f"{_injury_name(injury)} — severe"
+                )
+                for injury in candidates
+            ]
 
     if {"active_injury_restriction", "tracked_injury_high_risk_session"} & codes:
+        responsible_ids = [
+            code.split(":", 1)[1]
+            for prefix in (
+                "active_injury_restriction:",
+                "tracked_injury_high_risk_session:",
+            )
+            for code in triggers
+            if str(code).startswith(prefix) and str(code).split(":", 1)[1]
+        ]
         load_relevant = [
-            injury
-            for injury in active
-            if str(injury.get("surface_class") or "non_surface") not in _SURFACE_CLASSES
+            active_by_id[flag_id]
+            for flag_id in dict.fromkeys(responsible_ids)
+            if flag_id in active_by_id
         ]
         reason = (
             "active for hard session"
             if "tracked_injury_high_risk_session" in codes
             else "restricts today's training"
         )
-        replacements["Active injury"] = [
-            f"{_injury_name(injury)} — {reason}" for injury in load_relevant
-        ]
+        if load_relevant:
+            replacements["Active injury"] = [
+                f"{_injury_name(injury)} — {reason}" for injury in load_relevant
+            ]
 
     if "surface_injury_medical_review" in codes:
+        responsible_ids = [
+            code.split(":", 1)[1]
+            for code in triggers
+            if str(code).startswith("surface_injury_medical_review:")
+            and str(code).split(":", 1)[1]
+        ]
         surface_reviews = [
-            injury
-            for injury in active
-            if str(injury.get("surface_class") or "") == "surface_medical_review"
+            active_by_id[flag_id]
+            for flag_id in dict.fromkeys(responsible_ids)
+            if flag_id in active_by_id
         ]
-        replacements["Skin injury needs review"] = [
-            f"{_injury_name(injury)} — needs medical review" for injury in surface_reviews
-        ]
+        if surface_reviews:
+            replacements["Skin injury needs review"] = [
+                f"{_injury_name(injury)} — needs medical review"
+                for injury in surface_reviews
+            ]
 
     resolved: list[str] = []
     for label in base_labels:
