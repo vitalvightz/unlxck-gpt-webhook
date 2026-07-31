@@ -1314,6 +1314,28 @@ create trigger set_session_logs_updated_at
 -- admin review queue. Flags are resolved (status transition), never deleted,
 -- so the injury history stays auditable.
 -- ---------------------------------------------------------------------------
+
+-- infection_signs is modelled as list[str] everywhere above the database, so the
+-- column constraint checks element type as well as shape. A CHECK cannot contain
+-- a subquery, hence this immutable helper.
+create or replace function public.injury_flags_infection_signs_valid(signs jsonb)
+returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select case
+    when signs is null then true
+    when jsonb_typeof(signs) <> 'array' then false
+    when jsonb_array_length(signs) > 8 then false
+    else not exists (
+      select 1
+      from jsonb_array_elements(signs) as element
+      where jsonb_typeof(element) <> 'string'
+    )
+  end;
+$$;
+
 create table if not exists public.injury_flags (
   id uuid primary key default gen_random_uuid(),
   athlete_id uuid not null references public.profiles(id) on delete cascade,
@@ -1328,6 +1350,24 @@ create table if not exists public.injury_flags (
     check (status in ('open', 'monitoring', 'resolved')),
   latest_reported_status text not null default 'ongoing'
     check (latest_reported_status in ('ongoing', 'improving', 'worse', 'resolved')),
+  -- Structured surface (skin) safety answers, captured by the Today injury
+  -- check-in's conditional follow-up when a skin injury is marked worse. All
+  -- optional: a missing answer reads as "unknown", never as "clear".
+  skin_integrity text
+    check (skin_integrity is null or skin_integrity in ('intact', 'open', 'unknown')),
+  bleeding_status text
+    check (bleeding_status is null or bleeding_status in ('none', 'controlled', 'uncontrolled')),
+  drainage text
+    check (drainage is null or drainage in ('none', 'present', 'unknown')),
+  infection_signs jsonb not null default '[]'::jsonb
+    check (public.injury_flags_infection_signs_valid(infection_signs)),
+  coverable text
+    check (coverable is null or coverable in ('yes', 'no', 'unknown')),
+  friction_or_contact_problem text
+    check (
+      friction_or_contact_problem is null
+      or friction_or_contact_problem in ('yes', 'no', 'unknown')
+    ),
   resolved_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -230,6 +230,7 @@ export function TodayScreen() {
           banner={resolvedDecision.banner}
           tier={resolvedDecision.displayTier}
           triggers={state.today.recommendation_trigger_labels}
+          safetyChecks={state.today.recommendation_safety_checks}
           context={state.today.recommendation_context_labels}
           sources={state.today.recommendation_sources}
           confidenceNote={state.today.recommendation_confidence_note}

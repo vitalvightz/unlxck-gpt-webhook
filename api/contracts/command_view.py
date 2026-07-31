@@ -24,6 +24,7 @@ from .readiness_message import (
     confidence_note,
     context_labels,
     decision_sources,
+    safety_checks,
     trigger_labels,
 )
 from .recommendation import RecommendationState, resolve_recommendation_state
@@ -256,6 +257,12 @@ class CommandViewToday(BaseModel):
     # "High pain".
     recommendation_trigger_labels: list[str] = Field(default_factory=list)
     recommendation_context_labels: list[str] = Field(default_factory=list)
+    # Safety checks are the third role: things the engine ASSESSED, which mostly
+    # changed nothing. A stable skin injury lives here — never in the trigger
+    # list — so the card can show it was considered without implying it reduced
+    # the session. Structured ({code, label, result, result_label}) so the UI
+    # never reads prose to tell a check from a cause.
+    recommendation_safety_checks: list[dict[str, str]] = Field(default_factory=list)
     recommendation_sources: list[str] = Field(default_factory=list)
     # How much data the decision rests on, and what it was missing. This is data
     # completeness, NOT predictive accuracy — see readiness_message.
@@ -380,10 +387,12 @@ def build_command_view(
         injury_hold_exempt=injury_hold_exempt,
         recommendation_trigger_labels=list(trigger_labels(rec_view.triggers)),
         recommendation_context_labels=list(context_labels(rec_view.triggers)),
+        recommendation_safety_checks=[dict(check) for check in safety_checks(rec_view.triggers)],
+        # Sources come from the decision's own trigger codes. An open injury is
+        # named only when it ACTED — being tracked is not being used, and a
+        # stable skin injury stays in the safety checks where it belongs.
         recommendation_sources=(
-            list(decision_sources(rec_view.triggers, has_open_injuries=bool(open_injuries)))
-            if rec_view.triggers
-            else []
+            list(decision_sources(rec_view.triggers)) if rec_view.triggers else []
         ),
         recommendation_confidence=(
             confidence_band(rec_view.triggers) if rec_view.triggers else None

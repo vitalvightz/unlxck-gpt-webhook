@@ -32,6 +32,7 @@ from api.contracts.completion import (
     completion_status_of,
 )
 from api.contracts.injury_checkin import (
+    MAX_INFECTION_SIGNS,
     DeclaredInjury,
     build_injury_label,
     injury_consequence_tier,
@@ -45,6 +46,7 @@ from api.contracts.readiness_message import (
     ReadinessCheckin,
     ReadinessContext,
     build_readiness_adjustment,
+    classify_injury_surface,
     is_support_session,
 )
 from api.contracts.training_day import resolve_training_day_str
@@ -311,6 +313,56 @@ def _checked_open_injury_flags(
     except Exception:
         logger.exception("[today] injury_flags_read_failed athlete_id=%s", athlete_id)
         return [], False
+
+
+# Surface classes the surface evaluator routes itself (contact restriction /
+# local protection). A worse report on one of these must NOT be escalated into
+# the blanket "active injury worse" stop.
+_SURFACE_ROUTED_CLASSES = frozenset(
+    {"stable_surface", "surface_local_restriction", "surface_no_contact"}
+)
+
+
+def _with_surface_class(injuries: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Stamp each open injury with its canonical surface classification.
+
+    Computed once, server-side, so the Today UI can ask the right follow-up for a
+    skin injury without re-deriving the rules (and so nothing has to parse the
+    injury text client-side). A classification failure degrades to ``None`` —
+    which the UI reads as "not a skin injury", i.e. existing behaviour.
+    """
+    rows: list[dict[str, Any]] = []
+    for injury in injuries or []:
+        row = dict(injury)
+        try:
+            row["surface_class"] = classify_injury_surface(row)
+        except Exception:
+            logger.exception("[today] surface_injury_classification_failed")
+            row["surface_class"] = None
+        rows.append(row)
+    return rows
+
+
+def _load_relevant_worse_injury(injuries: Sequence[Mapping[str, Any]]) -> bool:
+    """True when an injury reported worse is one the generic stop still owns.
+
+    A worsening skin injury is deliberately excluded: it routes through the
+    surface evaluator (contact restriction), so marking a blister worse can no
+    longer turn the whole day into rehab-only.
+    """
+    for injury in injuries or []:
+        if str(injury.get("latest_reported_status") or "").strip().lower() != "worse":
+            continue
+        if str(injury.get("status") or "").strip().lower() not in {"open", "monitoring"}:
+            continue
+        try:
+            surface_class = classify_injury_surface(injury)
+        except Exception:
+            logger.exception("[today] surface_injury_classification_failed")
+            surface_class = "non_surface"
+        if surface_class not in _SURFACE_ROUTED_CLASSES:
+            return True
+    return False
 
 
 def _checked_with_injury_consequence(
@@ -892,7 +944,6 @@ def submit_today_injury_checkin(
             full_plan_row = plan_reader(plan_id, athlete_id)
             if full_plan_row:
                 active_plan_row = full_plan_row
-    injury_reported_worse = any(injury.status == "worse" for injury in declared)
 
     for fields in plan.creates:
         store.create_injury_flag(athlete_id, {**fields, "plan_id": plan_id})
@@ -904,7 +955,13 @@ def submit_today_injury_checkin(
         fields["resolved_at"] = now_iso if fields.get("status") == "resolved" else None
         store.update_injury_flag(update.flag_id, fields)
 
-    open_after = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
+    open_after = _with_surface_class(
+        store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or []
+    )
+    # Only a load-relevant injury reported worse escalates the day. A worsening
+    # skin injury is routed by the surface evaluator instead (see
+    # ``_load_relevant_worse_injury``).
+    injury_reported_worse = _load_relevant_worse_injury(open_after)
     refreshed_recommendation = None
     if active_plan_row:
         refreshed_recommendation = _refresh_today_recommendation_after_injury_change(
@@ -1409,6 +1466,91 @@ def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any])
     return body_area or details
 
 
+# Guided intake asks the surface-safety questions in its own vocabulary. The
+# canonical classifier reads the daily check-in's vocabulary. Without this
+# translation the bootstrapped flag carries no structured wound state at all, and
+# an open, infected or uncontrolled-bleeding intake cut is classified as
+# `stable_surface` in Today — a wound that triaged as needing review at intake
+# silently becomes "no session change".
+_GUIDED_OPEN_WOUND_TO_SKIN_INTEGRITY = {
+    "yes": "open",
+    "true": "open",
+    "open": "open",
+    "burst": "open",
+    "no": "intact",
+    "false": "intact",
+    "closed": "intact",
+    "intact": "intact",
+    "not_sure": "unknown",
+    "unsure": "unknown",
+    "unknown": "unknown",
+}
+_GUIDED_BLEEDING_TO_CANONICAL = {
+    "wont_stop": "uncontrolled",
+    "won't_stop": "uncontrolled",
+    "uncontrolled": "uncontrolled",
+    "a_little": "controlled",
+    "controlled": "controlled",
+    "none": "none",
+    "no": "none",
+    "stopped": "none",
+}
+# Matches the injury_flags column constraint. An oversized list would fail the
+# insert, and the bootstrap swallows write errors — so an over-long answer would
+# silently drop the whole wound instead of just the surplus signs.
+_GUIDED_EMPTY_ANSWERS = frozenset({"", "none", "no", "nil", "n/a", "na", "unknown", "unsure", "not_sure"})
+
+
+def _guided_answer(injury: Mapping[str, Any], field: str) -> str:
+    value = injury.get(field)
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _guided_surface_safety_fields(injury: Mapping[str, Any]) -> dict[str, object]:
+    """Canonical surface-safety columns carried over from a guided intake injury.
+
+    Only answers the athlete actually gave are written: an unanswered question
+    stays absent so the classifier reads it as "unknown" rather than "clear".
+    """
+    fields: dict[str, object] = {}
+
+    skin_integrity = _GUIDED_OPEN_WOUND_TO_SKIN_INTEGRITY.get(
+        _guided_answer(injury, "skin_integrity")
+    ) or _GUIDED_OPEN_WOUND_TO_SKIN_INTEGRITY.get(_guided_answer(injury, "open_wound"))
+    if skin_integrity:
+        fields["skin_integrity"] = skin_integrity
+
+    bleeding = _GUIDED_BLEEDING_TO_CANONICAL.get(_guided_answer(injury, "bleeding_status"))
+    if bleeding:
+        fields["bleeding_status"] = bleeding
+
+    raw_signs = injury.get("infection_signs")
+    if isinstance(raw_signs, str):
+        raw_signs = [raw_signs]
+    if isinstance(raw_signs, (list, tuple, set, frozenset)):
+        signs: list[str] = []
+        for item in raw_signs:
+            token = str(item or "").strip().lower().replace("-", "_").replace(" ", "_")
+            if token and token not in _GUIDED_EMPTY_ANSWERS and token not in signs:
+                signs.append(token)
+        if signs:
+            fields["infection_signs"] = signs[:MAX_INFECTION_SIGNS]
+
+    # Guided intake does not ask whether the wound can be kept covered today, so
+    # this is only carried when a caller supplied it.
+    coverable = _guided_answer(injury, "coverable")
+    if coverable in {"yes", "no", "unknown"}:
+        fields["coverable"] = coverable
+
+    drainage = _guided_answer(injury, "drainage")
+    if drainage in {"none", "present", "unknown"}:
+        fields["drainage"] = drainage
+
+    return fields
+
+
 def _guided_intake_injury_candidate(
     injury: Mapping[str, Any],
     *,
@@ -1427,6 +1569,9 @@ def _guided_intake_injury_candidate(
         "description": description or body_area,
         "severity": _flag_severity_from_guided_injury(injury),
         "status": _flag_status_from_guided_injury(injury),
+        # The wound state triage already collected. Without it the canonical
+        # classifier sees an unanswered wound and routes it as stable skin.
+        **_guided_surface_safety_fields(injury),
     }
 
 
@@ -1685,11 +1830,13 @@ def build_today_command_view(
         structured_phase=structured_phase,
     )
 
-    open_injuries = _ensure_intake_injury_flags(
-        store,
-        athlete_id=athlete_id,
-        plan_row=plan_row,
-        open_flags=_open_injury_flags(store, athlete_id),
+    open_injuries = _with_surface_class(
+        _ensure_intake_injury_flags(
+            store,
+            athlete_id=athlete_id,
+            plan_row=plan_row,
+            open_flags=_open_injury_flags(store, athlete_id),
+        )
     )
     # Attach a clean, athlete-facing label derived from the injury synonym logic
     # so the reminder text and the check-in card render the same normalized name

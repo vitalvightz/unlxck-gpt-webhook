@@ -780,6 +780,35 @@ export type InjuryFlagCreateRequest = {
   severity?: InjuryFlagSeverity;
 };
 
+/** Canonical surface (skin) injury routing class, computed by the backend. The
+ * UI never re-derives it — it only decides which follow-up to ask. */
+export type SurfaceInjuryClass =
+  | "non_surface"
+  | "stable_surface"
+  | "surface_local_restriction"
+  | "surface_no_contact"
+  | "surface_medical_review";
+
+export type SkinIntegrity = "intact" | "open" | "unknown";
+export type BleedingStatus = "none" | "controlled" | "uncontrolled";
+export type Drainage = "none" | "present" | "unknown";
+export type Coverable = "yes" | "no" | "unknown";
+export type FrictionOrContactProblem = "yes" | "no" | "unknown";
+
+/** One safety check the readiness engine ran, and what it concluded. */
+export type TodaySafetyCheck = {
+  code: string;
+  label: string;
+  result:
+    | "no_session_change"
+    | "local_protection_only"
+    | "no_contact"
+    | "direct_impact_removed"
+    | "multiple_restrictions"
+    | "medical_review";
+  result_label: string;
+};
+
 export type InjuryFlagRecord = {
   id: string;
   athlete_id: string;
@@ -793,6 +822,17 @@ export type InjuryFlagRecord = {
   severity: InjuryFlagSeverity;
   status: InjuryFlagStatus;
   latest_reported_status?: InjuryReportedStatus;
+  // Structured surface (skin) safety answers, captured by the conditional
+  // follow-up when a skin injury is marked worse.
+  skin_integrity?: SkinIntegrity | null;
+  bleeding_status?: BleedingStatus | null;
+  drainage?: Drainage | null;
+  infection_signs?: string[];
+  coverable?: Coverable | null;
+  friction_or_contact_problem?: FrictionOrContactProblem | null;
+  /** Backend-computed routing class; drives whether the "Worse" follow-up asks
+   * the skin questions at all. */
+  surface_class?: SurfaceInjuryClass | null;
   resolved_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -892,6 +932,11 @@ export type TodayCommandView = {
     /** The camp around the decision (fight week, taper, today's exposure). Only
      * ever changes how cautious the call is; never a claim anything is wrong. */
     recommendation_context_labels?: string[];
+    /** Safety questions the engine ASSESSED, with their outcome. A stable skin
+     * injury lands here with result "no_session_change" — it was checked and
+     * changed nothing — so it never has to appear as a cause. Structured, so the
+     * UI never reads prose to tell a check from a trigger. */
+    recommendation_safety_checks?: TodaySafetyCheck[];
     /** The inputs the decision was made from, for the card's "Based on" line. */
     recommendation_sources?: string[];
     /** How much data the decision rests on. Data completeness, NOT predictive
@@ -1026,6 +1071,14 @@ export type TodayInjuryDeclaration = {
   description?: string;
   severity?: InjuryFlagSeverity;
   status?: TodayInjuryCheckinStatus;
+  // Surface follow-up. Sent only when a known skin injury is marked worse; the
+  // backend treats every field as optional.
+  skin_integrity?: SkinIntegrity;
+  bleeding_status?: BleedingStatus;
+  drainage?: Drainage;
+  infection_signs?: string[];
+  coverable?: Coverable;
+  friction_or_contact_problem?: FrictionOrContactProblem;
 };
 
 export type TodayInjuryCheckinRequest = {

@@ -181,6 +181,7 @@ class TestShape:
             "injury_hold_exempt",
             "recommendation_trigger_labels",
             "recommendation_context_labels",
+            "recommendation_safety_checks",
             "recommendation_sources",
             "recommendation_confidence",
             "recommendation_confidence_note",
@@ -340,14 +341,26 @@ class TestContributorsAndSources:
             "today's planned session",
         ]
 
-    def test_open_injuries_are_named_as_a_source(self):
-        view = build_command_view(
+    def test_an_injury_is_named_as_a_source_only_when_it_acted(self):
+        # Having a tracked injury is not the same as the decision resting on it.
+        # The source is claimed from the injury trigger codes, which fire exactly
+        # when the injury restricted, held, or removed something.
+        injury = [{"severity": "moderate", "status": "open", "label": "left knee"}]
+        unused = build_command_view(
             current_training_day=TODAY,
             plan=PLAN,
             recommendation=_rec(triggers=["poor_sleep"]),
-            open_injuries=[{"severity": "moderate", "status": "open", "label": "left knee"}],
+            open_injuries=injury,
         )
-        assert "your tracked injuries" in view.today.recommendation_sources
+        acted = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["poor_sleep", "active_injury_restriction"]),
+            open_injuries=injury,
+        )
+
+        assert "your tracked injuries" not in unused.today.recommendation_sources
+        assert "your tracked injuries" in acted.today.recommendation_sources
 
     def test_a_degraded_context_hold_claims_no_history_it_could_not_read(self):
         # The hold exists BECAUSE the history failed to load, so the card must not

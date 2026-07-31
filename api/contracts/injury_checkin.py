@@ -43,6 +43,35 @@ _FLAG_STATUS_BY_REPORT: dict[str, InjuryFlagStatus] = {
 # Open/active statuses for risk-watch purposes (resolved flags are silent).
 ACTIVE_FLAG_STATUSES: frozenset[str] = frozenset({"open", "monitoring"})
 
+# Structured surface (skin) safety answers. The vocabulary is deliberately the
+# guided injury intake's own (``open_wound`` -> skin_integrity, ``bleeding_status``,
+# ``infection_signs``), so the daily check-in and the guided intake never carry two
+# names for the same fact. Every field is OPTIONAL: an existing client that posts
+# only ``{flag_id, status}`` stays valid, and the classifier treats a missing
+# answer as "unknown", never as "clear".
+# How many infection signs one report may carry (a bounded checkbox list, not
+# free-form input). Defined here, next to the vocabulary it belongs to, and
+# reused by every layer above so the API contract, the response model and the
+# injury_flags column constraint can never disagree about the bound.
+MAX_INFECTION_SIGNS = 8
+
+SkinIntegrity = Literal["intact", "open", "unknown"]
+BleedingStatus = Literal["none", "controlled", "uncontrolled"]
+Drainage = Literal["none", "present", "unknown"]
+Coverable = Literal["yes", "no", "unknown"]
+FrictionOrContactProblem = Literal["yes", "no", "unknown"]
+
+# The columns a surface follow-up persists, so a later day's check-in can be
+# evaluated without re-asking or parsing free text.
+SURFACE_SAFETY_FIELDS: tuple[str, ...] = (
+    "skin_integrity",
+    "bleeding_status",
+    "drainage",
+    "infection_signs",
+    "coverable",
+    "friction_or_contact_problem",
+)
+
 
 class DeclaredInjury(BaseModel):
     """One injury as reported on a daily check-in.
@@ -50,6 +79,11 @@ class DeclaredInjury(BaseModel):
     ``flag_id`` references an existing open flag being updated; without it the
     report is a new injury and needs a ``body_area`` or ``description`` to
     identify it.
+
+    The surface-safety fields are the structured follow-up asked only when a
+    known skin injury is marked worse. They are what routes the wound (local
+    friction restriction / no contact / medical review) instead of the blanket
+    "active injury worse" stop, so they are persisted rather than read once.
     """
 
     flag_id: str | None = None
@@ -57,12 +91,35 @@ class DeclaredInjury(BaseModel):
     description: str = ""
     severity: InjuryFlagSeverity | None = None
     status: InjuryCheckinStatus = "ongoing"
+    skin_integrity: SkinIntegrity | None = None
+    bleeding_status: BleedingStatus | None = None
+    drainage: Drainage | None = None
+    # Bounded to the same limit the injury_flags column enforces. A list this
+    # contract accepted but the database rejected would surface as a write
+    # failure at persist time rather than a validation error at the edge.
+    infection_signs: list[str] | None = Field(default=None, max_length=MAX_INFECTION_SIGNS)
+    coverable: Coverable | None = None
+    friction_or_contact_problem: FrictionOrContactProblem | None = None
 
     @model_validator(mode="after")
     def _check_identifiable(self) -> "DeclaredInjury":
         if not self.flag_id and not (self.body_area.strip() or self.description.strip()):
             raise ValueError("a new injury needs a body_area or description")
         return self
+
+    def surface_safety_fields(self) -> dict[str, object]:
+        """Only the surface answers this report actually carried.
+
+        Absent answers are left out entirely so a plain daily update can never
+        blank a previously recorded one.
+        """
+        fields: dict[str, object] = {}
+        for name in SURFACE_SAFETY_FIELDS:
+            value = getattr(self, name)
+            if value is None:
+                continue
+            fields[name] = list(value) if isinstance(value, list) else value
+        return fields
 
 
 class FlagUpdate(BaseModel):
@@ -469,6 +526,7 @@ def reconcile_injury_checkin(
                 fields["body_area"] = injury.body_area.strip()
             if injury.description.strip():
                 fields["description"] = injury.description.strip()
+            fields.update(injury.surface_safety_fields())
             updates.append(FlagUpdate(flag_id=injury.flag_id, fields=fields))
             continue
 
@@ -487,6 +545,7 @@ def reconcile_injury_checkin(
                 "severity": injury.severity or "moderate",
                 "status": flag_status,
                 "latest_reported_status": injury.status,
+                **injury.surface_safety_fields(),
             }
         )
 
@@ -522,6 +581,22 @@ def open_injury_flag_risks(
     labels = ", ".join(_flag_label(f) for f in active[:2])
     count = len(active)
     noun = "injury" if count == 1 else "injuries"
+
+    # Stable skin injuries stay VISIBLE, but they are a hygiene constraint, not
+    # something to train around: "train around it" would read as a dosage
+    # instruction for an intact blister. Uses the canonical classification, never
+    # a second copy of the rules.
+    from api.contracts.readiness_message import classify_injury_surface
+
+    if all(classify_injury_surface(flag) == "stable_surface" for flag in active):
+        skin_noun = "skin injury" if count == 1 else "skin injuries"
+        return [
+            make_risk(
+                "reminder",
+                text=f"Tracking {count} {skin_noun}: {labels}. Keep it clean and covered.",
+            )
+        ]
+
     return [
         make_risk(
             "reminder",

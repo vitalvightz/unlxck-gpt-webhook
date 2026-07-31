@@ -17,6 +17,14 @@ from .contracts.checkin_decision import (
     Sleep as CheckinSleep,
 )
 from .contracts.completion import CompletionStatus, LandingSessionState
+from .contracts.injury_checkin import (
+    MAX_INFECTION_SIGNS,
+    BleedingStatus as _BleedingStatus,
+    Coverable as _Coverable,
+    Drainage as _Drainage,
+    FrictionOrContactProblem as _FrictionOrContactProblem,
+    SkinIntegrity as _SkinIntegrity,
+)
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
 from .performance_focus import get_performance_focus_cap
 from .state_machine import GenerationJobStatus
@@ -1776,6 +1784,20 @@ RehabLabelMode = Literal["rehab", "prehab"]
 InjuryReportedStatus = Literal["ongoing", "improving", "worse", "resolved"]
 AdminReviewStatus = Literal["pending", "acknowledged", "resolved"]
 
+# Structured surface (skin) safety vocabulary, re-exported from the check-in
+# contract so the API schema and the routing logic can never drift apart.
+SkinIntegrity = _SkinIntegrity
+BleedingStatus = _BleedingStatus
+Drainage = _Drainage
+Coverable = _Coverable
+FrictionOrContactProblem = _FrictionOrContactProblem
+SurfaceInjuryClass = Literal[
+    "non_surface",
+    "stable_surface",
+    "surface_local_restriction",
+    "surface_no_contact",
+    "surface_medical_review",
+]
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DAILY_NOTE_MAX_CHARS = 2000
 
@@ -1816,6 +1838,19 @@ class InjuryFlagRecord(BaseModel):
     severity: InjuryFlagSeverity = "moderate"
     status: InjuryFlagStatus = "open"
     latest_reported_status: InjuryReportedStatus = "ongoing"
+    # Structured surface (skin) safety answers, recorded by the injury check-in's
+    # conditional follow-up. Optional throughout: an injury that never needed the
+    # follow-up simply carries none, and the classifier reads a missing answer as
+    # "unknown" rather than "clear".
+    skin_integrity: SkinIntegrity | None = None
+    bleeding_status: BleedingStatus | None = None
+    drainage: Drainage | None = None
+    infection_signs: list[str] = Field(default_factory=list, max_length=MAX_INFECTION_SIGNS)
+    coverable: Coverable | None = None
+    friction_or_contact_problem: FrictionOrContactProblem | None = None
+    # Canonical surface classification, computed server-side so the UI never
+    # re-derives it (see fightcamp.injury_registry.classify_surface_injury).
+    surface_class: SurfaceInjuryClass | None = None
     resolved_at: str | None = None
     created_at: str = ""
     updated_at: str = ""
@@ -2029,6 +2064,34 @@ class TodayInjuryDeclaration(BaseModel):
     description: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
     severity: InjuryFlagSeverity | None = None
     status: Literal["ongoing", "improving", "worse", "resolved"] = "ongoing"
+    # Optional surface (skin) follow-up, sent only when a known skin injury is
+    # marked worse. Existing clients that omit them stay valid.
+    skin_integrity: SkinIntegrity | None = None
+    bleeding_status: BleedingStatus | None = None
+    drainage: Drainage | None = None
+    infection_signs: list[str] | None = Field(default=None, max_length=MAX_INFECTION_SIGNS)
+    coverable: Coverable | None = None
+    friction_or_contact_problem: FrictionOrContactProblem | None = None
+
+    @field_validator("infection_signs", mode="before")
+    @classmethod
+    def clean_infection_signs(cls, value: Any) -> list[str] | None:
+        if value is None:
+            # Absent is not malformed. Every surface answer is optional by
+            # design — an existing client that posts {flag_id, status}, or one
+            # that sends an explicit null for a question it did not ask, stays
+            # valid, and the classifier reads the missing answer as "unknown".
+            return None
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, (list, tuple)):
+            # Silently reading a malformed container as "omitted" fails OPEN: the
+            # safety classifier would see no infection signs on a wound the
+            # client tried to report as infected, and route it as stable skin.
+            # A rejected request is the only safe reading of an unparseable
+            # safety answer.
+            raise ValueError("infection_signs must be a list of strings")
+        return [str(item).strip()[:60] for item in value if str(item).strip()]
 
     @field_validator("flag_id", mode="before")
     @classmethod

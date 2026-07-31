@@ -20,6 +20,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from api.contracts.injury_checkin import MAX_INFECTION_SIGNS
+from api.contracts.readiness_message import classify_injury_surface
 from api.models import (
     AdaptationNoteRecord,
     AdminReviewRecord,
@@ -32,9 +34,61 @@ from api.models import (
 from api.readiness import AdaptationDecision
 from api.services.plan_schedule import latest_visible_plan_row
 from api.store import AppStore
+from fightcamp.injury_registry import (
+    BLEEDING_STATUS_VALUES,
+    COVERABLE_VALUES,
+    DRAINAGE_VALUES,
+    FRICTION_PROBLEM_VALUES,
+    SKIN_INTEGRITY_VALUES,
+)
+
+
+_SURFACE_ENUM_VALUES: dict[str, frozenset[str]] = {
+    "skin_integrity": SKIN_INTEGRITY_VALUES,
+    "bleeding_status": BLEEDING_STATUS_VALUES,
+    "drainage": DRAINAGE_VALUES,
+    "coverable": COVERABLE_VALUES,
+    "friction_or_contact_problem": FRICTION_PROBLEM_VALUES,
+}
+
+
+def _surface_enum(row: dict[str, Any], field: str) -> str | None:
+    """One stored surface answer, or None when absent/unrecognised.
+
+    A value the response model does not know is dropped rather than raised on:
+    a legacy row must not be able to break the injury list.
+    """
+    value = str(row.get(field) or "").strip().lower()
+    return value if value in _SURFACE_ENUM_VALUES[field] else None
+
+
+def _surface_infection_signs(row: dict[str, Any]) -> list[str]:
+    raw = row.get("infection_signs")
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, (list, tuple)):
+        return []
+    signs = [str(item).strip()[:60] for item in raw if str(item or "").strip()]
+    return signs[:MAX_INFECTION_SIGNS]
 
 
 def _map_injury_flag(row: dict[str, Any]) -> InjuryFlagRecord:
+    # The structured surface answers and the canonical classification are mapped
+    # here too, not just on /api/today/injury-checkin. Dropping them left the
+    # legacy and admin readers looking at an injury whose wound state was
+    # blank — the same row that Today reports as needing review would read as
+    # having no surface answers at all.
+    surface_row = {
+        **row,
+        "infection_signs": _surface_infection_signs(row),
+        **{field: _surface_enum(row, field) for field in _SURFACE_ENUM_VALUES},
+    }
+    try:
+        surface_class = classify_injury_surface(surface_row)
+    except Exception:
+        # Response-only metadata: a classifier failure must not take the
+        # injury list down with it.
+        surface_class = None
     return InjuryFlagRecord(
         id=str(row["id"]),
         athlete_id=str(row["athlete_id"]),
@@ -44,6 +98,14 @@ def _map_injury_flag(row: dict[str, Any]) -> InjuryFlagRecord:
         description=str(row.get("description") or ""),
         severity=str(row.get("severity") or "moderate"),
         status=str(row.get("status") or "open"),
+        latest_reported_status=str(row.get("latest_reported_status") or "ongoing"),
+        skin_integrity=surface_row["skin_integrity"],
+        bleeding_status=surface_row["bleeding_status"],
+        drainage=surface_row["drainage"],
+        infection_signs=surface_row["infection_signs"],
+        coverable=surface_row["coverable"],
+        friction_or_contact_problem=surface_row["friction_or_contact_problem"],
+        surface_class=surface_class,
         resolved_at=str(row["resolved_at"]) if row.get("resolved_at") else None,
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
