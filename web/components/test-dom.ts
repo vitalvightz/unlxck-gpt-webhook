@@ -21,8 +21,31 @@ globalAny.HTMLElement = window.HTMLElement;
 globalAny.Element = window.Element;
 globalAny.Node = window.Node;
 globalAny.Event = window.Event;
+globalAny.CustomEvent = window.CustomEvent;
 globalAny.MouseEvent = window.MouseEvent;
 globalAny.getComputedStyle = window.getComputedStyle.bind(window);
+// next/link's intersection-observer fallback reads `self` at module scope and
+// throws a ReferenceError without it.
+globalAny.self = window;
+
+// jsdom ships no matchMedia. Components that check prefers-reduced-motion
+// before animating would throw on mount; report "no preference".
+if (typeof window.matchMedia !== "function") {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+globalAny.matchMedia = window.matchMedia.bind(window);
 
 Object.defineProperty(globalThis, "navigator", {
   value: window.navigator,

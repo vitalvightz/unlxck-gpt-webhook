@@ -10,6 +10,10 @@ import {
   type GenerationFailureKind,
 } from "@/lib/generation-failure";
 import { normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
+import {
+  publishGenerationTerminalJob,
+  resolveGenerationEndedAtMs,
+} from "@/lib/generation-terminal-event";
 import type { GenerationJobResponse, GenerationJobStatus, ProgressMilestone } from "@/lib/types";
 
 export type GenerationUiPhase =
@@ -309,6 +313,11 @@ export function useGenerationController({
   const [error, setError] = useState<string | null>(null);
   const [failedJobId, setFailedJobId] = useState<string | null>(null);
   const [failureKind, setFailureKind] = useState<GenerationFailureKind | null>(null);
+  // Backend-derived instant the job stopped. Set once and only once per build:
+  // the elapsed clock reads from it instead of Date.now() the moment it lands,
+  // which is what makes the timer freeze on a completed, review-paused or
+  // failed job instead of rolling on.
+  const [endedAtMs, setEndedAtMs] = useState<number | null>(null);
   // State updates are not visible to the async function that just scheduled
   // them, and the failure classifier has to know synchronously whether a job
   // was ever created — so the job id is mirrored into a ref.
@@ -323,6 +332,9 @@ export function useGenerationController({
     const kind = classifyGenerationFailure(generationError, {
       hasFailedJobId: Boolean(failedJobIdRef.current),
     });
+    // A failed build is over: freeze the clock here for the failures that never
+    // reached a job response to read a terminal timestamp from.
+    setEndedAtMs((previous) => previous ?? Date.now());
     setPhase("failed");
     setStatusMessage(null);
     setIsGenerating(false);
@@ -339,6 +351,17 @@ export function useGenerationController({
     return Number.isFinite(parsed) ? parsed : null;
   });
   const recoveryAttemptedRef = useRef<string | null>(null);
+
+  // Every terminal exit funnels through here so the three things that must
+  // happen together always do: drop the shared pending record, freeze this
+  // screen's clock on the backend's terminal timestamp, and tell the global
+  // ribbon — which owns its own state machine and cannot see a same-tab
+  // localStorage write — that the job is over.
+  const finishWithTerminalJob = useCallback((job: GenerationJobResponse) => {
+    clearAllPendingGenerations();
+    setEndedAtMs(resolveGenerationEndedAtMs(job, Date.now()));
+    publishGenerationTerminalJob(job);
+  }, []);
 
   const watchJobUntilTerminal = useCallback(
     async (
@@ -389,7 +412,7 @@ export function useGenerationController({
         if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
           const outcome = resolveCompletedTerminalJobOutcome(currentJob);
           if (outcome.type === "already_generated") {
-            clearAllPendingGenerations();
+            finishWithTerminalJob(currentJob);
             setPhase("already_generated");
             setStatusMessage("This intake already has a generated plan.");
             setIsGenerating(false);
@@ -400,7 +423,7 @@ export function useGenerationController({
             // elapsed timer, and surface admin-review copy. onComplete is
             // invoked without a planId so the generate page won't redirect
             // to /plans/{id}.
-            clearAllPendingGenerations();
+            finishWithTerminalJob(currentJob);
             setPhase("review_paused");
             setStatusMessage(
               "Planning paused. Admin review is required before generation can continue.",
@@ -415,7 +438,7 @@ export function useGenerationController({
             });
             return;
           }
-          clearAllPendingGenerations();
+          finishWithTerminalJob(currentJob);
           setPhase("finalizing");
           setStatusMessage("Final checks passed. Opening your saved plan.");
           setIsGenerating(false);
@@ -433,7 +456,7 @@ export function useGenerationController({
         if (normalizedStatus === "failed") {
           const recoveredPlanId = resolveFailedJobWithSavedPlan(currentJob);
           if (recoveredPlanId) {
-            clearAllPendingGenerations();
+            finishWithTerminalJob(currentJob);
             setPhase("finalizing");
             setStatusMessage("Opening your saved plan.");
             setIsGenerating(false);
@@ -444,7 +467,7 @@ export function useGenerationController({
             });
             return;
           }
-          clearAllPendingGenerations();
+          finishWithTerminalJob(currentJob);
           markFailedJob(currentJob.job_id);
           throw new Error(currentJob.error || "Plan generation failed.");
         }
@@ -457,7 +480,7 @@ export function useGenerationController({
         await sleep(getPollDelay(createdAtMs));
       }
     },
-    [markFailedJob, onComplete],
+    [finishWithTerminalJob, markFailedJob, onComplete],
   );
 
   const startGeneration = useCallback(
@@ -469,6 +492,7 @@ export function useGenerationController({
       setError(null);
       setFailureKind(null);
       markFailedJob(null);
+      setEndedAtMs(null);
       setIsGenerating(true);
       const recovered = options.recovered ?? false;
       const clientRequestId = options.clientRequestId ?? buildClientRequestId();
@@ -531,6 +555,7 @@ export function useGenerationController({
 
     setError(null);
     setFailureKind(null);
+    setEndedAtMs(null);
     setIsGenerating(true);
     setMilestones([]);
     setPhase("submitting");
@@ -614,6 +639,7 @@ export function useGenerationController({
     phase,
     statusMessage,
     startedAtMs,
+    endedAtMs,
     milestones,
     error,
     setError,

@@ -16547,6 +16547,15 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   white-space: nowrap;
 }
 
+/* The stage still in flight reads "running for 3m 46s" — longer than a bare
+   duration, so it is allowed to wrap instead of squeezing the milestone copy. */
+.loading-milestone-time-running {
+  color: var(--text-secondary);
+  white-space: normal;
+  text-align: right;
+  max-width: 96px;
+}
+
 .loading-milestone-rotator {
   margin-top: 8px;
   padding: 14px 16px 14px;

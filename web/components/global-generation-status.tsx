@@ -5,23 +5,31 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { cancelGenerationJob, retryGenerationJob } from "@/lib/api";
+import { formatGenerationElapsedLabel, formatJobElapsedLabel } from "@/lib/generation-elapsed";
 import { humanizeGenerationError } from "@/lib/generation-failure";
 import { useAppSession } from "./auth-provider";
 import { useGenerationStatus } from "./generation-status-provider";
 
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
+const CELEBRATION_DURATION_MS = 1_600;
 
-  if (minutes === 0) {
-    return `${seconds}s`;
+/**
+ * The frozen total a finished build took. Every terminal ribbon renders it —
+ * completed, review-required, recovered plan, and failure alike. Dropping it
+ * on the terminal branches was what made the ribbon look like it had lost
+ * track of time: the number climbed while the build ran and then vanished the
+ * instant it mattered, so nothing on screen ever said how long it had taken.
+ */
+function TotalBuildTime({ label }: { label: string | null }) {
+  if (!label) {
+    return null;
   }
 
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  return (
+    <span className="global-generation-status-elapsed" aria-label={`Total build time ${label}`}>
+      {label}
+    </span>
+  );
 }
-
-const CELEBRATION_DURATION_MS = 1_600;
 const RIBBON_DISMISSED_KEY = "unlxck:generation-ribbon-dismissed";
 const latestJobDismissKey = (jobId: string) => `${RIBBON_DISMISSED_KEY}:${jobId}`;
 
@@ -205,6 +213,7 @@ export function GlobalGenerationStatus() {
     planId,
     terminalStatus,
     startedAtMs,
+    endedAtMs,
     refreshStatus,
     latestJob,
     source,
@@ -346,7 +355,16 @@ export function GlobalGenerationStatus() {
   const isRedundantRoute = isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
   const isAcknowledgementRoute = isGenerationRibbonAcknowledgedRoute(pathname, acknowledgementTarget);
   const ctaLabel = isCompleted && planId ? "View" : navigationTarget ? "Open" : "Refresh";
-  const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
+  // The elapsed reading survives into the terminal states instead of vanishing
+  // — a finished build should say how long it took. It stops moving because
+  // `endedAtMs` replaces `now` in the subtraction, not because it is hidden.
+  const showElapsed = isActive && startedAtMs !== null;
+  const isElapsedRunning = showElapsed && endedAtMs === null;
+
+  // The passive ribbon has no live timer to read, so its total comes from the
+  // job row's own timestamps — the same window, recovered from the backend
+  // values, so the number does not change across the handoff.
+  const passiveTotalLabel = !isActive ? formatJobElapsedLabel(latestJob) : null;
 
   const dismissKey =
     !isActive && latestJob?.job_id
@@ -356,7 +374,7 @@ export function GlobalGenerationStatus() {
         : RIBBON_DISMISSED_KEY;
 
   useEffect(() => {
-    if (!showElapsed) {
+    if (!isElapsedRunning) {
       return;
     }
 
@@ -364,7 +382,7 @@ export function GlobalGenerationStatus() {
 
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
-  }, [showElapsed]);
+  }, [isElapsedRunning]);
 
   useEffect(() => {
     if (previousPhaseRef.current !== "completed" && phase === "completed") {
@@ -494,11 +512,14 @@ export function GlobalGenerationStatus() {
         return (
           <div className="global-generation-status global-generation-status-completed">
             <Link href={target} className="global-generation-status-main" onClick={dismissCurrentBanner}>
-              <div className="global-generation-status-message">
-                {isProtectedTriage
-                  ? "Plan is held for admin review."
-                  : "Your plan is saved and ready."}
-              </div>
+              <span className="global-generation-status-text">
+                <span className="global-generation-status-message">
+                  {isProtectedTriage
+                    ? "Plan is held for admin review."
+                    : "Your plan is saved and ready."}
+                </span>
+                <TotalBuildTime label={passiveTotalLabel} />
+              </span>
               <span className="global-generation-status-cta-label">
                 {isProtectedTriage ? "Open admin review" : "Open plan"}
               </span>
@@ -524,6 +545,8 @@ export function GlobalGenerationStatus() {
                 <span className="global-generation-status-message">
                   {humanizeGenerationError(latestJob.error)}
                 </span>
+
+                <TotalBuildTime label={passiveTotalLabel} />
 
                 {latestJob.completed_at ? (
                   <span className="global-generation-status-elapsed" suppressHydrationWarning>
@@ -586,7 +609,10 @@ export function GlobalGenerationStatus() {
       return (
         <div className="global-generation-status global-generation-status-completed">
           <Link href={target} className="global-generation-status-main" onClick={dismissCurrentBanner}>
-            <div className="global-generation-status-message">Review saved plan</div>
+            <span className="global-generation-status-text">
+              <span className="global-generation-status-message">Review saved plan</span>
+              <TotalBuildTime label={passiveTotalLabel} />
+            </span>
             <span className="global-generation-status-cta-label">Open plan</span>
           </Link>
 
@@ -614,7 +640,10 @@ export function GlobalGenerationStatus() {
       const adminTarget = latestJob.athlete_id ? `/admin/athletes/${latestJob.athlete_id}` : null;
       const content = (
         <>
-          <div className="global-generation-status-message">Plan is held for admin review.</div>
+          <span className="global-generation-status-text">
+            <span className="global-generation-status-message">Plan is held for admin review.</span>
+            <TotalBuildTime label={passiveTotalLabel} />
+          </span>
           <span className="global-generation-status-cta-label">
             {adminTarget ? "Open admin review" : "Awaiting admin"}
           </span>
@@ -655,11 +684,14 @@ export function GlobalGenerationStatus() {
         return (
           <div className="global-generation-status global-generation-status-completed">
             <Link href={target} className="global-generation-status-main" onClick={dismissCurrentBanner}>
-              <div className="global-generation-status-message">
-                {isProtectedTriage
-                  ? "Plan is held for admin review."
-                  : "Your plan is saved and ready."}
-              </div>
+              <span className="global-generation-status-text">
+                <span className="global-generation-status-message">
+                  {isProtectedTriage
+                    ? "Plan is held for admin review."
+                    : "Your plan is saved and ready."}
+                </span>
+                <TotalBuildTime label={passiveTotalLabel} />
+              </span>
               <span className="global-generation-status-cta-label">
                 {isProtectedTriage ? "Open admin review" : "Open plan"}
               </span>
@@ -685,6 +717,7 @@ export function GlobalGenerationStatus() {
                 <span className="global-generation-status-message">
                   Your plan finished but could not be opened. Support can recover it.
                 </span>
+                <TotalBuildTime label={passiveTotalLabel} />
               </span>
 
               <Link href="/plans" className="global-generation-status-cta-label">
@@ -707,7 +740,9 @@ export function GlobalGenerationStatus() {
   }
 
   const canNavigateToPlan = Boolean(navigationTarget);
-  const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
+  const elapsedLabel = showElapsed
+    ? formatGenerationElapsedLabel({ startedAtMs, endedAtMs, nowMs: now })
+    : null;
   const className = [
     "global-generation-status",
     isFailed ? "global-generation-status-failed" : "",
@@ -734,6 +769,7 @@ export function GlobalGenerationStatus() {
           <div className="global-generation-status-content">
             <span className="global-generation-status-text">
               <span className="global-generation-status-message">{statusMessage}</span>
+              <TotalBuildTime label={elapsedLabel} />
             </span>
 
             {/*
@@ -848,7 +884,10 @@ export function GlobalGenerationStatus() {
           <span className="global-generation-status-message">{statusMessage}</span>
 
           {elapsedLabel ? (
-            <span className="global-generation-status-elapsed" aria-label={`Elapsed time ${elapsedLabel}`}>
+            <span
+              className="global-generation-status-elapsed"
+              aria-label={`${isElapsedRunning ? "Elapsed time" : "Total build time"} ${elapsedLabel}`}
+            >
               {elapsedLabel}
             </span>
           ) : null}
