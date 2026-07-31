@@ -32,6 +32,7 @@ from api.contracts.completion import (
     completion_status_of,
 )
 from api.contracts.injury_checkin import (
+    MAX_INFECTION_SIGNS,
     DeclaredInjury,
     build_injury_label,
     injury_consequence_tier,
@@ -1497,7 +1498,6 @@ _GUIDED_BLEEDING_TO_CANONICAL = {
 # Matches the injury_flags column constraint. An oversized list would fail the
 # insert, and the bootstrap swallows write errors — so an over-long answer would
 # silently drop the whole wound instead of just the surplus signs.
-_MAX_INFECTION_SIGNS = 8
 _GUIDED_EMPTY_ANSWERS = frozenset({"", "none", "no", "nil", "n/a", "na", "unknown", "unsure", "not_sure"})
 
 
@@ -1536,7 +1536,7 @@ def _guided_surface_safety_fields(injury: Mapping[str, Any]) -> dict[str, object
             if token and token not in _GUIDED_EMPTY_ANSWERS and token not in signs:
                 signs.append(token)
         if signs:
-            fields["infection_signs"] = signs[:_MAX_INFECTION_SIGNS]
+            fields["infection_signs"] = signs[:MAX_INFECTION_SIGNS]
 
     # Guided intake does not ask whether the wound can be kept covered today, so
     # this is only carried when a caller supplied it.

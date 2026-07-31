@@ -721,8 +721,48 @@ _ACTIVE_FLAG_STATUSES = frozenset({"open", "monitoring"})
 SAFETY_CHECK_PREFIX = "safety_check:"
 
 SafetyCheckResult = Literal[
-    "no_session_change", "local_protection_only", "no_contact", "medical_review"
+    "no_session_change",
+    "local_protection_only",
+    "no_contact",
+    "direct_impact_removed",
+    "multiple_restrictions",
+    "medical_review",
 ]
+
+SurfaceExposureCode = Literal[
+    "contact_exposure",
+    "direct_impact_exposure",
+    "friction_exposure",
+]
+SurfaceRestrictionCode = Literal[
+    "remove_contact",
+    "remove_direct_impact",
+    "protect_or_replace_friction",
+]
+
+SURFACE_EXPOSURE_PREFIX = "surface_exposure:"
+SURFACE_RESTRICTION_PREFIX = "surface_restriction:"
+
+
+@dataclass(frozen=True)
+class SurfaceSessionExposure:
+    """Independent ways today's work can expose a surface injury."""
+
+    contact_exposure: bool = False
+    direct_impact_exposure: bool = False
+    friction_exposure: bool = False
+
+    @property
+    def codes(self) -> tuple[SurfaceExposureCode, ...]:
+        return tuple(
+            code
+            for code in (
+                "contact_exposure",
+                "direct_impact_exposure",
+                "friction_exposure",
+            )
+            if getattr(self, code)
+        )
 
 
 def _safety_check_code(code: str, result: str) -> str:
@@ -840,25 +880,25 @@ def _surface_medical_review(context: ReadinessContext) -> tuple[str, str] | None
 # friction over it. The body AREA of a skin wound never implies a load
 # restriction, so none of this consults injury regions.
 _CONTACT_SESSION_TYPES = frozenset(
-    {"sparring", "spar", "hard_spar", "fight_or_match", "fight", "match", "impact", "contact"}
+    {"sparring", "spar", "hard_spar", "fight_or_match", "fight", "match", "contact"}
 )
-_CONTACT_BLOCK_TYPES = frozenset({"sparring", "impact", "contact"})
-# Structured training tags that mean the athlete takes or delivers impact. These
-# come from the plan's own tag vocabulary, so an impact session is recognised
-# without having to find the word in prose.
+_CONTACT_BLOCK_TYPES = frozenset({"sparring", "contact"})
 _CONTACT_EXPOSURE_TAGS = frozenset(
-    {
-        "contact",
-        "hard_contact",
-        "head_impact",
-        "live_rounds",
-        "impact",
-        "high_impact_plyo",
-        "landing_stress_high",
-    }
+    {"contact", "hard_contact", "head_impact", "striking_contact", "live_rounds"}
+)
+_DIRECT_IMPACT_SESSION_TYPES = frozenset({"impact"})
+_DIRECT_IMPACT_BLOCK_TYPES = frozenset({"impact"})
+_DIRECT_IMPACT_EXPOSURE_TAGS = frozenset(
+    {"impact", "high_impact_plyo", "landing_stress_high"}
 )
 _CONTACT_TAG_FIELDS = ("tags", "training_tags", "exposure_tags", "session_tags")
 _NEGATIVE_ANSWERS = frozenset({"", "none", "no", "false", "0", "off", "nil"})
+_CONTACT_FREE_ANSWERS = frozenset(
+    {"no contact", "non-contact", "non contact", "contact-free", "contact free"}
+)
+_LOW_IMPACT_ANSWERS = frozenset(
+    {"low", "light", "minimal", "none", "no", "false", "0", "off", "nil", "low_impact"}
+)
 _CONTACT_EXPOSURE_TERMS = (
     "spar",
     "clinch",
@@ -869,16 +909,30 @@ _CONTACT_EXPOSURE_TERMS = (
     "live round",
     "live work",
     "contact",
-    "impact",
     "competition",
+)
+_DIRECT_IMPACT_EXPOSURE_TERMS = (
+    "impact drill",
+    "impact block",
+    "impact work",
+    "repeated impact",
+    "plyo",
+    "plyometric",
+    "landing",
+    "depth jump",
+    "bag work",
+    "bagwork",
+    "heavy bag",
+    "hard bag",
+    "bag round",
 )
 # Prose that says a session is explicitly WITHOUT contact/impact. Checked before
 # the positive terms, because "no contact" contains "contact" and a plain
 # substring search reads a contact-free session as a contact one.
 _CONTACT_NEGATION_PREFIXES = ("no ", "non-", "non ", "zero ", "without ", "avoid ", "skip ")
 _CONTACT_NEGATION_SUFFIXES = ("-free", " free")
-# Repeated friction / direct impact over a covered area: enough to lift a dressing
-# or rub a blister open, without being contact work.
+# Repeated rubbing over a covered area: enough to lift a dressing or rub a
+# blister open, without assuming every contact or impact session creates it.
 _FRICTION_EXPOSURE_TERMS = (
     "bag work",
     "bagwork",
@@ -933,38 +987,66 @@ def _text_mentions_exposure(text: str, terms: Sequence[str]) -> bool:
     return False
 
 
-def _session_contact_exposure(session: Mapping[str, Any] | None) -> bool:
-    """True when today's session puts the athlete in contact / grappling / impact work.
+def _structured_exposure_value(value: Any, *, low_is_negative: bool = False) -> bool:
+    """Whether one structured exposure field explicitly declares work."""
+    if isinstance(value, bool):
+        return value
+    normalized = _clean(value).lower().replace("-", "_").replace(" ", "_")
+    if normalized in _NEGATIVE_ANSWERS:
+        return False
+    if low_is_negative and normalized in _LOW_IMPACT_ANSWERS:
+        return False
+    return bool(normalized)
 
-    Impact counts: an open wound taking repeated direct impact is exposed whether
-    or not another person is involved, so a structured impact session has to
-    reach the same restriction sparring does.
+
+def _session_surface_exposure(session: Mapping[str, Any] | None) -> SurfaceSessionExposure:
+    """Return contact, direct-impact, and friction exposure independently.
+
+    Structured types, tags, and fields are authoritative. Prose is only a
+    fallback for executable session/block names; its exact negations deliberately
+    keep ``no contact`` and ``contact-free`` clear without treating ``no hard
+    sparring`` as contact-free when light or technical sparring may remain.
     """
     if not isinstance(session, Mapping) or not session:
-        return False
+        return SurfaceSessionExposure()
+
+    contact = False
+    direct_impact = False
     for mapping in _iter_session_mappings(session):
-        if _clean(mapping.get("session_type")).lower() in _CONTACT_SESSION_TYPES:
-            return True
-        if _clean(mapping.get("block_type") or mapping.get("type")).lower() in _CONTACT_BLOCK_TYPES:
-            return True
-        if _mapping_exposure_tags(mapping) & _CONTACT_EXPOSURE_TAGS:
-            return True
-        for key in ("contact", "coach_led_contact", "contact_level", "sparring", "impact"):
+        session_type = _clean(mapping.get("session_type")).lower()
+        block_type = _clean(mapping.get("block_type") or mapping.get("type")).lower()
+        tags = _mapping_exposure_tags(mapping)
+
+        contact = contact or session_type in _CONTACT_SESSION_TYPES
+        contact = contact or block_type in _CONTACT_BLOCK_TYPES
+        contact = contact or bool(tags & _CONTACT_EXPOSURE_TAGS)
+        for key in ("contact", "coach_led_contact", "contact_level", "sparring"):
             value = mapping.get(key)
-            if isinstance(value, bool):
-                if value:
-                    return True
+            if _clean(value).lower() in _CONTACT_FREE_ANSWERS:
                 continue
-            if value is not None and _clean(value).lower() not in _NEGATIVE_ANSWERS:
-                return True
-    return _text_mentions_exposure(_session_text(session), _CONTACT_EXPOSURE_TERMS)
+            contact = contact or _structured_exposure_value(value)
 
+        direct_impact = direct_impact or session_type in _DIRECT_IMPACT_SESSION_TYPES
+        direct_impact = direct_impact or block_type in _DIRECT_IMPACT_BLOCK_TYPES
+        direct_impact = direct_impact or bool(tags & _DIRECT_IMPACT_EXPOSURE_TAGS)
+        for key in ("impact", "direct_impact", "landing_impact"):
+            direct_impact = direct_impact or _structured_exposure_value(mapping.get(key))
+        for key in ("impact_level", "impact_cost", "landing_cost"):
+            direct_impact = direct_impact or _structured_exposure_value(
+                mapping.get(key), low_is_negative=True
+            )
 
-def _session_friction_exposure(session: Mapping[str, Any] | None) -> bool:
-    """True when the session repeatedly rubs or impacts a covered area."""
-    if _session_contact_exposure(session):
-        return True
-    return _text_mentions_exposure(_session_text(session), _FRICTION_EXPOSURE_TERMS)
+    text = _session_text(session)
+    contact = contact or _text_mentions_exposure(text, _CONTACT_EXPOSURE_TERMS)
+    direct_impact = direct_impact or _text_mentions_exposure(
+        text, _DIRECT_IMPACT_EXPOSURE_TERMS
+    )
+    friction = _text_mentions_exposure(text, _FRICTION_EXPOSURE_TERMS)
+    return SurfaceSessionExposure(
+        contact_exposure=contact,
+        direct_impact_exposure=direct_impact,
+        friction_exposure=friction,
+    )
 
 
 def _active_context_injury_stop(context: ReadinessContext) -> str | None:
@@ -2152,32 +2234,92 @@ def _safe_filler_adjustment(
     )
 
 
-# The contact removal is stated in full, every time it applies. It is never
-# inferred from whether the existing action text happens to mention sparring:
-# reading athlete-facing prose to decide what a safety restriction already
-# covers is a guess, and the failure mode is silently dropping the instruction.
-# Stated as "all contact work" first, then the named forms. The exposure detector
-# accepts generic contact (a session that says "contact" with no discipline
-# named), so an instruction that only listed sparring, clinch and grappling left
-# the very work that triggered the restriction technically permitted.
+# Each targeted removal is stated in full and generated from its structured
+# restriction code. Existing athlete-facing action copy is never parsed to infer
+# what was already removed; that would silently drop safety instructions when
+# wording changes.
 _CONTACT_RESTRICTION_INSTRUCTION = "Skip all contact work today, including sparring, clinch, and grappling."
-_SURFACE_PROTECTION_INSTRUCTION = "Keep it taped and off direct friction."
+_DIRECT_IMPACT_RESTRICTION_INSTRUCTION = (
+    "Remove or replace all direct-impact work today, including hard bag work, repeated "
+    "landings or plyometrics, and other impact blocks."
+)
+_SURFACE_PROTECTION_INSTRUCTION = (
+    "Protect the affected area from repeated rubbing; if it cannot stay covered, "
+    "replace only the block causing friction."
+)
 
-# Why contact is out, keyed to the classifier's own reason code rather than
-# assumed — an intact wound that cannot be kept covered is a different fact from
-# an open one, and telling the athlete it is "open" when it is not is wrong.
-_CONTACT_RESTRICTION_REASONS: dict[str, str] = {
-    "open_wound": "Your {label} is open, so contact would reopen or contaminate it.",
+_SURFACE_RESTRICTION_INSTRUCTIONS: dict[SurfaceRestrictionCode, str] = {
+    "remove_contact": _CONTACT_RESTRICTION_INSTRUCTION,
+    "remove_direct_impact": _DIRECT_IMPACT_RESTRICTION_INSTRUCTION,
+    "protect_or_replace_friction": _SURFACE_PROTECTION_INSTRUCTION,
+}
+
+# Why exposed work is restricted, keyed to the classifier's own reason code
+# rather than assumed — an intact wound that cannot be kept covered is a
+# different fact from an open one.
+_SURFACE_RESTRICTION_REASONS: dict[str, str] = {
+    "open_wound": "Your {label} is open, so {exposure} could reopen or contaminate it.",
     "open_not_coverable": (
-        "Your {label} is open and can't be kept sealed, so contact would reopen or contaminate it."
+        "Your {label} is open and can't be kept sealed, so {exposure} could reopen or contaminate it."
     ),
     "not_coverable": (
-        "Your {label} can't be kept covered, so contact would contaminate or reopen it."
+        "Your {label} can't be kept covered, so {exposure} could contaminate or reopen it."
     ),
     "worse_integrity_unknown": (
-        "Your {label} got worse and the skin may be open, so contact is out until it's checked."
+        "Your {label} got worse and the skin may be open, so remove {exposure} until it's checked."
     ),
 }
+
+_SURFACE_RESTRICTION_TARGETS: dict[SurfaceRestrictionCode, str] = {
+    "remove_contact": "contact work",
+    "remove_direct_impact": "direct-impact work",
+    "protect_or_replace_friction": "repeated friction",
+}
+
+
+def _surface_restriction_codes(
+    surface_class: str, exposure: SurfaceSessionExposure
+) -> tuple[SurfaceRestrictionCode, ...]:
+    restrictions: list[SurfaceRestrictionCode] = []
+    if surface_class == "surface_no_contact":
+        if exposure.contact_exposure:
+            restrictions.append("remove_contact")
+        if exposure.direct_impact_exposure:
+            restrictions.append("remove_direct_impact")
+        if exposure.friction_exposure:
+            restrictions.append("protect_or_replace_friction")
+    elif surface_class == "surface_local_restriction" and exposure.codes:
+        restrictions.append("protect_or_replace_friction")
+    return tuple(restrictions)
+
+
+def _surface_restriction_target(codes: Sequence[SurfaceRestrictionCode]) -> str:
+    targets = [_SURFACE_RESTRICTION_TARGETS[code] for code in codes]
+    if len(targets) < 2:
+        return targets[0] if targets else "the exposed work"
+    return ", ".join(targets[:-1]) + f" and {targets[-1]}"
+
+
+def _surface_restriction_title(codes: Sequence[SurfaceRestrictionCode]) -> str:
+    if tuple(codes) == ("remove_contact",):
+        return "Contact off, session on."
+    if tuple(codes) == ("remove_direct_impact",):
+        return "Impact work off, session on."
+    if tuple(codes) == ("protect_or_replace_friction",):
+        return "Protect the area, session on."
+    return "Exposed work off, session on."
+
+
+def _surface_safety_result(codes: Sequence[SurfaceRestrictionCode]) -> SafetyCheckResult:
+    if len(codes) > 1:
+        return "multiple_restrictions"
+    if not codes:
+        return "no_session_change"
+    return {
+        "remove_contact": "no_contact",
+        "remove_direct_impact": "direct_impact_removed",
+        "protect_or_replace_friction": "local_protection_only",
+    }[codes[0]]
 
 
 def _with_extra_instruction(action: str, instruction: str) -> str:
@@ -2211,13 +2353,19 @@ def _apply_surface_injury_policy(
     Stable skin injuries leave the decision exactly as the readiness signals set
     it and are recorded as a safety CHECK with the result ``no_session_change``,
     so the card can show that the blister was considered without implying it
-    changed anything. Only an open / uncoverable wound against contact work
-    changes the recommendation, and then only by removing contact — never the
-    session.
+    changed anything. Open / uncoverable wounds remove only the exposure that
+    exists in today's work: interpersonal contact, direct impact, and/or repeated
+    friction. The safe remainder of the session stays available.
     """
     surface_class, reason_code, label = _strongest_surface_state(context)
     if surface_class == "non_surface":
         return adjustment
+    exposure = _session_surface_exposure(context.today_session)
+    exposure_triggers = tuple(f"{SURFACE_EXPOSURE_PREFIX}{code}" for code in exposure.codes)
+    adjustment = replace(
+        adjustment,
+        triggers=tuple(dict.fromkeys([*adjustment.triggers, *exposure_triggers])),
+    )
     if surface_class == "surface_medical_review":
         # The review pathway (or, for a severe wound, the existing severe gates)
         # already owns the decision; only the record is added here.
@@ -2229,33 +2377,26 @@ def _apply_surface_injury_policy(
     reason = adjustment.reason
     action = adjustment.action
     triggers = list(adjustment.triggers)
-    result = "no_session_change"
+    restriction_codes = _surface_restriction_codes(surface_class, exposure)
+    result = _surface_safety_result(restriction_codes)
 
-    if surface_class == "surface_no_contact":
-        result = "no_contact"
-        if _session_contact_exposure(context.today_session):
+    if restriction_codes:
+        if surface_class == "surface_no_contact":
             # The strongest existing decision stands: a wound can raise the
             # decision but never soften one the readiness signals already set.
             decision = _more_conservative(decision, "modify")
             if adjustment.decision == "train_as_planned":
                 # Nothing else was restricting today, so the wound owns the copy.
-                title = "Contact off, session on."
-                reason = _CONTACT_RESTRICTION_REASONS.get(
-                    reason_code, _CONTACT_RESTRICTION_REASONS["open_wound"]
-                ).format(label=natural)
-            action = _with_extra_instruction(action, _CONTACT_RESTRICTION_INSTRUCTION)
-            _append_unique(triggers, "surface_injury_contact_restriction")
-    elif surface_class == "surface_local_restriction" and _session_friction_exposure(
-        context.today_session
-    ):
-        result = "local_protection_only"
-        action = _with_extra_instruction(action, _SURFACE_PROTECTION_INSTRUCTION)
-        # Recorded so the card's "Decision based on" can name the injury: the
-        # wound added an instruction, so the decision did rest on it. It carries
-        # no trigger LABEL on purpose — taping a graze is a local protection,
-        # not a reason the session changed.
-        _append_unique(triggers, "surface_injury_local_restriction")
-
+                title = _surface_restriction_title(restriction_codes)
+                reason = _SURFACE_RESTRICTION_REASONS.get(
+                    reason_code, _SURFACE_RESTRICTION_REASONS["open_wound"]
+                ).format(
+                    label=natural,
+                    exposure=_surface_restriction_target(restriction_codes),
+                )
+        for code in restriction_codes:
+            action = _with_extra_instruction(action, _SURFACE_RESTRICTION_INSTRUCTIONS[code])
+            _append_unique(triggers, f"{SURFACE_RESTRICTION_PREFIX}{code}")
     updated = replace(
         adjustment,
         decision=decision,
@@ -2575,7 +2716,8 @@ _TRIGGER_LABELS: dict[str, str] = {
     "tracked_injury_high_risk_session": "Active injury",
     # Surface (skin) injuries appear here ONLY when they actually changed the
     # recommendation. The stable case is a safety check, not a cause.
-    "surface_injury_contact_restriction": "Open skin injury",
+    "surface_restriction:remove_contact": "Open skin injury",
+    "surface_restriction:remove_direct_impact": "Open skin injury",
     "surface_injury_medical_review": "Skin injury needs review",
     # Today's check-in.
     "pain_high": "High pain",
@@ -2686,8 +2828,30 @@ _SAFETY_CHECK_RESULT_LABELS: dict[str, str] = {
     "no_session_change": "No session change",
     "local_protection_only": "Keep it covered",
     "no_contact": "No contact today",
+    "direct_impact_removed": "Impact work removed",
+    "multiple_restrictions": "Targeted work removed",
     "medical_review": "Needs checking",
 }
+
+
+def _structured_surface_codes(triggers: Sequence[str], prefix: str) -> tuple[str, ...]:
+    return tuple(
+        dict.fromkeys(
+            raw[len(prefix) :]
+            for trigger in triggers
+            if (raw := str(trigger).strip()).startswith(prefix) and raw[len(prefix) :]
+        )
+    )
+
+
+def surface_exposure_codes(triggers: Sequence[str]) -> tuple[str, ...]:
+    """Structured session exposure categories recorded on the decision."""
+    return _structured_surface_codes(triggers, SURFACE_EXPOSURE_PREFIX)
+
+
+def surface_restriction_codes(triggers: Sequence[str]) -> tuple[str, ...]:
+    """Structured targeted restrictions applied to the session."""
+    return _structured_surface_codes(triggers, SURFACE_RESTRICTION_PREFIX)
 
 
 def safety_checks(triggers: Sequence[str]) -> tuple[dict[str, str], ...]:
@@ -2732,6 +2896,8 @@ def explanation_metadata(
         "causal_triggers": list(trigger_labels(triggers, limit=limit)),
         "safety_checks": [dict(check) for check in safety_checks(triggers)],
         "context_modifiers": list(context_labels(triggers, limit=limit)),
+        "surface_exposures": list(surface_exposure_codes(triggers)),
+        "surface_restrictions": list(surface_restriction_codes(triggers)),
     }
 
 
@@ -2755,9 +2921,10 @@ _INJURY_TRIGGERS = frozenset(
         # A surface injury names the injury source only when it actually acted:
         # each of these is emitted at the point the wound changed the
         # recommendation, so a stable blister — or an open one on a day with no
-        # contact — never reaches this set.
-        "surface_injury_local_restriction",
-        "surface_injury_contact_restriction",
+        # matching exposure — never reaches this set.
+        "surface_restriction:protect_or_replace_friction",
+        "surface_restriction:remove_contact",
+        "surface_restriction:remove_direct_impact",
         "surface_injury_medical_review",
     }
 )

@@ -799,7 +799,13 @@ export type FrictionOrContactProblem = "yes" | "no" | "unknown";
 export type TodaySafetyCheck = {
   code: string;
   label: string;
-  result: "no_session_change" | "local_protection_only" | "no_contact" | "medical_review";
+  result:
+    | "no_session_change"
+    | "local_protection_only"
+    | "no_contact"
+    | "direct_impact_removed"
+    | "multiple_restrictions"
+    | "medical_review";
   result_label: string;
 };
 

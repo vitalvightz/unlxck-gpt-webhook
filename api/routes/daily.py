@@ -34,14 +34,21 @@ from api.models import (
 from api.readiness import AdaptationDecision
 from api.services.plan_schedule import latest_visible_plan_row
 from api.store import AppStore
+from fightcamp.injury_registry import (
+    BLEEDING_STATUS_VALUES,
+    COVERABLE_VALUES,
+    DRAINAGE_VALUES,
+    FRICTION_PROBLEM_VALUES,
+    SKIN_INTEGRITY_VALUES,
+)
 
 
 _SURFACE_ENUM_VALUES: dict[str, frozenset[str]] = {
-    "skin_integrity": frozenset({"intact", "open", "unknown"}),
-    "bleeding_status": frozenset({"none", "controlled", "uncontrolled"}),
-    "drainage": frozenset({"none", "present", "unknown"}),
-    "coverable": frozenset({"yes", "no", "unknown"}),
-    "friction_or_contact_problem": frozenset({"yes", "no", "unknown"}),
+    "skin_integrity": SKIN_INTEGRITY_VALUES,
+    "bleeding_status": BLEEDING_STATUS_VALUES,
+    "drainage": DRAINAGE_VALUES,
+    "coverable": COVERABLE_VALUES,
+    "friction_or_contact_problem": FRICTION_PROBLEM_VALUES,
 }
 
 
