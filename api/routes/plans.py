@@ -72,7 +72,14 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
-        plan_row = resolve_active_plan(store, profile.athlete_id).plan
+        training_day = resolve_training_day_str(
+            datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+        )
+        plan_row = resolve_active_plan(
+            store,
+            profile.athlete_id,
+            current_training_day=training_day,
+        ).plan
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         is_admin = is_effective_admin_profile(profile, store)
@@ -80,9 +87,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             plan_row,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
-            current_training_day=resolve_training_day_str(
-                datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
-            ),
+            current_training_day=training_day,
             rehab_label_policy=resolve_rehab_label_policy(
                 store, athlete_id=profile.athlete_id
             ),
@@ -95,7 +100,14 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> WeeklySchedule:
-        plan_row = resolve_active_plan(store, profile.athlete_id).plan
+        training_day = resolve_training_day_str(
+            datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+        )
+        plan_row = resolve_active_plan(
+            store,
+            profile.athlete_id,
+            current_training_day=training_day,
+        ).plan
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_weekly_schedule(plan_row, week_index=week_index)
@@ -105,20 +117,30 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanSummary:
-        plan_row = resolve_active_plan(store, profile.athlete_id).plan
+        training_day = resolve_training_day_str(
+            datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+        )
+        plan_row = resolve_active_plan(
+            store,
+            profile.athlete_id,
+            current_training_day=training_day,
+        ).plan
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        return _map_plan_summary(plan_row)
+        return _map_plan_summary(plan_row, current_training_day=training_day)
 
     @router.get("/api/plans", response_model=list[PlanSummary])
     def list_plans(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> list[PlanSummary]:
+        training_day = resolve_training_day_str(
+            datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+        )
         rows = store.list_user_plans(profile.athlete_id)
         if not is_effective_admin_profile(profile, store):
             rows = [row for row in rows if not _is_triage_blocked_plan(row)]
-        return [_map_plan_summary(row) for row in rows]
+        return [_map_plan_summary(row, current_training_day=training_day) for row in rows]
 
     @router.get("/api/plans/{plan_id}", response_model=PlanDetail)
     def get_plan(
@@ -128,13 +150,14 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
     ) -> PlanDetail:
         plan_row = _read_plan_for_viewer(plan_id, profile=profile, store=store)
         is_admin = is_effective_admin_profile(profile, store)
+        training_day = resolve_training_day_str(
+            datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+        )
         detail = _map_plan_detail(
             plan_row,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
-            current_training_day=resolve_training_day_str(
-                datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
-            ),
+            current_training_day=training_day,
             rehab_label_policy=resolve_rehab_label_policy(
                 store, athlete_id=profile.athlete_id
             ),
@@ -184,13 +207,17 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             uuid.UUID(plan_id)
         except (ValueError, AttributeError):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        training_day = resolve_training_day_str(
+            datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+        )
         plan_row = set_active_plan(
             store,
             profile.athlete_id,
             plan_id,
             overlap_action=activation.overlap_action if activation else None,
+            current_training_day=training_day,
         )
-        return _map_plan_summary(plan_row)
+        return _map_plan_summary(plan_row, current_training_day=training_day)
 
     @router.patch("/api/plans/{plan_id}", response_model=PlanDetail)
     @router.patch("/api/plans/{plan_id}/name", response_model=PlanDetail)

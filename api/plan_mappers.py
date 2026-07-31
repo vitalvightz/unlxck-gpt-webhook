@@ -15,6 +15,8 @@ from fightcamp.stage2_policy import (
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
+from .contracts.training_day import current_training_day
+
 from .models import (
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
     AdminAthleteRecord,
@@ -43,6 +45,7 @@ from .structured_card_lifecycle import (
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 from .structured_plan_generation import reconcile_late_fight_week_context
 from .services.open_plan_timeline import project_open_structured_plan
+from .services.active_plan import get_plan_activation_state
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +69,8 @@ _REVIEW_CODE_LABELS = {
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     latest_intake = store.get_latest_intake(profile.athlete_id)
     plans = _visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))
-    latest_plan = _map_plan_summary(plans[0]) if plans else None
+    training_day = current_training_day(athlete_timezone=profile.athlete_timezone)
+    latest_plan = _map_plan_summary(plans[0], current_training_day=training_day) if plans else None
     return MeResponse(
         profile=profile,
         latest_intake=latest_intake.get("intake") if latest_intake else None,
@@ -200,7 +204,11 @@ def _format_review_reason(report: dict[str, Any], *, normalized_status: str) -> 
     return "Admin review is required before this plan can be released to the athlete."
 
 
-def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
+def _map_plan_summary(
+    row: dict[str, Any],
+    *,
+    current_training_day: date | str | None = None,
+) -> PlanSummary:
     raw_status = str(row.get("status") or "generated")
     normalized_status = raw_status
     report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
@@ -228,6 +236,10 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         technical_style=list(row.get("technical_style") or []),
         created_at=str(row.get("created_at") or ""),
         status=normalized_status,
+        activation_state=get_plan_activation_state(
+            row,
+            current_training_day=current_training_day,
+        ),
         pdf_url=row.get("pdf_url"),
         review_reason=_format_review_reason(report, normalized_status=normalized_status),
     )
@@ -534,7 +546,7 @@ def _map_plan_detail(
     current_training_day: date | str | None = None,
     rehab_label_policy: RehabLabelPolicy | None = None,
 ) -> PlanDetail:
-    summary = _map_plan_summary(row)
+    summary = _map_plan_summary(row, current_training_day=current_training_day)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
     raw_stage2_payload = row.get("stage2_payload")
     fallback_parsing_metadata = (

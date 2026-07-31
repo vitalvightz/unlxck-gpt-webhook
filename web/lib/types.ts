@@ -270,6 +270,8 @@ export type UsernameChangeRequest = {
   username: string;
 };
 
+export type PlanActivationState = "eligible" | "fight_date_passed" | "status_ineligible";
+
 export type PlanSummary = {
   plan_id: string;
   plan_name?: string | null;
@@ -279,6 +281,7 @@ export type PlanSummary = {
   technical_style: string[];
   created_at: string;
   status: string;
+  activation_state: PlanActivationState;
   pdf_url?: string | null;
   review_reason?: string | null;
 };

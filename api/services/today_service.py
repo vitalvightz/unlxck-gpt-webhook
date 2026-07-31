@@ -880,7 +880,11 @@ def submit_today_injury_checkin(
 
     now_iso = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
     training_day = resolve_training_day(athlete_timezone, now=now)
-    active_plan_row = resolve_active_plan(store, athlete_id).plan
+    active_plan_row = resolve_active_plan(
+        store,
+        athlete_id,
+        current_training_day=training_day,
+    ).plan
     plan_id = str(active_plan_row.get("id") or "").strip() if active_plan_row else None
     if active_plan_row and plan_id:
         plan_reader = getattr(store, "get_plan_for_athlete", None)
@@ -1598,7 +1602,11 @@ def build_today_command_view(
     missing/unparseable structured plan → empty ``next_session`` (no crash).
     """
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = resolve_active_plan(store, athlete_id).plan
+    plan_row = resolve_active_plan(
+        store,
+        athlete_id,
+        current_training_day=training_day,
+    ).plan
 
     if not plan_row:
         return build_command_view(current_training_day=training_day, plan=None)
@@ -1748,7 +1756,11 @@ def resolve_today_landing(
 ) -> LandingDecision:
     """Resolve the landing decision from persisted state (see ``resolve_landing``)."""
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = resolve_active_plan(store, athlete_id).plan
+    plan_row = resolve_active_plan(
+        store,
+        athlete_id,
+        current_training_day=training_day,
+    ).plan
     has_active_plan = bool(plan_row)
 
     session_state = "none"

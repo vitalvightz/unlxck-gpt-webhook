@@ -1457,6 +1457,7 @@ class PlanSummary(BaseModel):
     technical_style: list[str] = Field(default_factory=list)
     created_at: str
     status: str = "generated"
+    activation_state: Literal["eligible", "fight_date_passed", "status_ineligible"] = "status_ineligible"
     pdf_url: str | None = None
     review_reason: str | None = None
 
