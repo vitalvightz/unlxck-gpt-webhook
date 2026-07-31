@@ -20,9 +20,8 @@ status is also a job status.
 
 Key trap that prompted this section: **`review_required` exists as both a job
 status and a plan status, and `held_for_review` exists only as a plan status.**
-A failed Stage 2 validation sets the *plan* to `held_for_review`, and the worker
-reports that plan's *job* as `review_required` (see
-[Stage 2 outcomes](#stage-2-outcomes--statuses) and the
+`held_for_review` is written by admin action only — a failed Stage 2 validation
+no longer produces it (see [Stage 2 outcomes](#stage-2-outcomes--statuses) and the
 [plan→job mapping](#plan-status--generation-job-status)). `stage2_status` is a
 separate audit trail and is never a job or plan status.
 
@@ -88,36 +87,38 @@ Allowed transitions are defined in `api/state_machine.py`. In plain terms:
 
 What the automated Stage 2 finalizer (`api/stage2_automation.py`) writes, by outcome:
 
+**Stage 2 validator findings never hold a plan.** They decide which release
+status is written, not whether the athlete gets the plan. Flagged plans land in
+`publishable_with_flags`, which is athlete-displayable *and* in
+`ADMIN_REVIEW_PLAN_STATUSES` — so the plan reaches the athlete immediately and
+still shows up in the admin review surface with every finding attached.
+
 | Stage 2 outcome | Plan status | `stage2_status` | Generation job status |
 |---|---|---|---|
 | Validator passes (clean) | `ready` | `stage2_pass` | `completed` |
 | Validator has only allowlisted low-risk quality flags | `publishable_with_flags` | `stage2_pass` | `completed` |
-| Validator has an admin-review blocking context/programme finding | `held_for_review` | `stage2_failed` | `review_required` |
-| **Validator fails on a hard blocker** (safety / output integrity) | **`held_for_review`** | `stage2_failed` | `review_required` |
+| Validator has an admin-review blocking context/programme finding | `publishable_with_flags` | `stage2_failed` | `completed` |
+| Validator fails on a hard blocker (safety / output integrity) | `publishable_with_flags` | `stage2_failed` | `completed` |
+| No clean structured card | unchanged (card status logged; plan_text is the fallback) | unchanged | `completed` |
 | Injury triage blocks Stage 2 | `triage_blocked` (or `medical_hold` / `restricted_rehab_only` / `needs_review`) | unchanged / `""` | `review_required` |
 
-The shared Stage 2 policy has three explicit classes:
+The shared Stage 2 policy still has three explicit classes:
 
 - `hard_stage2_blocker_codes`: safety and output-integrity failures;
 - `athlete_release_with_flags_codes`: a narrow allowlist of low-risk clarity findings;
-- `admin_review_blocking_codes`: athlete-context and programme-quality failures that must hold.
+- `admin_review_blocking_codes`: athlete-context and programme-quality failures.
 
-Validator errors, hard blockers, admin-review blockers, mixed low-risk/blocking
-reports, and unknown `blocking_warnings` all fail closed to `held_for_review`.
-Only findings in `athlete_release_with_flags_codes` release as
-`publishable_with_flags`. The persisted validator report records the matching
-`release_decision`, `is_athlete_releasable`, and `is_publishable` values so the
-audit state agrees with the saved plan status.
+What changed is the consequence, not the classification. Validator errors, hard
+blockers, admin-review blockers, mixed reports, and unknown `blocking_warnings`
+are all still detected and recorded verbatim on the plan; they now release with
+flags rather than holding. `stage2_status` stays `stage2_failed` on those plans,
+so the audit trail still shows the validator failed. The persisted report's
+`release_decision` / `is_athlete_releasable` / `is_publishable` are set to the
+released-with-flags values so the report agrees with the saved plan status.
 
 `publishable_with_flags` remains in the admin review surface for asynchronous
-audit. This policy reduces athlete release delay; it does not remove flagged
-plans from the admin queue or claim an equivalent reduction in review volume.
-
-Naming caveat: the helper that builds the failed-validation result is named
-`_review_required_result(...)`, but it sets the **plan** status to
-`held_for_review` (constant `_APP_STATUS_HELD_FOR_REVIEW`). The "review required"
-in the function name refers to the resulting *generation job* status, not the
-plan status. Do not let the function name leak into plan-status strings.
+audit. This policy removes athlete release delay; it does not remove flagged
+plans from the admin queue or reduce review volume.
 
 ### Plan status → generation job status
 
