@@ -379,11 +379,11 @@ test("getReadinessStrip injury cue omits the red-flag pointer when there are no 
   assert.equal(strip.risk, "Active weight cut · Left shoulder contusion");
 });
 
-test("resolveTrainingDay applies the 04:00 athlete-local rollover", () => {
-  // Before 04:00 the training day has not advanced yet — it is still yesterday.
+test("resolveTrainingDay applies the 03:00 athlete-local rollover", () => {
+  // Before 03:00 the training day has not advanced yet — it is still yesterday.
   assert.equal(toISODate(resolveTrainingDay(new Date(2026, 5, 19, 2, 30))), "2026-06-18");
-  // At/after 04:00 the training day is today.
-  assert.equal(toISODate(resolveTrainingDay(new Date(2026, 5, 19, 4, 0))), "2026-06-19");
+  // At/after 03:00 the training day is today.
+  assert.equal(toISODate(resolveTrainingDay(new Date(2026, 5, 19, 3, 0))), "2026-06-19");
   assert.equal(toISODate(resolveTrainingDay(new Date(2026, 5, 19, 23, 59))), "2026-06-19");
 });
 

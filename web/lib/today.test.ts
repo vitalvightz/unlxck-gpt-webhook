@@ -548,7 +548,7 @@ test("readiness display messages do not include banned old wording", () => {
 test("Today resolves today's blocks from the shared current-day resolver", () => {
   // Today renders today's exact blocks from the active plan's structured_plan,
   // resolved through the SAME shared resolver Plan Detail uses (resolveCurrentDay
-  // + the client-mounted 04:00 training-day hook) so the two screens can never
+  // + the client-mounted 03:00 training-day hook) so the two screens can never
   // disagree on the current day/session.
   const source = readFileSync(new URL("../components/today/today-session-panel.tsx", import.meta.url), "utf8");
   assert.equal(source.includes("resolveCurrentDay"), true);

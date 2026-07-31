@@ -246,7 +246,7 @@ export function TodaySessionPanel({
   const resolvedDecision = resolveTodayDecision(state);
   const hasSession = resolvedDecision.hasSession;
   // Resolve today's day/session from the structured plan through the shared
-  // 04:00 rollover, exactly as Plan Detail does. These blocks — not the backend
+  // 03:00 rollover, exactly as Plan Detail does. These blocks — not the backend
   // session summary — are the "what exact blocks apply today" answer. The
   // training day comes from the client-mounted hook (SSR-safe, null until mount)
   // and is resolved on every render so a long-lived tab follows the rollover

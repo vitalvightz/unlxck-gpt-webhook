@@ -8,9 +8,9 @@ Rules (``docs/block-4-ux-hierarchy-addendum.md`` §3):
 
 * Use the athlete's timezone when available; fall back safely to a default and
   finally to UTC — never crash on a missing/unknown timezone.
-* ``day_rollover_hour`` is 04:00 local time.
+* ``day_rollover_hour`` is 03:00 local time.
 * The training day for a timestamp ``t`` is the local calendar date of
-  ``t - 4h`` — so 00:00-03:59 local still belongs to the previous training day.
+  ``t - 3h`` — so 00:00-02:59 local still belongs to the previous training day.
 * The UTC instant alone does not define the athlete-facing training day; the
   athlete's local time does.
 
@@ -26,7 +26,7 @@ try:  # zoneinfo is stdlib on Python 3.9+; degrade gracefully if unavailable.
 except ImportError:  # pragma: no cover - defensive fallback only
     ZoneInfo = None  # type: ignore[assignment]
 
-DAY_ROLLOVER_HOUR = 4
+DAY_ROLLOVER_HOUR = 3
 DEFAULT_TIMEZONE = "UTC"
 
 

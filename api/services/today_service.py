@@ -3,7 +3,7 @@
 
 Everything here is server-authoritative:
 
-* the **training day** is computed from the athlete's timezone (04:00 rollover),
+* the **training day** is computed from the athlete's timezone (03:00 rollover),
   never supplied by the client;
 * the **recommendation** is computed by the readiness-message engine and persisted on the
   check-in row — the client never calculates or supplies it;
