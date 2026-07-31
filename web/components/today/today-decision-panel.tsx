@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  getDecisionTier,
-  getTierMeta,
-  type TodayDecisionBanner,
-  type TodayDecisionTier,
-} from "@/lib/today";
+import { type TodayDecisionBanner, type TodayDecisionTier } from "@/lib/today";
 
 /**
  * Compact train/modify/pull-back banner shown above today's blocks once the
@@ -35,7 +30,6 @@ import {
  */
 export function TodayDecisionPanel({
   banner,
-  tier,
   triggers,
   context,
   sources,
@@ -64,11 +58,6 @@ export function TodayDecisionPanel({
     Number(triggerLabels.length > 0) +
     Number(contextLabels.length > 0) +
     Number(usedSources.length > 0 || Boolean(note));
-  // Headline the tier ("Stop today" etc.) so Today matches the Overview action
-  // framing; the chip carries the tier marker and the detail keeps the specifics.
-  // Prefer the authoritative backend tier when supplied so the headline can never
-  // disagree with the resolved decision.
-  const tierLabel = getTierMeta(tier ?? getDecisionTier(banner)).label;
   return (
     <div
       className="today-decision-banner"
@@ -81,7 +70,6 @@ export function TodayDecisionPanel({
           <span className="today-decision-icon" aria-hidden="true">
             {banner.chip}
           </span>
-          <p className="today-decision-title">{tierLabel}</p>
         </div>
         {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
         <p className="today-decision-detail">{banner.detail}</p>

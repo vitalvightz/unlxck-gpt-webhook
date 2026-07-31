@@ -102,13 +102,14 @@ test("decision based on always lists the available sources", () => {
   assert.ok(!html.includes("Confidence"));
 });
 
-test("authoritative STOP renders a matching chip, headline, copy, and tone", () => {
+test("the status chip is the only decision-state label", () => {
   const html = render({ banner: STOP_BANNER, tier: "stop" });
 
   assert.ok(html.includes('data-state="stop"'));
   assert.ok(html.includes('data-tone="red"'));
   assert.ok(html.includes(">STOP<"));
-  assert.ok(html.includes("Stop today"));
+  assert.ok(!html.includes("today-decision-title"));
+  assert.ok(!html.includes(">Stop today<"));
   assert.ok(html.includes(STOP_BANNER.action!));
   assert.ok(html.includes(STOP_BANNER.detail));
   assert.ok(!html.includes("PULL BACK"));
