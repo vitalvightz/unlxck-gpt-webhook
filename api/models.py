@@ -2080,7 +2080,7 @@ class TodayInjuryDeclaration(BaseModel):
     @classmethod
     def clean_infection_signs(cls, value: Any) -> list[str] | None:
         if value is None:
-            return None
+            raise ValueError("infection_signs must be a list or string")
         if isinstance(value, str):
             value = [value]
         if not isinstance(value, (list, tuple)):
