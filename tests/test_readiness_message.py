@@ -5,6 +5,8 @@ import pytest
 from api.contracts.readiness_message import (
     ReadinessCheckin,
     ReadinessContext,
+    _GREEN_INJURY_ACTIONS,
+    _green_injury_action,
     _soft_warning_message,
     build_readiness_adjustment,
     classify_session_modality,
@@ -132,11 +134,56 @@ def test_minor_surface_injury_never_stops_training():
 
 
 def test_green_copy_never_claims_clear_while_injured():
-    adj = _decision("Recovery mobility", [_injury(None, "mild", label="knuckle graze")])
+    graze = _injury(None, "mild", label="knuckle graze")
+    graze.update(body_area="right knuckle", description="graze")
+    adj = _decision("Recovery mobility", [graze])
     assert adj.decision == "train_as_planned"
     assert "knuckle graze" in adj.reason
     assert adj.reason != "Your sleep, body, and pain checks are all clear today."
+    assert "clean" in adj.action
     _assert_card_shape(adj)
+
+
+def test_green_tightness_copy_is_personalized_without_wound_hygiene():
+    tightness = _injury(None, "mild", label="Knee tendon tightness")
+    tightness.update(
+        body_area="knee tendon",
+        description="tightness",
+    )
+
+    adj = _decision("Recovery mobility", [tightness])
+
+    assert adj.decision == "train_as_planned"
+    assert adj.action == "Ease into the session and stop if the knee tendon tightness builds."
+    assert "clean" not in adj.message.lower()
+    _assert_card_shape(adj)
+
+
+def test_green_injury_actions_cover_every_canonical_type():
+    from fightcamp.injury_taxonomy import INJURY_TAXONOMY
+
+    assert set(_GREEN_INJURY_ACTIONS) == set(INJURY_TAXONOMY)
+    for injury_type in INJURY_TAXONOMY:
+        action = _green_injury_action(
+            {"injury_type": injury_type},
+            str(INJURY_TAXONOMY[injury_type]["display"]),
+        )
+        assert action.endswith("."), injury_type
+        assert len(action.split()) <= 18, injury_type
+
+
+def test_only_known_surface_injuries_receive_cleaning_advice():
+    from fightcamp.injury_taxonomy import INJURY_TAXONOMY
+
+    for injury_type, rule in INJURY_TAXONOMY.items():
+        action = _green_injury_action({"injury_type": injury_type}, str(rule["display"]))
+        if rule["category"] == "surface":
+            assert " clean " in f" {action.lower()} ", injury_type
+        else:
+            assert "clean" not in action.lower(), injury_type
+
+    unknown = _green_injury_action({"label": "left knee niggle"}, "Left knee niggle")
+    assert "clean" not in unknown.lower()
 
 
 def test_green_copy_uses_location_when_injury_condition_is_unrecognized():
@@ -156,7 +203,9 @@ def test_green_copy_uses_location_when_injury_condition_is_unrecognized():
     )
 
     assert adj.decision == "train_as_planned"
-    assert "protect your Left shoulder today" in adj.reason
+    assert adj.reason == "Your check-in is clear, with the left shoulder still being tracked."
+    assert adj.action == "Protect the left shoulder and stop if it worsens."
+    assert "clean" not in adj.message.lower()
     assert "tngling" not in adj.reason
     assert "i dont know why" not in adj.reason
     _assert_card_shape(adj)

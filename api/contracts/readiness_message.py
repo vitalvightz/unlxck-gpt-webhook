@@ -1444,10 +1444,17 @@ def _soft_warning_message(
     )
 
 
-def _first_active_open_injury_label(context: ReadinessContext) -> str:
+def _first_active_open_injury(context: ReadinessContext) -> Mapping[str, Any] | None:
     for injury in context.open_injuries:
         if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
             continue
+        return injury
+    return None
+
+
+def _first_active_open_injury_label(context: ReadinessContext) -> str:
+    injury = _first_active_open_injury(context)
+    if injury is not None:
         label = _clean(injury.get("label"))
         if label:
             return label
@@ -1455,6 +1462,101 @@ def _first_active_open_injury_label(context: ReadinessContext) -> str:
 
         return build_injury_label(injury.get("body_area"), injury.get("description"))
     return ""
+
+
+# Short green-light coaching cues for every canonical injury type. These do not
+# decide whether training is allowed; the consequence/severity/session gates above
+# remain authoritative. They only replace the generic hygiene sentence once the
+# engine has already landed on ``train_as_planned``.
+#
+# Hygiene language is deliberately limited to taxonomy-backed surface injuries.
+# An unknown label must never imply an open wound just because an injury exists.
+_GREEN_INJURY_ACTIONS: dict[str, str] = {
+    "sprain": "Keep the {label} stable and stop if it gives way.",
+    "strain": "Ease into the session and stop if the {label} pulls or sharpens.",
+    "tightness": "Ease into the session and stop if the {label} builds.",
+    "contusion": "Protect the {label} from direct contact and stop if pain or swelling builds.",
+    "swelling": "Keep load off the {label} and stop if the swelling increases.",
+    "tendonitis": "Warm up gradually and stop if the {label} becomes more irritated.",
+    "impingement": "Stay out of pinching ranges and stop if the {label} catches.",
+    "instability": "Keep the {label} stable and controlled; stop if it gives way.",
+    "stiffness": "Ease through a comfortable range and stop if the {label} locks or worsens.",
+    "pain": "Stay in a comfortable range and stop if the {label} builds or sharpens.",
+    "soreness": "Warm up gradually and stop if the {label} gets worse.",
+    "hyperextension": "Avoid forced end range and stop if the {label} feels unstable or painful.",
+    "abrasion": "Keep the {label} clean and covered; stop if it opens or bleeds.",
+    "cut": "Keep the {label} clean and covered; stop if it reopens or bleeds.",
+    "laceration": "Keep the {label} clean and covered; stop if it reopens or bleeds.",
+    "graze": "Keep the {label} clean and covered; stop if it opens or bleeds.",
+    "blister": "Keep the {label} clean and covered; stop if it opens or rubs.",
+    "unspecified": "Protect the {label} and stop if it worsens.",
+    "acl_tear": "Keep load and twisting off the {label}; stick to cleared rehab only.",
+    "ligament_tear": "Keep load and twisting off the {label}; stick to cleared rehab only.",
+    "mcl_tear": "Keep load and twisting off the {label}; stick to cleared rehab only.",
+    "lcl_tear": "Keep load and twisting off the {label}; stick to cleared rehab only.",
+    "pcl_tear": "Keep load and twisting off the {label}; stick to cleared rehab only.",
+    "tendon_rupture": "Keep load off the {label}; stick to cleared rehab only.",
+    "muscle_rupture": "Keep load off the {label}; stick to cleared rehab only.",
+    "fracture": "Keep load and impact off the {label}; follow your clearance plan.",
+    "dislocation": "Keep the {label} supported and within your cleared range.",
+    "concussion": "No contact or hard work; follow your return-to-play clearance.",
+    "post_surgery": "Stay within the cleared plan for the {label}; do not add extra work.",
+    "infection": "Do not train through the {label}; get it medically reviewed.",
+    "acute_nerve_issue": "Avoid loading the {label}; get worsening numbness or weakness reviewed.",
+    "nerve_involvement": "Avoid loading the {label}; get worsening numbness or weakness reviewed.",
+    "hernia": "Avoid heavy loading or straining; follow your clearance plan for the {label}.",
+}
+
+
+def _natural_injury_label(label: str) -> str:
+    """Lower a sentence-internal display label while preserving ACL/MCL-style acronyms."""
+    cleaned = _clean(label) or "injury"
+    first_word = cleaned.split(maxsplit=1)[0]
+    if len(first_word) > 1 and first_word.isupper():
+        return cleaned
+    return cleaned[:1].lower() + cleaned[1:]
+
+
+def _resolved_injury_type(injury: Mapping[str, Any]) -> str:
+    """Resolve a canonical taxonomy type from structured fields or stored text."""
+    from fightcamp.injury_taxonomy import INJURY_TAXONOMY
+
+    def canonical(value: Any) -> str:
+        return _clean(value).lower().replace("-", "_").replace(" ", "_")
+
+    # Prefer exact structured values when a caller already carries them. A guided
+    # surface subtype is also authoritative when it is one of the canonical skin
+    # types; the umbrella ``surface_injury`` alone is intentionally not enough.
+    for field_name in ("triage_category", "injury_type", "rehab_type", "surface_type"):
+        candidate = canonical(injury.get(field_name))
+        if candidate in INJURY_TAXONOMY:
+            return candidate
+
+    from fightcamp.injury_scoring import score_injury_phrase
+
+    text = " ".join(
+        part
+        for part in (
+            _clean(injury.get("body_area")),
+            _clean(injury.get("description")),
+            _clean(injury.get("label")),
+        )
+        if part
+    )
+    scored = score_injury_phrase(text) if text else {}
+    # Structural diagnoses are deliberately emitted as triage_category while
+    # ordinary rehab types are emitted as injury_type/rehab_type.
+    for field_name in ("triage_category", "injury_type", "rehab_type"):
+        candidate = canonical(scored.get(field_name))
+        if candidate in INJURY_TAXONOMY:
+            return candidate
+    return "unspecified"
+
+
+def _green_injury_action(injury: Mapping[str, Any], label: str) -> str:
+    injury_type = _resolved_injury_type(injury)
+    template = _GREEN_INJURY_ACTIONS.get(injury_type, _GREEN_INJURY_ACTIONS["unspecified"])
+    return template.format(label=_natural_injury_label(label))
 
 
 def _injury_text_regions(text: str) -> set[str]:
@@ -1869,11 +1971,13 @@ def _resolve_readiness_adjustment(
         reason = f"An active injury ({label}) means hard combat work needs to be limited today."
         action = "Keep it controlled: skip sparring, clinch pressure, hard bag work, and all-out rounds."
     elif decision == "train_as_planned":
+        green_injury = _first_active_open_injury(context)
         green_label = _first_active_open_injury_label(context)
-        if green_label:
+        if green_injury is not None and green_label:
+            natural_label = _natural_injury_label(green_label)
             title = "Train around it."
-            reason = f"Your sleep, body, and pain checks are all clear — just protect your {green_label} today."
-            action = "Run the planned work, keep the area clean, and stop if it flares."
+            reason = f"Your check-in is clear, with the {natural_label} still being tracked."
+            action = _green_injury_action(green_injury, green_label)
 
     # Context escalation, last, so it acts on the decision the signals produced
     # rather than pretending to be one of them.
