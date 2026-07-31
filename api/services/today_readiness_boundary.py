@@ -38,6 +38,7 @@ from api.contracts.readiness_message import (
     confidence_note,
     context_labels,
     decision_sources,
+    has_decision_relevant_injury,
     safety_checks,
     trigger_labels,
 )
@@ -449,7 +450,10 @@ def _explain_from_triggers(view: CommandView, triggers: tuple[str, ...]) -> None
     view.today.recommendation_context_labels = list(context_labels(triggers))
     view.today.recommendation_safety_checks = [dict(check) for check in safety_checks(triggers)]
     view.today.recommendation_sources = list(
-        decision_sources(triggers, has_open_injuries=bool(view.open_injuries))
+        decision_sources(
+            triggers,
+            has_open_injuries=has_decision_relevant_injury(view.open_injuries),
+        )
     )
     view.today.recommendation_confidence = confidence_band(triggers)
     view.today.recommendation_confidence_note = confidence_note(triggers)

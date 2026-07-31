@@ -2068,10 +2068,44 @@ def _safe_filler_adjustment(
     )
 
 
-def _action_excludes_contact(action: str) -> bool:
-    """True when the action already tells the athlete to drop contact work."""
-    lowered = action.lower()
-    return any(term in lowered for term in ("spar", "contact", "clinch", "grappl", "rehab only", "no training"))
+# The contact removal is stated in full, every time it applies. It is never
+# inferred from whether the existing action text happens to mention sparring:
+# reading athlete-facing prose to decide what a safety restriction already
+# covers is a guess, and the failure mode is silently dropping the instruction.
+_CONTACT_RESTRICTION_INSTRUCTION = "Skip all sparring, clinch, and grappling today."
+_SURFACE_PROTECTION_INSTRUCTION = "Keep it taped and off direct friction."
+
+# Why contact is out, keyed to the classifier's own reason code rather than
+# assumed — an intact wound that cannot be kept covered is a different fact from
+# an open one, and telling the athlete it is "open" when it is not is wrong.
+_CONTACT_RESTRICTION_REASONS: dict[str, str] = {
+    "open_wound": "Your {label} is open, so contact would reopen or contaminate it.",
+    "open_not_coverable": (
+        "Your {label} is open and can't be kept sealed, so contact would reopen or contaminate it."
+    ),
+    "not_coverable": (
+        "Your {label} can't be kept covered, so contact would contaminate or reopen it."
+    ),
+    "worse_integrity_unknown": (
+        "Your {label} got worse and the skin may be open, so contact is out until it's checked."
+    ),
+}
+
+
+def _with_extra_instruction(action: str, instruction: str) -> str:
+    """Append an instruction to the action, keeping what was already there.
+
+    Additive on purpose: whatever the readiness signals already removed (rounds,
+    conditioning, load) must survive, so restrictions accumulate rather than
+    replace each other.
+    """
+    action = action.strip()
+    if not action:
+        return instruction
+    if instruction in action:
+        return action
+    separator = " " if action.endswith((".", "!", "?")) else ". "
+    return f"{action}{separator}{instruction}"
 
 
 def _with_safety_check(adjustment: ReadinessAdjustment, result: str) -> ReadinessAdjustment:
@@ -2093,7 +2127,7 @@ def _apply_surface_injury_policy(
     changes the recommendation, and then only by removing contact — never the
     session.
     """
-    surface_class, _reason_code, label = _strongest_surface_state(context)
+    surface_class, reason_code, label = _strongest_surface_state(context)
     if surface_class == "non_surface":
         return adjustment
     if surface_class == "surface_medical_review":
@@ -2112,23 +2146,22 @@ def _apply_surface_injury_policy(
     if surface_class == "surface_no_contact":
         result = "no_contact"
         if _session_contact_exposure(context.today_session):
-            if decision == "train_as_planned":
-                decision = "modify"
+            # The strongest existing decision stands: a wound can raise the
+            # decision but never soften one the readiness signals already set.
+            decision = _more_conservative(decision, "modify")
+            if adjustment.decision == "train_as_planned":
+                # Nothing else was restricting today, so the wound owns the copy.
                 title = "Contact off, session on."
-                reason = f"Your {natural} is open, so contact would reopen or contaminate it."
-                action = (
-                    "Skip sparring, clinch, and grappling today; do the rest of the session as planned."
-                )
-                _append_unique(triggers, "surface_injury_contact_restriction")
-            elif not _action_excludes_contact(action):
-                action = f"{action.rstrip('.')}. Keep contact off the {natural} until it closes."
-                _append_unique(triggers, "surface_injury_contact_restriction")
+                reason = _CONTACT_RESTRICTION_REASONS.get(
+                    reason_code, _CONTACT_RESTRICTION_REASONS["open_wound"]
+                ).format(label=natural)
+            action = _with_extra_instruction(action, _CONTACT_RESTRICTION_INSTRUCTION)
+            _append_unique(triggers, "surface_injury_contact_restriction")
     elif surface_class == "surface_local_restriction" and _session_friction_exposure(
         context.today_session
     ):
         result = "local_protection_only"
-        if "cover" not in action.lower():
-            action = f"{action.rstrip('.')}. Keep the {natural} covered and off direct friction."
+        action = _with_extra_instruction(action, _SURFACE_PROTECTION_INSTRUCTION)
 
     updated = replace(
         adjustment,
@@ -2622,10 +2655,36 @@ _HISTORY_CHECKIN_TRIGGERS = frozenset(
 )
 _RECENT_SESSION_TRIGGERS = frozenset({"recent_hard_session", "recent_hard_load_plus_poor_today"})
 _INJURY_TRIGGERS = frozenset(
-    {"active_injury_worse", "active_injury_restriction", "tracked_injury_high_risk_session"}
+    {
+        "active_injury_worse",
+        "active_injury_restriction",
+        "tracked_injury_high_risk_session",
+        # A surface injury names the injury source only when it actually acted.
+        "surface_injury_contact_restriction",
+        "surface_injury_medical_review",
+    }
 )
 _PHASE_TRIGGERS = frozenset({"taper_poor_readiness", "reintegration_poor_readiness", "fight_week"})
 _SESSION_RISK_TRIGGERS = frozenset({"session_risk_low", "session_risk_medium", "session_risk_high"})
+
+
+def has_decision_relevant_injury(open_injuries: Sequence[Mapping[str, Any]] | None) -> bool:
+    """True when a tracked injury could bear on the decision at all.
+
+    "Being tracked" is not the same as "was used". A stable skin injury is
+    recorded as a safety check and cannot move the decision, so listing it under
+    "Decision based on" would claim the call rested on an input it did not.
+    Injuries that CAN act — anything non-surface, plus a wound that is open,
+    uncoverable or needs review — still count.
+    """
+    for injury in open_injuries or []:
+        if not isinstance(injury, Mapping):
+            continue
+        if _clean(injury.get("status")).lower() not in _ACTIVE_FLAG_STATUSES:
+            continue
+        if classify_injury_surface(injury) != "stable_surface":
+            return True
+    return False
 
 
 def decision_sources(

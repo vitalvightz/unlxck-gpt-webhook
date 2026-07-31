@@ -17,17 +17,24 @@ from __future__ import annotations
 
 import pytest
 
+from api.contracts.command_view import build_command_view
 from api.contracts.injury_checkin import DeclaredInjury, reconcile_injury_checkin
 from api.contracts.readiness_message import (
     ReadinessCheckin,
     ReadinessContext,
     build_readiness_adjustment,
     classify_injury_surface,
+    decision_sources,
     explanation_metadata,
+    has_decision_relevant_injury,
     safety_checks,
 )
 from api.services.today_service import _load_relevant_worse_injury, _with_surface_class
 from fightcamp.injury_registry import classify_surface_injury
+from tests.support import _build_client
+
+ATHLETE = {"Authorization": "Bearer athlete-token"}
+PLAN_ID = "11111111-1111-1111-1111-111111111111"
 
 HARD_SPARRING = {
     "title": "Hard sparring",
@@ -293,6 +300,51 @@ class TestWorseningSurfaceInjury:
         assert "active_injury_worse" not in adjustment.triggers
         assert _surface_check(adjustment)["result"] == "local_protection_only"
 
+    def test_an_open_wound_removes_contact_without_undoing_other_restrictions(self):
+        # Poor sleep already reduced the session. The wound adds the contact
+        # removal ON TOP: the fatigue restriction survives, the contact
+        # instruction is stated explicitly, and neither is inferred from how the
+        # other one happens to be worded.
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(sleep="poor"),
+            ReadinessContext(
+                today_session=HARD_SPARRING,
+                open_injuries=[
+                    _blister(
+                        skin_integrity="open",
+                        bleeding_status="controlled",
+                        drainage="none",
+                        coverable="yes",
+                    )
+                ],
+            ),
+        )
+
+        assert adjustment.decision in {"modify", "pull_back"}
+        assert "Skip all sparring, clinch, and grappling today." in adjustment.action
+        # The poor-sleep restriction is still there in full.
+        assert "conditioning finishers" in adjustment.action
+        assert "Poor sleep" in adjustment.reason
+
+        metadata = explanation_metadata(adjustment.triggers)
+        assert metadata["causal_triggers"] == ["Poor sleep", "Open skin injury"]
+        assert metadata["safety_checks"][0]["result"] == "no_contact"
+
+    def test_a_pulled_back_day_still_states_the_contact_removal(self):
+        # The instruction is never dropped because the existing copy "sounds
+        # like" it already covers contact — that inference is what this closes.
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(pain="manageable", sleep="poor", body="flat"),
+            ReadinessContext(
+                today_session=HARD_SPARRING,
+                open_injuries=[_blister(skin_integrity="open", coverable="yes")],
+            ),
+        )
+
+        assert adjustment.decision == "pull_back"
+        assert "Skip all sparring, clinch, and grappling today." in adjustment.action
+        assert "surface_injury_contact_restriction" in adjustment.triggers
+
     def test_open_blister_before_sparring_removes_contact_only(self):
         adjustment = build_readiness_adjustment(
             ReadinessCheckin(active_injury="worse"),
@@ -310,11 +362,13 @@ class TestWorseningSurfaceInjury:
             ),
         )
 
+        # Contact is removed; the day is not.
         assert adjustment.decision == "modify"
+        assert adjustment.title == "Contact off, session on."
         assert "surface_injury_contact_restriction" in adjustment.triggers
-        assert "sparring" in adjustment.action.lower()
-        # The rest of the session survives: this is not a stop.
-        assert "rest of the session" in adjustment.action.lower()
+        assert "Skip all sparring, clinch, and grappling today." in adjustment.action
+        # The wound's own hygiene guidance survives alongside the restriction.
+        assert "clean and covered" in adjustment.action
         assert _surface_check(adjustment)["result"] == "no_contact"
 
     def test_open_blister_does_not_block_a_non_contact_recovery_session(self):
@@ -348,6 +402,10 @@ class TestWorseningSurfaceInjury:
 
         assert adjustment.decision == "modify"
         assert "surface_injury_contact_restriction" in adjustment.triggers
+        assert "Skip all sparring, clinch, and grappling today." in adjustment.action
+        # It is intact, just not sealable — the copy must not claim it is open.
+        assert "can't be kept covered" in adjustment.reason
+        assert "is open" not in adjustment.reason
         assert _surface_check(adjustment)["result"] == "no_contact"
 
 
@@ -445,6 +503,73 @@ class TestSurfacePlusRealInjury:
         assert _surface_check(adjustment)["result"] == "no_session_change"
 
 
+class TestDecisionSources:
+    """"Decision based on" names inputs the decision USED, not everything tracked."""
+
+    def test_a_stable_blister_is_a_safety_check_not_a_decision_source(self):
+        open_injuries = [_blister()]
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(sleep="poor"),
+            ReadinessContext(today_session=HARD_SPARRING, open_injuries=open_injuries),
+        )
+        sources = decision_sources(
+            adjustment.triggers,
+            has_open_injuries=has_decision_relevant_injury(open_injuries),
+        )
+
+        assert explanation_metadata(adjustment.triggers)["causal_triggers"] == ["Poor sleep"]
+        assert _surface_check(adjustment)["result"] == "no_session_change"
+        assert "your tracked injuries" not in sources
+        assert "today's check-in" in sources
+
+    def test_a_wound_that_acted_is_named_as_a_source(self):
+        open_injuries = [_blister(skin_integrity="open", coverable="yes")]
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(sleep="poor"),
+            ReadinessContext(today_session=HARD_SPARRING, open_injuries=open_injuries),
+        )
+        sources = decision_sources(
+            adjustment.triggers,
+            has_open_injuries=has_decision_relevant_injury(open_injuries),
+        )
+
+        assert "your tracked injuries" in sources
+
+    def test_a_load_relevant_injury_is_named_as_a_source(self):
+        assert has_decision_relevant_injury([_shoulder_strain()]) is True
+        assert has_decision_relevant_injury([_blister()]) is False
+        # Resolved flags are not tracked at all.
+        assert has_decision_relevant_injury([_shoulder_strain(status="resolved")]) is False
+
+    def test_the_command_view_does_not_name_a_stable_blister_as_a_source(self):
+        view = build_command_view(
+            current_training_day="2026-07-31",
+            plan={"id": PLAN_ID, "status": "ready"},
+            recommendation={
+                "training_day": "2026-07-31",
+                "recommendation_state": "modify",
+                "recommendation_reason": "Session reduced.",
+                "recommendation_triggers": [
+                    "poor_sleep",
+                    "safety_check:surface_injury:no_session_change",
+                ],
+            },
+            open_injuries=[_blister()],
+        )
+
+        assert "your tracked injuries" not in view.today.recommendation_sources
+        assert view.today.recommendation_safety_checks == [
+            {
+                "code": "surface_injury",
+                "label": "Skin injury",
+                "result": "no_session_change",
+                "result_label": "No session change",
+            }
+        ]
+        # It is still tracked and visible, just not claimed as a decision input.
+        assert view.open_injuries
+
+
 # ---------------------------------------------------------------------------
 # Persistence + service routing
 # ---------------------------------------------------------------------------
@@ -522,3 +647,147 @@ class TestServiceRouting:
 
         assert flags[0]["surface_class"] == "surface_medical_review"
         assert _load_relevant_worse_injury(flags) is True
+
+
+class TestSurfaceStateLifecycle:
+    """A wound has to be able to get better, not just worse.
+
+    The stored skin answers are what a contact restriction rests on, so a later
+    check-in must be able to update them — otherwise an open blister that closed
+    over would keep blocking contact forever.
+    """
+
+    def _open_blister_flag(self, client) -> str:
+        opened = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={
+                "injuries": [
+                    {
+                        "body_area": "left foot",
+                        "description": "blister on left foot",
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "bleeding_status": "controlled",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                        "friction_or_contact_problem": "yes",
+                    }
+                ]
+            },
+        )
+        assert opened.status_code == 201
+        flag = opened.json()["open_injuries"][0]
+        assert flag["surface_class"] == "surface_no_contact"
+        return str(flag["id"])
+
+    def test_an_open_blister_that_closes_over_stops_blocking_contact(self):
+        client, store, _ = _build_client()
+        store.plans[PLAN_ID] = {
+            "id": PLAN_ID,
+            "athlete_id": "athlete-1",
+            "status": "ready",
+            "plan_name": "Camp A",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        flag_id = self._open_blister_flag(client)
+
+        eased = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "improving",
+                        "skin_integrity": "intact",
+                        "bleeding_status": "none",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                    }
+                ]
+            },
+        )
+
+        assert eased.status_code == 201
+        flag = eased.json()["open_injuries"][0]
+        assert flag["skin_integrity"] == "intact"
+        assert flag["bleeding_status"] == "none"
+        # No longer an open wound, so contact is no longer blocked. The stored
+        # friction answer was not re-asked, so it survives and keeps the wound at
+        # a local restriction rather than fully stable.
+        assert flag["surface_class"] == "surface_local_restriction"
+        assert classify_injury_surface(flag) != "surface_no_contact"
+
+    def test_an_infected_wound_that_clears_leaves_the_review_pathway(self):
+        client, store, _ = _build_client()
+        store.plans[PLAN_ID] = {
+            "id": PLAN_ID,
+            "athlete_id": "athlete-1",
+            "status": "ready",
+            "plan_name": "Camp A",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        opened = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={
+                "injuries": [
+                    {
+                        "body_area": "left foot",
+                        "description": "blister on left foot",
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "infection_signs": ["pus"],
+                        "coverable": "yes",
+                        "friction_or_contact_problem": "no",
+                    }
+                ]
+            },
+        ).json()["open_injuries"][0]
+        assert opened["surface_class"] == "surface_medical_review"
+
+        cleared = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={
+                "injuries": [
+                    {
+                        "flag_id": opened["id"],
+                        "status": "improving",
+                        "skin_integrity": "intact",
+                        "bleeding_status": "none",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                    }
+                ]
+            },
+        ).json()["open_injuries"][0]
+
+        assert cleared["infection_signs"] == []
+        assert cleared["surface_class"] == "stable_surface"
+
+    def test_a_report_without_surface_answers_keeps_the_stored_state(self):
+        # An update that does not carry the answers must not silently clear them:
+        # only an athlete-confirmed recheck changes what is on record.
+        client, store, _ = _build_client()
+        store.plans[PLAN_ID] = {
+            "id": PLAN_ID,
+            "athlete_id": "athlete-1",
+            "status": "ready",
+            "plan_name": "Camp A",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        flag_id = self._open_blister_flag(client)
+
+        same = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"flag_id": flag_id, "status": "ongoing"}]},
+        ).json()["open_injuries"][0]
+
+        assert same["skin_integrity"] == "open"
+        assert same["surface_class"] == "surface_no_contact"

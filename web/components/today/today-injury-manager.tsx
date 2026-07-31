@@ -42,8 +42,13 @@ const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: str
 // Surface (skin) follow-up ----------------------------------------------------
 // A worsening blister, graze or cut is routed by what the skin is doing, not by
 // a blanket "injury is worse" rule — so a worse report on a KNOWN skin injury
-// asks these five questions first. They are never shown for other injuries, and
-// never on a normal easing/same/cleared update.
+// asks these five questions first. They are never shown for other injuries.
+//
+// The same answers are what a wound is still restricted BY, so they also need a
+// way back down: an injury currently held at "no contact" or "needs checking"
+// gets a shortened recheck on Easing / Same, which is how an open blister that
+// has closed over stops blocking contact. Nothing is ever cleared without the
+// athlete confirming it — the recheck opens pre-filled with what is on record.
 
 /** Backend classes that mean "this is a skin injury we route by skin answers". */
 const SURFACE_FOLLOW_UP_CLASSES = new Set([
@@ -52,8 +57,16 @@ const SURFACE_FOLLOW_UP_CLASSES = new Set([
   "surface_no_contact",
 ]);
 
+/** Classes where the stored skin state is actively restricting training, so an
+ * improving report has to say what changed before the restriction can lift. */
+const SURFACE_RECHECK_CLASSES = new Set(["surface_no_contact", "surface_medical_review"]);
+
 function needsSurfaceFollowUp(injury: InjuryFlagRecord): boolean {
   return SURFACE_FOLLOW_UP_CLASSES.has(injury.surface_class ?? "non_surface");
+}
+
+function needsSurfaceRecheck(injury: InjuryFlagRecord): boolean {
+  return SURFACE_RECHECK_CLASSES.has(injury.surface_class ?? "non_surface");
 }
 
 /** Bleeding and leaking read as one question to the athlete; the answer maps to
@@ -118,19 +131,52 @@ const EMPTY_SURFACE_ANSWERS: SurfaceFollowUpAnswers = {
   friction_or_contact_problem: "unknown",
 };
 
+/** Open the follow-up on what is already on record, not on blanks.
+ *
+ * This is what keeps a recheck from silently clearing an infection sign or a
+ * bleeding answer the athlete never revisited: every field starts where the
+ * backend has it, and only what they change is changed. */
+function answersFromInjury(injury: InjuryFlagRecord): SurfaceFollowUpAnswers {
+  const bleeding = injury.bleeding_status ?? null;
+  let bleed: BleedAnswer = EMPTY_SURFACE_ANSWERS.bleed;
+  if (bleeding === "uncontrolled") {
+    bleed = "uncontrolled";
+  } else if (injury.drainage === "present") {
+    bleed = "leaking";
+  } else if (bleeding === "controlled") {
+    bleed = "controlled";
+  } else if (bleeding === "none") {
+    bleed = "no";
+  }
+  return {
+    skin_integrity: injury.skin_integrity ?? EMPTY_SURFACE_ANSWERS.skin_integrity,
+    bleed,
+    infection_signs: [...(injury.infection_signs ?? [])],
+    coverable: injury.coverable ?? EMPTY_SURFACE_ANSWERS.coverable,
+    friction_or_contact_problem:
+      injury.friction_or_contact_problem ?? EMPTY_SURFACE_ANSWERS.friction_or_contact_problem,
+  };
+}
+
 function surfaceDeclaration(
   flagId: string,
+  status: TodayInjuryCheckinStatus,
   answers: SurfaceFollowUpAnswers,
+  { includeFriction }: { includeFriction: boolean },
 ): TodayInjuryDeclaration {
-  return {
+  const declaration: TodayInjuryDeclaration = {
     flag_id: flagId,
-    status: "worse",
+    status,
     skin_integrity: answers.skin_integrity,
     infection_signs: answers.infection_signs,
     coverable: answers.coverable,
-    friction_or_contact_problem: answers.friction_or_contact_problem,
     ...BLEED_ANSWER_FIELDS[answers.bleed],
   };
+  // The recheck does not ask about friction, so it does not send it — an
+  // unasked field must keep its stored value rather than be overwritten.
+  return includeFriction
+    ? { ...declaration, friction_or_contact_problem: answers.friction_or_contact_problem }
+    : declaration;
 }
 
 const INJURY_SEVERITY_OPTIONS: Array<{ value: InjuryFlagSeverity; label: string }> = [
@@ -195,13 +241,18 @@ export function TodayInjuryManager({
   // Clearing an injury removes it from tracking, so it asks for an explicit
   // confirmation first; this holds the flag id awaiting that "are you sure?".
   const [confirmingClearId, setConfirmingClearId] = useState<string | null>(null);
-  // A worse report on a known skin injury needs the surface follow-up before it
-  // can be routed, so it holds the flag id and the answers so far. Nothing is
-  // sent — and nothing is marked selected — until it is submitted.
+  // A skin injury needs its skin state before a report can be routed — on the
+  // way up (worse) and on the way back down (a restricted wound reported easing
+  // or the same). This holds the flag id, which report it belongs to, and the
+  // answers so far. Nothing is sent — and nothing is marked selected — until it
+  // is submitted.
   const [surfaceFollowUpId, setSurfaceFollowUpId] = useState<string | null>(null);
+  const [surfaceFollowUpStatus, setSurfaceFollowUpStatus] =
+    useState<TodayInjuryCheckinStatus>("worse");
   const [surfaceAnswers, setSurfaceAnswers] = useState<SurfaceFollowUpAnswers>(
     EMPTY_SURFACE_ANSWERS,
   );
+  const isSurfaceRecheck = surfaceFollowUpStatus !== "worse";
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
@@ -263,6 +314,15 @@ export function TodayInjuryManager({
   // known skin injury routes through the surface follow-up, because how a wound
   // is worse (open? bleeding? coverable?) is what decides whether anything about
   // today's session actually changes.
+  function openSurfaceFollowUp(injury: InjuryFlagRecord, status: TodayInjuryCheckinStatus) {
+    setConfirmingClearId(null);
+    // Pre-filled with what is on record, so an untouched answer is preserved
+    // rather than blanked by the act of rechecking.
+    setSurfaceAnswers(answersFromInjury(injury));
+    setSurfaceFollowUpStatus(status);
+    setSurfaceFollowUpId(injury.id);
+  }
+
   function handleInjuryAction(injury: InjuryFlagRecord, status: TodayInjuryCheckinStatus) {
     if (status === "resolved") {
       setSurfaceFollowUpId(null);
@@ -270,9 +330,14 @@ export function TodayInjuryManager({
       return;
     }
     if (status === "worse" && needsSurfaceFollowUp(injury)) {
-      setConfirmingClearId(null);
-      setSurfaceAnswers(EMPTY_SURFACE_ANSWERS);
-      setSurfaceFollowUpId(injury.id);
+      openSurfaceFollowUp(injury, status);
+      return;
+    }
+    // An easing / same report on a wound that is currently restricting training
+    // has to say what the skin is doing now — otherwise the restriction would
+    // either stick forever or lift on nothing.
+    if (status !== "worse" && needsSurfaceRecheck(injury)) {
+      openSurfaceFollowUp(injury, status);
       return;
     }
     // Choosing a different answer abandons any pending confirmation/follow-up.
@@ -289,7 +354,13 @@ export function TodayInjuryManager({
   }
 
   async function submitSurfaceFollowUp(flagId: string) {
-    const saved = await updateInjury(flagId, "worse", surfaceDeclaration(flagId, surfaceAnswers));
+    const saved = await updateInjury(
+      flagId,
+      surfaceFollowUpStatus,
+      surfaceDeclaration(flagId, surfaceFollowUpStatus, surfaceAnswers, {
+        includeFriction: !isSurfaceRecheck,
+      }),
+    );
     if (saved) {
       setSurfaceFollowUpId(null);
     }
@@ -382,20 +453,23 @@ export function TodayInjuryManager({
                 </div>
                 <div className="today-segment-row" role="group" aria-label={`Update ${getInjuryLabel(injury)}`}>
                   {INJURY_STATUS_ACTIONS.map((action) => {
-                    // A pending confirmation / follow-up shows the option as
-                    // ACTIVE (where the athlete is), not as saved — the saved
-                    // state only comes from selectedStatus, which is set after
-                    // the backend confirms.
+                    // Selected styling means SAVED, and a confirmed backend
+                    // write is the only thing that produces it. An answer that
+                    // is still waiting on a confirmation or a follow-up gets a
+                    // neutral "pending" outline instead, so nothing ever looks
+                    // logged before it is.
                     const isSelected = action.value === selectedStatus;
                     const isAwaitingConfirmation =
                       (confirmingClearId === injury.id && action.value === "resolved") ||
-                      (surfaceFollowUpId === injury.id && action.value === "worse");
+                      (surfaceFollowUpId === injury.id && action.value === surfaceFollowUpStatus);
 
                     return (
                       <button
                         key={action.value}
                         type="button"
-                        className={`today-segment${isSelected || isAwaitingConfirmation ? " today-segment-active" : ""}`}
+                        className={`today-segment${isSelected ? " today-segment-active" : ""}${
+                          isAwaitingConfirmation ? " today-segment-pending" : ""
+                        }`}
                         disabled={isPending}
                         aria-pressed={isSelected}
                         data-awaiting-confirmation={isAwaitingConfirmation || undefined}
@@ -410,13 +484,19 @@ export function TodayInjuryManager({
                   <div
                     className="today-injury-surface-followup"
                     role="group"
-                    aria-label={`How is the ${getInjuryLabel(injury)} worse?`}
+                    aria-label={
+                      isSurfaceRecheck
+                        ? `Recheck the ${getInjuryLabel(injury)}`
+                        : `How is the ${getInjuryLabel(injury)} worse?`
+                    }
                   >
                     <p className="today-injury-confirm-text">
-                      Quick check so we only change what we need to.
+                      {isSurfaceRecheck
+                        ? "Quick recheck so we can lift what no longer applies."
+                        : "Quick check so we only change what we need to."}
                     </p>
                     <SegmentGroup
-                      label="Is it open or burst?"
+                      label={isSurfaceRecheck ? "Is the skin closed now?" : "Is it open or burst?"}
                       value={surfaceAnswers.skin_integrity}
                       options={SKIN_INTEGRITY_OPTIONS}
                       onChange={(value) =>
@@ -457,17 +537,19 @@ export function TodayInjuryManager({
                         setSurfaceAnswers((current) => ({ ...current, coverable: value }))
                       }
                     />
-                    <SegmentGroup
-                      label="Is rubbing or contact the problem?"
-                      value={surfaceAnswers.friction_or_contact_problem}
-                      options={FRICTION_OPTIONS}
-                      onChange={(value) =>
-                        setSurfaceAnswers((current) => ({
-                          ...current,
-                          friction_or_contact_problem: value,
-                        }))
-                      }
-                    />
+                    {isSurfaceRecheck ? null : (
+                      <SegmentGroup
+                        label="Is rubbing or contact the problem?"
+                        value={surfaceAnswers.friction_or_contact_problem}
+                        options={FRICTION_OPTIONS}
+                        onChange={(value) =>
+                          setSurfaceAnswers((current) => ({
+                            ...current,
+                            friction_or_contact_problem: value,
+                          }))
+                        }
+                      />
+                    )}
                     <div className="today-injury-confirm-actions">
                       <button
                         type="button"

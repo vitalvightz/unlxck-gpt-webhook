@@ -7148,6 +7148,16 @@ html[data-theme="light"] .today-terminal-status {
   box-shadow: 0 2px 12px rgba(181, 18, 43, 0.38);
 }
 
+/* Awaiting a confirmation or a follow-up: the athlete is HERE, but nothing has
+   been written yet. Deliberately not the selected treatment — the brand fill
+   means "saved", and only a confirmed backend write earns it. */
+.today-segment-pending {
+  border-color: rgba(255, 255, 255, 0.34);
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
 .today-segment:disabled {
   cursor: default;
   opacity: 0.72;
