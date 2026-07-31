@@ -741,6 +741,13 @@ export function getAdminAthlete(token: string, athleteId: string): Promise<Admin
   );
 }
 
+export function approveAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
+  return readJson<AdminAthleteRecord>(
+    `/api/admin/athletes/${encodeURIComponent(athleteId)}/approve`,
+    { method: "POST", token },
+  );
+}
+
 export function updateAdminAthleteLatestIntake(
   token: string,
   athleteId: string,

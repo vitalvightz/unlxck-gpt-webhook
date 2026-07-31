@@ -74,6 +74,8 @@ create table if not exists public.profiles (
       check (username is null or username ~ '^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$'),
   username_change_history jsonb not null default '[]'::jsonb,
   role public.app_role not null default 'athlete',
+  access_status text not null default 'pending'
+    constraint profiles_access_status_check check (access_status in ('pending', 'approved')),
   full_name text not null default '',
   technical_style text[] not null default '{}',
   tactical_style text[] not null default '{}',
@@ -106,7 +108,8 @@ as $$
 begin
   if auth.role() <> 'service_role' then
     if (tg_op = 'INSERT' and new.role <> 'athlete')
-      or (tg_op = 'UPDATE' and new.role is distinct from old.role) then
+      or (tg_op = 'UPDATE' and new.role is distinct from old.role)
+      or (tg_op = 'UPDATE' and new.access_status is distinct from old.access_status) then
       raise exception 'Only the backend service role can change profile roles.';
     end if;
   end if;
@@ -1006,7 +1009,8 @@ select
   p.created_at,
   p.updated_at,
   count(pl.id)::int as plan_count,
-  max(pl.created_at) as latest_plan_created_at
+  max(pl.created_at) as latest_plan_created_at,
+  p.access_status
 from public.profiles p
 left join public.plans pl on pl.athlete_id = p.id
 group by
@@ -1026,7 +1030,8 @@ group by
   p.onboarding_draft,
   p.nutrition_profile,
   p.created_at,
-  p.updated_at;
+  p.updated_at,
+  p.access_status;
 
 -- The rollup view aggregates every athlete's profile. It is read only by the
 -- service-role backend (api/store.py). security_invoker keeps it bound to the

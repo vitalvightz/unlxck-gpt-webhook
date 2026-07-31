@@ -45,7 +45,7 @@ export function RequireAuth({
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
   const router = useRouter();
-  const { isReady, isMeHydrated, hasTransientMeError, session, me, refreshMe } = useAppSession();
+  const { isReady, isMeHydrated, hasTransientMeError, isAccessPending, session, me, refreshMe, signOut } = useAppSession();
   const [isRetryingRecovery, setIsRetryingRecovery] = useState(false);
   const role = me?.profile.role;
 
@@ -60,14 +60,14 @@ export function RequireAuth({
     if (adminOnly && !isMeHydrated) {
       return;
     }
-    if (isMeHydrated && !me) {
+    if (isMeHydrated && !me && !isAccessPending) {
       router.replace("/login");
       return;
     }
     if (adminOnly && role && role !== "admin") {
       router.replace("/plans");
     }
-  }, [adminOnly, hasTransientMeError, isMeHydrated, isReady, me, role, router, session]);
+  }, [adminOnly, hasTransientMeError, isAccessPending, isMeHydrated, isReady, me, role, router, session]);
 
   useEffect(() => {
     if (!hasTransientMeError) {
@@ -104,6 +104,17 @@ export function RequireAuth({
     body = <LoadingCard label="Checking your access" />;
   } else if (!session) {
     body = <LoadingCard label="Redirecting to login" />;
+  } else if (isAccessPending) {
+    body = (
+      <section className="panel loading-card">
+        <p className="kicker">Access pending</p>
+        <h1>Your account is in the approval queue.</h1>
+        <p className="muted">An UNLXCK admin must approve your account before you can enter the app.</p>
+        <button type="button" className="ghost-button" onClick={() => void signOut()}>
+          Sign out
+        </button>
+      </section>
+    );
   } else if (adminOnly && hasTransientMeError && !me) {
     body = <LoadingCard label="Restoring admin access" />;
   } else if (adminOnly && !isMeHydrated) {

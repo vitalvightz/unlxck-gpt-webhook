@@ -243,6 +243,7 @@ export type ProfileRecord = {
   username?: string | null;
   username_change_history?: string[];
   role: UserRole;
+  access_status?: "pending" | "approved";
   full_name: string;
   technical_style: string[];
   tactical_style: string[];
@@ -690,6 +691,7 @@ export type AdminAthleteRecord = {
   athlete_id: string;
   email: string;
   role: UserRole;
+  access_status?: "pending" | "approved";
   full_name: string;
   technical_style: string[];
   tactical_style: string[];
