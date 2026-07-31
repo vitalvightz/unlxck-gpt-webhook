@@ -1268,8 +1268,12 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
         risks.append(make_risk("active_injury_worse", text="Active injury reported as worse."))
     if str(checkin.get("pain")) == "high":
         risks.append(make_risk("high_pain", text="Pain reported as high."))
-    if str(checkin.get("phase")) in {"TAPER"}:
-        risks.append(make_risk("phase_taper", text="In taper — do not chase fatigue."))
+    # Taper deliberately produces no risk row. It fired on phase alone, so every
+    # athlete in taper carried a permanent caution-toned entry with a "!" icon,
+    # counted in Overview's "N active warnings" and able to render as the day's
+    # "strongest signal". Being in taper is the plan working, not a risk. It now
+    # appears as CONTEXT on the decision card, where it explains the call without
+    # being mistaken for a problem.
     if str(checkin.get("sleep")) == "poor" or str(checkin.get("body")) == "flat":
         risks.append(make_risk("fatigue", text="Fatigue signals on today's check-in."))
     return risks

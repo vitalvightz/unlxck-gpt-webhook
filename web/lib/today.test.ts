@@ -667,7 +667,7 @@ test("risk watch summary reports count and the strongest signal", () => {
   assert.deepEqual(getRiskWatchSummary([]), { count: 0, strongestLabel: "" });
   const summary = getRiskWatchSummary([
     { category: "stop_red_flag", priority: 1, icon: "octagon-x", label: "Stop", text: "x", tone: "stop" },
-    { category: "phase_taper", priority: 5, icon: "calendar-clock", label: "Taper", text: "y", tone: "caution" },
+    { category: "fatigue", priority: 6, icon: "battery-low", label: "Fatigue", text: "y", tone: "caution" },
   ]);
   assert.equal(summary.count, 2);
   assert.equal(summary.strongestLabel, "STOP");

@@ -23,55 +23,58 @@ const CONFIDENCE_LABELS: Record<TodayDecisionConfidence, string> = {
  * athlete has checked in. Returns null before check-in. It frames the original
  * blocks — it never mutates the saved plan.
  *
- * `contributors` and `sources` answer the athlete's two follow-up questions:
- * what moved today's call, and what it was read from. Both are computed by the
- * backend from the engine's own trigger codes, so this panel only renders them.
+ * The card answers the four questions an athlete actually has, in the order they
+ * ask them:
  *
- * The heading is "What moved this": it names what moved the DECISION, which is
- * exactly what the engine recorded. It is not a claim that any one signal caused
- * the athlete's state, and the copy must never drift into one.
+ *   DECISION    what should I do?      -> the tier headline and the action
+ *   TRIGGER     why did it change?     -> what changed about the athlete
+ *   CONTEXT     what influenced that?  -> the camp around the decision
+ *   CONFIDENCE  how sure is Unlxck?    -> how much this rested on
  *
- * `confidence` renders as "Data coverage" because that is what it measures: how
- * much the call had to go on, which the engine knows for certain. It is not
- * confidence that the call is RIGHT, which would need outcome data the product
- * does not collect yet. Labelling it "Confidence" invited the opposite reading,
- * worst of all on a red-flag stop, where a lowered band appeared to cast doubt
- * on the most certain decision the engine makes.
+ * Trigger and context are held apart because a flat list made "Fight week" a
+ * peer of "High pain". Being in taper is a plan, not a symptom: it explains how
+ * cautious the call is, and never that something is wrong. The backend does the
+ * classification, so this panel only renders it.
  *
- * Order matters here. The action reads before the reasoning because an athlete
- * standing in a gym scans for what to do first, and only then asks why. The
- * evidence (signals, coverage, sources) follows both, as support rather than as
- * competition for the instruction.
+ * Triggers are contributors, never causes. The engine records which signals were
+ * present when it decided; it does not establish that any one of them caused the
+ * change, so the copy must not claim it did.
+ *
+ * `confidence` is how much the call had to go on, which the engine knows for
+ * certain. It is not confidence that the call is RIGHT, which would need outcome
+ * data the product does not collect yet. At high it lists what was available; at
+ * anything less it names what was missing, which is the more useful half.
  */
 export function TodayDecisionPanel({
   banner,
   tier,
-  contributors,
+  triggers,
+  context,
   sources,
   confidence,
   confidenceNote,
-  sourcesAreHistorical = false,
 }: {
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
-  contributors?: string[];
+  triggers?: string[];
+  context?: string[];
   sources?: string[];
   confidence?: TodayDecisionConfidence | null;
   confidenceNote?: string;
-  sourcesAreHistorical?: boolean;
 }) {
   if (!banner) {
     return null;
   }
-  const signals = (contributors ?? []).filter((value) => value.trim());
-  const usedSources = (sources ?? []).filter((value) => value.trim());
+  const triggerLabels = clean(triggers);
+  const contextLabels = clean(context);
+  const usedSources = clean(sources);
   const note = (confidenceNote ?? "").trim();
   // The backend sends a band only when it has trigger codes to judge the
-  // decision by, so its presence is the signal that there is something real to
-  // qualify. Gating on the banner alone would put a confident "High" on a
+  // decision by. Rendering a default would put a confident "High" on a
   // recommendation stored before the engine recorded triggers, which is the one
   // decision nothing is known about.
   const band = confidence ?? null;
+  const hasEvidence = triggerLabels.length > 0 || contextLabels.length > 0 || band !== null;
   // Headline the tier ("Stop today" etc.) so Today matches the Overview action
   // framing; the chip carries the tier marker and the detail keeps the specifics.
   // Prefer the authoritative backend tier when supplied so the headline can never
@@ -92,48 +95,45 @@ export function TodayDecisionPanel({
         {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
         <p className="today-decision-detail">{banner.detail}</p>
         {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
-        {signals.length || band || usedSources.length ? (
-          <div className="today-decision-evidence">
-            {signals.length ? (
-              <div className="today-decision-signals">
-                <p className="today-decision-signals-label" id="today-decision-signals-label">
-                  What moved this
-                </p>
-                <ul aria-labelledby="today-decision-signals-label">
-                  {signals.map((signal) => (
-                    <li key={signal}>{signal}</li>
-                  ))}
-                </ul>
+        {hasEvidence ? (
+          <dl className="today-decision-evidence">
+            {triggerLabels.length ? (
+              <div className="today-decision-row">
+                <dt>Trigger</dt>
+                <dd>{triggerLabels.join(" · ")}</dd>
+              </div>
+            ) : null}
+            {contextLabels.length ? (
+              <div className="today-decision-row">
+                <dt>Context</dt>
+                <dd>{contextLabels.join(" · ")}</dd>
               </div>
             ) : null}
             {band ? (
-              <p className="today-decision-confidence" data-band={band}>
-                <span className="today-decision-confidence-label">Data coverage</span>
-                <span className="today-decision-confidence-band">
-                  {CONFIDENCE_LABELS[band]}
-                </span>
-                {note ? <span className="today-decision-confidence-note">{note}</span> : null}
-              </p>
+              <div className="today-decision-row" data-band={band}>
+                <dt>Confidence</dt>
+                <dd>
+                  <span className="today-decision-band">{CONFIDENCE_LABELS[band]}</span>
+                  {band === "high" && usedSources.length ? (
+                    <ul className="today-decision-inputs">
+                      {usedSources.map((source) => (
+                        <li key={source}>{source}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {band !== "high" && note ? (
+                    <span className="today-decision-gap">{note}</span>
+                  ) : null}
+                </dd>
+              </div>
             ) : null}
-            {usedSources.length ? (
-              <p className="today-decision-sources">
-                {sourcesAreHistorical
-                  ? `Today's call was based on ${formatSourceList(usedSources)}.`
-                  : `Based on ${formatSourceList(usedSources)}.`}
-              </p>
-            ) : null}
-          </div>
+          </dl>
         ) : null}
       </div>
     </div>
   );
 }
 
-/** "a, b and c" — the plain spoken form, so the line reads like a coach rather
- * than a data export. */
-function formatSourceList(sources: string[]): string {
-  if (sources.length === 1) {
-    return sources[0];
-  }
-  return `${sources.slice(0, -1).join(", ")} and ${sources[sources.length - 1]}`;
+function clean(values: string[] | undefined): string[] {
+  return (values ?? []).filter((value) => value.trim());
 }
