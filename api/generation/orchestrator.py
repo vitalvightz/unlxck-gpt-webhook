@@ -602,19 +602,31 @@ async def run_generation_job(
                     _emit_milestone(
                         "stage2_result_ready",
                         "Stage 2 result ready",
-                        "Finalizer result returned; saving review state.",
+                        "Finalizer result returned; saving the release state.",
                     )
-                    if str(final_result.get("status") or "").strip().lower() == "ready":
+                    finalized_status = str(final_result.get("status") or "").strip().lower()
+                    if finalized_status == "ready":
                         _emit_milestone(
                             "stage2_validated",
                             "Stage 2 finalizer complete",
                             "Validator passed. Final coach-voice plan ready for handoff.",
                         )
+                    elif finalized_status == "publishable_with_flags":
+                        # Flagged, not held: the plan releases to the athlete and the
+                        # findings ride along for asynchronous admin audit. Nothing
+                        # is waiting on a review, so this must not say it is.
+                        _emit_milestone(
+                            "stage2_flagged",
+                            "Stage 2 finalizer complete (flagged)",
+                            "Finalizer output released with validator flags recorded for admin audit.",
+                        )
                     else:
+                        # Defensive: an automator that returns some other, non-displayable
+                        # status genuinely does need a human before release.
                         _emit_milestone(
                             "stage2_review_required",
                             "Stage 2 needs review",
-                            "First-pass finalizer output did not pass validation. No automatic retry was sent.",
+                            "Finalizer returned a status that is not athlete-displayable.",
                         )
         # Triage-blocked Stage 1 outcomes are protected review states, not
         # plans. They live exclusively on the generation job — no plan row

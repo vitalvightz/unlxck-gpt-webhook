@@ -426,6 +426,7 @@ _STAGE2_RESPONSE_MILESTONES = (
     "stage2_response_parsed",
     "stage2_result_ready",
     "stage2_validated",
+    "stage2_flagged",
     "stage2_review_required",
 )
 
@@ -520,6 +521,35 @@ def test_stage2_incomplete_output_completes_job_on_stage1_plan():
 
     plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
     assert "incomplete" in plan["stage2_validator_report"]["stage2_fallback"]["detail"]
+
+
+def test_flagged_release_does_not_claim_a_review_is_required():
+    # publishable_with_flags releases to the athlete; the flags are for
+    # asynchronous admin audit. Nothing is waiting on a review, so the run must
+    # not emit a milestone saying one is needed.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(
+            result=finalized_result(
+                status="publishable_with_flags",
+                stage2_status="stage2_failed",
+            )
+        ),
+        client_request_id="stage2-flagged",
+    )
+
+    assert saved["status"] == "completed"
+    plan = next(iter(store.plans.values()))
+    assert plan["status"] == "publishable_with_flags"
+    codes = [milestone["code"] for milestone in saved["progress_milestones"]]
+    assert "stage2_flagged" in codes
+    assert "stage2_review_required" not in codes
+    # The response/parse milestones are true here — Stage 2 did return a plan.
+    assert "stage2_model_response_received" in codes
+    assert "stage2_response_parsed" in codes
 
 
 def test_stage2_failure_still_fails_job_when_stage1_has_no_plan_text():

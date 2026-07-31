@@ -2696,17 +2696,17 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
 
     _, job = _start_generation(client)
 
+    # A status that is not athlete-displayable is the one case that still routes
+    # to review, so this milestone must still fire here.
     assert job["status"] == "review_required"
-    milestone_details = [
-        milestone["detail"]
+    milestone_codes = [
+        milestone["code"]
         for milestone in job["progress_milestones"]
         if milestone["code"].startswith("stage2_")
     ]
-    assert (
-        "First-pass finalizer output did not pass validation. No automatic retry was sent."
-        in milestone_details
-    )
-    assert "Validator passed. Final coach-voice plan ready for handoff." not in milestone_details
+    assert "stage2_review_required" in milestone_codes
+    assert "stage2_validated" not in milestone_codes
+    assert "stage2_flagged" not in milestone_codes
     saved = next(iter(store.plans.values()))
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
