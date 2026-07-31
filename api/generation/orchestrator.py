@@ -26,9 +26,11 @@ from ..models import (
     ProfileUpdateRequest,
 )
 from ..stage2_automation import (
+    Stage1FallbackUnavailableError,
     Stage2AutomationError,
     Stage2AutomationUnavailableError,
     Stage2Automator,
+    build_stage1_fallback_result,
 )
 from ..store import AppStore
 from .admin_linkage import (
@@ -521,45 +523,149 @@ async def run_generation_job(
                     **stage1_result,
                     "_generation_source": str(job.get("source") or ""),
                 }
-                finalized_result = await finalize_stage2_with_timeout(
-                    stage2=stage2,
-                    stage1_result=stage1_result,
-                    log_context={"job_id": job_id, "athlete_id": athlete_id},
-                )
+                stage2_fell_back = False
+                try:
+                    finalized_result = await finalize_stage2_with_timeout(
+                        stage2=stage2,
+                        stage1_result=stage1_result,
+                        log_context={"job_id": job_id, "athlete_id": athlete_id},
+                    )
+                except Exception as exc:
+                    # Any Stage 2 failure — timeout, provider error, unavailable
+                    # finalizer, incomplete/empty output, or an unexpected crash
+                    # inside the finalizer (TypeError, validator bug, ...). Stage 1
+                    # already built a complete plan, so complete the job on that
+                    # instead of failing generation. Catching broadly is the point:
+                    # Stage 2 is only genuinely non-blocking if an unanticipated
+                    # exception degrades the same way a known one does.
+                    #
+                    # If Stage 1 left nothing to fall back to,
+                    # build_stage1_fallback_result raises and the original
+                    # exception is re-raised to the handlers below, which fail the
+                    # job exactly as before.
+                    safe_error, _ = _safe_error_and_frame(exc)
+                    is_unavailable = isinstance(exc, Stage2AutomationUnavailableError)
+                    is_timeout = isinstance(exc, asyncio.TimeoutError)
+                    is_expected = isinstance(exc, (Stage2AutomationError, asyncio.TimeoutError))
+                    # Count an attempt only when a request actually reached the
+                    # provider. Failures raised before the call — an unconfigured
+                    # automator, or a prompt over the budget — burn no tokens, so
+                    # counting them corrupts the cost/audit telemetry. A whole-
+                    # finalize timeout means a request was in flight.
+                    provider_request_started = is_timeout or bool(
+                        getattr(exc, "provider_request_started", False)
+                    )
+                    try:
+                        finalized_result = build_stage1_fallback_result(
+                            stage1_result,
+                            reason=(
+                                "stage2_timeout"
+                                if is_timeout
+                                else "stage2_unavailable"
+                                if is_unavailable
+                                else "stage2_model_error"
+                                if is_expected
+                                else "stage2_unexpected_error"
+                            ),
+                            detail=safe_error,
+                            attempt_count=1 if provider_request_started else 0,
+                            stage2_cost=getattr(exc, "stage2_cost", None),
+                        )
+                    except Stage1FallbackUnavailableError:
+                        logger.error(
+                            "[jobs] generation:stage2_failed_no_stage1_plan athlete_id=%s job_id=%s "
+                            "exc_type=%s error=%s",
+                            athlete_id,
+                            job_id,
+                            type(exc).__name__,
+                            safe_error,
+                        )
+                        raise exc from None
+                    stage2_fell_back = True
+                    # WARNING, not ERROR: the job completed successfully on the
+                    # Stage 1 plan, so this is a recovered degradation, not an
+                    # incident. Alert on the rate of this line, not on each one.
+                    # An unexpected exception type still gets a stack trace,
+                    # because that one is a bug worth seeing.
+                    if is_expected:
+                        logger.warning(
+                            "[jobs] generation:stage2_failed_stage1_completed athlete_id=%s job_id=%s "
+                            "exc_type=%s error=%s",
+                            athlete_id,
+                            job_id,
+                            type(exc).__name__,
+                            safe_error,
+                        )
+                    else:
+                        logger.warning(
+                            "[jobs] generation:stage2_unexpected_error_stage1_completed athlete_id=%s "
+                            "job_id=%s exc_type=%s error=%s",
+                            athlete_id,
+                            job_id,
+                            type(exc).__name__,
+                            safe_error,
+                            exc_info=exc,
+                        )
                 await _touch_heartbeat()
-                _emit_milestone(
-                    "stage2_model_response_received",
-                    "Stage 2 model response received",
-                    "AI finalizer returned a response.",
-                )
-                _emit_milestone(
-                    "stage2_response_parse_started",
-                    "Stage 2 response parsing started",
-                    "Preparing finalizer output for validation and persistence.",
-                )
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
-                _emit_milestone(
-                    "stage2_response_parsed",
-                    "Stage 2 response parsed",
-                    "Finalizer output was parsed.",
-                )
-                _emit_milestone(
-                    "stage2_result_ready",
-                    "Stage 2 result ready",
-                    "Finalizer result returned; saving review state.",
-                )
-                if str(final_result.get("status") or "").strip().lower() == "ready":
+                if stage2_fell_back:
+                    # There was no response to receive and nothing to parse, so the
+                    # response/parse milestones would be false. The fallback
+                    # milestone is the only true statement about this run.
+                    # Milestones surface on the athlete's generation screen, so the
+                    # label and detail stay neutral. The technical reason lives in
+                    # the server log and in stage2_validator_report.stage2_fallback,
+                    # which is admin-only.
                     _emit_milestone(
-                        "stage2_validated",
-                        "Stage 2 finalizer complete",
-                        "Validator passed. Final coach-voice plan ready for handoff.",
+                        "stage2_stage1_fallback",
+                        "Final checks complete",
+                        "Your plan is complete and ready to save.",
                     )
                 else:
                     _emit_milestone(
-                        "stage2_review_required",
-                        "Stage 2 needs review",
-                        "First-pass finalizer output did not pass validation. No automatic retry was sent.",
+                        "stage2_model_response_received",
+                        "Stage 2 model response received",
+                        "AI finalizer returned a response.",
                     )
+                    _emit_milestone(
+                        "stage2_response_parse_started",
+                        "Stage 2 response parsing started",
+                        "Preparing finalizer output for validation and persistence.",
+                    )
+                    _emit_milestone(
+                        "stage2_response_parsed",
+                        "Stage 2 response parsed",
+                        "Finalizer output was parsed.",
+                    )
+                    _emit_milestone(
+                        "stage2_result_ready",
+                        "Stage 2 result ready",
+                        "Finalizer result returned; saving the release state.",
+                    )
+                    finalized_status = str(final_result.get("status") or "").strip().lower()
+                    if finalized_status == "ready":
+                        _emit_milestone(
+                            "stage2_validated",
+                            "Stage 2 finalizer complete",
+                            "Validator passed. Final coach-voice plan ready for handoff.",
+                        )
+                    elif finalized_status == "publishable_with_flags":
+                        # Flagged, not held: the plan releases to the athlete and the
+                        # findings ride along for asynchronous admin audit. Nothing
+                        # is waiting on a review, so this must not say it is.
+                        _emit_milestone(
+                            "stage2_flagged",
+                            "Stage 2 finalizer complete (flagged)",
+                            "Finalizer output released with validator flags recorded for admin audit.",
+                        )
+                    else:
+                        # Defensive: an automator that returns some other, non-displayable
+                        # status genuinely does need a human before release.
+                        _emit_milestone(
+                            "stage2_review_required",
+                            "Stage 2 needs review",
+                            "Finalizer returned a status that is not athlete-displayable.",
+                        )
         # Triage-blocked Stage 1 outcomes are protected review states, not
         # plans. They live exclusively on the generation job — no plan row
         # is created or updated. The admin "Approve & Resume" flow drives
@@ -607,6 +713,9 @@ async def run_generation_job(
             to_thread_with_heartbeat=_to_thread_with_heartbeat,
             t_start=t_start,
         )
+    # The Stage 2 handlers below now only fire when there was no Stage 1 plan to
+    # complete the job with (or the failure came from outside the Stage 2 call).
+    # A Stage 2 failure over a usable Stage 1 plan is absorbed at the call site.
     except asyncio.TimeoutError as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.error(

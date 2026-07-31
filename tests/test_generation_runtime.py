@@ -20,7 +20,7 @@ from api.generation_runtime import (
     is_in_process_generation_enabled,
     run_stage1_planner,
 )
-from api.stage2_automation import Stage2AutomationError
+from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from support import FakeStage2Automator, FakeStore, _build_request, finalized_result, seed_default_profiles
 
 
@@ -76,6 +76,10 @@ def _spawn_planner_returns_large_result(payload):
 
 def _spawn_planner_returns_ready_plan(payload):
     return {"status": "ready", "plan_text": "draft"}
+
+
+def _spawn_planner_returns_empty_plan(payload):
+    return {"status": "ready", "plan_text": ""}
 
 
 def _clear_environment_markers(monkeypatch):
@@ -383,7 +387,66 @@ def test_stage2_finalize_timeout_enforces_minimum_of_1(monkeypatch):
     assert _stage2_finalize_timeout_seconds() == 1.0
 
 
-def test_stage2_timeout_fails_generation_job(monkeypatch):
+# ---------------------------------------------------------------------------
+# Technical Stage 2 failures complete the job on the Stage 1 plan.
+#
+# These cover the four ways Stage 2 can fail to produce a usable plan. In every
+# case Stage 1 has already built a complete deterministic plan, so the job
+# completes on that rather than failing generation. This is distinct from the
+# validator path (a Stage 2 plan that EXISTS but is flagged), which publishes
+# the Stage 2 plan as publishable_with_flags.
+# ---------------------------------------------------------------------------
+
+
+def _run_stage2_failure_job(store, stage2, *, client_request_id, planner_fn=None):
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id=client_request_id,
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=planner_fn or _spawn_planner_returns_ready_plan,
+            stage2=stage2,
+            active_tasks=set(),
+        )
+    )
+    return store.get_generation_job(job["id"])
+
+
+# Milestones that assert Stage 2 actually returned something. None of them can
+# be true when the finalizer never produced a plan, so the fallback path must
+# not emit any of them.
+_STAGE2_RESPONSE_MILESTONES = (
+    "stage2_model_response_received",
+    "stage2_response_parse_started",
+    "stage2_response_parsed",
+    "stage2_result_ready",
+    "stage2_validated",
+    "stage2_flagged",
+    "stage2_review_required",
+)
+
+
+def _assert_completed_on_stage1_plan(store, saved, *, reason):
+    assert saved["status"] == "completed"
+    assert not saved["error"]
+    plan = next(iter(store.plans.values()))
+    assert plan["status"] == "ready"
+    assert plan["plan_text"] == "draft"
+    assert plan["stage2_status"] == "stage2_failed_stage1_fallback"
+    assert plan["stage2_validator_report"]["stage2_fallback"]["reason"] == reason
+    codes = [milestone["code"] for milestone in saved["progress_milestones"]]
+    assert "stage2_stage1_fallback" in codes
+    # The run must not claim a response it never got.
+    assert [code for code in _STAGE2_RESPONSE_MILESTONES if code in codes] == []
+    return plan
+
+
+def test_stage2_timeout_completes_job_on_stage1_plan(monkeypatch):
     class HangingStage2:
         async def finalize(self, *, stage1_result: dict, log_context: dict | None = None) -> dict:
             await asyncio.sleep(1)
@@ -392,30 +455,230 @@ def test_stage2_timeout_fails_generation_job(monkeypatch):
     monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "0.01")
     store = FakeStore()
     seed_default_profiles(store)
-    job = store.create_or_get_generation_job(
-        athlete_id="athlete-1",
-        client_request_id="stage2-timeout",
-        source="self_serve",
-        request_payload=_build_request().model_dump(mode="json"),
+
+    saved = _run_stage2_failure_job(
+        store, HangingStage2(), client_request_id="stage2-timeout"
     )
 
-    asyncio.run(
-        generation_runtime.run_generation_job(
-            job_id=job["id"],
-            store=store,
-            planner_fn=_spawn_planner_returns_ready_plan,
-            stage2=HangingStage2(),
-            active_tasks=set(),
-        )
-    )
-
-    saved = store.get_generation_job(job["id"])
-    assert saved["status"] == "failed"
-    assert saved["error"] == "Stage 2 finalizer timed out."
+    _assert_completed_on_stage1_plan(store, saved, reason="stage2_timeout")
     codes = [milestone["code"] for milestone in saved["progress_milestones"]]
     assert "stage2_drafting" in codes
     assert "stage2_model_call_started" in codes
-    assert "stage2_finalizer_timeout" in codes
+    # The job is no longer failed, so the timeout-failure milestone must not fire.
+    assert "stage2_finalizer_timeout" not in codes
+
+
+def test_stage2_provider_error_completes_job_on_stage1_plan():
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(
+            error=Stage2AutomationError("Stage 2 model request failed. Check server logs.")
+        ),
+        client_request_id="stage2-provider-error",
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert "Stage 2 model request failed" in (
+        plan["stage2_validator_report"]["stage2_fallback"]["detail"]
+    )
+
+
+def test_stage2_unavailable_completes_job_on_stage1_plan():
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(
+            error=Stage2AutomationUnavailableError(
+                "OPENAI_API_KEY is required for automated Stage 2 finalization."
+            )
+        ),
+        client_request_id="stage2-unavailable",
+    )
+
+    _assert_completed_on_stage1_plan(store, saved, reason="stage2_unavailable")
+
+
+def test_stage2_incomplete_output_completes_job_on_stage1_plan():
+    # A response truncated before a full plan raises Stage2AutomationError from
+    # _generate_text — there is no usable Stage 2 plan, so Stage 1's completes.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(
+            error=Stage2AutomationError(
+                "Stage 2 model response was incomplete before producing a full plan."
+            )
+        ),
+        client_request_id="stage2-incomplete",
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert "incomplete" in plan["stage2_validator_report"]["stage2_fallback"]["detail"]
+
+
+def test_unexpected_stage2_exception_completes_job_on_stage1_plan():
+    # A TypeError, validator crash, or any other unanticipated exception inside
+    # Stage 2 must degrade the same way a known failure does. Stage 2 is only
+    # genuinely non-blocking if the unexpected case is covered too.
+    class ExplodingStage2:
+        async def finalize(self, *, stage1_result: dict, log_context: dict | None = None) -> dict:
+            raise TypeError("unexpected crash inside the finalizer")
+
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store, ExplodingStage2(), client_request_id="stage2-unexpected"
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_unexpected_error")
+    assert "unexpected crash" in plan["stage2_validator_report"]["stage2_fallback"]["detail"]
+    # An arbitrary exception carries no evidence that a request reached the
+    # provider, so no attempt is claimed. Only attempts we can evidence count.
+    assert plan["stage2_attempt_count"] == 0
+
+
+def test_unavailable_stage2_records_zero_attempts():
+    # Unavailable means no provider request was ever made, so nothing was
+    # attempted. Every other failure got at least as far as starting one.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(
+            error=Stage2AutomationUnavailableError("OPENAI_API_KEY is required.")
+        ),
+        client_request_id="stage2-unavailable-attempts",
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_unavailable")
+    assert plan["stage2_attempt_count"] == 0
+
+
+def test_prompt_budget_failure_records_zero_provider_attempts():
+    # The prompt-budget check raises before any request reaches the provider, so
+    # no tokens were burned. Counting it as an attempt corrupts cost telemetry.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    error = Stage2AutomationError("Stage 2 first_pass prompt too large: 214880 chars > 180000")
+    assert error.provider_request_started is False
+
+    saved = _run_stage2_failure_job(
+        store, FakeStage2Automator(error=error), client_request_id="stage2-prompt-budget"
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert plan["stage2_attempt_count"] == 0
+
+
+def test_provider_error_after_request_records_one_attempt():
+    # The mirror case: a failure raised once the request was in flight did burn
+    # tokens, so it counts.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    error = Stage2AutomationError("Stage 2 model request failed. Check server logs.")
+    error.provider_request_started = True
+
+    saved = _run_stage2_failure_job(
+        store, FakeStage2Automator(error=error), client_request_id="stage2-after-request"
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert plan["stage2_attempt_count"] == 1
+
+
+def test_stage1_fallback_records_a_terminal_structured_card_outcome():
+    # Without a terminal marker the card state derives as "none", which reads as
+    # "might still be building" and leaves the client polling for a conversion
+    # that is never going to run.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed")),
+        client_request_id="stage2-card-state",
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert plan["structured_plan"] is None
+    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+
+
+def test_stage1_fallback_milestone_copy_stays_neutral_for_the_athlete():
+    # Milestones render on the athlete's generation screen. The technical reason
+    # belongs in the log and the admin-only validator report, not here.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed")),
+        client_request_id="stage2-neutral-copy",
+    )
+
+    fallback = next(
+        m for m in saved["progress_milestones"] if m["code"] == "stage2_stage1_fallback"
+    )
+    blurb = f"{fallback['label']} {fallback['detail']}".lower()
+    for leak in ("finaliz", "stage 1", "stage 2", "fail", "ai ", "unusable", "fallback"):
+        assert leak not in blurb, f"athlete-visible milestone leaks {leak!r}: {blurb}"
+
+
+def test_flagged_release_does_not_claim_a_review_is_required():
+    # publishable_with_flags releases to the athlete; the flags are for
+    # asynchronous admin audit. Nothing is waiting on a review, so the run must
+    # not emit a milestone saying one is needed.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(
+            result=finalized_result(
+                status="publishable_with_flags",
+                stage2_status="stage2_failed",
+            )
+        ),
+        client_request_id="stage2-flagged",
+    )
+
+    assert saved["status"] == "completed"
+    plan = next(iter(store.plans.values()))
+    assert plan["status"] == "publishable_with_flags"
+    codes = [milestone["code"] for milestone in saved["progress_milestones"]]
+    assert "stage2_flagged" in codes
+    assert "stage2_review_required" not in codes
+    # The response/parse milestones are true here — Stage 2 did return a plan.
+    assert "stage2_model_response_received" in codes
+    assert "stage2_response_parsed" in codes
+
+
+def test_stage2_failure_still_fails_job_when_stage1_has_no_plan_text():
+    # The boundary: no Stage 1 plan means nothing to fall back to, so the job
+    # fails exactly as it did before rather than publishing an empty plan.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed")),
+        client_request_id="stage2-no-stage1-plan",
+        planner_fn=_spawn_planner_returns_empty_plan,
+    )
+
+    assert saved["status"] == "failed"
+    assert "Stage 2 model request failed" in saved["error"]
     assert not store.plans
 
 

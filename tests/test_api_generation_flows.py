@@ -2696,17 +2696,17 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
 
     _, job = _start_generation(client)
 
+    # A status that is not athlete-displayable is the one case that still routes
+    # to review, so this milestone must still fire here.
     assert job["status"] == "review_required"
-    milestone_details = [
-        milestone["detail"]
+    milestone_codes = [
+        milestone["code"]
         for milestone in job["progress_milestones"]
         if milestone["code"].startswith("stage2_")
     ]
-    assert (
-        "First-pass finalizer output did not pass validation. No automatic retry was sent."
-        in milestone_details
-    )
-    assert "Validator passed. Final coach-voice plan ready for handoff." not in milestone_details
+    assert "stage2_review_required" in milestone_codes
+    assert "stage2_validated" not in milestone_codes
+    assert "stage2_flagged" not in milestone_codes
     saved = next(iter(store.plans.values()))
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
@@ -4325,7 +4325,7 @@ def test_should_not_skip_stage2_when_triage_resume_override_is_approved():
     )
 
 
-def test_stage2_unavailable_returns_failed_job_without_persisting_plan():
+def test_stage2_unavailable_completes_job_on_the_stage1_plan():
     client, store, _ = _build_client(
         FakeStage2Automator(
             error=Stage2AutomationUnavailableError("OPENAI_API_KEY is required for automated Stage 2 finalization.")
@@ -4334,21 +4334,34 @@ def test_stage2_unavailable_returns_failed_job_without_persisting_plan():
 
     _, job = _start_generation(client)
 
-    assert job["status"] == "failed"
-    assert "OPENAI_API_KEY" in job["error"]
-    assert len(store.plans) == 0
+    # An unconfigured finalizer is a Stage 2 failure, not a reason to strand the
+    # athlete: Stage 1 already built a plan, so the job completes on that.
+    assert job["status"] == "completed"
+    assert not job["error"]
+    plan = next(iter(store.plans.values()))
+    assert plan["status"] == "ready"
+    assert plan["plan_text"] == "# Stage 1 Draft"
+    fallback = plan["stage2_validator_report"]["stage2_fallback"]
+    assert fallback["reason"] == "stage2_unavailable"
+    assert "OPENAI_API_KEY" in fallback["detail"]
 
 
-def test_stage2_gateway_failure_returns_failed_job_without_persisting_plan():
+def test_stage2_gateway_failure_completes_job_on_the_stage1_plan():
     client, store, _ = _build_client(
         FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed"))
     )
 
     _, job = _start_generation(client)
 
-    assert job["status"] == "failed"
-    assert "Stage 2 model request failed" in job["error"]
-    assert len(store.plans) == 0
+    assert job["status"] == "completed"
+    assert not job["error"]
+    plan = next(iter(store.plans.values()))
+    assert plan["status"] == "ready"
+    assert plan["plan_text"] == "# Stage 1 Draft"
+    assert plan["stage2_status"] == "stage2_failed_stage1_fallback"
+    fallback = plan["stage2_validator_report"]["stage2_fallback"]
+    assert fallback["reason"] == "stage2_model_error"
+    assert "Stage 2 model request failed" in fallback["detail"]
 
 
 def test_stale_running_job_is_failed_before_new_job_is_created():
@@ -4497,7 +4510,7 @@ def test_stage2_drafting_old_heartbeat_is_reaped_and_does_not_block_new_job():
     assert fresh["id"] != stuck["id"]
 
 
-def test_stage2_insufficient_quota_masks_athlete_error_and_preserves_admin_detail():
+def test_stage2_insufficient_quota_completes_job_and_keeps_admin_detail():
     client, store, _ = _build_client(
         FakeStage2Automator(
             error=Stage2AutomationError(
@@ -4507,24 +4520,34 @@ def test_stage2_insufficient_quota_masks_athlete_error_and_preserves_admin_detai
     )
 
     _, job = _start_generation(client)
-    assert job["status"] == "failed"
-    assert job["error"] == "Generation is temporarily unavailable. Please try again later."
-    assert len(store.plans) == 0
 
-    saved = store.get_generation_job(job["job_id"])
-    assert saved is not None
-    assert saved["status"] == "failed"
-    assert saved["error"] == "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
+    # An exhausted quota no longer strands the athlete — the Stage 1 plan ships.
+    assert job["status"] == "completed"
+    assert not job["error"]
+    plan = next(iter(store.plans.values()))
+    assert plan["status"] == "ready"
+    assert plan["plan_text"] == "# Stage 1 Draft"
 
-    admin_job = client.get(
-        f"/api/generation-jobs/{job['job_id']}",
+    # The quota detail survives for admins on the plan's validator report, which
+    # is served only under admin_outputs — never to the athlete.
+    fallback = plan["stage2_validator_report"]["stage2_fallback"]
+    assert fallback["reason"] == "stage2_model_error"
+    assert "insufficient_quota" in fallback["detail"]
+
+    athlete_plan = client.get(
+        f"/api/plans/{job['plan_id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert athlete_plan.status_code == 200
+    assert athlete_plan.json()["admin_outputs"] is None
+
+    admin_plan = client.get(
+        f"/api/plans/{job['plan_id']}",
         headers={"Authorization": "Bearer admin-token"},
     )
-    assert admin_job.status_code == 200
-    assert (
-        admin_job.json()["error"]
-        == "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
-    )
+    assert admin_plan.status_code == 200
+    admin_report = admin_plan.json()["admin_outputs"]["stage2_validator_report"]
+    assert "insufficient_quota" in admin_report["stage2_fallback"]["detail"]
 
 
 def test_generate_plan_returns_existing_active_job_for_same_athlete():

@@ -11,6 +11,7 @@ import {
   parsePlanText,
   splitLabeledSegments,
   buildReviewSummary,
+  describePlanReleaseState,
   canRetryResumeGenerationForPlan,
   getAdminReviewHeading,
   hasBlockedTriageStubText,
@@ -197,6 +198,62 @@ test("stage2 failed without validator reasons or blockers is still releasable", 
   assert.equal(summary.hasIssues, false);
   assert.equal(summary.blockingCount, 0);
   assert.match(summary.headline, /ready to release/i);
+});
+
+test("a flagged plan is never labelled Held in the admin sidebar", () => {
+  // publishable_with_flags means the athlete already has the plan. Deriving this
+  // label from the validator summary said "Held" for exactly those plans.
+  assert.equal(describePlanReleaseState({ status: "publishable_with_flags" }), "Released with flags");
+  assert.equal(describePlanReleaseState({ status: "ready" }), "Released");
+});
+
+test("release state still reports genuinely withheld and protected plans", () => {
+  assert.equal(describePlanReleaseState({ status: "review_required" }), "Held");
+  assert.equal(describePlanReleaseState({ status: "held_for_review" }), "Held");
+  assert.equal(describePlanReleaseState({ status: "archived" }), "Archived");
+  assert.equal(
+    describePlanReleaseState({ status: "ready", isTriageBlocked: true, triageMode: "medical_hold" }),
+    "Blocked",
+  );
+  assert.equal(
+    describePlanReleaseState({ status: "ready", isTriageBlocked: true, triageMode: "needs_review" }),
+    "Protected",
+  );
+  assert.equal(
+    describePlanReleaseState({ status: "ready", isProtectedTriageResumePending: true }),
+    "Blocked / resume pending",
+  );
+});
+
+test("stage 1 fallback release says the finalizer failed rather than looking routine", () => {
+  // The report is clean because the validator never ran against the Stage 1
+  // body. Without this branch the admin sees a plain "ready to release" and the
+  // technical Stage 2 failure is invisible.
+  const summary = buildReviewSummary({}, "stage2_failed_stage1_fallback", {
+    hasBlockedTriageStubText: false,
+  });
+
+  assert.equal(summary.isPublishable, true);
+  assert.equal(summary.hasIssues, false);
+  assert.match(summary.headline, /Released from Stage 1/i);
+  assert.match(summary.headline, /finalizer pass failed/i);
+  assert.match(summary.guidance, /stage2_fallback/);
+});
+
+test("flagged blockers are described as flagged, not as holding the plan", () => {
+  // Stage 2 findings no longer withhold a plan, so the summary must not tell an
+  // admin that something is waiting on them.
+  const hardBlockerCode = HARD_STAGE2_BLOCKER_CODES[0];
+  const summary = buildReviewSummary(
+    { blocking_warnings: [{ code: hardBlockerCode, message: "Hard blocker present." }] },
+    "stage2_failed",
+    { hasBlockedTriageStubText: false },
+  );
+
+  assert.equal(summary.hasIssues, true);
+  assert.match(summary.headline, /Flagged on this Stage 2 plan/i);
+  assert.doesNotMatch(summary.headline, /holding/i);
+  assert.match(summary.guidance, /released to the athlete/i);
 });
 
 test("blocked triage stub without validator reasons still explains the hold", () => {

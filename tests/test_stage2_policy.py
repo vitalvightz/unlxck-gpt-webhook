@@ -4,7 +4,6 @@ import json
 
 import pytest
 
-from api import stage2_automation
 from fightcamp import stage2_policy
 
 
@@ -117,17 +116,6 @@ def test_prompt_safe_validator_report_keeps_restricted_hits_for_normalized_restr
     assert stage2_policy.prompt_safe_validator_report(report)["restricted_hits"] == [
         {"restriction": "heavy_overhead_pressing", "line": "Push Press"}
     ]
-
-
-def test_stage2_hold_rescue_uses_shared_soft_code_list() -> None:
-    shared_soft_code = next(iter(stage2_policy.CARD_RESCUABLE_SOFT_CODES))
-
-    assert stage2_automation._stage2_hold_is_card_rescuable(
-        {"errors": [{"code": shared_soft_code}], "blocking_warnings": []}
-    )
-    assert not stage2_automation._stage2_hold_is_card_rescuable(
-        {"errors": [{"code": "unknown_future_soft_code"}], "blocking_warnings": []}
-    )
 
 
 def test_policy_findings_dedupe_warning_sources() -> None:

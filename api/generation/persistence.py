@@ -32,52 +32,94 @@ _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 _ADMIN_CANCELLED_JOB_ERROR = "Generation cancelled by admin."
 
 # Statuses that surface the plan to the athlete. A contract violation on one of
-# these is routed to review_required (an admin sees it first); a violation on an
-# already-non-visible status is recorded without changing the status.
+# these either flags the plan (keeping it visible) or, for an unrecoverable
+# finding, routes it to review_required; a violation on an already-non-visible
+# status is recorded without changing the status.
 _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
+_CONTRACT_FLAGGED_PLAN_STATUS = "publishable_with_flags"
 
-# Contract findings a clean structured card CAN vouch for: markdown
-# render/extraction misses where a schema-valid card already proves the plan is
-# well-formed. This is an explicit allowlist - anything not listed here
-# (notably ``plan_text_empty``, which is unrecoverable output integrity, plus
-# any future/unknown contract code) routes to review by default.
-_CONTRACT_CARD_RESCUABLE_ERROR_CODES = {
-    "weekly_schedule_blank",
-    "calendar_unrenderable",
-    "fight_day_missing",
-    "late_fight_session_sequence_empty",
-}
+# Two independent decisions, each with its own allowlist. They happen to list the
+# same codes today, which is exactly why they must not share a predicate — one
+# can change without the other.
+#
+# 1. Can a schema-valid structured card vouch for this finding? The card is the
+#    athlete-facing artifact, so a markdown render/extraction miss it already
+#    disproves is a false positive and the plan keeps `ready`.
+_CONTRACT_CARD_RESCUABLE_ERROR_CODES = frozenset(
+    {
+        "weekly_schedule_blank",
+        "calendar_unrenderable",
+        "fight_day_missing",
+        "late_fight_session_sequence_empty",
+    }
+)
+# 2. Can the plan be released at all? These describe a degraded calendar render,
+#    not an unusable plan: the athlete still has readable plan text, and most
+#    athletes have no coach to escalate to, so withholding helps nobody. They
+#    flag for admin audit and the plan stays visible.
+_CONTRACT_FLAGGABLE_ERROR_CODES = frozenset(
+    {
+        "weekly_schedule_blank",
+        "calendar_unrenderable",
+        "fight_day_missing",
+        "late_fight_session_sequence_empty",
+    }
+)
 
 
-def _contract_report_is_card_rescuable(report: Any) -> bool:
-    """Whether every error-level contract finding is a known render/extraction miss.
+def _contract_error_codes(report: Any) -> list[str] | None:
+    """Error-severity codes from a contract report, or ``None`` if unusable.
 
-    Defensive and allowlisted: returns True only when ``report`` is a dict with a
-    well-formed ``violations`` list, there is at least one error-level finding,
-    and every error-level code is in :data:`_CONTRACT_CARD_RESCUABLE_ERROR_CODES`.
-    A malformed report, an unknown code, or an unrescuable code (e.g.
-    ``plan_text_empty``) all return False so the plan routes to review.
+    Shared parsing only — it makes no policy decision. Returns ``None`` when the
+    report is malformed, a violation entry is malformed, a code is missing or
+    blank, or there are no error-severity findings at all. Callers treat ``None``
+    as "cannot confirm", which every policy below fails closed on.
     """
 
     if not isinstance(report, dict):
-        return False
+        return None
     violations = report.get("violations")
     if not isinstance(violations, list):
-        return False
-    error_codes: list[str] = []
+        return None
+    codes: list[str] = []
     for violation in violations:
         if not isinstance(violation, dict):
-            return False
+            return None
         if violation.get("severity") != "error":
             continue
         code = violation.get("code")
         if not isinstance(code, str) or not code.strip():
-            return False
-        error_codes.append(code.strip())
-    if not error_codes:
+            return None
+        codes.append(code.strip())
+    return codes or None
+
+
+def _contract_report_is_card_rescuable(report: Any) -> bool:
+    """Whether a clean structured card can vouch for every error-level finding.
+
+    Fails closed: a malformed report, an unknown code, or an unrescuable one
+    (e.g. ``plan_text_empty``) all return False.
+    """
+
+    codes = _contract_error_codes(report)
+    if codes is None:
         return False
-    return all(code in _CONTRACT_CARD_RESCUABLE_ERROR_CODES for code in error_codes)
+    return all(code in _CONTRACT_CARD_RESCUABLE_ERROR_CODES for code in codes)
+
+
+def _contract_report_is_flaggable(report: Any) -> bool:
+    """Whether the plan can be released with flags instead of withheld.
+
+    Fails closed: a malformed report, an unknown code, or an unrecoverable one
+    (``plan_text_empty`` — there is genuinely nothing to show) all return False,
+    so the plan routes to review.
+    """
+
+    codes = _contract_error_codes(report)
+    if codes is None:
+        return False
+    return all(code in _CONTRACT_FLAGGABLE_ERROR_CODES for code in codes)
 
 
 def _record_stage2_cost_if_available(
@@ -186,6 +228,32 @@ def _apply_plan_contract_validation(
                 "Plan kept publishable",
                 "Post-generation contract checks flagged the rendered calendar, but the plan "
                 "has a schema-valid structured card; trusting the card instead of routing to review.",
+                violation_codes=error_codes,
+            )
+            return final_result
+
+        # A degraded calendar render is not a reason to withhold the plan. The
+        # athlete still has readable plan text, and most athletes have no coach to
+        # escalate to, so the finding is flagged for admin audit and the plan stays
+        # visible. Fails closed: an unrecoverable finding (plan_text_empty, where
+        # there is genuinely nothing to show) or any unknown code still routes to
+        # review.
+        if _contract_report_is_flaggable(report):
+            # Rebind before emitting, so a throwing milestone sink cannot lose the
+            # flag (the outer handler returns the latest binding).
+            final_result = {**final_result, "status": _CONTRACT_FLAGGED_PLAN_STATUS}
+            logger.warning(
+                "[jobs] generation:plan_contract_flagged athlete_id=%s job_id=%s "
+                "from_status=%s codes=%s",
+                athlete_id,
+                job_id,
+                current_status,
+                error_codes,
+            )
+            emit_milestone(
+                "plan_contract_flagged",
+                "Final checks complete",
+                "Your plan is complete and ready to save.",
                 violation_codes=error_codes,
             )
             return final_result

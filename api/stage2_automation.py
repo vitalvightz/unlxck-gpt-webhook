@@ -10,12 +10,9 @@ from fightcamp.stage2_policy import (
     admin_review_blocking_findings,
     apply_stage2_release_policy,
     athlete_release_with_flags_findings,
-    is_card_rescuable_soft_code,
-    is_hard_stage2_blocker,
 )
 
 from .generation.time_utils import utc_now_iso as _utc_now_iso
-from .state_machine import is_athlete_displayable_plan_status
 from .structured_card_lifecycle import (
     clear_structured_card_attempt_started,
     mark_structured_card_attempt_started,
@@ -31,16 +28,24 @@ from .structured_plan_generation import (
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
-# Plan statuses this module writes. NOTE: a failed Stage 2 validation produces
-# the plan status `held_for_review`, NOT `review_required`. The plan-level
-# `review_required` status is produced by admin actions elsewhere, never here.
-# The worker maps `held_for_review` to the *job* status `review_required` via
-# api/state_machine.job_status_for_plan_status. See docs/state_machine.md.
+# Plan statuses this module writes. Both are athlete-displayable: Stage 2
+# validator findings never hold a plan. `publishable_with_flags` is also in
+# ADMIN_REVIEW_PLAN_STATUSES, so a flagged plan reaches the athlete AND stays in
+# the admin review surface. `held_for_review` / `review_required` are written by
+# admin actions and Stage 1 triage elsewhere, never here.
+# See docs/state_machine.md > "Stage 2 outcomes".
 _APP_STATUS_READY = "ready"
 _APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
-_APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
+# `stage2_status` audit value for a technical Stage 2 failure — the finalizer
+# never produced a usable plan (timeout, provider error, unavailable, incomplete
+# output) — so the deterministic Stage 1 plan was completed instead. Distinct
+# from `stage2_failed`, which means Stage 2 DID produce a plan that the validator
+# flagged. Never a plan or job status.
+STAGE2_STAGE1_FALLBACK = "stage2_failed_stage1_fallback"
+# Key under `stage2_validator_report` recording why Stage 2 was unusable.
+STAGE2_FALLBACK_REPORT_KEY = "stage2_fallback"
 
 logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
@@ -48,69 +53,21 @@ _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
 
 
-def _stage2_report_blocks_release(validator_report: Any) -> bool:
-    """Whether the explicit Stage 2 release policy requires an admin hold."""
+def _released_with_flags_report(validator_report: dict[str, Any]) -> dict[str, Any]:
+    """Record that a plan with validator blockers was released anyway.
 
-    if not isinstance(validator_report, dict):
-        return True
-
-    errors = validator_report.get("errors") or []
-    blocking_warnings = validator_report.get("blocking_warnings") or []
-    warnings = validator_report.get("warnings") or []
-    review_flags = validator_report.get("review_flags") or []
-    if (
-        not isinstance(errors, list)
-        or not isinstance(blocking_warnings, list)
-        or not isinstance(warnings, list)
-        or not isinstance(review_flags, list)
-    ):
-        return True
-    policy_report = apply_stage2_release_policy(validator_report)
-    return policy_report.get("release_decision") == "hold"
-
-
-def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
-    """Whether a would-be hold could be rescued by a clean structured card.
-
-    A hold is rescuable only when it is driven entirely by card-recoverable
-    render/format findings. The check is intentionally defensive about a
-    malformed report - anything it cannot positively confirm is non-rescuable,
-    so an odd shape never accidentally publishes a held plan. It returns True
-    only when ALL of the following hold:
-
-    * ``validator_report`` is a dict;
-    * ``errors`` and ``blocking_warnings`` are lists;
-    * every error/blocking warning is a dict carrying a non-empty string
-      ``code``; and
-    * every code is a known card-rescuable code, not safety/output-integrity,
-      admin-review blocking, or an athlete-release quality flag.
+    Every finding is kept verbatim so the admin review surface still shows what
+    the validator caught. Only the release decision changes, so the persisted
+    report agrees with the saved `publishable_with_flags` status instead of
+    claiming a hold that no longer happens.
     """
 
-    if not isinstance(validator_report, dict):
-        return False
-    if admin_review_blocking_findings(validator_report):
-        return False
-    if athlete_release_with_flags_findings(validator_report):
-        return False
-    errors = validator_report.get("errors")
-    blocking_warnings = validator_report.get("blocking_warnings") or []
-    if not isinstance(errors, list) or not isinstance(blocking_warnings, list):
-        return False
-    findings = [*errors, *blocking_warnings]
-    if not findings:
-        return False
-    for finding in findings:
-        if not isinstance(finding, dict):
-            return False
-        code = finding.get("code")
-        if not isinstance(code, str) or not code.strip():
-            return False
-        normalized_code = code.strip()
-        if is_hard_stage2_blocker(normalized_code):
-            return False
-        if not is_card_rescuable_soft_code(normalized_code):
-            return False
-    return True
+    return {
+        **validator_report,
+        "release_decision": "publish_with_flags",
+        "is_athlete_releasable": True,
+        "is_publishable": True,
+    }
 
 
 class Stage2AutomationError(RuntimeError):
@@ -119,15 +76,26 @@ class Stage2AutomationError(RuntimeError):
     Carries an optional ``stage2_cost`` payload (token/cost telemetry captured up
     to the point of failure) so the orchestrator can still persist what is known
     about a failed attempt.
+
+    ``provider_request_started`` records whether a request was actually issued to
+    the provider. It stays False for failures raised before the call — a prompt
+    over the budget, or an unconfigured automator — so those are not counted as
+    provider attempts in the cost/audit telemetry.
     """
 
     stage2_cost: dict[str, Any] | None = None
+    provider_request_started: bool = False
 
 
 def _with_stage2_cost(
     error: Stage2AutomationError, cost: dict[str, Any]
 ) -> Stage2AutomationError:
     error.stage2_cost = cost
+    return error
+
+
+def _mark_provider_request_started(error: Stage2AutomationError) -> Stage2AutomationError:
+    error.provider_request_started = True
     return error
 
 
@@ -173,10 +141,12 @@ def _stage2_max_output_tokens() -> int:
     # This budget is SHARED with the model's reasoning tokens (gpt-5-* burn a
     # large, hidden share of it before emitting any plan text), so a positive cap
     # set too low truncates the plan mid-output: ``_generate_text`` then sees an
-    # ``incomplete`` response and raises Stage2AutomationError, which fails the
-    # generation job (the athlete can retry). Default is 0 = no cap (provider
-    # default) so plans are never truncated; the Stage 2 timeout still bounds
-    # runtime. Set a positive value to bound output cost/latency.
+    # ``incomplete`` response and raises Stage2AutomationError. That no longer
+    # fails the job — the orchestrator completes it on the Stage 1 plan — but the
+    # athlete silently loses the coach-voice pass, so a cap is still worth
+    # avoiding. Default is 0 = no cap (provider default) so plans are never
+    # truncated; the Stage 2 timeout still bounds runtime. Set a positive value
+    # to bound output cost/latency.
     return _env_int(
         "UNLXCK_STAGE2_MAX_OUTPUT_TOKENS",
         _DEFAULT_MAX_OUTPUT_TOKENS,
@@ -696,28 +666,72 @@ def _approved_result(
     }
 
 
-def _review_required_result(
+class Stage1FallbackUnavailableError(RuntimeError):
+    """Raised when Stage 2 failed and Stage 1 left no plan body to fall back to."""
+
+
+def build_stage1_fallback_result(
     stage1_result: dict[str, Any],
     *,
-    draft_plan_text: str,
-    latest_plan_text: str,
-    validator_report: dict[str, Any],
-    retry_text: str,
-    attempt_count: int,
+    reason: str,
+    detail: str = "",
+    attempt_count: int = 1,
     stage2_cost: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    # NOTE: despite the name, this sets the PLAN status to `held_for_review`
-    # (which the worker reports as the JOB status `review_required`). The name
-    # refers to that downstream job status, not the plan status. See
-    # docs/state_machine.md > "Stage 2 outcomes".
+    """Complete the job on the Stage 1 plan after a technical Stage 2 failure.
+
+    Used when the finalizer never produced a usable plan — it timed out, threw,
+    was unavailable, or returned incomplete/empty output. Stage 1 has already
+    built a complete deterministic plan, so the job completes on that instead of
+    failing generation and stranding the athlete.
+
+    This is not the validator path: a Stage 2 plan that exists but trips the
+    validator is published as `publishable_with_flags` (see `finalize`). Here
+    there is no Stage 2 plan at all, so the Stage 1 body is published as `ready`
+    with a clean report — the validator never ran against it and has nothing to
+    say about it. The failure is recorded under `stage2_fallback` and logged.
+
+    ``attempt_count`` should be 1 when a provider request was actually started
+    and 0 only when Stage 2 was unavailable before any call was made.
+
+    Raises :class:`Stage1FallbackUnavailableError` when Stage 1 produced no plan
+    text, so the caller keeps its existing failure handling rather than
+    publishing an empty plan. That is a Stage 1 failure, which still blocks.
+    """
+
+    plan_text = str(stage1_result.get("plan_text") or "").strip()
+    if not plan_text:
+        raise Stage1FallbackUnavailableError(
+            "Stage 1 produced no plan text; nothing to fall back to."
+        )
     return {
-        **_base_result(stage1_result, draft_plan_text=draft_plan_text, stage2_cost=stage2_cost),
-        "status": _APP_STATUS_HELD_FOR_REVIEW,
-        "plan_text": "",
-        "final_plan_text": latest_plan_text,
-        "stage2_status": _STAGE2_FAILED,
-        "stage2_validator_report": validator_report,
-        "stage2_retry_text": retry_text,
+        **_base_result(stage1_result, draft_plan_text=plan_text, stage2_cost=stage2_cost),
+        "status": _APP_STATUS_READY,
+        "plan_text": plan_text,
+        "final_plan_text": plan_text,
+        "stage2_status": STAGE2_STAGE1_FALLBACK,
+        "stage2_validator_report": {
+            "errors": [],
+            "warnings": [],
+            "blocking_warnings": [],
+            "review_flags": [],
+            "release_decision": "publish",
+            "is_athlete_releasable": True,
+            "is_publishable": True,
+            # Terminal structured-card outcome. Without this the card state
+            # derives as "none", which reads as "might still be building" and
+            # leaves the client polling for a conversion that will never run.
+            "structured_plan": StructuredPlanOutcome(
+                status="not_attempted",
+                warnings=["stage 1 fallback released; structured conversion skipped"],
+            ).as_debug(),
+            STAGE2_FALLBACK_REPORT_KEY: {
+                "reason": reason,
+                "detail": detail,
+                "at": _utc_now_iso(),
+            },
+        },
+        "stage2_retry_text": "",
         "stage2_attempt_count": attempt_count,
     }
 
@@ -816,35 +830,43 @@ class OpenAIStage2Automator:
             # so a failed attempt still leaves an auditable cost row.
             failure_cost = _build_stage2_cost(self.model, prompt=prompt, response=None)
             if _is_quota_or_rate_limit_error(exc):
-                raise _with_stage2_cost(
-                    Stage2AutomationError(
-                        "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
-                    ),
-                    failure_cost,
+                raise _mark_provider_request_started(
+                    _with_stage2_cost(
+                        Stage2AutomationError(
+                            "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                        ),
+                        failure_cost,
+                    )
                 ) from exc
             # Keep the raw provider exception (which can carry request payloads or
             # provider internals) out of the stored/visible error; the full detail
             # is captured in the server log below.
             logger.exception("[stage2] model_request_failed error_type=%s", type(exc).__name__)
-            raise _with_stage2_cost(
-                Stage2AutomationError("Stage 2 model request failed. Check server logs."),
-                failure_cost,
+            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    Stage2AutomationError("Stage 2 model request failed. Check server logs."),
+                    failure_cost,
+                )
             ) from exc
         response_id = getattr(response, "id", None) or "unknown"
         if _response_is_incomplete(response):
             # We have a response (with usage), just not a full plan — capture the
             # actual tokens burned before truncation.
-            raise _with_stage2_cost(
-                Stage2AutomationError(
-                    "Stage 2 model response was incomplete before producing a full plan."
-                ),
-                _build_stage2_cost(self.model, prompt=prompt, response=response),
+            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    Stage2AutomationError(
+                        "Stage 2 model response was incomplete before producing a full plan."
+                    ),
+                    _build_stage2_cost(self.model, prompt=prompt, response=response),
+                )
             )
         try:
             text = _extract_response_text(response)
         except Stage2AutomationError as exc:
-            raise _with_stage2_cost(
-                exc, _build_stage2_cost(self.model, prompt=prompt, response=response)
+            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    exc, _build_stage2_cost(self.model, prompt=prompt, response=response)
+                )
             )
         cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text)
         # Attribute cost to the job/athlete so it can be aggregated per user from
@@ -903,12 +925,9 @@ class OpenAIStage2Automator:
             len(admin_blocking_findings),
         )
 
-        # A card-rescuable hold is tentatively published so the structured-card
-        # attempt below can run and vouch for it. Coaching-content gaps are not
-        # eligible for this path. If no clean card materialises, the card-first
-        # gate further down reverts it to a hold. Only gated when structured
-        # plans are enabled - otherwise no card can ever rescue it and the
-        # tentative publish would just flap back to a hold.
+        # Stage 2 validator findings never hold a plan. Every outcome below is
+        # athlete-displayable; the findings decide which release status is
+        # written, not whether the plan is released.
         if release_decision == "publish":
             result = _approved_result(
                 stage1_result,
@@ -921,8 +940,6 @@ class OpenAIStage2Automator:
                 stage2_cost=first_pass_cost,
             )
         elif release_decision == "publish_with_flags":
-            # Only the explicit low-risk allowlist reaches this path. Context,
-            # safety and programme-integrity findings remain held for admin.
             logger.info(
                 "[stage2] first_pass releasing with quality flags count=%s",
                 len(quality_findings),
@@ -937,41 +954,34 @@ class OpenAIStage2Automator:
                 app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
                 stage2_cost=first_pass_cost,
             )
-        elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
-            first_review["validator_report"]
-        ):
-            logger.info(
-                "[stage2] soft hold eligible for structured-card rescue; attempting card before holding"
+        else:
+            # What used to be an admin hold. The plan is released with flags and
+            # stays in the admin review surface (`publishable_with_flags` is in
+            # ADMIN_REVIEW_PLAN_STATUSES), so every finding is still visible to
+            # admins — it just no longer gates delivery to the athlete. The
+            # `stage2_failed` audit value records that the validator did fail.
+            logger.warning(
+                "[stage2] first_pass has release blockers; releasing with flags for admin audit "
+                "(errors=%s blocking=%s admin_blockers=%s)",
+                len(first_review["validator_report"].get("errors") or []),
+                len(first_review["validator_report"].get("blocking_warnings") or []),
+                len(admin_blocking_findings),
             )
             result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
                 final_plan_text=first_pass_text,
-                validator_report=first_review["validator_report"],
+                validator_report=_released_with_flags_report(first_review["validator_report"]),
                 attempt_count=1,
-                stage2_status=_STAGE2_PASS,
-                app_status=_APP_STATUS_READY,
-                stage2_cost=first_pass_cost,
-            )
-        else:
-            logger.warning(
-                "[stage2] review required after first_pass: hard release blockers present; holding for admin review"
-            )
-            result = _review_required_result(
-                stage1_result,
-                draft_plan_text=draft_plan_text,
-                latest_plan_text=first_pass_text,
-                validator_report=first_review["validator_report"],
-                retry_text="",
-                attempt_count=1,
+                stage2_status=_STAGE2_FAILED,
+                app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
                 stage2_cost=first_pass_cost,
             )
 
         # Structured-plan conversion is triggered by the canonical state-machine
         # predicate (athlete-displayable plans only), not a hardcoded Stage 2
-        # status. A PASS yields ready (attempted); a
-        # review-required hold is not displayable (skipped). Any failure degrades
-        # to the plan_text fallback and is recorded for admin debug.
+        # status. Any failure degrades to the plan_text fallback and is recorded
+        # for admin debug — a missing or rejected card never holds the plan.
         result, structured_costs = await attempt_structured_plan_for_result(
             result,
             planning_brief=package["planning_brief"],
@@ -979,40 +989,13 @@ class OpenAIStage2Automator:
             source=source,
             log_context=log_context,
         )
-
-        # Structured-card conversion is best-effort. It may hold a plan that
-        # still has release blockers, but a clean validator report falls back to
-        # the raw Stage 2 plan instead of creating admin review work. Exception:
-        # a card blocked by the safety audit (coach_gated leakage / deterministic
-        # conflict / audit crash) ALWAYS holds for review — publication must not
-        # proceed on the plan_text fallback while the safety findings stand.
-        if (
-            _structured_plan_enabled()
-            and is_athlete_displayable_plan_status(result.get("status"))
-            and not has_clean_structured_card(result)
-            and (
-                _structured_attempt_status(result) == "blocked_by_safety_audit"
-                or _stage2_report_blocks_release(result.get("stage2_validator_report"))
-            )
-        ):
+        if _structured_plan_enabled() and not has_clean_structured_card(result):
+            # Logged, not held: the raw Stage 2 plan_text is the athlete-facing
+            # fallback and the card status stays on the report for admins.
             logger.warning(
-                "[stage2] no clean structured card and release blockers remain; holding for review"
+                "[stage2] no clean structured card; releasing on the plan_text fallback (card_status=%s)",
+                _structured_attempt_status(result) or "unknown",
             )
-            report = result.get("stage2_validator_report")
-            structured_debug = report.get("structured_plan") if isinstance(report, dict) else None
-            result = _review_required_result(
-                stage1_result,
-                draft_plan_text=draft_plan_text,
-                latest_plan_text=first_pass_text,
-                validator_report=first_review["validator_report"],
-                retry_text="",
-                attempt_count=1,
-                stage2_cost=first_pass_cost,
-            )
-            if structured_debug is not None:
-                report = result.get("stage2_validator_report")
-                if isinstance(report, dict):
-                    report["structured_plan"] = structured_debug
 
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.

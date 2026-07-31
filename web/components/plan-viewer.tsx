@@ -334,6 +334,10 @@ const NON_PUBLISHABLE_STAGE2_STATUSES = new Set([
   "medical_hold",
   "restricted_rehab_only",
 ]);
+// Mirrors STAGE2_STAGE1_FALLBACK in api/stage2_automation.py: the AI finalizer
+// never returned a usable plan, so the deterministic Stage 1 plan was released.
+// Deliberately NOT in the set above — such a plan IS released to the athlete.
+const STAGE2_STAGE1_FALLBACK_STATUS = "stage2_failed_stage1_fallback";
 const TRIAGE_BLOCKED_STUB_MARKERS = [
   "## Injury Triage: Restricted Rehab Only",
   "Normal fight-camp planning is intentionally suspended",
@@ -1211,6 +1215,39 @@ export function isResumableTriageMode(modeOrStatus?: string | null): boolean {
   return normalized === "needs_review" || normalized === "restricted_rehab_only";
 }
 
+/**
+ * The admin sidebar's "Release state" line.
+ *
+ * Driven by the saved plan status, which is what actually decides whether the
+ * athlete can see the plan. It must not be derived from the validator summary:
+ * a flagged plan has findings (so `isPublishable` is false) but is already
+ * released, and labelling it "Held" contradicts the plan the admin is looking at.
+ */
+export function describePlanReleaseState(input: {
+  status: string | null | undefined;
+  isTriageBlocked?: boolean;
+  triageMode?: string | null;
+  isProtectedTriageResumePending?: boolean;
+}): string {
+  if (input.isTriageBlocked) {
+    return input.triageMode === "medical_hold" ? "Blocked" : "Protected";
+  }
+  if (input.isProtectedTriageResumePending) {
+    return "Blocked / resume pending";
+  }
+  const status = (input.status || "").trim().toLowerCase();
+  if (status === "publishable_with_flags") {
+    return "Released with flags";
+  }
+  if (status === "ready") {
+    return "Released";
+  }
+  if (status === "archived") {
+    return "Archived";
+  }
+  return "Held";
+}
+
 export function buildReviewSummary(
   report: Record<string, unknown> | null | undefined,
   stage2Status: string,
@@ -1237,6 +1274,19 @@ export function buildReviewSummary(
   };
 
   if (isPublishable) {
+    // A Stage 1 fallback has a clean report because the validator never ran
+    // against it — the AI finalizer failed outright. Say so, or the technical
+    // failure is invisible behind a "ready to release" that looks routine.
+    if (normalizedStage2Status === STAGE2_STAGE1_FALLBACK_STATUS) {
+      return {
+        ...summary,
+        hasIssues: false,
+        headline: "Released from Stage 1 — the AI finalizer pass failed.",
+        guidance:
+          "Stage 2 never returned a usable plan, so the deterministic Stage 1 plan was released. " +
+          "The reason is recorded under stage2_fallback in the validator report below.",
+      };
+    }
     return {
       ...summary,
       hasIssues: false,
@@ -1262,13 +1312,13 @@ export function buildReviewSummary(
         normalizedStage2Status === "triage_resume_approved"
           ? "Resume approved — regeneration pending. A regenerated final result is required before release."
           : normalizedStage2Status === "stage2_failed"
-          ? "Stage 2 held this plan, but no detailed validator reasons were saved in the report."
+          ? "Stage 2 validation failed, but no detailed reasons were saved in the report."
           : "No validator issues were saved for this plan.",
       guidance:
         normalizedStage2Status === "triage_resume_approved"
           ? "Keep this plan blocked until Stage 2 regeneration completes and a real final result replaces the triage stub."
           : normalizedStage2Status === "stage2_failed"
-          ? "Open the latest model output and retry prompt below to see what still needs work."
+          ? "The plan was released to the athlete regardless. Open the latest model output below to see what the validator objected to."
           : "This usually means the plan is held for workflow reasons rather than a specific validator issue.",
     };
   }
@@ -1278,16 +1328,19 @@ export function buildReviewSummary(
     blockingCount ? pluralize(blockingCount, "blocking issue") : null,
   ].filter((part): part is string => Boolean(part));
 
+  // Stage 2 findings no longer withhold a plan — a flagged plan has already gone
+  // to the athlete and these are here for audit. Only a triage stub still blocks,
+  // so the "holding" language is reserved for that.
   return {
     ...summary,
     hasIssues: true,
-    headline: `${summaryParts.join(" and ")} are currently holding this Stage 2 plan.`,
+    headline: isBlockedTriageStub
+      ? `${summaryParts.join(" and ")} are currently holding this Stage 2 plan.`
+      : `Flagged on this Stage 2 plan: ${summaryParts.join(" and ")}.`,
     guidance:
       isBlockedTriageStub
         ? "This plan still contains triage placeholder text and cannot be released to the athlete."
-        : errors.length > 0
-        ? "Fix the hard blockers first."
-        : "These blockers were found on the latest validation pass. You can retry or approve anyway to release.",
+        : "The plan was released to the athlete with these flags recorded. Review them and regenerate if the plan needs correcting.",
   };
 }
 
@@ -2618,15 +2671,12 @@ export function PlanViewer({
                 <article className="plan-meta-item">
                   <p className="plan-meta-label">Release state</p>
                   <p className="plan-meta-value">
-                    {isTriageBlocked
-                      ? injuryTriage?.mode === "medical_hold"
-                        ? "Blocked"
-                        : "Protected"
-                      : isProtectedTriageResumePending
-                        ? "Blocked / resume pending"
-                      : stage2ReviewSummary.isPublishable
-                        ? "Ready"
-                        : "Held"}
+                    {describePlanReleaseState({
+                      status: plan.status,
+                      isTriageBlocked,
+                      triageMode: injuryTriage?.mode,
+                      isProtectedTriageResumePending,
+                    })}
                   </p>
                 </article>
                 <article className="plan-meta-item">

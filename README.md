@@ -33,7 +33,7 @@ Operational references:
 2. The worker claims the job and runs the Python planner in `fightcamp/`.
 3. Stage 1 builds a structured candidate plan from intake, goals, style, equipment, schedule, phase, and injury restrictions.
 4. Stage 2 finalizes the plan with OpenAI and, by default, converts it into the `StructuredTrainingPlan` schema.
-5. Validation either publishes the plan or marks it `held_for_review`; the corresponding job status is `review_required`.
+5. Stage 2 never blocks release. A validated plan publishes; a flagged one publishes as `publishable_with_flags` and stays visible to admins; a Stage 2 that fails technically (timeout, provider error, unavailable, incomplete) completes the job on the Stage 1 plan. A plan is withheld only when it cannot be used: Stage 1 injury triage, or an empty plan body. Post-generation contract findings about a degraded calendar flag the plan for admin audit and still release it.
 6. The app displays structured plan cards with raw-markdown fallback, so structured conversion failure does not leave the athlete with a blank plan.
 
 Plan and job statuses are deliberately separate. See [the state-machine contract](docs/state_machine.md) and [`STAGE2_PAYLOAD_SPEC.md`](STAGE2_PAYLOAD_SPEC.md).

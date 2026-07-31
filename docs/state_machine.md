@@ -16,13 +16,12 @@ status is also a job status.
 |---|---|---|---|
 | **Generation job status** | `generation_jobs.status` | `queued`, `running`, `completed`, `review_required`, `failed` | `GENERATION_JOB_STATUSES` |
 | **Plan status** | `plans.status` | `generated`, `ready`, `review_required`, `held_for_review`, `publishable_with_flags`, `triage_blocked`, `medical_hold`, `restricted_rehab_only`, `needs_review`, `archived` | `PLAN_STATUSES` |
-| **`stage2_status`** | plan `admin_outputs.stage2_status` (audit only) | `stage2_pass`, `stage2_failed`, `admin_review_approved`, `admin_review_rejected`, `admin_archived`, `triage_resume_approved`, `manual_stage2_pass`, `manual_stage2_retry_pass`, `manual_stage2_retry_required`, `""` (not run) | `api/stage2_automation.py`, admin services |
+| **`stage2_status`** | plan `admin_outputs.stage2_status` (audit only) | `stage2_pass`, `stage2_failed`, `stage2_failed_stage1_fallback`, `admin_review_approved`, `admin_review_rejected`, `admin_archived`, `triage_resume_approved`, `manual_stage2_pass`, `manual_stage2_retry_pass`, `manual_stage2_retry_required`, `""` (not run) | `api/stage2_automation.py`, admin services |
 
 Key trap that prompted this section: **`review_required` exists as both a job
 status and a plan status, and `held_for_review` exists only as a plan status.**
-A failed Stage 2 validation sets the *plan* to `held_for_review`, and the worker
-reports that plan's *job* as `review_required` (see
-[Stage 2 outcomes](#stage-2-outcomes--statuses) and the
+`held_for_review` is written by admin action only — a failed Stage 2 validation
+no longer produces it (see [Stage 2 outcomes](#stage-2-outcomes--statuses) and the
 [plan→job mapping](#plan-status--generation-job-status)). `stage2_status` is a
 separate audit trail and is never a job or plan status.
 
@@ -88,36 +87,97 @@ Allowed transitions are defined in `api/state_machine.py`. In plain terms:
 
 What the automated Stage 2 finalizer (`api/stage2_automation.py`) writes, by outcome:
 
+**Stage 2 validator findings never hold a plan.** They decide which release
+status is written, not whether the athlete gets the plan. Flagged plans land in
+`publishable_with_flags`, which is athlete-displayable *and* in
+`ADMIN_REVIEW_PLAN_STATUSES` — so the plan reaches the athlete immediately and
+still shows up in the admin review surface with every finding attached.
+
 | Stage 2 outcome | Plan status | `stage2_status` | Generation job status |
 |---|---|---|---|
 | Validator passes (clean) | `ready` | `stage2_pass` | `completed` |
 | Validator has only allowlisted low-risk quality flags | `publishable_with_flags` | `stage2_pass` | `completed` |
-| Validator has an admin-review blocking context/programme finding | `held_for_review` | `stage2_failed` | `review_required` |
-| **Validator fails on a hard blocker** (safety / output integrity) | **`held_for_review`** | `stage2_failed` | `review_required` |
+| Validator has an admin-review blocking context/programme finding | `publishable_with_flags` | `stage2_failed` | `completed` |
+| Validator fails on a hard blocker (safety / output integrity) | `publishable_with_flags` | `stage2_failed` | `completed` |
+| No clean structured card | unchanged (card status logged; plan_text is the fallback) | unchanged | `completed` |
+| **Technical failure** — timeout, provider error, unavailable finalizer, incomplete/empty output | `ready` (Stage 1 plan) | `stage2_failed_stage1_fallback` | `completed` |
+| Technical failure **and** Stage 1 produced no plan text | no plan row | — | `failed` |
 | Injury triage blocks Stage 2 | `triage_blocked` (or `medical_hold` / `restricted_rehab_only` / `needs_review`) | unchanged / `""` | `review_required` |
 
-The shared Stage 2 policy has three explicit classes:
+The shared Stage 2 policy still has three explicit classes:
 
 - `hard_stage2_blocker_codes`: safety and output-integrity failures;
 - `athlete_release_with_flags_codes`: a narrow allowlist of low-risk clarity findings;
-- `admin_review_blocking_codes`: athlete-context and programme-quality failures that must hold.
+- `admin_review_blocking_codes`: athlete-context and programme-quality failures.
 
-Validator errors, hard blockers, admin-review blockers, mixed low-risk/blocking
-reports, and unknown `blocking_warnings` all fail closed to `held_for_review`.
-Only findings in `athlete_release_with_flags_codes` release as
-`publishable_with_flags`. The persisted validator report records the matching
-`release_decision`, `is_athlete_releasable`, and `is_publishable` values so the
-audit state agrees with the saved plan status.
+What changed is the consequence, not the classification. Validator errors, hard
+blockers, admin-review blockers, mixed reports, and unknown `blocking_warnings`
+are all still detected and recorded verbatim on the plan; they now release with
+flags rather than holding. `stage2_status` stays `stage2_failed` on those plans,
+so the audit trail still shows the validator failed. The persisted report's
+`release_decision` / `is_athlete_releasable` / `is_publishable` are set to the
+released-with-flags values so the report agrees with the saved plan status.
 
 `publishable_with_flags` remains in the admin review surface for asynchronous
-audit. This policy reduces athlete release delay; it does not remove flagged
-plans from the admin queue or claim an equivalent reduction in review volume.
+audit. This policy removes athlete release delay; it does not remove flagged
+plans from the admin queue or reduce review volume.
 
-Naming caveat: the helper that builds the failed-validation result is named
-`_review_required_result(...)`, but it sets the **plan** status to
-`held_for_review` (constant `_APP_STATUS_HELD_FOR_REVIEW`). The "review required"
-in the function name refers to the resulting *generation job* status, not the
-plan status. Do not let the function name leak into plan-status strings.
+#### Technical Stage 2 failures
+
+The rows above are about a Stage 2 plan that *exists*. When the finalizer never
+produces one — it times out, throws, is unavailable, or returns incomplete or
+empty output — there is nothing to publish or flag. Stage 1 has already built a
+complete deterministic plan, so the job completes on that instead of failing
+generation (`build_stage1_fallback_result` in `api/stage2_automation.py`).
+
+Such a plan is `ready`, not `publishable_with_flags`: the validator never ran
+against the Stage 1 body and has no findings to report on it. Its report is
+clean apart from a `stage2_fallback` entry carrying the reason
+(`stage2_timeout`, `stage2_model_error`, `stage2_unavailable`) and the sanitized
+error detail. The failure is logged as
+`generation:stage2_failed_stage1_completed`. `stage2_status` is
+`stage2_failed_stage1_fallback`, distinguishing it from `stage2_failed`, which
+means Stage 2 DID produce a plan that the validator flagged.
+
+The one case that still fails the job: Stage 1 produced no plan text either, so
+there is nothing to fall back to. That is a Stage 1 failure, and Stage 1
+failures still block.
+
+#### What can still block a release
+
+Two Stage 1 gates remain. Both are deliberately narrow.
+
+1. **Injury triage** — `triage_blocked` / `medical_hold` /
+   `restricted_rehab_only` / `needs_review`.
+2. **The post-generation plan-contract gate**
+   (`_apply_plan_contract_validation` in `api/generation/persistence.py`), but
+   only for an unrecoverable finding.
+
+The contract gate runs after Stage 2 and validates the finalized result: the
+calendar rendered from `planning_brief`, the `stage2_payload` late-fight
+sequence, and the athlete-facing plan text. Its error-severity findings are split
+by consequence, not by which stage produced them:
+
+| Finding | Outcome |
+|---|---|
+| `weekly_schedule_blank` | `publishable_with_flags` |
+| `calendar_unrenderable` | `publishable_with_flags` |
+| `fight_day_missing` | `publishable_with_flags` |
+| `late_fight_session_sequence_empty` | `publishable_with_flags` |
+| `plan_text_empty` | `review_required` |
+| `validator_error`, or any unknown code | `review_required` |
+
+The first four describe a degraded calendar render. The athlete still has
+readable plan text, and most athletes have no coach to escalate to, so
+withholding the plan helps nobody — the finding is flagged for admin audit and
+the plan stays visible. `plan_text_empty` is the one that must still withhold:
+there is genuinely nothing to show, and flagging it would ship a blank plan.
+
+The allowlist (`_CONTRACT_FLAGGABLE_ERROR_CODES`) fails closed, so a future
+contract finding nobody has classified withholds rather than silently becoming a
+flag. The same list decides which findings a clean structured card can vouch for
+outright — a schema-valid card proves the plan is well-formed, so those keep
+`ready` rather than dropping to `publishable_with_flags`.
 
 ### Plan status → generation job status
 
