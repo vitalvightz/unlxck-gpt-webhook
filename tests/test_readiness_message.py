@@ -1592,3 +1592,35 @@ class TestStakesEscalation:
         assert self._decision(
             phase="TAPER", fight_date="2026-08-03", session=self.SPAR
         ) == "train_as_planned"
+
+
+def test_the_stacked_signal_tier_is_calendar_independent():
+    # There is exactly one place camp context may escalate a decision, and it
+    # requires costly exposure. This branch used to promote on the calendar too,
+    # so the same three signals on the same medium-risk session were a reduced
+    # session in GPP and a pull-back in taper — the behaviour the trigger/context
+    # split exists to remove, surviving in one branch.
+    signals = ("poor_sleep", "flat_body", "repeated_poor_readiness")
+    decisions = {
+        _soft_warning_message(
+            signals, session_risk="medium", phase=phase, fight_week=fight_week
+        )[0]
+        for phase, fight_week in (("GPP", False), ("TAPER", False), ("REINTEGRATION", False), ("SPP", True))
+    }
+    assert decisions == {"modify"}
+
+
+def test_the_stacked_signal_tier_still_pulls_back_on_exposure_and_pain():
+    # What DOES decide it: how exposed the athlete is, and whether one of the
+    # signals is pain. Both are signal-driven, and both survive untouched.
+    hard, _, _, _ = _soft_warning_message(
+        ("poor_sleep", "flat_body", "repeated_poor_readiness"),
+        session_risk="high", phase="GPP", fight_week=False,
+    )
+    assert hard == "pull_back"
+
+    painful, _, _, _ = _soft_warning_message(
+        ("poor_sleep", "flat_body", "manageable_pain"),
+        session_risk="medium", phase="GPP", fight_week=False,
+    )
+    assert painful == "pull_back"

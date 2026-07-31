@@ -1347,8 +1347,15 @@ def _soft_warning_message(
     # the same thing twice — and the old lead-in ("Multiple warning signs are
     # showing: poor sleep, the taper phase, and fight week") swept the phase into
     # the list as though being close to a fight were a symptom.
+    # Only the SIGNALS decide here: how exposed the athlete is today, and whether
+    # one of the signals is pain. Camp context deliberately has no say at this
+    # point — it gets exactly one place to act, ``_escalate_for_stakes``, which
+    # requires costly exposure. Letting the calendar promote here as well meant
+    # the same three signals on the same medium-risk session were a reduced
+    # session in GPP and a pull-back in taper, which is the behaviour this whole
+    # split exists to remove.
     if warning_count >= 3:
-        if session_risk == "high" or _has_pain_warning(warnings) or phase in {"TAPER", "REINTEGRATION"} or fight_week:
+        if session_risk == "high" or _has_pain_warning(warnings):
             return (
                 "pull_back",
                 "Pull back today.",
