@@ -751,6 +751,9 @@ class SurfaceSessionExposure:
     contact_exposure: bool = False
     direct_impact_exposure: bool = False
     friction_exposure: bool = False
+    contact_targets: tuple[str, ...] = ()
+    direct_impact_targets: tuple[str, ...] = ()
+    friction_targets: tuple[str, ...] = ()
 
     @property
     def codes(self) -> tuple[SurfaceExposureCode, ...]:
@@ -763,6 +766,13 @@ class SurfaceSessionExposure:
             )
             if getattr(self, code)
         )
+
+    def targets_for(self, code: SurfaceRestrictionCode) -> tuple[str, ...]:
+        return {
+            "remove_contact": self.contact_targets,
+            "remove_direct_impact": self.direct_impact_targets,
+            "protect_or_replace_friction": self.friction_targets,
+        }[code]
 
 
 def _safety_check_code(code: str, result: str) -> str:
@@ -807,28 +817,6 @@ def _active_open_injuries(context: ReadinessContext) -> list[Mapping[str, Any]]:
         for injury in context.open_injuries
         if _clean(injury.get("status")).lower() in _ACTIVE_FLAG_STATUSES
     ]
-
-
-def _strongest_surface_state(context: ReadinessContext) -> tuple[str, str, str]:
-    """Strongest surface classification across the athlete's active injuries.
-
-    Returns ``(classification, reason, label)``; ``("non_surface", "", "")`` when
-    no surface injury is open.
-    """
-    from fightcamp.injury_registry import SURFACE_CLASS_RANK
-
-    best_class = "non_surface"
-    best_reason = ""
-    best_label = ""
-    for injury in _active_open_injuries(context):
-        assessment = _surface_assessment(injury)
-        if not assessment.is_surface:
-            continue
-        if SURFACE_CLASS_RANK[assessment.classification] > SURFACE_CLASS_RANK[best_class]:
-            best_class = assessment.classification
-            best_reason = assessment.reason
-            best_label = _injury_label_of(injury)
-    return best_class, best_reason, best_label
 
 
 def _has_load_relevant_injury(checkin: ReadinessCheckin, context: ReadinessContext) -> bool:
@@ -876,9 +864,10 @@ def _surface_medical_review(context: ReadinessContext) -> tuple[str, str] | None
 
 
 # Session exposure. A surface injury only changes training when today's work
-# actually reaches the wound: contact/impact, grappling and clinch, or repeated
-# friction over it. The body AREA of a skin wound never implies a load
-# restriction, so none of this consults injury regions.
+# actually reaches that wound: contact/impact, grappling and clinch, or repeated
+# friction over its body region. Exposure is therefore evaluated per injury and
+# per executable block; it is never inherited from another injury or from an
+# unrelated block elsewhere in the session.
 _CONTACT_SESSION_TYPES = frozenset(
     {"sparring", "spar", "hard_spar", "fight_or_match", "fight", "match", "contact"}
 )
@@ -891,13 +880,35 @@ _DIRECT_IMPACT_BLOCK_TYPES = frozenset({"impact"})
 _DIRECT_IMPACT_EXPOSURE_TAGS = frozenset(
     {"impact", "high_impact_plyo", "landing_stress_high"}
 )
-_CONTACT_TAG_FIELDS = ("tags", "training_tags", "exposure_tags", "session_tags")
-_NEGATIVE_ANSWERS = frozenset({"", "none", "no", "false", "0", "off", "nil"})
-_CONTACT_FREE_ANSWERS = frozenset(
-    {"no contact", "non-contact", "non contact", "contact-free", "contact free"}
+_FRICTION_EXPOSURE_TAGS = frozenset(
+    {"friction", "repeated_friction", "mat_friction", "equipment_friction"}
 )
-_LOW_IMPACT_ANSWERS = frozenset(
-    {"low", "light", "minimal", "none", "no", "false", "0", "off", "nil", "low_impact"}
+_CONTACT_TAG_FIELDS = (
+    "tags",
+    "training_tags",
+    "exposure_tags",
+    "session_tags",
+    "mechanical_risk_tags",
+)
+_NEGATIVE_EXPOSURE_VALUES = frozenset({"none", "no", "false", "0", "off", "nil"})
+_CONTACT_FREE_VALUES = frozenset(
+    {"no_contact", "non_contact", "contact_free", "zero_contact", "without_contact"}
+)
+_NO_IMPACT_VALUES = frozenset(
+    {
+        "low",
+        "light",
+        "minimal",
+        "low_impact",
+        "no_impact",
+        "non_impact",
+        "impact_free",
+        "zero_impact",
+        "without_impact",
+    }
+)
+_NO_FRICTION_VALUES = frozenset(
+    {"no_friction", "non_friction", "friction_free", "zero_friction", "without_friction"}
 )
 _CONTACT_EXPOSURE_TERMS = (
     "spar",
@@ -946,21 +957,84 @@ _FRICTION_EXPOSURE_TERMS = (
     "sprint",
     "run",
     "roadwork",
+    "footwork",
     "loaded carry",
     "grip",
+    "kneel",
+    "mat work",
+    "mat contact",
+    "floor work",
+    "headgear",
+    "clothing friction",
+    "equipment friction",
 )
+
+_HAND_SURFACE_REGIONS = frozenset({"hand", "fingers", "wrist", "forearm", "elbow"})
+_FOOT_SURFACE_REGIONS = frozenset({"foot", "toe", "heel", "ankle", "achilles"})
+_LEG_SURFACE_REGIONS = frozenset(
+    {"knee", "shin", "calf", "quad", "quads", "hamstring", "groin", "hip", "glute", "glutes"}
+)
+_HEAD_SURFACE_REGIONS = frozenset({"head", "face", "eye", "jaw", "neck"})
+_TORSO_SURFACE_REGIONS = frozenset(
+    {
+        "shoulder",
+        "chest",
+        "core",
+        "obliques",
+        "upper_back",
+        "upper back",
+        "lower_back",
+        "lower back",
+        "biceps",
+        "triceps",
+    }
+)
+_ALL_SURFACE_REGIONS = frozenset(
+    {
+        *_HAND_SURFACE_REGIONS,
+        *_FOOT_SURFACE_REGIONS,
+        *_LEG_SURFACE_REGIONS,
+        *_HEAD_SURFACE_REGIONS,
+        *_TORSO_SURFACE_REGIONS,
+    }
+)
+
+_BAG_ACTIVITY_TERMS = ("bag work", "bagwork", "heavy bag", "hard bag", "bag round")
+_PAD_ACTIVITY_TERMS = ("pad", "mitt")
+_GRIP_ACTIVITY_TERMS = ("grip", "loaded carry", "farmer carry")
+_LANDING_ACTIVITY_TERMS = ("landing", "plyo", "plyometric", "depth jump", "box jump", "hop")
+_RUNNING_ACTIVITY_TERMS = ("run", "sprint", "roadwork", "skip", "rope", "footwork")
+_KICKING_ACTIVITY_TERMS = ("kick", "kicking", "kickboxing", "muay thai")
+_KNEELING_ACTIVITY_TERMS = ("kneel", "knee walk")
+_GRAPPLING_ACTIVITY_TERMS = (
+    "grappl",
+    "wrestl",
+    "clinch",
+    "takedown",
+    "sprawl",
+    "mat work",
+    "mat contact",
+    "floor work",
+)
+_SPARRING_ACTIVITY_TERMS = ("spar", "live round", "live work", "competition")
+_HEAD_ACTIVITY_TERMS = ("head contact", "head impact", "headgear")
+_TORSO_FRICTION_TERMS = ("clothing friction", "equipment friction", "chest protector")
 
 
 def _mapping_exposure_tags(mapping: Mapping[str, Any]) -> set[str]:
-    """Lower-cased structured training tags on one session/block/exercise entry."""
+    """Normalized structured training tags on one session/block/exercise entry."""
     tags: set[str] = set()
     for key in _CONTACT_TAG_FIELDS:
         value = mapping.get(key)
         if isinstance(value, str):
-            tags.add(_clean(value).lower())
+            tags.add(_normalize_exposure_token(value))
         elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
-            tags.update(_clean(item).lower() for item in value if item)
+            tags.update(_normalize_exposure_token(item) for item in value if item)
     return {tag for tag in tags if tag}
+
+
+def _normalize_exposure_token(value: Any) -> str:
+    return _clean(value).lower().replace("-", "_").replace(" ", "_")
 
 
 def _text_mentions_exposure(text: str, terms: Sequence[str]) -> bool:
@@ -987,65 +1061,225 @@ def _text_mentions_exposure(text: str, terms: Sequence[str]) -> bool:
     return False
 
 
-def _structured_exposure_value(value: Any, *, low_is_negative: bool = False) -> bool:
-    """Whether one structured exposure field explicitly declares work."""
+def _structured_exposure_value(
+    value: Any, *, negative_values: frozenset[str] = _NEGATIVE_EXPOSURE_VALUES
+) -> bool | None:
+    """Tri-state value for one authoritative structured exposure field."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
     if isinstance(value, bool):
         return value
-    normalized = _clean(value).lower().replace("-", "_").replace(" ", "_")
-    if normalized in _NEGATIVE_ANSWERS:
-        return False
-    if low_is_negative and normalized in _LOW_IMPACT_ANSWERS:
+    normalized = _normalize_exposure_token(value)
+    if normalized in negative_values:
         return False
     return bool(normalized)
 
 
-def _session_surface_exposure(session: Mapping[str, Any] | None) -> SurfaceSessionExposure:
-    """Return contact, direct-impact, and friction exposure independently.
+def _mapping_structured_exposure(
+    mapping: Mapping[str, Any], axis: SurfaceExposureCode
+) -> bool | None:
+    """Authoritative structured declaration for one exposure axis.
 
-    Structured types, tags, and fields are authoritative. Prose is only a
-    fallback for executable session/block names; its exact negations deliberately
-    keep ``no contact`` and ``contact-free`` clear without treating ``no hard
-    sparring`` as contact-free when light or technical sparring may remain.
+    An explicit negative wins on its own axis, including normalized values such
+    as ``non_contact`` and ``contact_free``. Athlete-facing prose is consulted
+    only when this returns ``None``.
     """
+    session_type = _normalize_exposure_token(mapping.get("session_type"))
+    block_type = _normalize_exposure_token(mapping.get("block_type") or mapping.get("type"))
+    tags = _mapping_exposure_tags(mapping)
+
+    if axis == "contact_exposure":
+        negative_values = _NEGATIVE_EXPOSURE_VALUES | _CONTACT_FREE_VALUES
+        values = [session_type, block_type, *tags]
+        fields = ("contact", "coach_led_contact", "contact_level", "sparring")
+        positive_types = _CONTACT_SESSION_TYPES | _CONTACT_BLOCK_TYPES | _CONTACT_EXPOSURE_TAGS
+    elif axis == "direct_impact_exposure":
+        negative_values = _NEGATIVE_EXPOSURE_VALUES | _NO_IMPACT_VALUES
+        values = [session_type, block_type, *tags]
+        fields = (
+            "impact",
+            "direct_impact",
+            "landing_impact",
+            "impact_level",
+            "impact_cost",
+            "landing_cost",
+        )
+        positive_types = (
+            _DIRECT_IMPACT_SESSION_TYPES
+            | _DIRECT_IMPACT_BLOCK_TYPES
+            | _DIRECT_IMPACT_EXPOSURE_TAGS
+        )
+    else:
+        negative_values = _NEGATIVE_EXPOSURE_VALUES | _NO_FRICTION_VALUES
+        values = [*tags]
+        fields = ("friction", "repeated_friction", "friction_level")
+        positive_types = _FRICTION_EXPOSURE_TAGS
+
+    field_states = [
+        _structured_exposure_value(mapping.get(field), negative_values=negative_values)
+        for field in fields
+    ]
+    if any(value in negative_values for value in values) or False in field_states:
+        return False
+    if any(value in positive_types for value in values) or True in field_states:
+        return True
+    return None
+
+
+def _mapping_executable_text(mapping: Mapping[str, Any]) -> str:
+    if _is_non_physical_mapping(mapping):
+        return ""
+    fields = (*_ENTRY_NAME_FIELDS, "display_name", "block_type", "type", "focus")
+    return " ".join(_clean(mapping.get(field)) for field in fields if mapping.get(field)).lower()
+
+
+def _mapping_target_label(mapping: Mapping[str, Any], fallback: str) -> str:
+    for field_name in ("display_name", *_ENTRY_NAME_FIELDS):
+        label = _clean(mapping.get(field_name))
+        if label:
+            return label
+    return fallback
+
+
+def _declared_mapping_regions(mapping: Mapping[str, Any]) -> set[str]:
+    declared = mapping.get("mechanical_load_regions")
+    if isinstance(declared, str):
+        values: Sequence[Any] = (declared,)
+    elif isinstance(declared, Sequence) and not isinstance(declared, (str, bytes)):
+        values = declared
+    else:
+        values = ()
+    regions: set[str] = set()
+    for value in values:
+        normalized = _normalize_exposure_token(value)
+        regions |= _resolve_injury_regions(_clean(value))
+        if normalized in _ALL_SURFACE_REGIONS:
+            regions.add(normalized)
+    return regions
+
+
+def _mapping_exposure_regions(
+    mapping: Mapping[str, Any], axis: SurfaceExposureCode, text: str
+) -> set[str]:
+    """Canonical body regions exposed by this executable entry and axis."""
+    regions = _declared_mapping_regions(mapping)
+    tags = _mapping_exposure_tags(mapping)
+    if tags & {"high_impact_lower", "high_impact_plyo", "landing_stress_high"}:
+        regions |= _FOOT_SURFACE_REGIONS | _LEG_SURFACE_REGIONS
+
+    if any(term in text for term in (*_BAG_ACTIVITY_TERMS, *_PAD_ACTIVITY_TERMS, *_GRIP_ACTIVITY_TERMS)):
+        regions |= _HAND_SURFACE_REGIONS
+    if any(term in text for term in (*_LANDING_ACTIVITY_TERMS, *_RUNNING_ACTIVITY_TERMS)):
+        regions |= _FOOT_SURFACE_REGIONS | _LEG_SURFACE_REGIONS
+    if any(term in text for term in _KICKING_ACTIVITY_TERMS):
+        regions |= _FOOT_SURFACE_REGIONS | _LEG_SURFACE_REGIONS
+    if any(term in text for term in _KNEELING_ACTIVITY_TERMS):
+        regions |= _LEG_SURFACE_REGIONS
+    if any(term in text for term in _HEAD_ACTIVITY_TERMS):
+        regions |= _HEAD_SURFACE_REGIONS
+    if any(term in text for term in _TORSO_FRICTION_TERMS):
+        regions |= _TORSO_SURFACE_REGIONS
+
+    # Live interpersonal work can expose any external body region. This is also
+    # the only axis that conservatively matches an injury whose location is not
+    # known; generic impact/friction never inherits that broad fallback.
+    if axis == "contact_exposure" and (
+        any(term in text for term in (*_SPARRING_ACTIVITY_TERMS, *_GRAPPLING_ACTIVITY_TERMS))
+        or _mapping_structured_exposure(mapping, axis) is True
+    ):
+        regions |= _ALL_SURFACE_REGIONS
+    elif axis == "friction_exposure" and any(
+        term in text for term in _GRAPPLING_ACTIVITY_TERMS
+    ):
+        regions |= _ALL_SURFACE_REGIONS
+    return regions
+
+
+@lru_cache(maxsize=512)
+def _scored_injury_location(text: str) -> str:
+    from fightcamp.injury_scoring import score_injury_phrase
+
+    return _normalize_exposure_token(score_injury_phrase(text).get("location")) if text else ""
+
+
+def _surface_injury_regions(injury: Mapping[str, Any]) -> set[str]:
+    """Canonical wound regions, using the shared injury location pipeline."""
+    body_area = _clean(injury.get("body_area"))
+    text = " ".join(
+        part
+        for part in (body_area, _clean(injury.get("label")), _clean(injury.get("description")))
+        if part
+    )
+    regions = _resolve_injury_regions(body_area)
+    regions |= _injury_text_regions(text)
+    scored = _scored_injury_location(text)
+    regions |= _resolve_injury_regions(scored)
+    if scored in _ALL_SURFACE_REGIONS:
+        regions.add(scored)
+    return regions & _ALL_SURFACE_REGIONS
+
+
+def _mapping_has_nested_entries(mapping: Mapping[str, Any]) -> bool:
+    return any(
+        isinstance(mapping.get(key), Sequence)
+        and not isinstance(mapping.get(key), (str, bytes))
+        and any(isinstance(item, Mapping) for item in mapping.get(key, ()))
+        for key in ("blocks", "exercises", "movements", "items")
+    )
+
+
+def _session_surface_exposure(
+    session: Mapping[str, Any] | None, injury: Mapping[str, Any]
+) -> SurfaceSessionExposure:
+    """Return only the session entries that expose this injury's body region."""
     if not isinstance(session, Mapping) or not session:
         return SurfaceSessionExposure()
 
-    contact = False
-    direct_impact = False
-    for mapping in _iter_session_mappings(session):
-        session_type = _clean(mapping.get("session_type")).lower()
-        block_type = _clean(mapping.get("block_type") or mapping.get("type")).lower()
-        tags = _mapping_exposure_tags(mapping)
-
-        contact = contact or session_type in _CONTACT_SESSION_TYPES
-        contact = contact or block_type in _CONTACT_BLOCK_TYPES
-        contact = contact or bool(tags & _CONTACT_EXPOSURE_TAGS)
-        for key in ("contact", "coach_led_contact", "contact_level", "sparring"):
-            value = mapping.get(key)
-            if _clean(value).lower() in _CONTACT_FREE_ANSWERS:
-                continue
-            contact = contact or _structured_exposure_value(value)
-
-        direct_impact = direct_impact or session_type in _DIRECT_IMPACT_SESSION_TYPES
-        direct_impact = direct_impact or block_type in _DIRECT_IMPACT_BLOCK_TYPES
-        direct_impact = direct_impact or bool(tags & _DIRECT_IMPACT_EXPOSURE_TAGS)
-        for key in ("impact", "direct_impact", "landing_impact"):
-            direct_impact = direct_impact or _structured_exposure_value(mapping.get(key))
-        for key in ("impact_level", "impact_cost", "landing_cost"):
-            direct_impact = direct_impact or _structured_exposure_value(
-                mapping.get(key), low_is_negative=True
+    injury_regions = _surface_injury_regions(injury)
+    targets: dict[SurfaceExposureCode, list[str]] = {
+        "contact_exposure": [],
+        "direct_impact_exposure": [],
+        "friction_exposure": [],
+    }
+    mappings = _iter_session_mappings(session)
+    has_nested_entries = _mapping_has_nested_entries(session)
+    session_states = {
+        axis: _mapping_structured_exposure(session, axis)
+        for axis in targets
+    }
+    for index, mapping in enumerate(mappings):
+        if mapping is session and has_nested_entries:
+            continue
+        text = _mapping_executable_text(mapping)
+        fallback = "session" if mapping is session else f"block {index}"
+        label = _mapping_target_label(mapping, fallback)
+        for axis, terms in (
+            ("contact_exposure", _CONTACT_EXPOSURE_TERMS),
+            ("direct_impact_exposure", _DIRECT_IMPACT_EXPOSURE_TERMS),
+            ("friction_exposure", _FRICTION_EXPOSURE_TERMS),
+        ):
+            structured = _mapping_structured_exposure(mapping, axis)
+            if mapping is not session and session_states[axis] is False:
+                structured = False
+            exposed = structured is True or (
+                structured is None and _text_mentions_exposure(text, terms)
             )
+            if not exposed:
+                continue
+            exposed_regions = _mapping_exposure_regions(mapping, axis, text)
+            relevant = bool(injury_regions & exposed_regions)
+            if axis == "contact_exposure" and not injury_regions:
+                relevant = True
+            if relevant and label not in targets[axis]:
+                targets[axis].append(label)
 
-    text = _session_text(session)
-    contact = contact or _text_mentions_exposure(text, _CONTACT_EXPOSURE_TERMS)
-    direct_impact = direct_impact or _text_mentions_exposure(
-        text, _DIRECT_IMPACT_EXPOSURE_TERMS
-    )
-    friction = _text_mentions_exposure(text, _FRICTION_EXPOSURE_TERMS)
     return SurfaceSessionExposure(
-        contact_exposure=contact,
-        direct_impact_exposure=direct_impact,
-        friction_exposure=friction,
+        contact_exposure=bool(targets["contact_exposure"]),
+        direct_impact_exposure=bool(targets["direct_impact_exposure"]),
+        friction_exposure=bool(targets["friction_exposure"]),
+        contact_targets=tuple(targets["contact_exposure"]),
+        direct_impact_targets=tuple(targets["direct_impact_exposure"]),
+        friction_targets=tuple(targets["friction_exposure"]),
     )
 
 
@@ -2239,21 +2473,6 @@ def _safe_filler_adjustment(
 # what was already removed; that would silently drop safety instructions when
 # wording changes.
 _CONTACT_RESTRICTION_INSTRUCTION = "Skip all contact work today, including sparring, clinch, and grappling."
-_DIRECT_IMPACT_RESTRICTION_INSTRUCTION = (
-    "Remove or replace all direct-impact work today, including hard bag work, repeated "
-    "landings or plyometrics, and other impact blocks."
-)
-_SURFACE_PROTECTION_INSTRUCTION = (
-    "Protect the affected area from repeated rubbing; if it cannot stay covered, "
-    "replace only the block causing friction."
-)
-
-_SURFACE_RESTRICTION_INSTRUCTIONS: dict[SurfaceRestrictionCode, str] = {
-    "remove_contact": _CONTACT_RESTRICTION_INSTRUCTION,
-    "remove_direct_impact": _DIRECT_IMPACT_RESTRICTION_INSTRUCTION,
-    "protect_or_replace_friction": _SURFACE_PROTECTION_INSTRUCTION,
-}
-
 # Why exposed work is restricted, keyed to the classifier's own reason code
 # rather than assumed — an intact wound that cannot be kept covered is a
 # different fact from an open one.
@@ -2288,9 +2507,26 @@ def _surface_restriction_codes(
             restrictions.append("remove_direct_impact")
         if exposure.friction_exposure:
             restrictions.append("protect_or_replace_friction")
-    elif surface_class == "surface_local_restriction" and exposure.codes:
+    elif surface_class == "surface_local_restriction" and exposure.friction_exposure:
         restrictions.append("protect_or_replace_friction")
     return tuple(restrictions)
+
+
+def _surface_restriction_instruction(
+    code: SurfaceRestrictionCode, targets: Sequence[str]
+) -> str:
+    """Athlete-facing action generated from a restriction code and block IDs."""
+    if code == "remove_contact":
+        return _CONTACT_RESTRICTION_INSTRUCTION
+    named = ", ".join(dict.fromkeys(targets))
+    if code == "remove_direct_impact":
+        target = f": {named}" if named else ""
+        return f"Remove or replace only the direct-impact block(s) that expose the wound{target}."
+    target = f" during {named}" if named else ""
+    return (
+        f"Protect the affected area from repeated rubbing{target}; if it cannot stay "
+        "covered, replace only that block."
+    )
 
 
 def _surface_restriction_target(codes: Sequence[SurfaceRestrictionCode]) -> str:
@@ -2357,45 +2593,105 @@ def _apply_surface_injury_policy(
     exists in today's work: interpersonal contact, direct impact, and/or repeated
     friction. The safe remainder of the session stays available.
     """
-    surface_class, reason_code, label = _strongest_surface_state(context)
-    if surface_class == "non_surface":
+    from fightcamp.injury_registry import SURFACE_CLASS_RANK
+
+    surface_found = False
+    medical_review = False
+    exposure_codes: list[SurfaceExposureCode] = []
+    restriction_targets: dict[SurfaceRestrictionCode, list[str]] = {
+        "remove_contact": [],
+        "remove_direct_impact": [],
+        "protect_or_replace_friction": [],
+    }
+    restricted_injuries: list[
+        tuple[str, str, str, tuple[SurfaceRestrictionCode, ...]]
+    ] = []
+
+    for injury in _active_open_injuries(context):
+        assessment = _surface_assessment(injury)
+        if not assessment.is_surface:
+            continue
+        surface_found = True
+        exposure = _session_surface_exposure(context.today_session, injury)
+        for code in exposure.codes:
+            _append_unique(exposure_codes, code)
+        if assessment.classification == "surface_medical_review":
+            medical_review = True
+            continue
+        injury_restrictions = _surface_restriction_codes(
+            assessment.classification, exposure
+        )
+        if not injury_restrictions:
+            continue
+        restricted_injuries.append(
+            (
+                assessment.classification,
+                assessment.reason,
+                _injury_label_of(injury),
+                injury_restrictions,
+            )
+        )
+        for code in injury_restrictions:
+            for target in exposure.targets_for(code):
+                _append_unique(restriction_targets[code], target)
+
+    if not surface_found:
         return adjustment
-    exposure = _session_surface_exposure(context.today_session)
-    exposure_triggers = tuple(f"{SURFACE_EXPOSURE_PREFIX}{code}" for code in exposure.codes)
+    exposure_triggers = tuple(
+        f"{SURFACE_EXPOSURE_PREFIX}{code}" for code in exposure_codes
+    )
     adjustment = replace(
         adjustment,
         triggers=tuple(dict.fromkeys([*adjustment.triggers, *exposure_triggers])),
     )
-    if surface_class == "surface_medical_review":
+    if medical_review:
         # The review pathway (or, for a severe wound, the existing severe gates)
         # already owns the decision; only the record is added here.
         return _with_safety_check(adjustment, "medical_review")
 
-    natural = _natural_injury_label(label or "skin injury")
     decision = adjustment.decision
     title = adjustment.title
     reason = adjustment.reason
     action = adjustment.action
     triggers = list(adjustment.triggers)
-    restriction_codes = _surface_restriction_codes(surface_class, exposure)
+    restriction_codes = tuple(
+        code
+        for code in (
+            "remove_contact",
+            "remove_direct_impact",
+            "protect_or_replace_friction",
+        )
+        if restriction_targets[code]
+    )
     result = _surface_safety_result(restriction_codes)
 
     if restriction_codes:
-        if surface_class == "surface_no_contact":
+        no_contact_injuries = [
+            item for item in restricted_injuries if item[0] == "surface_no_contact"
+        ]
+        if no_contact_injuries:
             # The strongest existing decision stands: a wound can raise the
             # decision but never soften one the readiness signals already set.
             decision = _more_conservative(decision, "modify")
             if adjustment.decision == "train_as_planned":
                 # Nothing else was restricting today, so the wound owns the copy.
                 title = _surface_restriction_title(restriction_codes)
+                _surface_class, reason_code, label, injury_codes = max(
+                    no_contact_injuries,
+                    key=lambda item: SURFACE_CLASS_RANK[item[0]],
+                )
+                natural = _natural_injury_label(label or "skin injury")
                 reason = _SURFACE_RESTRICTION_REASONS.get(
                     reason_code, _SURFACE_RESTRICTION_REASONS["open_wound"]
                 ).format(
                     label=natural,
-                    exposure=_surface_restriction_target(restriction_codes),
+                    exposure=_surface_restriction_target(injury_codes),
                 )
         for code in restriction_codes:
-            action = _with_extra_instruction(action, _SURFACE_RESTRICTION_INSTRUCTIONS[code])
+            action = _with_extra_instruction(
+                action,
+                _surface_restriction_instruction(code, restriction_targets[code]),
+            )
             _append_unique(triggers, f"{SURFACE_RESTRICTION_PREFIX}{code}")
     updated = replace(
         adjustment,
