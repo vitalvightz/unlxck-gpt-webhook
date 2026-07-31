@@ -1691,7 +1691,7 @@ export function StructuredPlanRenderer({
     [completions],
   );
 
-  // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
+  // Resolve "today" through the shared 03:00 training-day rollover so Plan Detail
   // and the Today tab can never disagree on the current day.
   const mountedDay = useTrainingDay();
   const serverTrainingDay = useMemo(() => {

@@ -1,7 +1,7 @@
 """Recommendation TTL / validity (Block 4 §3).
 
 A recommendation is valid only for the athlete's current local training day
-(see ``training_day.py``). After the 04:00 rollover the previous recommendation
+(see ``training_day.py``). After the 03:00 rollover the previous recommendation
 expires and the live state returns to ``not_checked_in``; an expired
 recommendation may only be shown as clearly-labelled history, never as the
 current/live readiness.

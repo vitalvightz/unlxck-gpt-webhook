@@ -10,7 +10,7 @@ import { resolveTrainingDay } from "@/lib/camp-map";
  * SSR output and hydration match — date-dependent UI (current-day highlight,
  * today's blocks) renders its neutral "no current day" state until mount, then
  * fills in. Re-resolves every minute and on tab focus/visibility so a tab left
- * open across midnight / the 04:00 rollover advances to the new day instead of
+ * open across midnight / the 03:00 rollover advances to the new day instead of
  * sticking on the old one.
  */
 export function useTrainingDay(): Date | null {

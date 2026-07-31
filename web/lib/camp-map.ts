@@ -36,14 +36,14 @@ export function toISODate(date: Date): string {
 
 /**
  * The athlete-local training-day rollover hour. The training day does not
- * advance until 04:00 local time, so a 01:00 session still belongs to the
+ * advance until 03:00 local time, so a 01:00 session still belongs to the
  * previous calendar day. This mirrors the backend `/api/today` training-day
  * concept so Today and Plan Detail resolve the same current day.
  */
-export const TRAINING_DAY_ROLLOVER_HOUR = 4;
+export const TRAINING_DAY_ROLLOVER_HOUR = 3;
 
 /**
- * The athlete-local training-day `Date` for `now`, applying the 04:00 rollover.
+ * The athlete-local training-day `Date` for `now`, applying the 03:00 rollover.
  * Returns a Date at local midnight of the resolved training day so it can be fed
  * straight into `resolvePlanProgress` / `resolveCurrentDay` / `toISODate`. This
  * is the single shared entry point both Today and Plan Detail use to decide

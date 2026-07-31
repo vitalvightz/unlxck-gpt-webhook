@@ -137,7 +137,7 @@ function utcCalendarDay(value: string | null | undefined): number | null {
  * as date strings and compared by UTC calendar day — no `new Date()`, no local
  * clock. `referenceDay` must be the app's authoritative training-day ISO
  * (`current_training_day`), so server render, browser hydration, and the
- * 04:00 training-day rollover all agree. Returns null when the reference is
+ * 03:00 training-day rollover all agree. Returns null when the reference is
  * missing, rather than silently falling back to a nondeterministic clock.
  */
 export function describeRelativeDay(

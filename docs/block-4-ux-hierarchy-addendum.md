@@ -84,9 +84,9 @@ schema changes (§7).
 A recommendation is valid only for the athlete's **local training day**.
 
 - Use the **athlete's timezone**.
-- Use `day_rollover_hour = 04:00` local time.
+- Use `day_rollover_hour = 03:00` local time.
 - The training day for a timestamp `t` is the local calendar date of
-  `t - 4h` (i.e. 00:00–03:59 local still belongs to the previous training day).
+  `t - 3h` (i.e. 00:00–02:59 local still belongs to the previous training day).
 - After rollover, the previous recommendation **expires** and recommendation
   state returns to `not_checked_in`.
 - **Never** show yesterday's recommendation as today's live readiness.
@@ -102,7 +102,7 @@ Reconciliation with `docs/live-athlete-flow.md`:
 
 - That doc currently describes check-in upsert keyed by **UTC day**. This
   addendum supersedes that for the recommendation/landing layer: the
-  **training day** (athlete-local, 04:00 rollover) is the key used to decide
+  **training day** (athlete-local, 03:00 rollover) is the key used to decide
   recommendation validity, landing state, and completion-record `training_day`.
   Storage may remain UTC-backed, but the training-day derivation above is the
   contract used by the UI and decision logic.

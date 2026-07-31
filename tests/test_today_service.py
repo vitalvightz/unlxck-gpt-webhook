@@ -494,17 +494,17 @@ def _checkin_payload(**overrides) -> dict:
 
 
 class TestTrainingDayPersistence:
-    def test_0359_local_stores_previous_training_day(self):
+    def test_0259_local_stores_previous_training_day(self):
         store = _store_with_plan()
-        now = datetime(2026, 6, 18, 3, 59, tzinfo=ZoneInfo(NY))
+        now = datetime(2026, 6, 18, 2, 59, tzinfo=ZoneInfo(NY))
         row = submit_today_checkin(
             store, athlete_id=ATHLETE, athlete_timezone=NY, payload=_checkin_payload(), now=now
         )
         assert row["training_day"] == "2026-06-17"
 
-    def test_0400_local_stores_current_training_day(self):
+    def test_0300_local_stores_current_training_day(self):
         store = _store_with_plan()
-        now = datetime(2026, 6, 18, 4, 0, tzinfo=ZoneInfo(NY))
+        now = datetime(2026, 6, 18, 3, 0, tzinfo=ZoneInfo(NY))
         row = submit_today_checkin(
             store, athlete_id=ATHLETE, athlete_timezone=NY, payload=_checkin_payload(), now=now
         )

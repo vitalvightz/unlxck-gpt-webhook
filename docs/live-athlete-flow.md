@@ -15,7 +15,7 @@ plans, injury flags, rule-based adaptations, and the admin attention queue.
 
 > **See also:** `docs/block-4-ux-hierarchy-addendum.md` locks the Today/Overview
 > UX contracts (state-dependent landing, read-only Overview, recommendation TTL
-> with athlete-local `day_rollover_hour = 04:00`, the check-in decision table,
+> with athlete-local `day_rollover_hour = 03:00`, the check-in decision table,
 > the thin completion model, risk-watch governance, and the normalized
 > command-view read model). Where it touches the day boundary, that addendum
 > refines the UTC-day check-in keying described here.
