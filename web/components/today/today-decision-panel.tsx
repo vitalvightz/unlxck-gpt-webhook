@@ -30,6 +30,7 @@ import { type TodayDecisionBanner, type TodayDecisionTier } from "@/lib/today";
  */
 export function TodayDecisionPanel({
   banner,
+  tier,
   triggers,
   context,
   sources,
@@ -45,10 +46,13 @@ export function TodayDecisionPanel({
   if (!banner) {
     return null;
   }
-  const triggerLabels = clean(triggers);
-  const contextLabels = clean(context);
-  const usedSources = clean(sources);
-  const note = (confidenceNote ?? "").trim();
+  const isPreview = tier === "preview" || banner.displayState === "preview";
+  // Current-day readiness evidence cannot clear or restrict a future session.
+  // Preview cards explain only which planned session their copy is framing.
+  const triggerLabels = clean(isPreview ? undefined : triggers);
+  const contextLabels = clean(isPreview ? undefined : context);
+  const usedSources = clean(isPreview ? ["next planned session"] : sources);
+  const note = isPreview ? "" : (confidenceNote ?? "").trim();
   const hasEvidence =
     triggerLabels.length > 0 ||
     contextLabels.length > 0 ||

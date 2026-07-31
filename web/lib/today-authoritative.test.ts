@@ -207,6 +207,143 @@ test("future pull-back remains a neutral pending preview", () => {
   assert.equal(resolved.tone, "neutral");
 });
 
+test("future mobility preview uses its own session copy, not today's strength or injury copy", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_reason:
+        "Run the planned work and keep the lifts crisp.\nYour sleep, body, and pain checks are all clear today.\nKeep the injured area clean.",
+      next_session: {
+        session_id: "mobility-1",
+        session_relation: "next",
+        session_type: "recovery",
+        title: "Mobility Reset",
+      },
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(resolved.banner?.chip, "PREVIEW");
+  assert.equal(resolved.banner?.title, "Session preview");
+  assert.equal(resolved.banner?.detail, "Mobility Reset is next on your plan.");
+  assert.equal(
+    resolved.banner?.action,
+    "Review the mobility and recovery work before it opens.",
+  );
+  assert.doesNotMatch(
+    `${resolved.banner?.detail} ${resolved.banner?.action}`,
+    /lifts crisp|pain checks|injured area|clean/i,
+  );
+  assert.equal(resolved.banner?.safety, undefined);
+});
+
+test("future previews cover every canonical session type with short specific copy", () => {
+  const expectedActions: Record<string, string> = {
+    strength_power: "Review the lifts and loading before it opens.",
+    conditioning: "Review the intervals and pace before it opens.",
+    skill: "Review the drills and technical focus before it opens.",
+    sparring: "Review the rounds and contact plan before it opens.",
+    primer: "Review the primer and key movement cues before it opens.",
+    recovery: "Review the mobility and recovery work before it opens.",
+    rehab: "Review the rehab sequence and pain-free ranges before it opens.",
+    fight_or_match: "Review the fight-day plan before it opens.",
+    mixed: "Review the session blocks and transitions before it opens.",
+  };
+
+  for (const [sessionType, expectedAction] of Object.entries(expectedActions)) {
+    const resolved = resolveTodayDecision({
+      ...BASE_STATE,
+      today: {
+        ...BASE_STATE.today,
+        next_session: {
+          session_id: `preview-${sessionType}`,
+          session_relation: "next",
+          session_type: sessionType,
+          title: `${sessionType} preview`,
+        },
+        session_scope: "next",
+      },
+    });
+
+    assert.equal(resolved.banner?.action, expectedAction, sessionType);
+    assert.ok(expectedAction.split(/\s+/).length <= 11, sessionType);
+  }
+});
+
+test("support-session previews cover every generated support category", () => {
+  const expectedActions: Record<string, string> = {
+    tactical: "Review the tactical cues before it opens.",
+    mental: "Review the mindset work before it opens.",
+    recovery: "Review the recovery work before it opens.",
+    mobility: "Review the mobility work and pain-free ranges before it opens.",
+    movement_quality: "Review the movement-quality work before it opens.",
+    technical: "Review the technical drills before it opens.",
+    footwork: "Review the footwork pattern before it opens.",
+    recovery_walk: "Review the easy pace and route before it opens.",
+    conditioning_maintenance: "Review the easy conditioning pace before it opens.",
+  };
+
+  for (const [supportCategory, expectedAction] of Object.entries(expectedActions)) {
+    const resolved = resolveTodayDecision({
+      ...BASE_STATE,
+      today: {
+        ...BASE_STATE.today,
+        next_session: {
+          session_id: `support-${supportCategory}`,
+          session_relation: "next",
+          session_type: "skill",
+          category: "support_insert",
+          support_insert_category: supportCategory,
+          title: `${supportCategory} support`,
+        },
+        session_scope: "next",
+      },
+    });
+
+    assert.equal(resolved.banner?.action, expectedAction, supportCategory);
+    assert.ok(expectedAction.split(/\s+/).length <= 11, supportCategory);
+  }
+});
+
+test("block metadata frames every canonical block when session type is unavailable", () => {
+  const expectedActions: Record<string, string> = {
+    preparation: "Review the preparation sequence before it opens.",
+    mobility_activation: "Review the mobility and activation work before it opens.",
+    plyometric_power: "Review the explosive work and rest periods before it opens.",
+    speed: "Review the speed work and rest periods before it opens.",
+    strength: "Review the lifts and loading before it opens.",
+    strength_speed: "Review the power lifts and loading before it opens.",
+    accessory: "Review the accessory work before it opens.",
+    conditioning: "Review the intervals and pace before it opens.",
+    skill: "Review the drills and technical focus before it opens.",
+    sparring: "Review the rounds and contact plan before it opens.",
+    cooldown_recovery: "Review the cooldown and recovery work before it opens.",
+    nutrition: "Review the nutrition steps before it opens.",
+    mindset: "Review the mindset cues before it opens.",
+    rehab: "Review the rehab sequence and pain-free ranges before it opens.",
+  };
+
+  for (const [blockType, expectedAction] of Object.entries(expectedActions)) {
+    const resolved = resolveTodayDecision({
+      ...BASE_STATE,
+      today: {
+        ...BASE_STATE.today,
+        next_session: {
+          session_id: `block-${blockType}`,
+          session_relation: "next",
+          title: `${blockType} block`,
+          blocks: [{ block_type: blockType }],
+        },
+        session_scope: "next",
+      },
+    });
+
+    assert.equal(resolved.banner?.action, expectedAction, blockType);
+    assert.ok(expectedAction.split(/\s+/).length <= 11, blockType);
+  }
+});
+
 test("future STOP remains a neutral pending preview without remediation or replacement", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
