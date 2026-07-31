@@ -502,11 +502,13 @@ test("Today session card uses short preview wording and Next session label", () 
 
 test("Today recommendation styles keep preview neutral, modify amber, and pull-back red", () => {
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  const baseBlock = css.match(/\.today-decision-banner\s*{[^}]+}/)?.[0] ?? "";
   const neutralBlock = css.match(/\.today-decision-banner\[data-tone="neutral"\]\s*{[^}]+}/)?.[0] ?? "";
   const amberBlock = css.match(/\.today-decision-banner\[data-tone="amber"\]\s*{[^}]+}/)?.[0] ?? "";
   const redBlock = css.match(/\.today-decision-banner\[data-tone="red"\]\s*{[^}]+}/)?.[0] ?? "";
 
-  assert.match(neutralBlock, /border-left-color/);
+  assert.match(baseBlock, /inset 3px 0 0 var\(--decision-accent\)/);
+  assert.match(neutralBlock, /--decision-accent/);
   assert.doesNotMatch(neutralBlock, /#ff6b75|#e23a4c|219,\s*47,\s*64/);
   assert.match(amberBlock, /#f1bd61|214,\s*175,\s*106/);
   assert.doesNotMatch(amberBlock, /#ff6b75|#e23a4c|219,\s*47,\s*64/);

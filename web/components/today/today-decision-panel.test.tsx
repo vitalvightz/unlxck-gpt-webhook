@@ -48,7 +48,21 @@ test("triggers and context render as separate stacked lists", () => {
   assert.ok(html.includes("Feeling flat"));
   assert.ok(html.includes("Context"));
   assert.equal((html.match(/today-decision-values/g) ?? []).length, 2);
+  assert.ok(html.includes('data-evidence-count="2"'));
   assert.ok(!html.includes(" · "));
+});
+
+test("dense evidence uses one command region and a three-group evidence rail", () => {
+  const html = render({
+    banner: BANNER,
+    triggers: ["Poor sleep", "Feeling flat"],
+    context: ["Fight week"],
+    sources: ["today's check-in", "today's planned session"],
+  });
+
+  assert.equal((html.match(/today-decision-command/g) ?? []).length, 1);
+  assert.equal((html.match(/today-decision-evidence/g) ?? []).length, 1);
+  assert.ok(html.includes('data-evidence-count="3"'));
 });
 
 test("context never renders inside the trigger row", () => {
