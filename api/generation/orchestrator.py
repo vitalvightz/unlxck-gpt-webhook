@@ -545,13 +545,22 @@ async def run_generation_job(
                     # job exactly as before.
                     safe_error, _ = _safe_error_and_frame(exc)
                     is_unavailable = isinstance(exc, Stage2AutomationUnavailableError)
+                    is_timeout = isinstance(exc, asyncio.TimeoutError)
                     is_expected = isinstance(exc, (Stage2AutomationError, asyncio.TimeoutError))
+                    # Count an attempt only when a request actually reached the
+                    # provider. Failures raised before the call — an unconfigured
+                    # automator, or a prompt over the budget — burn no tokens, so
+                    # counting them corrupts the cost/audit telemetry. A whole-
+                    # finalize timeout means a request was in flight.
+                    provider_request_started = is_timeout or bool(
+                        getattr(exc, "provider_request_started", False)
+                    )
                     try:
                         finalized_result = build_stage1_fallback_result(
                             stage1_result,
                             reason=(
                                 "stage2_timeout"
-                                if isinstance(exc, asyncio.TimeoutError)
+                                if is_timeout
                                 else "stage2_unavailable"
                                 if is_unavailable
                                 else "stage2_model_error"
@@ -559,9 +568,7 @@ async def run_generation_job(
                                 else "stage2_unexpected_error"
                             ),
                             detail=safe_error,
-                            # Unavailable means no provider request was ever made;
-                            # everything else got at least as far as starting one.
-                            attempt_count=0 if is_unavailable else 1,
+                            attempt_count=1 if provider_request_started else 0,
                             stage2_cost=getattr(exc, "stage2_cost", None),
                         )
                     except Stage1FallbackUnavailableError:

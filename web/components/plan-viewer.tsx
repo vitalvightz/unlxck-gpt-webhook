@@ -1215,6 +1215,39 @@ export function isResumableTriageMode(modeOrStatus?: string | null): boolean {
   return normalized === "needs_review" || normalized === "restricted_rehab_only";
 }
 
+/**
+ * The admin sidebar's "Release state" line.
+ *
+ * Driven by the saved plan status, which is what actually decides whether the
+ * athlete can see the plan. It must not be derived from the validator summary:
+ * a flagged plan has findings (so `isPublishable` is false) but is already
+ * released, and labelling it "Held" contradicts the plan the admin is looking at.
+ */
+export function describePlanReleaseState(input: {
+  status: string | null | undefined;
+  isTriageBlocked?: boolean;
+  triageMode?: string | null;
+  isProtectedTriageResumePending?: boolean;
+}): string {
+  if (input.isTriageBlocked) {
+    return input.triageMode === "medical_hold" ? "Blocked" : "Protected";
+  }
+  if (input.isProtectedTriageResumePending) {
+    return "Blocked / resume pending";
+  }
+  const status = (input.status || "").trim().toLowerCase();
+  if (status === "publishable_with_flags") {
+    return "Released with flags";
+  }
+  if (status === "ready") {
+    return "Released";
+  }
+  if (status === "archived") {
+    return "Archived";
+  }
+  return "Held";
+}
+
 export function buildReviewSummary(
   report: Record<string, unknown> | null | undefined,
   stage2Status: string,
@@ -2638,15 +2671,12 @@ export function PlanViewer({
                 <article className="plan-meta-item">
                   <p className="plan-meta-label">Release state</p>
                   <p className="plan-meta-value">
-                    {isTriageBlocked
-                      ? injuryTriage?.mode === "medical_hold"
-                        ? "Blocked"
-                        : "Protected"
-                      : isProtectedTriageResumePending
-                        ? "Blocked / resume pending"
-                      : stage2ReviewSummary.isPublishable
-                        ? "Ready"
-                        : "Held"}
+                    {describePlanReleaseState({
+                      status: plan.status,
+                      isTriageBlocked,
+                      triageMode: injuryTriage?.mode,
+                      isProtectedTriageResumePending,
+                    })}
                   </p>
                 </article>
                 <article className="plan-meta-item">

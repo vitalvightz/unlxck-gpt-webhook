@@ -540,8 +540,9 @@ def test_unexpected_stage2_exception_completes_job_on_stage1_plan():
 
     plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_unexpected_error")
     assert "unexpected crash" in plan["stage2_validator_report"]["stage2_fallback"]["detail"]
-    # A provider request was started, so the attempt is counted.
-    assert plan["stage2_attempt_count"] == 1
+    # An arbitrary exception carries no evidence that a request reached the
+    # provider, so no attempt is claimed. Only attempts we can evidence count.
+    assert plan["stage2_attempt_count"] == 0
 
 
 def test_unavailable_stage2_records_zero_attempts():
@@ -560,6 +561,40 @@ def test_unavailable_stage2_records_zero_attempts():
 
     plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_unavailable")
     assert plan["stage2_attempt_count"] == 0
+
+
+def test_prompt_budget_failure_records_zero_provider_attempts():
+    # The prompt-budget check raises before any request reaches the provider, so
+    # no tokens were burned. Counting it as an attempt corrupts cost telemetry.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    error = Stage2AutomationError("Stage 2 first_pass prompt too large: 214880 chars > 180000")
+    assert error.provider_request_started is False
+
+    saved = _run_stage2_failure_job(
+        store, FakeStage2Automator(error=error), client_request_id="stage2-prompt-budget"
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert plan["stage2_attempt_count"] == 0
+
+
+def test_provider_error_after_request_records_one_attempt():
+    # The mirror case: a failure raised once the request was in flight did burn
+    # tokens, so it counts.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    error = Stage2AutomationError("Stage 2 model request failed. Check server logs.")
+    error.provider_request_started = True
+
+    saved = _run_stage2_failure_job(
+        store, FakeStage2Automator(error=error), client_request_id="stage2-after-request"
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert plan["stage2_attempt_count"] == 1
 
 
 def test_stage1_fallback_records_a_terminal_structured_card_outcome():

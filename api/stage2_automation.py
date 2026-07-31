@@ -76,15 +76,26 @@ class Stage2AutomationError(RuntimeError):
     Carries an optional ``stage2_cost`` payload (token/cost telemetry captured up
     to the point of failure) so the orchestrator can still persist what is known
     about a failed attempt.
+
+    ``provider_request_started`` records whether a request was actually issued to
+    the provider. It stays False for failures raised before the call — a prompt
+    over the budget, or an unconfigured automator — so those are not counted as
+    provider attempts in the cost/audit telemetry.
     """
 
     stage2_cost: dict[str, Any] | None = None
+    provider_request_started: bool = False
 
 
 def _with_stage2_cost(
     error: Stage2AutomationError, cost: dict[str, Any]
 ) -> Stage2AutomationError:
     error.stage2_cost = cost
+    return error
+
+
+def _mark_provider_request_started(error: Stage2AutomationError) -> Stage2AutomationError:
+    error.provider_request_started = True
     return error
 
 
@@ -819,35 +830,43 @@ class OpenAIStage2Automator:
             # so a failed attempt still leaves an auditable cost row.
             failure_cost = _build_stage2_cost(self.model, prompt=prompt, response=None)
             if _is_quota_or_rate_limit_error(exc):
-                raise _with_stage2_cost(
-                    Stage2AutomationError(
-                        "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
-                    ),
-                    failure_cost,
+                raise _mark_provider_request_started(
+                    _with_stage2_cost(
+                        Stage2AutomationError(
+                            "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                        ),
+                        failure_cost,
+                    )
                 ) from exc
             # Keep the raw provider exception (which can carry request payloads or
             # provider internals) out of the stored/visible error; the full detail
             # is captured in the server log below.
             logger.exception("[stage2] model_request_failed error_type=%s", type(exc).__name__)
-            raise _with_stage2_cost(
-                Stage2AutomationError("Stage 2 model request failed. Check server logs."),
-                failure_cost,
+            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    Stage2AutomationError("Stage 2 model request failed. Check server logs."),
+                    failure_cost,
+                )
             ) from exc
         response_id = getattr(response, "id", None) or "unknown"
         if _response_is_incomplete(response):
             # We have a response (with usage), just not a full plan — capture the
             # actual tokens burned before truncation.
-            raise _with_stage2_cost(
-                Stage2AutomationError(
-                    "Stage 2 model response was incomplete before producing a full plan."
-                ),
-                _build_stage2_cost(self.model, prompt=prompt, response=response),
+            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    Stage2AutomationError(
+                        "Stage 2 model response was incomplete before producing a full plan."
+                    ),
+                    _build_stage2_cost(self.model, prompt=prompt, response=response),
+                )
             )
         try:
             text = _extract_response_text(response)
         except Stage2AutomationError as exc:
-            raise _with_stage2_cost(
-                exc, _build_stage2_cost(self.model, prompt=prompt, response=response)
+            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    exc, _build_stage2_cost(self.model, prompt=prompt, response=response)
+                )
             )
         cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text)
         # Attribute cost to the job/athlete so it can be aggregated per user from

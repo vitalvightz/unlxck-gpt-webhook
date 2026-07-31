@@ -443,17 +443,24 @@ def test_finalize_still_releases_when_card_invalid(monkeypatch: pytest.MonkeyPat
 
 def test_finalize_safety_error_releases_with_flags_and_builds_card(monkeypatch: pytest.MonkeyPatch):
     # A safety error (restriction violation) is flagged for admins but no longer
-    # holds the plan, so the release path runs normally.
+    # holds the plan, so the release path runs in full — including the structured
+    # card conversion. Both provider responses are supplied so the card really is
+    # built rather than silently failing on an exhausted queue.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("restriction_violation"))
-    client = _FakeClient([_response("# final plan")])
+    client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert result["status"] == "publishable_with_flags"
-    assert result["plan_text"] == "# final plan"
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
     assert result["stage2_validator_report"]["errors"] == [{"code": "restriction_violation"}]
+    # The card was actually converted: plan-text pass + structured pass.
+    assert len(client.responses.calls) == 2
+    assert isinstance(result["structured_plan"], dict)
+    assert result["schema_version"] == SCHEMA_VERSION
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
 
 
 def test_finalize_soft_blocker_released_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
