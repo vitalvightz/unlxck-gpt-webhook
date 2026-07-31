@@ -49,6 +49,12 @@ ACTIVE_FLAG_STATUSES: frozenset[str] = frozenset({"open", "monitoring"})
 # names for the same fact. Every field is OPTIONAL: an existing client that posts
 # only ``{flag_id, status}`` stays valid, and the classifier treats a missing
 # answer as "unknown", never as "clear".
+# How many infection signs one report may carry (a bounded checkbox list, not
+# free-form input). Defined here, next to the vocabulary it belongs to, and
+# reused by every layer above so the API contract, the response model and the
+# injury_flags column constraint can never disagree about the bound.
+MAX_INFECTION_SIGNS = 8
+
 SkinIntegrity = Literal["intact", "open", "unknown"]
 BleedingStatus = Literal["none", "controlled", "uncontrolled"]
 Drainage = Literal["none", "present", "unknown"]
@@ -88,7 +94,10 @@ class DeclaredInjury(BaseModel):
     skin_integrity: SkinIntegrity | None = None
     bleeding_status: BleedingStatus | None = None
     drainage: Drainage | None = None
-    infection_signs: list[str] | None = None
+    # Bounded to the same limit the injury_flags column enforces. A list this
+    # contract accepted but the database rejected would surface as a write
+    # failure at persist time rather than a validation error at the edge.
+    infection_signs: list[str] | None = Field(default=None, max_length=MAX_INFECTION_SIGNS)
     coverable: Coverable | None = None
     friction_or_contact_problem: FrictionOrContactProblem | None = None
 

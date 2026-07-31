@@ -61,10 +61,21 @@ const SHOULDER: InjuryFlagRecord = {
   surface_class: "non_surface",
 };
 
-function mount(): { container: HTMLElement; root: Root } {
+function mount(): { container: HTMLElement; root: Root; cleanup: () => void } {
   const container = document.createElement("div");
   document.body.appendChild(container);
-  return { container, root: createRoot(container) };
+  const root = createRoot(container);
+  // Unmounting tears down React's tree but leaves the host node parented to
+  // document.body, so every test used to leave an orphan div behind for the
+  // next one to query across. Cleanup detaches the node as well.
+  return {
+    container,
+    root,
+    cleanup: () => {
+      act(() => root.unmount());
+      container.remove();
+    },
+  };
 }
 
 async function settle() {
@@ -134,7 +145,7 @@ function stubCheckin(options: { fail?: boolean } = {}) {
 
 test("marking a skin injury worse asks the surface follow-up before saving anything", async () => {
   const { calls, restore } = stubCheckin();
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -178,7 +189,7 @@ test("marking a skin injury worse asks the surface follow-up before saving anyth
     assertSelected(statusButton(container, "Worse"));
     assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
 
-    act(() => root.unmount());
+    cleanup();
   } finally {
     restore();
   }
@@ -186,7 +197,7 @@ test("marking a skin injury worse asks the surface follow-up before saving anyth
 
 test("a failed worse update leaves the injury unselected and the follow-up open", async () => {
   const { calls, restore } = stubCheckin({ fail: true });
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -203,7 +214,7 @@ test("a failed worse update leaves the injury unselected and the follow-up open"
     // The answers are still on screen, so a retry does not start from scratch.
     assert.match(container.textContent ?? "", /Is it open or burst\?/);
 
-    act(() => root.unmount());
+    cleanup();
   } finally {
     restore();
   }
@@ -211,7 +222,7 @@ test("a failed worse update leaves the injury unselected and the follow-up open"
 
 test("a non-surface injury marked worse saves directly, with no skin questions", async () => {
   const { calls, restore } = stubCheckin();
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -226,7 +237,7 @@ test("a non-surface injury marked worse saves directly, with no skin questions",
     assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
     assertSelected(statusButton(container, "Worse"));
 
-    act(() => root.unmount());
+    cleanup();
   } finally {
     restore();
   }
@@ -234,7 +245,7 @@ test("a non-surface injury marked worse saves directly, with no skin questions",
 
 test("an ordinary status update never shows the skin questions", async () => {
   const { calls, restore } = stubCheckin();
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -248,7 +259,7 @@ test("an ordinary status update never shows the skin questions", async () => {
     assert.deepEqual(calls, [{ injuries: [{ flag_id: "flag-blister", status: "ongoing" }] }]);
     assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
 
-    act(() => root.unmount());
+    cleanup();
   } finally {
     restore();
   }
@@ -256,7 +267,7 @@ test("an ordinary status update never shows the skin questions", async () => {
 
 test("clearing an injury is not marked selected until the confirmed write succeeds", async () => {
   const failing = stubCheckin({ fail: true });
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -289,7 +300,7 @@ test("clearing an injury is not marked selected until the confirmed write succee
     assertSelected(statusButton(container, "Cleared"));
     assert.doesNotMatch(container.textContent ?? "", /Clear this injury\?/);
 
-    act(() => root.unmount());
+    cleanup();
   } finally {
     succeeding.restore();
   }
@@ -297,7 +308,7 @@ test("clearing an injury is not marked selected until the confirmed write succee
 
 test("a restricted wound reported easing rechecks the skin before the restriction lifts", async () => {
   const { calls, restore } = stubCheckin();
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -339,7 +350,7 @@ test("a restricted wound reported easing rechecks the skin before the restrictio
     ]);
     assertSelected(statusButton(container, "Easing"));
 
-    act(() => root.unmount());
+    cleanup();
   } finally {
     restore();
   }
@@ -352,7 +363,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
     infection_signs: ["pus"],
     surface_class: "surface_medical_review",
   };
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -375,7 +386,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
     assert.equal(sent.skin_integrity, "open");
     assert.equal(sent.bleeding_status, "controlled");
 
-    act(() => root.unmount());
+    cleanup();
   } finally {
     restore();
   }
@@ -383,7 +394,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
 
 test("a stable skin injury reported easing saves directly, with no recheck", async () => {
   const { calls, restore } = stubCheckin();
-  const { container, root } = mount();
+  const { container, root, cleanup } = mount();
 
   try {
     await act(async () => {
@@ -397,7 +408,171 @@ test("a stable skin injury reported easing saves directly, with no recheck", asy
     assert.deepEqual(calls, [{ injuries: [{ flag_id: "flag-blister", status: "improving" }] }]);
     assert.doesNotMatch(container.textContent ?? "", /Is the skin closed now\?/);
 
-    act(() => root.unmount());
+    cleanup();
+  } finally {
+    restore();
+  }
+});
+
+// A wound that is bleeding uncontrollably AND draining. The follow-up asks one
+// bleeding question, and "Won't stop" is the answer it prefills — which says
+// nothing about drainage.
+const LEAKING_UNCONTROLLED_BLISTER: InjuryFlagRecord = {
+  ...OPEN_BLISTER,
+  bleeding_status: "uncontrolled",
+  drainage: "present",
+  surface_class: "surface_medical_review",
+};
+
+test("an untouched recheck preserves a stored drainage the bleeding answer does not cover", async () => {
+  // Saving the canonical mapping for "Won't stop" wrote drainage: "unknown"
+  // over a recorded "present" — losing a safety signal the athlete never
+  // touched, on a recheck of a wound already flagged for medical review.
+  const { calls, restore } = stubCheckin();
+  const { container, root, cleanup } = mount();
+
+  try {
+    await act(async () => {
+      root.render(
+        <TodayInjuryManager
+          openInjuries={[LEAKING_UNCONTROLLED_BLISTER]}
+          token="t"
+          onRefresh={async () => {}}
+        />,
+      );
+    });
+
+    await click(statusButton(container, "Easing"));
+    await click(buttonNamed(container, "Save update"));
+
+    const sent = (calls[0]?.injuries as Array<Record<string, unknown>>)[0];
+    assert.equal(sent.bleeding_status, "uncontrolled");
+    assert.equal(sent.drainage, "present");
+    assert.notEqual(sent.drainage, "unknown");
+
+    cleanup();
+  } finally {
+    restore();
+  }
+});
+
+test("changing the bleeding answer does replace the stored drainage", async () => {
+  // The preservation above must not freeze the field: an answered question
+  // still overwrites what was on record.
+  const { calls, restore } = stubCheckin();
+  const { container, root, cleanup } = mount();
+
+  try {
+    await act(async () => {
+      root.render(
+        <TodayInjuryManager
+          openInjuries={[LEAKING_UNCONTROLLED_BLISTER]}
+          token="t"
+          onRefresh={async () => {}}
+        />,
+      );
+    });
+
+    await click(statusButton(container, "Easing"));
+    await click(buttonNamed(container, "No"));
+    await click(buttonNamed(container, "Save update"));
+
+    const sent = (calls[0]?.injuries as Array<Record<string, unknown>>)[0];
+    assert.equal(sent.bleeding_status, "none");
+    assert.equal(sent.drainage, "none");
+
+    cleanup();
+  } finally {
+    restore();
+  }
+});
+
+test("a write in flight locks every row, so another injury's follow-up cannot be discarded", async () => {
+  // The other row stayed clickable, the handler closed the open follow-up, and
+  // updateInjury then refused the request because a write was pending — so the
+  // answers being filled in were lost on the way to a no-op.
+  let release: (() => void) | null = null;
+  const originalFetch = globalThis.fetch;
+  const calls: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+    calls.push(JSON.parse(String(init?.body ?? "{}")));
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return new Response(JSON.stringify({ open_injuries: [] }), {
+      status: 201,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof globalThis.fetch;
+
+  const { container, root, cleanup } = mount();
+
+  try {
+    await act(async () => {
+      root.render(
+        <TodayInjuryManager
+          openInjuries={[SHOULDER, OPEN_BLISTER]}
+          token="t"
+          onRefresh={async () => {}}
+        />,
+      );
+    });
+
+    // Start a write on the shoulder and leave it hanging.
+    await click(statusButton(container, "Easing"));
+    assert.equal(calls.length, 1);
+
+    // Every status button is now disabled, including the other injury's.
+    // Scoped to the tracked-injury rows: the "add an injury" form below has its
+    // own segment row, and that flow is not what the pending write blocks.
+    const allStatusButtons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(".today-injury-item .today-segment-row button"),
+    );
+    assert.ok(
+      allStatusButtons.every((button) => button.disabled),
+      "expected every row's status actions to be locked while a write is in flight",
+    );
+
+    // And a click that slips through (a stale pointer event) changes nothing.
+    await click(allStatusButtons[allStatusButtons.length - 1]);
+    assert.equal(calls.length, 1);
+
+    await act(async () => {
+      release?.();
+      await Promise.resolve();
+    });
+    await settle();
+
+    cleanup();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a pending answer is announced, not just outlined", async () => {
+  // aria-pressed stays false until the write is confirmed, so the "captured but
+  // not saved" state needs its own accessible description.
+  const { restore } = stubCheckin();
+  const { container, root, cleanup } = mount();
+
+  try {
+    await act(async () => {
+      root.render(
+        <TodayInjuryManager openInjuries={[BLISTER]} token="t" onRefresh={async () => {}} />,
+      );
+    });
+
+    await click(statusButton(container, "Cleared"));
+
+    const cleared = statusButton(container, "Cleared");
+    assertNotSelected(cleared);
+    const describedBy = cleared.getAttribute("aria-describedby");
+    assert.ok(describedBy, "expected the pending button to describe its state");
+    const hint = container.querySelector(`[id="${describedBy}"]`);
+    assert.ok(hint, "expected the described element to exist");
+    assert.match(hint?.textContent ?? "", /Not saved yet/);
+
+    cleanup();
   } finally {
     restore();
   }

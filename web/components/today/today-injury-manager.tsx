@@ -24,6 +24,7 @@ import {
 } from "@/lib/today-injury-input";
 import type {
   Coverable,
+  Drainage,
   FrictionOrContactProblem,
   InjuryFlagRecord,
   InjuryFlagSeverity,
@@ -118,6 +119,12 @@ const FRICTION_OPTIONS: Array<{ value: FrictionOrContactProblem; label: string }
 type SurfaceFollowUpAnswers = {
   skin_integrity: SkinIntegrity;
   bleed: BleedAnswer;
+  // Bleeding and drainage are one question to the athlete but two stored facts,
+  // and "Won't stop" does not say anything about drainage. These two remember
+  // what was on record so an untouched recheck can send the stored drainage back
+  // instead of overwriting a recorded "present" with "unknown".
+  initialBleed: BleedAnswer;
+  storedDrainage: Drainage | null;
   infection_signs: string[];
   coverable: Coverable;
   friction_or_contact_problem: FrictionOrContactProblem;
@@ -126,6 +133,8 @@ type SurfaceFollowUpAnswers = {
 const EMPTY_SURFACE_ANSWERS: SurfaceFollowUpAnswers = {
   skin_integrity: "unknown",
   bleed: "no",
+  initialBleed: "no",
+  storedDrainage: null,
   infection_signs: [],
   coverable: "unknown",
   friction_or_contact_problem: "unknown",
@@ -151,6 +160,8 @@ function answersFromInjury(injury: InjuryFlagRecord): SurfaceFollowUpAnswers {
   return {
     skin_integrity: injury.skin_integrity ?? EMPTY_SURFACE_ANSWERS.skin_integrity,
     bleed,
+    initialBleed: bleed,
+    storedDrainage: injury.drainage ?? null,
     infection_signs: [...(injury.infection_signs ?? [])],
     coverable: injury.coverable ?? EMPTY_SURFACE_ANSWERS.coverable,
     friction_or_contact_problem:
@@ -164,13 +175,20 @@ function surfaceDeclaration(
   answers: SurfaceFollowUpAnswers,
   { includeFriction }: { includeFriction: boolean },
 ): TodayInjuryDeclaration {
+  const bleedFields = BLEED_ANSWER_FIELDS[answers.bleed];
+  // The athlete did not revisit the bleeding question, so the drainage already
+  // on record still stands. Sending the canonical mapping's drainage here would
+  // downgrade a stored "present" to "unknown" on an otherwise untouched recheck
+  // — losing a safety signal nobody asked to change.
+  const drainageUntouched = answers.bleed === answers.initialBleed && answers.storedDrainage !== null;
   const declaration: TodayInjuryDeclaration = {
     flag_id: flagId,
     status,
     skin_integrity: answers.skin_integrity,
     infection_signs: answers.infection_signs,
     coverable: answers.coverable,
-    ...BLEED_ANSWER_FIELDS[answers.bleed],
+    ...bleedFields,
+    ...(drainageUntouched ? { drainage: answers.storedDrainage as Drainage } : {}),
   };
   // The recheck does not ask about friction, so it does not send it — an
   // unasked field must keep its stored value rather than be overwritten.
@@ -324,6 +342,13 @@ export function TodayInjuryManager({
   }
 
   function handleInjuryAction(injury: InjuryFlagRecord, status: TodayInjuryCheckinStatus) {
+    // A write is already in flight. updateInjury would refuse this one anyway,
+    // but the handler would first tear down whatever follow-up or confirmation
+    // is open — so a click on a second row silently discarded the surface
+    // answers being filled in on the first. Refuse before touching any state.
+    if (pendingFlagId) {
+      return;
+    }
     if (status === "resolved") {
       setSurfaceFollowUpId(null);
       setConfirmingClearId(injury.id);
@@ -443,6 +468,11 @@ export function TodayInjuryManager({
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
             const isPending = pendingFlagId === injury.id;
+            // Any in-flight write locks every row's status actions, not just its
+            // own. The store refuses concurrent writes, so leaving other rows
+            // clickable only offered an action that could not succeed — and that
+            // discarded a follow-up in progress on its way to failing.
+            const isLockedByOtherWrite = pendingFlagId !== null && !isPending;
 
             return (
               <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
@@ -470,8 +500,15 @@ export function TodayInjuryManager({
                         className={`today-segment${isSelected ? " today-segment-active" : ""}${
                           isAwaitingConfirmation ? " today-segment-pending" : ""
                         }`}
-                        disabled={isPending}
+                        disabled={isPending || isLockedByOtherWrite}
+                        // aria-pressed stays false until the backend confirms:
+                        // pressed means SAVED. The pending state is announced
+                        // separately so a screen-reader user still knows the
+                        // answer is captured but not yet written.
                         aria-pressed={isSelected}
+                        aria-describedby={
+                          isAwaitingConfirmation ? `${injury.id}-pending-hint` : undefined
+                        }
                         data-awaiting-confirmation={isAwaitingConfirmation || undefined}
                         onClick={() => handleInjuryAction(injury, action.value)}
                       >
@@ -480,6 +517,11 @@ export function TodayInjuryManager({
                     );
                   })}
                 </div>
+                {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
+                  <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
+                    Not saved yet — confirm below to log this.
+                  </p>
+                ) : null}
                 {surfaceFollowUpId === injury.id ? (
                   <div
                     className="today-injury-surface-followup"

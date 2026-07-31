@@ -839,8 +839,25 @@ def _surface_medical_review(context: ReadinessContext) -> tuple[str, str] | None
 # actually reaches the wound: contact/impact, grappling and clinch, or repeated
 # friction over it. The body AREA of a skin wound never implies a load
 # restriction, so none of this consults injury regions.
-_CONTACT_SESSION_TYPES = frozenset({"sparring", "spar", "fight_or_match", "fight", "match"})
-_CONTACT_BLOCK_TYPES = frozenset({"sparring"})
+_CONTACT_SESSION_TYPES = frozenset(
+    {"sparring", "spar", "hard_spar", "fight_or_match", "fight", "match", "impact", "contact"}
+)
+_CONTACT_BLOCK_TYPES = frozenset({"sparring", "impact", "contact"})
+# Structured training tags that mean the athlete takes or delivers impact. These
+# come from the plan's own tag vocabulary, so an impact session is recognised
+# without having to find the word in prose.
+_CONTACT_EXPOSURE_TAGS = frozenset(
+    {
+        "contact",
+        "hard_contact",
+        "head_impact",
+        "live_rounds",
+        "impact",
+        "high_impact_plyo",
+        "landing_stress_high",
+    }
+)
+_CONTACT_TAG_FIELDS = ("tags", "training_tags", "exposure_tags", "session_tags")
 _NEGATIVE_ANSWERS = frozenset({"", "none", "no", "false", "0", "off", "nil"})
 _CONTACT_EXPOSURE_TERMS = (
     "spar",
@@ -855,6 +872,11 @@ _CONTACT_EXPOSURE_TERMS = (
     "impact",
     "competition",
 )
+# Prose that says a session is explicitly WITHOUT contact/impact. Checked before
+# the positive terms, because "no contact" contains "contact" and a plain
+# substring search reads a contact-free session as a contact one.
+_CONTACT_NEGATION_PREFIXES = ("no ", "non-", "non ", "zero ", "without ", "avoid ", "skip ")
+_CONTACT_NEGATION_SUFFIXES = ("-free", " free")
 # Repeated friction / direct impact over a covered area: enough to lift a dressing
 # or rub a blister open, without being contact work.
 _FRICTION_EXPOSURE_TERMS = (
@@ -875,8 +897,49 @@ _FRICTION_EXPOSURE_TERMS = (
 )
 
 
+def _mapping_exposure_tags(mapping: Mapping[str, Any]) -> set[str]:
+    """Lower-cased structured training tags on one session/block/exercise entry."""
+    tags: set[str] = set()
+    for key in _CONTACT_TAG_FIELDS:
+        value = mapping.get(key)
+        if isinstance(value, str):
+            tags.add(_clean(value).lower())
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            tags.update(_clean(item).lower() for item in value if item)
+    return {tag for tag in tags if tag}
+
+
+def _text_mentions_exposure(text: str, terms: Sequence[str]) -> bool:
+    """True when the prose names an exposure term that is not explicitly negated.
+
+    ``no contact``, ``non-contact`` and ``contact-free`` all contain ``contact``;
+    a plain substring search reads every one of them as contact work and puts a
+    restriction on a session built to avoid exactly that.
+    """
+    for term in terms:
+        start = 0
+        while True:
+            index = text.find(term, start)
+            if index < 0:
+                break
+            before = text[:index]
+            after = text[index + len(term) :]
+            negated = any(before.endswith(prefix) for prefix in _CONTACT_NEGATION_PREFIXES) or any(
+                after.startswith(suffix) for suffix in _CONTACT_NEGATION_SUFFIXES
+            )
+            if not negated:
+                return True
+            start = index + len(term)
+    return False
+
+
 def _session_contact_exposure(session: Mapping[str, Any] | None) -> bool:
-    """True when today's session puts the athlete in contact / grappling work."""
+    """True when today's session puts the athlete in contact / grappling / impact work.
+
+    Impact counts: an open wound taking repeated direct impact is exposed whether
+    or not another person is involved, so a structured impact session has to
+    reach the same restriction sparring does.
+    """
     if not isinstance(session, Mapping) or not session:
         return False
     for mapping in _iter_session_mappings(session):
@@ -884,7 +947,9 @@ def _session_contact_exposure(session: Mapping[str, Any] | None) -> bool:
             return True
         if _clean(mapping.get("block_type") or mapping.get("type")).lower() in _CONTACT_BLOCK_TYPES:
             return True
-        for key in ("contact", "coach_led_contact", "contact_level", "sparring"):
+        if _mapping_exposure_tags(mapping) & _CONTACT_EXPOSURE_TAGS:
+            return True
+        for key in ("contact", "coach_led_contact", "contact_level", "sparring", "impact"):
             value = mapping.get(key)
             if isinstance(value, bool):
                 if value:
@@ -892,16 +957,14 @@ def _session_contact_exposure(session: Mapping[str, Any] | None) -> bool:
                 continue
             if value is not None and _clean(value).lower() not in _NEGATIVE_ANSWERS:
                 return True
-    text = _session_text(session)
-    return any(term in text for term in _CONTACT_EXPOSURE_TERMS)
+    return _text_mentions_exposure(_session_text(session), _CONTACT_EXPOSURE_TERMS)
 
 
 def _session_friction_exposure(session: Mapping[str, Any] | None) -> bool:
     """True when the session repeatedly rubs or impacts a covered area."""
     if _session_contact_exposure(session):
         return True
-    text = _session_text(session)
-    return any(term in text for term in _FRICTION_EXPOSURE_TERMS)
+    return _text_mentions_exposure(_session_text(session), _FRICTION_EXPOSURE_TERMS)
 
 
 def _active_context_injury_stop(context: ReadinessContext) -> str | None:
@@ -1082,6 +1145,23 @@ def _risk_adjustment(
 ) -> ReadinessAdjustment | None:
     flags = _active_safety_flags(checkin)
     contact_sport = _is_combat_contact_sport(context)
+
+    # A wound showing infection signs, uncontrolled bleeding or drainage is a
+    # medical question, not a dosage one, so it is assessed alongside the red
+    # flags rather than down in the dosage rules. Severe wounds are excluded —
+    # they keep the existing severe-injury gates.
+    #
+    # It is NOT, however, the strongest question. A red flag symptom, or an
+    # unrelated severe / worsening non-surface injury, owns the decision; the
+    # skin review is recorded as a safety check ON that stronger decision instead
+    # of replacing it. Returning the review first meant an infected blister could
+    # mask an active severe shoulder injury and downgrade "stop training" to
+    # "get this checked".
+    surface_review = _surface_medical_review(context)
+    surface_review_check = (
+        _safety_check_code("surface_injury", "medical_review") if surface_review is not None else ""
+    )
+
     if flags:
         trigger_text = ", ".join(_SAFETY_FLAG_LABELS[flag] for flag in flags)
         reason = (
@@ -1094,16 +1174,23 @@ def _risk_adjustment(
             title="No training today.",
             reason=reason,
             action="Stop training and seek medical advice.",
-            triggers=_with_context_triggers(*flags, "red_flag", session_risk=session_risk, phase=phase, contact_sport=contact_sport),
+            triggers=_with_context_triggers(*flags, "red_flag", surface_review_check, session_risk=session_risk, phase=phase, contact_sport=contact_sport),
             session_risk=session_risk,
         )
 
-    # A wound showing infection signs, uncontrolled bleeding or drainage is a
-    # medical question, not a dosage one, so it is checked alongside the red flags
-    # (before the safe-filler exemption). Severe wounds are excluded here — they
-    # keep the existing severe-injury gates below.
-    surface_review = _surface_medical_review(context)
-    if surface_review is not None:
+    active_injury_stop_reason = _active_context_injury_stop(context)
+    # A blanket "my injury is worse" answer must not stop all training when the
+    # only thing being tracked is skin: that routes through the surface evaluator
+    # (contact restriction), never a rehab-only day.
+    declared_worse = checkin.active_injury == "worse" and not _all_active_injuries_are_routable_surface(
+        context
+    )
+    # The stop below is exempted for a support session, so the skin review keeps
+    # its own pathway there — a safe-filler day does not make an infected wound
+    # safe to leave unassessed.
+    stronger_injury_stop = (declared_worse or active_injury_stop_reason is not None) and not support_session
+
+    if surface_review is not None and not stronger_injury_stop:
         review_label, review_reason = surface_review
         return _surface_medical_review_adjustment(
             review_label,
@@ -1120,13 +1207,6 @@ def _risk_adjustment(
     if support_session:
         return None
 
-    active_injury_stop_reason = _active_context_injury_stop(context)
-    # A blanket "my injury is worse" answer must not stop all training when the
-    # only thing being tracked is skin: that routes through the surface evaluator
-    # (contact restriction), never a rehab-only day.
-    declared_worse = checkin.active_injury == "worse" and not _all_active_injuries_are_routable_surface(
-        context
-    )
     if declared_worse or active_injury_stop_reason is not None:
         context_reason = active_injury_stop_reason or "The injury is worse."
         reason = f"{context_reason} Hard combat work is not safe today."
@@ -1142,6 +1222,9 @@ def _risk_adjustment(
             safety="Seek medical advice if pain is sharp, unstable, swollen, or neurological.",
             triggers=_with_context_triggers(
                 "active_injury_worse",
+                # The skin wound was still assessed; it just did not win. Recording
+                # it here is what keeps "checked" distinct from "not looked at".
+                surface_review_check,
                 session_risk=session_risk,
                 phase=phase,
                 contact_sport=contact_sport,
@@ -2073,7 +2156,11 @@ def _safe_filler_adjustment(
 # inferred from whether the existing action text happens to mention sparring:
 # reading athlete-facing prose to decide what a safety restriction already
 # covers is a guess, and the failure mode is silently dropping the instruction.
-_CONTACT_RESTRICTION_INSTRUCTION = "Skip all contact work, including sparring, clinch, and grappling today."
+# Stated as "all contact work" first, then the named forms. The exposure detector
+# accepts generic contact (a session that says "contact" with no discipline
+# named), so an instruction that only listed sparring, clinch and grappling left
+# the very work that triggered the restriction technically permitted.
+_CONTACT_RESTRICTION_INSTRUCTION = "Skip all contact work today, including sparring, clinch, and grappling."
 _SURFACE_PROTECTION_INSTRUCTION = "Keep it taped and off direct friction."
 
 # Why contact is out, keyed to the classifier's own reason code rather than

@@ -1314,6 +1314,28 @@ create trigger set_session_logs_updated_at
 -- admin review queue. Flags are resolved (status transition), never deleted,
 -- so the injury history stays auditable.
 -- ---------------------------------------------------------------------------
+
+-- infection_signs is modelled as list[str] everywhere above the database, so the
+-- column constraint checks element type as well as shape. A CHECK cannot contain
+-- a subquery, hence this immutable helper.
+create or replace function public.injury_flags_infection_signs_valid(signs jsonb)
+returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select case
+    when signs is null then true
+    when jsonb_typeof(signs) <> 'array' then false
+    when jsonb_array_length(signs) > 8 then false
+    else not exists (
+      select 1
+      from jsonb_array_elements(signs) as element
+      where jsonb_typeof(element) <> 'string'
+    )
+  end;
+$$;
+
 create table if not exists public.injury_flags (
   id uuid primary key default gen_random_uuid(),
   athlete_id uuid not null references public.profiles(id) on delete cascade,
@@ -1338,7 +1360,7 @@ create table if not exists public.injury_flags (
   drainage text
     check (drainage is null or drainage in ('none', 'present', 'unknown')),
   infection_signs jsonb not null default '[]'::jsonb
-    check (jsonb_typeof(infection_signs) = 'array' and jsonb_array_length(infection_signs) <= 8),
+    check (public.injury_flags_infection_signs_valid(infection_signs)),
   coverable text
     check (coverable is null or coverable in ('yes', 'no', 'unknown')),
   friction_or_contact_problem text

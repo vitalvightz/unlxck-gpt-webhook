@@ -18,6 +18,7 @@ from .contracts.checkin_decision import (
 )
 from .contracts.completion import CompletionStatus, LandingSessionState
 from .contracts.injury_checkin import (
+    MAX_INFECTION_SIGNS,
     BleedingStatus as _BleedingStatus,
     Coverable as _Coverable,
     Drainage as _Drainage,
@@ -1797,10 +1798,6 @@ SurfaceInjuryClass = Literal[
     "surface_no_contact",
     "surface_medical_review",
 ]
-# How many infection signs one report may carry (a bounded checkbox list, not
-# free-form input).
-MAX_INFECTION_SIGNS = 8
-
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DAILY_NOTE_MAX_CHARS = 2000
 
@@ -1848,7 +1845,7 @@ class InjuryFlagRecord(BaseModel):
     skin_integrity: SkinIntegrity | None = None
     bleeding_status: BleedingStatus | None = None
     drainage: Drainage | None = None
-    infection_signs: list[str] = Field(default_factory=list)
+    infection_signs: list[str] = Field(default_factory=list, max_length=MAX_INFECTION_SIGNS)
     coverable: Coverable | None = None
     friction_or_contact_problem: FrictionOrContactProblem | None = None
     # Canonical surface classification, computed server-side so the UI never
@@ -2080,11 +2077,20 @@ class TodayInjuryDeclaration(BaseModel):
     @classmethod
     def clean_infection_signs(cls, value: Any) -> list[str] | None:
         if value is None:
-            raise ValueError("infection_signs must be a list or string")
+            # Absent is not malformed. Every surface answer is optional by
+            # design — an existing client that posts {flag_id, status}, or one
+            # that sends an explicit null for a question it did not ask, stays
+            # valid, and the classifier reads the missing answer as "unknown".
+            return None
         if isinstance(value, str):
             value = [value]
         if not isinstance(value, (list, tuple)):
-            return None
+            # Silently reading a malformed container as "omitted" fails OPEN: the
+            # safety classifier would see no infection signs on a wound the
+            # client tried to report as infected, and route it as stable skin.
+            # A rejected request is the only safe reading of an unparseable
+            # safety answer.
+            raise ValueError("infection_signs must be a list of strings")
         return [str(item).strip()[:60] for item in value if str(item).strip()]
 
     @field_validator("flag_id", mode="before")

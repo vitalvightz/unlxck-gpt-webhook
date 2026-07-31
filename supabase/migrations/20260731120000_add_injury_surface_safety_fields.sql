@@ -52,8 +52,31 @@ alter table public.injury_flags
     or friction_or_contact_problem in ('yes', 'no', 'unknown')
   );
 
+-- infection_signs is modelled as list[str] everywhere above the database, so the
+-- constraint checks element type as well as shape. A CHECK cannot contain a
+-- subquery, hence the immutable helper. Without the element check a direct write
+-- or a future migration could store [1, true, {}] — valid against the old
+-- constraint, and a type error for every reader.
+create or replace function public.injury_flags_infection_signs_valid(signs jsonb)
+returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select case
+    when signs is null then true
+    when jsonb_typeof(signs) <> 'array' then false
+    when jsonb_array_length(signs) > 8 then false
+    else not exists (
+      select 1
+      from jsonb_array_elements(signs) as element
+      where jsonb_typeof(element) <> 'string'
+    )
+  end;
+$$;
+
 alter table public.injury_flags
   drop constraint if exists injury_flags_infection_signs_check;
 alter table public.injury_flags
   add constraint injury_flags_infection_signs_check
-  check (jsonb_typeof(infection_signs) = 'array' and jsonb_array_length(infection_signs) <= 8);
+  check (public.injury_flags_infection_signs_valid(infection_signs));

@@ -1465,6 +1465,92 @@ def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any])
     return body_area or details
 
 
+# Guided intake asks the surface-safety questions in its own vocabulary. The
+# canonical classifier reads the daily check-in's vocabulary. Without this
+# translation the bootstrapped flag carries no structured wound state at all, and
+# an open, infected or uncontrolled-bleeding intake cut is classified as
+# `stable_surface` in Today — a wound that triaged as needing review at intake
+# silently becomes "no session change".
+_GUIDED_OPEN_WOUND_TO_SKIN_INTEGRITY = {
+    "yes": "open",
+    "true": "open",
+    "open": "open",
+    "burst": "open",
+    "no": "intact",
+    "false": "intact",
+    "closed": "intact",
+    "intact": "intact",
+    "not_sure": "unknown",
+    "unsure": "unknown",
+    "unknown": "unknown",
+}
+_GUIDED_BLEEDING_TO_CANONICAL = {
+    "wont_stop": "uncontrolled",
+    "won't_stop": "uncontrolled",
+    "uncontrolled": "uncontrolled",
+    "a_little": "controlled",
+    "controlled": "controlled",
+    "none": "none",
+    "no": "none",
+    "stopped": "none",
+}
+# Matches the injury_flags column constraint. An oversized list would fail the
+# insert, and the bootstrap swallows write errors — so an over-long answer would
+# silently drop the whole wound instead of just the surplus signs.
+_MAX_INFECTION_SIGNS = 8
+_GUIDED_EMPTY_ANSWERS = frozenset({"", "none", "no", "nil", "n/a", "na", "unknown", "unsure", "not_sure"})
+
+
+def _guided_answer(injury: Mapping[str, Any], field: str) -> str:
+    value = injury.get(field)
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _guided_surface_safety_fields(injury: Mapping[str, Any]) -> dict[str, object]:
+    """Canonical surface-safety columns carried over from a guided intake injury.
+
+    Only answers the athlete actually gave are written: an unanswered question
+    stays absent so the classifier reads it as "unknown" rather than "clear".
+    """
+    fields: dict[str, object] = {}
+
+    skin_integrity = _GUIDED_OPEN_WOUND_TO_SKIN_INTEGRITY.get(
+        _guided_answer(injury, "skin_integrity")
+    ) or _GUIDED_OPEN_WOUND_TO_SKIN_INTEGRITY.get(_guided_answer(injury, "open_wound"))
+    if skin_integrity:
+        fields["skin_integrity"] = skin_integrity
+
+    bleeding = _GUIDED_BLEEDING_TO_CANONICAL.get(_guided_answer(injury, "bleeding_status"))
+    if bleeding:
+        fields["bleeding_status"] = bleeding
+
+    raw_signs = injury.get("infection_signs")
+    if isinstance(raw_signs, str):
+        raw_signs = [raw_signs]
+    if isinstance(raw_signs, (list, tuple, set, frozenset)):
+        signs: list[str] = []
+        for item in raw_signs:
+            token = str(item or "").strip().lower().replace("-", "_").replace(" ", "_")
+            if token and token not in _GUIDED_EMPTY_ANSWERS and token not in signs:
+                signs.append(token)
+        if signs:
+            fields["infection_signs"] = signs[:_MAX_INFECTION_SIGNS]
+
+    # Guided intake does not ask whether the wound can be kept covered today, so
+    # this is only carried when a caller supplied it.
+    coverable = _guided_answer(injury, "coverable")
+    if coverable in {"yes", "no", "unknown"}:
+        fields["coverable"] = coverable
+
+    drainage = _guided_answer(injury, "drainage")
+    if drainage in {"none", "present", "unknown"}:
+        fields["drainage"] = drainage
+
+    return fields
+
+
 def _guided_intake_injury_candidate(
     injury: Mapping[str, Any],
     *,
@@ -1483,6 +1569,9 @@ def _guided_intake_injury_candidate(
         "description": description or body_area,
         "severity": _flag_severity_from_guided_injury(injury),
         "status": _flag_status_from_guided_injury(injury),
+        # The wound state triage already collected. Without it the canonical
+        # classifier sees an unanswered wound and routes it as stable skin.
+        **_guided_surface_safety_fields(injury),
     }
 
 
