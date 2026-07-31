@@ -277,9 +277,11 @@ export function TodaySessionPanel({
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
-  const isNextSessionPreview = session.session_relation === "next";
+  const isSessionPreview = resolvedDecision.displayTier === "preview";
   const relationCopy = getSessionRelationCopy(session, status);
-  const decisionBlocksTraining = resolvedDecision.blocksTraining;
+  const decisionBlocksCurrentSession = resolvedDecision.blocksCurrentSession;
+  const severeInjuryBlocksCurrentSession =
+    resolvedDecision.severeInjuryBlocksCurrentSession;
   // STOP + the scheduled session is today: show the recovery/mobility safe
   // session in place of the real blocks so Today never displays hard combat as
   // available under a stop. Future sessions stay visible but read as pending.
@@ -302,9 +304,11 @@ export function TodaySessionPanel({
     resolvedDecision.tone === "red"
       ? resolvedDecision.tone
       : undefined;
-  const terminalStatusCopy = decisionBlocksTraining
-    ? "Follow the recommendation above. Do not start this session from Today."
-    : isNextSessionPreview
+  const terminalStatusCopy = severeInjuryBlocksCurrentSession
+    ? "Blocked by an active severe injury. Marking it easing does not lift the hold."
+    : decisionBlocksCurrentSession
+      ? "Follow the recommendation above. Do not start this session from Today."
+      : isSessionPreview
       ? "Preview only. Completion opens on the matched training day."
       : "Session details available, but completion is unavailable for this entry.";
 
@@ -430,7 +434,7 @@ export function TodaySessionPanel({
               <p>{duration}</p>
             </div>
           ) : null}
-          {!isNextSessionPreview ? (
+          {!isSessionPreview ? (
             <div>
               <p className="today-detail-label">Status</p>
               <p>{getCompletionLabel(status)}</p>
@@ -438,7 +442,7 @@ export function TodaySessionPanel({
           ) : null}
         </div>
       )}
-      {isNextSessionPreview && !safeSession ? (
+      {isSessionPreview && !safeSession ? (
         <div className="today-next-planned-note">
           <p className="today-pending-line">
             <span className="today-pending-pill">Pending</span>
@@ -457,9 +461,17 @@ export function TodaySessionPanel({
 
       {!canCompleteSession ? (
         <div className="today-terminal-block">
-          <p className="today-terminal-status" data-tone={decisionBlocksTraining ? "blocked" : "neutral"}>
+          <p
+            className="today-terminal-status"
+            data-tone={decisionBlocksCurrentSession ? "blocked" : "neutral"}
+          >
             {terminalStatusCopy}
           </p>
+          {severeInjuryBlocksCurrentSession ? (
+            <a href="#today-injury" className="secondary-button today-terminal-action">
+              Open injury check-in
+            </a>
+          ) : null}
         </div>
       ) : null}
 

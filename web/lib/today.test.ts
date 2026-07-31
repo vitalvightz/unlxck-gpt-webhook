@@ -490,6 +490,14 @@ test("Today session card uses short preview wording and Next session label", () 
     source.includes("Preview only. Completion opens on the matched training day."),
     true,
   );
+  assert.equal(source.includes("resolvedDecision.blocksCurrentSession"), true);
+  assert.equal(source.includes("resolvedDecision.severeInjuryBlocksCurrentSession"), true);
+  assert.equal(
+    source.includes("Blocked by an active severe injury. Marking it easing does not lift the hold."),
+    true,
+  );
+  assert.equal(source.includes('href="#today-injury"'), true);
+  assert.equal(source.includes("Open injury check-in"), true);
 });
 
 test("Today recommendation styles keep preview neutral, modify amber, and pull-back red", () => {

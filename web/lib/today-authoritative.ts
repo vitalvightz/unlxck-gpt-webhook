@@ -1,5 +1,6 @@
 import {
   canCompleteTodaySession,
+  getActiveSevereInjury,
   getTierMeta,
   getTodayDecisionBanner as getLegacyTodayDecisionBanner,
   hasTodaySession,
@@ -92,7 +93,8 @@ export type ResolvedTodayDecision = {
   tone: TodayDecisionTone;
   hasSession: boolean;
   sessionIsToday: boolean;
-  blocksTraining: boolean;
+  blocksCurrentSession: boolean;
+  severeInjuryBlocksCurrentSession: boolean;
   canCompleteSession: boolean;
   useSafeReplacement: boolean;
 };
@@ -198,7 +200,11 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const authoritativeTier =
     state.today.decision_tier ?? FALLBACK_TIER_BY_RECOMMENDATION[recommendationState];
   const hasSession = hasTodaySession(state.today.next_session);
-  const isPreview = state.today.next_session.session_relation === "next" || !hasSession;
+  const sessionIsToday = isSessionToday(
+    state.today.next_session,
+    state.today.session_scope,
+  );
+  const isPreview = !hasSession || !sessionIsToday;
   const displayTier: TodayDecisionTier = isPreview ? "preview" : authoritativeTier;
   const tone = getTierMeta(displayTier).tone;
   const banner = resolvePresentationBanner(
@@ -206,16 +212,17 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     state.today.recommendation_reason,
     displayTier,
   );
-  const sessionIsToday = isSessionToday(
-    state.today.next_session,
-    state.today.session_scope,
-  );
-  const blocksTraining =
-    authoritativeTier === "stop" || authoritativeTier === "pull_back";
+  const blocksCurrentSession =
+    sessionIsToday &&
+    (authoritativeTier === "stop" || authoritativeTier === "pull_back");
+  const severeInjuryBlocksCurrentSession =
+    blocksCurrentSession &&
+    !state.today.injury_hold_exempt &&
+    Boolean(getActiveSevereInjury(state.open_injuries));
   const canCompleteSession =
     canCompleteTodaySession(state.today.next_session) &&
     sessionIsToday &&
-    !blocksTraining;
+    !blocksCurrentSession;
   const useSafeReplacement =
     authoritativeTier === "stop" && hasSession && sessionIsToday;
 
@@ -227,7 +234,8 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     tone,
     hasSession,
     sessionIsToday,
-    blocksTraining,
+    blocksCurrentSession,
+    severeInjuryBlocksCurrentSession,
     canCompleteSession,
     useSafeReplacement,
   };

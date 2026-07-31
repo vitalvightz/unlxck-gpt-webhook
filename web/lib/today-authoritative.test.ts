@@ -28,6 +28,18 @@ const BASE_STATE: TodayCommandView = {
   quick_actions: [],
 };
 
+const ACTIVE_SEVERE_INJURY: TodayCommandView["open_injuries"][number] = {
+  id: "injury-1",
+  athlete_id: "athlete-1",
+  source: "today",
+  body_area: "knee",
+  description: "left knee",
+  severity: "severe",
+  status: "open",
+  created_at: "2026-06-18T10:00:00Z",
+  updated_at: "2026-06-18T10:00:00Z",
+};
+
 test("green remains completable despite stop-sounding prose", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
@@ -39,7 +51,7 @@ test("green remains completable despite stop-sounding prose", () => {
   });
 
   assert.equal(resolved.authoritativeTier, "green");
-  assert.equal(resolved.blocksTraining, false);
+  assert.equal(resolved.blocksCurrentSession, false);
   assert.equal(resolved.canCompleteSession, true);
   assert.ok(resolved.banner);
   assert.equal(resolved.banner.displayState, "go");
@@ -59,7 +71,7 @@ test("pull-back remains blocking despite green-sounding prose", () => {
   });
 
   assert.equal(resolved.authoritativeTier, "pull_back");
-  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.blocksCurrentSession, true);
   assert.equal(resolved.canCompleteSession, false);
 });
 
@@ -75,7 +87,7 @@ test("STOP uses a safe replacement only for today's matched session", () => {
 
   assert.equal(resolved.authoritativeTier, "stop");
   assert.equal(resolved.sessionIsToday, true);
-  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.blocksCurrentSession, true);
   assert.equal(resolved.canCompleteSession, false);
   assert.equal(resolved.useSafeReplacement, true);
 });
@@ -89,19 +101,7 @@ test("backend STOP remains visible before check-in when a severe injury is activ
       recommendation_reason: null,
       decision_tier: "stop",
     },
-    open_injuries: [
-      {
-        id: "injury-1",
-        athlete_id: "athlete-1",
-        source: "today",
-        body_area: "knee",
-        description: "left knee",
-        severity: "severe",
-        status: "open",
-        created_at: "2026-06-18T10:00:00Z",
-        updated_at: "2026-06-18T10:00:00Z",
-      },
-    ],
+    open_injuries: [ACTIVE_SEVERE_INJURY],
   });
 
   assert.equal(resolved.displayTier, "stop");
@@ -110,7 +110,8 @@ test("backend STOP remains visible before check-in when a severe injury is activ
   assert.equal(resolved.banner.chip, "STOP");
   assert.equal(resolved.banner.title, "Stop today");
   assert.equal(resolved.banner.tone, "red");
-  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.blocksCurrentSession, true);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, true);
   assert.equal(resolved.canCompleteSession, false);
 });
 
@@ -139,12 +140,38 @@ test("authoritative STOP overrides pull-back presentation as well as session saf
   );
   assert.equal(resolved.banner.tone, "red");
   assert.equal(getTierMeta(resolved.displayTier).label, "Stop today");
-  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.blocksCurrentSession, true);
   assert.equal(resolved.canCompleteSession, false);
   assert.equal(resolved.useSafeReplacement, true);
 });
 
-test("future previews remain non-completable and never get today's replacement", () => {
+test("future pull-back remains a neutral pending preview", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "pull_back",
+      next_session: {
+        ...BASE_STATE.today.next_session,
+        session_relation: "next",
+      },
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "pull_back");
+  assert.equal(resolved.displayTier, "preview");
+  assert.equal(resolved.sessionIsToday, false);
+  assert.equal(resolved.blocksCurrentSession, false);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, false);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, false);
+  assert.equal(resolved.banner?.chip, "PREVIEW");
+  assert.equal(resolved.tone, "neutral");
+});
+
+test("future STOP remains a neutral pending preview without remediation or replacement", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
     today: {
@@ -157,13 +184,34 @@ test("future previews remain non-completable and never get today's replacement",
       },
       session_scope: "next",
     },
+    open_injuries: [ACTIVE_SEVERE_INJURY],
   });
 
+  assert.equal(resolved.authoritativeTier, "stop");
   assert.equal(resolved.displayTier, "preview");
   assert.equal(resolved.sessionIsToday, false);
+  assert.equal(resolved.blocksCurrentSession, false);
   assert.equal(resolved.canCompleteSession, false);
   assert.equal(resolved.useSafeReplacement, false);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, false);
+  assert.equal(resolved.banner?.chip, "PREVIEW");
   assert.equal(resolved.tone, "neutral");
+});
+
+test("severe-injury remediation respects the backend exemption", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "stop",
+      injury_hold_exempt: true,
+    },
+    open_injuries: [ACTIVE_SEVERE_INJURY],
+  });
+
+  assert.equal(resolved.blocksCurrentSession, true);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, false);
 });
 
 test("the banner adapter stays presentation-only", () => {
