@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   getInjuryOverrideBanner,
+  getTierMeta,
   getTodayDecisionBanner,
   resolveTodayDecision,
 } from "./today-authoritative.ts";
@@ -74,6 +75,70 @@ test("STOP uses a safe replacement only for today's matched session", () => {
 
   assert.equal(resolved.authoritativeTier, "stop");
   assert.equal(resolved.sessionIsToday, true);
+  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, true);
+});
+
+test("backend STOP remains visible before check-in when a severe injury is active", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "not_checked_in",
+      recommendation_reason: null,
+      decision_tier: "stop",
+    },
+    open_injuries: [
+      {
+        id: "injury-1",
+        athlete_id: "athlete-1",
+        source: "today",
+        body_area: "knee",
+        description: "left knee",
+        severity: "severe",
+        status: "open",
+        created_at: "2026-06-18T10:00:00Z",
+        updated_at: "2026-06-18T10:00:00Z",
+      },
+    ],
+  });
+
+  assert.equal(resolved.displayTier, "stop");
+  assert.ok(resolved.banner);
+  assert.equal(resolved.banner.displayState, "stop");
+  assert.equal(resolved.banner.chip, "STOP");
+  assert.equal(resolved.banner.title, "Stop today");
+  assert.equal(resolved.banner.tone, "red");
+  assert.equal(resolved.blocksTraining, true);
+  assert.equal(resolved.canCompleteSession, false);
+});
+
+test("authoritative STOP overrides pull-back presentation as well as session safety", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      recommendation_reason: "Sharp work ready.\nEverything feels good.\nTrain normally.",
+      decision_tier: "stop",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "stop");
+  assert.equal(resolved.displayTier, "stop");
+  assert.ok(resolved.banner);
+  assert.equal(resolved.banner.displayState, "stop");
+  assert.equal(resolved.banner.chip, "STOP");
+  assert.notEqual(resolved.banner.chip, "PULL BACK");
+  assert.equal(resolved.banner.title, "Stop today");
+  assert.equal(resolved.banner.detail, "A safety restriction is blocking training today.");
+  assert.equal(
+    resolved.banner.action,
+    "Do not start today's planned session. Follow the injury and safety guidance below.",
+  );
+  assert.equal(resolved.banner.tone, "red");
+  assert.equal(getTierMeta(resolved.displayTier).label, "Stop today");
   assert.equal(resolved.blocksTraining, true);
   assert.equal(resolved.canCompleteSession, false);
   assert.equal(resolved.useSafeReplacement, true);

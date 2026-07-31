@@ -15,6 +15,16 @@ const BANNER: TodayDecisionBanner = {
   tone: "amber",
 };
 
+const STOP_BANNER: TodayDecisionBanner = {
+  state: "not_checked_in",
+  displayState: "stop",
+  chip: "STOP",
+  title: "Stop today",
+  detail: "A safety restriction is blocking training today.",
+  action: "Do not start today's planned session. Follow the injury and safety guidance below.",
+  tone: "red",
+};
+
 /** React escapes apostrophes in static markup, so compare against plain text. */
 function render(props: Parameters<typeof TodayDecisionPanel>[0]): string {
   return renderToStaticMarkup(<TodayDecisionPanel {...props} />).replace(/&#x27;/g, "'");
@@ -76,6 +86,18 @@ test("decision based on always lists the available sources", () => {
   assert.ok(html.includes("today's check-in"));
   assert.ok(html.includes("your recent sessions"));
   assert.ok(!html.includes("Confidence"));
+});
+
+test("authoritative STOP renders a matching chip, headline, copy, and tone", () => {
+  const html = render({ banner: STOP_BANNER, tier: "stop" });
+
+  assert.ok(html.includes('data-state="stop"'));
+  assert.ok(html.includes('data-tone="red"'));
+  assert.ok(html.includes(">STOP<"));
+  assert.ok(html.includes("Stop today"));
+  assert.ok(html.includes(STOP_BANNER.action!));
+  assert.ok(html.includes(STOP_BANNER.detail));
+  assert.ok(!html.includes("PULL BACK"));
 });
 
 test("a missing-data note renders beneath the available sources", () => {

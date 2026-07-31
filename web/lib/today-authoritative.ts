@@ -19,7 +19,7 @@ type BannerOptions = {
 
 type AuthoritativeDisplayState = Extract<
   TodayDecisionDisplayState,
-  "go" | "adjust" | "pull_back" | "preview"
+  "go" | "adjust" | "stop" | "pull_back" | "preview"
 >;
 
 const DISPLAY_BY_DECISION: Partial<
@@ -36,6 +36,7 @@ const CHIP_BY_DISPLAY: Record<
 > = {
   go: "GO",
   adjust: "ADJUST",
+  stop: "STOP",
   pull_back: "PULL BACK",
   preview: "PREVIEW",
 };
@@ -46,6 +47,7 @@ const TONE_BY_DISPLAY: Record<
 > = {
   go: "green",
   adjust: "amber",
+  stop: "red",
   pull_back: "red",
   preview: "neutral",
 };
@@ -53,10 +55,9 @@ const TONE_BY_DISPLAY: Record<
 /**
  * Backend-authoritative Today banner adapter.
  *
- * The legacy formatter is still used for display copy only. Safety behaviour is
- * derived exclusively from the backend recommendation state (or preview scope):
- * prose such as "red flag", "pain is high", or a changed title can never change
- * the display state, training block, chip, or tone.
+ * The legacy formatter is still used for display copy only. This compatibility
+ * adapter normalizes state, chip and tone from the structured recommendation;
+ * the shared resolver below promotes the backend decision tier over that state.
  */
 export function getTodayDecisionBanner(
   state: TodayRecommendationState,
@@ -106,6 +107,85 @@ const FALLBACK_TIER_BY_RECOMMENDATION: Record<
   not_checked_in: "not_checked_in",
 };
 
+type ResolvedPresentationTier = Exclude<TodayDecisionTier, "not_checked_in">;
+
+const DISPLAY_BY_TIER: Record<ResolvedPresentationTier, AuthoritativeDisplayState> = {
+  stop: "stop",
+  pull_back: "pull_back",
+  modify: "adjust",
+  green: "go",
+  preview: "preview",
+};
+
+const DEFAULT_COPY_BY_TIER: Record<
+  ResolvedPresentationTier,
+  Pick<TodayDecisionBanner, "title" | "detail" | "action">
+> = {
+  stop: {
+    title: "Stop today",
+    detail: "A safety restriction is blocking training today.",
+    action: "Do not start today's planned session. Follow the injury and safety guidance below.",
+  },
+  pull_back: {
+    title: "Pull back today",
+    detail: "Your readiness is too low for hard combat work today.",
+    action: "Skip hard combat work today. Use recovery or light mobility instead.",
+  },
+  modify: {
+    title: "Modify today",
+    detail: "Your readiness is down, so reduce hard combat work today.",
+    action: "Follow the adjusted work and skip extras.",
+  },
+  green: {
+    title: "Green light",
+    detail: "Your check-in is clear for today's planned work.",
+    action: "Start the session and keep the work clean.",
+  },
+  preview: {
+    title: "Session preview",
+    detail: "This session is not open today.",
+    action: "Completion opens on the matched training day.",
+  },
+};
+
+function resolvePresentationBanner(
+  recommendationState: TodayRecommendationState,
+  reason: string | null | undefined,
+  displayTier: TodayDecisionTier,
+): TodayDecisionBanner | null {
+  if (displayTier === "not_checked_in") {
+    return null;
+  }
+
+  const displayState = DISPLAY_BY_TIER[displayTier];
+  const fallback = DEFAULT_COPY_BY_TIER[displayTier];
+
+  // STOP has no recommendation-state equivalent: the backend can raise it from
+  // severe injury or another safety authority before check-in. Use tier-safe
+  // copy so a stale or green-sounding recommendation can never contradict STOP.
+  const recommendationMatchesTier =
+    displayTier === "preview" ||
+    FALLBACK_TIER_BY_RECOMMENDATION[recommendationState] === displayTier;
+  const recommendationCopy =
+    displayTier === "stop" || !recommendationMatchesTier
+      ? null
+      : getTodayDecisionBanner(recommendationState, reason, {
+          isPreview: displayTier === "preview",
+        });
+  const copy = recommendationCopy ?? fallback;
+
+  return {
+    state: recommendationState,
+    displayState,
+    chip: CHIP_BY_DISPLAY[displayState],
+    title: copy.title,
+    detail: copy.detail,
+    action: copy.action,
+    safety: recommendationCopy?.safety,
+    tone: TONE_BY_DISPLAY[displayState],
+  };
+}
+
 /**
  * Resolve Today once for both presentation and session safety.
  *
@@ -121,12 +201,11 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const isPreview = state.today.next_session.session_relation === "next" || !hasSession;
   const displayTier: TodayDecisionTier = isPreview ? "preview" : authoritativeTier;
   const tone = getTierMeta(displayTier).tone;
-  const copy = getTodayDecisionBanner(
+  const banner = resolvePresentationBanner(
     recommendationState,
     state.today.recommendation_reason,
-    { isPreview },
+    displayTier,
   );
-  const banner = copy ? { ...copy, tone } : null;
   const sessionIsToday = isSessionToday(
     state.today.next_session,
     state.today.session_scope,

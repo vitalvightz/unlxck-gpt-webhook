@@ -85,6 +85,7 @@ export type TodayDecisionTone = "green" | "amber" | "red" | "neutral";
 export type TodayDecisionDisplayState =
   | "go"
   | "adjust"
+  | "stop"
   | "pull_back"
   | "rehab_only"
   | "no_training"
@@ -94,7 +95,7 @@ export type TodayDecisionDisplayState =
 export type TodayDecisionBanner = {
   state: TodayRecommendationState;
   displayState: TodayDecisionDisplayState;
-  chip: "GO" | "ADJUST" | "PULL BACK" | "REHAB ONLY" | "NO TRAINING" | "INJURY HOLD" | "PREVIEW";
+  chip: "GO" | "ADJUST" | "STOP" | "PULL BACK" | "REHAB ONLY" | "NO TRAINING" | "INJURY HOLD" | "PREVIEW";
   /** Short coach-card headline, e.g. "Pull back today". */
   title: string;
   /** One clear reason sentence. Prefers the backend reason when present. */
@@ -313,6 +314,9 @@ function getDisplayChip(displayState: TodayDecisionDisplayState): TodayDecisionB
   }
   if (displayState === "adjust") {
     return "ADJUST";
+  }
+  if (displayState === "stop") {
+    return "STOP";
   }
   if (displayState === "pull_back") {
     return "PULL BACK";
@@ -690,6 +694,7 @@ export function getDecisionTier(banner: TodayDecisionBanner | null): TodayDecisi
     return "not_checked_in";
   }
   switch (banner.displayState) {
+    case "stop":
     case "injury_blocked":
     case "no_training":
     case "rehab_only":
