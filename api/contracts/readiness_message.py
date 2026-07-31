@@ -908,7 +908,16 @@ _NO_IMPACT_VALUES = frozenset(
     }
 )
 _NO_FRICTION_VALUES = frozenset(
-+    {"no_friction", "non_friction", "friction_free", "zero_friction", "without_friction", "low", "light", "minimal"}
+    {
+        "no_friction",
+        "non_friction",
+        "friction_free",
+        "zero_friction",
+        "without_friction",
+        "low",
+        "light",
+        "minimal",
+    }
 )
 _CONTACT_EXPOSURE_TERMS = (
     "spar",
@@ -1272,6 +1281,24 @@ def _session_surface_exposure(
                 relevant = True
             if relevant and label not in targets[axis]:
                 targets[axis].append(label)
+
+    # A positive parent declaration describes real session exposure even when
+    # generic children cannot name the responsible block. Prefer child targets
+    # when they exist; otherwise keep one session-level target, but only when the
+    # parent's declared/inferred regions reach this injury. Generic direct impact
+    # therefore never broadens to an unrelated wound.
+    if has_nested_entries:
+        session_text = _mapping_executable_text(session)
+        session_label = _mapping_target_label(session, "session")
+        for axis, state in session_states.items():
+            if state is not True or targets[axis]:
+                continue
+            exposed_regions = _mapping_exposure_regions(session, axis, session_text)
+            relevant = bool(injury_regions & exposed_regions)
+            if axis == "contact_exposure" and not injury_regions:
+                relevant = True
+            if relevant:
+                targets[axis].append(session_label)
 
     return SurfaceSessionExposure(
         contact_exposure=bool(targets["contact_exposure"]),
@@ -2507,7 +2534,7 @@ def _surface_restriction_codes(
             restrictions.append("remove_direct_impact")
         if exposure.friction_exposure:
             restrictions.append("protect_or_replace_friction")
-    elif surface_class == "surface_local_restriction" and exposure.friction_exposure:
+    elif surface_class == "surface_local_restriction" and exposure.codes:
         restrictions.append("protect_or_replace_friction")
     return tuple(restrictions)
 
@@ -2524,8 +2551,8 @@ def _surface_restriction_instruction(
         return f"Remove or replace only the direct-impact block(s) that expose the wound{target}."
     target = f" during {named}" if named else ""
     return (
-        f"Protect the affected area from repeated rubbing{target}; if it cannot stay "
-        "covered, replace only that block."
+        f"Protect the affected area from contact, impact, or repeated rubbing{target}; "
+        "if it cannot stay securely covered, replace only that block."
     )
 
 
@@ -2632,7 +2659,17 @@ def _apply_surface_injury_policy(
             )
         )
         for code in injury_restrictions:
-            for target in exposure.targets_for(code):
+            code_targets = exposure.targets_for(code)
+            if (
+                assessment.classification == "surface_local_restriction"
+                and code == "protect_or_replace_friction"
+            ):
+                code_targets = (
+                    *exposure.contact_targets,
+                    *exposure.direct_impact_targets,
+                    *exposure.friction_targets,
+                )
+            for target in code_targets:
                 _append_unique(restriction_targets[code], target)
 
     if not surface_found:
@@ -2644,11 +2681,6 @@ def _apply_surface_injury_policy(
         adjustment,
         triggers=tuple(dict.fromkeys([*adjustment.triggers, *exposure_triggers])),
     )
-    if medical_review:
-        # The review pathway (or, for a severe wound, the existing severe gates)
-        # already owns the decision; only the record is added here.
-        return _with_safety_check(adjustment, "medical_review")
-
     decision = adjustment.decision
     title = adjustment.title
     reason = adjustment.reason
@@ -2663,7 +2695,9 @@ def _apply_surface_injury_policy(
         )
         if restriction_targets[code]
     )
-    result = _surface_safety_result(restriction_codes)
+    result: SafetyCheckResult = (
+        "medical_review" if medical_review else _surface_safety_result(restriction_codes)
+    )
 
     if restriction_codes:
         no_contact_injuries = [

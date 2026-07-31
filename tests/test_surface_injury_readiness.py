@@ -371,7 +371,7 @@ class TestWorseningSurfaceInjury:
         assert adjustment.decision != "pull_back"
         assert adjustment.title != "Rehab only today."
         assert "active_injury_worse" not in adjustment.triggers
-        assert _surface_check(adjustment)["result"] == "no_session_change"
+        assert _surface_check(adjustment)["result"] == "local_protection_only"
 
     def test_poor_sleep_and_open_wound_accumulate_mixed_exposure_restrictions(self):
         # Poor sleep already reduced the session. The wound adds both targeted
@@ -895,6 +895,238 @@ class TestImpactSessionExposure:
         )
 
         assert axis not in surface_exposure_codes(adjustment.triggers)
+
+    @pytest.mark.parametrize("friction_level", ["low", "light", "minimal"])
+    def test_low_friction_level_does_not_activate_friction_exposure(self, friction_level):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session={
+                    "title": "Roadwork intervals",
+                    "session_type": "conditioning",
+                    "friction_level": friction_level,
+                },
+                open_injuries=[_blister(skin_integrity="open")],
+            ),
+        )
+
+        assert "friction_exposure" not in surface_exposure_codes(adjustment.triggers)
+        assert "protect_or_replace_friction" not in surface_restriction_codes(
+            adjustment.triggers
+        )
+
+    @pytest.mark.parametrize(
+        "parent_fields",
+        [
+            {"session_type": "skill", "contact": True},
+            {"session_type": "sparring"},
+        ],
+    )
+    def test_parent_contact_positive_survives_generic_nested_blocks(self, parent_fields):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session={
+                    "title": "Combat rounds",
+                    **parent_fields,
+                    "blocks": [{"title": "Round 1", "type": "technical"}],
+                },
+                open_injuries=[
+                    _blister(
+                        body_area="forehead",
+                        description="open facial cut",
+                        label="Facial cut",
+                        skin_integrity="open",
+                    )
+                ],
+            ),
+        )
+
+        assert surface_exposure_codes(adjustment.triggers) == ("contact_exposure",)
+        assert surface_restriction_codes(adjustment.triggers) == ("remove_contact",)
+        assert "Skip all contact work today" in adjustment.action
+
+    def test_parent_impact_positive_uses_matching_declared_region_as_session_target(self):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session={
+                    "title": "Power development",
+                    "session_type": "strength_power",
+                    "impact": True,
+                    "mechanical_load_regions": ["foot", "ankle"],
+                    "blocks": [{"title": "Round 1", "type": "technical"}],
+                },
+                open_injuries=[_blister(skin_integrity="open")],
+            ),
+        )
+
+        assert surface_exposure_codes(adjustment.triggers) == (
+            "direct_impact_exposure",
+        )
+        assert surface_restriction_codes(adjustment.triggers) == (
+            "remove_direct_impact",
+        )
+        assert "Power development" in adjustment.action
+        assert "Round 1" not in adjustment.action
+
+    def test_parent_negative_overrides_contradictory_positive_child(self):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session={
+                    "title": "Contact-free technical session",
+                    "session_type": "skill",
+                    "contact": False,
+                    "blocks": [{"title": "Hard sparring", "type": "sparring"}],
+                },
+                open_injuries=[
+                    _blister(
+                        body_area="forehead",
+                        description="open facial cut",
+                        label="Facial cut",
+                        skin_integrity="open",
+                    )
+                ],
+            ),
+        )
+
+        assert "contact_exposure" not in surface_exposure_codes(adjustment.triggers)
+        assert "remove_contact" not in surface_restriction_codes(adjustment.triggers)
+
+
+class TestIndependentSurfacePolicyAggregation:
+    def test_medical_review_preserves_other_injurys_targeted_restriction(self):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session=RUNNING_SESSION,
+                open_injuries=[
+                    _blister(
+                        id="flag-infected-hand",
+                        body_area="left hand",
+                        description="infected wound on left hand",
+                        label="Infected hand wound",
+                        injury_type="cut",
+                        infection_signs=["pus"],
+                    ),
+                    _blister(
+                        id="flag-open-foot",
+                        skin_integrity="open",
+                    ),
+                ],
+            ),
+        )
+
+        assert adjustment.decision == "pull_back"
+        assert adjustment.title == "Get this checked."
+        assert "infected hand wound" in adjustment.reason
+        assert "medical advice" in adjustment.safety.lower()
+        assert "Roadwork intervals" in adjustment.action
+        assert "protect_or_replace_friction" in surface_restriction_codes(
+            adjustment.triggers
+        )
+        assert _surface_check(adjustment)["result"] == "medical_review"
+
+    def test_local_facial_contact_problem_gets_sparring_protection_not_removal(self):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session=HARD_SPARRING,
+                open_injuries=[
+                    _blister(
+                        body_area="forehead",
+                        description="intact cut on forehead",
+                        label="Forehead cut",
+                        skin_integrity="intact",
+                        friction_or_contact_problem="yes",
+                    )
+                ],
+            ),
+        )
+
+        assert surface_exposure_codes(adjustment.triggers) == ("contact_exposure",)
+        assert surface_restriction_codes(adjustment.triggers) == (
+            "protect_or_replace_friction",
+        )
+        assert "Hard sparring" in adjustment.action
+        assert "Skip all contact work" not in adjustment.action
+
+    def test_local_hand_contact_problem_gets_bag_pad_protection_not_removal(self):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session=FRICTION_SESSION,
+                open_injuries=[
+                    _blister(
+                        body_area="left hand",
+                        description="intact wound on left hand",
+                        label="Left hand wound",
+                        skin_integrity="intact",
+                        friction_or_contact_problem="yes",
+                    )
+                ],
+            ),
+        )
+
+        assert "friction_exposure" in surface_exposure_codes(adjustment.triggers)
+        assert surface_restriction_codes(adjustment.triggers) == (
+            "protect_or_replace_friction",
+        )
+        assert "Technical pad and bag work" in adjustment.action
+        assert "Remove or replace only the direct-impact block" not in adjustment.action
+
+    def test_local_foot_friction_problem_gets_running_protection(self):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session=RUNNING_SESSION,
+                open_injuries=[
+                    _blister(
+                        skin_integrity="intact",
+                        friction_or_contact_problem="yes",
+                    )
+                ],
+            ),
+        )
+
+        assert surface_exposure_codes(adjustment.triggers) == ("friction_exposure",)
+        assert "Roadwork intervals" in adjustment.action
+        assert "protect_or_replace_friction" in surface_restriction_codes(
+            adjustment.triggers
+        )
+
+    @pytest.mark.parametrize(
+        ("injury", "session"),
+        [
+            (
+                {
+                    "body_area": "left hand",
+                    "description": "intact wound on left hand",
+                    "label": "Left hand wound",
+                },
+                STRUCTURED_IMPACT_SESSION,
+            ),
+            ({}, HARD_BAG_SESSION),
+        ],
+    )
+    def test_local_restriction_ignores_unrelated_contact_or_impact(self, injury, session):
+        adjustment = build_readiness_adjustment(
+            ReadinessCheckin(),
+            ReadinessContext(
+                today_session=session,
+                open_injuries=[
+                    _blister(
+                        skin_integrity="intact",
+                        friction_or_contact_problem="yes",
+                        **injury,
+                    )
+                ],
+            ),
+        )
+
+        assert surface_exposure_codes(adjustment.triggers) == ()
+        assert surface_restriction_codes(adjustment.triggers) == ()
 
     @pytest.mark.parametrize("session", [NO_CONTACT_SESSION, CONTACT_FREE_SESSION])
     def test_explicitly_contact_free_sessions_do_not_get_contact_restrictions(self, session):
