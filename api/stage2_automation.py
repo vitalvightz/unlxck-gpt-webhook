@@ -130,10 +130,12 @@ def _stage2_max_output_tokens() -> int:
     # This budget is SHARED with the model's reasoning tokens (gpt-5-* burn a
     # large, hidden share of it before emitting any plan text), so a positive cap
     # set too low truncates the plan mid-output: ``_generate_text`` then sees an
-    # ``incomplete`` response and raises Stage2AutomationError, which fails the
-    # generation job (the athlete can retry). Default is 0 = no cap (provider
-    # default) so plans are never truncated; the Stage 2 timeout still bounds
-    # runtime. Set a positive value to bound output cost/latency.
+    # ``incomplete`` response and raises Stage2AutomationError. That no longer
+    # fails the job — the orchestrator completes it on the Stage 1 plan — but the
+    # athlete silently loses the coach-voice pass, so a cap is still worth
+    # avoiding. Default is 0 = no cap (provider default) so plans are never
+    # truncated; the Stage 2 timeout still bounds runtime. Set a positive value
+    # to bound output cost/latency.
     return _env_int(
         "UNLXCK_STAGE2_MAX_OUTPUT_TOKENS",
         _DEFAULT_MAX_OUTPUT_TOKENS,
@@ -662,6 +664,7 @@ def build_stage1_fallback_result(
     *,
     reason: str,
     detail: str = "",
+    attempt_count: int = 1,
     stage2_cost: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Complete the job on the Stage 1 plan after a technical Stage 2 failure.
@@ -676,6 +679,9 @@ def build_stage1_fallback_result(
     there is no Stage 2 plan at all, so the Stage 1 body is published as `ready`
     with a clean report — the validator never ran against it and has nothing to
     say about it. The failure is recorded under `stage2_fallback` and logged.
+
+    ``attempt_count`` should be 1 when a provider request was actually started
+    and 0 only when Stage 2 was unavailable before any call was made.
 
     Raises :class:`Stage1FallbackUnavailableError` when Stage 1 produced no plan
     text, so the caller keeps its existing failure handling rather than
@@ -701,6 +707,13 @@ def build_stage1_fallback_result(
             "release_decision": "publish",
             "is_athlete_releasable": True,
             "is_publishable": True,
+            # Terminal structured-card outcome. Without this the card state
+            # derives as "none", which reads as "might still be building" and
+            # leaves the client polling for a conversion that will never run.
+            "structured_plan": StructuredPlanOutcome(
+                status="not_attempted",
+                warnings=["stage 1 fallback released; structured conversion skipped"],
+            ).as_debug(),
             STAGE2_FALLBACK_REPORT_KEY: {
                 "reason": reason,
                 "detail": detail,
@@ -708,7 +721,7 @@ def build_stage1_fallback_result(
             },
         },
         "stage2_retry_text": "",
-        "stage2_attempt_count": 0,
+        "stage2_attempt_count": attempt_count,
     }
 
 

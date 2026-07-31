@@ -523,6 +523,83 @@ def test_stage2_incomplete_output_completes_job_on_stage1_plan():
     assert "incomplete" in plan["stage2_validator_report"]["stage2_fallback"]["detail"]
 
 
+def test_unexpected_stage2_exception_completes_job_on_stage1_plan():
+    # A TypeError, validator crash, or any other unanticipated exception inside
+    # Stage 2 must degrade the same way a known failure does. Stage 2 is only
+    # genuinely non-blocking if the unexpected case is covered too.
+    class ExplodingStage2:
+        async def finalize(self, *, stage1_result: dict, log_context: dict | None = None) -> dict:
+            raise TypeError("unexpected crash inside the finalizer")
+
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store, ExplodingStage2(), client_request_id="stage2-unexpected"
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_unexpected_error")
+    assert "unexpected crash" in plan["stage2_validator_report"]["stage2_fallback"]["detail"]
+    # A provider request was started, so the attempt is counted.
+    assert plan["stage2_attempt_count"] == 1
+
+
+def test_unavailable_stage2_records_zero_attempts():
+    # Unavailable means no provider request was ever made, so nothing was
+    # attempted. Every other failure got at least as far as starting one.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(
+            error=Stage2AutomationUnavailableError("OPENAI_API_KEY is required.")
+        ),
+        client_request_id="stage2-unavailable-attempts",
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_unavailable")
+    assert plan["stage2_attempt_count"] == 0
+
+
+def test_stage1_fallback_records_a_terminal_structured_card_outcome():
+    # Without a terminal marker the card state derives as "none", which reads as
+    # "might still be building" and leaves the client polling for a conversion
+    # that is never going to run.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed")),
+        client_request_id="stage2-card-state",
+    )
+
+    plan = _assert_completed_on_stage1_plan(store, saved, reason="stage2_model_error")
+    assert plan["structured_plan"] is None
+    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+
+
+def test_stage1_fallback_milestone_copy_stays_neutral_for_the_athlete():
+    # Milestones render on the athlete's generation screen. The technical reason
+    # belongs in the log and the admin-only validator report, not here.
+    store = FakeStore()
+    seed_default_profiles(store)
+
+    saved = _run_stage2_failure_job(
+        store,
+        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed")),
+        client_request_id="stage2-neutral-copy",
+    )
+
+    fallback = next(
+        m for m in saved["progress_milestones"] if m["code"] == "stage2_stage1_fallback"
+    )
+    blurb = f"{fallback['label']} {fallback['detail']}".lower()
+    for leak in ("finaliz", "stage 1", "stage 2", "fail", "ai ", "unusable", "fallback"):
+        assert leak not in blurb, f"athlete-visible milestone leaks {leak!r}: {blurb}"
+
+
 def test_flagged_release_does_not_claim_a_review_is_required():
     # publishable_with_flags releases to the athlete; the flags are for
     # asynchronous admin audit. Nothing is waiting on a review, so the run must

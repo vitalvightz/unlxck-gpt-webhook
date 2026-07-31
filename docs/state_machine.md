@@ -143,6 +143,31 @@ The one case that still fails the job: Stage 1 produced no plan text either, so
 there is nothing to fall back to. That is a Stage 1 failure, and Stage 1
 failures still block.
 
+#### What can still block a release
+
+"Stage 2 never blocks" is exact, but it is not the same as "nothing blocks".
+Two Stage 1 gates remain, and both are deliberate:
+
+1. **Injury triage** — `triage_blocked` / `medical_hold` /
+   `restricted_rehab_only` / `needs_review`.
+2. **The post-generation plan-contract gate**
+   (`_apply_plan_contract_validation` in `api/generation/persistence.py`), which
+   downgrades a would-be-visible plan to `review_required` on an error-severity
+   contract violation.
+
+The second one is easy to mistake for a Stage 2 gate because it runs after
+Stage 2 and inspects the finalized result. It is not. Every error-severity check
+it makes — `weekly_schedule_blank`, `calendar_unrenderable`, `fight_day_missing`,
+`late_fight_session_sequence_empty` — reads `planning_brief` or `stage2_payload`,
+both of which are Stage 1 outputs. The only plan-text check, `plan_text_empty`,
+already falls back through `plan_text` → `final_plan_text` → `draft_plan_text`,
+so it cannot trip while any body exists.
+
+The consequence: substituting the Stage 1 body for the Stage 2 body cannot clear
+a contract violation, because the violation was never about the body. When this
+gate fires it is reporting a genuine Stage 1 structural failure, so routing to
+review is correct and no Stage 1 fallback belongs here.
+
 ### Plan status → generation job status
 
 Terminal generation-job reporting is derived from the saved plan status by
