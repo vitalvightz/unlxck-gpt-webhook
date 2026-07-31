@@ -308,13 +308,13 @@ def test_activation_state_precedence_and_legacy_date_handling():
     ) == "fight_date_passed"
 
 
-def test_training_day_rollover_keeps_fight_camp_eligible_until_0400_local():
+def test_training_day_rollover_keeps_fight_camp_eligible_until_0300_local():
     before_rollover = current_training_day(
-        now=datetime(2026, 6, 2, 2, 30, tzinfo=timezone.utc),
+        now=datetime(2026, 6, 2, 1, 30, tzinfo=timezone.utc),
         athlete_timezone="Europe/London",
     )
     after_rollover = current_training_day(
-        now=datetime(2026, 6, 2, 3, 0, tzinfo=timezone.utc),
+        now=datetime(2026, 6, 2, 2, 0, tzinfo=timezone.utc),
         athlete_timezone="Europe/London",
     )
     camp = {**plan("camp"), "fight_date": "2026-06-01"}
