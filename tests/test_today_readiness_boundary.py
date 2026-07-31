@@ -449,7 +449,7 @@ def test_degraded_context_reports_moderate_confidence_and_incomplete_history():
     assert view.today.recommendation_state == "modify"
     assert view.today.recommendation_confidence == "moderate"
     assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
-    assert view.today.recommendation_trigger_labels == ["Check-in history incomplete"]
+    assert view.today.recommendation_trigger_labels == ["Recent history incomplete"]
     assert not _stored_green_explanation_is_stale(view)
 
 

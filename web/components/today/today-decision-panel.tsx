@@ -6,17 +6,6 @@ import {
   type TodayDecisionBanner,
   type TodayDecisionTier,
 } from "@/lib/today";
-import type { TodayCommandView } from "@/lib/types";
-
-type TodayDecisionConfidence = NonNullable<
-  TodayCommandView["today"]["recommendation_confidence"]
->;
-
-const CONFIDENCE_LABELS: Record<TodayDecisionConfidence, string> = {
-  high: "High",
-  moderate: "Moderate",
-  low: "Low",
-};
 
 /**
  * Compact train/modify/pull-back banner shown above today's blocks once the
@@ -29,7 +18,7 @@ const CONFIDENCE_LABELS: Record<TodayDecisionConfidence, string> = {
  *   DECISION    what should I do?      -> the tier headline and the action
  *   TRIGGER     why did it change?     -> what changed about the athlete
  *   CONTEXT     what influenced that?  -> the camp around the decision
- *   CONFIDENCE  how sure is Unlxck?    -> how much this rested on
+ *   DECISION BASED ON                 -> which inputs were available
  *
  * Trigger and context are held apart because a flat list made "Fight week" a
  * peer of "High pain". Being in taper is a plan, not a symptom: it explains how
@@ -40,10 +29,9 @@ const CONFIDENCE_LABELS: Record<TodayDecisionConfidence, string> = {
  * present when it decided; it does not establish that any one of them caused the
  * change, so the copy must not claim it did.
  *
- * `confidence` is how much the call had to go on, which the engine knows for
- * certain. It is not confidence that the call is RIGHT, which would need outcome
- * data the product does not collect yet. At high it lists what was available; at
- * anything less it names what was missing, which is the more useful half.
+ * The API keeps its confidence fields for compatibility. This panel describes
+ * the evidence directly instead of translating data coverage into a confidence
+ * claim the athlete could mistake for predictive certainty.
  */
 export function TodayDecisionPanel({
   banner,
@@ -51,7 +39,6 @@ export function TodayDecisionPanel({
   triggers,
   context,
   sources,
-  confidence,
   confidenceNote,
 }: {
   banner: TodayDecisionBanner | null;
@@ -59,7 +46,6 @@ export function TodayDecisionPanel({
   triggers?: string[];
   context?: string[];
   sources?: string[];
-  confidence?: TodayDecisionConfidence | null;
   confidenceNote?: string;
 }) {
   if (!banner) {
@@ -69,12 +55,11 @@ export function TodayDecisionPanel({
   const contextLabels = clean(context);
   const usedSources = clean(sources);
   const note = (confidenceNote ?? "").trim();
-  // The backend sends a band only when it has trigger codes to judge the
-  // decision by. Rendering a default would put a confident "High" on a
-  // recommendation stored before the engine recorded triggers, which is the one
-  // decision nothing is known about.
-  const band = confidence ?? null;
-  const hasEvidence = triggerLabels.length > 0 || contextLabels.length > 0 || band !== null;
+  const hasEvidence =
+    triggerLabels.length > 0 ||
+    contextLabels.length > 0 ||
+    usedSources.length > 0 ||
+    Boolean(note);
   // Headline the tier ("Stop today" etc.) so Today matches the Overview action
   // framing; the chip carries the tier marker and the detail keeps the specifics.
   // Prefer the authoritative backend tier when supplied so the headline can never
@@ -100,28 +85,39 @@ export function TodayDecisionPanel({
             {triggerLabels.length ? (
               <div className="today-decision-row">
                 <dt>Trigger</dt>
-                <dd>{triggerLabels.join(" · ")}</dd>
+                <dd>
+                  <ul className="today-decision-values">
+                    {triggerLabels.map((trigger) => (
+                      <li key={trigger}>{trigger}</li>
+                    ))}
+                  </ul>
+                </dd>
               </div>
             ) : null}
             {contextLabels.length ? (
               <div className="today-decision-row">
                 <dt>Context</dt>
-                <dd>{contextLabels.join(" · ")}</dd>
+                <dd>
+                  <ul className="today-decision-values">
+                    {contextLabels.map((contextLabel) => (
+                      <li key={contextLabel}>{contextLabel}</li>
+                    ))}
+                  </ul>
+                </dd>
               </div>
             ) : null}
-            {band ? (
-              <div className="today-decision-row" data-band={band}>
-                <dt>Confidence</dt>
+            {usedSources.length || note ? (
+              <div className="today-decision-row">
+                <dt>Decision based on</dt>
                 <dd>
-                  <span className="today-decision-band">{CONFIDENCE_LABELS[band]}</span>
-                  {band === "high" && usedSources.length ? (
+                  {usedSources.length ? (
                     <ul className="today-decision-inputs">
                       {usedSources.map((source) => (
                         <li key={source}>{source}</li>
                       ))}
                     </ul>
                   ) : null}
-                  {band !== "high" && note ? (
+                  {note ? (
                     <span className="today-decision-gap">{note}</span>
                   ) : null}
                 </dd>

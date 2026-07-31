@@ -13,7 +13,16 @@ const BANNER: TodayDecisionBanner = {
   detail: "Poor sleep means your body has less room to recover today.",
   action: "Cut 1 round and do not add extra conditioning.",
   tone: "amber",
-  blocksTraining: false,
+};
+
+const STOP_BANNER: TodayDecisionBanner = {
+  state: "not_checked_in",
+  displayState: "stop",
+  chip: "STOP",
+  title: "Stop today",
+  detail: "A safety restriction is blocking training today.",
+  action: "Do not start today's planned session. Follow the injury and safety guidance below.",
+  tone: "red",
 };
 
 /** React escapes apostrophes in static markup, so compare against plain text. */
@@ -28,16 +37,18 @@ test("the action reads before the reason", () => {
   assert.ok(html.indexOf(BANNER.action!) < html.indexOf(BANNER.detail));
 });
 
-test("triggers and context render as separate rows", () => {
+test("triggers and context render as separate stacked lists", () => {
   const html = render({
     banner: BANNER,
-    triggers: ["Poor sleep, 3 days"],
+    triggers: ["Poor sleep for 3 days", "Feeling flat"],
     context: ["Fight week", "Taper phase"],
   });
   assert.ok(html.includes("Trigger"));
-  assert.ok(html.includes("Poor sleep, 3 days"));
+  assert.ok(html.includes("Poor sleep for 3 days"));
+  assert.ok(html.includes("Feeling flat"));
   assert.ok(html.includes("Context"));
-  assert.ok(html.includes("Fight week · Taper phase"));
+  assert.equal((html.match(/today-decision-values/g) ?? []).length, 2);
+  assert.ok(!html.includes(" · "));
 });
 
 test("context never renders inside the trigger row", () => {
@@ -65,47 +76,59 @@ test("blank labels never render an empty row", () => {
   assert.ok(!html.includes("Context"));
 });
 
-test("high confidence lists what was available", () => {
+test("decision based on always lists the available sources", () => {
   const html = render({
     banner: BANNER,
-    confidence: "high",
     sources: ["today's check-in", "your recent sessions"],
   });
-  assert.ok(html.includes("Confidence"));
-  assert.ok(html.includes("High"));
+  assert.ok(html.includes("Decision based on"));
+  assert.ok(html.includes("today-decision-inputs"));
   assert.ok(html.includes("today's check-in"));
   assert.ok(html.includes("your recent sessions"));
+  assert.ok(!html.includes("Confidence"));
 });
 
-test("below high, the card names what was missing instead", () => {
-  // The useful half. At high the inputs list says the same thing the other way
-  // round, so showing both would only repeat the point.
+test("authoritative STOP renders a matching chip, headline, copy, and tone", () => {
+  const html = render({ banner: STOP_BANNER, tier: "stop" });
+
+  assert.ok(html.includes('data-state="stop"'));
+  assert.ok(html.includes('data-tone="red"'));
+  assert.ok(html.includes(">STOP<"));
+  assert.ok(html.includes("Stop today"));
+  assert.ok(html.includes(STOP_BANNER.action!));
+  assert.ok(html.includes(STOP_BANNER.detail));
+  assert.ok(!html.includes("PULL BACK"));
+});
+
+test("a missing-data note renders beneath the available sources", () => {
   const html = render({
     banner: BANNER,
-    confidence: "moderate",
     sources: ["today's check-in"],
     confidenceNote: "Less to go on today: today's session isn't resolved yet.",
   });
-  assert.ok(html.includes("Moderate"));
+  assert.ok(html.includes("Decision based on"));
   assert.ok(html.includes("today's session isn't resolved yet"));
-  assert.ok(!html.includes("today-decision-inputs"));
-  assert.ok(html.includes('data-band="moderate"'));
+  assert.ok(html.indexOf("today-decision-inputs") < html.indexOf("today-decision-gap"));
 });
 
-test("confidence is hidden when the backend sends no band", () => {
-  // A recommendation stored before the engine recorded triggers has nothing to
-  // judge it by. Rendering a default "High" there would put the most confident
-  // claim on the one decision nothing is known about.
-  assert.ok(!render({ banner: BANNER }).includes("Confidence"));
-  assert.ok(
-    !render({ banner: BANNER, sources: ["today's check-in"], confidence: null }).includes(
-      "Confidence",
-    ),
-  );
+test("a missing-data note still renders when no source was available", () => {
+  const html = render({
+    banner: BANNER,
+    confidenceNote: "Safety history is unavailable.",
+  });
+  assert.ok(html.includes("Decision based on"));
+  assert.ok(html.includes("Safety history is unavailable."));
+});
+
+test("confidence bands are never rendered", () => {
+  const html = render({ banner: BANNER, sources: ["today's check-in"] });
+  for (const band of ["Confidence", "High", "Moderate", "Low", "data-band"]) {
+    assert.ok(!html.includes(band), `must not render confidence band: ${band}`);
+  }
 });
 
 test("the panel stays null before check-in even with an explanation supplied", () => {
-  const html = render({ banner: null, triggers: ["Poor sleep"], confidence: "high" });
+  const html = render({ banner: null, triggers: ["Poor sleep"] });
   assert.equal(html, "");
 });
 
@@ -114,7 +137,6 @@ test("the explanation never claims a signal caused the change", () => {
     banner: BANNER,
     triggers: ["Poor sleep"],
     context: ["Fight week"],
-    confidence: "high",
     sources: ["today's check-in"],
   }).toLowerCase();
   for (const causal of ["caused", "because of", "due to"]) {
@@ -127,7 +149,6 @@ test("nothing on the card calls context a warning", () => {
     banner: BANNER,
     triggers: ["Poor sleep"],
     context: ["Fight week", "Taper phase"],
-    confidence: "moderate",
     confidenceNote: "Less to go on today: today's session isn't resolved yet.",
   }).toLowerCase();
   assert.ok(!html.includes("warning"));

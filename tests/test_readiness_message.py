@@ -647,7 +647,7 @@ def test_flat_body_caps_intensity():
     _assert_card_shape(adjustment)
 
 
-def test_poor_sleep_plus_flat_body_stacks_two_warnings():
+def test_poor_sleep_plus_flat_body_reduces_the_relevant_load():
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor", body="flat"),
         ReadinessContext(today_session=_session(title="Heavy lower body plyometrics")),
@@ -655,8 +655,9 @@ def test_poor_sleep_plus_flat_body_stacks_two_warnings():
 
     assert adjustment.decision == "modify"
     assert adjustment.title == "Session reduced."
-    assert "signals are stacking up" in adjustment.reason
-    assert trigger_labels(adjustment.triggers) == ("Poor sleep", "Body feels flat")
+    assert adjustment.reason == "Your readiness is down, so reduce heavy loading today."
+    assert "signals are stacking" not in adjustment.reason
+    assert trigger_labels(adjustment.triggers) == ("Poor sleep", "Feeling flat")
     assert "Cut the heavy top sets and back-off volume" in adjustment.action
     assert "keep the remaining lifts controlled" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
@@ -724,7 +725,8 @@ def test_resetting_checkin_clears_stale_warning_state():
     )
 
     assert poor.decision == "modify"
-    assert "signals are stacking up" in poor.reason
+    assert poor.reason == "Your readiness is down, so reduce heavy loading today."
+    assert "signals are stacking" not in poor.reason
     assert reset.decision == "train_as_planned"
     assert "poor_sleep" not in reset.triggers
     assert "flat_body" not in reset.triggers
@@ -785,8 +787,9 @@ def test_taper_poor_flat_manageable_pain_pulls_back_without_modify_copy():
 
     assert adjustment.decision == "pull_back"
     assert "Pull back today." in adjustment.message
-    assert "signals are stacking up" in adjustment.message
-    assert "Skip the loaded work" in adjustment.message
+    assert "Your readiness is too low for heavy loading today." in adjustment.message
+    assert "Skip heavy loading today. Use recovery or light mobility instead." in adjustment.message
+    assert "signals are stacking" not in adjustment.message
     assert "Keep sharp work only" not in adjustment.message
     assert "Remove 1 set" not in adjustment.message
     assert "fatigue-heavy accessories" not in adjustment.message
@@ -807,7 +810,8 @@ def test_repeated_poor_readiness_adds_stronger_warning():
     )
 
     assert adjustment.decision == "modify"
-    assert "signals are stacking up" in adjustment.reason
+    assert adjustment.reason == "Your readiness is down, so reduce heavy loading today."
+    assert "signals are stacking" not in adjustment.reason
     assert "Cut the heavy top sets and back-off volume" in adjustment.action
     assert "poor_sleep" in adjustment.triggers
     assert "repeated_poor_readiness" in adjustment.triggers
@@ -980,8 +984,9 @@ def test_three_soft_warnings_pull_back_before_high_risk_combat_work():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "signals are stacking up" in adjustment.reason
-    assert "Skip combat work" in adjustment.action
+    assert adjustment.reason == "Your readiness is too low for hard combat work today."
+    assert adjustment.action == "Skip hard combat work today. Use recovery or light mobility instead."
+    assert "signals are stacking" not in adjustment.reason
     assert "poor_sleep" in adjustment.triggers
     assert "flat_body" in adjustment.triggers
     assert "manageable_pain" in adjustment.triggers
@@ -1007,7 +1012,8 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
     )
 
     assert adjustment.decision == "modify"
-    assert "signals are stacking up" in adjustment.reason
+    assert adjustment.reason == "Your readiness is down, so reduce heavy loading today."
+    assert "signals are stacking" not in adjustment.reason
     assert "Cut sets, cap load, and add no extra work" in adjustment.action
     assert "poor_sleep_3_day_streak" in adjustment.triggers
     assert "flat_body_3_day_streak" in adjustment.triggers
@@ -1049,8 +1055,9 @@ def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "signals are stacking up" in adjustment.message
-    assert "Skip the loaded work" in adjustment.message
+    assert "Your readiness is too low for heavy loading today." in adjustment.message
+    assert "Skip heavy loading today. Use recovery or light mobility instead." in adjustment.message
+    assert "signals are stacking" not in adjustment.message
     _assert_card_shape(adjustment)
 
 
@@ -1240,11 +1247,12 @@ def test_collapsing_warning_pair_does_not_claim_multiple_sources():
         )
         assert "stacking up" not in reason
 
-    # A genuine two-signal pair still reads as more than one.
+    # A genuine two-signal pair still reduces the session without restating a count.
     _, _, reason, _ = _soft_warning_message(
         ("poor_sleep", "flat_body"), session_risk="medium", phase="GPP", fight_week=False
     )
-    assert "Two signals are stacking up." in reason
+    assert reason == "Your readiness is down, so reduce hard combat work today."
+    assert "signals are stacking" not in reason
 
 
 def test_session_modality_reads_the_structured_session_type_tag():
@@ -1315,7 +1323,7 @@ def test_strength_and_conditioning_alias_maps_to_strength_like_upstream():
     assert classify_session_modality({"session_type": "s&c"}) == "strength"
 
 
-def test_strength_stacked_warnings_reason_matches_strength_action():
+def test_strength_multi_signal_reason_matches_strength_action():
     # Two warnings on a strength session must not read "reduce combat work" above a
     # "cut your sets" action — the reason and action share the same lever.
     adjustment = build_readiness_adjustment(
@@ -1324,7 +1332,8 @@ def test_strength_stacked_warnings_reason_matches_strength_action():
     )
 
     assert adjustment.decision == "modify"
-    assert "Heavy loading should be reduced today." in adjustment.reason
+    assert adjustment.reason == "Your readiness is down, so reduce heavy loading today."
+    assert "signals are stacking" not in adjustment.reason
     assert "combat work" not in adjustment.reason.lower()
     assert "top sets" in adjustment.action
     _assert_card_shape(adjustment)
@@ -1408,7 +1417,7 @@ def test_mixed_session_never_speaks_only_one_lever(checkin):
     _assert_card_shape(adjustment)
 
 
-def test_mixed_stacked_warnings_reason_names_both_levers():
+def test_mixed_multi_signal_reason_names_both_levers_without_a_signal_count():
     # The reason's "reduce X" clause must cover the same two levers as the action.
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor", body="flat"),
@@ -1416,9 +1425,30 @@ def test_mixed_stacked_warnings_reason_names_both_levers():
     )
 
     assert adjustment.decision == "modify"
-    assert "Hard combat work and heavy loading should be reduced today." in adjustment.reason
+    assert adjustment.reason == (
+        "Your readiness is down, so reduce hard combat work and heavy loading today."
+    )
+    assert "signals are stacking" not in adjustment.reason
     assert "sparring" in adjustment.action.lower()
     assert "top sets" in adjustment.action
+    _assert_card_shape(adjustment)
+
+
+def test_mixed_multi_signal_pull_back_uses_the_exact_two_lever_action():
+    adjustment = build_readiness_adjustment(
+        ReadinessCheckin(sleep="poor", body="flat", pain="manageable"),
+        ReadinessContext(today_session=_mixed_session(effective_load="hard")),
+    )
+
+    assert adjustment.decision == "pull_back"
+    assert adjustment.reason == (
+        "Your readiness is too low for hard combat work or heavy loading today."
+    )
+    assert adjustment.action == (
+        "Skip hard combat work and heavy loading today. "
+        "Use recovery or light mobility instead."
+    )
+    assert "signals are stacking" not in adjustment.message
     _assert_card_shape(adjustment)
 
 

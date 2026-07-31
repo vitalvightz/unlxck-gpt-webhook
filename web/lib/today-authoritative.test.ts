@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   getInjuryOverrideBanner,
+  getTierMeta,
   getTodayDecisionBanner,
+  resolveTodayDecision,
 } from "./today-authoritative.ts";
 import type { TodayCommandView } from "./types.ts";
 
@@ -26,45 +28,235 @@ const BASE_STATE: TodayCommandView = {
   quick_actions: [],
 };
 
-test("prose cannot turn a backend green decision into a training block", () => {
-  const banner = getTodayDecisionBanner(
-    "train_as_planned",
-    "No training today.\nRed flag detected. Seek medical advice.",
-  );
+const ACTIVE_SEVERE_INJURY: TodayCommandView["open_injuries"][number] = {
+  id: "injury-1",
+  athlete_id: "athlete-1",
+  source: "today",
+  body_area: "knee",
+  description: "left knee",
+  severity: "severe",
+  status: "open",
+  created_at: "2026-06-18T10:00:00Z",
+  updated_at: "2026-06-18T10:00:00Z",
+};
 
-  assert.ok(banner);
-  assert.equal(banner.displayState, "go");
-  assert.equal(banner.chip, "GO");
-  assert.equal(banner.tone, "green");
-  assert.equal(banner.blocksTraining, false);
-});
-
-test("prose cannot weaken a backend pull-back decision", () => {
-  const banner = getTodayDecisionBanner(
-    "pull_back",
-    "Sharp work ready.\nEverything feels good.\nTrain normally.",
-  );
-
-  assert.ok(banner);
-  assert.equal(banner.displayState, "pull_back");
-  assert.equal(banner.chip, "PULL BACK");
-  assert.equal(banner.tone, "red");
-  assert.equal(banner.blocksTraining, true);
-});
-
-test("preview scope is display-only and never training-cleared", () => {
-  const banner = getTodayDecisionBanner("train_as_planned", "Train as planned.", {
-    isPreview: true,
+test("green remains completable despite stop-sounding prose", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_reason: "No training today.\nRed flag detected. Seek medical advice.",
+      decision_tier: "green",
+    },
   });
 
-  assert.ok(banner);
-  assert.equal(banner.displayState, "preview");
-  assert.equal(banner.chip, "PREVIEW");
-  assert.equal(banner.tone, "neutral");
-  assert.equal(banner.blocksTraining, false);
+  assert.equal(resolved.authoritativeTier, "green");
+  assert.equal(resolved.blocksCurrentSession, false);
+  assert.equal(resolved.canCompleteSession, true);
+  assert.ok(resolved.banner);
+  assert.equal(resolved.banner.displayState, "go");
+  assert.equal(resolved.banner.tone, "green");
+  assert.equal("blocksTraining" in resolved.banner, false);
 });
 
-test("frontend does not create a separate severe-injury override", () => {
+test("pull-back remains blocking despite green-sounding prose", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      recommendation_reason: "Sharp work ready.\nEverything feels good.\nTrain normally.",
+      decision_tier: "pull_back",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "pull_back");
+  assert.equal(resolved.blocksCurrentSession, true);
+  assert.equal(resolved.canCompleteSession, false);
+});
+
+test("STOP uses a safe replacement only for today's matched session", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "stop",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "stop");
+  assert.equal(resolved.sessionIsToday, true);
+  assert.equal(resolved.blocksCurrentSession, true);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, true);
+});
+
+test("backend STOP remains visible before check-in when a severe injury is active", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "not_checked_in",
+      recommendation_reason: null,
+      decision_tier: "stop",
+    },
+    open_injuries: [ACTIVE_SEVERE_INJURY],
+  });
+
+  assert.equal(resolved.displayTier, "stop");
+  assert.ok(resolved.banner);
+  assert.equal(resolved.banner.displayState, "stop");
+  assert.equal(resolved.banner.chip, "STOP");
+  assert.equal(resolved.banner.title, "Stop today");
+  assert.equal(resolved.banner.tone, "red");
+  assert.match(resolved.banner.detail, /Active severe injury: Knee/);
+  assert.match(resolved.banner.detail, /marking it easing does not lift the hold/);
+  assert.doesNotMatch(resolved.banner.detail, /Train as planned|Everything feels good/);
+  assert.equal(resolved.blocksCurrentSession, true);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, true);
+  assert.equal(resolved.canCompleteSession, false);
+});
+
+test("severe-injury STOP copy never leaks stale recommendation text", () => {
+  const staleRecommendations: Array<{
+    state: TodayCommandView["today"]["recommendation_state"];
+    reason: string | null;
+  }> = [
+    { state: "train_as_planned", reason: "Everything feels good. Train normally." },
+    { state: "pull_back", reason: "Only readiness load needs adjusting." },
+    { state: "not_checked_in", reason: null },
+  ];
+
+  for (const recommendation of staleRecommendations) {
+    const resolved = resolveTodayDecision({
+      ...BASE_STATE,
+      today: {
+        ...BASE_STATE.today,
+        recommendation_state: recommendation.state,
+        recommendation_reason: recommendation.reason,
+        decision_tier: "stop",
+      },
+      open_injuries: [ACTIVE_SEVERE_INJURY],
+    });
+
+    assert.equal(resolved.authoritativeTier, "stop");
+    assert.equal(resolved.banner?.chip, "STOP");
+    assert.match(resolved.banner?.detail ?? "", /Active severe injury: Knee/);
+    assert.doesNotMatch(
+      resolved.banner?.detail ?? "",
+      /Everything feels good|Only readiness load|Train normally/,
+    );
+    assert.equal(resolved.blocksCurrentSession, true);
+  }
+});
+
+test("authoritative STOP overrides pull-back presentation as well as session safety", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      recommendation_reason: "Sharp work ready.\nEverything feels good.\nTrain normally.",
+      decision_tier: "stop",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "stop");
+  assert.equal(resolved.displayTier, "stop");
+  assert.ok(resolved.banner);
+  assert.equal(resolved.banner.displayState, "stop");
+  assert.equal(resolved.banner.chip, "STOP");
+  assert.notEqual(resolved.banner.chip, "PULL BACK");
+  assert.equal(resolved.banner.title, "Stop today");
+  assert.equal(resolved.banner.detail, "A safety restriction is blocking training today.");
+  assert.equal(
+    resolved.banner.action,
+    "Do not start today's planned session. Follow the injury and safety guidance below.",
+  );
+  assert.equal(resolved.banner.tone, "red");
+  assert.equal(getTierMeta(resolved.displayTier).label, "Stop today");
+  assert.equal(resolved.blocksCurrentSession, true);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, true);
+});
+
+test("future pull-back remains a neutral pending preview", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "pull_back",
+      next_session: {
+        ...BASE_STATE.today.next_session,
+        session_relation: "next",
+      },
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(resolved.authoritativeTier, "pull_back");
+  assert.equal(resolved.displayTier, "preview");
+  assert.equal(resolved.sessionIsToday, false);
+  assert.equal(resolved.blocksCurrentSession, false);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, false);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, false);
+  assert.equal(resolved.banner?.chip, "PREVIEW");
+  assert.equal(resolved.tone, "neutral");
+});
+
+test("future STOP remains a neutral pending preview without remediation or replacement", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "stop",
+      next_session: {
+        ...BASE_STATE.today.next_session,
+        session_relation: "next",
+      },
+      session_scope: "next",
+    },
+    open_injuries: [ACTIVE_SEVERE_INJURY],
+  });
+
+  assert.equal(resolved.authoritativeTier, "stop");
+  assert.equal(resolved.displayTier, "preview");
+  assert.equal(resolved.sessionIsToday, false);
+  assert.equal(resolved.blocksCurrentSession, false);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.useSafeReplacement, false);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, false);
+  assert.equal(resolved.banner?.chip, "PREVIEW");
+  assert.equal(resolved.tone, "neutral");
+});
+
+test("severe-injury remediation respects the backend exemption", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "stop",
+      injury_hold_exempt: true,
+    },
+    open_injuries: [ACTIVE_SEVERE_INJURY],
+  });
+
+  assert.equal(resolved.blocksCurrentSession, true);
+  assert.equal(resolved.severeInjuryBlocksCurrentSession, false);
+});
+
+test("the banner adapter stays presentation-only", () => {
+  const banner = getTodayDecisionBanner("pull_back", "Train normally.");
+  assert.ok(banner);
+  assert.equal("blocksTraining" in banner, false);
+});
+
+test("the legacy injury presentation export is preserved without overriding backend safety", () => {
   const state: TodayCommandView = {
     ...BASE_STATE,
     open_injuries: [
@@ -82,5 +274,12 @@ test("frontend does not create a separate severe-injury override", () => {
     ],
   };
 
-  assert.equal(getInjuryOverrideBanner(state, "Boxing conditioning"), null);
+  const injuryBanner = getInjuryOverrideBanner(state, "Boxing conditioning");
+  const resolved = resolveTodayDecision(state);
+
+  assert.equal(injuryBanner?.chip, "INJURY HOLD");
+  assert.match(injuryBanner?.detail ?? "", /Active severe injury: Knee/);
+  assert.equal(resolved.authoritativeTier, "green");
+  assert.equal(resolved.banner?.chip, "GO");
+  assert.equal(resolved.blocksCurrentSession, false);
 });

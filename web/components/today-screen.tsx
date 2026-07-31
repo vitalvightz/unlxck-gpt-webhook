@@ -5,8 +5,10 @@ import { useMemo } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { CampProgressBar } from "@/components/camp-progress-bar";
+import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
 import { formatTrainingDay } from "@/components/today/format";
+import { TodayDecisionPanel } from "@/components/today/today-decision-panel";
 import { TodayInjuryManager } from "@/components/today/today-injury-manager";
 import { TodayReadinessForm } from "@/components/today/today-readiness-form";
 import { TodayRiskWatch } from "@/components/today/today-risk-watch";
@@ -19,6 +21,7 @@ import {
   TODAY_EMPTY_TITLE,
   getCompletionLabel,
   hasActivePlan,
+  resolveTodayDecision,
   shouldShowTodayCheckin,
 } from "@/lib/today";
 import { useTrainingDay } from "@/lib/use-training-day";
@@ -183,6 +186,7 @@ export function TodayScreen() {
   if (!state || !hasPlan) {
     return <NoActivePlanState />;
   }
+  const resolvedDecision = resolveTodayDecision(state);
 
   return (
     <div className="today-page">
@@ -222,6 +226,21 @@ export function TodayScreen() {
           injuriesHref={token ? "#today-injury" : undefined}
           sessionHref="#today-session"
         />
+        <TodayDecisionPanel
+          banner={resolvedDecision.banner}
+          tier={resolvedDecision.displayTier}
+          triggers={state.today.recommendation_trigger_labels}
+          context={state.today.recommendation_context_labels}
+          sources={state.today.recommendation_sources}
+          confidenceNote={state.today.recommendation_confidence_note}
+        />
+        {resolvedDecision.recommendationState !== "not_checked_in" ? (
+          <ContextualFeedback
+            key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
+            token={token ?? ""}
+            surface="daily_recommendation"
+          />
+        ) : null}
         <TodayRiskWatch risks={state.risk_watch} />
       </section>
 

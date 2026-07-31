@@ -66,8 +66,8 @@ const MODIFY_REASON = [
 
 const PULL_BACK_REASON = [
   "Pull back today.",
-  "Several warnings are showing, so your body is not ready for hard combat work.",
-  "Skip combat work and use recovery or light mobility instead.",
+  "Your readiness is too low for hard combat work today.",
+  "Skip hard combat work today. Use recovery or light mobility instead.",
 ].join("\n");
 
 const INJURY_REASON = [
@@ -160,7 +160,7 @@ test("safety pull-back copy maps to rehab-only or no-training chips", () => {
   const redFlag = getTodayDecisionBanner("pull_back", RED_FLAG_REASON);
 
   assert.equal(injury?.chip, "REHAB ONLY");
-  assert.equal(injury?.blocksTraining, true);
+  assert.equal(injury?.tone, "red");
   assert.equal(highPain?.chip, "REHAB ONLY");
   assert.equal(redFlag?.chip, "NO TRAINING");
   assert.equal(redFlag?.title, "No training today");
@@ -402,7 +402,6 @@ test("severe injury override supersedes the daily recommendation banner", () => 
   assert.equal(banner?.title, "Session blocked");
   assert.equal(banner?.displayState, "injury_blocked");
   assert.equal(banner?.tone, "red");
-  assert.equal(banner?.blocksTraining, true);
   assert.match(banner?.detail ?? "", /Active severe injury: Chest bruise/);
   assert.match(banner?.detail ?? "", /hard sparring/);
   assert.match(banner?.detail ?? "", /easing does not lift/);
@@ -415,7 +414,7 @@ test("marking a severe injury easing does not lift the override (bypass fix)", (
     "Hard sparring",
   );
   assert.ok(easing, "an easing severe injury must still block");
-  assert.equal(easing?.blocksTraining, true);
+  assert.equal(easing?.displayState, "injury_blocked");
   // Clearing (resolving) it is the only way to lift the hold.
   assert.equal(getInjuryOverrideBanner(stateWithInjuries([makeInjury({ status: "resolved" })]), "Hard sparring"), null);
 });
@@ -491,6 +490,14 @@ test("Today session card uses short preview wording and Next session label", () 
     source.includes("Preview only. Completion opens on the matched training day."),
     true,
   );
+  assert.equal(source.includes("resolvedDecision.blocksCurrentSession"), true);
+  assert.equal(source.includes("resolvedDecision.severeInjuryBlocksCurrentSession"), true);
+  assert.equal(
+    source.includes("Blocked by an active severe injury. Marking it easing does not lift the hold."),
+    true,
+  );
+  assert.equal(source.includes('href="#today-injury"'), true);
+  assert.equal(source.includes("Open injury check-in"), true);
 });
 
 test("Today recommendation styles keep preview neutral, modify amber, and pull-back red", () => {
@@ -591,6 +598,34 @@ test("Today renders only today's session, never the full camp map", () => {
   assert.equal(sources.includes("WeekStrip"), false);
 });
 
+test("Today renders one recommendation and feedback prompt in the required DOM order", () => {
+  const screen = readFileSync(
+    new URL("../components/today-screen.tsx", import.meta.url),
+    "utf8",
+  );
+  const sessionPanel = readFileSync(
+    new URL("../components/today/today-session-panel.tsx", import.meta.url),
+    "utf8",
+  );
+  const orderedMarkers = [
+    "<TodayReadinessStrip",
+    "<TodayDecisionPanel",
+    'surface="daily_recommendation"',
+    "<TodayRiskWatch",
+    "<TodayReadinessForm",
+    "<TodayInjuryManager",
+    "<TodaySessionPanel",
+  ];
+  const positions = orderedMarkers.map((marker) => screen.indexOf(marker));
+
+  assert.ok(positions.every((position) => position >= 0));
+  assert.deepEqual([...positions].sort((left, right) => left - right), positions);
+  assert.equal((screen.match(/<TodayDecisionPanel/g) ?? []).length, 1);
+  assert.equal((screen.match(/surface="daily_recommendation"/g) ?? []).length, 1);
+  assert.equal(sessionPanel.includes("TodayDecisionPanel"), false);
+  assert.equal(sessionPanel.includes("ContextualFeedback"), false);
+});
+
 test("Today's View full plan action routes to the plan detail camp map", () => {
   const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
   assert.equal(source.includes("/plans/${activePlan.id}"), true);
@@ -622,9 +657,9 @@ test("decision tiers map 1:1 with display-states", () => {
   assert.equal(getDecisionTier(null), "not_checked_in");
 });
 
-test("tier meta gives the coach-facing labels and STOP blocks", () => {
+test("tier meta gives the coach-facing labels and tones", () => {
   assert.equal(getTierMeta("stop").label, "Stop today");
-  assert.equal(getTierMeta("stop").blocks, true);
+  assert.equal(getTierMeta("stop").tone, "red");
   assert.equal(getTierMeta("pull_back").label, "Pull back today");
   assert.equal(getTierMeta("modify").label, "Modify today");
   assert.equal(getTierMeta("green").label, "Green light");
@@ -723,6 +758,15 @@ test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () 
     href: "/today#today-session",
     label: "Open today's session",
   });
+});
+
+test("Overview consumes the shared authoritative resolver", () => {
+  const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.equal(source.includes("resolveTodayDecision(commandState)"), true);
+  assert.equal(source.includes("resolvedDecision?.severeInjuryBlocksCurrentSession"), true);
+  assert.equal(source.includes("getInjuryOverrideBanner(commandState"), false);
+  assert.equal(source.includes("resolveDecisionTier(commandState?.today"), false);
 });
 
 // ---------------------------------------------------------------------------
