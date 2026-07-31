@@ -908,7 +908,7 @@ _NO_IMPACT_VALUES = frozenset(
     }
 )
 _NO_FRICTION_VALUES = frozenset(
-    {"no_friction", "non_friction", "friction_free", "zero_friction", "without_friction"}
++    {"no_friction", "non_friction", "friction_free", "zero_friction", "without_friction", "low", "light", "minimal"}
 )
 _CONTACT_EXPOSURE_TERMS = (
     "spar",
