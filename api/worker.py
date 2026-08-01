@@ -15,6 +15,7 @@ from .generation_runtime import default_planner, is_stale_job, run_generation_jo
 from .generation_config import generation_job_stale_after_seconds
 from .stage2_automation import build_default_stage2_automator
 from .store import AppStore, SupabaseAppStore
+from .store_performance import list_claimable_generation_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,7 @@ async def _drain_active_tasks(
     detached_tasks.clear()
     active_tasks.clear()
 
+
 async def _mark_job_failed_before_runtime(
     *,
     store: AppStore,
@@ -204,7 +206,8 @@ async def _tick(
 
     try:
         candidates = await asyncio.to_thread(
-            store.list_claimable_generation_jobs,
+            list_claimable_generation_jobs,
+            store,
             limit=remaining_capacity,
             stale_after_seconds=stale_after_seconds,
         )
