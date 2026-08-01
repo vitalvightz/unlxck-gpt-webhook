@@ -112,7 +112,6 @@ test("backend STOP remains visible before check-in when a severe injury is activ
   assert.equal(resolved.banner.tone, "red");
   assert.match(resolved.banner.detail, /Active severe injury: Knee/);
   assert.match(resolved.banner.detail, /until it is cleared or medically cleared/);
-  assert.doesNotMatch(resolved.banner.detail, /marking it easing does not lift the hold/);
   assert.doesNotMatch(resolved.banner.detail, /Train as planned|Everything feels good/);
   assert.equal(resolved.blocksCurrentSession, true);
   assert.equal(resolved.severeInjuryBlocksCurrentSession, true);

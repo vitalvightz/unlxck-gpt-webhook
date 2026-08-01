@@ -2791,7 +2791,7 @@ class TestSessionCompletion:
         assert "severe injury" in exc.value.detail.lower()
 
     def test_severe_injury_easing_still_blocks_completion(self):
-        # The bypass: marking it easing (monitoring) must not open completion.
+        # Monitoring status must not open completion.
         store = _store_with_plan()
         self._add_severe_injury(store, status="monitoring")
         with pytest.raises(HTTPException) as exc:

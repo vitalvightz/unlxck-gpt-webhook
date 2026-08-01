@@ -391,9 +391,9 @@ function injuryFlagLabel(injury: InjuryFlagRecord): string {
  * The highest-priority active injury that must hard-block training today: any
  * non-resolved injury the athlete flagged as SEVERE. The block is driven by
  * severity, not day-status — a severe injury is still severe while it is
- * "easing" (monitoring), so marking it easing must NOT unblock hard training the
- * same day (that was a bypass). Only clearing it (resolved) — a deliberate,
- * confirmed action — or downgrading its severity lifts the block.
+ * "easing" (monitoring), so monitoring status must not unblock hard training
+ * on the same day. Only resolving it — a deliberate, confirmed action — or
+ * downgrading its severity removes the block.
  */
 export function getActiveSevereInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,

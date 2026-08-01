@@ -325,7 +325,7 @@ export function TodaySessionPanel({
       ? resolvedDecision.tone
       : undefined;
   const terminalStatusCopy = severeInjuryBlocksCurrentSession
-    ? "Blocked by an active severe injury. Marking it easing does not lift the hold."
+    ? "Blocked by an active severe injury."
     : decisionBlocksCurrentSession
       ? "Follow the recommendation above. Do not start this session from Today."
       : isSessionPreview
