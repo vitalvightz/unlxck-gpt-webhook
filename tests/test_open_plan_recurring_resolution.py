@@ -14,8 +14,8 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 PLAN_ID = "11111111-1111-1111-1111-111111111111"
 
 
-def _open_plan_brief():
-    return {
+def _open_plan_brief(*, plan_creation_weekday: str | None = None):
+    brief = {
         "open_plan_spec": {
             "plan_type": "open_ongoing_system",
             "weekly_template": {
@@ -35,6 +35,12 @@ def _open_plan_brief():
         },
         "stage1_selection_summary": {"current_phase": "GPP"},
     }
+    if plan_creation_weekday:
+        brief["athlete_model"] = {
+            "plan_creation_weekday": plan_creation_weekday,
+            "plan_creation_weekday_basis": "athlete_local_weekday",
+        }
+    return brief
 
 
 def test_open_plan_sunday_wraps_to_monday_from_full_seven_day_schedule():
@@ -201,6 +207,44 @@ def test_open_plan_created_late_in_the_week_starts_the_following_monday():
 
     assert context["anchor_date"] == "2026-08-03"
     assert context["current_week_number"] == 1
+
+
+def test_open_plan_uses_local_thursday_when_utc_date_is_already_friday():
+    plan_row = {
+        "id": PLAN_ID,
+        # 00:30 UTC Friday is still Thursday for an athlete west of UTC.
+        "created_at": "2026-07-31T00:30:00+00:00",
+        "fight_date": None,
+        "planning_brief": _open_plan_brief(plan_creation_weekday="thursday"),
+    }
+
+    _, context = project_open_structured_plan(
+        plan_row,
+        _open_structured_plan(),
+        current_training_day="2026-07-30",
+    )
+
+    # Thursday joins the current week rather than being delayed until 3 August.
+    assert context["anchor_date"] == "2026-07-27"
+
+
+def test_open_plan_uses_local_friday_when_utc_date_is_still_thursday():
+    plan_row = {
+        "id": PLAN_ID,
+        # 23:30 UTC Thursday is already Friday for an athlete east of UTC.
+        "created_at": "2026-07-30T23:30:00+00:00",
+        "fight_date": None,
+        "planning_brief": _open_plan_brief(plan_creation_weekday="friday"),
+    }
+
+    _, context = project_open_structured_plan(
+        plan_row,
+        _open_structured_plan(),
+        current_training_day="2026-07-31",
+    )
+
+    # Friday is too late to join, so the block starts the coming Monday.
+    assert context["anchor_date"] == "2026-08-03"
 
 
 def test_open_plan_recovers_one_full_calendar_legacy_week_and_expands_the_block():
