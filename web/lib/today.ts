@@ -442,7 +442,7 @@ export function getInjuryOverrideBanner(
     displayState: "injury_blocked",
     chip: "INJURY HOLD",
     title: "Session blocked",
-    detail: `Active severe injury: ${label}. Do not complete ${sessionPhrase} until it is cleared or medically cleared — marking it easing does not lift the hold.`,
+    detail: `Active severe injury: ${label}. Do not complete ${sessionPhrase} until it is cleared or medically cleared.`,
     // Only call out the superseded guidance when a daily recommendation actually
     // exists to supersede (i.e. the athlete has checked in).
     safety:
