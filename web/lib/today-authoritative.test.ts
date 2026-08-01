@@ -59,6 +59,8 @@ test("green remains completable despite stop-sounding prose", () => {
   assert.ok(resolved.banner);
   assert.equal(resolved.banner.displayState, "go");
   assert.equal(resolved.banner.tone, "green");
+  assert.equal(resolved.banner.detail, "Your check-in is clear for today's planned work.");
+  assert.doesNotMatch(resolved.banner.detail, /Red flag|medical advice/i);
   assert.equal(
     resolved.banner.action,
     "Session unchanged — complete today's planned session.",
@@ -95,6 +97,15 @@ test("pull-back remains blocking despite green-sounding prose", () => {
   assert.equal(resolved.canCompleteSession, false);
   assert.equal(resolved.sessionOutcome, "blocked");
   assert.doesNotMatch(resolved.banner?.action ?? "", /replaced/i);
+  assert.equal(
+    resolved.banner?.action,
+    "Today's planned session is blocked. Follow today's limits.",
+  );
+  assert.equal(
+    resolved.banner?.detail,
+    "Your readiness is too low for hard combat work today.",
+  );
+  assert.doesNotMatch(resolved.banner?.detail ?? "", /Everything feels good|Train normally/);
 });
 
 test("STOP uses a safe replacement only for today's matched session", () => {
@@ -255,12 +266,12 @@ test("modify is guidance only and never claims the structured session was rewrit
     {
       chip: "ADJUST",
       action: "Follow today's limits. The planned session has not been automatically rewritten.",
-      detail: "Hard combat work needs to be controlled today.",
+      detail: "Today's session has not been rewritten. Follow the limits below and skip extra work.",
     },
   );
 });
 
-test("severe-injury STOP removes only matching injury and generic STOP risks", () => {
+test("severe-injury STOP removes only the known duplicate injury risk", () => {
   const state: TodayCommandView = {
     ...BASE_STATE,
     today: { ...BASE_STATE.today, decision_tier: "stop" },
@@ -271,7 +282,10 @@ test("severe-injury STOP removes only matching injury and generic STOP risks", (
     { category: "stop_red_flag", priority: 2, icon: "stop", label: "Stop", text: "Do not train", tone: "stop" },
     { category: "weight_cut", priority: 3, icon: "scale", label: "Weight cut", text: "Hydrate", tone: "watch" },
   ];
-  assert.deepEqual(getSupplementaryRiskWatch(risks, resolveTodayDecision(state)), [risks[2]]);
+  assert.deepEqual(getSupplementaryRiskWatch(risks, resolveTodayDecision(state)), [
+    risks[1],
+    risks[2],
+  ]);
 });
 
 test("risk filtering preserves stable reminders and distinct pain outside severe STOP", () => {
