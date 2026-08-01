@@ -12,6 +12,13 @@ a block's text for; the per-block decision itself lives in
 ``web/lib/rehab-label.ts`` so both render surfaces (Plan detail and Today) share
 one rule.
 
+Surface (skin) injuries are excluded outright. A blister, graze or covered cut
+is a hygiene/friction constraint, not something rehab work targets, so it must
+neither pin its own region to "Rehab" nor — when it carries no resolvable
+location — drag the whole plan back to "Rehab" by way of ``default_mode``. The
+class comes from ``api.contracts.readiness_message.classify_injury_surface`` so
+this module never holds a second copy of the rules.
+
 Fail-safe in both directions:
   * a live injury whose region cannot be resolved makes ``default_mode`` "rehab",
     because an unlocalised injury cannot be region-matched and guessing "prehab"
@@ -135,6 +142,23 @@ def _bank_drill_terms(region: str, *, covered_by: set[str]) -> list[str]:
     return sorted(terms)
 
 
+def _is_surface_injury(record: dict[str, Any]) -> bool:
+    """True when this flag is a skin injury, which rehab labelling ignores.
+
+    Errors resolve to False — a flag we cannot classify keeps its pre-existing
+    (cautious) treatment as a real injury rather than being silently dropped.
+    """
+    # Deferred import: the readiness contract pulls in the injury registry, which
+    # no plan read needs unless the athlete actually has live flags.
+    from api.contracts.readiness_message import classify_injury_surface
+
+    try:
+        return classify_injury_surface(record) != "non_surface"
+    except Exception:  # pragma: no cover - never break a plan read on classifier errors
+        LOGGER.warning("rehab_label: surface classification failed", exc_info=True)
+        return False
+
+
 def _build_region(region: str) -> ActiveInjuryRegion:
     synonyms = _synonym_terms(region)
     drills = _bank_drill_terms(region, covered_by=set(synonyms))
@@ -148,7 +172,7 @@ def resolve_rehab_label_policy(store: AppStore, *, athlete_id: str) -> RehabLabe
     answer, which says an athlete may train, not that the injury has resolved.
     Intake injuries are seeded into the flag table and the Today "Cleared" action
     stamps them ``resolved``, so the flags reflect the real current state for
-    both origins.
+    both origins. Surface (skin) flags are skipped — see the module docstring.
     """
     lister = getattr(store, "list_injury_flags", None)
     if not callable(lister):
@@ -164,6 +188,11 @@ def resolve_rehab_label_policy(store: AppStore, *, athlete_id: str) -> RehabLabe
     for flag in flags:
         record: dict[str, Any] = flag if isinstance(flag, dict) else {}
         if str(record.get("status") or "").strip().lower() not in _ACTIVE_STATUSES:
+            continue
+        # A skin injury is not rehab work. Skipped before the region resolution
+        # below so it can neither claim a region nor, when it has no resolvable
+        # location, set has_unlocalized and pin the entire plan to "Rehab".
+        if _is_surface_injury(record):
             continue
         body_area = str(record.get("body_area") or "").strip()
         description = str(record.get("description") or "").strip()
