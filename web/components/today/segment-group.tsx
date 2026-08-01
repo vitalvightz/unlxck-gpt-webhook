@@ -33,6 +33,9 @@ export function SegmentGroup<T extends string>({
       </p>
       <div
         className={columns === 2 ? "today-segment-row today-segment-row-2col" : "today-segment-row"}
+        role="group"
+        aria-label={label}
+        aria-invalid={invalid || undefined}
         data-invalid={invalid || undefined}
       >
         {options.map((option) => (
