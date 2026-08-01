@@ -831,8 +831,9 @@ export type InjuryFlagRecord = {
     | "upper_limb"
     | "spine_pelvis"
     | "head_face"
-    | "unknown";
-  body_region?: "lower_limb" | "upper_limb" | "trunk_spine" | "head_neck" | "unknown";
+    | "unknown"
+    | null;
+  body_region?: "lower_limb" | "upper_limb" | "trunk_spine" | "head_neck" | "unknown" | null;
   consequence?: "neuro" | "structural" | "load_sensitive" | null;
   severity: InjuryFlagSeverity;
   /** Who owns `severity`. `surface_system` means it is a floor the backend

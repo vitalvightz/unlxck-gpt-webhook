@@ -486,10 +486,12 @@ def _with_safe_session_context(
             )
         except Exception:
             logger.exception("[today] safe_session_injury_classification_failed")
-            row.setdefault("canonical_location", None)
-            row.setdefault("region_group", "unknown")
-            row.setdefault("body_region", "unknown")
-            row.setdefault("consequence", None)
+            row["canonical_location"] = None
+            row["region_group"] = "unknown"
+            row["body_region"] = "unknown"
+            # Fail closed: the client treats an unknown structural consequence as
+            # rest-only, so a classifier failure can never re-enable loaded work.
+            row["consequence"] = "structural"
         rows.append(row)
     return rows
 

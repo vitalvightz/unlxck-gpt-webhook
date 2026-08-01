@@ -879,14 +879,13 @@ function hasLoadIntolerantInjuryInRegion(
   );
 }
 
-function hasUnclassifiedLoadIntolerantInjury(
+function hasUnclassifiedActiveInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): boolean {
   return (openInjuries ?? []).some(
     (injury) =>
       isActiveInjury(injury) &&
-      (!injury.body_region || injury.body_region === "unknown") &&
-      injuryIsLoadIntolerant(injury),
+      (!injury.body_region || injury.body_region === "unknown"),
   );
 }
 
@@ -903,8 +902,8 @@ function hasNeuroDownregulationInjury(
   return (openInjuries ?? []).some(
     (injury) =>
       isActiveInjury(injury) &&
-      (injury.consequence === "neuro" ||
-        (injury.body_region === "head_neck" && injuryIsLoadIntolerant(injury))),
+      injury.body_region === "head_neck" &&
+      injuryIsLoadIntolerant(injury),
   );
 }
 
@@ -916,7 +915,7 @@ function resolveSafeSessionPosture(
   // A structural/severe injury whose anatomy could not be classified is never a
   // green light for generic movement. Fail closed rather than guessing a limb.
   if (
-    hasUnclassifiedLoadIntolerantInjury(openInjuries) ||
+    hasUnclassifiedActiveInjury(openInjuries) ||
     hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine")
   ) {
     return "rest_only";
@@ -965,7 +964,7 @@ export function resolveSafeSessionBlocked(
   const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
   const trunkBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine");
   const neuro = hasNeuroDownregulationInjury(openInjuries);
-  const unclassified = hasUnclassifiedLoadIntolerantInjury(openInjuries);
+  const unclassified = hasUnclassifiedActiveInjury(openInjuries);
 
   let explosive: string;
   if (unclassified || (upperBlocked && lowerBlocked)) {

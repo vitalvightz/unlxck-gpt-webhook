@@ -334,9 +334,33 @@ def test_reported_tear_is_not_escalated_to_rupture():
 
 
 def test_negated_rupture_evidence_does_not_upgrade_a_tear():
-    assert build_injury_label("bicep", "Not ruptured, just a bicep tear") == "Bicep tear"
-    assert build_injury_label("bicep", "nothing is ruptured, just a bicep tear") == "Bicep tear"
+    for description in [
+        "Not ruptured, just a bicep tear",
+        "nothing is ruptured, just a bicep tear",
+        "bicep tear with no rupture",
+        "bicep tear without evidence of rupture",
+        "bicep tear, not detached",
+        "the tendon was not detached, just a bicep tear",
+        "avulsion not present, just a bicep tear",
+        "rupture not seen, just a bicep tear",
+        "not a complete tear, just a bicep tear",
+        "confirmed bicep tear, not a full-thickness tear",
+    ]:
+        assert build_injury_label("bicep", description) == "Bicep tear", description
     assert build_injury_label("achilles", "ruled out rupture but achilles tear") == "Achilles tear"
+
+
+def test_rupture_evidence_requires_an_actual_complete_tear_phrase():
+    for description in [
+        "complete recovery from a bicep tear",
+        "complete healing of the tendon tear",
+        "bicep tear; complete imaging confirms a tear",
+        "bicep tear; full-thickness injury",
+    ]:
+        assert build_injury_label("bicep", description) == "Bicep tear", description
+
+    assert build_injury_label("achilles", "multiple achilles ruptures") == "Achilles rupture"
+    assert build_injury_label("achilles", "the tendon is rupturing") == "Achilles rupture"
 
 
 def test_confirmed_tear_stays_a_tear():

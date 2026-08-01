@@ -173,21 +173,70 @@ _TRIAGE_DISPLAY_NOUN = {
 # achilles tear" is still a tear — so "confirmed" is deliberately NOT evidence on
 # its own ("confirmed rupture" already matches via the bare "rupture" token). The
 # underlying triage — and its clearance requirement — is unchanged.
+_RUPTURE_ANATOMY_TOKEN = (
+    r"(?:left|right|bilateral|proximal|distal|achilles|biceps?|triceps?|"
+    r"quadriceps?|quads?|hamstrings?|rotator|cuff|patellar|tendon|ligament|"
+    r"muscle|fascia|labrum|meniscus|acl|mcl|pcl|lcl|shoulder|elbow|wrist|"
+    r"hip|knee|ankle|calf|foot|hand|groin|adductor|gluteal?)"
+)
+_RUPTURE_EVIDENCE_FRAGMENT = (
+    rf"(?:ruptur(?:e|ed|es|ing)|avuls(?:ion|ions|ed)|detached|snap(?:ped|s|ping)?|"
+    rf"complete(?:\s+{_RUPTURE_ANATOMY_TOKEN}){{0,4}}\s+(?:tear|rupture)|"
+    rf"full[-\s]thickness(?:\s+{_RUPTURE_ANATOMY_TOKEN}){{0,4}}\s+(?:tear|rupture)|"
+    rf"full\s+(?:tear|rupture))"
+)
 _RUPTURE_EVIDENCE_PATTERN = re.compile(
-    r"\b(?:rupture[d]?|avuls(?:ion|ed)|detached|snap(?:ped)?|"
-    r"complete(?:\s+[\w-]+){0,4}\s+(?:tear|rupture)|"
-    r"full[-\s]thickness(?:\s+[\w-]+){0,4}(?:\s+tear)?|full\s+tear)\b",
+    rf"\b{_RUPTURE_EVIDENCE_FRAGMENT}\b",
+    re.IGNORECASE,
+)
+_NEGATED_RUPTURE_EVIDENCE_PATTERN = re.compile(
+    rf"\b(?:"
+    rf"(?:no|not|without|den(?:y|ies|ied)|ruled\s+out)\s+"
+    rf"(?:(?:signs?|evidence)\s+of\s+)?(?:an?\s+)?(?:\w+\s+){{0,2}}?"
+    rf"|nothing\s+(?:is|was|has\s+been)\s+"
+    rf"|there\s+(?:is|was|were)\s+no\s+"
+    rf"|(?:does|do|did|is|was|were|has|have|had)\s+not\s+(?:\w+\s+){{0,2}}?"
+    rf"){_RUPTURE_EVIDENCE_FRAGMENT}\b",
+    re.IGNORECASE,
+)
+_TRAILING_RUPTURE_DENIAL_PATTERN = re.compile(
+    rf"\b{_RUPTURE_EVIDENCE_FRAGMENT}"
+    rf"(?:\s+{_RUPTURE_ANATOMY_TOKEN}){{0,2}}\s+"
+    rf"(?:(?:is|was|were)\s+)?(?:not\s+(?:present|seen|confirmed|found|evident)|"
+    rf"absent|negative|ruled\s+out)\b",
     re.IGNORECASE,
 )
 
-# ``remove_negated_phrases`` covers the pipeline's standard denial language.
-# Keep this narrow fallback for the common "nothing is ruptured" construction,
-# which is a denial but is not one of Negex's configured leading cues.
-_NOTHING_RUPTURED_PATTERN = re.compile(
-    r"\bnothing\s+(?:is|was|has\s+been)\s+"
-    r"(?:rupture[d]?|avuls(?:ion|ed)|detached|snap(?:ped)?)\b",
+
+def _has_affirmative_rupture_evidence(*injury_text_parts: str) -> bool:
+    """Return true only for explicit, non-negated complete-tear evidence."""
+    from fightcamp.injury_negation import remove_negated_phrases
+
+    cleaned_parts: list[str] = []
+    for part in injury_text_parts:
+        cleaned = remove_negated_phrases(part or "")
+        cleaned = _NEGATED_RUPTURE_EVIDENCE_PATTERN.sub(" ", cleaned)
+        cleaned = _TRAILING_RUPTURE_DENIAL_PATTERN.sub(" ", cleaned)
+        cleaned_parts.append(cleaned)
+    return bool(_RUPTURE_EVIDENCE_PATTERN.search(" ".join(cleaned_parts)))
+
+
+_STRUCTURAL_INJURY_PATTERN = re.compile(
+    r"\b(?:tears?|torn|fractures?|fractured|dislocations?|dislocated)\b",
     re.IGNORECASE,
 )
+
+
+def _has_affirmative_structural_evidence(*injury_text_parts: str) -> bool:
+    """Recognise structural wording the scorer does not yet pluralise."""
+    from fightcamp.injury_negation import remove_negated_phrases
+
+    if _has_affirmative_rupture_evidence(*injury_text_parts):
+        return True
+    cleaned = " ".join(
+        remove_negated_phrases(part or "") for part in injury_text_parts
+    )
+    return bool(_STRUCTURAL_INJURY_PATTERN.search(cleaned))
 
 
 def _triage_display_noun(triage_category: str, *injury_text_parts: str) -> str:
@@ -198,18 +247,10 @@ def _triage_display_noun(triage_category: str, *injury_text_parts: str) -> str:
     "tear" rather than escalated to "rupture".
     """
     noun = _TRIAGE_DISPLAY_NOUN.get(triage_category, "")
-    if triage_category == "tendon_rupture":
-        # Clean each field independently. Prefixing a structured body area before
-        # the description would hide a leading denial such as "not ruptured" from
-        # the clause-scoped negation cleaner.
-        from fightcamp.injury_negation import remove_negated_phrases
-
-        evidence_text = " ".join(
-            _NOTHING_RUPTURED_PATTERN.sub(" ", remove_negated_phrases(part or ""))
-            for part in injury_text_parts
-        )
-        if not _RUPTURE_EVIDENCE_PATTERN.search(evidence_text):
-            return "tear"
+    if triage_category == "tendon_rupture" and not _has_affirmative_rupture_evidence(
+        *injury_text_parts
+    ):
+        return "tear"
     return noun
 
 # Triage categories whose name already implies the body part (a named knee
@@ -241,7 +282,7 @@ _SOFT_SYMPTOM_LABELS = {
 _CONDITION_STRIP = re.compile(
     r"\b(?:bruis(?:e|ed|ing)|contusion|hyperextend(?:ed|ing|s)?|hyperextension|"
     r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broke(?:n)?|break|crack(?:ed)?|shattered|"
-    r"ruptur(?:e|ed)|tears?|torn|tore|snap(?:ped)?|pop(?:ped)?|blown|"
+    r"ruptur(?:e|ed|es|ing)|tears?|torn|tore|snap(?:ped|s|ping)?|pop(?:ped)?|blown|"
     r"sprain(?:ed|ing)?|strain(?:ed|ing)?|pulled|tendon[ai]tis|tendinopathy|"
     r"imping(?:ed|ement)|instability|unstable|inflam(?:ed|mation|matory)|"
     r"swollen|swelling|stiff(?:ness)?|tight(?:ness)?|sore(?:ness)?|"
@@ -382,6 +423,10 @@ def build_injury_label(body_area: object, description: object) -> str:
     # rupture (see _triage_display_noun).
     if condition_key in ("", "unspecified"):
         condition_key = _triage_display_noun(triage_category, body, desc) or condition_key
+        if condition_key in ("", "unspecified") and _has_affirmative_rupture_evidence(
+            body, desc
+        ):
+            condition_key = "rupture"
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"
@@ -525,10 +570,20 @@ def injury_consequence_tier(
     """
     # Deferred import: keeps the fightcamp NLP/synonym stack out of the eager import
     # graph for callers that never classify an injury.
+    from fightcamp.injury_negation import remove_negated_phrases
     from fightcamp.injury_registry import get_registry_category
     from fightcamp.injury_scoring import score_injury_phrase
 
-    text = f"{str(body_area or '').strip()} {str(description or '').strip()}".strip()
+    # Clean fields independently. Prefixing the body area before a description
+    # can otherwise hide a leading denial (for example, ``no fracture``).
+    text = " ".join(
+        cleaned
+        for cleaned in (
+            remove_negated_phrases(str(body_area or "").strip()),
+            remove_negated_phrases(str(description or "").strip()),
+        )
+        if cleaned
+    )
     if not text:
         return None
     score = score_injury_phrase(text) or {}
@@ -536,6 +591,10 @@ def injury_consequence_tier(
     if triage_category in _CONSEQUENCE_NEURO_TRIAGE:
         return "neuro"
     if triage_category in _CONSEQUENCE_STRUCTURAL_TRIAGE:
+        return "structural"
+    if _has_affirmative_structural_evidence(
+        str(body_area or ""), str(description or "")
+    ):
         return "structural"
 
     category = get_registry_category(str(score.get("injury_type") or ""))
