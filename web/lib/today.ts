@@ -855,19 +855,19 @@ export type SafeSessionView = {
 //     needs healthy arms. Mobility and activation can always be steered to
 //     unaffected regions by the coach, so they stay unless the whole athlete
 //     must rest.
-//   • A concussion (or a severe neck injury) needs downregulation, not aerobic
-//     exertion or neck-loading activation — only calm mobility, breathing and
-//     coach-led rehab remain.
+//   • A concussion / head injury (or a severe neck injury) needs downregulation,
+//     not aerobic exertion or neck-loading activation — only calm mobility,
+//     breathing and coach-led rehab remain.
+//   • A structural/severe spine, back or rib injury must not receive ANY generic
+//     movement advice — not cardio, not gravity-loaded mobility, not trunk
+//     activation. Only calm breathing and clinician-led rehab are safe there.
 //   • The gate is severity/structure, not mere presence: a niggle (tightness,
 //     minor strain, soreness) in a region still tolerates gentle conditioning;
 //     only a structural failure (fracture / rupture / tear / dislocation /
 //     avulsion) or a severe injury removes an option.
-// Trunk/spine injuries deliberately keep the standard menu: gentle walking,
-// breathing and mobility are safe-to-beneficial for the back and ribs on a
-// recovery day, and anything loaded is already in the blocked column.
 
 // Whole-word body-location vocabulary per region. An injury can hit more than one
-// (e.g. "back of knee"); the menu reacts to each region it touches.
+// region; the menu reacts to each region it touches.
 const INJURY_REGION_TERMS = {
   // The weight-bearing lower kinetic chain that gait and pedalling load.
   lower_limb: [
@@ -882,11 +882,37 @@ const INJURY_REGION_TERMS = {
     "tricep", "triceps", "elbow", "forearm", "wrist", "hand", "finger", "fingers",
     "thumb", "knuckle", "knuckles", "clavicle", "collarbone",
   ],
-  // Brain/neck — the region that turns any aerobic push into a symptom risk.
-  head_neck: ["concussion", "concussed", "skull", "whiplash", "neck", "cervical", "jaw", "temple"],
+  // Brain/neck — the region that turns any aerobic push into a symptom risk. Bare
+  // "head" is handled by INJURY_REGION_PATTERNS to avoid matching anatomical uses
+  // ("long head of biceps", "femoral head", "radial head").
+  head_neck: [
+    "concussion", "concussed", "brain", "skull", "whiplash",
+    "neck", "cervical", "jaw", "temple", "face", "facial",
+  ],
+  // Spine, back and rib cage — a structural/severe injury here cannot take any
+  // gravity-loaded or trunk-braced work. Bare "back" is handled by a pattern so
+  // it never matches "back of knee/thigh" (which are lower-limb).
+  trunk_spine: [
+    "spine", "spinal", "lumbar", "thoracic", "thorax",
+    "sacral", "sacrum", "coccyx", "tailbone", "vertebra", "vertebrae",
+    "disc", "sciatic", "sciatica", "rib", "ribs", "ribcage", "chest", "sternum",
+  ],
 } as const;
 
 type InjuryRegion = keyof typeof INJURY_REGION_TERMS;
+
+// Context-guarded region terms. Some body words are ambiguous as bare tokens —
+// "head" is usually anatomical ("long head", "femoral head") and "back" is often
+// a direction ("back of knee") — so they only count when they read as an injury
+// to that region.
+const INJURY_REGION_PATTERNS: Partial<Record<InjuryRegion, readonly RegExp[]>> = {
+  // "head" as a head injury, not "<bone> head" / "head of <bone>".
+  head_neck: [
+    /(?<!(?:long|short|radial|humeral|femoral|fibular|tibial|metatarsal|ulnar|lateral|medial|bicep|biceps|tricep|triceps|gastroc|gastrocnemius)\s)\bhead\b(?!\s+of\b)/,
+  ],
+  // "back" as the spine ("lower back", "back spasm"), not "back of <limb>".
+  trunk_spine: [/\bback\b(?!\s+of\b)/],
+};
 
 // The "cannot take load" tier: a structural failure. A plain ache, tightness or
 // minor strain is NOT disqualifying — only a break/rupture/tear/dislocation is
@@ -910,7 +936,10 @@ function isActiveInjury(injury: InjuryFlagRecord): boolean {
 }
 
 function injuryHitsRegion(haystack: string, region: InjuryRegion): boolean {
-  return INJURY_REGION_TERMS[region].some((term) => haystack.includes(` ${term} `));
+  if (INJURY_REGION_TERMS[region].some((term) => haystack.includes(` ${term} `))) {
+    return true;
+  }
+  return (INJURY_REGION_PATTERNS[region] ?? []).some((pattern) => pattern.test(haystack));
 }
 
 function injuryIsLoadIntolerant(injury: InjuryFlagRecord, haystack: string): boolean {
@@ -944,8 +973,9 @@ export function hasLoadIntolerantLowerLegInjury(
   return hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
 }
 
-/** A concussion, or a structural/severe neck injury: both call for aerobic and
- *  CNS downregulation rather than any exertion, even on a "safe" session. */
+/** A concussion, or a structural/severe head or neck injury: all call for
+ *  aerobic and CNS downregulation rather than any exertion, even on a "safe"
+ *  session. */
 function hasNeuroDownregulationInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): boolean {
@@ -955,7 +985,7 @@ function hasNeuroDownregulationInjury(
     }
     const haystack = injuryHaystack(injury);
     // A concussion at ANY severity is disqualifying — it is never a green light
-    // for aerobic push. A neck injury only downregulates when structural/severe.
+    // for aerobic push. Other head/neck injuries downregulate when structural/severe.
     if (haystack.includes(" concussion ") || haystack.includes(" concussed ")) {
       return true;
     }
@@ -970,22 +1000,33 @@ function hasNeuroDownregulationInjury(
 export function resolveSafeSessionAllowed(
   openInjuries?: readonly InjuryFlagRecord[] | null,
 ): string[] {
-  const neuro = hasNeuroDownregulationInjury(openInjuries);
+  // Most restrictive first: a structural/severe spine, back or rib injury. No
+  // loaded or gravity-loaded movement is safe as generic advice — not cardio, not
+  // mobility, not trunk activation — so only calm breathing and clinician-led
+  // rehab remain.
+  if (hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine")) {
+    return ["Breathing reset", "Coach-approved rehab"];
+  }
+
+  // Concussion / head / severe neck: downregulate. Gentle mobility is fine (and
+  // part of sub-symptom-threshold protocols), but no aerobic push and no activation.
+  if (hasNeuroDownregulationInjury(openInjuries)) {
+    return ["Easy mobility", "Breathing reset", "Coach-approved rehab"];
+  }
+
   const lowerBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
   const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
 
   // The one aerobic/movement slot, matched to whichever limbs can take load.
   let conditioning: string | null;
-  if (neuro) {
-    // Concussion / severe neck: no aerobic push on a rest day.
-    conditioning = null;
-  } else if (lowerBlocked && upperBlocked) {
+  if (lowerBlocked && upperBlocked) {
     // Neither the legs nor the arms can drive a cardio modality — defer to the
     // coach-led item rather than name something unsafe.
     conditioning = null;
   } else if (lowerBlocked) {
-    // Spare the legs with seated, non-weight-bearing upper-body cardio.
-    conditioning = "Upper-body cardio (arm bike)";
+    // Spare the legs. Not everyone owns an arm ergometer, so keep it optional and
+    // symptom-gated rather than prescribing a specific machine.
+    conditioning = "Seated upper-body cardio — only if pain-free and available";
   } else {
     conditioning = "Light bike or walk";
   }
@@ -994,13 +1035,7 @@ export function resolveSafeSessionAllowed(
   if (conditioning) {
     allowed.push(conditioning);
   }
-  allowed.push("Breathing reset");
-  // Activation can be steered to unaffected muscles — but a concussion rest-day
-  // holds even that back in favour of pure downregulation.
-  if (!neuro) {
-    allowed.push("Gentle activation");
-  }
-  allowed.push("Coach-approved rehab");
+  allowed.push("Breathing reset", "Gentle activation", "Coach-approved rehab");
   return allowed;
 }
 

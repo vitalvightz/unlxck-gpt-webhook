@@ -167,13 +167,15 @@ _TRIAGE_DISPLAY_NOUN = {
 # That conflation is correct for routing, but the athlete-facing label must not put
 # the louder word in the athlete's mouth: relabelling "Left bicep tear" as "Left
 # bicep rupture" over-states a partial tear as a complete one. So the "rupture"
-# noun is earned only by explicit rupture evidence (ruptured / avulsion / detached
-# / snapped / a complete or full-thickness tear); a plain tear stays a "tear". The
+# noun is earned only by explicit evidence of a COMPLETE tear: a rupture/avulsion,
+# a detached or snapped tendon, or a "complete"/"full-thickness" tear. A tear being
+# clinically *confirmed* proves it exists, not that it is complete — "confirmed
+# achilles tear" is still a tear — so "confirmed" is deliberately NOT evidence on
+# its own ("confirmed rupture" already matches via the bare "rupture" token). The
 # underlying triage — and its clearance requirement — is unchanged.
 _RUPTURE_EVIDENCE_PATTERN = re.compile(
     r"\b(?:rupture[d]?|avuls(?:ion|ed)|detached|snap(?:ped)?|"
-    r"complete\s+(?:tear|rupture)|full[-\s]thickness(?:\s+tear)?|full\s+tear|"
-    r"confirmed\s+(?:tear|rupture))\b",
+    r"complete\s+(?:tear|rupture)|full[-\s]thickness(?:\s+tear)?|full\s+tear)\b",
     re.IGNORECASE,
 )
 
@@ -231,10 +233,14 @@ _CONDITION_STRIP = re.compile(
 )
 
 # Connective/filler words removed once the condition is stripped, leaving only
-# the body location. Laterality (left/right) is deliberately kept.
+# the body location. Laterality (left/right) is deliberately kept. Clinical
+# qualifiers (confirmed/suspected/possible/likely) are stripped too — they modify
+# the diagnosis, not the body part, so "confirmed achilles tear" must not read
+# "Confirmed achilles tear".
 _LOCATION_FILLER = re.compile(
     r"\b(?:is|are|was|were|been|be|has|have|had|got|getting|gets|feels?|feeling|felt|"
-    r"seems?|it|this|that|a|an|the|my|some|really|quite|very|bit|of|in|on|with|and)\b",
+    r"seems?|it|this|that|a|an|the|my|some|really|quite|very|bit|of|in|on|with|and|"
+    r"confirmed|suspected|possible|likely)\b",
     re.I,
 )
 _LOCATION_SIDE_WORDS = {"left", "right", "both", "bilateral"}

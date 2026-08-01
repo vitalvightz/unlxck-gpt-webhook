@@ -327,6 +327,19 @@ def test_reported_tear_is_not_escalated_to_rupture():
     assert build_injury_label("snapped achilles", "snapped achilles") == "Achilles rupture"
     assert build_injury_label("ruptured bicep", "ruptured bicep") == "Bicep rupture"
 
+
+def test_confirmed_tear_stays_a_tear():
+    # A tear being clinically *confirmed* proves it exists, not that it is complete.
+    # "confirmed" must not act as rupture evidence — only a confirmed *rupture* does
+    # (and that already reads as a rupture via the word "rupture" itself).
+    assert build_injury_label("bicep", "confirmed bicep tear") == "Bicep tear"
+    assert build_injury_label("achilles", "confirmed achilles tear") == "Achilles tear"
+    assert build_injury_label("achilles", "confirmed achilles rupture") == "Achilles rupture"
+    # The clinical qualifier never leaks into the label location either.
+    assert build_injury_label("confirmed bicep tear", "confirmed bicep tear") == "Bicep tear"
+    assert build_injury_label("confirmed achilles tear", "confirmed achilles tear") == "Achilles tear"
+    assert build_injury_label("confirmed achilles rupture", "confirmed achilles rupture") == "Achilles rupture"
+
     # The safety triage is unchanged: a plain tear still routes to the urgent
     # tendon-rupture category (clinical clearance), only the label is honest.
     from fightcamp.injury_scoring import score_injury_phrase
