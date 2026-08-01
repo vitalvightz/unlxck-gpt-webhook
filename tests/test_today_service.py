@@ -1447,6 +1447,29 @@ class TestCommandView:
         assert view.today.recommendation_state == "not_checked_in"
         assert "high_pain" in [risk.category for risk in view.risk_watch]
 
+    def test_current_checkin_risks_carry_explicit_today_timing(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(sleep="poor", pain="high"),
+            now=now,
+        )
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=now,
+        )
+        by_category = {risk.category: risk for risk in view.risk_watch}
+        assert by_category["high_pain"].timeframe == "today"
+        assert by_category["high_pain"].text == "High pain reported during today's check-in."
+        assert by_category["fatigue"].timeframe == "today"
+        assert by_category["fatigue"].text == "Fatigue reported during today's check-in."
+
     def test_logged_session_pain_surfaces_when_checkin_history_fails(self):
         class FailingCheckinHistoryStore(FakeStore):
             def list_today_checkins(self, athlete_id: str, *, limit: int = 14):

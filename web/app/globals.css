@@ -2595,27 +2595,6 @@ html[data-theme="light"] .today-caution-row {
   margin: 0 0 14px;
 }
 
-/* Risk-watch severity footer. */
-.overview-risk-footer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 6px;
-  margin: 4px 0 0;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  color: var(--text-muted);
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.overview-risk-strongest {
-  color: #ff8d9a;
-  font-weight: 700;
-}
-
 html[data-theme="light"] .today-safe-session {
   border-color: rgba(189, 16, 32, 0.2);
   background: rgba(189, 16, 32, 0.05);
@@ -2631,8 +2610,7 @@ html[data-theme="light"] .today-safe-list[data-kind="allowed"] li::before {
 html[data-theme="light"] .overview-safe-list[data-kind="blocked"] .overview-safe-list-label,
 html[data-theme="light"] .today-safe-list[data-kind="blocked"] .today-safe-list-label,
 html[data-theme="light"] .overview-safe-list[data-kind="blocked"] li::before,
-html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before,
-html[data-theme="light"] .overview-risk-strongest {
+html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before {
   color: var(--danger-ink, #bd1020);
 }
 
@@ -2642,11 +2620,13 @@ html[data-theme="light"] .overview-risk-strongest {
   align-content: start;
 }
 
-/* Coloured risk rows — meaning never rests on colour alone (label + text carry
-   it), but each tone now reads instantly instead of a flat grey list. */
+/* Overview stays a compact index: timing + signal only. Today owns the full
+   explanation and action. */
 .overview-risk-row {
   display: grid;
-  gap: 3px;
+  grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
   padding: 8px 10px 8px 12px;
   border-radius: 10px;
   border-left: 3px solid rgba(255, 255, 255, 0.16);
@@ -2693,7 +2673,8 @@ html[data-theme="light"] .overview-risk-strongest {
 
 .overview-risk-row-text {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 650;
   line-height: 1.4;
 }
 
@@ -2702,9 +2683,10 @@ html[data-theme="light"] .overview-risk-strongest {
   gap: 8px;
 }
 
-/* In-place expander for extra risk flags — matches the Today toggle so the two
-   screens feel like one system. Full-width, quiet, and clearly tappable. */
+/* Overflow routes to the actionable Today surface instead of expanding a
+   second full warning feed on Overview. */
 .overview-risk-more {
+  display: block;
   justify-self: stretch;
   width: 100%;
   margin-top: 2px;
@@ -2717,6 +2699,8 @@ html[data-theme="light"] .overview-risk-strongest {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
+  text-align: center;
+  text-decoration: none;
   text-transform: uppercase;
   cursor: pointer;
   transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
@@ -7911,90 +7895,63 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   opacity: 0.82;
 }
 
-/* Risk watch reads as a calm coach note: a single stacked column of thin
-   accent-ruled rows, not a wall of glowing alert cards. */
+/* Risk context sits inside the command shell as open, compact rows. It is not
+   repeated beneath the injury form and does not compete with the decision. */
 .today-risk-watch {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: -4px;
+  padding-top: 4px;
 }
 
 .today-risk-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .today-risk-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 11px;
-  align-items: start;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-left-width: 3px;
-  border-radius: 12px;
-  padding: 11px 13px;
-  background: rgba(255, 255, 255, 0.028);
+  grid-template-columns: minmax(112px, 0.3fr) minmax(0, 1fr) auto;
+  gap: 10px 16px;
+  align-items: baseline;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.today-risk-copy {
+.today-risk-heading {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
-/* The "!" badge is a quiet, tone-tinted chip — not a filled glowing puck.
-   Meaning never rests on colour alone (the label + text carry it). */
-.today-risk-icon {
-  width: 24px;
-  height: 24px;
-  margin-top: 1px;
-  border-radius: 8px;
-  border-color: transparent;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.today-risk-item[data-tone="stop"],
-.today-risk-item[data-tone="warning"] {
-  border-color: rgba(219, 47, 64, 0.24);
-  border-left-color: #e23a4c;
-  background: rgba(219, 47, 64, 0.06);
-}
-
-.today-risk-item[data-tone="stop"] .today-risk-icon,
-.today-risk-item[data-tone="warning"] .today-risk-icon {
-  background: rgba(226, 58, 76, 0.2);
-  color: #ffd8dc;
-}
-
-.today-risk-item[data-tone="caution"] {
-  border-color: rgba(214, 175, 106, 0.24);
-  border-left-color: #d6af6a;
-  background: rgba(214, 175, 106, 0.07);
-}
-
-.today-risk-item[data-tone="caution"] .today-risk-icon {
-  background: rgba(230, 194, 125, 0.2);
-  color: #ffe2a6;
-}
-
-.today-risk-item[data-tone="info"] {
-  border-color: rgba(120, 168, 224, 0.24);
-  border-left-color: #78a8e0;
-  background: rgba(120, 168, 224, 0.06);
-}
-
-.today-risk-item[data-tone="info"] .today-risk-icon {
-  background: rgba(110, 162, 224, 0.2);
-  color: #d6e6ff;
+.today-risk-signal {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .today-risk-text {
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.4;
+}
+
+.today-risk-action {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration-color: rgba(255, 255, 255, 0.35);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.today-risk-action:hover,
+.today-risk-action:focus-visible {
+  color: #ff8d9a;
+  text-decoration-color: currentColor;
 }
 
 .today-risk-item[data-tone="caution"] .today-risk-label {
@@ -8012,6 +7969,19 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
 
 .today-risk-more {
   align-self: flex-start;
+}
+
+@media (max-width: 720px) {
+  .today-risk-item {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 12px 2px;
+  }
+
+  .today-risk-action {
+    width: fit-content;
+    white-space: normal;
+  }
 }
 
 .today-session-summary {
@@ -15367,6 +15337,24 @@ html[data-theme="light"] .today-risk-item[data-tone="info"] {
   border-color: rgba(73, 105, 141, 0.18);
   border-left-color: #49698d;
   background: linear-gradient(135deg, rgba(73, 105, 141, 0.07), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-risk-list {
+  border-top-color: rgba(80, 81, 84, 0.12);
+}
+
+html[data-theme="light"] .today-risk-item,
+html[data-theme="light"] .today-risk-item[data-tone="stop"],
+html[data-theme="light"] .today-risk-item[data-tone="warning"],
+html[data-theme="light"] .today-risk-item[data-tone="caution"],
+html[data-theme="light"] .today-risk-item[data-tone="info"] {
+  border-color: rgba(80, 81, 84, 0.12);
+  background: transparent;
+}
+
+html[data-theme="light"] .today-risk-action {
+  color: var(--text-primary);
+  text-decoration-color: rgba(35, 36, 39, 0.3);
 }
 
 /* The risk-watch "!" chips carry the dark theme's pale glyph colours (near-white

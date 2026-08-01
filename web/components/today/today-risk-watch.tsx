@@ -2,11 +2,21 @@
 
 import { useId, useState } from "react";
 
-import { getRiskWatchText, getVisibleRiskWatch } from "@/lib/today";
+import {
+  getRiskTimeframeLabel,
+  getRiskWatchText,
+  getVisibleRiskWatch,
+} from "@/lib/today";
 import type { TodayCommandView } from "@/lib/types";
 
-/** Collapsible list of the backend's prioritized risk-watch warnings. */
-export function TodayRiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
+/** Compact, collapsible command context for prioritized risk signals. */
+export function TodayRiskWatch({
+  risks,
+  hasActiveInjury = false,
+}: {
+  risks: TodayCommandView["risk_watch"];
+  hasActiveInjury?: boolean;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const overflowId = useId();
   if (!risks.length) {
@@ -15,19 +25,30 @@ export function TodayRiskWatch({ risks }: { risks: TodayCommandView["risk_watch"
   const { visible, overflow } = getVisibleRiskWatch(risks);
   const shown = isExpanded ? risks : visible;
   return (
-    <section className="today-risk-watch" aria-label="Risk watch">
+    <section className="today-risk-watch" aria-label="Current and recent risk signals">
       <div id={overflowId} className="today-risk-list">
-        {shown.map((risk, index) => (
-          <article key={`${risk.category}-${risk.label}-${index}`} className="today-risk-item" data-tone={risk.tone}>
-            <span className="today-risk-icon" aria-hidden="true">
-              !
-            </span>
-            <div className="today-risk-copy">
-              <p className="today-risk-label">{risk.label}</p>
+        {shown.map((risk, index) => {
+          const timeframe = getRiskTimeframeLabel(risk.timeframe);
+          const isHistoricalPain =
+            risk.category === "high_pain" &&
+            (risk.timeframe === "last_session" || risk.timeframe === "recent_sessions");
+          return (
+            <article key={`${risk.category}-${risk.label}-${index}`} className="today-risk-item" data-tone={risk.tone}>
+              <div className="today-risk-heading">
+                <p className="today-risk-label">{timeframe || risk.label}</p>
+                {timeframe ? <p className="today-risk-signal">{risk.label}</p> : null}
+              </div>
               <p className="today-risk-text">{getRiskWatchText(risk)}</p>
-            </div>
-          </article>
-        ))}
+              {isHistoricalPain ? (
+                <a className="today-risk-action" href="#today-injury">
+                  {hasActiveInjury
+                    ? "Still present? Update your injury."
+                    : "Still present? Add an injury."}
+                </a>
+              ) : null}
+            </article>
+          );
+        })}
       </div>
       {overflow > 0 ? (
         <button

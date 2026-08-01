@@ -1718,11 +1718,29 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
     risks = []
     state = str(checkin.get("recommendation_state") or "")
     if state == "pull_back":
-        risks.append(make_risk("stop_red_flag", text="Recommendation: pull back today."))
+        risks.append(
+            make_risk(
+                "stop_red_flag",
+                text="Recommendation: pull back today.",
+                timeframe="today",
+            )
+        )
     if str(checkin.get("active_injury")) == "worse":
-        risks.append(make_risk("active_injury_worse", text="Active injury reported as worse."))
+        risks.append(
+            make_risk(
+                "active_injury_worse",
+                text="Active injury reported as worse during today's check-in.",
+                timeframe="today",
+            )
+        )
     if str(checkin.get("pain")) == "high":
-        risks.append(make_risk("high_pain", text="Pain reported as high."))
+        risks.append(
+            make_risk(
+                "high_pain",
+                text="High pain reported during today's check-in.",
+                timeframe="today",
+            )
+        )
     # Taper deliberately produces no risk row. It fired on phase alone, so every
     # athlete in taper carried a permanent caution-toned entry with a "!" icon,
     # counted in Overview's "N active warnings" and able to render as the day's
@@ -1730,7 +1748,13 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
     # appears as CONTEXT on the decision card, where it explains the call without
     # being mistaken for a problem.
     if str(checkin.get("sleep")) == "poor" or str(checkin.get("body")) == "flat":
-        risks.append(make_risk("fatigue", text="Fatigue signals on today's check-in."))
+        risks.append(
+            make_risk(
+                "fatigue",
+                text="Fatigue reported during today's check-in.",
+                timeframe="today",
+            )
+        )
     return risks
 
 

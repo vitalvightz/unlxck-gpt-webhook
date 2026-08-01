@@ -20,6 +20,7 @@ import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
   getCompletionLabel,
+  getDistinctTodayRiskWatch,
   getSupplementaryRiskWatch,
   hasActivePlan,
   resolveTodayDecision,
@@ -192,6 +193,14 @@ export function TodayScreen() {
     state.risk_watch,
     resolvedDecision,
   );
+  const visibleTriggerLabels =
+    resolvedDecision.displayTier === "preview"
+      ? []
+      : state.today.recommendation_trigger_labels;
+  const commandRisks = getDistinctTodayRiskWatch(
+    supplementaryRisks,
+    visibleTriggerLabels,
+  );
   const readinessForm = showCheckin ? (
     <TodayReadinessForm
       plan={activePlan}
@@ -258,6 +267,10 @@ export function TodayScreen() {
           sources={state.today.recommendation_sources}
           confidenceNote={state.today.recommendation_confidence_note}
         />
+        <TodayRiskWatch
+          risks={commandRisks}
+          hasActiveInjury={(state.open_injuries?.length ?? 0) > 0}
+        />
       </section>
 
       {resolvedDecision.useSafeReplacement ? (
@@ -279,8 +292,6 @@ export function TodayScreen() {
           onRefresh={refresh}
         />
       ) : null}
-
-      <TodayRiskWatch risks={supplementaryRisks} />
 
       {resolvedDecision.recommendationState !== "not_checked_in" ? (
         <ContextualFeedback

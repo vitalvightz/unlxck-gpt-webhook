@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { CampProgressBar } from "@/components/camp-progress-bar";
@@ -24,9 +24,9 @@ import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName, isOpenOng
 import {
   getCampDayLabel,
   getCompletionLabel,
+  getOverviewCommandEyebrow,
   getOverviewPrimaryAction,
-  getRiskWatchSummary,
-  getRiskWatchText,
+  getRiskTimeframeLabel,
   getSafeSessionView,
   getSessionDayLabel,
   getSessionFocus,
@@ -34,7 +34,6 @@ import {
   getTierMeta,
   isHardCombatSession,
   resolveTodayDecision,
-  type TodayDecisionTier,
 } from "@/lib/today";
 import {
   LANDING_OUTCOME_POINTS,
@@ -202,21 +201,11 @@ function enrichConfirmedActivePlan(
 }
 
 /**
- * Overview risk watch. Shows the two highest-priority flags, with any extras
- * behind an in-place "+N more" toggle so the card expands smoothly instead of
- * routing away or truncating. Row copy runs through getRiskWatchText so a flag
- * never parrots the main recommendation word-for-word.
+ * Condensed Overview risk index. Today owns the full explanation and action;
+ * this card names only the two highest-priority signals and routes overflow to
+ * that actionable surface.
  */
-function OverviewRiskWatch({
-  risks = [],
-  tier,
-}: {
-  risks?: TodayCommandView["risk_watch"];
-  tier?: TodayDecisionTier;
-}) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const overflowId = useId();
-
+function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watch"] }) {
   if (!risks.length) {
     return (
       <article className="status-card overview-command-card overview-risk-card">
@@ -229,35 +218,27 @@ function OverviewRiskWatch({
   const safeRisks = risks ?? [];
   const visible = safeRisks.slice(0, 2);
   const overflow = safeRisks.length - visible.length;
-  const shown = isExpanded ? safeRisks : visible;
-  const summary = getRiskWatchSummary(safeRisks, tier);
 
   return (
     <article className="status-card overview-command-card overview-risk-card">
       <p className="status-label">Risk watch</p>
-      <div id={overflowId} className="overview-risk-list">
-        {shown.map((risk, index) => (
-          <div key={`${risk.category}-${risk.label}-${index}`} className="overview-risk-row" data-tone={risk.tone}>
-            <span className="overview-risk-row-label">{humanizeIfRawEnum(risk.label) || risk.label}</span>
-            <span className="overview-risk-row-text">{getRiskWatchText(risk)}</span>
-          </div>
-        ))}
+      <div className="overview-risk-list">
+        {visible.map((risk, index) => {
+          const timeframe = getRiskTimeframeLabel(risk.timeframe);
+          const riskLabel = humanizeIfRawEnum(risk.label) || risk.label;
+          return (
+            <div key={`${risk.category}-${risk.label}-${index}`} className="overview-risk-row" data-tone={risk.tone}>
+              <span className="overview-risk-row-label">{timeframe || riskLabel}</span>
+              {timeframe ? <span className="overview-risk-row-text">{riskLabel}</span> : null}
+            </div>
+          );
+        })}
       </div>
       {overflow > 0 ? (
-        <button
-          type="button"
-          className="overview-risk-more"
-          aria-controls={overflowId}
-          aria-expanded={isExpanded}
-          onClick={() => setIsExpanded((current) => !current)}
-        >
-          {isExpanded ? "Show less" : `+${overflow} more warning${overflow > 1 ? "s" : ""}`}
-        </button>
+        <Link href="/today" className="overview-risk-more">
+          Review {overflow} more on Today
+        </Link>
       ) : null}
-      <p className="overview-risk-footer">
-        <span>{summary.count} active warning{summary.count === 1 ? "" : "s"}</span>
-        <span className="overview-risk-strongest">Strongest signal: {summary.strongestLabel}</span>
-      </p>
     </article>
   );
 }
@@ -489,6 +470,7 @@ export default function HomePage() {
     const decisionTier = resolvedDecision?.displayTier ?? "not_checked_in";
     const tierMeta = getTierMeta(decisionTier);
     const decisionTitle = tierMeta.label;
+    const overviewEyebrow = getOverviewCommandEyebrow(decisionTier);
     const decisionLines = decisionBanner
       ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
       : ["Submit today's fast check-in to unlock your training decision."];
@@ -560,7 +542,7 @@ export default function HomePage() {
         <section className="hero-panel overview-command-shell overview-command-primary athlete-motion-slot athlete-motion-header">
           <div className="overview-primary-grid">
             <div className="status-card overview-command-card overview-decision-lead" data-tone={decisionTone}>
-              <p className="eyebrow">Today&apos;s command</p>
+              <p className="eyebrow">{overviewEyebrow}</p>
               <h1 className="hero-title overview-decision-headline">{overviewTitle}</h1>
               <div className="overview-decision-copy">
                 {overviewLines.map((line, index) => (
@@ -653,7 +635,7 @@ export default function HomePage() {
             <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
           </div>
           <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
-          <OverviewRiskWatch risks={risks} tier={decisionTier} />
+          <OverviewRiskWatch risks={risks} />
         </section>
       </>
     );

@@ -979,6 +979,7 @@ export type TodayCommandView = {
     label: string;
     text: string;
     tone: string;
+    timeframe?: "today" | "last_session" | "recent_sessions" | "active" | null;
   }>;
   open_injuries: InjuryFlagRecord[];
   week_summary: Record<string, unknown>;

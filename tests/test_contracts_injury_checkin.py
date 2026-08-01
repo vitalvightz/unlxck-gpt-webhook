@@ -144,6 +144,7 @@ def test_severe_open_flag_is_a_stop_level_risk():
     )
     assert len(risks) == 1
     assert risks[0].category == "active_injury_worse"
+    assert risks[0].timeframe == "active"
     assert "Left knee" in risks[0].text
 
 
@@ -173,6 +174,7 @@ def test_non_severe_open_flags_are_a_tracking_reminder():
     )
     assert len(risks) == 1
     assert risks[0].category == "reminder"
+    assert risks[0].timeframe == "active"
     assert "2 open injuries" in risks[0].text
     assert "Wrist" in risks[0].text
 

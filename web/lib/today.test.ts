@@ -14,8 +14,10 @@ import {
   getCompletionActions,
   getDecisionTier,
   getInjuryOverrideBanner,
+  getOverviewCommandEyebrow,
   getOverviewPrimaryAction,
   getRecommendationCopy,
+  getRiskTimeframeLabel,
   getRiskWatchSummary,
   getSafeSessionView,
   getTierMeta,
@@ -342,6 +344,14 @@ test("risk watch shows icon label text records with overflow count", () => {
   assert.equal(overflow, 1);
 });
 
+test("risk timeframe labels are explicit and legacy risks stay unlabeled", () => {
+  assert.equal(getRiskTimeframeLabel("today"), "Today");
+  assert.equal(getRiskTimeframeLabel("last_session"), "Last session");
+  assert.equal(getRiskTimeframeLabel("recent_sessions"), "Recent sessions");
+  assert.equal(getRiskTimeframeLabel("active"), "Active");
+  assert.equal(getRiskTimeframeLabel(), "");
+});
+
 function makeInjury(overrides: Partial<InjuryFlagRecord> = {}): InjuryFlagRecord {
   // Legacy tests pre-date the structured Today payload. Production never
   // classifies injury text in the browser; this helper only supplies the
@@ -653,12 +663,13 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   const orderedMarkers = [
     "<TodayReadinessStrip",
     "<TodayDecisionPanel",
+    // Compact risks belong to the command surface, immediately after the
+    // decision, rather than beneath the injury manager.
+    "<TodayRiskWatch",
     // Session renders via the {sessionPanel} slot so its safe-replacement
     // ordering with the readiness form stays intact.
     "{sessionPanel}",
     "<TodayInjuryManager",
-    // Risk watch must stay supplementary so STOP-tier risks are not duplicated.
-    "<TodayRiskWatch risks={supplementaryRisks}",
     // Feedback trails the full session — last in the DOM flow.
     'surface="daily_recommendation"',
   ];
@@ -667,13 +678,16 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((left, right) => left - right), positions);
   assert.equal((screen.match(/<TodayDecisionPanel/g) ?? []).length, 1);
+  assert.equal((screen.match(/<TodayRiskWatch/g) ?? []).length, 1);
   assert.equal((screen.match(/<TodayReadinessForm/g) ?? []).length, 1);
   assert.equal((screen.match(/<TodaySessionPanel/g) ?? []).length, 1);
   assert.equal((screen.match(/surface="daily_recommendation"/g) ?? []).length, 1);
   assert.ok(screen.includes("resolvedDecision.useSafeReplacement"));
-  assert.ok(screen.indexOf("{sessionPanel}\n          {readinessForm}") >= 0);
+  const normalizedScreen = screen.replace(/\r\n/g, "\n");
+  assert.ok(normalizedScreen.indexOf("{sessionPanel}\n          {readinessForm}") >= 0);
   assert.equal(sessionPanel.includes("TodayDecisionPanel"), false);
   assert.equal(sessionPanel.includes("ContextualFeedback"), false);
+  assert.ok(screen.includes('resolvedDecision.displayTier === "preview"'));
 });
 
 test("Today's View full plan action routes to the plan detail camp map", () => {
@@ -1054,6 +1068,13 @@ test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () 
   });
 });
 
+test("Overview reserves Today's command for current-day decisions", () => {
+  assert.equal(getOverviewCommandEyebrow("preview"), "Next up");
+  for (const tier of ["stop", "pull_back", "modify", "green", "not_checked_in"] as const) {
+    assert.equal(getOverviewCommandEyebrow(tier), "Today's command");
+  }
+});
+
 test("Overview consumes the shared authoritative resolver", () => {
   const source = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
 
@@ -1061,6 +1082,10 @@ test("Overview consumes the shared authoritative resolver", () => {
   assert.equal(source.includes("resolvedDecision?.severeInjuryBlocksCurrentSession"), true);
   assert.equal(source.includes("getInjuryOverrideBanner(commandState"), false);
   assert.equal(source.includes("resolveDecisionTier(commandState?.today"), false);
+  assert.equal(source.includes("getOverviewCommandEyebrow(decisionTier)"), true);
+  assert.equal(source.includes("overview-risk-footer"), false);
+  assert.equal(source.includes("getRiskWatchText(risk)"), false);
+  assert.equal(source.includes("Review {overflow} more on Today"), true);
 });
 
 // ---------------------------------------------------------------------------
