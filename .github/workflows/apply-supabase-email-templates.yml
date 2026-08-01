@@ -1,0 +1,124 @@
+name: Apply Supabase email templates
+
+on:
+  push:
+    branches:
+      - Main
+    paths:
+      - .github/workflows/apply-supabase-email-templates.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply-templates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_PROJECT_REF: leienvqynijrgghhzczt
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Auth configuration payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          template_dir = Path("supabase/templates")
+
+          def read(name: str) -> str:
+              path = template_dir / name
+              if not path.is_file():
+                  raise SystemExit(f"Missing template: {path}")
+              return path.read_text(encoding="utf-8")
+
+          payload = {
+              "mailer_subjects_confirmation": "Confirm your UNLXCK account",
+              "mailer_templates_confirmation_content": read("confirm-signup.html"),
+              "mailer_subjects_magic_link": "Your UNLXCK sign-in link",
+              "mailer_templates_magic_link_content": read("magic-link.html"),
+              "mailer_subjects_recovery": "Reset your UNLXCK password",
+              "mailer_templates_recovery_content": read("recovery.html"),
+              "mailer_subjects_email_change": "Confirm your new UNLXCK email",
+              "mailer_templates_email_change_content": read("email-change.html"),
+              "mailer_subjects_invite": "You have been invited to UNLXCK",
+              "mailer_templates_invite_content": read("invite.html"),
+              "mailer_notifications_password_changed_enabled": True,
+              "mailer_subjects_password_changed_notification": "Your UNLXCK password was changed",
+              "mailer_templates_password_changed_notification_content": read("password-changed.html"),
+          }
+
+          Path("/tmp/unlxck-auth-config.json").write_text(
+              json.dumps(payload, ensure_ascii=False),
+              encoding="utf-8",
+          )
+          print(f"Prepared {len(payload)} Auth configuration fields.")
+          PY
+
+      - name: Apply templates through Supabase Management API
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN GitHub secret is missing}"
+
+          endpoint="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/config/auth"
+          http_code="$(curl \
+            --silent \
+            --show-error \
+            --output /tmp/supabase-patch-response.json \
+            --write-out '%{http_code}' \
+            --request PATCH \
+            --header "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data-binary @/tmp/unlxck-auth-config.json \
+            "${endpoint}")"
+
+          if (( http_code < 200 || http_code >= 300 )); then
+            echo "Supabase Management API update failed with HTTP ${http_code}."
+            cat /tmp/supabase-patch-response.json
+            exit 1
+          fi
+
+          echo "Supabase accepted the Auth configuration update (HTTP ${http_code})."
+
+      - name: Verify applied configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/config/auth"
+
+          http_code="$(curl \
+            --silent \
+            --show-error \
+            --output /tmp/supabase-current-auth-config.json \
+            --write-out '%{http_code}' \
+            --request GET \
+            --header "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            "${endpoint}")"
+
+          if (( http_code < 200 || http_code >= 300 )); then
+            echo "Unable to verify Supabase Auth configuration: HTTP ${http_code}."
+            cat /tmp/supabase-current-auth-config.json
+            exit 1
+          fi
+
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          expected = json.loads(Path("/tmp/unlxck-auth-config.json").read_text(encoding="utf-8"))
+          current = json.loads(Path("/tmp/supabase-current-auth-config.json").read_text(encoding="utf-8"))
+
+          mismatches = [key for key, value in expected.items() if current.get(key) != value]
+          if mismatches:
+              raise SystemExit("Verification failed for: " + ", ".join(mismatches))
+
+          print("Verified all UNLXCK email subjects, templates, and the password-change notification.")
+          PY
