@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { getSafeSessionView } from "./today.ts";
 import type { InjuryFlagRecord } from "./types.ts";
 
+// These fixtures intentionally provide backend-classified anatomy. Today must
+// consume these fields directly rather than rebuilding the injury synonym map.
 function injury(overrides: Partial<InjuryFlagRecord>): InjuryFlagRecord {
   return {
     id: "inj-1",
