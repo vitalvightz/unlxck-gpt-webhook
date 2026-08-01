@@ -550,7 +550,7 @@ export default function HomePage() {
       hasSafeSession: Boolean(safeSession),
     });
     const primaryHref = primaryAction.href;
-    const primaryLabel = primaryAction.label;
+    const primaryLabel = primaryAction.label === "Open today's session" ? "Today's session" : primaryAction.label;
 
     return (
       <>
@@ -570,7 +570,7 @@ export default function HomePage() {
               <div className="plan-summary-actions overview-primary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
                 {hasActivePlan ? (
-                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">Open camp plan</Link>
+                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">Camp plan</Link>
                 ) : (
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>
                 )}
