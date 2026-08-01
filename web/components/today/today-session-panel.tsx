@@ -18,6 +18,7 @@ import { submitTodaySessionCompletion } from "@/lib/api";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
+  resolvedDayHasNoAppSession,
   sessionIdentity,
   type CurrentDayResolution,
 } from "@/lib/camp-map";
@@ -290,6 +291,11 @@ export function TodaySessionPanel({
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
+  // The plan matched the day and prescribes no app session on it (rest, active
+  // recovery, coach-owned contact). The card body already says so — the start /
+  // complete lifecycle must agree, rather than offering to log a session that
+  // does not exist.
+  const dayHasNoAppSession = resolvedDayHasNoAppSession(current);
   const isSessionPreview = resolvedDecision.displayTier === "preview";
   const relationCopy = getSessionRelationCopy(session, status);
   const decisionBlocksCurrentSession = resolvedDecision.blocksCurrentSession;
@@ -307,7 +313,7 @@ export function TodaySessionPanel({
   // session_relation stamp: a session that reaches the card without an explicit
   // session_relation but whose scope is not "today" must still read as pending,
   // never completable.
-  const canCompleteSession = resolvedDecision.canCompleteSession;
+  const canCompleteSession = resolvedDecision.canCompleteSession && !dayHasNoAppSession;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.
@@ -321,6 +327,8 @@ export function TodaySessionPanel({
     ? "Blocked by an active severe injury. Marking it easing does not lift the hold."
     : decisionBlocksCurrentSession
       ? "Follow the recommendation above. Do not start this session from Today."
+      : dayHasNoAppSession
+      ? "No app session is scheduled for this day, so there is nothing to start or log."
       : isSessionPreview
       ? "Preview only. Completion opens on the matched training day."
       : "Session details available, but completion is unavailable for this entry.";

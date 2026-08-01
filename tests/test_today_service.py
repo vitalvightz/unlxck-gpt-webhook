@@ -871,6 +871,59 @@ class TestCommandView:
         assert seeded["status"] == "open"
         assert "bruise" in seeded["description"]
 
+    def test_guided_intake_description_carries_no_taxonomy_tokens(self):
+        """The description is athlete-facing, so the routing keys stay internal.
+
+        Guided intake stores the family (``surface_injury``) and its
+        ``family:specific`` pair alongside the real condition word. Both used to
+        land in the description and render on the injury card as "Right
+        shoulder: blister. surface injury. surface injury:blister".
+        """
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Right shoulder",
+                        "severity": "moderate",
+                        "trend": "same",
+                        "injury_type": "surface_injury",
+                        "surface_type": "blister",
+                        "injury_subtypes": ["surface_injury:blister"],
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        description = view.open_injuries[0]["description"]
+        assert description == "Right shoulder: blister"
+        # The condition word survives, so the scorer still reads it as a wound.
+        assert view.open_injuries[0]["label"] == "Right shoulder blister"
+
+    def test_guided_intake_keeps_a_type_with_no_specific_word(self):
+        """A non-surface type is the only word available, so it is kept."""
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left knee",
+                        "severity": "moderate",
+                        "injury_type": "tendon_ligament",
+                        "injury_subtypes": ["sprain"],
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["description"] == "Left knee: tendon ligament. sprain"
+
     def test_guided_intake_description_does_not_repeat_body_area(self):
         store = _store_with_plan()
         _attach_intake(

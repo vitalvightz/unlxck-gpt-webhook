@@ -990,6 +990,24 @@ export function resolveCurrentDay(
 }
 
 /**
+ * True when the plan matched the day but schedules no app session on it — a
+ * rest / active-recovery day, or a coach-owned contact day the app does not run.
+ *
+ * The backend session summary can still name a day like this (an open plan's
+ * weekly rhythm calls every training weekday a session, and a rest day carries a
+ * date-keyed session_id), so Today would offer "Start session" on a card whose
+ * own body reads "Rest or active recovery". There is nothing to start, and
+ * logging it would persist a session state the plan never prescribed.
+ *
+ * Out of range (no matched day, or the structured plan has not loaded yet) is
+ * deliberately NOT this case: nothing is known about the day, so no conclusion
+ * is drawn from it.
+ */
+export function resolvedDayHasNoAppSession(current: CurrentDayResolution): boolean {
+  return current.inRange && Boolean(current.day) && current.sessions.length === 0;
+}
+
+/**
  * The strongest stable identity for a session, used for completion/display keys
  * so they never drift or duplicate on title/date alone. Prefers
  * plan_id + day + session_id; falls back to plan_id + week/day/session indices

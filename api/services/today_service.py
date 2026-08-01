@@ -1652,20 +1652,68 @@ def _details_already_include_body_area(body_area: str, details: str) -> bool:
     return bool(body_key and (details_key == body_key or details_key.startswith(f"{body_key} ")))
 
 
+def _humanized_guided_token(value: object) -> str:
+    return " ".join(str(value or "").replace("_", " ").split())
+
+
+def _guided_subtype_word(subtype: object) -> str:
+    """The athlete-facing condition word inside a taxonomy subtype token.
+
+    Subtypes are stored as ``family:specific`` (``surface_injury:blister``). Only
+    the specific half is a word an athlete recognises; the family is the routing
+    key, and it is already implied by the word it qualifies.
+    """
+    text = str(subtype or "").strip()
+    if not text:
+        return ""
+    return _humanized_guided_token(text.rsplit(":", 1)[-1]) or _humanized_guided_token(text)
+
+
 def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any]) -> str:
+    """Athlete-facing description for a flag bootstrapped from guided intake.
+
+    The description is rendered on the injury card and in history, so it carries
+    the condition and the athlete's own notes — never the taxonomy plumbing.
+    A blister reads "Right shoulder: blister", not "Right shoulder: blister.
+    surface injury. surface injury:blister". Nothing the injury scorer routes on
+    is lost: the specific condition word is what it reads, and the structured
+    wound answers travel in their own columns.
+    """
     parts: list[str] = []
-    for field in ("surface_type", "injury_type", "timeframe"):
-        value = str(injury.get(field) or "").strip()
-        if value:
-            parts.append(value.replace("_", " "))
-    subtypes = injury.get("injury_subtypes")
-    if isinstance(subtypes, list):
-        parts.extend(str(item).replace("_", " ").strip() for item in subtypes if str(item or "").strip())
+    surface_type = _humanized_guided_token(injury.get("surface_type"))
+    injury_type = _humanized_guided_token(injury.get("injury_type"))
+    raw_subtypes = injury.get("injury_subtypes")
+    subtype_words = (
+        [word for item in raw_subtypes if (word := _guided_subtype_word(item))]
+        if isinstance(raw_subtypes, list)
+        else []
+    )
+    if surface_type:
+        parts.append(surface_type)
+    # ``surface_injury`` is the family a wound is routed by, and its specific word
+    # (blister / graze / cut) says the same thing in the athlete's language. Keep
+    # the family only when nothing more specific is available to say it.
+    if injury_type and not (injury_type == "surface injury" and (surface_type or subtype_words)):
+        parts.append(injury_type)
+    timeframe = _humanized_guided_token(injury.get("timeframe"))
+    if timeframe:
+        parts.append(timeframe)
+    parts.extend(subtype_words)
     for field in ("notes", "avoid"):
         value = str(injury.get(field) or "").strip()
         if value:
             parts.append(value)
-    details = ". ".join(dict.fromkeys(parts))
+    # Case-insensitive dedupe: a surface type and its subtype word are the same
+    # fact stored twice, and repeating it reads as noise.
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for part in parts:
+        key = part.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(part)
+    details = ". ".join(deduped)
     if body_area and details and _details_already_include_body_area(body_area, details):
         return details
     if body_area and details:

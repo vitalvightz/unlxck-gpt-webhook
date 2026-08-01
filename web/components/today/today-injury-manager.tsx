@@ -12,7 +12,7 @@ import { CustomSelect } from "@/components/custom-select";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
-import { normalizeInjuryLabel } from "@/lib/injury-display";
+import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
 import { TODAY_INJURY_MAX_WORDS } from "@/lib/input-limits";
 import {
   NO_TODAY_INJURY_TYPE,
@@ -236,8 +236,12 @@ function getInjuryLabel(injury: InjuryFlagRecord): string {
 }
 
 function getInjuryType(injury: InjuryFlagRecord): string {
-  const description = injury.description?.trim().replace(/\s+/g, " ");
-  return description || "Type not specified";
+  // Guided intake stores its structured read of the injury in the description
+  // (the taxonomy family plus its `family:specific` pair), so the raw field
+  // leaks planner vocabulary — "Right shoulder: blister. surface injury.
+  // surface injury:blister". The athlete gets the condition and their own
+  // words; the routing keys stay internal.
+  return formatInjuryDetail(injury.description, { bodyArea: injury.body_area }) || "Type not specified";
 }
 
 /**

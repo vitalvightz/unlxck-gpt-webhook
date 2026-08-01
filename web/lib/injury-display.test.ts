@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { normalizeInjuryLabel } from "./injury-display.ts";
+import { formatInjuryDetail, normalizeInjuryLabel } from "./injury-display.ts";
 
 test("normalizes a literal bruise sentence into a short label", () => {
   assert.equal(normalizeInjuryLabel("Left shoulder is bruised"), "Left shoulder bruise");
@@ -74,4 +74,45 @@ test("strips duplicated condition debris from messy parser strings", () => {
 
 test("normalizes a leading condition with trailing location", () => {
   assert.equal(normalizeInjuryLabel("bruise, left shoulder"), "Left shoulder bruise");
+});
+
+// formatInjuryDetail ---------------------------------------------------------
+
+test("strips the planner's taxonomy tokens out of a guided-intake description", () => {
+  assert.equal(
+    formatInjuryDetail("Right shoulder: blister. surface injury. surface injury:blister", {
+      bodyArea: "Right shoulder",
+    }),
+    "blister",
+  );
+});
+
+test("keeps the condition word and the athlete's own detail", () => {
+  assert.equal(
+    formatInjuryDetail("bruise. worse when sprinting"),
+    "bruise. worse when sprinting",
+  );
+  assert.equal(formatInjuryDetail("blister on left foot"), "blister on left foot");
+});
+
+test("drops a body-area segment that only restates the location", () => {
+  assert.equal(formatInjuryDetail("Left shoulder", { bodyArea: "Left shoulder" }), "");
+  assert.equal(
+    formatInjuryDetail("Left shoulder: soreness. this week", { bodyArea: "left shoulder" }),
+    "soreness. this week",
+  );
+});
+
+// The "<body area>: <condition>" prefix an athlete-facing description uses is
+// the one colon that must survive — only the space-less `family:specific` pair
+// is internal vocabulary.
+test("keeps a colon that separates the location from the condition", () => {
+  assert.equal(formatInjuryDetail("Left knee: sore after running"), "Left knee: sore after running");
+});
+
+test("dedupes repeated segments and tolerates blank input", () => {
+  assert.equal(formatInjuryDetail("bruise. Bruise. bruise"), "bruise");
+  assert.equal(formatInjuryDetail(""), "");
+  assert.equal(formatInjuryDetail(null), "");
+  assert.equal(formatInjuryDetail(undefined), "");
 });

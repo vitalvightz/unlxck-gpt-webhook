@@ -15,6 +15,7 @@ import {
   resolveOpenPlanWeekNumber,
   resolvePlanProgress,
   resolveTrainingDay,
+  resolvedDayHasNoAppSession,
   getSessionDisplayStatus,
   primarySessionOf,
   sessionIdentity,
@@ -411,6 +412,30 @@ test("resolveCurrentDay reports an in-range off day with no sessions", () => {
   assert.equal(current.weekPos, 1);
   assert.equal(current.dayPos, 0);
   assert.equal(current.sessions.length, 0);
+});
+
+test("resolvedDayHasNoAppSession flags a matched day the plan schedules nothing on", () => {
+  // 2026-06-25 is in range and carries no sessions — a rest / active-recovery
+  // day. Today must not offer to start or log a session on it.
+  assert.equal(
+    resolvedDayHasNoAppSession(resolveCurrentDay(campPlan(), new Date(2026, 5, 25))),
+    true,
+  );
+  assert.equal(
+    resolvedDayHasNoAppSession(resolveCurrentDay(campPlan(), new Date(2026, 5, 19))),
+    false,
+  );
+});
+
+test("resolvedDayHasNoAppSession draws no conclusion when no day matched", () => {
+  // Out of range, and the pre-mount (null training day) case: the plan says
+  // nothing about the day, so this must not read as "rest day" and strip the
+  // session actions off a real session.
+  assert.equal(
+    resolvedDayHasNoAppSession(resolveCurrentDay(campPlan(), new Date(2026, 5, 1))),
+    false,
+  );
+  assert.equal(resolvedDayHasNoAppSession(resolveCurrentDay(campPlan(), null)), false);
 });
 
 test("resolveCurrentDay is out of range when today maps to no day", () => {
