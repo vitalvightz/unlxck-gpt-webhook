@@ -2,8 +2,10 @@
 
 Open plans do not have an event countdown. Their persisted structured card is a
 weekly template (or four already-expanded weeks), and this module projects it
-onto the current renewable block from one stable compatibility anchor: the first
-Monday on or after the plan was created.
+onto the current renewable block from one stable anchor: the Monday of the week
+the athlete can start training in — the creation week for a plan generated
+Mon-Thu, the coming Monday for one generated Fri-Sun (see
+``open_plan_anchor_date``).
 
 The projection is deliberately strict.  Legacy cards are only assigned
 weekdays when their day count and coach-owned pattern agree with the saved
@@ -70,11 +72,72 @@ def schedule_mode(plan_row: Mapping[str, Any]) -> str:
     return "static_undated"
 
 
-def open_plan_anchor_date(plan_row: Mapping[str, Any]) -> date | None:
+# How far into the week a plan can be created and still join the week it was
+# created in. Creating on Mon-Thu leaves at least three days of the block's first
+# week to train, so the plan goes live immediately; a Fri/Sat/Sun plan would join
+# a week that is effectively over, so it starts on the coming Monday instead.
+_JOIN_CURRENT_WEEK_SHIFT = timedelta(days=3)
+
+
+def _athlete_local_creation_date(plan_row: Mapping[str, Any]) -> date | None:
+    """Creation date corrected to the athlete-local calendar day when known.
+
+    ``plans.created_at`` is stored as a UTC timestamp. Around midnight UTC its
+    date prefix can be one day ahead of, or behind, the athlete's local date. The
+    Stage 2 planning brief already persists the creation weekday together with
+    ``plan_creation_weekday_basis=athlete_local_weekday``. Since real timezone
+    offsets can only move a timestamp onto the same, previous, or next calendar
+    day, that persisted weekday is enough to correct the UTC date without adding
+    timezone-dependent response plumbing or changing the database schema.
+
+    Legacy briefs without the explicit athlete-local basis keep the historical
+    UTC/date-only fallback.
+    """
+
     created = _parse_date(plan_row.get("created_at"))
     if created is None:
         return None
-    return created + timedelta(days=(-created.weekday()) % 7)
+
+    planning_brief = _mapping(plan_row.get("planning_brief"))
+    athlete_model = planning_brief.get("athlete_snapshot")
+    if not isinstance(athlete_model, Mapping):
+        # Compatibility for hand-built fixtures and any early brief shape that
+        # used the model's internal name instead of the persisted contract key.
+        athlete_model = planning_brief.get("athlete_model")
+    if not isinstance(athlete_model, Mapping):
+        return created
+    if athlete_model.get("plan_creation_weekday_basis") != "athlete_local_weekday":
+        return created
+
+    local_weekday = normalize_weekday(athlete_model.get("plan_creation_weekday"))
+    if local_weekday not in WEEKDAYS:
+        return created
+
+    utc_weekday_index = created.weekday()
+    local_weekday_index = WEEKDAYS.index(local_weekday)
+    if local_weekday_index == (utc_weekday_index - 1) % 7:
+        return created - timedelta(days=1)
+    if local_weekday_index == (utc_weekday_index + 1) % 7:
+        return created + timedelta(days=1)
+    return created
+
+
+def open_plan_anchor_date(plan_row: Mapping[str, Any]) -> date | None:
+    """The Monday the plan's renewable block starts on.
+
+    A plan is generated mid-week far more often than on a Monday, so the anchor
+    is the Monday of the week the athlete can actually start training in: the
+    current week for a Mon-Thu plan, the coming Monday for a Fri-Sun one.
+    Anchoring every plan forward to the *next* Monday left a plan created on
+    Tuesday dormant for six days, and made the projected block sit a week ahead
+    of the live calendar — so nothing on the plan matched the real training day.
+    """
+
+    created = _athlete_local_creation_date(plan_row)
+    if created is None:
+        return None
+    shifted = created + _JOIN_CURRENT_WEEK_SHIFT
+    return shifted - timedelta(days=shifted.weekday())
 
 
 def _coach_owned_days(template: Mapping[str, Any]) -> list[str]:

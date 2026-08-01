@@ -18587,6 +18587,13 @@ html[data-theme="light"] .loading-operational-item {
   gap: var(--space-2);
 }
 
+/* "Plan starts Mon 03 Aug 2026 · in 2 days" — shown only while an open block
+   has not begun, in place of the TODAY marker no day can carry yet. */
+.cm-block-start {
+  margin: 0;
+  padding: 0 2px;
+}
+
 /* Day cards: one compact line per closed day — mono D-countdown column,
    weekday, optional TODAY marker, then the completion fraction + chevron. */
 .cm-days {

@@ -67,7 +67,7 @@ import {
   resolveRehabSummaryLabel,
 } from "@/lib/rehab-label";
 import { useTrainingDay } from "@/lib/use-training-day";
-import { formatAppDate, formatAppDateRange } from "@/lib/date-format";
+import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/date-format";
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { SafetyNote } from "@/components/safety-note";
@@ -747,6 +747,8 @@ function parseIsoDay(iso: string | null | undefined): Date | null {
   const parsed = new Date(`${clean.slice(0, 10)}T00:00:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
+
+const ISO_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function toLocalIsoDay(date: Date): string {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -1661,8 +1663,9 @@ export function StructuredPlanRenderer({
   openOngoing?: boolean;
   today?: Date;
   /** Plan creation timestamp. For an open plan without a server projection it
-   * anchors which week of the renewable block is current (first Monday on or
-   * after creation, mirroring the backend timeline). Not rendered. */
+   * anchors which week of the renewable block is current (the Monday of the week
+   * the plan starts training in, mirroring the backend timeline). Not
+   * rendered. */
   createdAt?: string | null;
   /** Accepted for compatibility with callers, but not rendered on this plan view. */
   planStatus?: string | null;
@@ -1810,6 +1813,48 @@ export function StructuredPlanRenderer({
       (calendarDay ? toLocalIsoDay(calendarDay) : null));
   // Open the support phase that matches the week the athlete is viewing.
   const activeSupportPhaseKey = normalizeSupportPhaseKey(resolvedWeekPhase(selectedWeek));
+  // A block that starts on a future Monday — an open plan generated late enough
+  // in the week to join the next one — has no current day to mark. Say when it
+  // starts rather than showing a plain week with no "Today" anywhere on it and
+  // leaving the athlete to guess whether the plan is live.
+  //
+  // The block starts on the server's anchor (the Monday the week runs from), not
+  // on the first day that happens to carry a session: a block anchored to Mon 03
+  // Aug whose first session is Thursday still starts on the Monday, and saying
+  // "starts Thu 06 Aug" would contradict the week it is shown above. The
+  // earliest scheduled day is only a fallback for a payload with no anchor.
+  const blockStartsOn = useMemo(() => {
+    if (!openOngoing || activeWeekPos !== null) {
+      return null;
+    }
+    const todayIso =
+      cleanText(currentTrainingDayIso)?.slice(0, 10) ??
+      cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
+      (calendarDay ? toLocalIsoDay(calendarDay) : null);
+    if (!todayIso) {
+      return null;
+    }
+    const anchorIso = cleanText(scheduleContext?.anchor_date)?.slice(0, 10);
+    const startIso =
+      anchorIso && ISO_DAY_PATTERN.test(anchorIso)
+        ? anchorIso
+        : weeks
+            .flatMap((week) => getDays(week))
+            .map((day) => cleanText(day.date)?.slice(0, 10))
+            .filter((iso): iso is string => typeof iso === "string" && ISO_DAY_PATTERN.test(iso))
+            .sort()[0];
+    return startIso && startIso > todayIso
+      ? { iso: startIso, relative: describeRelativeDay(startIso, todayIso) }
+      : null;
+  }, [
+    openOngoing,
+    activeWeekPos,
+    currentTrainingDayIso,
+    scheduleContext?.current_training_day,
+    scheduleContext?.anchor_date,
+    calendarDay,
+    weeks,
+  ]);
 
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
@@ -1848,6 +1893,13 @@ export function StructuredPlanRenderer({
             <ActiveNotesCard plan={plan} />
             <RedFlagsCard plan={plan} />
           </div>
+
+          {blockStartsOn ? (
+            <p className="sp-today-note cm-block-start" role="status">
+              {`Plan starts ${formatAppDate(blockStartsOn.iso)}`}
+              {blockStartsOn.relative ? ` · ${blockStartsOn.relative.toLowerCase()}` : ""}
+            </p>
+          ) : null}
 
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (

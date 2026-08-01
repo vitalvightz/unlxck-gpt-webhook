@@ -79,7 +79,7 @@ function dayISO(day: StructuredDay | null | undefined): string | null {
 // such a plan matches on today's weekday instead of an ISO date, scoped to the
 // current week of the renewable block. The current week comes from the server's
 // schedule projection when available, else is derived from the same anchor the
-// backend uses (the first Monday on or after plan creation — see
+// backend uses (the Monday of the week the plan can start training in — see
 // api/services/open_plan_timeline.py).
 // ---------------------------------------------------------------------------
 
@@ -103,13 +103,31 @@ function weekdayTokenFor(date: Date): WeekdayToken {
 }
 
 /** True when a day can use the open-plan weekday path. Legacy open plans are
- * undated; projected renewable plans may carry future dates but still repeat by
- * weekday inside the server-selected block week. Dated fight camps never opt in. */
+ * undated; projected renewable plans carry dates but still repeat by weekday
+ * inside the server-selected block week. Dated fight camps never opt in.
+ *
+ * A projected row is only weekday-matchable once its own date has arrived
+ * (`day.date <= todayISO`). The fallback exists for a payload whose projection
+ * has gone stale *behind* the clock — the block rolled over, every row is dated
+ * in the past, and the weekly rhythm still holds. A row dated in the FUTURE is
+ * the opposite situation: the block simply has not started yet (an open plan
+ * created mid-week anchors to the following Monday), so today is genuinely not a
+ * plan day. Matching it there marked a future row "Today" and relabelled it with
+ * today's real date, dropping a past date into the middle of an ascending week
+ * ("THU 06 AUG / FRI 31 JUL / SAT 08 AUG"). */
 function isWeekdayMatchableDay(
   day: StructuredDay | null | undefined,
   allowDatedDays = false,
+  todayISO: string | null = null,
 ): boolean {
-  return dayWeekdayToken(day) !== null && (allowDatedDays || dayISO(day) === null);
+  if (dayWeekdayToken(day) === null) {
+    return false;
+  }
+  const iso = dayISO(day);
+  if (iso === null) {
+    return true;
+  }
+  return allowDatedDays && todayISO !== null && iso <= todayISO;
 }
 
 export type OpenScheduleHints = {
@@ -118,8 +136,9 @@ export type OpenScheduleHints = {
   currentWeekNumber?: number | null;
   /** Server anchor date (schedule_context.anchor_date). */
   anchorDate?: string | null;
-  /** Plan creation timestamp; the anchor is derived from it when the server
-   * did not provide one (first Monday on or after creation). */
+  /** Plan creation timestamp; the anchor is derived from it when the server did
+   * not provide one (the creation week's Monday for a Mon-Thu plan, the coming
+   * Monday for a Fri-Sun one). */
   createdAt?: string | null;
 };
 
@@ -138,9 +157,10 @@ function isoToNoonMs(value: string | null | undefined): number | null {
  * The 1-based week number of the renewable block containing `today`, for a
  * weekday-only open plan. Mirrors the backend projection
  * (api/services/open_plan_timeline.py): an explicit server week number wins;
- * otherwise the week is counted from the anchor (server-provided, else the
- * first Monday on or after plan creation), wrapping every `weekCount` weeks so
- * the block renews indefinitely. Days before the anchor belong to week 1.
+ * otherwise the week is counted from the anchor (server-provided, else derived
+ * from plan creation — the Monday of the creation week for a Mon-Thu plan, the
+ * coming Monday for a Fri-Sun one), wrapping every `weekCount` weeks so the
+ * block renews indefinitely. Days before the anchor belong to week 1.
  * Returns null when there is no week count, no today, or no usable anchor.
  */
 export function resolveOpenPlanWeekNumber(
@@ -162,10 +182,12 @@ export function resolveOpenPlanWeekNumber(
   if (anchorMs === null) {
     const createdMs = isoToNoonMs(hints?.createdAt);
     if (createdMs !== null) {
-      const created = new Date(createdMs);
-      // First Monday on or after the creation date (Python weekday(): Mon=0).
-      const pyWeekday = (created.getDay() + 6) % 7;
-      anchorMs = createdMs + ((7 - pyWeekday) % 7) * 86_400_000;
+      // Monday of the week the plan can start training in: the creation week for
+      // a Mon-Thu plan, the next one for Fri-Sun. Same shift-then-truncate the
+      // backend uses (Python weekday(): Mon=0).
+      const shiftedMs = createdMs + 3 * 86_400_000;
+      const shiftedWeekday = (new Date(shiftedMs).getDay() + 6) % 7;
+      anchorMs = shiftedMs - shiftedWeekday * 86_400_000;
     }
   }
   if (anchorMs === null) {
@@ -192,7 +214,10 @@ type WeekdayOnlyMatch = {
  * (1-based `openWeekNumber`, when known) is searched first so the block's
  * current week owns the match; any week with that weekday is the fallback, so
  * an open plan still resolves when no anchor is available (all weeks of an
- * open block share the same weekly rhythm). Dated days never match here.
+ * open block share the same weekly rhythm). Dated days only match here once
+ * their own date has passed (see `isWeekdayMatchableDay`), so a plan whose block
+ * starts in the future stays out of range instead of stamping "Today" onto a row
+ * that has not arrived yet.
  */
 function findWeekdayDay(
   weeks: StructuredWeek[],
@@ -201,11 +226,12 @@ function findWeekdayDay(
   allowDatedDays = false,
 ): WeekdayOnlyMatch | null {
   const target = weekdayTokenFor(today);
+  const todayISO = toISODate(today);
   const matchIn = (weekPos: number): WeekdayOnlyMatch | null => {
     const days = getDays(weeks[weekPos]);
     for (let dayPos = 0; dayPos < days.length; dayPos += 1) {
       const day = days[dayPos];
-      if (isWeekdayMatchableDay(day, allowDatedDays) && dayWeekdayToken(day) === target) {
+      if (isWeekdayMatchableDay(day, allowDatedDays, todayISO) && dayWeekdayToken(day) === target) {
         return { weekPos, dayPos, week: weeks[weekPos], day };
       }
     }
