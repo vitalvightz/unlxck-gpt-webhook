@@ -1671,24 +1671,21 @@ def _history_injury_risks(
     training_day: str,
     current_phase: str | None = None,
 ) -> list[RiskWatchItem]:
-    """Derive an injury-risk item from logged pain/symptom history.
+    """Derive an injury-risk item from logged post-session pain history.
 
-    Defensive about the store surface: the history readers are optional on
-    minimal test doubles, and a transient read failure must never crash Overview
-    — in either case the derived signal is simply skipped.
+    Defensive about the store surface: the completion-history reader is optional
+    on minimal test doubles, and a transient read failure must never crash
+    Overview — in either case the derived signal is simply skipped.
     """
     list_completions = getattr(store, "list_session_completions", None)
-    list_checkins = getattr(store, "list_today_checkins", None)
-    if not callable(list_completions) or not callable(list_checkins):
+    if not callable(list_completions):
         return []
     try:
         completions = list_completions(athlete_id) or []
-        checkins = list_checkins(athlete_id) or []
     except Exception:
         return []
     return derive_injury_signal(
         completions=completions,
-        checkins=checkins,
         current_training_day=training_day,
         current_phase=current_phase,
     )

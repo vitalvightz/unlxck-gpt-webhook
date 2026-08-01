@@ -8,15 +8,13 @@ single check-in:
 
 * **post-session pain** logged on each ``session_completions`` row
   (``pain_after``), and
-* the **history of symptom reports** across recent check-ins / completions.
+* recent post-session pain readings across completions.
 
 This module turns that logged history into at most one risk-watch item so the
 badge reflects training reality even with no check-in today:
 
 * an escalating post-session pain reading,
-* a rising post-session pain trend (the "post-session pain delta"), and
-* a recent symptom that should decay toward clear over a few clean days
-  ("days since last symptom" / self-report decay).
+* a rising post-session pain trend (the "post-session pain delta").
 
 Pure and deterministic: no I/O, no plan mutation, and no invented medical
 advice. The text states what was logged and frames load; the recommendation
@@ -31,13 +29,11 @@ from typing import Any, Mapping, Sequence
 from .command_view import RiskWatchItem, make_risk
 
 # Post-session pain (0-10) thresholds. HIGH is "ease in and reassess"; ELEVATED
-# is the floor for counting a session as a symptom day / a rising trend.
+# is the floor for treating consecutive readings as a rising trend.
 HIGH_PAIN_AFTER = 7
 ELEVATED_PAIN_AFTER = 4
 # A jump of this much between consecutive logged sessions reads as "climbing".
 PAIN_RISE_DELTA = 3
-# A reported symptom keeps a (decaying) reminder for this many clean days.
-SYMPTOM_DECAY_DAYS = 3
 # Ignore history older than this — a month-old tweak is not today's risk.
 LOOKBACK_DAYS = 14
 
@@ -91,49 +87,17 @@ def _pain_series(
     return sorted(worst_by_day.items())
 
 
-def _last_symptom_day(
-    completions: Sequence[Mapping[str, Any]],
-    checkins: Sequence[Mapping[str, Any]],
-    current: date,
-) -> date | None:
-    """Most recent day (on/before today) the athlete logged a real symptom.
-
-    A symptom day is any logged elevated post-session pain, a check-in reporting
-    high pain, or a check-in flagging an active injury as worse.
-    """
-    symptom_days: list[date] = []
-    for row in completions:
-        day = _parse_day(row.get("training_day"))
-        if not _within_lookback(day, current):
-            continue
-        pain = _coerce_pain(row.get("pain_after"))
-        if pain is not None and pain >= ELEVATED_PAIN_AFTER:
-            assert day is not None
-            symptom_days.append(day)
-    for row in checkins:
-        day = _parse_day(row.get("training_day"))
-        if not _within_lookback(day, current):
-            continue
-        assert day is not None
-        if str(row.get("pain") or "") == "high" or str(row.get("active_injury") or "") == "worse":
-            symptom_days.append(day)
-    return max(symptom_days) if symptom_days else None
-
-
 def derive_injury_signal(
     *,
     completions: Sequence[Mapping[str, Any]],
-    checkins: Sequence[Mapping[str, Any]],
     current_training_day: str,
     current_phase: str | None = None,
 ) -> list[RiskWatchItem]:
-    """Derive at most one risk-watch item from logged pain/symptom history.
+    """Derive at most one risk-watch item from logged post-session pain history.
 
     Returns ``[]`` when nothing in the recent history reads as a risk. At most
-    one item is returned, picking the most severe of: an escalating last reading,
-    a rising trend, then a decaying recent symptom. Callers fold this into the
-    same-day check-in risks (the check-in is fresher, so it wins ties by
-    category).
+    one item is returned, for either an escalating last reading or a rising
+    trend. Callers fold this into the same-day check-in risks.
     """
     current = _parse_day(current_training_day)
     if current is None:
@@ -172,22 +136,6 @@ def derive_injury_signal(
                     text=(
                         f"Post-session pain is climbing ({prev_pain}/10 -> {last_pain}/10). "
                         "Watch load today."
-                    ),
-                )
-            ]
-
-    # C. Decay — a recent symptom that should ramp back gradually over clean days.
-    last_symptom = None if phase == "TAPER" else _last_symptom_day(completions, checkins, current)
-    if last_symptom is not None:
-        days_since = (current - last_symptom).days
-        if 1 <= days_since <= SYMPTOM_DECAY_DAYS:
-            day_word = "day" if days_since == 1 else "days"
-            return [
-                make_risk(
-                    "reminder",
-                    text=(
-                        f"{days_since} {day_word} since your last pain/injury report — "
-                        "ramp load back gradually."
                     ),
                 )
             ]

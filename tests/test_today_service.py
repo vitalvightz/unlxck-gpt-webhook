@@ -34,8 +34,13 @@ PLAN = "11111111-1111-1111-1111-111111111111"
 OTHER_PLAN = "22222222-2222-2222-2222-222222222222"
 
 
-def _store_with_plan(plan_id: str = PLAN, athlete_id: str = ATHLETE) -> FakeStore:
-    store = FakeStore()
+def _store_with_plan(
+    plan_id: str = PLAN,
+    athlete_id: str = ATHLETE,
+    *,
+    store_type=FakeStore,
+) -> FakeStore:
+    store = store_type()
     store.plans[plan_id] = {
         "id": plan_id,
         "athlete_id": athlete_id,
@@ -1442,19 +1447,21 @@ class TestCommandView:
         assert view.today.recommendation_state == "not_checked_in"
         assert "high_pain" in [risk.category for risk in view.risk_watch]
 
-    def test_recent_symptom_keeps_a_decaying_reminder(self):
-        # A symptom two days ago, clean since, no check-in today: the badge stays
-        # live with a decaying reminder rather than reverting to a blank green.
-        store = _store_with_plan()
+    def test_logged_session_pain_surfaces_when_checkin_history_fails(self):
+        class FailingCheckinHistoryStore(FakeStore):
+            def list_today_checkins(self, athlete_id: str, *, limit: int = 14):
+                raise RuntimeError("check-in history unavailable")
+
+        store = _store_with_plan(store_type=FailingCheckinHistoryStore)
         store.session_completions[ATHLETE] = [
             {
                 "id": "c1",
                 "athlete_id": ATHLETE,
                 "plan_id": PLAN,
                 "session_id": "s1",
-                "training_day": "2026-06-16",
+                "training_day": "2026-06-18",
                 "status": "done",
-                "pain_after": 5,
+                "pain_after": 8,
             }
         ]
         view = build_today_command_view(
@@ -1463,11 +1470,10 @@ class TestCommandView:
             athlete_timezone="",
             now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
         )
-        assert "reminder" in [risk.category for risk in view.risk_watch]
+        assert "high_pain" in [risk.category for risk in view.risk_watch]
 
-    def test_recent_symptom_decay_reminder_is_suppressed_in_taper(self):
+    def test_old_elevated_pain_does_not_create_a_stale_reminder(self):
         store = _store_with_plan()
-        store.plans[PLAN]["planning_brief"] = _taper_planning_brief()
         store.session_completions[ATHLETE] = [
             {
                 "id": "c1",
