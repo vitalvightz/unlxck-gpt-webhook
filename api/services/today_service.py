@@ -1055,8 +1055,8 @@ def upsert_session_completion(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
-                    f"Blocked by an active severe injury ({label}). Clear it or get it "
-                    "medically cleared before starting or completing this session."
+                    f"Blocked by an active severe injury ({label}). "
+                    "Clear it before training this session."
                 ),
             )
 
