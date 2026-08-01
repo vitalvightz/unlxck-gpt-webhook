@@ -748,6 +748,8 @@ function parseIsoDay(iso: string | null | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+const ISO_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 function toLocalIsoDay(date: Date): string {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
@@ -1815,24 +1817,44 @@ export function StructuredPlanRenderer({
   // in the week to join the next one — has no current day to mark. Say when it
   // starts rather than showing a plain week with no "Today" anywhere on it and
   // leaving the athlete to guess whether the plan is live.
+  //
+  // The block starts on the server's anchor (the Monday the week runs from), not
+  // on the first day that happens to carry a session: a block anchored to Mon 03
+  // Aug whose first session is Thursday still starts on the Monday, and saying
+  // "starts Thu 06 Aug" would contradict the week it is shown above. The
+  // earliest scheduled day is only a fallback for a payload with no anchor.
   const blockStartsOn = useMemo(() => {
     if (!openOngoing || activeWeekPos !== null) {
       return null;
     }
-    const todayIso = currentTrainingDayIso?.slice(0, 10) ||
+    const todayIso =
+      cleanText(currentTrainingDayIso)?.slice(0, 10) ??
+      cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
       (calendarDay ? toLocalIsoDay(calendarDay) : null);
     if (!todayIso) {
       return null;
     }
-    const firstDated = weeks
-      .flatMap((week) => getDays(week))
-      .map((day) => cleanText(day.date)?.slice(0, 10))
-      .filter((iso): iso is string => Boolean(iso))
-      .sort()[0];
-    return firstDated && firstDated > todayIso
-      ? { iso: firstDated, relative: describeRelativeDay(firstDated, todayIso) }
+    const anchorIso = cleanText(scheduleContext?.anchor_date)?.slice(0, 10);
+    const startIso =
+      anchorIso && ISO_DAY_PATTERN.test(anchorIso)
+        ? anchorIso
+        : weeks
+            .flatMap((week) => getDays(week))
+            .map((day) => cleanText(day.date)?.slice(0, 10))
+            .filter((iso): iso is string => typeof iso === "string" && ISO_DAY_PATTERN.test(iso))
+            .sort()[0];
+    return startIso && startIso > todayIso
+      ? { iso: startIso, relative: describeRelativeDay(startIso, todayIso) }
       : null;
-  }, [openOngoing, activeWeekPos, currentTrainingDayIso, calendarDay, weeks]);
+  }, [
+    openOngoing,
+    activeWeekPos,
+    currentTrainingDayIso,
+    scheduleContext?.current_training_day,
+    scheduleContext?.anchor_date,
+    calendarDay,
+    weeks,
+  ]);
 
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>

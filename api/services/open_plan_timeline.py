@@ -2,8 +2,10 @@
 
 Open plans do not have an event countdown. Their persisted structured card is a
 weekly template (or four already-expanded weeks), and this module projects it
-onto the current renewable block from one stable compatibility anchor: the first
-Monday on or after the plan was created.
+onto the current renewable block from one stable anchor: the Monday of the week
+the athlete can start training in — the creation week for a plan generated
+Mon-Thu, the coming Monday for one generated Fri-Sun (see
+``open_plan_anchor_date``).
 
 The projection is deliberately strict.  Legacy cards are only assigned
 weekdays when their day count and coach-owned pattern agree with the saved

@@ -161,6 +161,7 @@ test("an open plan whose block starts next week marks no day as today", () => {
       scheduleContext={{
         schedule_mode: "open_recurring",
         projection_status: "projected",
+        anchor_date: "2026-08-03",
         current_week_number: 1,
       }}
     />,
@@ -170,7 +171,45 @@ test("an open plan whose block starts next week marks no day as today", () => {
   assert.equal(html.includes("SAT 08 AUG"), true);
   assert.equal(html.includes("SAT 01 AUG"), false);
   assert.equal(html.includes("cm-day-now"), false);
-  // With no day markable as today, the plan says when it does start.
+  // With no day markable as today, the plan says when it does start — the block
+  // anchor (Monday), not the first day that happens to carry a session.
+  assert.equal(html.includes("Plan starts Mon 03 Aug 2026"), true);
+  assert.equal(html.includes("in 2 days"), true);
+  assert.equal(html.includes("Plan starts Thu 06 Aug 2026"), false);
+});
+
+test("a not-yet-started plan without an anchor falls back to its first scheduled day", () => {
+  const plan = {
+    schema_version: "text-adapter.v1",
+    plan_metadata: { title: "Open plan", plan_type: "open_ongoing_system" },
+    weeks: [
+      {
+        week_id: "week-1",
+        week_index: 1,
+        days: [
+          {
+            date: "2026-08-06",
+            weekday: "Thu",
+            sessions: [{ session_id: "thu-strength", title: "Thursday strength", blocks: [] }],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 7, 1)}
+      openOngoing
+      scheduleContext={{
+        schedule_mode: "open_recurring",
+        projection_status: "projected",
+        current_week_number: 1,
+      }}
+    />,
+  );
+
   assert.equal(html.includes("Plan starts Thu 06 Aug 2026"), true);
   assert.equal(html.includes("in 5 days"), true);
 });
