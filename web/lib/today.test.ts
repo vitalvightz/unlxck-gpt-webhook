@@ -803,6 +803,84 @@ test("safe session restricts a structural or severe spine/back/rib injury to res
   );
 });
 
+test("safe session blocks the explosive work of the region actually at risk", () => {
+  // No injury (or a lower-limb one): lower-body explosive work is the default hazard.
+  assert.equal(
+    getSafeSessionView("Technical sparring").blocked.includes("Plyos or explosive lower-body work"),
+    true,
+  );
+  const lower = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate" }),
+  ]);
+  assert.equal(lower.blocked.includes("Plyos or explosive lower-body work"), true);
+
+  // Upper-limb injury: explosive UPPER-body work is the hazard, plus overhead/pressing.
+  const upper = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "left bicep", description: "left bicep tear", label: "Left bicep tear", severity: "moderate" }),
+  ]);
+  assert.equal(upper.blocked.includes("Plyos or explosive upper-body work"), true);
+  assert.equal(upper.blocked.includes("Plyos or explosive lower-body work"), false);
+  assert.equal(upper.blocked.includes("Overhead or pressing work"), true);
+
+  // Both limbs injured: block explosive work outright, unqualified.
+  const both = getSafeSessionView("Technical sparring", [
+    makeInjury({ id: "a", body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate" }),
+    makeInjury({ id: "b", body_area: "wrist", description: "wrist fracture", label: "Wrist fracture", severity: "moderate" }),
+  ]);
+  assert.equal(both.blocked.includes("Plyos or explosive work"), true);
+
+  // The universal stop-day blocks are never dropped.
+  for (const view of [lower, upper, both]) {
+    for (const item of ["Sparring", "Hard pads", "HIIT", "Heavy lifting"]) {
+      assert.equal(view.blocked.includes(item), true, item);
+    }
+  }
+});
+
+test("safe session blocks the loading pattern each injured region cannot take", () => {
+  // Trunk/spine: loaded rotation and bracing (valsalva) are the specific danger.
+  const trunk = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "ribs", description: "rib fracture", label: "Rib fracture", severity: "moderate" }),
+  ]);
+  assert.equal(trunk.blocked.includes("Loaded rotation or bracing"), true);
+
+  // Concussion: head impact is called out explicitly, beyond blanket sparring.
+  const head = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate" }),
+  ]);
+  assert.equal(head.blocked.includes("Head impact or contact drills"), true);
+
+  // A minor injury adds no extra restriction.
+  const mild = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "left bicep", description: "sore bicep", label: "Bicep soreness", severity: "mild" }),
+  ]);
+  assert.equal(mild.blocked.length, 5);
+});
+
+test("safe session copy never contradicts the menu it shows", () => {
+  // Rest-only: no movement is offered, so the card must not say "keep the body moving".
+  const restOnly = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "back", description: "spinal fracture", label: "Spinal fracture", severity: "moderate" }),
+  ]);
+  assert.deepEqual(restOnly.allowed, ["Breathing reset", "Coach-approved rehab"]);
+  assert.equal(restOnly.title, "Rest and recover");
+  assert.equal(/keep the body moving/.test(restOnly.detail), false);
+  assert.match(restOnly.detail, /no loaded movement today/);
+
+  // Downregulate still offers mobility, so "mobility only" remains accurate.
+  const neuro = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate" }),
+  ]);
+  assert.equal(neuro.title, "Recovery / mobility only");
+  assert.equal(/keep the body moving/.test(neuro.detail), false);
+  assert.match(neuro.detail, /symptom-free/);
+
+  // The standard stop day keeps the original coach copy.
+  const standard = getSafeSessionView("Technical sparring");
+  assert.match(standard.detail, /Technical sparring is blocked today/);
+  assert.match(standard.detail, /keep the body moving without adding stress/);
+});
+
 test("safe session does not misread anatomical head/back terms as head or spine injuries", () => {
   // "long head of biceps" is an arm injury — legs are free, so bike/walk stays.
   const bicepHead = getSafeSessionView("Technical sparring", [

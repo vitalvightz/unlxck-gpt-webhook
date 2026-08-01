@@ -994,23 +994,44 @@ function hasNeuroDownregulationInjury(
 }
 
 /**
+ * How restrictive today's safe session has to be, resolved most-restrictive-first.
+ * Drives the allowed menu AND the card copy, so the two can never contradict
+ * (a rest-only day must not read "keep the body moving").
+ *   • rest_only     — structural/severe spine, back or rib injury: no loaded or
+ *                     gravity-loaded movement is safe as generic advice.
+ *   • downregulate  — concussion / head / severe neck: calm work only, no exertion.
+ *   • standard      — the ordinary stop-day menu, limb-matched.
+ */
+type SafeSessionPosture = "rest_only" | "downregulate" | "standard";
+
+function resolveSafeSessionPosture(
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): SafeSessionPosture {
+  if (hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine")) {
+    return "rest_only";
+  }
+  if (hasNeuroDownregulationInjury(openInjuries)) {
+    return "downregulate";
+  }
+  return "standard";
+}
+
+/**
  * The adaptive "allowed" menu for the safe session, chosen so nothing on it ever
  * loads an injured region. See the module notes above for the reasoning.
  */
 export function resolveSafeSessionAllowed(
   openInjuries?: readonly InjuryFlagRecord[] | null,
 ): string[] {
-  // Most restrictive first: a structural/severe spine, back or rib injury. No
-  // loaded or gravity-loaded movement is safe as generic advice — not cardio, not
-  // mobility, not trunk activation — so only calm breathing and clinician-led
-  // rehab remain.
-  if (hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine")) {
+  const posture = resolveSafeSessionPosture(openInjuries);
+  // No cardio, no gravity-loaded mobility, no trunk activation — only calm
+  // breathing and clinician-led rehab.
+  if (posture === "rest_only") {
     return ["Breathing reset", "Coach-approved rehab"];
   }
-
-  // Concussion / head / severe neck: downregulate. Gentle mobility is fine (and
-  // part of sub-symptom-threshold protocols), but no aerobic push and no activation.
-  if (hasNeuroDownregulationInjury(openInjuries)) {
+  // Gentle mobility is fine (and part of sub-symptom-threshold protocols), but no
+  // aerobic push and no activation.
+  if (posture === "downregulate") {
     return ["Easy mobility", "Breathing reset", "Coach-approved rehab"];
   }
 
@@ -1040,12 +1061,64 @@ export function resolveSafeSessionAllowed(
 }
 
 /**
+ * The adaptive "blocked" column. The first four are universal for a stop day. The
+ * explosive-work line names the region that is actually at risk — an upper-limb
+ * injury makes explosive UPPER-body work the hazard, not lower — and each injured
+ * region adds the loading pattern specifically dangerous to it. The extra patterns
+ * mirror `blocked_training_tags` in the backend injury taxonomy
+ * (fightcamp/injury_taxonomy.py) so both surfaces agree: dislocation blocks
+ * overhead / press_heavy / explosive_upper_push, hernia blocks heavy_bracing and
+ * valsalva (as rib injuries do rotation), concussion blocks head_impact.
+ */
+export function resolveSafeSessionBlocked(
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): string[] {
+  const lowerBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
+  const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
+  const trunkBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine");
+  const neuro = hasNeuroDownregulationInjury(openInjuries);
+
+  // With no injury (or a lower-limb one) the default stays lower-body: it carries
+  // the highest impact and CNS cost on an ordinary stop day.
+  let explosive: string;
+  if (upperBlocked && lowerBlocked) {
+    explosive = "Plyos or explosive work";
+  } else if (upperBlocked) {
+    explosive = "Plyos or explosive upper-body work";
+  } else {
+    explosive = "Plyos or explosive lower-body work";
+  }
+
+  const blocked = ["Sparring", "Hard pads", "HIIT", "Heavy lifting", explosive];
+  if (upperBlocked) {
+    blocked.push("Overhead or pressing work");
+  }
+  if (trunkBlocked) {
+    blocked.push("Loaded rotation or bracing");
+  }
+  if (neuro) {
+    blocked.push("Head impact or contact drills");
+  }
+  return blocked;
+}
+
+// Closing line of the safe-session card, matched to the posture so the copy never
+// contradicts the menu — telling an athlete on a rest-only day to "keep the body
+// moving" would invite exactly the loading the menu just removed.
+const SAFE_SESSION_POSTURE_DETAIL: Record<SafeSessionPosture, string> = {
+  rest_only:
+    "Protect the injured area and let it settle — no loaded movement today, and follow your clinician on what is safe.",
+  downregulate:
+    "Keep everything calm and symptom-free today — no exertion, and follow your clinician before adding work back.",
+  standard: "Protect freshness, reduce risk, and keep the body moving without adding stress.",
+};
+
+/**
  * The recovery/mobility-only session shown in place of the scheduled work when
  * today is a STOP. Coach copy — the scheduled session is named so the athlete
- * sees exactly what is being held. The "allowed" menu adapts to the athlete's
- * active injuries so it never prescribes loading an injured region (see
- * resolveSafeSessionAllowed); the "blocked" column stays the universal
- * conservative set — it only ever adds restriction.
+ * sees exactly what is being held. Both columns adapt to the athlete's active
+ * injuries: "allowed" never prescribes loading an injured region, and "blocked"
+ * names the patterns that region specifically cannot take.
  */
 export function getSafeSessionView(
   blockedSessionName?: string,
@@ -1054,12 +1127,15 @@ export function getSafeSessionView(
   const name = (blockedSessionName ?? "").trim();
   const blockedLead =
     name && name.toLowerCase() !== "today's session" ? `${name} is blocked today.` : "Hard combat work is blocked today.";
+  const posture = resolveSafeSessionPosture(openInjuries);
   return {
     eyebrow: "Today's safe session",
-    title: "Recovery / mobility only",
-    detail: `${blockedLead} Protect freshness, reduce risk, and keep the body moving without adding stress.`,
+    // "mobility only" still describes the downregulate menu (mobility is on it),
+    // but a rest-only day has no movement at all — name it honestly.
+    title: posture === "rest_only" ? "Rest and recover" : "Recovery / mobility only",
+    detail: `${blockedLead} ${SAFE_SESSION_POSTURE_DETAIL[posture]}`,
     allowed: resolveSafeSessionAllowed(openInjuries),
-    blocked: ["Sparring", "Hard pads", "HIIT", "Heavy lifting", "Plyos or explosive lower-body work"],
+    blocked: resolveSafeSessionBlocked(openInjuries),
   };
 }
 
