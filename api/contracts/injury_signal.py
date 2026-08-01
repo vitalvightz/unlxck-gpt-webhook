@@ -29,7 +29,7 @@ from typing import Any, Mapping, Sequence
 from .command_view import RiskWatchItem, make_risk
 
 # Post-session pain (0-10) thresholds. HIGH is "ease in and reassess"; ELEVATED
-# is the floor for counting a session as a symptom day / a rising trend.
+# is the floor for treating consecutive readings as a rising trend.
 HIGH_PAIN_AFTER = 7
 ELEVATED_PAIN_AFTER = 4
 # A jump of this much between consecutive logged sessions reads as "climbing".
@@ -90,7 +90,6 @@ def _pain_series(
 def derive_injury_signal(
     *,
     completions: Sequence[Mapping[str, Any]],
-    checkins: Sequence[Mapping[str, Any]],
     current_training_day: str,
     current_phase: str | None = None,
 ) -> list[RiskWatchItem]:

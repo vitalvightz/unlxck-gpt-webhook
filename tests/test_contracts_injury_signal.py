@@ -15,14 +15,9 @@ def _completion(day: str, pain_after=None, status: str = "done") -> dict:
     return {"training_day": day, "pain_after": pain_after, "status": status}
 
 
-def _checkin(day: str, *, pain: str = "none", active_injury: str = "none") -> dict:
-    return {"training_day": day, "pain": pain, "active_injury": active_injury}
-
-
-def _derive(completions=None, checkins=None, current=TODAY, current_phase=None):
+def _derive(completions=None, current=TODAY, current_phase=None):
     return derive_injury_signal(
         completions=completions or [],
-        checkins=checkins or [],
         current_training_day=current,
         current_phase=current_phase,
     )
@@ -70,7 +65,7 @@ def test_rising_trend_flags_pain_delta():
 
 def test_small_rise_is_not_a_trend():
     # 1 -> 2 is only a +1 delta (below PAIN_RISE_DELTA) and both readings sit
-    # below ELEVATED, so neither a trend nor a symptom day fires.
+    # below ELEVATED, so no trend fires.
     assert _derive(
         completions=[
             _completion("2026-06-16", pain_after=1),
@@ -98,10 +93,6 @@ def test_old_elevated_reading_does_not_create_a_stale_reminder():
     # Current injury and check-in signals own today's advice. History must not
     # add a generic "days since" message beside newer information.
     assert _derive(completions=[_completion("2026-06-16", pain_after=5)]) == []
-
-
-def test_old_checkin_does_not_create_a_stale_reminder():
-    assert _derive(checkins=[_checkin("2026-06-17", pain="high")]) == []
 
 
 def test_high_latest_reading_beats_older_elevated_reading():
