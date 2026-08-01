@@ -72,10 +72,12 @@ export function ContextualFeedback({
   token,
   surface,
   planId,
+  className,
 }: Readonly<{
   token: string;
   surface: "plan" | "daily_recommendation";
   planId?: string;
+  className?: string;
 }>) {
   const [record, setRecord] = useState<FeedbackRecord | null>(null);
   const [choice, setChoice] = useState<FeedbackResponseValue | null>(null);
@@ -145,7 +147,10 @@ export function ContextualFeedback({
   const showUnsafe = shouldShowUnsafeGuidance(choice, record?.response);
 
   return (
-    <section className="feedback-card" aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}>
+    <section
+      className={className ? `feedback-card ${className}` : "feedback-card"}
+      aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}
+    >
       {record && !editing ? (
         <div className="feedback-sent-row" role="status">
           <span>Feedback sent</span>
@@ -192,7 +197,7 @@ export function ContextualFeedback({
                 disabled={submitting}
                 aria-pressed={choice === "unsafe"}
               >
-                This recommendation may be unsafe
+                Something feels off? Tell us
               </button>
             ) : null}
           </div>

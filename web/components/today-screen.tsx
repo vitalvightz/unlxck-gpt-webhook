@@ -287,6 +287,7 @@ export function TodayScreen() {
           key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
           token={token ?? ""}
           surface="daily_recommendation"
+          className="today-feedback-card"
         />
       ) : null}
     </div>
