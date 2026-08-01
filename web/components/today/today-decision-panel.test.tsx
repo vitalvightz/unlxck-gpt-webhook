@@ -262,3 +262,40 @@ test("safety checks are omitted on a preview card", () => {
   });
   assert.ok(!html.includes("Skin injury"));
 });
+
+test("a current skin-care message stays authoritative over preview timing", () => {
+  const html = render({
+    banner: {
+      state: "train_as_planned",
+      displayState: "safety_notice",
+      chip: "SKIN CARE",
+      title: "Skin care active",
+      action: "Keep the left eyebrow cut clean and covered.",
+      detail: "Stop if it opens, reopens, bleeds, or rubs.",
+      tone: "amber",
+    },
+    tier: "preview",
+    triggers: ["Poor sleep"],
+    context: ["Taper phase"],
+    sources: ["next planned session"],
+    safetyChecks: [
+      {
+        code: "surface_injury",
+        label: "Skin injury",
+        result: "no_session_change",
+        result_label: "No session change",
+      },
+    ],
+  });
+
+  assert.ok(html.includes(">SKIN CARE<"));
+  assert.ok(html.includes("Keep the left eyebrow cut clean and covered."));
+  assert.ok(html.includes("Why this message?"));
+  assert.ok(html.includes("Message based on"));
+  assert.ok(html.includes("your tracked injuries"));
+  assert.ok(html.includes("Skin injury"));
+  assert.ok(html.includes("No session change"));
+  assert.ok(!html.includes("Poor sleep"));
+  assert.ok(!html.includes("Taper phase"));
+  assert.ok(!html.includes("next planned session"));
+});

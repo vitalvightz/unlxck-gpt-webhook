@@ -231,7 +231,7 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
       </div>
       {overflow > 0 ? (
         <Link href="/today" className="overview-risk-more">
-          Review {overflow} more in Today
+          Review {overflow} more on Today
         </Link>
       ) : null}
     </article>
@@ -453,10 +453,18 @@ export default function HomePage() {
     const decisionBanner = resolvedDecision?.banner ?? null;
     const decisionTier = resolvedDecision?.displayTier ?? "not_checked_in";
     const tierMeta = getTierMeta(decisionTier);
-    const decisionTitle = tierMeta.label;
-    const overviewEyebrow = getOverviewCommandEyebrow(decisionTier);
+    const safetyNoticeLeads = resolvedDecision?.primaryMessageKind === "safety_notice";
+    const decisionTitle = safetyNoticeLeads
+      ? decisionBanner?.title ?? "Current safety"
+      : tierMeta.label;
+    const overviewEyebrow = safetyNoticeLeads
+      ? "Current safety"
+      : getOverviewCommandEyebrow(decisionTier);
     const decisionLines = decisionBanner
-      ? [decisionBanner.detail, decisionBanner.action].filter((line): line is string => Boolean(line))
+      ? (safetyNoticeLeads
+          ? [decisionBanner.action, decisionBanner.detail]
+          : [decisionBanner.detail, decisionBanner.action]
+        ).filter((line): line is string => Boolean(line))
       : ["Submit today's fast check-in to unlock your training decision."];
     const decisionSafety = decisionBanner?.safety;
     // With no active plan there is no training decision to render, so the whole

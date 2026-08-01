@@ -58,16 +58,26 @@ export function TodayDecisionPanel({
   if (!banner) {
     return null;
   }
-  const isPreview = tier === "preview" || banner.displayState === "preview";
+  const isSafetyNotice = banner.displayState === "safety_notice";
+  // Session timing cannot downgrade a current safety notice back to PREVIEW.
+  // `tier` still describes session behavior; `displayState` owns this message.
+  const isPreview = banner.displayState === "preview" ||
+    (tier === "preview" && !isSafetyNotice);
   // Current-day readiness evidence cannot clear or restrict a future session.
   // Preview cards explain only which planned session their copy is framing.
-  const triggerLabels = clean(isPreview ? undefined : triggers);
-  const contextLabels = clean(isPreview ? undefined : context);
+  const triggerLabels = clean(isPreview || isSafetyNotice ? undefined : triggers);
+  const contextLabels = clean(isPreview || isSafetyNotice ? undefined : context);
   const checks = (isPreview ? [] : (safetyChecks ?? [])).filter(
     (check) => check.label?.trim() && check.result_label?.trim(),
+  ).filter((check) => !isSafetyNotice || check.code === "surface_injury");
+  const usedSources = clean(
+    isPreview
+      ? ["next planned session"]
+      : isSafetyNotice
+        ? ["your tracked injuries"]
+        : sources,
   );
-  const usedSources = clean(isPreview ? ["next planned session"] : sources);
-  const note = isPreview ? "" : (confidenceNote ?? "").trim();
+  const note = isPreview || isSafetyNotice ? "" : (confidenceNote ?? "").trim();
   const hasEvidence =
     triggerLabels.length > 0 ||
     checks.length > 0 ||
@@ -100,7 +110,7 @@ export function TodayDecisionPanel({
       </div>
       {hasEvidence ? (
         <details className="today-decision-disclosure" open>
-          <summary>Why this decision?</summary>
+          <summary>{isSafetyNotice ? "Why this message?" : "Why this decision?"}</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (
             <div className="today-decision-row">
@@ -140,7 +150,7 @@ export function TodayDecisionPanel({
           ) : null}
           {usedSources.length || note ? (
             <div className="today-decision-row">
-              <dt>Decision based on</dt>
+              <dt>{isSafetyNotice ? "Message based on" : "Decision based on"}</dt>
               <dd>
                 {usedSources.length ? (
                   <ul className="today-decision-inputs">

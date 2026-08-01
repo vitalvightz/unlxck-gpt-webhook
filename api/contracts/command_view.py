@@ -175,6 +175,28 @@ class QuickAction(BaseModel):
 
 DecisionTier = Literal["stop", "pull_back", "modify", "green", "not_checked_in"]
 
+
+class PrimarySafetyNotice(BaseModel):
+    """Current, actionable safety guidance that can outrank session preview copy.
+
+    This is deliberately separate from ``decision_tier``: a wound can need care
+    now without blocking a future session. The server owns the notice and its
+    priority so every client gets the same message hierarchy.
+    """
+
+    code: Literal[
+        "skin_care",
+        "skin_local_protection",
+        "skin_no_contact",
+        "skin_medical_review",
+    ]
+    injury_id: str
+    chip: Literal["SKIN CARE", "CHECK"]
+    title: str
+    detail: str
+    action: str
+    tone: Literal["amber", "red"]
+
 _TIER_RANK: dict[str, int] = {
     "not_checked_in": 0,
     "green": 1,
@@ -295,6 +317,10 @@ class CommandViewToday(BaseModel):
     # confident claim on the one decision nothing is known about.
     recommendation_confidence: ConfidenceBand | None = None
     recommendation_confidence_note: str = ""
+    # A current safety instruction is a separate authority from the scheduled
+    # session. It may lead the UI while ``session_scope == "next"`` without
+    # implying that the future session has been blocked or modified.
+    primary_safety_notice: PrimarySafetyNotice | None = None
     warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"
@@ -376,6 +402,92 @@ def _active_injury_rows(
         for injury in (open_injuries or [])
         if str(injury.get("status") or "").strip().lower() in _ACTIVE_INJURY_STATUSES
     ]
+
+
+_SURFACE_NOTICE_PRIORITY = {
+    "stable_surface": 1,
+    "surface_local_restriction": 2,
+    "surface_no_contact": 3,
+    "surface_medical_review": 4,
+}
+
+
+def _natural_injury_name(label: str) -> str:
+    first_word = label.split(maxsplit=1)[0]
+    if len(first_word) > 1 and first_word.isupper():
+        return label
+    return label[:1].lower() + label[1:]
+
+
+def _primary_safety_notice(
+    open_injuries: Sequence[Mapping[str, Any]] | None,
+) -> PrimarySafetyNotice | None:
+    """Return the strongest current skin-care instruction, if one exists.
+
+    Session timing is intentionally absent from this selector. A future-session
+    preview is planning information; an active wound instruction is current
+    safety information and therefore remains eligible to lead the command card.
+    """
+    surface_injuries = [
+        injury
+        for injury in _active_injury_rows(open_injuries)
+        if str(injury.get("surface_class") or "") in _SURFACE_NOTICE_PRIORITY
+    ]
+    if not surface_injuries:
+        return None
+
+    injury = max(
+        surface_injuries,
+        key=lambda item: _SURFACE_NOTICE_PRIORITY[
+            str(item.get("surface_class") or "stable_surface")
+        ],
+    )
+    surface_class = str(injury.get("surface_class") or "stable_surface")
+    injury_id = str(injury.get("id") or "").strip()
+    label = _injury_name(injury)
+    natural_label = _natural_injury_name(label)
+
+    if surface_class == "surface_medical_review":
+        return PrimarySafetyNotice(
+            code="skin_medical_review",
+            injury_id=injury_id,
+            chip="CHECK",
+            title="Check before training",
+            action=f"Get the {natural_label} checked before training.",
+            detail="Keep it clean and covered, and keep contact or rubbing off it.",
+            tone="red",
+        )
+    if surface_class == "surface_no_contact":
+        return PrimarySafetyNotice(
+            code="skin_no_contact",
+            injury_id=injury_id,
+            chip="SKIN CARE",
+            title="Contact restriction",
+            action=(
+                f"Keep contact off the {natural_label} until the skin is closed and coverable."
+            ),
+            detail="Keep it clean and covered while it heals.",
+            tone="amber",
+        )
+    if surface_class == "surface_local_restriction":
+        return PrimarySafetyNotice(
+            code="skin_local_protection",
+            injury_id=injury_id,
+            chip="SKIN CARE",
+            title="Protect the area",
+            action=f"Protect the {natural_label} from rubbing or contact.",
+            detail="Keep it clean and covered while it heals.",
+            tone="amber",
+        )
+    return PrimarySafetyNotice(
+        code="skin_care",
+        injury_id=injury_id,
+        chip="SKIN CARE",
+        title="Skin care active",
+        action=f"Keep the {natural_label} clean and covered.",
+        detail="Stop if it opens, reopens, bleeds, or rubs.",
+        tone="amber",
+    )
 
 
 def _specific_trigger_labels(
@@ -544,6 +656,7 @@ def build_command_view(
             confidence_band(rec_view.triggers) if rec_view.triggers else None
         ),
         recommendation_confidence_note=confidence_note(rec_view.triggers),
+        primary_safety_notice=_primary_safety_notice(open_injuries),
         warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},
         session_scope=resolved_session_scope,

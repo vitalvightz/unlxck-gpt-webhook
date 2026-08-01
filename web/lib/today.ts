@@ -90,12 +90,13 @@ export type TodayDecisionDisplayState =
   | "rehab_only"
   | "no_training"
   | "injury_blocked"
+  | "safety_notice"
   | "preview";
 
 export type TodayDecisionBanner = {
   state: TodayRecommendationState;
   displayState: TodayDecisionDisplayState;
-  chip: "GO" | "ADJUST" | "STOP" | "PULL BACK" | "REHAB ONLY" | "NO TRAINING" | "INJURY HOLD" | "PREVIEW";
+  chip: "GO" | "ADJUST" | "STOP" | "PULL BACK" | "REHAB ONLY" | "NO TRAINING" | "INJURY HOLD" | "SKIN CARE" | "CHECK" | "PREVIEW";
   /** Short coach-card headline, e.g. "Pull back today". */
   title: string;
   /** One clear reason sentence. Prefers the backend reason when present. */
