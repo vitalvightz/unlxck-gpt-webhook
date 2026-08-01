@@ -173,7 +173,6 @@ function surfaceDeclaration(
   flagId: string,
   status: TodayInjuryCheckinStatus,
   answers: SurfaceFollowUpAnswers,
-  { includeFriction }: { includeFriction: boolean },
 ): TodayInjuryDeclaration {
   const bleedFields = BLEED_ANSWER_FIELDS[answers.bleed];
   // The athlete did not revisit the bleeding question, so the drainage already
@@ -181,20 +180,21 @@ function surfaceDeclaration(
   // downgrade a stored "present" to "unknown" on an otherwise untouched recheck
   // — losing a safety signal nobody asked to change.
   const drainageUntouched = answers.bleed === answers.initialBleed && answers.storedDrainage !== null;
-  const declaration: TodayInjuryDeclaration = {
+  return {
     flag_id: flagId,
     status,
     skin_integrity: answers.skin_integrity,
     infection_signs: answers.infection_signs,
     coverable: answers.coverable,
+    // Asked on the way back down as well as the way up. Friction is what holds a
+    // closed wound at a local restriction, so a recheck that could not answer it
+    // left that restriction — and the severity floor under it — with no way to
+    // lift. The form opens pre-filled from the record, so leaving it alone still
+    // preserves the stored answer.
+    friction_or_contact_problem: answers.friction_or_contact_problem,
     ...bleedFields,
     ...(drainageUntouched ? { drainage: answers.storedDrainage as Drainage } : {}),
   };
-  // The recheck does not ask about friction, so it does not send it — an
-  // unasked field must keep its stored value rather than be overwritten.
-  return includeFriction
-    ? { ...declaration, friction_or_contact_problem: answers.friction_or_contact_problem }
-    : declaration;
 }
 
 const INJURY_SEVERITY_OPTIONS: Array<{ value: InjuryFlagSeverity; label: string }> = [
@@ -302,8 +302,9 @@ export function TodayInjuryManager({
     : [];
 
   async function submit(injuries: TodayInjuryDeclaration[]) {
-    await submitTodayInjuryCheckin(token, { injuries });
+    const response = await submitTodayInjuryCheckin(token, { injuries });
     await onRefresh();
+    return response;
   }
 
   /** Send one per-injury update. The button only reads as selected AFTER the
@@ -320,11 +321,36 @@ export function TodayInjuryManager({
     }
     setPendingFlagId(flagId);
     try {
-      await submit([declaration ?? { flag_id: flagId, status }]);
+      const response = await submit([declaration ?? { flag_id: flagId, status }]);
       setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
-      showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
-        tone: "success",
-      });
+      const previous = openInjuries.find((injury) => injury.id === flagId);
+      const updated = response.open_injuries.find((injury) => injury.id === flagId);
+      const severityRaised =
+        previous && updated
+          ? INJURY_SEVERITY_OPTIONS.findIndex((option) => option.value === updated.severity) >
+            INJURY_SEVERITY_OPTIONS.findIndex((option) => option.value === previous.severity)
+          : false;
+      if (status !== "resolved" && updated?.surface_class === "surface_medical_review") {
+        showToast(
+          severityRaised
+            ? `Severity raised to ${updated.severity}. This skin injury needs checking.`
+            : "This skin injury needs checking before training.",
+          { tone: "info" },
+        );
+      } else if (status !== "resolved" && updated?.surface_class === "surface_no_contact") {
+        showToast("Injury updated. Keep contact off it until the skin is closed and coverable.", {
+          tone: "info",
+        });
+      } else if (
+        status !== "resolved" &&
+        updated?.surface_class === "surface_local_restriction"
+      ) {
+        showToast("Injury updated. Protect it from rubbing or contact.", { tone: "info" });
+      } else {
+        showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
+          tone: "success",
+        });
+      }
       return true;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Injury update failed.", { tone: "error" });
@@ -389,9 +415,7 @@ export function TodayInjuryManager({
     const saved = await updateInjury(
       flagId,
       surfaceFollowUpStatus,
-      surfaceDeclaration(flagId, surfaceFollowUpStatus, surfaceAnswers, {
-        includeFriction: !isSurfaceRecheck,
-      }),
+      surfaceDeclaration(flagId, surfaceFollowUpStatus, surfaceAnswers),
     );
     if (saved) {
       setSurfaceFollowUpId(null);
@@ -590,19 +614,21 @@ export function TodayInjuryManager({
                         setSurfaceAnswers((current) => ({ ...current, coverable: value }))
                       }
                     />
-                    {isSurfaceRecheck ? null : (
-                      <SegmentGroup
-                        label="Is rubbing or contact the problem?"
-                        value={surfaceAnswers.friction_or_contact_problem}
-                        options={FRICTION_OPTIONS}
-                        onChange={(value) =>
-                          setSurfaceAnswers((current) => ({
-                            ...current,
-                            friction_or_contact_problem: value,
-                          }))
-                        }
-                      />
-                    )}
+                    <SegmentGroup
+                      label={
+                        isSurfaceRecheck
+                          ? "Is rubbing or contact still the problem?"
+                          : "Is rubbing or contact the problem?"
+                      }
+                      value={surfaceAnswers.friction_or_contact_problem}
+                      options={FRICTION_OPTIONS}
+                      onChange={(value) =>
+                        setSurfaceAnswers((current) => ({
+                          ...current,
+                          friction_or_contact_problem: value,
+                        }))
+                      }
+                    />
                     <div className="today-injury-confirm-actions">
                       <button
                         type="button"

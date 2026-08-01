@@ -97,6 +97,12 @@ def _map_injury_flag(row: dict[str, Any]) -> InjuryFlagRecord:
         body_area=str(row.get("body_area") or ""),
         description=str(row.get("description") or ""),
         severity=str(row.get("severity") or "moderate"),
+        # Provenance travels with the severity it describes. Without it a reader
+        # cannot tell an athlete's "severe" from a wound floor the system
+        # applied, which is the whole difference between a severity that may be
+        # released automatically and one that may not.
+        severity_source=str(row.get("severity_source") or "") or None,
+        manual_severity=str(row.get("manual_severity") or "") or None,
         status=str(row.get("status") or "open"),
         latest_reported_status=str(row.get("latest_reported_status") or "ongoing"),
         skin_integrity=surface_row["skin_integrity"],

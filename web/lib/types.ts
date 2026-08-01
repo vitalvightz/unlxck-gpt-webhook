@@ -822,6 +822,12 @@ export type InjuryFlagRecord = {
   // logic (e.g. "Left wrist tightness"). Present on Today's open_injuries.
   label?: string;
   severity: InjuryFlagSeverity;
+  /** Who owns `severity`. `surface_system` means it is a floor the backend
+   * derived from the wound answers, with the athlete's own value kept in
+   * `manual_severity` so a later clean recheck can release it. Absent reads as
+   * the athlete's own choice, which is never lowered automatically. */
+  severity_source?: "manual" | "surface_system" | null;
+  manual_severity?: InjuryFlagSeverity | null;
   status: InjuryFlagStatus;
   latest_reported_status?: InjuryReportedStatus;
   // Structured surface (skin) safety answers, captured by the conditional

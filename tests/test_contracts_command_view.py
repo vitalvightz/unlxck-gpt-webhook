@@ -297,6 +297,113 @@ class TestContributorsAndSources:
         )
         assert view.today.recommendation_trigger_labels == ["Poor sleep", "Feeling flat"]
 
+    def test_active_injury_contributor_names_the_relevant_injury_and_reason(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(
+                triggers=[
+                    "tracked_injury_high_risk_session",
+                    "tracked_injury_high_risk_session:ankle-1",
+                ]
+            ),
+            open_injuries=[
+                {
+                    "id": "skin-1",
+                    "status": "open",
+                    "label": "Eye cut",
+                    "surface_class": "stable_surface",
+                },
+                {
+                    "id": "ankle-1",
+                    "status": "monitoring",
+                    "label": "Left ankle sprain",
+                    "surface_class": "non_surface",
+                },
+            ],
+        )
+
+        assert view.today.recommendation_trigger_labels == [
+            "Left ankle sprain — active for hard session"
+        ]
+
+    def test_multiple_worsening_injuries_are_named_independently(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(
+                decision="pull_back",
+                triggers=[
+                    "active_injury_worse",
+                    "active_injury_worse:hand-1",
+                    "active_injury_worse:ankle-1",
+                ],
+            ),
+            open_injuries=[
+                {
+                    "id": "hand-1",
+                    "status": "open",
+                    "label": "Left hand cut",
+                    "severity": "severe",
+                    "latest_reported_status": "worse",
+                    "surface_class": "surface_medical_review",
+                },
+                {
+                    "id": "ankle-1",
+                    "status": "monitoring",
+                    "label": "Left ankle sprain",
+                    "severity": "moderate",
+                    "latest_reported_status": "worse",
+                    "surface_class": "non_surface",
+                },
+            ],
+        )
+
+        assert view.today.recommendation_trigger_labels == [
+            "Left hand cut — needs medical review",
+            "Left ankle sprain — getting worse",
+        ]
+
+    def test_injury_hold_uses_its_exact_injury_not_an_unrelated_worse_flag(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(
+                decision="pull_back",
+                triggers=["injury_hold", "injury_hold:shoulder-1", "active_injury_worse"],
+            ),
+            open_injuries=[
+                {
+                    "id": "shoulder-1",
+                    "status": "monitoring",
+                    "label": "Left shoulder dislocation",
+                    "severity": "severe",
+                    "latest_reported_status": "improving",
+                    "surface_class": "non_surface",
+                },
+                {
+                    "id": "ankle-1",
+                    "status": "open",
+                    "label": "Minor right ankle sprain",
+                    "severity": "mild",
+                    "latest_reported_status": "worse",
+                    "surface_class": "non_surface",
+                },
+            ],
+        )
+
+        assert view.today.recommendation_trigger_labels == [
+            "Left shoulder dislocation — severe"
+        ]
+
+    def test_generic_injury_trigger_remains_as_a_legacy_fallback(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            recommendation=_rec(triggers=["active_injury_restriction"]),
+        )
+        assert view.today.recommendation_trigger_labels == ["Active injury"]
+
     def test_context_markers_never_render_as_contributors(self):
         view = build_command_view(
             current_training_day=TODAY,

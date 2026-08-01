@@ -621,3 +621,38 @@ def test_atomic_admin_role_change_audit_schema_and_migration():
             "grant execute on function public.set_profile_role_with_audit(uuid, text, text, text, text, text) to service_role;"
             in sql
         )
+
+
+INJURY_SEVERITY_PROVENANCE_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260801120000_add_injury_severity_provenance.sql"
+)
+
+
+def test_injury_flags_table_declares_severity_provenance_columns():
+    schema = _read_schema()
+    injury_flags_definition = schema.split(
+        "create table if not exists public.injury_flags (", 1
+    )[1].split(");", 1)[0]
+
+    assert "severity_source text" in injury_flags_definition
+    assert "manual_severity text" in injury_flags_definition
+    assert (
+        "severity_source is null or severity_source in ('manual', 'surface_system')"
+        in injury_flags_definition
+    )
+    # A system-applied floor without the athlete's severity under it could never
+    # be released, so the pairing is enforced in the database, not just in code.
+    assert "injury_flags_manual_severity_pairing_check" in injury_flags_definition
+
+
+def test_injury_severity_provenance_migration_backfills_columns():
+    migration = INJURY_SEVERITY_PROVENANCE_MIGRATION_PATH.read_text(encoding="utf-8")
+
+    assert "add column if not exists severity_source text" in migration
+    assert "add column if not exists manual_severity text" in migration
+    assert "injury_flags_severity_source_check" in migration
+    assert "injury_flags_manual_severity_check" in migration
+    assert "injury_flags_manual_severity_pairing_check" in migration

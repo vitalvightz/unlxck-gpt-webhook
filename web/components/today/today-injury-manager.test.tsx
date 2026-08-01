@@ -126,7 +126,7 @@ async function click(element: HTMLElement) {
 }
 
 /** Stub /api/today/injury-checkin, capturing what was posted. */
-function stubCheckin(options: { fail?: boolean } = {}) {
+function stubCheckin(options: { fail?: boolean; openInjuries?: InjuryFlagRecord[] } = {}) {
   const calls: Array<Record<string, unknown>> = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
@@ -137,7 +137,7 @@ function stubCheckin(options: { fail?: boolean } = {}) {
         headers: { "content-type": "application/json" },
       });
     }
-    return new Response(JSON.stringify({ open_injuries: [] }), {
+    return new Response(JSON.stringify({ open_injuries: options.openInjuries ?? [] }), {
       status: 201,
       headers: { "content-type": "application/json" },
     });
@@ -190,6 +190,43 @@ test("marking a skin injury worse asks the surface follow-up before saving anyth
     // Only now is it marked as saved, and the follow-up closes.
     assertSelected(statusButton(container, "Worse"));
     assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+
+    cleanup();
+  } finally {
+    restore();
+  }
+});
+
+test("a medically concerning worse answer reports the raised severity immediately", async () => {
+  const severeWound: InjuryFlagRecord = {
+    ...BLISTER,
+    severity: "severe",
+    latest_reported_status: "worse",
+    skin_integrity: "open",
+    drainage: "present",
+    infection_signs: ["pus"],
+    coverable: "no",
+    surface_class: "surface_medical_review",
+  };
+  const { restore } = stubCheckin({ openInjuries: [severeWound] });
+  const { container, root, cleanup } = mount();
+
+  try {
+    await act(async () => {
+      root.render(
+        <ToastProvider>
+          <TodayInjuryManager openInjuries={[{ ...BLISTER, severity: "mild" }]} token="t" onRefresh={async () => {}} />
+        </ToastProvider>,
+      );
+    });
+
+    await click(statusButton(container, "Worse"));
+    await click(buttonNamed(container, "Open or burst"));
+    await click(buttonNamed(container, "Pus"));
+    await click(buttonNamed(container, "Save update"));
+
+    assert.match(container.textContent ?? "", /Severity raised to severe/);
+    assert.match(container.textContent ?? "", /skin injury needs checking/i);
 
     cleanup();
   } finally {
@@ -326,8 +363,10 @@ test("a restricted wound reported easing rechecks the skin before the restrictio
     assert.equal(calls.length, 0);
     assertNotSelected(statusButton(container, "Easing"));
     assert.match(container.textContent ?? "", /Is the skin closed now\?/);
-    // The recheck is the short set — the routing question is not re-asked.
-    assert.doesNotMatch(container.textContent ?? "", /Is rubbing or contact the problem\?/);
+    // Friction is asked on the way back down too: it is what holds a closed
+    // wound at a local restriction, so a recheck that could not answer it would
+    // leave that restriction with no way to lift.
+    assert.match(container.textContent ?? "", /Is rubbing or contact still the problem\?/);
 
     await click(buttonNamed(container, "Still closed"));
     await click(buttonNamed(container, "No"));
@@ -341,9 +380,9 @@ test("a restricted wound reported easing rechecks the skin before the restrictio
             status: "improving",
             skin_integrity: "intact",
             infection_signs: [],
-            // Unasked in a recheck, so friction is not sent and keeps its
-            // stored value; coverable comes back as recorded.
+            // Untouched answers come back as recorded rather than blanked.
             coverable: "yes",
+            friction_or_contact_problem: "yes",
             bleeding_status: "none",
             drainage: "none",
           },

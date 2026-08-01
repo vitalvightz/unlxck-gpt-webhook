@@ -1778,6 +1778,10 @@ AdaptationDecisionValue = Literal[
     "flag_admin_review",
 ]
 InjuryFlagSeverity = Literal["mild", "moderate", "severe"]
+# Who owns an injury flag's current severity: the athlete's own choice, or a
+# floor the surface (skin) evaluator derived from the structured wound answers.
+# Only a system-applied floor may be released automatically.
+InjurySeveritySource = Literal["manual", "surface_system"]
 InjuryFlagStatus = Literal["open", "monitoring", "resolved"]
 # How a rehab block is labelled in the viewer. "rehab" while the body region it
 # targets is actively injured; "prehab" once that injury clears and the work is
@@ -1838,6 +1842,13 @@ class InjuryFlagRecord(BaseModel):
     body_area: str = ""
     description: str
     severity: InjuryFlagSeverity = "moderate"
+    # Provenance for ``severity``. ``surface_system`` means the current value is a
+    # floor the surface (skin) evaluator applied from the structured wound
+    # answers, and ``manual_severity`` carries the athlete's own severity
+    # underneath it so a later clean recheck can release the floor. ``None`` reads
+    # as manual — a severity the system did not raise is never auto-lowered.
+    severity_source: InjurySeveritySource | None = None
+    manual_severity: InjuryFlagSeverity | None = None
     status: InjuryFlagStatus = "open"
     latest_reported_status: InjuryReportedStatus = "ongoing"
     # Structured surface (skin) safety answers, recorded by the injury check-in's

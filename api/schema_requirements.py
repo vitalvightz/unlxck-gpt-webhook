@@ -227,6 +227,8 @@ REQUIRED_INJURY_FLAGS_COLUMNS: tuple[str, ...] = (
     "body_area",
     "description",
     "severity",
+    "severity_source",
+    "manual_severity",
     "status",
     "latest_reported_status",
     "resolved_at",
