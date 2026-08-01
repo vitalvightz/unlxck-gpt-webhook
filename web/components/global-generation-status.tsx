@@ -893,12 +893,14 @@ export function GlobalGenerationStatus() {
           ) : null}
         </span>
 
-        <span className="global-generation-status-cta">
-          <span className="global-generation-status-cta-label">{ctaLabel}</span>
-          <span className="global-generation-status-arrow" aria-hidden="true">
-            →
+        {isCompleted ? (
+          <span className="global-generation-status-cta">
+            <span className="global-generation-status-cta-label">{ctaLabel}</span>
+            <span className="global-generation-status-arrow" aria-hidden="true">
+              →
+            </span>
           </span>
-        </span>
+        ) : null}
       </div>
 
       {!isFailed && !isCompleted ? (

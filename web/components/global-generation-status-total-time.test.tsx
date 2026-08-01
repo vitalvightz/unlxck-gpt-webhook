@@ -241,6 +241,7 @@ test("the total survives the active-to-passive handoff unchanged", async () => {
 
   try {
     assert.ok(harness.text().includes("Generating plan..."), harness.text());
+    assert.equal(harness.text().includes("Open"), false, `building ribbon showed an Open action: ${harness.text()}`);
 
     // The controller resolves the job and clears the shared pending record.
     state.active = null;

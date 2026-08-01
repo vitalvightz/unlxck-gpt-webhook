@@ -1004,6 +1004,7 @@ test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () 
     recommendation: "train_as_planned" as TodayCommandView["today"]["recommendation_state"],
     decisionTier: "green" as TodayDecisionTier,
     hasSafeSession: false,
+    sessionIsToday: false,
   };
 
   // No plans at all -> build the first one.
@@ -1041,10 +1042,15 @@ test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () 
     href: "/today#today-session",
     label: "Review stop guidance",
   });
-  // Normal cleared / modified session.
+  // A future session must not be presented as today's session.
   assert.deepEqual(getOverviewPrimaryAction(base), {
     href: "/today#today-session",
-    label: "Open today's session",
+    label: "Next session",
+  });
+  // A session matched to the training day keeps the today's-session label.
+  assert.deepEqual(getOverviewPrimaryAction({ ...base, sessionIsToday: true }), {
+    href: "/today#today-session",
+    label: "Today's session",
   });
 });
 

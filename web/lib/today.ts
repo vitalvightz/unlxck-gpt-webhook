@@ -774,6 +774,7 @@ export function getOverviewPrimaryAction(params: {
   recommendation: TodayRecommendationState;
   decisionTier: TodayDecisionTier;
   hasSafeSession: boolean;
+  sessionIsToday: boolean;
 }): OverviewPrimaryAction {
   const {
     hasActivePlan,
@@ -782,6 +783,7 @@ export function getOverviewPrimaryAction(params: {
     recommendation,
     decisionTier,
     hasSafeSession,
+    sessionIsToday,
   } = params;
 
   if (!hasActivePlan) {
@@ -800,7 +802,10 @@ export function getOverviewPrimaryAction(params: {
       ? { href: "/today#today-session", label: "View safe session" }
       : { href: "/today#today-session", label: "Review stop guidance" };
   }
-  return { href: "/today#today-session", label: "Open today's session" };
+  return {
+    href: "/today#today-session",
+    label: sessionIsToday ? "Today's session" : "Next session",
+  };
 }
 
 /**

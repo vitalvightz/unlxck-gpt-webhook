@@ -548,9 +548,10 @@ export default function HomePage() {
       recommendation,
       decisionTier,
       hasSafeSession: Boolean(safeSession),
+      sessionIsToday,
     });
     const primaryHref = primaryAction.href;
-    const primaryLabel = primaryAction.label === "Open today's session" ? "Today's session" : primaryAction.label;
+    const primaryLabel = primaryAction.label;
 
     return (
       <>
