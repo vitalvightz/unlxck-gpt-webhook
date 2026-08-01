@@ -41,12 +41,13 @@ const ACTIVE_SEVERE_INJURY: TodayCommandView["open_injuries"][number] = {
   updated_at: "2026-06-18T10:00:00Z",
 };
 
-test("green remains completable despite stop-sounding prose", () => {
+test("green remains completable and preserves backend-authored instructions", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
     today: {
       ...BASE_STATE.today,
-      recommendation_reason: "No training today.\nRed flag detected. Seek medical advice.",
+      recommendation_reason:
+        "Train as planned.\nYour readiness is good today.\nKeep the abrasion clean and covered. Stop if the wound opens or bleeds.",
       decision_tier: "green",
     },
   });
@@ -59,11 +60,10 @@ test("green remains completable despite stop-sounding prose", () => {
   assert.ok(resolved.banner);
   assert.equal(resolved.banner.displayState, "go");
   assert.equal(resolved.banner.tone, "green");
-  assert.equal(resolved.banner.detail, "Your check-in is clear for today's planned work.");
-  assert.doesNotMatch(resolved.banner.detail, /Red flag|medical advice/i);
+  assert.equal(resolved.banner.detail, "Your readiness is good today.");
   assert.equal(
     resolved.banner.action,
-    "Session unchanged — complete today's planned session.",
+    "Keep the abrasion clean and covered. Stop if the wound opens or bleeds.",
   );
   assert.equal("blocksTraining" in resolved.banner, false);
 });
@@ -81,13 +81,14 @@ test("current session before check-in is not classified as blocked", () => {
   assert.equal(resolved.banner, null);
 });
 
-test("pull-back remains blocking despite green-sounding prose", () => {
+test("pull-back remains blocking while preserving backend-authored instructions", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
     today: {
       ...BASE_STATE.today,
       recommendation_state: "pull_back",
-      recommendation_reason: "Sharp work ready.\nEverything feels good.\nTrain normally.",
+      recommendation_reason:
+        "Pull back today.\nFatigue is high and recovery is down.\nKeep load off the injured area. Avoid impact or painful ranges.",
       decision_tier: "pull_back",
     },
   });
@@ -99,13 +100,12 @@ test("pull-back remains blocking despite green-sounding prose", () => {
   assert.doesNotMatch(resolved.banner?.action ?? "", /replaced/i);
   assert.equal(
     resolved.banner?.action,
-    "Today's planned session is blocked. Follow today's limits.",
+    "Keep load off the injured area. Avoid impact or painful ranges.",
   );
   assert.equal(
     resolved.banner?.detail,
-    "Your readiness is too low for hard combat work today.",
+    "Fatigue is high and recovery is down.",
   );
-  assert.doesNotMatch(resolved.banner?.detail ?? "", /Everything feels good|Train normally/);
 });
 
 test("STOP uses a safe replacement only for today's matched session", () => {
@@ -124,7 +124,7 @@ test("STOP uses a safe replacement only for today's matched session", () => {
   assert.equal(resolved.canCompleteSession, false);
   assert.equal(resolved.useSafeReplacement, true);
   assert.equal(resolved.sessionOutcome, "replaced_with_recovery");
-  assert.match(resolved.banner?.action ?? "", /replaced with Recovery \/ Mobility Only/);
+  assert.equal(resolved.banner?.action, "Today's planned session is blocked.");
 });
 
 test("backend STOP remains visible before check-in when a severe injury is active", () => {
@@ -207,7 +207,7 @@ test("authoritative STOP overrides pull-back presentation as well as session saf
   assert.equal(resolved.banner.detail, "A safety restriction is blocking training today.");
   assert.equal(
     resolved.banner.action,
-    "Today's planned session has been replaced with Recovery / Mobility Only.",
+    "Today's planned session is blocked.",
   );
   assert.equal(resolved.banner.tone, "red");
   assert.equal(getTierMeta(resolved.displayTier).label, "Stop today");
@@ -243,20 +243,19 @@ test("future pull-back remains a neutral pending preview", () => {
   assert.equal(resolved.tone, "neutral");
 });
 
-test("modify is guidance only and never claims the structured session was rewritten", () => {
+test("modify is guidance only and preserves specific backend-authored volume cuts", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
     today: {
       ...BASE_STATE.today,
       recommendation_state: "modify",
       decision_tier: "modify",
-      recommendation_reason: "Hard combat work needs to be controlled today.",
+      recommendation_reason:
+        "Session reduced.\nStrength and rounds need less volume today.\nCut 2 rounds and 1 set from each strength exercise.",
     },
   });
   assert.equal(resolved.sessionOutcome, "guidance_only");
   assert.equal(resolved.canCompleteSession, true);
-  assert.match(resolved.banner?.action ?? "", /has not been automatically rewritten/);
-  assert.doesNotMatch(resolved.banner?.action ?? "", /reduced|adjusted session/i);
   assert.deepEqual(
     {
       chip: resolved.banner?.chip,
@@ -265,13 +264,13 @@ test("modify is guidance only and never claims the structured session was rewrit
     },
     {
       chip: "ADJUST",
-      action: "Follow today's limits. The planned session has not been automatically rewritten.",
-      detail: "Today's session has not been rewritten. Follow the limits below and skip extra work.",
+      action: "Cut 2 rounds and 1 set from each strength exercise.",
+      detail: "Strength and rounds need less volume today.",
     },
   );
 });
 
-test("severe-injury STOP removes only the known duplicate injury risk", () => {
+test("severe-injury STOP removes duplicate injury and stop-red-flag risks", () => {
   const state: TodayCommandView = {
     ...BASE_STATE,
     today: { ...BASE_STATE.today, decision_tier: "stop" },
@@ -282,10 +281,24 @@ test("severe-injury STOP removes only the known duplicate injury risk", () => {
     { category: "stop_red_flag", priority: 2, icon: "stop", label: "Stop", text: "Do not train", tone: "stop" },
     { category: "weight_cut", priority: 3, icon: "scale", label: "Weight cut", text: "Hydrate", tone: "watch" },
   ];
-  assert.deepEqual(getSupplementaryRiskWatch(risks, resolveTodayDecision(state)), [
-    risks[1],
-    risks[2],
-  ]);
+  assert.deepEqual(getSupplementaryRiskWatch(risks, resolveTodayDecision(state)), [risks[2]]);
+});
+
+test("pull-back removes its duplicated stop-red-flag risk", () => {
+  const state: TodayCommandView = {
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "pull_back",
+    },
+  };
+  const risks: TodayCommandView["risk_watch"] = [
+    { category: "stop_red_flag", priority: 1, icon: "stop", label: "Stop", text: "Pull back", tone: "stop" },
+    { category: "fatigue", priority: 2, icon: "battery", label: "Fatigue", text: "Sleep was low", tone: "caution" },
+  ];
+
+  assert.deepEqual(getSupplementaryRiskWatch(risks, resolveTodayDecision(state)), [risks[1]]);
 });
 
 test("risk filtering preserves stable reminders and distinct pain outside severe STOP", () => {

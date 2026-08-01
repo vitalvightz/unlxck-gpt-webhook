@@ -298,10 +298,10 @@ function getPreviewCopy(
 
 function resolvePresentationBanner(
   recommendationState: TodayRecommendationState,
+  recommendationReason: string | null | undefined,
   displayTier: TodayDecisionTier,
   injuryPresentation?: TodayDecisionBanner | null,
   previewSession?: TodaySession | null,
-  sessionOutcome?: TodaySessionOutcome,
 ): TodayDecisionBanner | null {
   if (displayTier === "not_checked_in") {
     return null;
@@ -323,25 +323,20 @@ function resolvePresentationBanner(
     };
   }
 
-  // The command area must agree with the authoritative tier. Recommendation
-  // prose is retained in state/history, but is not trusted as command copy: an
-  // older reason can sound green on a blocked day (or vice versa).
+  // Parse the backend-authored recommendation for presentation only. The
+  // structured tier above still owns every safety and session behaviour.
+  const recommendationCopy =
+    displayTier !== "stop" &&
+    FALLBACK_TIER_BY_RECOMMENDATION[recommendationState] === displayTier
+      ? getLegacyTodayDecisionBanner(
+          recommendationState,
+          recommendationReason,
+          { isPreview: false },
+        )
+      : null;
   const injuryCopy =
     displayTier === "stop" ? injuryPresentation ?? null : null;
-  const copy = injuryCopy ?? fallback;
-
-  const action =
-    sessionOutcome === "replaced_with_recovery"
-      ? "Today's planned session has been replaced with Recovery / Mobility Only."
-      : sessionOutcome === "guidance_only"
-        ? "Follow today's limits. The planned session has not been automatically rewritten."
-        : sessionOutcome === "unchanged"
-          ? "Session unchanged — complete today's planned session."
-          : sessionOutcome === "blocked"
-            ? displayTier === "pull_back"
-              ? "Today's planned session is blocked. Follow today's limits."
-              : "Today's planned session is blocked."
-            : copy.action;
+  const copy = injuryCopy ?? recommendationCopy ?? fallback;
 
   return {
     state: recommendationState,
@@ -349,7 +344,7 @@ function resolvePresentationBanner(
     chip: CHIP_BY_DISPLAY[displayState],
     title: injuryCopy ? fallback.title : copy.title,
     detail: copy.detail,
-    action,
+    action: copy.action,
     // The injury STOP already establishes priority. Keep the legacy history in
     // state, but do not repeat its "superseded" sentence as a highlighted command.
     safety: undefined,
@@ -399,10 +394,10 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
           : "blocked";
   const banner = resolvePresentationBanner(
     recommendationState,
+    state.today.recommendation_reason,
     displayTier,
     injuryPresentation,
     state.today.next_session,
-    sessionOutcome,
   );
   const blocksCurrentSession =
     sessionIsToday &&
@@ -432,20 +427,21 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   };
 }
 
-/** Remove only the severe-injury warning already expressed by the main STOP. */
+/** Remove warnings already expressed by the authoritative command banner. */
 export function getSupplementaryRiskWatch(
   risks: TodayCommandView["risk_watch"] | null | undefined,
   decision: ResolvedTodayDecision,
 ): TodayCommandView["risk_watch"] {
-  const severeInjuryStop =
-    decision.authoritativeTier === "stop" &&
-    decision.sessionIsToday &&
-    decision.severeInjuryBlocksCurrentSession;
-  if (!severeInjuryStop) {
+  if (!decision.sessionIsToday) {
     return risks ?? [];
   }
+  const decisionAlreadyShowsStop =
+    decision.authoritativeTier === "stop" ||
+    decision.authoritativeTier === "pull_back";
   return (risks ?? []).filter(
-    (risk) => risk.category !== "active_injury_worse",
+    (risk) =>
+      !(decision.severeInjuryBlocksCurrentSession && risk.category === "active_injury_worse") &&
+      !(decisionAlreadyShowsStop && risk.category === "stop_red_flag"),
   );
 }
 
