@@ -37,17 +37,15 @@ jobs:
 
           service_path = Path("api/services/today_service.py")
           service_text = service_path.read_text()
-          old_service = '''                detail=(
-                    f"Blocked by an active severe injury ({label}). Clear it or get it "
-                    "medically cleared before starting or completing this session."
-                ),'''
-          new_service = '''                detail=(
-                    f"Blocked by an active severe injury ({label}). "
-                    "Clear it before training this session."
-                ),'''
-          if old_service not in service_text:
-              raise SystemExit("Expected today_service.py completion guard was not found")
-          service_path.write_text(service_text.replace(old_service, new_service, 1))
+          old_service_first = 'f"Blocked by an active severe injury ({label}). Clear it or get it "'
+          new_service_first = 'f"Blocked by an active severe injury ({label}). "'
+          old_service_second = '"medically cleared before starting or completing this session."'
+          new_service_second = '"Clear it before training this session."'
+          if old_service_first not in service_text or old_service_second not in service_text:
+              raise SystemExit("Expected today_service.py completion guard fragments were not found")
+          service_text = service_text.replace(old_service_first, new_service_first, 1)
+          service_text = service_text.replace(old_service_second, new_service_second, 1)
+          service_path.write_text(service_text)
 
           Path(".github/workflows/apply-pr-2143-review-fixes.yml").unlink()
           Path(".github/pr-2143-review-fix-trigger").unlink(missing_ok=True)
