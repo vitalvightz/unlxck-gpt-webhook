@@ -7417,21 +7417,25 @@ html[data-theme="light"] .today-terminal-status {
   white-space: nowrap;
 }
 
-/* The four status actions were the only unlabelled control on the card — four
-   bare words under an injury name, with the question they answer living only
-   in the group's aria-label. */
+/* The status actions were the only unlabelled control on the card — bare words
+   under an injury name, with the question they answer living only in the
+   group's aria-label. */
 .today-injury-status-label {
-  margin: 2px 0 -4px;
+  margin: 2px 0 0;
   color: var(--text-muted);
 }
 
-/* Four short words go across one row wherever they fit. Below that, they break
-   2 + 2 — a squarer, more deliberate shape than 3 + a stranded fourth. */
-@media (max-width: 379px) {
-  .today-injury-status-row > .today-segment {
-    flex-basis: calc(50% - 4px);
-  }
+/* "Same" is no longer an option (silence means same), so the check-in reads as
+   "only tell us if it changed" — this line says so, since three change-only
+   buttons with no "no change" option would otherwise leave an athlete hunting
+   for one. */
+.today-injury-status-hint {
+  margin: 2px 0 6px;
 }
+
+/* No forced column basis on the status row: three short words — Easing / Worse /
+   Cleared — sit across one row on the default .today-segment flex wherever they
+   fit, and wrap on their own below that. (The old 2 + 2 rule was for four.) */
 
 .today-injury-status-note {
   margin: -2px 0 0;

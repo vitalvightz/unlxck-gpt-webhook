@@ -33,9 +33,13 @@ import type {
   TodayInjuryDeclaration,
 } from "@/lib/types";
 
+// "Same" is deliberately NOT an option. An injury left untouched stays exactly
+// where it is (the backend keeps it "ongoing"), so a per-day "nothing changed"
+// tap was pure ceremony — and a bright, pre-selectable "Same" button read to
+// athletes as a required daily confirmation. The check-in now only asks for a
+// CHANGE: easing, worse, or cleared. Silence means "same".
 const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: string }> = [
   { value: "improving", label: "Easing" },
-  { value: "ongoing", label: "Same" },
   { value: "worse", label: "Worse" },
   { value: "resolved", label: "Cleared" },
 ];
@@ -375,7 +379,7 @@ export function TodayInjuryManager({
     }
   }
 
-  // "Easing" / "Same" apply straight away. "Cleared" routes through an inline
+  // "Easing" applies straight away. "Cleared" routes through an inline
   // confirmation because it removes the injury from tracking, and "Worse" on a
   // known skin injury routes through the surface follow-up, because how a wound
   // is worse (open? bleeding? coverable?) is what decides whether anything about
@@ -406,9 +410,9 @@ export function TodayInjuryManager({
       openSurfaceFollowUp(injury, status);
       return;
     }
-    // An easing / same report on a wound that is currently restricting training
-    // has to say what the skin is doing now — otherwise the restriction would
-    // either stick forever or lift on nothing.
+    // An easing report on a wound that is currently restricting training has to
+    // say what the skin is doing now — otherwise the restriction would either
+    // stick forever or lift on nothing.
     if (status !== "worse" && needsSurfaceRecheck(injury)) {
       openSurfaceFollowUp(injury, status);
       return;
@@ -549,6 +553,9 @@ export function TodayInjuryManager({
                   {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
                 <p className="today-field-label today-injury-status-label">How is it today?</p>
+                <p className="today-field-hint today-injury-status-hint">
+                  Only tap if it changed — we keep tracking it otherwise.
+                </p>
                 <div
                   className="today-segment-row today-injury-status-row"
                   role="group"
