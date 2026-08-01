@@ -29,6 +29,7 @@ import type {
   InjuryFlagRecord,
   InjuryFlagSeverity,
   SkinIntegrity,
+  SurfaceInjuryClass,
   TodayInjuryCheckinStatus,
   TodayInjuryDeclaration,
 } from "@/lib/types";
@@ -249,6 +250,36 @@ function getInjuryType(injury: InjuryFlagRecord): string {
     bodyArea: injury.body_area,
     label: injury.label,
   });
+}
+
+type SurfaceGuidance = {
+  label: string;
+  message: string;
+  tone: "caution" | "danger";
+};
+
+const SURFACE_GUIDANCE: Partial<Record<SurfaceInjuryClass, SurfaceGuidance>> = {
+  surface_medical_review: {
+    label: "Check before training",
+    message: "This skin injury needs checking before training.",
+    tone: "danger",
+  },
+  surface_no_contact: {
+    label: "Contact restriction",
+    message: "Keep contact off it until the skin is closed and coverable.",
+    tone: "caution",
+  },
+  surface_local_restriction: {
+    label: "Protect the area",
+    message: "Protect it from rubbing or contact.",
+    tone: "caution",
+  },
+};
+
+/** Persistent, injury-owned guidance. The main Today decision remains the only
+ * session-level command; this only states the current local skin restriction. */
+function getSurfaceGuidance(injury: InjuryFlagRecord): SurfaceGuidance | null {
+  return SURFACE_GUIDANCE[injury.surface_class ?? "non_surface"] ?? null;
 }
 
 /**
@@ -535,6 +566,7 @@ export function TodayInjuryManager({
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
             const injuryType = getInjuryType(injury);
+            const surfaceGuidance = getSurfaceGuidance(injury);
             const isPending = pendingFlagId === injury.id;
             // Any in-flight write locks every row's status actions, not just its
             // own. The store refuses concurrent writes, so leaving other rows
@@ -552,6 +584,16 @@ export function TodayInjuryManager({
                   <span className="badge status-badge-neutral">{injury.severity}</span>
                   {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
+                {surfaceGuidance ? (
+                  <div
+                    className="today-injury-guidance"
+                    data-tone={surfaceGuidance.tone}
+                    role="note"
+                  >
+                    <span>{surfaceGuidance.label}</span>
+                    <p>{surfaceGuidance.message}</p>
+                  </div>
+                ) : null}
                 <p className="today-field-label today-injury-status-label">How is it today?</p>
                 <p className="today-field-hint today-injury-status-hint">
                   Only tap if it changed — we keep tracking it otherwise.

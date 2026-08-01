@@ -235,6 +235,95 @@ test("the injury card never renders the planner's internal taxonomy tokens", asy
   cleanup();
 });
 
+test("actionable skin guidance persists on its injury card", async () => {
+  const cases: Array<{
+    surfaceClass: InjuryFlagRecord["surface_class"];
+    label: string;
+    message: string;
+    tone: string;
+  }> = [
+    {
+      surfaceClass: "surface_medical_review",
+      label: "Check before training",
+      message: "This skin injury needs checking before training.",
+      tone: "danger",
+    },
+    {
+      surfaceClass: "surface_no_contact",
+      label: "Contact restriction",
+      message: "Keep contact off it until the skin is closed and coverable.",
+      tone: "caution",
+    },
+    {
+      surfaceClass: "surface_local_restriction",
+      label: "Protect the area",
+      message: "Protect it from rubbing or contact.",
+      tone: "caution",
+    },
+  ];
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager
+        openInjuries={cases.map((item, index) => ({
+          ...BLISTER,
+          id: `surface-${index}`,
+          surface_class: item.surfaceClass,
+        }))}
+        token="t"
+        onRefresh={async () => {}}
+      />,
+    );
+  });
+
+  const guidance = Array.from(container.querySelectorAll<HTMLElement>(".today-injury-guidance"));
+  assert.equal(guidance.length, cases.length);
+  cases.forEach((item, index) => {
+    assert.equal(guidance[index]?.dataset.tone, item.tone);
+    assert.ok(guidance[index]?.textContent?.includes(item.label));
+    assert.ok(guidance[index]?.textContent?.includes(item.message));
+  });
+
+  cleanup();
+});
+
+test("stable and non-surface injuries do not show persistent restriction guidance", async () => {
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager openInjuries={[BLISTER, SHOULDER]} token="t" onRefresh={async () => {}} />,
+    );
+  });
+
+  assert.equal(container.querySelector(".today-injury-guidance"), null);
+  cleanup();
+});
+
+test("persistent guidance follows refreshed injury data and clears with the injury", async () => {
+  const { container, root, cleanup } = mount();
+  const render = async (openInjuries: InjuryFlagRecord[]) => {
+    await act(async () => {
+      root.render(
+        <TodayInjuryManager openInjuries={openInjuries} token="t" onRefresh={async () => {}} />,
+      );
+    });
+  };
+
+  await render([{ ...BLISTER, surface_class: "surface_no_contact" }]);
+  assert.match(container.textContent ?? "", /Keep contact off it/);
+
+  await render([{ ...BLISTER, surface_class: "stable_surface" }]);
+  assert.equal(container.querySelector(".today-injury-guidance"), null);
+
+  await render([]);
+  assert.equal(container.querySelector(".today-injury-guidance"), null);
+  assert.match(container.textContent ?? "", /No injuries are being tracked/);
+
+  cleanup();
+});
+
 test("marking a skin injury worse asks the surface follow-up before saving anything", async () => {
   const { calls, restore } = stubCheckin();
   const { container, root, cleanup } = mount();

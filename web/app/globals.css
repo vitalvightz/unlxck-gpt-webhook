@@ -7406,6 +7406,47 @@ html[data-theme="light"] .today-terminal-status {
   white-space: nowrap;
 }
 
+/* The session command stays in the Today decision banner. This compact strip is
+   deliberately subordinate and belongs to one injury: it keeps an actionable
+   skin restriction visible after the save toast has gone. */
+.today-injury-guidance {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(218, 169, 75, 0.28);
+  border-left: 3px solid rgba(218, 169, 75, 0.72);
+  border-radius: 9px;
+  background: rgba(218, 169, 75, 0.07);
+}
+
+.today-injury-guidance span {
+  color: #d9ad59;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.today-injury-guidance p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.today-injury-guidance[data-tone="danger"] {
+  border-color: rgba(226, 58, 76, 0.3);
+  border-left-color: rgba(226, 58, 76, 0.82);
+  background: rgba(181, 18, 43, 0.09);
+}
+
+.today-injury-guidance[data-tone="danger"] span {
+  color: #f26a79;
+}
+
 /* Option labels on Today's pickers are a fixed set written in the component —
    "Open or burst", "Spreading redness", "Very hard" — and a column layout used
    to break them across two lines mid-phrase. Hold them to one line.
@@ -7645,6 +7686,26 @@ html[data-theme="light"] .today-injury-confirm {
 html[data-theme="light"] .today-injury-confirm-cancel {
   border-color: rgba(20, 20, 30, 0.16);
   background: rgba(20, 20, 30, 0.04);
+}
+
+html[data-theme="light"] .today-injury-guidance {
+  border-color: rgba(157, 112, 24, 0.28);
+  border-left-color: rgba(157, 112, 24, 0.7);
+  background: rgba(218, 169, 75, 0.1);
+}
+
+html[data-theme="light"] .today-injury-guidance span {
+  color: #805b16;
+}
+
+html[data-theme="light"] .today-injury-guidance[data-tone="danger"] {
+  border-color: rgba(189, 16, 32, 0.28);
+  border-left-color: rgba(189, 16, 32, 0.72);
+  background: rgba(189, 16, 32, 0.07);
+}
+
+html[data-theme="light"] .today-injury-guidance[data-tone="danger"] span {
+  color: #a00e20;
 }
 
 /* Light-theme parity for the drawer: the dark rules lean on white opacity,
