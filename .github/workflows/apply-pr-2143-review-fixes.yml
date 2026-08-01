@@ -1,7 +1,9 @@
 name: Apply PR 2143 review fixes
 
 on:
-  push:
+  pull_request_target:
+    types:
+      - opened
     branches:
       - Main
 
@@ -10,6 +12,7 @@ permissions:
 
 jobs:
   apply-fixes:
+    if: github.event.pull_request.head.ref == 'agent/trigger-pr-2143-main-fix'
     runs-on: ubuntu-latest
     steps:
       - name: Check out Main
