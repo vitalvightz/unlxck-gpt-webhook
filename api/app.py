@@ -18,12 +18,13 @@ from pydantic import ValidationError
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
-from .errors import generation_already_in_flight_error
-from .request_body_guard import RequestBodySizeLimitMiddleware, normalize_request_path
 from .environment import (
     apply_production_environment_defaults,
+    is_production_environment,
     should_default_to_production,
 )
+from .errors import generation_already_in_flight_error
+from .request_body_guard import RequestBodySizeLimitMiddleware, normalize_request_path
 from .models import (
     ApproveAndResumeGenerationRequest,
     AdminGenerationJobDiagnostic,
@@ -110,6 +111,21 @@ security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
 init_sentry()
+
+
+def _fastapi_documentation_options() -> dict[str, str | None]:
+    if is_production_environment():
+        return {
+            "docs_url": None,
+            "redoc_url": None,
+            "openapi_url": None,
+        }
+
+    return {
+        "docs_url": "/docs",
+        "redoc_url": "/redoc",
+        "openapi_url": "/openapi.json",
+    }
 
 
 def _admin_max_concurrent_requests() -> int:
@@ -444,6 +460,7 @@ def create_app(
         version="0.2.0",
         description="Authenticated athlete-first application API around the fight camp planner.",
         lifespan=_app_lifespan,
+        **_fastapi_documentation_options(),
     )
     app.state.store = store
     app.state.auth_service = auth_service
@@ -1660,7 +1677,11 @@ def _build_runtime_app() -> FastAPI:
 
 
 def _build_startup_failure_app(detail: str = "service temporarily unavailable") -> FastAPI:
-    app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
+    app = FastAPI(
+        title="UNLXCK Fight Camp API",
+        version="0.2.0",
+        **_fastapi_documentation_options(),
+    )
 
     def _failure_response() -> JSONResponse:
         return JSONResponse(
