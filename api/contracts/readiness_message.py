@@ -779,6 +779,13 @@ def _safety_check_code(code: str, result: str) -> str:
     return f"{SAFETY_CHECK_PREFIX}{code}:{result}"
 
 
+# Surface classes the surface evaluator routes itself (contact restriction /
+# local protection), as opposed to the ones that escalate.
+_SURFACE_ROUTED_CLASSES = frozenset(
+    {"stable_surface", "surface_local_restriction", "surface_no_contact"}
+)
+
+
 def _injury_label_of(injury: Mapping[str, Any]) -> str:
     label = _clean(injury.get("label"))
     if label:
@@ -798,6 +805,55 @@ def _surface_assessment(injury: Mapping[str, Any]):
     from fightcamp.injury_registry import classify_surface_injury
 
     return classify_surface_injury(injury, injury_type=_resolved_injury_type(injury))
+
+
+def _surface_answers_assessment(injury: Mapping[str, Any]):
+    """Surface assessment from the structured wound answers alone.
+
+    ``classify_surface_injury`` short-circuits a severe wound straight to medical
+    review, which is correct as a class but loses WHY — and once the surface
+    severity floor has raised the wound to severe itself, that short-circuit
+    would be reading back the system's own output instead of the answers.
+    Reclassifying with a neutral severity recovers the answer-driven verdict.
+    """
+    from fightcamp.injury_registry import classify_surface_injury
+
+    return classify_surface_injury(
+        {**injury, "severity": "mild"}, injury_type=_resolved_injury_type(injury)
+    )
+
+
+def surface_wound_medical_review(injury: Mapping[str, Any]) -> str | None:
+    """The wound's own reason for needing medical review, or ``None``.
+
+    Answer-driven and severity-independent: infection signs, uncontrolled
+    bleeding, drainage or a red flag on the wound itself. This is what makes the
+    wound pathway ("Get this checked", keep it clean and covered, keep contact
+    off it) own a wound that the surface severity floor has raised to severe,
+    instead of it disappearing into the generic severe-injury stop. A wound that
+    is severe only because the athlete said so carries no such reason and keeps
+    the existing severe routing.
+    """
+    if not isinstance(injury, Mapping):
+        return None
+    assessment = _surface_answers_assessment(injury)
+    if not assessment.is_surface or not assessment.needs_medical_review:
+        return None
+    return assessment.reason
+
+
+def _surface_pathway_owns(injury: Mapping[str, Any]) -> bool:
+    """True when the surface evaluator — not the generic injury gates — decides.
+
+    Either the wound routes itself (contact restriction / local protection), or
+    its answers put it in medical review, which is its own stronger pathway.
+    """
+    assessment = _surface_assessment(injury)
+    if not assessment.is_surface:
+        return False
+    if assessment.classification in _SURFACE_ROUTED_CLASSES:
+        return True
+    return surface_wound_medical_review(injury) is not None
 
 
 def classify_injury_surface(injury: Mapping[str, Any]) -> str:
@@ -848,30 +904,33 @@ def _all_active_injuries_are_routable_surface(context: ReadinessContext) -> bool
     """True when EVERY active injury is a surface injury the surface evaluator owns.
 
     Used to keep a blanket "my injury is worse" answer from stopping all training
-    when the only thing being tracked is skin. A medical-review surface wound is
-    deliberately excluded — that keeps its own (stronger) pathway.
+    when the only thing being tracked is skin. A wound in medical review counts:
+    it is not waved through, it is routed to the review pathway below, which is
+    itself a pull-back. Excluding it only meant the blanket answer beat the
+    wound-specific guidance to the decision.
     """
     active = _active_open_injuries(context)
     if not active:
         return False
-    routable = {"stable_surface", "surface_local_restriction", "surface_no_contact"}
-    return all(_surface_assessment(injury).classification in routable for injury in active)
+    return all(_surface_pathway_owns(injury) for injury in active)
 
 
 def _surface_medical_review(context: ReadinessContext) -> tuple[str, str, str] | None:
-    """A non-severe surface wound needing the safety/review pathway.
+    """A surface wound whose own answers need the safety/review pathway.
 
-    Severe wounds are excluded on purpose: they already run through the existing
-    severe-injury gates, which own the escalation.
+    Severity is not the gate — the wound answers are. The surface severity floor
+    raises an infected or draining wound to severe itself, so gating on severity
+    would hand the wound straight back to the generic severe-injury stop and lose
+    the guidance ("Get this checked", keep it clean and covered) that the answers
+    were collected for. A wound that is severe for some other reason has no
+    answer-driven review reason and keeps the existing severe routing.
     """
     for injury in _active_open_injuries(context):
-        if _clean(injury.get("severity")).lower() == "severe":
-            continue
-        assessment = _surface_assessment(injury)
-        if assessment.needs_medical_review:
+        reason = surface_wound_medical_review(injury)
+        if reason is not None:
             return (
                 _injury_label_of(injury),
-                assessment.reason,
+                reason,
                 _clean(injury.get("id")),
             )
     return None
@@ -1329,12 +1388,18 @@ def _active_context_injury_stop(context: ReadinessContext) -> tuple[str, str] | 
 
     A worsening SURFACE injury is deliberately not a stop: it routes through the
     surface evaluator instead, which restricts contact rather than the session.
-    Severe injuries — surface or not — keep the existing hard stop.
+    The same holds for a wound whose own answers put it in medical review — the
+    surface review pathway owns it and pulls back with wound-specific guidance,
+    so treating it as a generic severe injury here would replace "Get this
+    checked" with "Rehab only today" and drop the wound care entirely. Every
+    other severe injury keeps the existing hard stop.
     """
     for injury in _active_open_injuries(context):
         label = _injury_label_of(injury)
         flag_id = _clean(injury.get("id"))
         if _clean(injury.get("severity")).lower() == "severe":
+            if surface_wound_medical_review(injury) is not None:
+                continue
             return f"Active severe injury: {label}.", flag_id
         if _clean(injury.get("latest_reported_status")).lower() == "worse":
             if _surface_assessment(injury).is_surface:

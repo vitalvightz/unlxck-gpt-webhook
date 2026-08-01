@@ -48,6 +48,7 @@ from api.contracts.readiness_message import (
     build_readiness_adjustment,
     classify_injury_surface,
     is_support_session,
+    surface_wound_medical_review,
 )
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
@@ -331,31 +332,44 @@ _SURFACE_SEVERITY_FLOOR = {
 }
 
 
+def _stronger_severity(*values: str) -> str:
+    return max(values, key=lambda value: _INJURY_SEVERITY_RANK.get(value, -1))
+
+
 def _sync_surface_severity_from_checkin(
     declared: Sequence[DeclaredInjury],
     open_flags: Sequence[Mapping[str, Any]],
-) -> list[DeclaredInjury]:
-    """Apply a server-owned severity floor from explicit wound answers.
+) -> tuple[list[DeclaredInjury], dict[str, dict[str, Any]]]:
+    """Apply — and release — a server-owned severity floor from wound answers.
 
     The follow-up answers already determine the canonical surface class. Reuse
     that result instead of trusting the browser to choose a matching severity:
     local/open-wound restrictions are at least moderate, while infection,
     uncontrolled bleeding, drainage, or another medical-review result is severe.
-    This PR has no persisted provenance for an automatically raised value, so
-    synchronization is deliberately raise-only. A clean recheck may clear the
-    structured wound signals, but it never lowers a severity the athlete may
-    have selected manually.
+
+    The floor is not one-way. Every write records who owns the stored severity
+    (``severity_source``) and, while a floor is in force, the athlete's own value
+    underneath it (``manual_severity``). A later recheck is therefore evaluated
+    against the athlete's severity, not against the floor the system last
+    applied: clean answers drop an infected wound back to what the athlete
+    actually reported, while a severity the athlete chose is never lowered by the
+    system. Returns the declarations with their effective severity plus the
+    provenance fields to persist, keyed by flag id — provenance is server-owned
+    and deliberately absent from the client contract.
     """
     current_by_id = {
         str(flag.get("id")): dict(flag)
         for flag in open_flags
         if str(flag.get("id") or "").strip()
     }
-    raised: list[DeclaredInjury] = []
+    synced: list[DeclaredInjury] = []
+    provenance: dict[str, dict[str, Any]] = {}
     for injury in declared:
         surface_fields = injury.surface_safety_fields()
         if injury.status != "worse" and not surface_fields:
-            raised.append(injury)
+            # No wound evidence in this report. A floor is only ever released by
+            # answers that say the wound is better, never by silence.
+            synced.append(injury)
             continue
 
         current = current_by_id.get(str(injury.flag_id or ""), {})
@@ -363,7 +377,7 @@ def _sync_surface_severity_from_checkin(
         # A brand-new API declaration has no prior severity to synchronize and
         # keeps the normal create/default behavior.
         if not current:
-            raised.append(injury)
+            synced.append(injury)
             continue
         candidate = {
             **current,
@@ -382,22 +396,37 @@ def _sync_surface_severity_from_checkin(
             surface_class = classify_injury_surface(candidate)
         except Exception:
             logger.exception("[today] surface_severity_classification_failed")
-            raised.append(injury)
-            continue
-
-        floor = _SURFACE_SEVERITY_FLOOR.get(surface_class)
-        if floor is None:
-            raised.append(injury)
+            synced.append(injury)
             continue
 
         current_severity = str(current.get("severity") or "mild").strip().lower()
-        requested_severity = str(injury.severity or current_severity).strip().lower()
-        target = max(
-            (current_severity, requested_severity, floor),
-            key=lambda value: _INJURY_SEVERITY_RANK.get(value, -1),
+        system_owned = (
+            str(current.get("severity_source") or "").strip().lower() == "surface_system"
         )
-        raised.append(injury.model_copy(update={"severity": target}))
-    return raised
+        stored_manual = str(current.get("manual_severity") or "").strip().lower()
+        if injury.severity is not None:
+            # An explicit severity on this report is the athlete choosing one,
+            # which replaces whatever floor was in force.
+            athlete_severity = str(injury.severity).strip().lower()
+        elif system_owned:
+            # The stored value is the system's floor, so the athlete's own
+            # severity is the one preserved underneath it.
+            athlete_severity = stored_manual or "mild"
+        else:
+            athlete_severity = current_severity
+
+        # A wound that no longer classifies as surface tissue has no floor to
+        # contribute, so the athlete's severity simply stands.
+        floor = _SURFACE_SEVERITY_FLOOR.get(surface_class, athlete_severity)
+        target = _stronger_severity(athlete_severity, floor)
+        synced.append(injury.model_copy(update={"severity": target}))
+        if injury.flag_id:
+            provenance[injury.flag_id] = (
+                {"severity_source": "surface_system", "manual_severity": athlete_severity}
+                if target != athlete_severity
+                else {"severity_source": "manual", "manual_severity": None}
+            )
+    return synced, provenance
 
 
 def _with_surface_class(injuries: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -782,23 +811,30 @@ def _severe_injury_recommendation(
 def _surface_medical_review_recommendation(
     injury: Mapping[str, Any], training_day: str
 ) -> dict[str, Any] | None:
-    """Visible wound guidance even when there is no session or daily check-in."""
+    """Visible wound guidance even when there is no session or daily check-in.
+
+    Driven by the wound's own answers rather than its stored class, for the same
+    reason the readiness engine is: the surface severity floor raises an infected
+    wound to severe, and a severe wound classifies as medical review whatever its
+    answers say. Reading the answers keeps this in step with the readiness
+    pathway — a wound severe for some other reason keeps the severe-injury hold.
+    """
     try:
-        if classify_injury_surface(injury) != "surface_medical_review":
-            return None
+        review_reason = surface_wound_medical_review(injury)
     except Exception:
         logger.exception("[today] surface_review_classification_failed")
+        return None
+    if review_reason is None:
         return None
 
     label = injury.get("label") or build_injury_label(
         injury.get("body_area"), injury.get("description")
     )
     natural_label = str(label or "wound").strip().lower()
-    infection_signs = injury.get("infection_signs") or []
-    if infection_signs:
+    if review_reason == "infection_signs":
         reason = f"Your {natural_label} is showing infection signs."
         safety = "Seek medical advice for spreading redness, pus, swelling, or fever."
-    elif str(injury.get("bleeding_status") or "").strip().lower() == "uncontrolled":
+    elif review_reason == "uncontrolled_bleeding":
         reason = f"Your {natural_label} is bleeding and not under control."
         safety = "Get bleeding controlled and seek medical advice before training."
     else:
@@ -822,6 +858,25 @@ def _surface_medical_review_recommendation(
         "training_day": training_day,
         "triggers": triggers,
     }
+
+
+# Triggers that mark a pull-back as a GENERIC injury hold — one driven by "an
+# injury is active/worse" with no injury-specific guidance of its own. A red flag
+# stop is never generic, and neither is a pull-back the surface pathway already
+# owns, so both keep their copy.
+_GENERIC_INJURY_PULL_BACK_TRIGGERS = frozenset(
+    {"active_injury_worse", "active_injury_restriction", "injury_hold"}
+)
+
+
+def _is_generic_injury_pull_back(recommendation: Mapping[str, Any] | None) -> bool:
+    triggers = {
+        str(trigger).split(":", 1)[0]
+        for trigger in (recommendation or {}).get("triggers") or []
+    }
+    if "red_flag" in triggers:
+        return False
+    return bool(triggers & _GENERIC_INJURY_PULL_BACK_TRIGGERS)
 
 
 def _completion_session_is_support(
@@ -1069,7 +1124,7 @@ def submit_today_injury_checkin(
 
     open_flags = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
     open_flag_ids = [str(flag.get("id")) for flag in open_flags if flag.get("id")]
-    declared = _sync_surface_severity_from_checkin(declared, open_flags)
+    declared, severity_provenance = _sync_surface_severity_from_checkin(declared, open_flags)
     try:
         plan = reconcile_injury_checkin(declared=declared, open_flag_ids=open_flag_ids)
     except ValueError as exc:
@@ -1101,6 +1156,10 @@ def submit_today_injury_checkin(
         # Stamp resolution time on close; clear it when a flag is reopened so a
         # later "it came back" report doesn't keep a stale resolved_at.
         fields["resolved_at"] = now_iso if fields.get("status") == "resolved" else None
+        # Server-owned severity provenance, written alongside the severity it
+        # describes so the pair can never drift (a floor without the athlete's
+        # value under it could not be released).
+        fields.update(severity_provenance.get(update.flag_id, {}))
         store.update_injury_flag(update.flag_id, fields)
 
     open_after = _with_surface_class(
@@ -2039,7 +2098,19 @@ def build_today_command_view(
                 )
             )
         current_decision = "pull_back"
-    elif surface_review_recommendation is not None and current_decision != "pull_back":
+    elif surface_review_recommendation is not None and (
+        current_decision != "pull_back"
+        # A pull-back is normally left alone — it is already the stronger call and
+        # usually carries richer copy. A GENERIC injury pull-back over a wound is
+        # the exception: it says "rehab only" and nothing about keeping the wound
+        # clean, covered and out of contact. With no severe non-surface injury to
+        # explain it, the wound-specific guidance is what the athlete needs, so it
+        # replaces the generic copy rather than losing to it.
+        or (
+            severe_non_surface_injury is None
+            and _is_generic_injury_pull_back(recommendation)
+        )
+    ):
         recommendation = surface_review_recommendation
         current_decision = "pull_back"
     if severe_injury is not None and current_decision != "pull_back" and not today_is_support_filler:

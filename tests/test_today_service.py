@@ -1292,6 +1292,313 @@ class TestCommandView:
 
         assert updated["open_injuries"][0]["severity"] == "severe"
 
+    def test_system_raised_wound_severity_is_released_by_a_clean_recheck(self):
+        """The full lifecycle of a wound the SYSTEM escalated.
+
+        A mild cut goes septic, the surface floor raises it to severe, and the
+        athlete already has a readiness check-in for the day — so the wound has to
+        beat the generic severe-injury pull-back to the recommendation. When the
+        wound later comes back clean, the floor the system applied is released
+        rather than pinning the injury at severe until it is resolved outright.
+        """
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        checkin = submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(),
+            now=now,
+        )
+        assert checkin["recommendation_state"] == "train_as_planned"
+
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {
+                        "body_area": "left hand",
+                        "description": "left hand cut",
+                        "severity": "mild",
+                        "status": "ongoing",
+                    }
+                ]
+            },
+            now=now,
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+        assert opened["open_injuries"][0]["severity"] == "mild"
+
+        infected = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "bleeding_status": "controlled",
+                        "drainage": "present",
+                        "infection_signs": ["pus"],
+                        "coverable": "no",
+                        "friction_or_contact_problem": "yes",
+                    }
+                ]
+            },
+            now=now,
+        )
+        wound = infected["open_injuries"][0]
+        assert wound["severity"] == "severe"
+        assert wound["severity_source"] == "surface_system"
+        # The athlete's own severity is kept underneath the floor, which is what
+        # makes releasing it later a restore rather than a guess.
+        assert wound["manual_severity"] == "mild"
+
+        # A readiness check-in exists, so the generic severe-injury pull-back is
+        # live and competing. The wound-specific guidance has to win it: "rehab
+        # only" says nothing about keeping the wound clean, covered, and out of
+        # contact. The readiness engine itself has to produce that — not just the
+        # command view patching it back afterwards.
+        stored = store.get_today_checkin(ATHLETE, PLAN, "2026-06-18")
+        assert stored is not None
+        assert stored["recommendation_state"] == "pull_back"
+        assert "Get this checked." in stored["recommendation_reason"]
+        assert "Rehab only today." not in stored["recommendation_reason"]
+        assert "surface_injury_medical_review" in stored["recommendation_triggers"]
+
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+        assert view.today.recommendation_state == "pull_back"
+        reason = view.today.recommendation_reason or ""
+        assert "Get this checked." in reason
+        assert "showing infection signs" in reason
+        assert "Rehab only today." not in reason
+        assert "Active severe injury" not in reason
+
+        cleaned = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "improving",
+                        "skin_integrity": "intact",
+                        "bleeding_status": "none",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                        "friction_or_contact_problem": "no",
+                    }
+                ]
+            },
+            now=now,
+        )
+        healed = cleaned["open_injuries"][0]
+        assert healed["severity"] == "mild"
+        assert healed["severity_source"] == "manual"
+        assert healed["manual_severity"] is None
+        assert healed["surface_class"] == "stable_surface"
+
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+        assert "Get this checked." not in (view.today.recommendation_reason or "")
+
+    def test_clean_recheck_never_releases_a_manually_chosen_severe_severity(self):
+        """The release is scoped to floors the system applied.
+
+        A severity the athlete chose is theirs; clean skin answers say the wound
+        is clean, not that the athlete was wrong about how bad the injury is.
+        """
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "body_area": "left hand",
+                        "description": "left hand cut",
+                        "severity": "severe",
+                        "status": "ongoing",
+                    }
+                ]
+            },
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        cleaned = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "improving",
+                        "skin_integrity": "intact",
+                        "bleeding_status": "none",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                        "friction_or_contact_problem": "no",
+                    }
+                ]
+            },
+        )
+        healed = cleaned["open_injuries"][0]
+        assert healed["severity"] == "severe"
+        assert healed["severity_source"] == "manual"
+        assert healed["manual_severity"] is None
+
+    def test_clean_recheck_releases_a_floor_to_the_severity_the_athlete_chose(self):
+        """Releasing restores the athlete's severity, not a blanket "mild"."""
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "body_area": "left hand",
+                        "description": "left hand cut",
+                        "severity": "moderate",
+                        "status": "ongoing",
+                    }
+                ]
+            },
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        infected = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "bleeding_status": "controlled",
+                        "drainage": "present",
+                        "infection_signs": ["pus"],
+                        "coverable": "no",
+                        "friction_or_contact_problem": "yes",
+                    }
+                ]
+            },
+        )
+        assert infected["open_injuries"][0]["severity"] == "severe"
+        assert infected["open_injuries"][0]["manual_severity"] == "moderate"
+
+        cleaned = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "improving",
+                        "skin_integrity": "intact",
+                        "bleeding_status": "none",
+                        "drainage": "none",
+                        "infection_signs": [],
+                        "coverable": "yes",
+                        "friction_or_contact_problem": "no",
+                    }
+                ]
+            },
+        )
+        assert cleaned["open_injuries"][0]["severity"] == "moderate"
+        assert cleaned["open_injuries"][0]["severity_source"] == "manual"
+
+    def test_severe_non_surface_injury_still_outranks_a_wound_in_medical_review(self):
+        """The wound pathway wins over the GENERIC injury pull-back, not over a
+        real severe injury elsewhere."""
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(),
+            now=now,
+        )
+        store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "checkin",
+                "plan_id": PLAN,
+                "body_area": "left shoulder",
+                "description": "left shoulder dislocation",
+                "severity": "severe",
+                "status": "open",
+            },
+        )
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {
+                        "body_area": "left hand",
+                        "description": "left hand cut",
+                        "severity": "mild",
+                        "status": "ongoing",
+                    }
+                ]
+            },
+            now=now,
+        )
+        flag_id = next(
+            injury["id"]
+            for injury in opened["open_injuries"]
+            if injury["description"] == "left hand cut"
+        )
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={
+                "injuries": [
+                    {
+                        "flag_id": flag_id,
+                        "status": "worse",
+                        "skin_integrity": "open",
+                        "bleeding_status": "controlled",
+                        "drainage": "present",
+                        "infection_signs": ["pus"],
+                        "coverable": "no",
+                        "friction_or_contact_problem": "yes",
+                    }
+                ]
+            },
+            now=now,
+        )
+
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+
+        assert view.today.recommendation_state == "pull_back"
+        assert "Get this checked." not in (view.today.recommendation_reason or "")
+        # The wound was still assessed — it just did not own the decision.
+        assert view.today.recommendation_safety_checks == [
+            {
+                "code": "surface_injury",
+                "label": "Skin injury",
+                "result": "medical_review",
+                "result_label": "Needs checking",
+            }
+        ]
+
     def test_worse_surface_answers_raise_severity_from_canonical_surface_class(self):
         store = _store_with_plan()
         opened = submit_today_injury_checkin(
@@ -1424,7 +1731,11 @@ class TestCommandView:
                 "source": "checkin",
                 "plan_id": PLAN,
                 "body_area": "left hand",
-                "description": "infected left hand cut",
+                # The infection is carried by the structured answers, not the
+                # description: "infected" in the text resolves the injury TYPE to
+                # infection, which is not surface tissue, so the wound would never
+                # reach the surface pathway this test is about.
+                "description": "left hand cut",
                 "severity": "moderate",
                 "status": "open",
                 "skin_integrity": "open",

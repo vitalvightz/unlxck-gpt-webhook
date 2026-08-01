@@ -1351,6 +1351,20 @@ create table if not exists public.injury_flags (
   description text not null,
   severity text not null default 'moderate'
     check (severity in ('mild', 'moderate', 'severe')),
+  -- Who owns the current severity. The surface follow-up derives a severity
+  -- FLOOR from the structured wound answers, so a raise has to be marked as the
+  -- system's — otherwise a later clean recheck reads it as the athlete's own
+  -- choice and can never lower it. ``manual_severity`` holds the athlete's value
+  -- underneath an active floor so releasing the floor restores it. NULL source
+  -- reads as 'manual': a legacy severity is never auto-lowered.
+  severity_source text
+    check (severity_source is null or severity_source in ('manual', 'surface_system')),
+  manual_severity text
+    check (manual_severity is null or manual_severity in ('mild', 'moderate', 'severe')),
+  constraint injury_flags_manual_severity_pairing_check check (
+    (severity_source = 'surface_system' and manual_severity is not null)
+    or (severity_source is distinct from 'surface_system' and manual_severity is null)
+  ),
   status text not null default 'open'
     check (status in ('open', 'monitoring', 'resolved')),
   latest_reported_status text not null default 'ongoing'

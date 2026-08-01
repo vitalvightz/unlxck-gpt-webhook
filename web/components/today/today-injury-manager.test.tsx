@@ -363,8 +363,10 @@ test("a restricted wound reported easing rechecks the skin before the restrictio
     assert.equal(calls.length, 0);
     assertNotSelected(statusButton(container, "Easing"));
     assert.match(container.textContent ?? "", /Is the skin closed now\?/);
-    // The recheck is the short set — the routing question is not re-asked.
-    assert.doesNotMatch(container.textContent ?? "", /Is rubbing or contact the problem\?/);
+    // Friction is asked on the way back down too: it is what holds a closed
+    // wound at a local restriction, so a recheck that could not answer it would
+    // leave that restriction with no way to lift.
+    assert.match(container.textContent ?? "", /Is rubbing or contact still the problem\?/);
 
     await click(buttonNamed(container, "Still closed"));
     await click(buttonNamed(container, "No"));
@@ -378,9 +380,9 @@ test("a restricted wound reported easing rechecks the skin before the restrictio
             status: "improving",
             skin_integrity: "intact",
             infection_signs: [],
-            // Unasked in a recheck, so friction is not sent and keeps its
-            // stored value; coverable comes back as recorded.
+            // Untouched answers come back as recorded rather than blanked.
             coverable: "yes",
+            friction_or_contact_problem: "yes",
             bleeding_status: "none",
             drainage: "none",
           },
