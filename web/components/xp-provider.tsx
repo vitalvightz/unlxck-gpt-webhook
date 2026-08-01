@@ -30,6 +30,12 @@ type XpViewState = Omit<XpContextValue, "refresh"> & {
   athleteId: string | null;
 };
 
+type ClaimDailyOptions = {
+  respectCooldown: boolean;
+};
+
+export const XP_AUTOMATIC_CLAIM_COOLDOWN_MS = 5 * 60 * 1_000;
+
 const initialViewState = (): XpViewState => ({
   athleteId: null,
   state: createFreshXpState(),
@@ -49,11 +55,25 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
   const identityKey = athleteId && accessToken ? `${athleteId}:${accessToken}` : "";
   const [view, setView] = useState<XpViewState>(initialViewState);
   const activeIdentityRef = useRef(identityKey);
+  const activeAthleteRef = useRef(athleteId);
   const inFlightRef = useRef<{ key: string; request: Promise<void> } | null>(null);
+  const lastClaimCompletedAtRef = useRef(0);
 
   useEffect(() => {
     activeIdentityRef.current = identityKey;
-  }, [identityKey]);
+    if (activeAthleteRef.current === athleteId) {
+      return;
+    }
+
+    activeAthleteRef.current = athleteId;
+    lastClaimCompletedAtRef.current = 0;
+    inFlightRef.current = null;
+    setView({
+      ...initialViewState(),
+      athleteId: athleteId || null,
+      isHydrated: !athleteId,
+    });
+  }, [athleteId, identityKey]);
 
   const applyResult = useCallback((result: XpAwardResult, targetAthleteId: string) => {
     const isNewAward = Boolean(result.awarded && result.award);
@@ -68,13 +88,27 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
     });
   }, []);
 
-  const claimDaily = useCallback(async () => {
+  const claimDaily = useCallback(async ({ respectCooldown }: ClaimDailyOptions) => {
     if (!athleteId || !accessToken || !identityKey) {
       return;
     }
 
+    if (
+      respectCooldown &&
+      lastClaimCompletedAtRef.current > 0 &&
+      Date.now() - lastClaimCompletedAtRef.current < XP_AUTOMATIC_CLAIM_COOLDOWN_MS
+    ) {
+      return;
+    }
+
     if (inFlightRef.current?.key === identityKey) {
-      await inFlightRef.current.request;
+      try {
+        await inFlightRef.current.request;
+      } finally {
+        if (activeAthleteRef.current === athleteId) {
+          lastClaimCompletedAtRef.current = Date.now();
+        }
+      }
       return;
     }
 
@@ -107,6 +141,9 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
     try {
       await request;
     } finally {
+      if (activeAthleteRef.current === targetAthleteId) {
+        lastClaimCompletedAtRef.current = Date.now();
+      }
       if (inFlightRef.current?.request === request) {
         inFlightRef.current = null;
       }
@@ -118,12 +155,12 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
       inFlightRef.current = null;
       return;
     }
-    void claimDaily();
+    void claimDaily({ respectCooldown: true });
 
-    const handleFocus = () => void claimDaily();
+    const handleFocus = () => void claimDaily({ respectCooldown: true });
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        void claimDaily();
+        void claimDaily({ respectCooldown: true });
       }
     };
 
@@ -134,6 +171,11 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [accessToken, athleteId, claimDaily]);
+
+  const refresh = useCallback(
+    () => claimDaily({ respectCooldown: false }),
+    [claimDaily],
+  );
 
   const visibleView =
     view.athleteId === (athleteId || null)
@@ -149,7 +191,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
         isNewAward: visibleView.isNewAward,
         isNewDailyAward: visibleView.isNewDailyAward,
         previousTotalXp: visibleView.previousTotalXp,
-        refresh: claimDaily,
+        refresh,
       }}
     >
       {children}
