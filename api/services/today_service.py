@@ -799,7 +799,7 @@ def _severe_injury_recommendation(
         [
             "Session blocked",
             f"Active severe injury: {label}. This is not a load-reduced session.",
-            "Clear it or get it medically cleared before training — marking it easing does not lift the hold.",
+            "Clear it or get it medically cleared before training.",
         ]
     )
     flag_id = str(injury.get("id") or "").strip()

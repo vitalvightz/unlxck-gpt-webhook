@@ -404,18 +404,18 @@ test("severe injury override supersedes the daily recommendation banner", () => 
   assert.equal(banner?.tone, "red");
   assert.match(banner?.detail ?? "", /Active severe injury: Chest bruise/);
   assert.match(banner?.detail ?? "", /hard sparring/);
-  assert.match(banner?.detail ?? "", /easing does not lift/);
+  assert.match(banner?.detail ?? "", /until it is cleared or medically cleared/);
   assert.match(banner?.safety ?? "", /superseded by the injury warning/);
 });
 
-test("marking a severe injury easing does not lift the override (bypass fix)", () => {
+test("severe injury override remains active while monitoring", () => {
   const easing = getInjuryOverrideBanner(
     stateWithInjuries([makeInjury({ status: "monitoring" })]),
     "Hard sparring",
   );
   assert.ok(easing, "an easing severe injury must still block");
   assert.equal(easing?.displayState, "injury_blocked");
-  // Clearing (resolving) it is the only way to lift the hold.
+  // Resolving the injury is the only state that removes the override.
   assert.equal(getInjuryOverrideBanner(stateWithInjuries([makeInjury({ status: "resolved" })]), "Hard sparring"), null);
 });
 
@@ -493,7 +493,7 @@ test("Today session card uses short preview wording and Next session label", () 
   assert.equal(source.includes("resolvedDecision.blocksCurrentSession"), true);
   assert.equal(source.includes("resolvedDecision.severeInjuryBlocksCurrentSession"), true);
   assert.equal(
-    source.includes("Blocked by an active severe injury. Marking it easing does not lift the hold."),
+    source.includes("Blocked by an active severe injury."),
     true,
   );
   assert.equal(source.includes('href="#today-injury"'), true);
