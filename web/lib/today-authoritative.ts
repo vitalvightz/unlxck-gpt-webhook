@@ -91,6 +91,13 @@ export function getTodayDecisionBanner(
 
 export type AuthoritativeTodayTier = Exclude<TodayDecisionTier, "preview">;
 
+export type TodaySessionOutcome =
+  | "unchanged"
+  | "guidance_only"
+  | "blocked"
+  | "replaced_with_recovery"
+  | "preview";
+
 export type ResolvedTodayDecision = {
   recommendationState: TodayRecommendationState;
   authoritativeTier: AuthoritativeTodayTier;
@@ -103,6 +110,8 @@ export type ResolvedTodayDecision = {
   severeInjuryBlocksCurrentSession: boolean;
   canCompleteSession: boolean;
   useSafeReplacement: boolean;
+  /** Presentation only: describes what Today renders, never why it is safe. */
+  sessionOutcome: TodaySessionOutcome;
 };
 
 const FALLBACK_TIER_BY_RECOMMENDATION: Record<
@@ -132,22 +141,22 @@ const DEFAULT_COPY_BY_TIER: Record<
   stop: {
     title: "Stop today",
     detail: "A safety restriction is blocking training today.",
-    action: "Do not start today's planned session. Follow the injury and safety guidance below.",
+    action: "Today's planned session is blocked.",
   },
   pull_back: {
     title: "Pull back today",
     detail: "Your readiness is too low for hard combat work today.",
-    action: "Skip hard combat work today. Use recovery or light mobility instead.",
+    action: "Today's planned session is blocked. Follow today's limits.",
   },
   modify: {
-    title: "Modify today",
-    detail: "Your readiness is down, so reduce hard combat work today.",
-    action: "Follow the adjusted work and skip extras.",
+    title: "Follow today's limits",
+    detail: "Today's session has not been rewritten. Follow the limits below and skip extra work.",
+    action: "Follow today's limits.",
   },
   green: {
-    title: "Green light",
+    title: "Session unchanged",
     detail: "Your check-in is clear for today's planned work.",
-    action: "Start the session and keep the work clean.",
+    action: "Complete today's planned session.",
   },
   preview: {
     title: "Session preview",
@@ -293,6 +302,7 @@ function resolvePresentationBanner(
   displayTier: TodayDecisionTier,
   injuryPresentation?: TodayDecisionBanner | null,
   previewSession?: TodaySession | null,
+  sessionOutcome?: TodaySessionOutcome,
 ): TodayDecisionBanner | null {
   if (displayTier === "not_checked_in") {
     return null;
@@ -329,14 +339,27 @@ function resolvePresentationBanner(
     displayTier === "stop" ? injuryPresentation ?? null : null;
   const copy = injuryCopy ?? recommendationCopy ?? fallback;
 
+  const action =
+    sessionOutcome === "replaced_with_recovery"
+      ? "Today's planned session has been replaced with Recovery / Mobility Only."
+      : sessionOutcome === "guidance_only"
+        ? "Follow today's limits. The planned session has not been automatically rewritten."
+        : sessionOutcome === "unchanged"
+          ? "Complete today's planned session."
+          : sessionOutcome === "blocked"
+            ? "Today's planned session is blocked."
+            : copy.action;
+
   return {
     state: recommendationState,
     displayState,
     chip: CHIP_BY_DISPLAY[displayState],
     title: injuryCopy ? fallback.title : copy.title,
     detail: copy.detail,
-    action: copy.action,
-    safety: injuryCopy?.safety ?? recommendationCopy?.safety,
+    action,
+    // The injury STOP already establishes priority. Keep the legacy history in
+    // state, but do not repeat its "superseded" sentence as a highlighted command.
+    safety: injuryCopy ? undefined : recommendationCopy?.safety,
     tone: TONE_BY_DISPLAY[displayState],
   };
 }
@@ -370,12 +393,24 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
           hasSession ? getSessionTitle(state.today.next_session) : undefined,
         )
       : null;
+  const useSafeReplacement =
+    authoritativeTier === "stop" && hasSession && sessionIsToday;
+  const sessionOutcome: TodaySessionOutcome = isPreview
+    ? "preview"
+    : authoritativeTier === "green"
+      ? "unchanged"
+      : authoritativeTier === "modify"
+        ? "guidance_only"
+        : authoritativeTier === "stop" && useSafeReplacement
+          ? "replaced_with_recovery"
+          : "blocked";
   const banner = resolvePresentationBanner(
     recommendationState,
     state.today.recommendation_reason,
     displayTier,
     injuryPresentation,
     state.today.next_session,
+    sessionOutcome,
   );
   const blocksCurrentSession =
     sessionIsToday &&
@@ -388,8 +423,6 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     canCompleteTodaySession(state.today.next_session) &&
     sessionIsToday &&
     !blocksCurrentSession;
-  const useSafeReplacement =
-    authoritativeTier === "stop" && hasSession && sessionIsToday;
 
   return {
     recommendationState,
@@ -403,7 +436,27 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     severeInjuryBlocksCurrentSession,
     canCompleteSession,
     useSafeReplacement,
+    sessionOutcome,
   };
+}
+
+/** Remove only warnings already fully expressed by a current severe-injury STOP. */
+export function getSupplementaryRiskWatch(
+  risks: TodayCommandView["risk_watch"] | null | undefined,
+  decision: ResolvedTodayDecision,
+): TodayCommandView["risk_watch"] {
+  const severeInjuryStop =
+    decision.authoritativeTier === "stop" &&
+    decision.sessionIsToday &&
+    decision.severeInjuryBlocksCurrentSession;
+  if (!severeInjuryStop) {
+    return risks ?? [];
+  }
+  return (risks ?? []).filter(
+    (risk) =>
+      risk.category !== "active_injury_worse" &&
+      risk.category !== "stop_red_flag",
+  );
 }
 
 /**

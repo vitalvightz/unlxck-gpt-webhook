@@ -20,6 +20,7 @@ import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
   getCompletionLabel,
+  getSupplementaryRiskWatch,
   hasActivePlan,
   resolveTodayDecision,
   shouldShowTodayCheckin,
@@ -187,6 +188,10 @@ export function TodayScreen() {
     return <NoActivePlanState />;
   }
   const resolvedDecision = resolveTodayDecision(state);
+  const supplementaryRisks = getSupplementaryRiskWatch(
+    state.risk_watch,
+    resolvedDecision,
+  );
 
   return (
     <div className="today-page">
@@ -235,14 +240,6 @@ export function TodayScreen() {
           sources={state.today.recommendation_sources}
           confidenceNote={state.today.recommendation_confidence_note}
         />
-        {resolvedDecision.recommendationState !== "not_checked_in" ? (
-          <ContextualFeedback
-            key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
-            token={token ?? ""}
-            surface="daily_recommendation"
-          />
-        ) : null}
-        <TodayRiskWatch risks={state.risk_watch} />
       </section>
 
       {showCheckin ? (
@@ -250,14 +247,6 @@ export function TodayScreen() {
           plan={activePlan}
           token={token ?? ""}
           warnings={state.today.warnings}
-          onRefresh={refresh}
-        />
-      ) : null}
-
-      {token ? (
-        <TodayInjuryManager
-          openInjuries={state.open_injuries ?? []}
-          token={token}
           onRefresh={refresh}
         />
       ) : null}
@@ -270,6 +259,24 @@ export function TodayScreen() {
         token={token ?? ""}
         onRefresh={refresh}
       />
+
+      {token ? (
+        <TodayInjuryManager
+          openInjuries={state.open_injuries ?? []}
+          token={token}
+          onRefresh={refresh}
+        />
+      ) : null}
+
+      <TodayRiskWatch risks={supplementaryRisks} />
+
+      {resolvedDecision.recommendationState !== "not_checked_in" ? (
+        <ContextualFeedback
+          key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
+          token={token ?? ""}
+          surface="daily_recommendation"
+        />
+      ) : null}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { TodaySessionBlocks } from "./today-session-panel";
 import { resolveCurrentDay } from "@/lib/camp-map";
 import type { StructuredPlan } from "@/lib/types";
+import { readFileSync } from "node:fs";
 
 test("weekday fallback never presents a stale template date as today", () => {
   const plan = {
@@ -69,4 +70,11 @@ test("today shows no session blocks while the plan's block has not started", () 
   assert.equal(current.inRange, false);
   assert.equal(current.matchType, null);
   assert.equal(html.includes("Saturday strength"), false);
+});
+
+test("safe replacement suppresses the duplicate terminal block", () => {
+  const source = readFileSync(new URL("./today-session-panel.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("!canCompleteSession && !safeSession"));
+  assert.ok(source.includes("<SafeSessionCard view={safeSession}"));
+  assert.ok(source.includes("resolvedDecision.canCompleteSession"));
 });

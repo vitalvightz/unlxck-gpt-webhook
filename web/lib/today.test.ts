@@ -612,11 +612,11 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   const orderedMarkers = [
     "<TodayReadinessStrip",
     "<TodayDecisionPanel",
-    'surface="daily_recommendation"',
-    "<TodayRiskWatch",
     "<TodayReadinessForm",
-    "<TodayInjuryManager",
     "<TodaySessionPanel",
+    "<TodayInjuryManager",
+    "<TodayRiskWatch",
+    'surface="daily_recommendation"',
   ];
   const positions = orderedMarkers.map((marker) => screen.indexOf(marker));
 
