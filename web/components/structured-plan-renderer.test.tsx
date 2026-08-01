@@ -89,7 +89,7 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Rounds are banked"), true);
 });
 
-test("open-plan weekday fallback labels today with the live date, not the projected date", () => {
+test("open-plan weekday fallback labels today with the live date, not the stale date", () => {
   const plan = {
     schema_version: "text-adapter.v1",
     plan_metadata: { title: "Open plan", plan_type: "open_ongoing_system" },
@@ -100,7 +100,7 @@ test("open-plan weekday fallback labels today with the live date, not the projec
         week_index: 2,
         days: [
           {
-            date: "2026-08-15",
+            date: "2026-06-13",
             weekday: "Sat",
             sessions: [{ session_id: "sat-strength", title: "Saturday strength", blocks: [] }],
           },
@@ -123,7 +123,56 @@ test("open-plan weekday fallback labels today with the live date, not the projec
   );
 
   assert.equal(html.includes("SAT 18 JUL"), true);
-  assert.equal(html.includes("SAT 15 AUG"), false);
+  assert.equal(html.includes("SAT 13 JUN"), false);
+});
+
+test("an open plan whose block starts next week marks no day as today", () => {
+  // The block anchors to Monday 3 August while the athlete is on Saturday 1
+  // August. Every row belongs to a week that has not started, so the timeline
+  // reads in date order with no "Today" stamped onto a future row.
+  const plan = {
+    schema_version: "text-adapter.v1",
+    plan_metadata: { title: "Open plan", plan_type: "open_ongoing_system" },
+    weeks: [
+      {
+        week_id: "week-1",
+        week_index: 1,
+        days: [
+          {
+            date: "2026-08-06",
+            weekday: "Thu",
+            sessions: [{ session_id: "thu-strength", title: "Thursday strength", blocks: [] }],
+          },
+          {
+            date: "2026-08-08",
+            weekday: "Sat",
+            sessions: [{ session_id: "sat-strength", title: "Saturday strength", blocks: [] }],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 7, 1)}
+      openOngoing
+      scheduleContext={{
+        schedule_mode: "open_recurring",
+        projection_status: "projected",
+        current_week_number: 1,
+      }}
+    />,
+  );
+
+  assert.equal(html.includes("THU 06 AUG"), true);
+  assert.equal(html.includes("SAT 08 AUG"), true);
+  assert.equal(html.includes("SAT 01 AUG"), false);
+  assert.equal(html.includes("cm-day-now"), false);
+  // With no day markable as today, the plan says when it does start.
+  assert.equal(html.includes("Plan starts Thu 06 Aug 2026"), true);
+  assert.equal(html.includes("in 5 days"), true);
 });
 
 test("structured renderer normalizes legacy D0 event-day labels to D-0", () => {

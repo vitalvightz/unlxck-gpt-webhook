@@ -67,7 +67,7 @@ import {
   resolveRehabSummaryLabel,
 } from "@/lib/rehab-label";
 import { useTrainingDay } from "@/lib/use-training-day";
-import { formatAppDate, formatAppDateRange } from "@/lib/date-format";
+import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/date-format";
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { SafetyNote } from "@/components/safety-note";
@@ -1661,8 +1661,9 @@ export function StructuredPlanRenderer({
   openOngoing?: boolean;
   today?: Date;
   /** Plan creation timestamp. For an open plan without a server projection it
-   * anchors which week of the renewable block is current (first Monday on or
-   * after creation, mirroring the backend timeline). Not rendered. */
+   * anchors which week of the renewable block is current (the Monday of the week
+   * the plan starts training in, mirroring the backend timeline). Not
+   * rendered. */
   createdAt?: string | null;
   /** Accepted for compatibility with callers, but not rendered on this plan view. */
   planStatus?: string | null;
@@ -1810,6 +1811,28 @@ export function StructuredPlanRenderer({
       (calendarDay ? toLocalIsoDay(calendarDay) : null));
   // Open the support phase that matches the week the athlete is viewing.
   const activeSupportPhaseKey = normalizeSupportPhaseKey(resolvedWeekPhase(selectedWeek));
+  // A block that starts on a future Monday — an open plan generated late enough
+  // in the week to join the next one — has no current day to mark. Say when it
+  // starts rather than showing a plain week with no "Today" anywhere on it and
+  // leaving the athlete to guess whether the plan is live.
+  const blockStartsOn = useMemo(() => {
+    if (!openOngoing || activeWeekPos !== null) {
+      return null;
+    }
+    const todayIso = currentTrainingDayIso?.slice(0, 10) ||
+      (calendarDay ? toLocalIsoDay(calendarDay) : null);
+    if (!todayIso) {
+      return null;
+    }
+    const firstDated = weeks
+      .flatMap((week) => getDays(week))
+      .map((day) => cleanText(day.date)?.slice(0, 10))
+      .filter((iso): iso is string => Boolean(iso))
+      .sort()[0];
+    return firstDated && firstDated > todayIso
+      ? { iso: firstDated, relative: describeRelativeDay(firstDated, todayIso) }
+      : null;
+  }, [openOngoing, activeWeekPos, currentTrainingDayIso, calendarDay, weeks]);
 
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
@@ -1848,6 +1871,13 @@ export function StructuredPlanRenderer({
             <ActiveNotesCard plan={plan} />
             <RedFlagsCard plan={plan} />
           </div>
+
+          {blockStartsOn ? (
+            <p className="sp-today-note cm-block-start" role="status">
+              {`Plan starts ${formatAppDate(blockStartsOn.iso)}`}
+              {blockStartsOn.relative ? ` · ${blockStartsOn.relative.toLowerCase()}` : ""}
+            </p>
+          ) : null}
 
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (

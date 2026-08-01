@@ -67,17 +67,19 @@ def test_open_plan_sunday_wraps_to_monday_from_full_seven_day_schedule():
 def test_open_plan_starts_the_next_four_week_cycle_after_week_four():
     plan_row = {
         "id": PLAN_ID,
+        # Wednesday 1 July, so the block anchors to Monday 29 June.
         "created_at": "2026-07-01T09:00:00+00:00",
         "fight_date": None,
         "planning_brief": _open_plan_brief(),
     }
 
+    # 44 days after the anchor = elapsed week 6, i.e. week 3 of the second block.
     week_index, week = resolve_current_week(plan_row, today=date(2026, 8, 12))
 
-    assert week_index == 1
+    assert week_index == 2
     assert week is not None
-    assert week.week_index == 1
-    assert week.day_label == "Development week 2"
+    assert week.week_index == 2
+    assert week.day_label == "Development week 3"
 
 
 def _open_structured_plan():
@@ -110,9 +112,11 @@ def _open_structured_plan():
     }
 
 
-def test_open_plan_projects_weekdays_and_dates_from_first_monday_anchor():
+def test_open_plan_projects_weekdays_and_dates_from_the_block_anchor():
     plan_row = {
         "id": PLAN_ID,
+        # Sunday 12 July: too late to join that week, so the block starts on the
+        # coming Monday.
         "created_at": "2026-07-12T09:00:00+00:00",
         "fight_date": None,
         "planning_brief": _open_plan_brief(),
@@ -147,6 +151,56 @@ def test_open_plan_projects_weekdays_and_dates_from_first_monday_anchor():
         "2026-07-18",
     ]
     assert all(not day["countdown_label"] for day in projected["weeks"][0]["days"])
+
+
+def test_open_plan_created_midweek_starts_in_the_week_it_was_created():
+    """A Mon-Thu plan is live the day it is generated.
+
+    Anchoring forward to the *next* Monday left the athlete with a dormant plan
+    for the rest of the week, and put every projected date a week ahead of the
+    live training day — so the plan view showed next week's dates while nothing
+    on it matched today.
+    """
+
+    plan_row = {
+        "id": PLAN_ID,
+        # Wednesday 29 July.
+        "created_at": "2026-07-29T09:00:00+00:00",
+        "fight_date": None,
+        "planning_brief": _open_plan_brief(),
+    }
+
+    projected, context = project_open_structured_plan(
+        plan_row,
+        _open_structured_plan(),
+        current_training_day="2026-07-31",
+    )
+
+    assert context["anchor_date"] == "2026-07-27"
+    assert context["block_number"] == 1
+    assert context["current_week_number"] == 1
+    # Friday 31 July is a real row of week 1, not a date the athlete has to wait
+    # a week to reach.
+    assert "2026-07-31" in [day["date"] for day in projected["weeks"][0]["days"]]
+
+
+def test_open_plan_created_late_in_the_week_starts_the_following_monday():
+    plan_row = {
+        "id": PLAN_ID,
+        # Friday 31 July: only the weekend is left, so week 1 starts on 3 August.
+        "created_at": "2026-07-31T09:00:00+00:00",
+        "fight_date": None,
+        "planning_brief": _open_plan_brief(),
+    }
+
+    _, context = project_open_structured_plan(
+        plan_row,
+        _open_structured_plan(),
+        current_training_day="2026-07-31",
+    )
+
+    assert context["anchor_date"] == "2026-08-03"
+    assert context["current_week_number"] == 1
 
 
 def test_open_plan_recovers_one_full_calendar_legacy_week_and_expands_the_block():

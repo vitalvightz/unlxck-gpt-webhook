@@ -499,17 +499,24 @@ test("resolveCurrentDay matches a coach-led weekday-only day with no sessions", 
   assert.equal(current.sessions.length, 0);
 });
 
-test("projected open-plan dates still match the live recurring weekday", () => {
+/** The open plan with every row dated, `monthDay` being week 1's Monday. */
+function projectedOpenPlan(month: number, monthDay: number): StructuredPlan {
   const plan = openPlan();
   const weekdayOffsets = [0, 2, 5];
   for (const [weekPos, week] of (plan.weeks ?? []).entries()) {
     for (const [dayPos, day] of (week.days ?? []).entries()) {
-      day.date = `2026-08-${String(3 + weekPos * 7 + weekdayOffsets[dayPos]!).padStart(2, "0")}`;
+      const date = new Date(2026, month, monthDay + weekPos * 7 + weekdayOffsets[dayPos]!);
+      day.date = toISODate(date);
     }
   }
+  return plan;
+}
 
-  // The projected rows begin in August, but the renewable schedule is already
-  // in week 2 on Saturday 18 July. Only an explicitly open plan may use this.
+test("a stale projection still matches the live recurring weekday", () => {
+  // Rows projected for a block that has already run out (it ends 28 June) while
+  // the athlete is on Saturday 18 July: the block rolled over but the payload's
+  // dates did not, and the weekly rhythm still holds.
+  const plan = projectedOpenPlan(5, 1);
   const current = resolveCurrentDay(plan, new Date(2026, 6, 18), {
     openWeekNumber: 2,
     allowDatedWeekdayMatch: true,
@@ -529,6 +536,30 @@ test("projected open-plan dates still match the live recurring weekday", () => {
   assert.equal(progress.currentDayDate, null);
   assert.equal(progress.trainingDayISO, "2026-07-18");
   assert.equal(progress.matchType, "weekday");
+});
+
+test("a projected block that has not started yet stays out of range", () => {
+  // Week 1 starts Monday 3 August; the athlete is on Saturday 1 August. Matching
+  // today's weekday onto the row dated 8 August would mark a future day "Today"
+  // and stamp it with today's date, dropping 01 Aug below 05 Aug in the plan
+  // timeline.
+  const plan = projectedOpenPlan(7, 3);
+  const current = resolveCurrentDay(plan, new Date(2026, 7, 1), {
+    openWeekNumber: 1,
+    allowDatedWeekdayMatch: true,
+  });
+  const progress = resolvePlanProgress(plan, new Date(2026, 7, 1), {
+    openWeekNumber: 1,
+    allowDatedWeekdayMatch: true,
+  });
+
+  assert.equal(current.inRange, false);
+  assert.equal(current.weekPos, null);
+  assert.equal(current.dayPos, null);
+  assert.equal(current.matchType, null);
+  assert.equal(progress.currentWeekPos, null);
+  assert.equal(progress.currentDayPos, null);
+  assert.equal(progress.matchType, null);
 });
 
 test("resolveCurrentDay falls back to the first matching week without a week hint", () => {
@@ -578,15 +609,23 @@ test("resolveOpenPlanWeekNumber prefers the server-computed week number", () => 
 });
 
 test("resolveOpenPlanWeekNumber derives the week from the plan-creation anchor", () => {
-  // Created Tuesday 2026-06-30 -> anchor Monday 2026-07-06 (first Monday on or
-  // after creation, mirroring the backend timeline).
+  // Created Tuesday 2026-06-30 -> anchor Monday 2026-06-29: a Mon-Thu plan joins
+  // the week it was created in (mirroring the backend timeline).
   const hints = { createdAt: "2026-06-30T09:00:00Z" };
-  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 8), hints), 1);
-  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 18), hints), 2);
-  // Days before the anchor belong to week 1.
   assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 1), hints), 1);
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 8), hints), 2);
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 18), hints), 3);
   // The block renews: 4 weeks after the anchor it is week 1 again.
-  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 7, 8), hints), 1);
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 27), hints), 1);
+});
+
+test("resolveOpenPlanWeekNumber starts a late-week plan on the coming Monday", () => {
+  // Created Friday 2026-07-31 -> anchor Monday 2026-08-03; the rest of that week
+  // is too short to join.
+  const hints = { createdAt: "2026-07-31T09:00:00Z" };
+  // Days before the anchor belong to week 1.
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 6, 31), hints), 1);
+  assert.equal(resolveOpenPlanWeekNumber(openPlan(), new Date(2026, 7, 10), hints), 2);
 });
 
 test("resolveOpenPlanWeekNumber returns null without an anchor or today", () => {

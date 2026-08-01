@@ -70,11 +70,29 @@ def schedule_mode(plan_row: Mapping[str, Any]) -> str:
     return "static_undated"
 
 
+# How far into the week a plan can be created and still join the week it was
+# created in. Creating on Mon-Thu leaves at least three days of the block's first
+# week to train, so the plan goes live immediately; a Fri/Sat/Sun plan would join
+# a week that is effectively over, so it starts on the coming Monday instead.
+_JOIN_CURRENT_WEEK_SHIFT = timedelta(days=3)
+
+
 def open_plan_anchor_date(plan_row: Mapping[str, Any]) -> date | None:
+    """The Monday the plan's renewable block starts on.
+
+    A plan is generated mid-week far more often than on a Monday, so the anchor
+    is the Monday of the week the athlete can actually start training in: the
+    current week for a Mon-Thu plan, the coming Monday for a Fri-Sun one.
+    Anchoring every plan forward to the *next* Monday left a plan created on
+    Tuesday dormant for six days, and made the projected block sit a week ahead
+    of the live calendar — so nothing on the plan matched the real training day.
+    """
+
     created = _parse_date(plan_row.get("created_at"))
     if created is None:
         return None
-    return created + timedelta(days=(-created.weekday()) % 7)
+    shifted = created + _JOIN_CURRENT_WEEK_SHIFT
+    return shifted - timedelta(days=shifted.weekday())
 
 
 def _coach_owned_days(template: Mapping[str, Any]) -> list[str]:
