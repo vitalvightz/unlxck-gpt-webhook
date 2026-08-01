@@ -94,12 +94,28 @@ jobs:
             "EXPECTED_COMMIT='$EXPECTED_COMMIT' BUNDLE_PATH='$REMOTE_BUNDLE' bash -s" <<'REMOTE_SCRIPT'
               set -Eeuo pipefail
 
-              HEALTH_URL="https://api.unlxck.com/health"
+              HEALTH_HOST="api.unlxck.com"
+              HEALTH_URL="https://${HEALTH_HOST}/health"
+              CADDY_CONFIG="/etc/caddy/Caddyfile"
 
               worker_running() { [ -n "$(docker compose ps --status running -q worker)" ]; }
               caddy_running()  { [ -n "$(docker compose ps --status running -q caddy)" ]; }
               api_healthy() {
-                curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" >/dev/null
+                # Exercise the local TLS proxy without routing the server's own
+                # readiness probe through Cloudflare, whose security policy can
+                # reject origin-host traffic even while the API is healthy.
+                curl \
+                  --fail \
+                  --silent \
+                  --show-error \
+                  --max-time 10 \
+                  --noproxy "$HEALTH_HOST" \
+                  --resolve "${HEALTH_HOST}:443:127.0.0.1" \
+                  "$HEALTH_URL" >/dev/null
+              }
+              validate_and_reload_caddy() {
+                docker compose exec -T caddy caddy validate --config "$CADDY_CONFIG" &&
+                  docker compose exec -T caddy caddy reload --config "$CADDY_CONFIG"
               }
 
               cd /opt/unlxck || { echo "ERROR: /opt/unlxck is missing on the server." >&2; exit 1; }
@@ -178,6 +194,10 @@ jobs:
                   echo "ROLLBACK ERROR: compose up failed during rollback." >&2
                   rollback_steps_ok=false
                 fi
+                if ! validate_and_reload_caddy; then
+                  echo "ROLLBACK ERROR: restored Caddy configuration could not be reloaded." >&2
+                  rollback_steps_ok=false
+                fi
 
                 # Only after every restore step succeeded do we probe the
                 # services; a false restore must never pass on the strength of
@@ -232,6 +252,10 @@ jobs:
 
               echo "Building and (re)starting api, worker and caddy..."
               docker compose up -d --build --remove-orphans
+              if ! validate_and_reload_caddy; then
+                echo "ERROR: Caddy configuration validation or reload failed." >&2
+                false
+              fi
               docker compose ps
 
               echo "Waiting for API health and worker readiness..."
