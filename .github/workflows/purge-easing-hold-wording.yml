@@ -1,0 +1,83 @@
+name: Purge easing hold wording
+
+on:
+  push:
+    branches:
+      - agent/remove-easing-hold-copy
+
+permissions:
+  contents: write
+
+jobs:
+  purge-wording:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/remove-easing-hold-copy
+
+      - name: Remove remaining wording and verify repository
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          edits = {
+              Path("web/lib/today-authoritative.test.ts"): [
+                  (
+                      '  assert.doesNotMatch(resolved.banner.detail, /marking it easing does not lift the hold/);\n',
+                      '',
+                  ),
+              ],
+              Path("web/lib/today.test.ts"): [
+                  (
+                      '  assert.doesNotMatch(banner?.detail ?? "", /easing does not lift/);\n',
+                      '',
+                  ),
+                  (
+                      'test("marking a severe injury easing does not lift the override (bypass fix)", () => {',
+                      'test("severe injury override remains active while monitoring", () => {',
+                  ),
+                  (
+                      '// Clearing (resolving) it is the only way to lift the hold.',
+                      '// Resolving the injury is the only state that removes the override.',
+                  ),
+              ],
+          }
+
+          for path, replacements in edits.items():
+              text = path.read_text(encoding="utf-8")
+              for old, new in replacements:
+                  if text.count(old) != 1:
+                      raise SystemExit(f"Expected exactly one match in {path}: {old!r}")
+                  text = text.replace(old, new)
+              path.write_text(text, encoding="utf-8")
+
+          banned = (
+              "marking it easing",
+              "easing does not lift",
+              "lift the hold",
+          )
+          workflow = Path(".github/workflows/purge-easing-hold-wording.yml")
+          hits: list[str] = []
+          for path in Path(".").rglob("*"):
+              if path == workflow or not path.is_file() or ".git" in path.parts:
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8").lower()
+              except UnicodeDecodeError:
+                  continue
+              for phrase in banned:
+                  if phrase in text:
+                      hits.append(f"{path}: {phrase}")
+          if hits:
+              raise SystemExit("Remaining banned wording:\n" + "\n".join(hits))
+          PY
+
+          git rm -f .github/workflows/purge-easing-hold-wording.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Purge easing hold wording"
+          git push origin HEAD:agent/remove-easing-hold-copy
