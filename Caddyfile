@@ -7,8 +7,15 @@
         X-Frame-Options "DENY"
         Referrer-Policy "no-referrer"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
-        Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
     }
+
+    @documentation path /docs /docs/* /redoc /redoc/*
+    header @documentation Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src https://fastapi.tiangolo.com data:; font-src https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'"
+
+    @api {
+        not path /docs /docs/* /redoc /redoc/*
+    }
+    header @api Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
 
     reverse_proxy api:8000 {
         transport http {
