@@ -1100,6 +1100,70 @@ test("adding a non-surface injury does not open the skin follow-up", async () =>
   }
 });
 
+test("adding a medical-review skin injury skips the questions for its banner", async () => {
+  // A wound that already lands in medical review does not need the five
+  // questions on add — it goes straight to its "get it checked" guidance.
+  const created: InjuryFlagRecord = {
+    ...BLISTER,
+    id: "flag-new-severe",
+    body_area: "right eye",
+    description: "deep cut",
+    label: "Right eye cut",
+    severity: "severe",
+    surface_class: "surface_medical_review",
+    latest_reported_status: "ongoing",
+  };
+  const { calls, restore } = stubCheckin({ openInjuries: [created] });
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  let openInjuries: InjuryFlagRecord[] = [];
+  const renderTree = () => {
+    root.render(
+      <ToastProvider>
+        <TodayInjuryManager
+          openInjuries={openInjuries}
+          token="t"
+          onRefresh={async () => {
+            openInjuries = [created];
+            renderTree();
+          }}
+        />
+      </ToastProvider>,
+    );
+  };
+
+  try {
+    await act(async () => {
+      renderTree();
+    });
+
+    await click(button(container, "+ Add injury"));
+    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    assert.ok(area);
+    await setInput(area, "right eye");
+    await click(button(container, "Other"));
+
+    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await settle();
+
+    assert.equal(calls.length, 1);
+    assert.equal(container.querySelector(".today-injury-surface-followup"), null);
+    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+    // Its persistent guidance stands in for the questions.
+    assert.match(container.textContent ?? "", /needs checking before training/i);
+
+    act(() => root.unmount());
+    container.remove();
+  } finally {
+    restore();
+  }
+});
+
 test("failed injury submission leaves the populated form open", async () => {
   const originalFetch = globalThis.fetch;
   let refreshes = 0;

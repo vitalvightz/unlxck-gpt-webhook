@@ -88,13 +88,6 @@ function needsSurfaceRecheck(injury: InjuryFlagRecord): boolean {
   return SURFACE_RECHECK_CLASSES.has(injury.surface_class ?? "non_surface");
 }
 
-/** True for any skin injury the surface pathway owns — every surface class,
- * including the medical-review one. A freshly added surface injury asks the five
- * questions straight away, whatever class it lands in with no answers yet. */
-function isSurfaceInjury(injury: InjuryFlagRecord): boolean {
-  return (injury.surface_class ?? "non_surface") !== "non_surface";
-}
-
 /** Bleeding and leaking read as one question to the athlete; the answer maps to
  * the two structured fields the backend routes on. */
 type BleedAnswer = "no" | "controlled" | "leaking" | "uncontrolled";
@@ -546,10 +539,12 @@ export function TodayInjuryManager({
       showToast("Injury added.", { tone: "success" });
       // A skin injury is routed by what the skin is doing, so ask the five
       // surface questions immediately instead of waiting for a later easing /
-      // worse report. The follow-up renders on the refreshed row, so it needs
-      // the just-created flag id from the response.
+      // worse report. A wound that already lands in medical review skips the
+      // questions — it goes straight to its "get it checked" banner. The
+      // follow-up renders on the refreshed row, so it needs the just-created
+      // flag id from the response.
       const created = response.open_injuries.find((injury) => !previousIds.has(injury.id));
-      if (created && isSurfaceInjury(created)) {
+      if (created && needsSurfaceFollowUp(created)) {
         openSurfaceFollowUp(created, "initial");
       }
     } catch (error) {
