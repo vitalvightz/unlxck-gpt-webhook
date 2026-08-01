@@ -27,6 +27,22 @@ jobs:
           from pathlib import Path
 
           edits = {
+              Path("tests/test_today_service.py"): [
+                  (
+                      "        # The bypass: marking it easing (monitoring) must not open completion.",
+                      "        # Monitoring status must not open completion.",
+                  ),
+              ],
+              Path("web/lib/today.ts"): [
+                  (
+                      ' * "easing" (monitoring), so marking it easing must NOT unblock hard training the\n'
+                      ' * same day (that was a bypass). Only clearing it (resolved) — a deliberate,\n'
+                      ' * confirmed action — or downgrading its severity lifts the block.',
+                      ' * "easing" (monitoring), so monitoring status must not unblock hard training\n'
+                      ' * on the same day. Only resolving it — a deliberate, confirmed action — or\n'
+                      ' * downgrading its severity removes the block.',
+                  ),
+              ],
               Path("web/lib/today-authoritative.test.ts"): [
                   (
                       '  assert.doesNotMatch(resolved.banner.detail, /marking it easing does not lift the hold/);\n',
@@ -45,6 +61,16 @@ jobs:
                   (
                       '// Clearing (resolving) it is the only way to lift the hold.',
                       '// Resolving the injury is the only state that removes the override.',
+                  ),
+                  (
+                      '    source.includes("Blocked by an active severe injury. Marking it easing does not lift the hold."),',
+                      '    source.includes("Blocked by an active severe injury."),',
+                  ),
+              ],
+              Path("web/components/today/today-session-panel.tsx"): [
+                  (
+                      '    ? "Blocked by an active severe injury. Marking it easing does not lift the hold."',
+                      '    ? "Blocked by an active severe injury."',
                   ),
               ],
           }
