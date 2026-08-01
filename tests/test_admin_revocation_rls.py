@@ -58,6 +58,8 @@ _OWN_ROW_SELECT_POLICIES = {
     "adaptation_notes_owner_select": "athlete_id = auth.uid()",
     "today_checkins_owner_select": "athlete_id = auth.uid()",
     "session_completions_owner_select": "athlete_id = auth.uid()",
+    "xp_accounts_owner_select": "(select auth.uid()) = athlete_id",
+    "xp_awards_owner_select": "(select auth.uid()) = athlete_id",
 }
 
 
@@ -135,6 +137,10 @@ def test_revocation_migration_removes_client_admin_access():
     migration = _read_revocation_migration()
     # Own-rows-only SELECT policies are created without is_admin().
     for policy_name, own_row_clause in _OWN_ROW_SELECT_POLICIES.items():
+        if policy_name.startswith("xp_"):
+            # XP was introduced after this historical migration; its own-row
+            # policies are covered by the canonical-schema assertion above.
+            continue
         assert f'create policy "{policy_name}"' in migration
     assert "or public.is_admin()" not in migration
     # Admin-only tables are locked to false and the authenticated grant pulled.

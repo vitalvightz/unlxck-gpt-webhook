@@ -10,6 +10,7 @@ import { CampProgressBar } from "@/components/camp-progress-bar";
 import { EmptyState } from "@/components/empty-state";
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
+import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
 import { getPlan, getToday } from "@/lib/api";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
@@ -23,16 +24,10 @@ import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName, isOpenOngoingPlan } from "@/lib/plan-format";
 import {
   getCampDayLabel,
-  getCompletionLabel,
   getOverviewCommandEyebrow,
   getOverviewPrimaryAction,
   getRiskTimeframeLabel,
-  getSafeSessionView,
-  getSessionDayLabel,
-  getSessionFocus,
-  getSessionTitle,
   getTierMeta,
-  isHardCombatSession,
   resolveTodayDecision,
 } from "@/lib/today";
 import {
@@ -42,7 +37,7 @@ import {
   LANDING_WORKSPACE_ROWS,
   PUBLIC_HERO_SUMMARY,
 } from "@/lib/public-landing-copy";
-import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
+import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView } from "@/lib/types";
 
 function formatPlanCount(value: number): string {
   return `${value} saved plan${value === 1 ? "" : "s"}`;
@@ -160,7 +155,7 @@ function WorkspaceOverviewSkeleton() {
             </div>
           </div>
           <div className="overview-primary-session">
-            <PlansFeaturedSkeleton />
+            <XpProgressCardSkeleton />
           </div>
         </div>
       </section>
@@ -449,18 +444,7 @@ export default function HomePage() {
     // "No active plan" splits into two states the whole primary area must agree
     // on: saved plans exist (pick one) vs no plans at all (build the first).
     const hasSavedPlans = (me.plan_count ?? 0) > 0;
-    const sessionPreview = (commandState?.today?.next_session ?? {}) as TodaySession;
     const resolvedDecision = commandState ? resolveTodayDecision(commandState) : null;
-    const hasNextSession = resolvedDecision?.hasSession ?? false;
-    const nextSessionTitle = hasNextSession ? getSessionTitle(sessionPreview) : "No upcoming session";
-    const nextSessionDay = hasNextSession ? getSessionDayLabel(sessionPreview) : "";
-    const nextSessionFocus = hasNextSession
-      ? getSessionFocus(sessionPreview)
-      : hasActivePlan
-        ? "Open Today for the matched session."
-        : hasSavedPlans
-          ? "Select a saved plan to see its next session."
-          : "Build a plan to see your first session.";
     const risks = commandState?.risk_watch ?? [];
     const recommendation = commandState?.today?.recommendation_state ?? "not_checked_in";
     // Overview consumes the same authoritative resolver as Today. The backend
@@ -497,21 +481,6 @@ export default function HomePage() {
     const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
     const openOngoing = hasActivePlan && isOpenOngoingPlan(activePlan.fight_date);
     const sessionIsToday = resolvedDecision?.sessionIsToday ?? false;
-    const nextIsHardCombat = hasNextSession && isHardCombatSession(sessionPreview);
-    // STOP + the scheduled session is today -> replace it with a safe session.
-    // Any future scheduled session -> show it as pending clearance, never cleared.
-    const safeSession = resolvedDecision?.useSafeReplacement
-      ? getSafeSessionView(nextSessionTitle, commandState?.open_injuries)
-      : null;
-    const showNextPlanned = hasNextSession && !sessionIsToday;
-    // When today's session has already been logged (modified / done / skipped),
-    // surface that state on the session card so a modified day reads clearly and
-    // is not mistaken for an untouched session.
-    const todayCompletionStatus = commandState?.today?.completion_status;
-    const sessionStateLabel =
-      sessionIsToday && todayCompletionStatus && todayCompletionStatus !== "not_started"
-        ? getCompletionLabel(todayCompletionStatus)
-        : null;
     // Decision tone drives the colour accents on the decision card (matches
     // Today). Neutral/preview carries no accent — the next-session preview stays
     // grey and is never tinted red just because today is a pull-back. The
@@ -529,7 +498,7 @@ export default function HomePage() {
       hasInjuryOverride: Boolean(resolvedDecision?.severeInjuryBlocksCurrentSession),
       recommendation,
       decisionTier,
-      hasSafeSession: Boolean(safeSession),
+      hasSafeSession: Boolean(resolvedDecision?.useSafeReplacement),
       sessionIsToday,
     });
     const primaryHref = primaryAction.href;
@@ -560,53 +529,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="overview-primary-session">
-              {safeSession ? (
-                <article className="status-card overview-command-card overview-safe-session-card" data-tone="red">
-                  <p className="status-label">{safeSession.eyebrow}</p>
-                  <h2 className="plan-summary-title">{safeSession.title}</h2>
-                  <p className="muted">{safeSession.detail}</p>
-                  <div className="overview-safe-session-lists">
-                    <div className="overview-safe-list" data-kind="allowed">
-                      <p className="overview-safe-list-label">Allowed</p>
-                      <ul>{safeSession.allowed.map((item) => <li key={item}>{item}</li>)}</ul>
-                    </div>
-                    <div className="overview-safe-list" data-kind="blocked">
-                      <p className="overview-safe-list-label">Blocked</p>
-                      <ul>{safeSession.blocked.map((item) => <li key={item}>{item}</li>)}</ul>
-                    </div>
-                  </div>
-                </article>
-              ) : showNextPlanned ? (
-                <article className="status-card overview-command-card overview-next-session-card">
-                  <p className="status-label">Next planned session</p>
-                  <h2 className="plan-summary-title">{nextSessionTitle}</h2>
-                  {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
-                  <p className="overview-session-pending">
-                    <span className="overview-pending-pill">Pending</span>
-                    Check in on the day to unlock this session.
-                  </p>
-                  {nextIsHardCombat ? (
-                    <div className="overview-caution-row">
-                      <span className="overview-caution-label">Caution</span>
-                      <span className="overview-caution-text">
-                        Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
-                      </span>
-                    </div>
-                  ) : null}
-                </article>
-              ) : (
-                <article className="status-card overview-command-card overview-next-session-card">
-                  <p className="status-label">{sessionIsToday ? "Today's session" : "Next session"}</p>
-                  <h2 className="plan-summary-title">{nextSessionTitle}</h2>
-                  {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
-                  {sessionStateLabel ? (
-                    <p className="overview-session-state">
-                      <span className="overview-session-state-pill">{sessionStateLabel}</span>
-                    </p>
-                  ) : null}
-                  <p className="muted">{nextSessionFocus}</p>
-                </article>
-              )}
+              <XpProgressCard />
             </div>
           </div>
           {commandError ? (

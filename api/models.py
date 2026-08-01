@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
@@ -2056,6 +2056,49 @@ class PlanCompletionsResponse(BaseModel):
 
     completions: list[SessionCompletionRecordResponse]
     current_training_day: str
+
+
+# ---------------------------------------------------------------------------
+# Durable account XP
+# ---------------------------------------------------------------------------
+
+XpAction = Literal[
+    "daily_login",
+    "training_logged",
+    "planned_session_completed",
+    "recommended_fighter_content_watched",
+    "full_training_week_completed",
+]
+
+
+class XpAwardRecord(BaseModel):
+    id: str
+    action: XpAction
+    amount: int = Field(ge=1)
+    awarded_at: datetime
+    calendar_date: date | None = None
+
+
+class XpAccountState(BaseModel):
+    total_xp: int = Field(ge=0)
+    last_daily_login_date: date | None = None
+    recent_awards: list[XpAwardRecord] = Field(default_factory=list, max_length=20)
+
+
+class XpAwardResponse(BaseModel):
+    state: XpAccountState
+    previous_total_xp: int = Field(ge=0)
+    awarded: bool
+    award: XpAwardRecord | None = None
+
+    @model_validator(mode="after")
+    def validate_award_totals(self) -> "XpAwardResponse":
+        if self.awarded:
+            if self.award is None or self.state.total_xp != self.previous_total_xp + self.award.amount:
+                raise ValueError("awarded XP response must include the matching ledger increment")
+        elif self.award is not None or self.state.total_xp != self.previous_total_xp:
+            raise ValueError("idempotent XP response must preserve the previous total")
+        return self
 
 
 class LandingResponse(BaseModel):
