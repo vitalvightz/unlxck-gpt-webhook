@@ -19,6 +19,10 @@ on:
     branches:
       - "**"
 
+concurrency:
+  group: backend-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   refactor-pr-2152:
     if: github.head_ref == 'claude/year-rupture-leg-injury-opyabn' || github.ref_name == 'claude/year-rupture-leg-injury-opyabn'
