@@ -343,13 +343,54 @@ test("risk watch shows icon label text records with overflow count", () => {
 });
 
 function makeInjury(overrides: Partial<InjuryFlagRecord> = {}): InjuryFlagRecord {
+  // Legacy tests pre-date the structured Today payload. Production never
+  // classifies injury text in the browser; this helper only supplies the
+  // backend fields those existing fixtures would receive.
+  const bodyArea = overrides.body_area ?? "chest";
+  const description = overrides.description ?? "chest bruise";
+  const text = `${bodyArea} ${description}`.toLowerCase();
+  const hasAny = (terms: readonly string[]) => terms.some((term) => text.includes(term));
+  const bodyRegion =
+    overrides.body_region ??
+    (hasAny(["back of knee", "calf", "achilles", "ankle", "knee", "shin", "hip", "quad", "hamstring", "leg"])
+      ? "lower_limb"
+      : hasAny(["bicep", "wrist", "arm", "shoulder", "elbow", "hand"])
+        ? "upper_limb"
+        : hasAny(["concussion", "head", "neck", "cervical", "brain", "skull"])
+          ? "head_neck"
+          : hasAny(["lower back", "upper back", "spine", "spinal", "rib", "chest", "sternum", "back"])
+            ? "trunk_spine"
+            : "unknown");
+  const deniedStructural = hasAny([
+    "no fracture",
+    "no fracture or tear",
+    "ruled out rupture",
+    "nothing is ruptured",
+  ]);
+  const consequence =
+    overrides.consequence !== undefined
+      ? overrides.consequence
+      : hasAny(["concussion", "concussed"])
+        ? "neuro"
+        : !deniedStructural && hasAny([
+            "fracture",
+            "rupture",
+            "tear",
+            "torn",
+            "dislocation",
+            "avulsion",
+          ])
+          ? "structural"
+          : null;
   return {
     id: "inj-1",
     athlete_id: "ath-1",
     source: "checkin",
-    body_area: "chest",
-    description: "chest bruise",
+    body_area: bodyArea,
+    description,
     label: "Chest bruise",
+    body_region: bodyRegion,
+    consequence,
     severity: "severe",
     status: "open",
     created_at: "2026-07-06T00:00:00Z",
@@ -696,8 +737,246 @@ test("safe session names the blocked work and lists allowed/blocked", () => {
   assert.match(view.detail, /Technical sparring is blocked today/);
   assert.equal(view.title, "Recovery / mobility only");
   assert.equal(view.allowed.length, 5);
+  assert.equal(view.allowed.includes("Light bike or walk"), true);
   assert.equal(view.blocked.includes("Sparring"), true);
   assert.equal(view.blocked.includes("Heavy lifting"), true);
+});
+
+test("safe session keeps bike/walk for an upper-body or minor lower-leg injury", () => {
+  // A bicep tear (upper body) leaves the legs free — the screenshot case.
+  const bicep = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "left bicep", description: "left bicep tear", label: "Left bicep tear", severity: "moderate", body_region: "upper_limb", consequence: "structural" }),
+  ]);
+  assert.equal(bicep.allowed.includes("Light bike or walk"), true);
+  assert.equal(bicep.allowed.length, 5);
+
+  // A minor lower-leg niggle (not structural, not severe) still tolerates a spin.
+  const tightCalf = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "calf", description: "tight calf", label: "Calf tightness", severity: "mild", body_region: "lower_limb", consequence: "load_sensitive" }),
+  ]);
+  assert.equal(tightCalf.allowed.includes("Light bike or walk"), true);
+
+  // A resolved lower-leg tear no longer constrains today.
+  const resolved = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "calf", description: "calf tear", label: "Calf tear", severity: "severe", status: "resolved", body_region: "lower_limb", consequence: "structural" }),
+  ]);
+  assert.equal(resolved.allowed.includes("Light bike or walk"), true);
+});
+
+test("safe session swaps bike/walk for seated upper-body cardio on a load-intolerant lower-leg injury", () => {
+  // Structural lower-leg injuries: gait / pedal load is out, but symptom-gated
+  // seated upper-body cardio still keeps the athlete moving.
+  const substitute = "Seated upper-body cardio — only if pain-free and available";
+  for (const injury of [
+    makeInjury({ body_area: "left calf", description: "calf tear", label: "Left calf tear", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+    makeInjury({ body_area: "achilles", description: "achilles rupture", label: "Achilles rupture", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+    makeInjury({ body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+    makeInjury({ body_area: "knee", description: "acl tear", label: "ACL tear", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+    // Severe lower-leg injury of any type also disqualifies gait/pedal load.
+    makeInjury({ body_area: "shin", description: "shin pain", label: "Shin pain", severity: "severe", body_region: "lower_limb", consequence: "load_sensitive" }),
+  ]) {
+    const view = getSafeSessionView("Technical sparring", [injury]);
+    assert.equal(view.allowed.includes("Light bike or walk"), false, injury.label);
+    assert.equal(view.allowed.includes(substitute), true, injury.label);
+    assert.equal(view.allowed.length, 5, injury.label);
+  }
+});
+
+test("safe session drops all cardio when both legs and arms cannot take load", () => {
+  const view = getSafeSessionView("Technical sparring", [
+    makeInjury({ id: "a", body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+    makeInjury({ id: "b", body_area: "wrist", description: "wrist fracture", label: "Wrist fracture", severity: "moderate", body_region: "upper_limb", consequence: "structural" }),
+  ]);
+  assert.equal(view.allowed.some((item) => item.toLowerCase().includes("cardio")), false);
+  assert.equal(view.allowed.includes("Light bike or walk"), false);
+  // Mobility, breathing, activation and coach-led rehab remain.
+  assert.deepEqual(view.allowed, ["Easy mobility", "Breathing reset", "Gentle activation", "Coach-approved rehab"]);
+});
+
+test("safe session recognizes generic arm injuries before offering upper-body cardio", () => {
+  for (const bodyArea of ["arm", "arms", "upper arm"]) {
+    const view = getSafeSessionView("Technical sparring", [
+      makeInjury({ id: "leg", body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+      makeInjury({ id: "arm", body_area: bodyArea, description: `${bodyArea} fracture`, label: `${bodyArea} fracture`, severity: "moderate", body_region: "upper_limb", consequence: "structural" }),
+    ]);
+    assert.equal(view.allowed.some((item) => item.toLowerCase().includes("cardio")), false, bodyArea);
+  }
+});
+
+test("safe session recognizes plural structural terms and canonical lower-limb locations", () => {
+  const cases = [
+    ["calf", "calf tears"],
+    ["ankle", "ankle fractures"],
+    ["achilles", "achilles ruptures"],
+    ["hip", "hip dislocations"],
+    ["quads", "quad tear"],
+    ["hamstrings", "hamstring tear"],
+  ] as const;
+  for (const [bodyArea, description] of cases) {
+    const view = getSafeSessionView("Technical sparring", [
+      makeInjury({ body_area: bodyArea, description, label: "Structural injury", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+    ]);
+    assert.equal(view.allowed.includes("Light bike or walk"), false, `${bodyArea}: ${description}`);
+  }
+});
+
+test("safe session ignores negated structural terms on a mild lower-limb injury", () => {
+  for (const description of [
+    "no fracture, mild ankle soreness",
+    "no fracture or tear, mild ankle soreness",
+    "doctor ruled out rupture; mild ankle soreness",
+    "nothing is ruptured, mild ankle soreness",
+  ]) {
+    const view = getSafeSessionView("Technical sparring", [
+      makeInjury({ body_area: "ankle", description, label: "Ankle soreness", severity: "mild", body_region: "lower_limb", consequence: null }),
+    ]);
+    assert.equal(view.allowed.includes("Light bike or walk"), true, description);
+  }
+});
+
+test("safe session downregulates to rest work for a concussion or head injury", () => {
+  const view = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate", body_region: "head_neck", consequence: "neuro" }),
+  ]);
+  // No aerobic push and no activation — only calm, non-provocative work.
+  assert.deepEqual(view.allowed, ["Easy mobility", "Breathing reset", "Clinician-approved rehab"]);
+
+  // A generic severe head injury is caught too (not just the word "concussion").
+  const head = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "head", description: "head injury", label: "Head injury", severity: "severe", body_region: "head_neck", consequence: null }),
+  ]);
+  assert.deepEqual(head.allowed, ["Easy mobility", "Breathing reset", "Clinician-approved rehab"]);
+
+  // A severe neck injury downregulates the same way…
+  const neck = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "neck", description: "cervical fracture", label: "Neck fracture", severity: "severe", body_region: "head_neck", consequence: "structural" }),
+  ]);
+  assert.equal(neck.allowed.includes("Light bike or walk"), false);
+  assert.equal(neck.allowed.includes("Gentle activation"), false);
+
+  // …but a mild stiff neck keeps the standard menu.
+  const stiffNeck = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "neck", description: "stiff neck", label: "Neck stiffness", severity: "mild", body_region: "head_neck", consequence: "load_sensitive" }),
+  ]);
+  assert.equal(stiffNeck.allowed.includes("Light bike or walk"), true);
+  assert.equal(stiffNeck.allowed.includes("Gentle activation"), true);
+});
+
+test("safe session restricts a structural or severe spine/back/rib injury to rest work", () => {
+  // A structural/severe trunk injury gets no movement advice — only breathing and
+  // clinician-led rehab.
+  for (const injury of [
+    makeInjury({ body_area: "lower back", description: "lumbar disc injury", label: "Lower back injury", severity: "severe", body_region: "trunk_spine", consequence: "load_sensitive" }),
+    makeInjury({ body_area: "back", description: "spinal fracture", label: "Spinal fracture", severity: "moderate", body_region: "trunk_spine", consequence: "structural" }),
+    makeInjury({ body_area: "ribs", description: "rib fracture", label: "Rib fracture", severity: "moderate", body_region: "trunk_spine", consequence: "structural" }),
+    makeInjury({ body_area: "chest", description: "severe chest injury", label: "Chest injury", severity: "severe", body_region: "trunk_spine", consequence: "load_sensitive" }),
+  ]) {
+    const view = getSafeSessionView("Technical sparring", [injury]);
+    assert.deepEqual(view.allowed, ["Breathing reset", "Clinician-approved rehab"], injury.label);
+  }
+
+  // A mild back niggle still keeps the standard menu…
+  const mildBack = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "lower back", description: "tight lower back", label: "Lower back tightness", severity: "mild", body_region: "trunk_spine", consequence: "load_sensitive" }),
+  ]);
+  assert.equal(mildBack.allowed.includes("Light bike or walk"), true);
+
+  // …and "back of knee" is a lower-limb injury, not a spine one.
+  const backOfKnee = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "back of knee", description: "back of knee tear", label: "Knee tear", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+  ]);
+  assert.equal(backOfKnee.allowed.includes("Breathing reset"), true);
+  assert.equal(
+    backOfKnee.allowed.includes("Seated upper-body cardio — only if pain-free and available"),
+    true,
+  );
+});
+
+test("safe session blocks the explosive work of the region actually at risk", () => {
+  // No injury (or a lower-limb one): lower-body explosive work is the default hazard.
+  assert.equal(
+    getSafeSessionView("Technical sparring").blocked.includes("Plyos or explosive lower-body work"),
+    true,
+  );
+  const lower = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+  ]);
+  assert.equal(lower.blocked.includes("Plyos or explosive lower-body work"), true);
+
+  // Upper-limb injury: explosive UPPER-body work is the hazard, plus overhead/pressing.
+  const upper = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "left bicep", description: "left bicep tear", label: "Left bicep tear", severity: "moderate", body_region: "upper_limb", consequence: "structural" }),
+  ]);
+  assert.equal(upper.blocked.includes("Plyos or explosive upper-body work"), true);
+  assert.equal(upper.blocked.includes("Plyos or explosive lower-body work"), false);
+  assert.equal(upper.blocked.includes("Overhead or pressing work"), true);
+
+  // Both limbs injured: block explosive work outright, unqualified.
+  const both = getSafeSessionView("Technical sparring", [
+    makeInjury({ id: "a", body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate", body_region: "lower_limb", consequence: "structural" }),
+    makeInjury({ id: "b", body_area: "wrist", description: "wrist fracture", label: "Wrist fracture", severity: "moderate", body_region: "upper_limb", consequence: "structural" }),
+  ]);
+  assert.equal(both.blocked.includes("Plyos or explosive work"), true);
+
+  // The universal stop-day blocks are never dropped.
+  for (const view of [lower, upper, both]) {
+    for (const item of ["Sparring", "Hard pads", "HIIT", "Heavy lifting"]) {
+      assert.equal(view.blocked.includes(item), true, item);
+    }
+  }
+});
+
+test("safe session blocks the loading pattern each injured region cannot take", () => {
+  // Trunk/spine: loaded rotation and bracing (valsalva) are the specific danger.
+  const trunk = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "ribs", description: "rib fracture", label: "Rib fracture", severity: "moderate", body_region: "trunk_spine", consequence: "structural" }),
+  ]);
+  assert.equal(trunk.blocked.includes("Loaded rotation or bracing"), true);
+
+  // Concussion: head impact is called out explicitly, beyond blanket sparring.
+  const head = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate", body_region: "head_neck", consequence: "neuro" }),
+  ]);
+  assert.equal(head.blocked.includes("Head impact or contact drills"), true);
+
+  // A minor injury adds no extra restriction.
+  const mild = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "left bicep", description: "sore bicep", label: "Bicep soreness", severity: "mild", body_region: "upper_limb", consequence: "load_sensitive" }),
+  ]);
+  assert.equal(mild.blocked.length, 5);
+});
+
+test("safe session copy never contradicts the menu it shows", () => {
+  // Rest-only: no movement is offered, so the card must not say "keep the body moving".
+  const restOnly = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "back", description: "spinal fracture", label: "Spinal fracture", severity: "moderate", body_region: "trunk_spine", consequence: "structural" }),
+  ]);
+  assert.deepEqual(restOnly.allowed, ["Breathing reset", "Clinician-approved rehab"]);
+  assert.equal(restOnly.title, "Rest and recover");
+  assert.equal(/keep the body moving/.test(restOnly.detail), false);
+  assert.match(restOnly.detail, /no loaded movement today/);
+
+  // Downregulate still offers mobility, so "mobility only" remains accurate.
+  const neuro = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate", body_region: "head_neck", consequence: "neuro" }),
+  ]);
+  assert.equal(neuro.title, "Recovery / mobility only");
+  assert.equal(/keep the body moving/.test(neuro.detail), false);
+  assert.match(neuro.detail, /symptom-free/);
+
+  // The standard stop day keeps the original coach copy.
+  const standard = getSafeSessionView("Technical sparring");
+  assert.match(standard.detail, /Technical sparring is blocked today/);
+  assert.match(standard.detail, /keep the body moving without adding stress/);
+});
+
+test("safe session does not misread anatomical head/back terms as head or spine injuries", () => {
+  // "long head of biceps" is an arm injury — legs are free, so bike/walk stays.
+  const bicepHead = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "left bicep", description: "long head of biceps tear", label: "Left bicep tear", severity: "moderate", body_region: "upper_limb", consequence: "structural" }),
+  ]);
+  assert.equal(bicepHead.allowed.includes("Light bike or walk"), true);
+  assert.equal(bicepHead.allowed.length, 5);
 });
 
 test("camp day counts down from training day to fight date", () => {

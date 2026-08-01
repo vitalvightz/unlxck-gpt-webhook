@@ -117,7 +117,7 @@ test("safe replacement renders without blocked terminal or completion controls",
     </ToastProvider>,
   );
 
-  assert.match(html, /Recovery \/ mobility only/i);
+  assert.match(html, /Rest and recover/i);
   assert.doesNotMatch(html, /Blocked by an active severe injury/);
   assert.doesNotMatch(html, />Start session<|>Mark done<|>Mark modified<|>Resume session</);
 });

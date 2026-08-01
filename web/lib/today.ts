@@ -845,21 +845,181 @@ export type SafeSessionView = {
   blocked: string[];
 };
 
+// ── Safe-session activity gating ─────────────────────────────────────────────
+// Anatomy and injury consequence are resolved by the backend's shared injury
+// system. This module consumes structured fields only; it never carries a second
+// body-part synonym list or re-parses athlete-entered injury text.
+
+type InjuryRegion = Exclude<
+  NonNullable<InjuryFlagRecord["body_region"]>,
+  "unknown"
+>;
+
+function isActiveInjury(injury: InjuryFlagRecord): boolean {
+  return injury.status === "open" || injury.status === "monitoring";
+}
+
+function injuryIsLoadIntolerant(injury: InjuryFlagRecord): boolean {
+  return (
+    injury.severity === "severe" ||
+    injury.consequence === "structural" ||
+    injury.consequence === "neuro"
+  );
+}
+
+function hasLoadIntolerantInjuryInRegion(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+  region: InjuryRegion,
+): boolean {
+  return (openInjuries ?? []).some(
+    (injury) =>
+      isActiveInjury(injury) &&
+      injury.body_region === region &&
+      injuryIsLoadIntolerant(injury),
+  );
+}
+
+function hasUnclassifiedActiveInjury(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+): boolean {
+  return (openInjuries ?? []).some(
+    (injury) =>
+      isActiveInjury(injury) &&
+      (!injury.body_region || injury.body_region === "unknown"),
+  );
+}
+
+/** Whether an active lower-limb injury cannot take gait or pedal load. */
+export function hasLoadIntolerantLowerLegInjury(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+): boolean {
+  return hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
+}
+
+function hasNeuroDownregulationInjury(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+): boolean {
+  return (openInjuries ?? []).some(
+    (injury) =>
+      isActiveInjury(injury) &&
+      injury.body_region === "head_neck" &&
+      injuryIsLoadIntolerant(injury),
+  );
+}
+
+type SafeSessionPosture = "rest_only" | "downregulate" | "standard";
+
+function resolveSafeSessionPosture(
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): SafeSessionPosture {
+  // A structural/severe injury whose anatomy could not be classified is never a
+  // green light for generic movement. Fail closed rather than guessing a limb.
+  if (
+    hasUnclassifiedActiveInjury(openInjuries) ||
+    hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine")
+  ) {
+    return "rest_only";
+  }
+  if (hasNeuroDownregulationInjury(openInjuries)) {
+    return "downregulate";
+  }
+  return "standard";
+}
+
+export function resolveSafeSessionAllowed(
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): string[] {
+  const posture = resolveSafeSessionPosture(openInjuries);
+  if (posture === "rest_only") {
+    return ["Breathing reset", "Clinician-approved rehab"];
+  }
+  if (posture === "downregulate") {
+    return ["Easy mobility", "Breathing reset", "Clinician-approved rehab"];
+  }
+
+  const lowerBlocked = hasLoadIntolerantLowerLegInjury(openInjuries);
+  const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
+
+  let conditioning: string | null;
+  if (lowerBlocked && upperBlocked) {
+    conditioning = null;
+  } else if (lowerBlocked) {
+    conditioning = "Seated upper-body cardio — only if pain-free and available";
+  } else {
+    conditioning = "Light bike or walk";
+  }
+
+  const allowed = ["Easy mobility"];
+  if (conditioning) {
+    allowed.push(conditioning);
+  }
+  allowed.push("Breathing reset", "Gentle activation", "Coach-approved rehab");
+  return allowed;
+}
+
+export function resolveSafeSessionBlocked(
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): string[] {
+  const lowerBlocked = hasLoadIntolerantLowerLegInjury(openInjuries);
+  const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
+  const trunkBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine");
+  const neuro = hasNeuroDownregulationInjury(openInjuries);
+  const unclassified = hasUnclassifiedActiveInjury(openInjuries);
+
+  let explosive: string;
+  if (unclassified || (upperBlocked && lowerBlocked)) {
+    explosive = "Plyos or explosive work";
+  } else if (upperBlocked) {
+    explosive = "Plyos or explosive upper-body work";
+  } else {
+    explosive = "Plyos or explosive lower-body work";
+  }
+
+  const blocked = ["Sparring", "Hard pads", "HIIT", "Heavy lifting", explosive];
+  if (upperBlocked) {
+    blocked.push("Overhead or pressing work");
+  }
+  if (trunkBlocked) {
+    blocked.push("Loaded rotation or bracing");
+  }
+  if (neuro) {
+    blocked.push("Head impact or contact drills");
+  }
+  if (unclassified) {
+    blocked.push("Loaded movement");
+  }
+  return blocked;
+}
+
+const SAFE_SESSION_POSTURE_DETAIL: Record<SafeSessionPosture, string> = {
+  rest_only:
+    "Protect the injured area and let it settle — no loaded movement today, and follow your clinician on what is safe.",
+  downregulate:
+    "Keep everything calm and symptom-free today — no exertion, and follow your clinician before adding work back.",
+  standard: "Protect freshness, reduce risk, and keep the body moving without adding stress.",
+};
+
 /**
- * The recovery/mobility-only session shown in place of the scheduled work when
- * today is a STOP. Static coach copy — the scheduled session is named so the
- * athlete sees exactly what is being held.
+ * The recovery-only session shown in place of scheduled work when today is a STOP.
+ * The backend classifies each active injury; this display only applies the supplied
+ * broad region and consequence fields.
  */
-export function getSafeSessionView(blockedSessionName?: string): SafeSessionView {
+export function getSafeSessionView(
+  blockedSessionName?: string,
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): SafeSessionView {
   const name = (blockedSessionName ?? "").trim();
   const blockedLead =
-    name && name.toLowerCase() !== "today's session" ? `${name} is blocked today.` : "Hard combat work is blocked today.";
+    name && name.toLowerCase() !== "today's session"
+      ? `${name} is blocked today.`
+      : "Hard combat work is blocked today.";
+  const posture = resolveSafeSessionPosture(openInjuries);
   return {
     eyebrow: "Today's safe session",
-    title: "Recovery / mobility only",
-    detail: `${blockedLead} Protect freshness, reduce risk, and keep the body moving without adding stress.`,
-    allowed: ["Easy mobility", "Light bike or walk", "Breathing reset", "Gentle activation", "Coach-approved rehab"],
-    blocked: ["Sparring", "Hard pads", "HIIT", "Heavy lifting", "Plyos or explosive lower-body work"],
+    title: posture === "rest_only" ? "Rest and recover" : "Recovery / mobility only",
+    detail: `${blockedLead} ${SAFE_SESSION_POSTURE_DETAIL[posture]}`,
+    allowed: resolveSafeSessionAllowed(openInjuries),
+    blocked: resolveSafeSessionBlocked(openInjuries),
   };
 }
 

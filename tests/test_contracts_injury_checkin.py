@@ -292,20 +292,96 @@ def test_build_injury_label_is_clean_for_every_injury_type():
         "concussed": "Concussion",
         "got rocked": "Concussion",
         "head knock": "Concussion",
-        # tears / ruptures keep their type noun; named ligaments show the type alone
-        "knee tendon tear": "Knee tendon rupture",
-        "torn tendon": "Tendon rupture",
+        # A reported tear stays a "tear" — it is not escalated to "rupture" — while
+        # explicit rupture evidence ("snapped", "rupture") keeps the louder noun.
+        # Named ligaments show the type alone.
+        "knee tendon tear": "Knee tendon tear",
+        "torn tendon": "Tendon tear",
         "acl tear": "ACL tear",
         "torn acl": "ACL tear",
         "mcl tear": "MCL tear",
         "torn ligament": "Ligament tear",
         "muscle tear": "Muscle tear",
         "torn hamstring": "Hamstring tear",
+        "bicep tear": "Bicep tear",
+        "torn bicep": "Bicep tear",
         "snapped achilles": "Achilles rupture",
         "achilles rupture": "Achilles rupture",
+        "ruptured tendon": "Tendon rupture",
     }
     for phrase, expected in cases.items():
         assert build_injury_label(phrase, phrase) == expected, phrase
+
+
+def test_reported_tear_is_not_escalated_to_rupture():
+    # A tear is not always a rupture. A reported tendon tear must keep the athlete's
+    # own word instead of being relabelled a (complete) rupture — the screenshot
+    # bug where "Left bicep tear" surfaced as "Left bicep rupture".
+    assert build_injury_label("Left bicep", "Left bicep tear") == "Left bicep tear"
+    assert build_injury_label("bicep tear", "bicep tear") == "Bicep tear"
+    assert build_injury_label("torn tendon", "torn tendon") == "Tendon tear"
+    assert build_injury_label("rotator cuff tear", "rotator cuff tear") == "Rotator cuff tear"
+
+    # Explicit rupture evidence still earns the louder "rupture" noun.
+    assert build_injury_label("achilles rupture", "achilles rupture") == "Achilles rupture"
+    assert build_injury_label("snapped achilles", "snapped achilles") == "Achilles rupture"
+    assert build_injury_label("ruptured bicep", "ruptured bicep") == "Bicep rupture"
+    assert build_injury_label("achilles", "complete achilles tear") == "Achilles rupture"
+    assert build_injury_label("achilles", "complete achilles tendon tear") == "Achilles rupture"
+    assert build_injury_label("bicep", "full-thickness bicep tear") == "Bicep rupture"
+    assert build_injury_label("achilles", "achilles tear with avulsion") == "Achilles rupture"
+    assert build_injury_label("bicep", "bicep tear with detached tendon") == "Bicep rupture"
+
+
+def test_negated_rupture_evidence_does_not_upgrade_a_tear():
+    for description in [
+        "Not ruptured, just a bicep tear",
+        "nothing is ruptured, just a bicep tear",
+        "bicep tear with no rupture",
+        "bicep tear without evidence of rupture",
+        "bicep tear, not detached",
+        "the tendon was not detached, just a bicep tear",
+        "avulsion not present, just a bicep tear",
+        "rupture not seen, just a bicep tear",
+        "not a complete tear, just a bicep tear",
+        "confirmed bicep tear, not a full-thickness tear",
+    ]:
+        assert build_injury_label("bicep", description) == "Bicep tear", description
+    assert build_injury_label("achilles", "ruled out rupture but achilles tear") == "Achilles tear"
+
+
+def test_rupture_evidence_requires_an_actual_complete_tear_phrase():
+    for description in [
+        "complete recovery from a bicep tear",
+        "complete healing of the tendon tear",
+        "bicep tear; complete imaging confirms a tear",
+        "bicep tear; full-thickness injury",
+    ]:
+        assert build_injury_label("bicep", description) == "Bicep tear", description
+
+    assert build_injury_label("achilles", "multiple achilles ruptures") == "Achilles rupture"
+    assert build_injury_label("achilles", "the tendon is rupturing") == "Achilles rupture"
+
+
+def test_confirmed_tear_stays_a_tear():
+    # A tear being clinically *confirmed* proves it exists, not that it is complete.
+    # "confirmed" must not act as rupture evidence — only a confirmed *rupture* does
+    # (and that already reads as a rupture via the word "rupture" itself).
+    assert build_injury_label("bicep", "confirmed bicep tear") == "Bicep tear"
+    assert build_injury_label("achilles", "confirmed achilles tear") == "Achilles tear"
+    assert build_injury_label("achilles", "confirmed achilles rupture") == "Achilles rupture"
+    # The clinical qualifier never leaks into the label location either.
+    assert build_injury_label("confirmed bicep tear", "confirmed bicep tear") == "Bicep tear"
+    assert build_injury_label("confirmed achilles tear", "confirmed achilles tear") == "Achilles tear"
+    assert build_injury_label("confirmed achilles rupture", "confirmed achilles rupture") == "Achilles rupture"
+
+    # The safety triage is unchanged: a plain tear still routes to the urgent
+    # tendon-rupture category (clinical clearance), only the label is honest.
+    from fightcamp.injury_scoring import score_injury_phrase
+
+    scored = score_injury_phrase("left bicep tear")
+    assert scored["triage_category"] == "tendon_rupture"
+    assert "urgent" in scored["flags"]
 
 
 def test_every_triage_category_has_a_display_noun():

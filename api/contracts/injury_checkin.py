@@ -143,7 +143,7 @@ _CONDITION_DISPLAY_NOUN = {"contusion": "bruise"}
 # are routed by the triage category, not by ordinary rehab typing), but they
 # still have an obvious display noun. When the scorer nulls injury_type, the label
 # recovers the noun from the triage category so a tear/rupture/fracture never
-# loses its type — "knee tendon tear" reads "Knee tendon rupture", "acl tear"
+# loses its type — "knee tendon tear" reads "Knee tendon tear", "acl tear"
 # reads "ACL tear", "broken collarbone" reads "Collarbone fracture".
 _TRIAGE_DISPLAY_NOUN = {
     "fracture": "fracture",
@@ -160,6 +160,98 @@ _TRIAGE_DISPLAY_NOUN = {
     "infection": "infection",
     "nerve_involvement": "nerve issue",
 }
+
+# A reported *tear* is not a *rupture*. The ``tendon_rupture`` triage category is a
+# safety bucket that deliberately catches BOTH an honest "bicep tear" and a genuine
+# "achilles rupture" so both route to clinical clearance (see TRIAGE_CATEGORY_MAP).
+# That conflation is correct for routing, but the athlete-facing label must not put
+# the louder word in the athlete's mouth: relabelling "Left bicep tear" as "Left
+# bicep rupture" over-states a partial tear as a complete one. So the "rupture"
+# noun is earned only by explicit evidence of a COMPLETE tear: a rupture/avulsion,
+# a detached or snapped tendon, or a "complete"/"full-thickness" tear. A tear being
+# clinically *confirmed* proves it exists, not that it is complete — "confirmed
+# achilles tear" is still a tear — so "confirmed" is deliberately NOT evidence on
+# its own ("confirmed rupture" already matches via the bare "rupture" token). The
+# underlying triage — and its clearance requirement — is unchanged.
+_RUPTURE_ANATOMY_TOKEN = (
+    r"(?:left|right|bilateral|proximal|distal|achilles|biceps?|triceps?|"
+    r"quadriceps?|quads?|hamstrings?|rotator|cuff|patellar|tendon|ligament|"
+    r"muscle|fascia|labrum|meniscus|acl|mcl|pcl|lcl|shoulder|elbow|wrist|"
+    r"hip|knee|ankle|calf|foot|hand|groin|adductor|gluteal?)"
+)
+_RUPTURE_EVIDENCE_FRAGMENT = (
+    rf"(?:ruptur(?:e|ed|es|ing)|avuls(?:ion|ions|ed)|detached|snap(?:ped|s|ping)?|"
+    rf"complete(?:\s+{_RUPTURE_ANATOMY_TOKEN}){{0,4}}\s+(?:tear|rupture)|"
+    rf"full[-\s]thickness(?:\s+{_RUPTURE_ANATOMY_TOKEN}){{0,4}}\s+(?:tear|rupture)|"
+    rf"full\s+(?:tear|rupture))"
+)
+_RUPTURE_EVIDENCE_PATTERN = re.compile(
+    rf"\b{_RUPTURE_EVIDENCE_FRAGMENT}\b",
+    re.IGNORECASE,
+)
+_NEGATED_RUPTURE_EVIDENCE_PATTERN = re.compile(
+    rf"\b(?:"
+    rf"(?:no|not|without|den(?:y|ies|ied)|ruled\s+out)\s+"
+    rf"(?:(?:signs?|evidence)\s+of\s+)?(?:an?\s+)?(?:\w+\s+){{0,2}}?"
+    rf"|nothing\s+(?:is|was|has\s+been)\s+"
+    rf"|there\s+(?:is|was|were)\s+no\s+"
+    rf"|(?:does|do|did|is|was|were|has|have|had)\s+not\s+(?:\w+\s+){{0,2}}?"
+    rf"){_RUPTURE_EVIDENCE_FRAGMENT}\b",
+    re.IGNORECASE,
+)
+_TRAILING_RUPTURE_DENIAL_PATTERN = re.compile(
+    rf"\b{_RUPTURE_EVIDENCE_FRAGMENT}"
+    rf"(?:\s+{_RUPTURE_ANATOMY_TOKEN}){{0,2}}\s+"
+    rf"(?:(?:is|was|were)\s+)?(?:not\s+(?:present|seen|confirmed|found|evident)|"
+    rf"absent|negative|ruled\s+out)\b",
+    re.IGNORECASE,
+)
+
+
+def _has_affirmative_rupture_evidence(*injury_text_parts: str) -> bool:
+    """Return true only for explicit, non-negated complete-tear evidence."""
+    from fightcamp.injury_negation import remove_negated_phrases
+
+    cleaned_parts: list[str] = []
+    for part in injury_text_parts:
+        cleaned = remove_negated_phrases(part or "")
+        cleaned = _NEGATED_RUPTURE_EVIDENCE_PATTERN.sub(" ", cleaned)
+        cleaned = _TRAILING_RUPTURE_DENIAL_PATTERN.sub(" ", cleaned)
+        cleaned_parts.append(cleaned)
+    return bool(_RUPTURE_EVIDENCE_PATTERN.search(" ".join(cleaned_parts)))
+
+
+_STRUCTURAL_INJURY_PATTERN = re.compile(
+    r"\b(?:tears?|torn|fractures?|fractured|dislocations?|dislocated)\b",
+    re.IGNORECASE,
+)
+
+
+def _has_affirmative_structural_evidence(*injury_text_parts: str) -> bool:
+    """Recognise structural wording the scorer does not yet pluralise."""
+    from fightcamp.injury_negation import remove_negated_phrases
+
+    if _has_affirmative_rupture_evidence(*injury_text_parts):
+        return True
+    cleaned = " ".join(
+        remove_negated_phrases(part or "") for part in injury_text_parts
+    )
+    return bool(_STRUCTURAL_INJURY_PATTERN.search(cleaned))
+
+
+def _triage_display_noun(triage_category: str, *injury_text_parts: str) -> str:
+    """Athlete-facing type noun for a structural triage category.
+
+    Mirrors ``_TRIAGE_DISPLAY_NOUN`` except that a ``tendon_rupture`` with no
+    explicit rupture evidence in the athlete's own words is honestly labelled a
+    "tear" rather than escalated to "rupture".
+    """
+    noun = _TRIAGE_DISPLAY_NOUN.get(triage_category, "")
+    if triage_category == "tendon_rupture" and not _has_affirmative_rupture_evidence(
+        *injury_text_parts
+    ):
+        return "tear"
+    return noun
 
 # Triage categories whose name already implies the body part (a named knee
 # ligament, or a head/brain injury), so the label shows the type alone rather
@@ -190,7 +282,7 @@ _SOFT_SYMPTOM_LABELS = {
 _CONDITION_STRIP = re.compile(
     r"\b(?:bruis(?:e|ed|ing)|contusion|hyperextend(?:ed|ing|s)?|hyperextension|"
     r"disloc(?:ate|ated|ation)|fractur(?:e|ed)|broke(?:n)?|break|crack(?:ed)?|shattered|"
-    r"ruptur(?:e|ed)|tears?|torn|tore|snap(?:ped)?|pop(?:ped)?|blown|"
+    r"ruptur(?:e|ed|es|ing)|tears?|torn|tore|snap(?:ped|s|ping)?|pop(?:ped)?|blown|"
     r"sprain(?:ed|ing)?|strain(?:ed|ing)?|pulled|tendon[ai]tis|tendinopathy|"
     r"imping(?:ed|ement)|instability|unstable|inflam(?:ed|mation|matory)|"
     r"swollen|swelling|stiff(?:ness)?|tight(?:ness)?|sore(?:ness)?|"
@@ -200,10 +292,14 @@ _CONDITION_STRIP = re.compile(
 )
 
 # Connective/filler words removed once the condition is stripped, leaving only
-# the body location. Laterality (left/right) is deliberately kept.
+# the body location. Laterality (left/right) is deliberately kept. Clinical
+# qualifiers (confirmed/suspected/possible/likely) are stripped too — they modify
+# the diagnosis, not the body part, so "confirmed achilles tear" must not read
+# "Confirmed achilles tear".
 _LOCATION_FILLER = re.compile(
     r"\b(?:is|are|was|were|been|be|has|have|had|got|getting|gets|feels?|feeling|felt|"
-    r"seems?|it|this|that|a|an|the|my|some|really|quite|very|bit|of|in|on|with|and)\b",
+    r"seems?|it|this|that|a|an|the|my|some|really|quite|very|bit|of|in|on|with|and|"
+    r"confirmed|suspected|possible|likely|complete|full[-\s]thickness)\b",
     re.I,
 )
 _LOCATION_SIDE_WORDS = {"left", "right", "both", "bilateral"}
@@ -322,9 +418,15 @@ def build_injury_label(body_area: object, description: object) -> str:
     # Structural injuries (fracture / tear / rupture / dislocation / concussion)
     # deliberately null out injury_type, so recover the display noun from the
     # triage category. condition_key becomes the display noun; triage_category is
-    # kept separately to drive synonym stripping and location handling.
+    # kept separately to drive synonym stripping and location handling. The noun is
+    # resolved from the athlete's own words so a reported tear is not escalated to a
+    # rupture (see _triage_display_noun).
     if condition_key in ("", "unspecified"):
-        condition_key = _TRIAGE_DISPLAY_NOUN.get(triage_category, condition_key)
+        condition_key = _triage_display_noun(triage_category, body, desc) or condition_key
+        if condition_key in ("", "unspecified") and _has_affirmative_rupture_evidence(
+            body, desc
+        ):
+            condition_key = "rupture"
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"
@@ -468,10 +570,20 @@ def injury_consequence_tier(
     """
     # Deferred import: keeps the fightcamp NLP/synonym stack out of the eager import
     # graph for callers that never classify an injury.
+    from fightcamp.injury_negation import remove_negated_phrases
     from fightcamp.injury_registry import get_registry_category
     from fightcamp.injury_scoring import score_injury_phrase
 
-    text = f"{str(body_area or '').strip()} {str(description or '').strip()}".strip()
+    # Clean fields independently. Prefixing the body area before a description
+    # can otherwise hide a leading denial (for example, ``no fracture``).
+    text = " ".join(
+        cleaned
+        for cleaned in (
+            remove_negated_phrases(str(body_area or "").strip()),
+            remove_negated_phrases(str(description or "").strip()),
+        )
+        if cleaned
+    )
     if not text:
         return None
     score = score_injury_phrase(text) or {}
@@ -479,6 +591,10 @@ def injury_consequence_tier(
     if triage_category in _CONSEQUENCE_NEURO_TRIAGE:
         return "neuro"
     if triage_category in _CONSEQUENCE_STRUCTURAL_TRIAGE:
+        return "structural"
+    if _has_affirmative_structural_evidence(
+        str(body_area or ""), str(description or "")
+    ):
         return "structural"
 
     category = get_registry_category(str(score.get("injury_type") or ""))

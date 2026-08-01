@@ -821,6 +821,20 @@ export type InjuryFlagRecord = {
   // Clean, athlete-facing label derived server-side from the injury synonym
   // logic (e.g. "Left wrist tightness"). Present on Today's open_injuries.
   label?: string;
+  /** Backend-owned normalized anatomy. The client must not parse injury text. */
+  canonical_location?: string | null;
+  region_group?:
+    | "lower_leg_foot"
+    | "knee"
+    | "hip_groin"
+    | "lower_limb"
+    | "upper_limb"
+    | "spine_pelvis"
+    | "head_face"
+    | "unknown"
+    | null;
+  body_region?: "lower_limb" | "upper_limb" | "trunk_spine" | "head_neck" | "unknown" | null;
+  consequence?: "neuro" | "structural" | "load_sensitive" | null;
   severity: InjuryFlagSeverity;
   /** Who owns `severity`. `surface_system` means it is a floor the backend
    * derived from the wound answers, with the athlete's own value kept in
