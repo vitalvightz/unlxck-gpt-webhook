@@ -92,15 +92,16 @@ function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
 function getSessionRelationCopy(
   session: TodaySession,
   completionStatus: TodayCompletionStatus,
+  sessionIsToday: boolean,
 ): {
   kicker: string;
   status: string;
   helper: string;
 } {
-  // The backend owns "today vs next" via session_relation, so trust it rather
-  // than re-deriving it from the structured plan — that mismatch is what left the
-  // card stuck on the completed day while the header already read "Next session".
-  if (session.session_relation === "next") {
+  // The authoritative resolver owns "today vs next". It normally follows the
+  // backend relation, but rejects an impossible calendar-date mismatch so a
+  // stale payload cannot label or unlock future work as today's session.
+  if (!sessionIsToday) {
     const loggedToday =
       completionStatus === "done" ||
       completionStatus === "modified" ||
@@ -291,7 +292,11 @@ export function TodaySessionPanel({
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
   const isSessionPreview = resolvedDecision.displayTier === "preview";
-  const relationCopy = getSessionRelationCopy(session, status);
+  const relationCopy = getSessionRelationCopy(
+    session,
+    status,
+    resolvedDecision.sessionIsToday,
+  );
   const decisionBlocksCurrentSession = resolvedDecision.blocksCurrentSession;
   const severeInjuryBlocksCurrentSession =
     resolvedDecision.severeInjuryBlocksCurrentSession;

@@ -1,14 +1,20 @@
 import copy
-from datetime import date
+from datetime import date, datetime, timezone
+
+import pytest
+from fastapi import HTTPException
 
 from api.models import WeeklySchedule
 from api.services.plan_schedule import resolve_current_week, resolve_today_and_next
 from api.services.open_plan_timeline import project_open_structured_plan
 from api.services.today_service import (
+    build_today_command_view,
     _structured_next_session_entry,
     _structured_today_session_entry,
+    upsert_session_completion,
 )
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
+from tests.support import FakeStore
 
 
 PLAN_ID = "11111111-1111-1111-1111-111111111111"
@@ -207,6 +213,54 @@ def test_open_plan_created_late_in_the_week_starts_the_following_monday():
 
     assert context["anchor_date"] == "2026-08-03"
     assert context["current_week_number"] == 1
+
+
+def test_open_plan_before_start_surfaces_monday_as_next_not_future_saturday_as_today():
+    structured_plan = _open_structured_plan()
+    future_saturday = structured_plan["weeks"][0]["days"][-1]
+    future_saturday["today_card"]["headline"] = "Fight-Pace Conditioning and Neural Primer"
+    future_saturday["sessions"][0]["title"] = "Fight-Pace Conditioning and Neural Primer"
+    plan_row = {
+        "id": PLAN_ID,
+        "athlete_id": "athlete-1",
+        "status": "ready",
+        "plan_name": "Open plan",
+        # Friday 31 July: the block starts on Monday 3 August.
+        "created_at": "2026-07-31T09:00:00+00:00",
+        "fight_date": None,
+        "planning_brief": _open_plan_brief(),
+        "structured_plan": structured_plan,
+    }
+    store = FakeStore()
+    store.plans[PLAN_ID] = plan_row
+
+    view = build_today_command_view(
+        store,
+        athlete_id="athlete-1",
+        athlete_timezone="",
+        now=datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc),
+    )
+
+    assert view.today.training_day == "2026-08-01"
+    assert view.today.session_scope == "next"
+    assert view.today.next_session["session_relation"] == "next"
+    assert view.today.next_session["calendar_date"] == "2026-08-03"
+    assert view.today.next_session["title"] == "Support strength"
+
+    with pytest.raises(HTTPException) as exc:
+        upsert_session_completion(
+            store,
+            athlete_id="athlete-1",
+            athlete_timezone="",
+            payload={
+                "plan_id": PLAN_ID,
+                "session_id": "2026-08-08",
+                "status": "started",
+            },
+            now=datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc),
+        )
+    assert exc.value.status_code == 409
+    assert "has not started" in str(exc.value.detail)
 
 
 def test_open_plan_uses_local_thursday_when_utc_date_is_already_friday():

@@ -237,6 +237,29 @@ test("future pull-back remains a neutral pending preview", () => {
   assert.equal(resolved.tone, "neutral");
 });
 
+test("a future calendar date cannot be made completable by an incorrect today relation", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      training_day: "2026-08-01",
+      next_session: {
+        session_id: "2026-08-08",
+        title: "Fight-Pace Conditioning and Neural Primer",
+        calendar_date: "2026-08-08",
+        session_relation: "today",
+        effective_load: "technical",
+      },
+      session_scope: "today",
+    },
+  });
+
+  assert.equal(resolved.sessionIsToday, false);
+  assert.equal(resolved.displayTier, "preview");
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.sessionOutcome, "preview");
+});
+
 test("modify is guidance only and never claims the structured session was rewritten", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
