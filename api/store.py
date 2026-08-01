@@ -48,6 +48,7 @@ from .state_machine import (
     require_generation_job_transition,
     require_plan_transition,
 )
+from .xp import XpAction
 
 logger = logging.getLogger(__name__)
 
@@ -466,6 +467,17 @@ class AppStore(Protocol):
     def list_today_checkins(
         self, athlete_id: str, *, limit: int = 14
     ) -> list[dict[str, Any]]: ...
+
+    # --- Durable, server-awarded account XP ---
+
+    def award_xp(
+        self,
+        athlete_id: str,
+        *,
+        action: XpAction,
+        idempotency_key: str,
+        calendar_date: str | None = None,
+    ) -> dict[str, Any]: ...
 
     # --- Web push subscriptions (api/routes/push.py, push notification services) ---
 
@@ -4382,6 +4394,45 @@ class SupabaseAppStore:
             .execute()
         )
         return getattr(response, "data", None) or []
+
+    def award_xp(
+        self,
+        athlete_id: str,
+        *,
+        action: XpAction,
+        idempotency_key: str,
+        calendar_date: str | None = None,
+    ) -> dict[str, Any]:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"award_xp athlete_id={athlete_id} action={action}",
+                fn=lambda: self.client.rpc(
+                    "award_athlete_xp",
+                    {
+                        "p_athlete_id": athlete_id,
+                        "p_action": action,
+                        "p_idempotency_key": idempotency_key,
+                        "p_calendar_date": calendar_date,
+                    },
+                ).execute(),
+            )
+            payload = getattr(response, "data", None)
+            if isinstance(payload, list):
+                payload = payload[0] if payload else None
+            if not isinstance(payload, dict):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="XP service temporarily unavailable",
+                )
+            return payload
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"award_xp athlete_id={athlete_id} action={action}",
+                detail="failed to persist XP award",
+                exc=exc,
+            )
 
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(

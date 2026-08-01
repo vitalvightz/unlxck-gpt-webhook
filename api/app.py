@@ -101,6 +101,7 @@ from .routes import (
     build_profile_router,
     build_push_router,
     build_today_router,
+    build_xp_router,
 )
 
 if TYPE_CHECKING:
@@ -919,6 +920,12 @@ def create_app(
     )
     app.include_router(
         build_today_router(
+            require_profile=require_profile,
+            get_store=get_store,
+        )
+    )
+    app.include_router(
+        build_xp_router(
             require_profile=require_profile,
             get_store=get_store,
         )

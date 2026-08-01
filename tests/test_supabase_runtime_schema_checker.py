@@ -136,6 +136,8 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "daily_checkins_athlete_date_key",
         "today_checkins_athlete_plan_day_key",
         "session_completions_athlete_session_day_key",
+        "xp_awards_athlete_idempotency_key",
+        "xp_awards_one_daily_login_per_calendar_date",
         "beta_feedback_submitter_context_key",
         "beta_feedback_rate_limits_claim_idx",
         "beta_feedback_screenshot_expiry_idx",

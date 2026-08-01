@@ -9,6 +9,7 @@ import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
 import { PwaRegister } from "@/components/pwa-register";
 import { ToastProvider } from "@/components/toast-provider";
+import { XpProvider } from "@/components/xp-provider";
 import { getServerShellSurface } from "@/lib/app-surface";
 import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
@@ -98,27 +99,29 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </head>
       <body>
         <AuthProvider>
-          {/* Recovery links can land on any route Supabase allows, so this
-              listens app-wide and moves the athlete to the reset form. */}
-          <PasswordRecoveryRedirect />
-          <ToastProvider>
-            <PwaRegister buildVersion={pwaBuildVersion}>
-              <GenerationStatusShell>
-                <div className="app-shell">
-                  <AppNav />
-                  <div className="app-content">
-                    <main className="app-main">
-                      <div className="page">{children}</div>
-                    </main>
-                    <footer className="app-safety-footer" role="contentinfo">
-                      <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
-                      <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
-                    </footer>
+          <XpProvider>
+            {/* Recovery links can land on any route Supabase allows, so this
+                listens app-wide and moves the athlete to the reset form. */}
+            <PasswordRecoveryRedirect />
+            <ToastProvider>
+              <PwaRegister buildVersion={pwaBuildVersion}>
+                <GenerationStatusShell>
+                  <div className="app-shell">
+                    <AppNav />
+                    <div className="app-content">
+                      <main className="app-main">
+                        <div className="page">{children}</div>
+                      </main>
+                      <footer className="app-safety-footer" role="contentinfo">
+                        <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
+                        <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
+                      </footer>
+                    </div>
                   </div>
-                </div>
-              </GenerationStatusShell>
-            </PwaRegister>
-          </ToastProvider>
+                </GenerationStatusShell>
+              </PwaRegister>
+            </ToastProvider>
+          </XpProvider>
         </AuthProvider>
       </body>
     </html>

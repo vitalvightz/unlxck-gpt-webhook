@@ -6,6 +6,7 @@ from .plans import build_plans_router
 from .profile import build_profile_router
 from .push import build_push_router
 from .today import build_today_router
+from .xp import build_xp_router
 
 __all__ = [
     "build_daily_router",
@@ -16,4 +17,5 @@ __all__ = [
     "build_profile_router",
     "build_push_router",
     "build_today_router",
+    "build_xp_router",
 ]

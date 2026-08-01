@@ -36,6 +36,7 @@ import type {
   UsernameChangeRequest,
 } from "@/lib/types";
 import type { ActivePlanOverlapAction } from "@/lib/plan-active";
+import { parseXpAwardResponse, type XpAwardResult } from "@/lib/xp";
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
@@ -479,6 +480,14 @@ export function getMe(token: string): Promise<MeResponse> {
   });
   meRequestsByToken.set(token, request);
   return request;
+}
+
+export async function claimDailyLoginXp(token: string): Promise<XpAwardResult> {
+  const response = await readJson<unknown>("/api/xp/daily-login", {
+    method: "POST",
+    token,
+  });
+  return parseXpAwardResponse(response);
 }
 
 export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<MeResponse> {

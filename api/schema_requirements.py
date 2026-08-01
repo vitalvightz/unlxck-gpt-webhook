@@ -56,6 +56,10 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # must fail the deploy gate just like the daily-tracking tables above.
     "today_checkins",
     "session_completions",
+    # Durable XP aggregate + immutable award ledger. Award writes are atomic
+    # through public.award_athlete_xp and never browser-controlled.
+    "xp_accounts",
+    "xp_awards",
     # Secure beta feedback and its durable, per-profile abuse controls.
     "beta_feedback",
     "beta_feedback_rate_limits",
@@ -309,6 +313,24 @@ REQUIRED_SESSION_COMPLETIONS_COLUMNS: tuple[str, ...] = (
     "updated_at",
 )
 
+REQUIRED_XP_ACCOUNTS_COLUMNS: tuple[str, ...] = (
+    "athlete_id",
+    "total_xp",
+    "last_daily_login_date",
+    "created_at",
+    "updated_at",
+)
+
+REQUIRED_XP_AWARDS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "action",
+    "amount",
+    "idempotency_key",
+    "calendar_date",
+    "awarded_at",
+)
+
 REQUIRED_BETA_FEEDBACK_COLUMNS: tuple[str, ...] = (
     "id",
     "submitted_by_profile_id",
@@ -358,6 +380,8 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "admin_reviews": REQUIRED_ADMIN_REVIEWS_COLUMNS,
     "today_checkins": REQUIRED_TODAY_CHECKINS_COLUMNS,
     "session_completions": REQUIRED_SESSION_COMPLETIONS_COLUMNS,
+    "xp_accounts": REQUIRED_XP_ACCOUNTS_COLUMNS,
+    "xp_awards": REQUIRED_XP_AWARDS_COLUMNS,
     "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
     "beta_feedback_rate_limits": REQUIRED_BETA_FEEDBACK_RATE_LIMIT_COLUMNS,
 }
@@ -387,6 +411,7 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     # (api/store.py); a missing lock RPC must fail this check too.
     "public.validate_generation_job_active_lock",
     "public.claim_beta_feedback_rate_limit",
+    "public.award_athlete_xp",
 )
 
 # ---------------------------------------------------------------------------
@@ -457,6 +482,14 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         accepted_names=("session_completions_athlete_session_day_key",),
     ),
     IndexRequirement(
+        label="xp awards athlete/idempotency uniqueness",
+        accepted_names=("xp_awards_athlete_idempotency_key",),
+    ),
+    IndexRequirement(
+        label="xp awards one daily login per account calendar date",
+        accepted_names=("xp_awards_one_daily_login_per_calendar_date",),
+    ),
+    IndexRequirement(
         label="beta_feedback submitter/context uniqueness",
         accepted_names=("beta_feedback_submitter_context_key",),
     ),
@@ -488,6 +521,8 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "admin_reviews",
     "today_checkins",
     "session_completions",
+    "xp_accounts",
+    "xp_awards",
     "beta_feedback",
     "beta_feedback_rate_limits",
 )

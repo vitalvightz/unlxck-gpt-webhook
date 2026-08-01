@@ -32,6 +32,7 @@ from api.state_machine import (
 from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
+from api.xp import XP_REWARD_AMOUNTS, XpAction
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -110,6 +111,8 @@ class FakeStore:
         self.generation_jobs: dict[str, dict] = {}
         self.today_checkins: dict[str, list[dict]] = {}
         self.session_completions: dict[str, list[dict]] = {}
+        self.xp_accounts: dict[str, dict] = {}
+        self.xp_awards: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
@@ -127,6 +130,7 @@ class FakeStore:
         }
         self._plan_generation_limit_events: dict[str, list[datetime]] = {}
         self._generation_job_daily_limit_lock = threading.RLock()
+        self._xp_lock = threading.RLock()
 
     def validate_runtime_schema(self) -> None:
         return None
@@ -1454,6 +1458,78 @@ class FakeStore:
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]
+
+    def award_xp(
+        self,
+        athlete_id: str,
+        *,
+        action: XpAction,
+        idempotency_key: str,
+        calendar_date: str | None = None,
+    ) -> dict:
+        amount = XP_REWARD_AMOUNTS[action]
+        with self._xp_lock:
+            account = self.xp_accounts.setdefault(
+                athlete_id,
+                {
+                    "total_xp": 0,
+                    "last_daily_login_date": None,
+                    "created_at": _now(),
+                    "updated_at": _now(),
+                },
+            )
+            previous_total = int(account["total_xp"])
+            awards = self.xp_awards.setdefault(athlete_id, [])
+            duplicate_key = any(row["idempotency_key"] == idempotency_key for row in awards)
+            duplicate_daily = (
+                action == "daily_login"
+                and account["last_daily_login_date"] is not None
+                and calendar_date is not None
+                and calendar_date <= account["last_daily_login_date"]
+            )
+            awarded = not duplicate_key and not duplicate_daily
+            award = None
+            if awarded:
+                award = {
+                    "id": str(uuid4()),
+                    "athlete_id": athlete_id,
+                    "action": action,
+                    "amount": amount,
+                    "idempotency_key": idempotency_key,
+                    "calendar_date": calendar_date if action == "daily_login" else None,
+                    "awarded_at": _now(),
+                }
+                awards.append(award)
+                account["total_xp"] = previous_total + amount
+                if action == "daily_login":
+                    account["last_daily_login_date"] = calendar_date
+                account["updated_at"] = _now()
+
+            recent = sorted(
+                awards,
+                key=lambda row: (row["awarded_at"], row["id"]),
+                reverse=True,
+            )[:20]
+
+            def public_award(row: dict | None) -> dict | None:
+                if row is None:
+                    return None
+                return {
+                    key: value
+                    for key, value in row.items()
+                    if key not in {"athlete_id", "idempotency_key"} and value is not None
+                }
+
+            return {
+                "state": {
+                    "total_xp": account["total_xp"],
+                    "last_daily_login_date": account["last_daily_login_date"],
+                    "recent_awards": [public_award(row) for row in recent],
+                },
+                "previous_total_xp": previous_total,
+                "awarded": awarded,
+                "award": public_award(award),
+            }
 
     def upsert_push_subscription(self, profile_id: str, fields: dict) -> dict:
         endpoint = str(fields.get("endpoint") or "")
