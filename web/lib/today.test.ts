@@ -363,9 +363,11 @@ function makeInjury(overrides: Partial<InjuryFlagRecord> = {}): InjuryFlagRecord
   const consequence =
     overrides.consequence !== undefined
       ? overrides.consequence
-      : !deniedStructural && /\b(?:fracture|fractures|rupture|ruptures|tear|tears|torn|dislocation|dislocations|avulsion)\b/.test(text)
-        ? "structural"
-        : null;
+      : /\b(?:concussion|concussed)\b/.test(text)
+        ? "neuro"
+        : !deniedStructural && /\b(?:fracture|fractures|rupture|ruptures|tear|tears|torn|dislocation|dislocations|avulsion)\b/.test(text)
+          ? "structural"
+          : null;
   return {
     id: "inj-1",
     athlete_id: "ath-1",
