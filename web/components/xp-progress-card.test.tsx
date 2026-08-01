@@ -40,18 +40,59 @@ test("XP card renders all required copy, formatted totals, recent awards, and pr
   assert.match(html, /Level 6/);
   assert.match(html, /Contender/);
   assert.match(html, /1,240/);
-  assert.match(html, /60 XP to Level 7/);
-  assert.match(html, /DAILY LOGIN/);
+  // Under the bar: position within the level, then distance to the next one.
+  assert.match(html, /240 \/ 300 XP/);
+  assert.match(html, /60 XP remaining/);
+  assert.match(html, /TODAY&#x27;S REWARD/);
   assert.match(html, /\+10 XP/);
-  assert.match(html, /earned today/);
+  assert.match(html, /claimed/);
   assert.match(html, /RECENT/);
   assert.match(html, /Training logged/);
-  assert.match(html, /Daily login/);
   assert.doesNotMatch(html, /Full training week completed/);
   assert.match(html, /role="progressbar"/);
   assert.match(html, /aria-valuemin="0"/);
   assert.match(html, /aria-valuemax="300"/);
   assert.match(html, /aria-valuenow="240"/);
+  // The full sentence survives for assistive tech even though the visible
+  // ledger splits it across two columns.
+  assert.match(html, /aria-valuetext="60 XP to Level 7"/);
+});
+
+test("today's claimed daily login is not printed twice", () => {
+  const state = {
+    ...createFreshXpState(),
+    totalXp: 10,
+    lastDailyLoginDate: "2026-08-01",
+    recentAwards: [award("daily-1", "daily_login", 10)],
+  };
+  const html = renderToStaticMarkup(
+    <XpProgressCardView state={state} dailyRewardStatus="earned" />,
+  );
+
+  assert.match(html, /TODAY&#x27;S REWARD/);
+  // The award behind "Today's reward" is dropped from the recent slot rather
+  // than repeated under its own label.
+  assert.doesNotMatch(html, /Daily login/);
+  assert.match(html, /No other XP yet/);
+  assert.equal(html.match(/\+10 XP/g)?.length, 1);
+});
+
+test("an older daily login still shows once today's reward is claimed", () => {
+  const state = {
+    ...createFreshXpState(),
+    totalXp: 45,
+    lastDailyLoginDate: "2026-08-01",
+    recentAwards: [
+      award("daily-today", "daily_login", 10),
+      award("training-1", "training_logged", 25),
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <XpProgressCardView state={state} dailyRewardStatus="earned" />,
+  );
+
+  assert.match(html, /Training logged/);
+  assert.equal(html.match(/Daily login/g), null);
 });
 
 test("fresh XP card has a neutral recent state and no session or currency content", () => {
@@ -62,7 +103,7 @@ test("fresh XP card has a neutral recent state and no session or currency conten
   assert.match(html, /Level 1/);
   assert.match(html, /Rookie/);
   assert.match(html, />0</);
-  assert.match(html, /No XP earned yet/);
+  assert.match(html, /No other XP yet/);
   assert.match(html, /Checking today&#x27;s reward/);
   assert.doesNotMatch(html, /Next planned session/i);
   assert.doesNotMatch(html, /upcoming workout/i);
@@ -141,7 +182,13 @@ test("reduced motion resolves the XP total and bar immediately", async () => {
         />,
       );
     });
-    assert.match(container.querySelector(".xp-progress-total")?.textContent ?? "", /10 XP/);
+    // Number and unit are separate flex children with a gap, so there is no
+    // whitespace text node between them; the aria-label carries the readable form.
+    assert.match(container.querySelector(".xp-progress-total")?.textContent ?? "", /10\s*XP/);
+    assert.equal(
+      container.querySelector(".xp-progress-total")?.getAttribute("aria-label"),
+      "10 experience points",
+    );
     assert.equal(
       (container.querySelector(".xp-progress-fill") as HTMLElement | null)?.style.getPropertyValue("--xp-progress-width"),
       "10%",
@@ -163,6 +210,22 @@ test("stylesheet disables every XP animation path for reduced motion", () => {
   assert.match(xpBlock, /\.xp-progress-shimmer/);
   assert.match(xpBlock, /\.xp-progress-daily-value\[data-new-reward="true"\]/);
   assert.match(xpBlock, /animation:\s*none/);
+});
+
+test("the XP card can fill the Overview row it sits in", () => {
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  const wrapper = css.match(/\.overview-primary-session \{[\s\S]*?\n\}/)?.[0] ?? "";
+  const card = css.match(/\.xp-progress-card \{[\s\S]*?\n\}/)?.[0] ?? "";
+
+  // `align-content: start` capped the row at content height, which made any
+  // height the card asked for resolve against ~72px instead of the full row.
+  assert.match(wrapper, /align-content:\s*stretch/);
+  assert.doesNotMatch(wrapper, /align-content:\s*start/);
+  assert.match(card, /display:\s*flex/);
+  assert.match(card, /flex-direction:\s*column/);
+  assert.doesNotMatch(card, /min-height:\s*100%/);
+  // The detail rail is what anchors to the base of a stretched card.
+  assert.match(css, /\.xp-progress-details \{[\s\S]*?margin-top:\s*auto/);
 });
 
 test("Overview reserves the established right-hand slot for XP without moving the left command card", () => {
