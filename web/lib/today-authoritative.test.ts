@@ -42,6 +42,16 @@ const ACTIVE_SEVERE_INJURY: TodayCommandView["open_injuries"][number] = {
   updated_at: "2026-06-18T10:00:00Z",
 };
 
+const SKIN_CARE_NOTICE = {
+  code: "skin_care" as const,
+  injury_id: "cut-1",
+  chip: "SKIN CARE" as const,
+  title: "Skin care active",
+  detail: "Stop if it opens, reopens, bleeds, or rubs.",
+  action: "Keep the left eyebrow cut clean and covered.",
+  tone: "amber" as const,
+};
+
 test("green remains completable despite stop-sounding prose", () => {
   const resolved = resolveTodayDecision({
     ...BASE_STATE,
@@ -398,6 +408,79 @@ test("future mobility preview uses its own session copy, not today's strength or
     /lifts crisp|pain checks|injured area|clean/i,
   );
   assert.equal(resolved.banner?.safety, undefined);
+});
+
+test("current skin care outranks a future rehab preview without blocking that session", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      primary_safety_notice: SKIN_CARE_NOTICE,
+      next_session: {
+        session_id: "rehab-1",
+        session_relation: "next",
+        session_type: "rehab",
+        title: "Rehab-friendly low-load support",
+      },
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(resolved.displayTier, "preview");
+  assert.equal(resolved.primaryMessageKind, "safety_notice");
+  assert.equal(resolved.banner?.displayState, "safety_notice");
+  assert.equal(resolved.banner?.chip, "SKIN CARE");
+  assert.equal(resolved.banner?.action, "Keep the left eyebrow cut clean and covered.");
+  assert.doesNotMatch(
+    `${resolved.banner?.action} ${resolved.banner?.detail}`,
+    /review the rehab|before it opens|next on your plan/i,
+  );
+  assert.equal(resolved.blocksCurrentSession, false);
+  assert.equal(resolved.canCompleteSession, false);
+  assert.equal(resolved.sessionOutcome, "preview");
+  assert.equal(resolved.tone, "amber");
+});
+
+test("current restrictive decisions still outrank a local skin-care notice", () => {
+  for (const item of [
+    { state: "modify" as const, tier: "modify" as const },
+    { state: "pull_back" as const, tier: "pull_back" as const },
+    { state: "pull_back" as const, tier: "stop" as const },
+  ]) {
+    const resolved = resolveTodayDecision({
+      ...BASE_STATE,
+      today: {
+        ...BASE_STATE.today,
+        recommendation_state: item.state,
+        decision_tier: item.tier,
+        primary_safety_notice: SKIN_CARE_NOTICE,
+      },
+    });
+
+    assert.equal(resolved.primaryMessageKind, "decision", item.tier);
+    assert.notEqual(resolved.banner?.displayState, "safety_notice", item.tier);
+  }
+});
+
+test("skin care leads a green current session and a no-check-in state", () => {
+  for (const item of [
+    { state: "train_as_planned" as const, tier: "green" as const },
+    { state: "not_checked_in" as const, tier: "not_checked_in" as const },
+  ]) {
+    const resolved = resolveTodayDecision({
+      ...BASE_STATE,
+      today: {
+        ...BASE_STATE.today,
+        recommendation_state: item.state,
+        decision_tier: item.tier,
+        primary_safety_notice: SKIN_CARE_NOTICE,
+      },
+    });
+
+    assert.equal(resolved.primaryMessageKind, "safety_notice", item.tier);
+    assert.equal(resolved.banner?.action, SKIN_CARE_NOTICE.action, item.tier);
+    assert.equal(resolved.blocksCurrentSession, false, item.tier);
+  }
 });
 
 test("future previews cover every canonical session type with short specific copy", () => {

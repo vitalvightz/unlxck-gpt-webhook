@@ -122,6 +122,79 @@ class TestGracefulDegradation:
         assert view.today.session_label == "Today's session"
 
 
+class TestPrimarySafetyNotice:
+    def test_stable_skin_care_is_current_even_when_the_session_is_next(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            next_session={"session_id": "next-1", "session_type": "rehab"},
+            session_scope="next",
+            open_injuries=[
+                {
+                    "id": "cut-1",
+                    "status": "open",
+                    "label": "Left eyebrow cut",
+                    "surface_class": "stable_surface",
+                }
+            ],
+        )
+
+        notice = view.today.primary_safety_notice
+        assert notice is not None
+        assert notice.code == "skin_care"
+        assert notice.chip == "SKIN CARE"
+        assert notice.action == "Keep the left eyebrow cut clean and covered."
+        assert view.today.session_scope == "next"
+
+    def test_strongest_surface_instruction_wins_independent_of_input_order(self):
+        injuries = [
+            {
+                "id": "blister-1",
+                "status": "open",
+                "label": "Right heel blister",
+                "surface_class": "stable_surface",
+            },
+            {
+                "id": "cut-1",
+                "status": "monitoring",
+                "label": "Left eyebrow cut",
+                "surface_class": "surface_no_contact",
+            },
+        ]
+
+        for ordered in (injuries, list(reversed(injuries))):
+            notice = build_command_view(
+                current_training_day=TODAY,
+                plan=PLAN,
+                open_injuries=ordered,
+            ).today.primary_safety_notice
+            assert notice is not None
+            assert notice.code == "skin_no_contact"
+            assert notice.injury_id == "cut-1"
+            assert "Keep contact off" in notice.action
+
+    def test_resolved_and_non_surface_injuries_do_not_create_a_skin_notice(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            open_injuries=[
+                {
+                    "id": "resolved-cut",
+                    "status": "resolved",
+                    "label": "Resolved cut",
+                    "surface_class": "stable_surface",
+                },
+                {
+                    "id": "ankle-1",
+                    "status": "open",
+                    "label": "Left ankle sprain",
+                    "surface_class": "non_surface",
+                },
+            ],
+        )
+        assert view.today.primary_safety_notice is None
+
+
 class TestRiskWatch:
     def test_risk_watch_is_sorted_by_priority(self):
         risks = [
@@ -196,6 +269,7 @@ class TestShape:
             "recommendation_sources",
             "recommendation_confidence",
             "recommendation_confidence_note",
+            "primary_safety_notice",
             "warnings",
             "next_session",
             "session_scope",

@@ -811,6 +811,23 @@ export type TodaySafetyCheck = {
   result_label: string;
 };
 
+/** Backend-owned current safety instruction. It is intentionally separate from
+ * the session decision: active wound care can lead the UI without claiming a
+ * future session has been blocked or modified. */
+export type TodayPrimarySafetyNotice = {
+  code:
+    | "skin_care"
+    | "skin_local_protection"
+    | "skin_no_contact"
+    | "skin_medical_review";
+  injury_id: string;
+  chip: "SKIN CARE" | "CHECK";
+  title: string;
+  detail: string;
+  action: string;
+  tone: "amber" | "red";
+};
+
 export type InjuryFlagRecord = {
   id: string;
   athlete_id: string;
@@ -966,6 +983,8 @@ export type TodayCommandView = {
     recommendation_confidence?: "high" | "moderate" | "low" | null;
     /** Names the missing input when confidence is below high. Empty at high. */
     recommendation_confidence_note?: string;
+    /** Current safety guidance that outranks planning-only preview copy. */
+    primary_safety_notice?: TodayPrimarySafetyNotice | null;
     warnings?: string[];
     next_session: TodaySession;
     session_scope: "today" | "next" | "none";

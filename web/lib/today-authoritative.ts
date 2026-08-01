@@ -14,6 +14,7 @@ import {
 } from "./today";
 import type {
   TodayCommandView,
+  TodayPrimarySafetyNotice,
   TodayRecommendationState,
   TodaySession,
 } from "./types";
@@ -110,6 +111,8 @@ export type ResolvedTodayDecision = {
   severeInjuryBlocksCurrentSession: boolean;
   canCompleteSession: boolean;
   useSafeReplacement: boolean;
+  /** Which authority owns the lead message; session behavior remains separate. */
+  primaryMessageKind: "decision" | "safety_notice" | "preview" | "none";
   /** Presentation only: describes what Today renders, never why it is safe. */
   sessionOutcome: TodaySessionOutcome;
 };
@@ -381,8 +384,9 @@ function resolvePresentationBanner(
   const displayState = DISPLAY_BY_TIER[displayTier];
   const fallback = DEFAULT_COPY_BY_TIER[displayTier];
 
-  // Today's readiness and injuries say nothing authoritative about a future
-  // session. A preview is framed only from the session being previewed.
+  // A planning preview never borrows current recommendation copy. Current
+  // safety notices are selected separately in resolveTodayDecision before this
+  // fallback, which stops session timing from suppressing wound care.
   if (displayTier === "preview") {
     const copy = getPreviewCopy(previewSession);
     return {
@@ -416,6 +420,21 @@ function resolvePresentationBanner(
   };
 }
 
+function getPrimarySafetyNoticeBanner(
+  recommendationState: TodayRecommendationState,
+  notice: TodayPrimarySafetyNotice,
+): TodayDecisionBanner {
+  return {
+    state: recommendationState,
+    displayState: "safety_notice",
+    chip: notice.chip,
+    title: notice.title,
+    detail: notice.detail,
+    action: notice.action,
+    tone: notice.tone,
+  };
+}
+
 /**
  * Resolve Today once for both presentation and session safety.
  *
@@ -435,7 +454,6 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   );
   const isPreview = !hasSession || !sessionIsToday;
   const displayTier: TodayDecisionTier = isPreview ? "preview" : authoritativeTier;
-  const tone = getTierMeta(displayTier).tone;
   // Injury data can make a backend-authoritative STOP more specific, but it
   // never creates the STOP. This preserves truthful injury presentation while
   // keeping the server decision tier as the sole safety authority.
@@ -457,13 +475,29 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
         : authoritativeTier === "stop" && useSafeReplacement
           ? "replaced_with_recovery"
           : "blocked";
-  const banner = resolvePresentationBanner(
-    recommendationState,
-    displayTier,
-    state.today.recommendation_reason,
-    injuryPresentation,
-    state.today.next_session,
-  );
+  // A current wound instruction outranks planning-only preview copy. It also
+  // replaces a green/no-check-in lead because those carry no more restrictive
+  // session command. Modify/pull-back/stop still lead for today's session, with
+  // the backend recommendation retaining any additive wound restriction.
+  const safetyNoticeLeads = Boolean(state.today.primary_safety_notice) &&
+    (isPreview || authoritativeTier === "green" || authoritativeTier === "not_checked_in");
+  const banner = safetyNoticeLeads && state.today.primary_safety_notice
+    ? getPrimarySafetyNoticeBanner(recommendationState, state.today.primary_safety_notice)
+    : resolvePresentationBanner(
+        recommendationState,
+        displayTier,
+        state.today.recommendation_reason,
+        injuryPresentation,
+        state.today.next_session,
+      );
+  const primaryMessageKind: ResolvedTodayDecision["primaryMessageKind"] = banner
+    ? banner.displayState === "safety_notice"
+      ? "safety_notice"
+      : banner.displayState === "preview"
+        ? "preview"
+        : "decision"
+    : "none";
+  const tone = banner?.tone ?? getTierMeta(displayTier).tone;
   const blocksCurrentSession =
     sessionIsToday &&
     (authoritativeTier === "stop" || authoritativeTier === "pull_back");
@@ -488,6 +522,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     severeInjuryBlocksCurrentSession,
     canCompleteSession,
     useSafeReplacement,
+    primaryMessageKind,
     sessionOutcome,
   };
 }
