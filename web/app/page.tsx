@@ -231,7 +231,7 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
       </div>
       {overflow > 0 ? (
         <Link href="/today" className="overview-risk-more">
-          Review {overflow} more in Today
+          Review {overflow} more on Today
         </Link>
       ) : null}
     </article>
