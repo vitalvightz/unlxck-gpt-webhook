@@ -612,8 +612,13 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   const orderedMarkers = [
     "<TodayReadinessStrip",
     "<TodayDecisionPanel",
+    // Session renders via the {sessionPanel} slot so its safe-replacement
+    // ordering with the readiness form stays intact.
+    "{sessionPanel}",
     "<TodayInjuryManager",
-    "<TodayRiskWatch",
+    // Risk watch must stay supplementary so STOP-tier risks are not duplicated.
+    "<TodayRiskWatch risks={supplementaryRisks}",
+    // Feedback trails the full session — last in the DOM flow.
     'surface="daily_recommendation"',
   ];
   const positions = orderedMarkers.map((marker) => screen.indexOf(marker));

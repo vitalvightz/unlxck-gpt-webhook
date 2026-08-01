@@ -19355,6 +19355,18 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   background: var(--bg-support);
 }
 
+/* Today feedback trails the full session at the end of the page flow — spacing
+   comes from normal document flow, not absolute/sticky positioning. */
+.today-feedback-card {
+  margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .today-feedback-card {
+    margin-top: 20px;
+  }
+}
+
 .feedback-question {
   margin: 0;
   font-size: clamp(1rem, 2vw, 1.15rem);
