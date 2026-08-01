@@ -1,0 +1,16 @@
+{
+  "status": "verified",
+  "applied_at": "2026-08-01T09:17:41.531111+00:00",
+  "project_ref": "leienvqynijrgghhzczt",
+  "workflow_run_id": "30693459098",
+  "source_commit": "4aa9d99083da483b55598b377e16cf63b86a7ed6",
+  "templates": [
+    "confirm-signup",
+    "magic-link",
+    "recovery",
+    "email-change",
+    "invite",
+    "password-changed"
+  ],
+  "password_changed_notification_enabled": true
+}
