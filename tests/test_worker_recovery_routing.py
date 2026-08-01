@@ -166,6 +166,7 @@ async def _exercise_tick(monkeypatch) -> tuple[list[str], _RecoveryStore]:
         "worker-claim",
         milestones=[_milestone("job_loaded")],
     )
+    stale_worker_claim_snapshot = dict(worker_claim)
     stage1 = _running_job(
         "stage1",
         milestones=[
@@ -206,12 +207,13 @@ async def _exercise_tick(monkeypatch) -> tuple[list[str], _RecoveryStore]:
         }
     )
 
-    # Deliberately leak a worker-claim-stalled row into the claim list. The test
-    # proves _tick still routes it to recovery instead of claim/start.
+    # Deliberately return a stale RPC snapshot after the recovery sweep has
+    # already requeued the durable row. The worker must still reject the old
+    # later-stage snapshot from claim/start.
     monkeypatch.setattr(
         worker,
         "list_claimable_generation_jobs",
-        lambda *_args, **_kwargs: [queued, startup, worker_claim],
+        lambda *_args, **_kwargs: [queued, startup, stale_worker_claim_snapshot],
     )
     claimed: list[str] = []
 
