@@ -499,6 +499,11 @@ def build_today_command_view(
         athlete_timezone=athlete_timezone,
         now=now,
     )
+    # Re-check the history that can qualify a stored readiness decision. This
+    # safety probe must not depend on unrelated risk-card code happening to read
+    # the same rows; otherwise removing that consumer silently disables the
+    # degraded-context fail-safe.
+    tracked.list_today_checkins(athlete_id)
     _probe_schedule(tracked.last_plan, view.today.training_day, health)
     return _apply_fail_safe_to_command_view(view, health)
 
