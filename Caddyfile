@@ -1,6 +1,15 @@
 {$API_DOMAIN} {
     encode zstd gzip
 
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+    }
+
     reverse_proxy api:8000 {
         transport http {
             dial_timeout 10s
