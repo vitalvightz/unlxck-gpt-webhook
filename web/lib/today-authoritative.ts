@@ -431,6 +431,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const sessionIsToday = isSessionToday(
     state.today.next_session,
     state.today.session_scope,
+    state.today.training_day,
   );
   const isPreview = !hasSession || !sessionIsToday;
   const displayTier: TodayDecisionTier = isPreview ? "preview" : authoritativeTier;

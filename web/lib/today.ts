@@ -804,14 +804,21 @@ export function getOverviewPrimaryAction(params: {
 }
 
 /**
- * Whether the scheduled session is TODAY (vs a future planned day). Prefers the
- * session's own relation, then the command-view scope. Future sessions must be
- * shown as pending clearance, never removed.
+ * Whether the scheduled session is TODAY (vs a future planned day). A canonical
+ * calendar-date mismatch wins over relation/scope so a malformed or stale
+ * payload cannot unlock a future session. Future sessions stay visible as
+ * pending clearance.
  */
 export function isSessionToday(
-  session: Pick<TodaySession, "session_relation"> | null | undefined,
+  session: Pick<TodaySession, "session_relation" | "calendar_date"> | null | undefined,
   sessionScope?: TodayCommandView["today"]["session_scope"] | null,
+  trainingDay?: string | null,
 ): boolean {
+  const sessionDate = session?.calendar_date?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  const currentDate = trainingDay?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  if (sessionDate && currentDate && sessionDate !== currentDate) {
+    return false;
+  }
   if (session?.session_relation === "today") {
     return true;
   }

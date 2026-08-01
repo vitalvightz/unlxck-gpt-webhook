@@ -164,6 +164,16 @@ def resolve_training_day(athlete_timezone: str | None, *, now: datetime | None =
     )
 
 
+def _open_plan_has_not_started(plan_row: Mapping[str, Any], training_day: str) -> bool:
+    """True while an open plan is waiting for its first block anchor."""
+
+    if open_plan_spec(plan_row) is None:
+        return False
+    anchor = open_plan_anchor_date(plan_row)
+    current = parse_iso_date(training_day)
+    return anchor is not None and current is not None and current < anchor
+
+
 def _readiness_checkin_from(payload: Mapping[str, Any]) -> ReadinessCheckin:
     return ReadinessCheckin(**{field: payload[field] for field in _CHECKIN_INPUT_FIELDS})
 
@@ -260,6 +270,12 @@ def _resolve_today_session_entry(plan_row: Mapping[str, Any], training_day: str)
     # The card has a row for today and it schedules nothing: a rest day, which is
     # the normal empty result — not a reason to fall back to the weekly template.
     if structured_today.is_rest_day:
+        return {}
+
+    # A renewable plan created Fri-Sun starts on the coming Monday. Its weekly
+    # template still contains the current weekday, but that recurring rhythm is
+    # not live before the anchor and must never become today's session.
+    if _open_plan_has_not_started(plan_row, training_day):
         return {}
 
     training_date = parse_iso_date(training_day)
@@ -1059,6 +1075,19 @@ def upsert_session_completion(
         )
     training_day = requested_day or today
 
+    # The same pre-start boundary that frames Today is enforced on the write.
+    # A stale client or forged request cannot log a future open-plan session
+    # against today's training-day record.
+    if (
+        not is_retro_log
+        and status_value != "not_started"
+        and _open_plan_has_not_started(plan_row, training_day)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This plan has not started yet, so no session can be logged today.",
+        )
+
     # A day the plan card schedules nothing on has no session to log. The UI does
     # not offer it, but the UI is not the guard: without this, a direct call —
     # or a client running against a stale card — writes a completion for a
@@ -1503,6 +1532,11 @@ def _structured_day_for_training_day(
     falls back to the template's generic guess, which is how a plan REST day
     ended up presented as a startable session.
     """
+    # Before the first open-plan anchor, a same-weekday row belongs to the
+    # upcoming block (for example Sat 8 Aug viewed on Sat 1 Aug), not today.
+    if _open_plan_has_not_started(plan_row, training_day):
+        return None
+
     weeks, context = _projected_structured_plan(plan_row, training_day=training_day)
     for week in weeks:
         for day in _iter_mapping_items(week.get("days")):
@@ -2194,6 +2228,8 @@ def build_today_command_view(
         try:
             week_index, week = resolve_current_week(plan_row, today=training_date)
             today_entry, next_entry = resolve_today_and_next(week, today=training_date)
+            if _open_plan_has_not_started(plan_row, training_day):
+                today_entry = None
         except Exception:
             # Malformed plan data must never crash Overview.
             today_entry = next_entry = None
@@ -2385,6 +2421,8 @@ def resolve_today_landing(
             try:
                 _week_index, week = resolve_current_week(plan_row, today=training_date)
                 today_entry, next_entry = resolve_today_and_next(week, today=training_date)
+                if _open_plan_has_not_started(plan_row, training_day):
+                    today_entry = None
             except Exception:
                 today_entry = next_entry = None
         # Same resolution Today uses, for the same reason: a rest day has no

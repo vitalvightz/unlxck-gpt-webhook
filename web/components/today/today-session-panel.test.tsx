@@ -72,6 +72,48 @@ test("today shows no session blocks while the plan's block has not started", () 
   assert.equal(html.includes("Saturday strength"), false);
 });
 
+test("a future-dated session is a locked preview even when the payload calls it today", () => {
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Open plan", phase: "GPP" },
+    today: {
+      training_day: "2026-08-01",
+      recommendation_state: "not_checked_in",
+      decision_tier: "not_checked_in",
+      warnings: [],
+      next_session: {
+        session_id: "2026-08-08",
+        title: "Fight-Pace Conditioning and Neural Primer",
+        calendar_date: "2026-08-08",
+        session_relation: "today",
+        effective_load: "technical",
+      },
+      session_scope: "today",
+      session_label: "Today's session",
+      completion_status: "not_started",
+    },
+    risk_watch: [],
+    open_injuries: [],
+    week_summary: {},
+    quick_actions: [],
+  };
+
+  const html = renderToStaticMarkup(
+    <ToastProvider>
+      <TodaySessionPanel
+        state={state}
+        structuredPlan={null}
+        token="token"
+        onRefresh={async () => {}}
+      />
+    </ToastProvider>,
+  );
+
+  assert.match(html, /Next session/);
+  assert.match(html, /Sat 08 Aug 2026/);
+  assert.match(html, /Preview only/);
+  assert.doesNotMatch(html, />Start session<|>Mark skipped</);
+});
+
 test("safe replacement renders without blocked terminal or completion controls", () => {
   const state: TodayCommandView = {
     active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
