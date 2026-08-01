@@ -653,6 +653,23 @@ export function getVisibleRiskWatch(risks: TodayCommandView["risk_watch"]): {
   return { visible, overflow: Math.max(0, risks.length - visible.length) };
 }
 
+const RISK_TIMEFRAME_LABELS: Record<
+  NonNullable<TodayCommandView["risk_watch"][number]["timeframe"]>,
+  string
+> = {
+  today: "Today",
+  last_session: "Last session",
+  recent_sessions: "Recent sessions",
+  active: "Active",
+};
+
+/** Athlete-facing timing label for a structured risk signal. */
+export function getRiskTimeframeLabel(
+  timeframe?: TodayCommandView["risk_watch"][number]["timeframe"],
+): string {
+  return timeframe ? RISK_TIMEFRAME_LABELS[timeframe] : "";
+}
+
 /**
  * Display copy for a risk-watch row. Keyed on the backend category so the row
  * never parrots the main recommendation word-for-word ("Recommendation: pull
@@ -755,6 +772,11 @@ const TIER_META: Record<TodayDecisionTier, TodayTierMeta> = {
 
 export function getTierMeta(tier: TodayDecisionTier): TodayTierMeta {
   return TIER_META[tier];
+}
+
+/** Reserve Today's command for a command that applies to the current day. */
+export function getOverviewCommandEyebrow(tier: TodayDecisionTier): string {
+  return tier === "preview" ? "Next up" : "Today's command";
 }
 
 export type OverviewPrimaryAction = { href: string; label: string };

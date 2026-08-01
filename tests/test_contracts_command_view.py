@@ -146,19 +146,30 @@ class TestRiskWatch:
         assert [v.category for v in visible] == ["stop_red_flag", "active_injury_worse"]
         assert overflow == 2
 
-    def test_risk_items_carry_icon_label_text_and_tone(self):
-        item = make_risk("high_pain", text="Pain is high")
+    def test_risk_items_carry_icon_label_text_tone_and_optional_timeframe(self):
+        item = make_risk("high_pain", text="Pain is high", timeframe="last_session")
         assert item.icon and item.label and item.tone
         assert item.text == "Pain is high"
+        assert item.timeframe == "last_session"
+
+        legacy = make_risk("fatigue", text="Fatigue")
+        assert legacy.timeframe is None
 
     def test_mapping_risks_are_coerced(self):
         view = build_command_view(
             current_training_day=TODAY,
             plan=PLAN,
-            risks=[{"category": "weight_cut", "text": "5% to cut"}],
+            risks=[
+                {
+                    "category": "weight_cut",
+                    "text": "5% to cut",
+                    "timeframe": "active",
+                }
+            ],
         )
         assert view.risk_watch[0].category == "weight_cut"
         assert view.risk_watch[0].text == "5% to cut"
+        assert view.risk_watch[0].timeframe == "active"
 
 
 class TestShape:

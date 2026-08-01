@@ -434,7 +434,11 @@ def _apply_fail_safe_to_command_view(
         view,
         tuple(dict.fromkeys([*context_status.reason_codes, *floored.triggers])),
     )
-    reminder = make_risk("reminder", text=_COMMAND_VIEW_REMINDER)
+    reminder = make_risk(
+        "reminder",
+        text=_COMMAND_VIEW_REMINDER,
+        timeframe="active",
+    )
     view.risk_watch = sort_risk_watch([*view.risk_watch, reminder])
     return view
 

@@ -512,6 +512,45 @@ export function getSupplementaryRiskWatch(
   );
 }
 
+const CURRENT_TRIGGER_LABELS_BY_RISK: Partial<Record<string, ReadonlySet<string>>> = {
+  high_pain: new Set(["high pain"]),
+  fatigue: new Set([
+    "poor sleep",
+    "poor sleep for 3 days",
+    "feeling flat",
+    "feeling flat for 3 days",
+    "low readiness lately",
+  ]),
+  active_injury_worse: new Set(["injury getting worse", "active injury"]),
+};
+
+/**
+ * Remove a current-day risk row only when the visible decision trigger already
+ * says the same thing. Historical/active rows stay because their timing, safety
+ * guidance, or injury-manager action adds information the trigger does not.
+ */
+export function getDistinctTodayRiskWatch(
+  risks: TodayCommandView["risk_watch"] | null | undefined,
+  visibleTriggerLabels: string[] | null | undefined,
+): TodayCommandView["risk_watch"] {
+  const visibleTriggers = new Set(
+    (visibleTriggerLabels ?? []).map((label) => label.trim().toLowerCase()).filter(Boolean),
+  );
+  if (!visibleTriggers.size) {
+    return risks ?? [];
+  }
+  return (risks ?? []).filter((risk) => {
+    if (risk.timeframe !== "today") {
+      return true;
+    }
+    const equivalentTriggers = CURRENT_TRIGGER_LABELS_BY_RISK[risk.category];
+    if (!equivalentTriggers) {
+      return true;
+    }
+    return !Array.from(equivalentTriggers).some((label) => visibleTriggers.has(label));
+  });
+}
+
 /**
  * Preserve the legacy presentation helper for consumers outside the shared
  * resolver. Its result is display data only and must never determine session

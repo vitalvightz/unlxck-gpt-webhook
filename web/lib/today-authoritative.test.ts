@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  getDistinctTodayRiskWatch,
   getInjuryOverrideBanner,
   getSupplementaryRiskWatch,
   getTierMeta,
@@ -314,6 +315,58 @@ test("risk filtering preserves stable reminders and distinct pain outside severe
     today: { ...BASE_STATE.today, recommendation_state: "pull_back", decision_tier: "pull_back" },
   });
   assert.deepEqual(getSupplementaryRiskWatch(risks, pullBack), risks);
+});
+
+test("current risk rows are removed when a visible trigger already explains them", () => {
+  const risks: TodayCommandView["risk_watch"] = [
+    { category: "high_pain", priority: 2, icon: "pain", label: "High pain", text: "Pain", tone: "warning", timeframe: "today" },
+    { category: "fatigue", priority: 3, icon: "battery", label: "Fatigue", text: "Fatigue", tone: "caution", timeframe: "today" },
+    { category: "active_injury_worse", priority: 1, icon: "bandage", label: "Injury worsening", text: "Worse", tone: "stop", timeframe: "today" },
+  ];
+
+  assert.deepEqual(
+    getDistinctTodayRiskWatch(risks, ["High pain", "Poor sleep", "Injury getting worse"]),
+    [],
+  );
+});
+
+test("historical and active rows survive related triggers because they add context or action", () => {
+  const historical: TodayCommandView["risk_watch"][number] = {
+    category: "high_pain",
+    priority: 2,
+    icon: "pain",
+    label: "High pain",
+    text: "Pain was logged at 8/10.",
+    tone: "warning",
+    timeframe: "last_session",
+  };
+  const active: TodayCommandView["risk_watch"][number] = {
+    category: "reminder",
+    priority: 3,
+    icon: "info",
+    label: "Reminder",
+    text: "Keep the injury covered.",
+    tone: "info",
+    timeframe: "active",
+  };
+
+  assert.deepEqual(
+    getDistinctTodayRiskWatch([historical, active], ["High pain", "Active injury"]),
+    [historical, active],
+  );
+});
+
+test("risks stay visible when preview framing hides today's trigger explanation", () => {
+  const risk: TodayCommandView["risk_watch"][number] = {
+    category: "fatigue",
+    priority: 3,
+    icon: "battery",
+    label: "Fatigue",
+    text: "Fatigue reported during today's check-in.",
+    tone: "caution",
+    timeframe: "today",
+  };
+  assert.deepEqual(getDistinctTodayRiskWatch([risk], []), [risk]);
 });
 
 test("future mobility preview uses its own session copy, not today's strength or injury copy", () => {

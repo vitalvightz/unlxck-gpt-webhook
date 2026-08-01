@@ -36,8 +36,16 @@ def test_high_last_reading_escalates():
     risks = _derive(completions=[_completion(TODAY, pain_after=HIGH_PAIN_AFTER)])
     assert len(risks) == 1
     assert risks[0].category == "high_pain"
-    assert "7/10" in risks[0].text
-    assert "Ease into load and reassess." in risks[0].text
+    assert risks[0].timeframe == "last_session"
+    assert risks[0].text == (
+        f"Pain was logged at {HIGH_PAIN_AFTER}/10. Reassess before your next session."
+    )
+
+
+def test_high_last_reading_uses_the_actual_recorded_score():
+    for score in (7, 8, 10):
+        risks = _derive(completions=[_completion(TODAY, pain_after=score)])
+        assert risks[0].text.startswith(f"Pain was logged at {score}/10.")
 
 
 def test_taper_high_last_reading_uses_freshness_wording():
@@ -47,8 +55,11 @@ def test_taper_high_last_reading_uses_freshness_wording():
     )
     assert len(risks) == 1
     assert risks[0].category == "high_pain"
-    assert "Keep today minimal, protect freshness, and reassess." in risks[0].text
-    assert "Ease into load" not in risks[0].text
+    assert risks[0].timeframe == "last_session"
+    assert (
+        "Keep today minimal, protect freshness, and reassess before your next session."
+        in risks[0].text
+    )
 
 
 def test_rising_trend_flags_pain_delta():
@@ -60,7 +71,9 @@ def test_rising_trend_flags_pain_delta():
     )
     assert len(risks) == 1
     assert risks[0].category == "high_pain"
-    assert "2/10 -> 5/10" in risks[0].text
+    assert risks[0].timeframe == "recent_sessions"
+    assert "2/10 to 5/10" in risks[0].text
+    assert "last two logged sessions" in risks[0].text
 
 
 def test_small_rise_is_not_a_trend():
@@ -86,7 +99,7 @@ def test_worst_reading_per_day_prevents_fake_trend():
     )
     # 2 (worst of the 17th) -> 5 on the 18th is a +3 rise.
     assert len(risks) == 1
-    assert "2/10 -> 5/10" in risks[0].text
+    assert "2/10 to 5/10" in risks[0].text
 
 
 def test_old_elevated_reading_does_not_create_a_stale_reminder():

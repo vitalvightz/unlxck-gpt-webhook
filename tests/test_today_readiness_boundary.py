@@ -299,6 +299,9 @@ def test_command_view_holds_stored_green_when_injury_context_unavailable():
     assert f"reason_code:{INJURY_CONTEXT_UNAVAILABLE}" in view.today.warnings
     assert any(w.startswith("readiness_context_status=unavailable") for w in view.today.warnings)
     assert any(risk.text == boundary._COMMAND_VIEW_REMINDER for risk in view.risk_watch)
+    assert next(
+        risk for risk in view.risk_watch if risk.text == boundary._COMMAND_VIEW_REMINDER
+    ).timeframe == "active"
 
 
 def test_command_view_softens_stored_green_when_context_degraded():

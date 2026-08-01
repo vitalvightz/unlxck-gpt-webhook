@@ -42,6 +42,13 @@ RiskCategory = Literal[
     "reminder",
 ]
 
+RiskTimeframe = Literal[
+    "today",
+    "last_session",
+    "recent_sessions",
+    "active",
+]
+
 # Lower number = higher priority (rendered first). See §6 priority order.
 RISK_PRIORITY: dict[str, int] = {
     "stop_red_flag": 1,
@@ -83,6 +90,7 @@ class RiskWatchItem(BaseModel):
     label: str
     text: str = ""
     tone: str
+    timeframe: RiskTimeframe | None = None
 
 
 def make_risk(
@@ -92,6 +100,7 @@ def make_risk(
     icon: str | None = None,
     label: str | None = None,
     tone: str | None = None,
+    timeframe: RiskTimeframe | None = None,
 ) -> RiskWatchItem:
     """Build a risk-watch item with sensible per-category defaults."""
     default_icon, default_label, default_tone = _RISK_PRESENTATION[category]
@@ -102,6 +111,7 @@ def make_risk(
         label=label or default_label,
         text=text,
         tone=tone or default_tone,
+        timeframe=timeframe,
     )
 
 
@@ -117,6 +127,7 @@ def _coerce_risk(risk: RiskWatchItem | Mapping[str, Any]) -> RiskWatchItem:
         icon=risk.get("icon"),
         label=risk.get("label"),
         tone=risk.get("tone"),
+        timeframe=risk.get("timeframe"),
     )
 
 
