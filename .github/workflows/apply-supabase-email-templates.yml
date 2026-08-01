@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   apply-templates:
@@ -122,3 +122,45 @@ jobs:
 
           print("Verified all UNLXCK email subjects, templates, and the password-change notification.")
           PY
+
+      - name: Record successful deployment
+        shell: bash
+        env:
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p docs/deployment-status
+          python3 <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          status = {
+              "status": "verified",
+              "applied_at": datetime.now(timezone.utc).isoformat(),
+              "project_ref": os.environ["SUPABASE_PROJECT_REF"],
+              "workflow_run_id": os.environ["WORKFLOW_RUN_ID"],
+              "source_commit": os.environ["SOURCE_COMMIT"],
+              "templates": [
+                  "confirm-signup",
+                  "magic-link",
+                  "recovery",
+                  "email-change",
+                  "invite",
+                  "password-changed",
+              ],
+              "password_changed_notification_enabled": True,
+          }
+          Path("docs/deployment-status/supabase-email-templates.json").write_text(
+              json.dumps(status, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/deployment-status/supabase-email-templates.json
+          git commit -m "Record verified Supabase email template deployment"
+          git push origin HEAD:Main
