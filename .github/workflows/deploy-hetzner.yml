@@ -301,15 +301,44 @@ jobs:
           SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
           $SSH "$HETZNER_USER@$HETZNER_HOST" "rm -f '$REMOTE_BUNDLE'" || true
 
-      # Independent, external re-confirmation that the public endpoint is 200.
-      # Skipped automatically if the deploy step failed (job already failed).
+      # Independent external check after the authoritative local TLS Caddy gate.
+      # A runner-specific Cloudflare 403 is reported without rolling back a
+      # healthy deployment; transport errors and all other non-200 responses fail.
       - name: Verify public health endpoint
         run: |
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --retry 5 \
-            --retry-delay 5 \
-            --max-time 15 \
-            https://api.unlxck.com/health
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          status="$(
+            curl \
+              --silent \
+              --show-error \
+              --location \
+              --retry 5 \
+              --retry-delay 5 \
+              --retry-connrefused \
+              --connect-timeout 10 \
+              --max-time 20 \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              https://api.unlxck.com/health
+          )" || {
+            echo "ERROR: public health request could not be completed." >&2
+            exit 1
+          }
+
+          case "$status" in
+            200)
+              echo "Public health endpoint returned 200."
+              ;;
+            403)
+              echo "::warning::Cloudflare returned 403 to the GitHub Actions runner. The authoritative local TLS Caddy health check already passed."
+              ;;
+            *)
+              echo "ERROR: public health endpoint returned HTTP ${status}." >&2
+              cat "$response_file" >&2 || true
+              exit 1
+              ;;
+          esac

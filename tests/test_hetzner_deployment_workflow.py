@@ -27,6 +27,24 @@ def test_remote_health_probe_targets_local_caddy_without_cloudflare():
     assert "https://api.unlxck.com/health" in PUBLIC_HEALTH_STEP
 
 
+def test_public_health_check_warns_only_for_cloudflare_403():
+    assert "set -euo pipefail" in PUBLIC_HEALTH_STEP
+    assert "--retry 5" in PUBLIC_HEALTH_STEP
+    assert "--retry-connrefused" in PUBLIC_HEALTH_STEP
+    assert '--write-out "%{http_code}"' in PUBLIC_HEALTH_STEP
+    assert "--fail" not in PUBLIC_HEALTH_STEP
+    assert "public health request could not be completed" in PUBLIC_HEALTH_STEP
+
+    assert "200)" in PUBLIC_HEALTH_STEP
+    assert "Public health endpoint returned 200." in PUBLIC_HEALTH_STEP
+    assert "403)" in PUBLIC_HEALTH_STEP
+    assert "::warning::Cloudflare returned 403" in PUBLIC_HEALTH_STEP
+    assert "*)" in PUBLIC_HEALTH_STEP
+    assert "public health endpoint returned HTTP ${status}" in PUBLIC_HEALTH_STEP
+    assert 'cat "$response_file" >&2 || true' in PUBLIC_HEALTH_STEP
+    assert PUBLIC_HEALTH_STEP.count("exit 1") == 2
+
+
 def test_deploy_and_rollback_validate_and_reload_caddy_configuration():
     assert 'CADDY_CONFIG="/etc/caddy/Caddyfile"' in DEPLOY_STEP
     assert 'caddy validate --config "$CADDY_CONFIG"' in DEPLOY_STEP
@@ -46,6 +64,18 @@ def test_remote_deploy_script_has_valid_bash_syntax():
     subprocess.run(
         ["bash", "-n"],
         input=textwrap.dedent(remote_script),
+        text=True,
+        check=True,
+    )
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_public_health_script_has_valid_bash_syntax():
+    public_health_script = PUBLIC_HEALTH_STEP.split("run: |", 1)[1]
+
+    subprocess.run(
+        ["bash", "-n"],
+        input=textwrap.dedent(public_health_script),
         text=True,
         check=True,
     )
