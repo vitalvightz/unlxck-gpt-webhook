@@ -700,6 +700,7 @@ test("safe session keeps bike/walk for an upper-body or minor lower-leg injury",
     makeInjury({ body_area: "left bicep", description: "left bicep tear", label: "Left bicep tear", severity: "moderate" }),
   ]);
   assert.equal(bicep.allowed.includes("Light bike or walk"), true);
+  assert.equal(bicep.allowed.length, 5);
 
   // A minor lower-leg niggle (not structural, not severe) still tolerates a spin.
   const tightCalf = getSafeSessionView("Technical sparring", [
@@ -714,22 +715,55 @@ test("safe session keeps bike/walk for an upper-body or minor lower-leg injury",
   assert.equal(resolved.allowed.includes("Light bike or walk"), true);
 });
 
-test("safe session drops bike/walk for a load-intolerant lower-leg injury", () => {
-  // Structural lower-leg injuries: gait / pedal load is not safe recovery work.
+test("safe session swaps bike/walk for arm-bike on a load-intolerant lower-leg injury", () => {
+  // Structural lower-leg injuries: gait / pedal load is out, but non-weight-bearing
+  // upper-body cardio still keeps the athlete moving.
   for (const injury of [
     makeInjury({ body_area: "left calf", description: "calf tear", label: "Left calf tear", severity: "moderate" }),
     makeInjury({ body_area: "achilles", description: "achilles rupture", label: "Achilles rupture", severity: "moderate" }),
     makeInjury({ body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate" }),
     makeInjury({ body_area: "knee", description: "acl tear", label: "ACL tear", severity: "moderate" }),
-    // Severe lower-leg injury of any type also disqualifies it.
+    // Severe lower-leg injury of any type also disqualifies gait/pedal load.
     makeInjury({ body_area: "shin", description: "shin pain", label: "Shin pain", severity: "severe" }),
   ]) {
     const view = getSafeSessionView("Technical sparring", [injury]);
     assert.equal(view.allowed.includes("Light bike or walk"), false, injury.label);
-    assert.equal(view.allowed.length, 4, injury.label);
-    // The rest of the safe options are untouched.
-    assert.equal(view.allowed.includes("Coach-approved rehab"), true, injury.label);
+    assert.equal(view.allowed.includes("Upper-body cardio (arm bike)"), true, injury.label);
+    assert.equal(view.allowed.length, 5, injury.label);
   }
+});
+
+test("safe session drops all cardio when both legs and arms cannot take load", () => {
+  const view = getSafeSessionView("Technical sparring", [
+    makeInjury({ id: "a", body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate" }),
+    makeInjury({ id: "b", body_area: "wrist", description: "wrist fracture", label: "Wrist fracture", severity: "moderate" }),
+  ]);
+  assert.equal(view.allowed.includes("Light bike or walk"), false);
+  assert.equal(view.allowed.includes("Upper-body cardio (arm bike)"), false);
+  // Mobility, breathing, activation and coach-led rehab remain.
+  assert.deepEqual(view.allowed, ["Easy mobility", "Breathing reset", "Gentle activation", "Coach-approved rehab"]);
+});
+
+test("safe session downregulates to rest work for a concussion", () => {
+  const view = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate" }),
+  ]);
+  // No aerobic push and no activation — only calm, non-provocative work.
+  assert.deepEqual(view.allowed, ["Easy mobility", "Breathing reset", "Coach-approved rehab"]);
+
+  // A severe neck injury downregulates the same way…
+  const neck = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "neck", description: "cervical fracture", label: "Neck fracture", severity: "severe" }),
+  ]);
+  assert.equal(neck.allowed.includes("Light bike or walk"), false);
+  assert.equal(neck.allowed.includes("Gentle activation"), false);
+
+  // …but a mild stiff neck keeps the standard menu.
+  const stiffNeck = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "neck", description: "stiff neck", label: "Neck stiffness", severity: "mild" }),
+  ]);
+  assert.equal(stiffNeck.allowed.includes("Light bike or walk"), true);
+  assert.equal(stiffNeck.allowed.includes("Gentle activation"), true);
 });
 
 test("camp day counts down from training day to fight date", () => {

@@ -845,57 +845,56 @@ export type SafeSessionView = {
   blocked: string[];
 };
 
-// Body-location words for the weight-bearing lower kinetic chain — the leg that
-// both walking (body-weight gait through foot/ankle/shin/calf/knee) and a light
-// stationary-bike spin (repeated knee flexion + ankle plantarflexion under pedal
-// load, driven by the quads) actually load. An upper-body injury (e.g. a bicep
-// tear) leaves the legs free, so it never matches here.
-const LOWER_LEG_INJURY_TERMS = [
-  "leg",
-  "knee",
-  "kneecap",
-  "patella",
-  "patellar",
-  "meniscus",
-  "acl",
-  "mcl",
-  "pcl",
-  "lcl",
-  "shin",
-  "tibia",
-  "fibula",
-  "calf",
-  "achilles",
-  "ankle",
-  "foot",
-  "feet",
-  "heel",
-  "toe",
-  "plantar",
-  "hamstring",
-  "quad",
-  "quadriceps",
-  "thigh",
-] as const;
+// ── Safe-session activity gating ─────────────────────────────────────────────
+// The stop-day "safe session" offers a short menu of low-risk work. Which items
+// are genuinely safe depends on WHERE the injury is and HOW bad it is, so the
+// menu is resolved per athlete rather than shown as one static list. The
+// sports-science principles driving it:
+//   • Never prescribe loading the injured tissue. Walking and a light bike spin
+//     both drive the lower kinetic chain; an arm ergometer spares the legs but
+//     needs healthy arms. Mobility and activation can always be steered to
+//     unaffected regions by the coach, so they stay unless the whole athlete
+//     must rest.
+//   • A concussion (or a severe neck injury) needs downregulation, not aerobic
+//     exertion or neck-loading activation — only calm mobility, breathing and
+//     coach-led rehab remain.
+//   • The gate is severity/structure, not mere presence: a niggle (tightness,
+//     minor strain, soreness) in a region still tolerates gentle conditioning;
+//     only a structural failure (fracture / rupture / tear / dislocation /
+//     avulsion) or a severe injury removes an option.
+// Trunk/spine injuries deliberately keep the standard menu: gentle walking,
+// breathing and mobility are safe-to-beneficial for the back and ribs on a
+// recovery day, and anything loaded is already in the blocked column.
 
-// The "xyz" that makes gait / pedal loading unsafe: a structural failure that
-// cannot take load. A plain ache, tightness or minor strain in the same area is
-// NOT disqualifying — only a break, rupture, tear, dislocation or avulsion is
-// (severity "severe" is handled separately).
+// Whole-word body-location vocabulary per region. An injury can hit more than one
+// (e.g. "back of knee"); the menu reacts to each region it touches.
+const INJURY_REGION_TERMS = {
+  // The weight-bearing lower kinetic chain that gait and pedalling load.
+  lower_limb: [
+    "leg", "knee", "kneecap", "patella", "patellar", "meniscus",
+    "acl", "mcl", "pcl", "lcl", "shin", "tibia", "fibula", "calf", "achilles",
+    "ankle", "foot", "feet", "heel", "toe", "plantar",
+    "hamstring", "quad", "quadriceps", "thigh", "hip", "groin", "glute", "glutes", "adductor",
+  ],
+  // The arms/shoulders that drive an arm ergometer and any pressing/pulling.
+  upper_limb: [
+    "shoulder", "rotator", "cuff", "delt", "deltoid", "bicep", "biceps",
+    "tricep", "triceps", "elbow", "forearm", "wrist", "hand", "finger", "fingers",
+    "thumb", "knuckle", "knuckles", "clavicle", "collarbone",
+  ],
+  // Brain/neck — the region that turns any aerobic push into a symptom risk.
+  head_neck: ["concussion", "concussed", "skull", "whiplash", "neck", "cervical", "jaw", "temple"],
+} as const;
+
+type InjuryRegion = keyof typeof INJURY_REGION_TERMS;
+
+// The "cannot take load" tier: a structural failure. A plain ache, tightness or
+// minor strain is NOT disqualifying — only a break/rupture/tear/dislocation is
+// (severity "severe" is handled alongside this).
 const LOAD_INTOLERANT_INJURY_TERMS = [
-  "fracture",
-  "fractured",
-  "broken",
-  "break",
-  "rupture",
-  "ruptured",
-  "tear",
-  "torn",
-  "snap",
-  "snapped",
-  "dislocation",
-  "dislocated",
-  "avulsion",
+  "fracture", "fractured", "broken", "break",
+  "rupture", "ruptured", "tear", "torn", "snap", "snapped",
+  "dislocation", "dislocated", "avulsion",
 ] as const;
 
 function injuryHaystack(injury: InjuryFlagRecord): string {
@@ -905,20 +904,33 @@ function injuryHaystack(injury: InjuryFlagRecord): string {
   return ` ${raw.replace(/[^a-z]+/g, " ").trim()} `;
 }
 
-function isLoadIntolerantLowerLegInjury(injury: InjuryFlagRecord): boolean {
+function isActiveInjury(injury: InjuryFlagRecord): boolean {
   // Only an active (open / monitoring) injury constrains today's session.
-  if (injury.status !== "open" && injury.status !== "monitoring") {
-    return false;
-  }
-  const haystack = injuryHaystack(injury);
-  const hitsLowerLeg = LOWER_LEG_INJURY_TERMS.some((term) => haystack.includes(` ${term} `));
-  if (!hitsLowerLeg) {
-    return false;
-  }
+  return injury.status === "open" || injury.status === "monitoring";
+}
+
+function injuryHitsRegion(haystack: string, region: InjuryRegion): boolean {
+  return INJURY_REGION_TERMS[region].some((term) => haystack.includes(` ${term} `));
+}
+
+function injuryIsLoadIntolerant(injury: InjuryFlagRecord, haystack: string): boolean {
   if (injury.severity === "severe") {
     return true;
   }
   return LOAD_INTOLERANT_INJURY_TERMS.some((term) => haystack.includes(` ${term} `));
+}
+
+function hasLoadIntolerantInjuryInRegion(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+  region: InjuryRegion,
+): boolean {
+  return (openInjuries ?? []).some((injury) => {
+    if (!isActiveInjury(injury)) {
+      return false;
+    }
+    const haystack = injuryHaystack(injury);
+    return injuryHitsRegion(haystack, region) && injuryIsLoadIntolerant(injury, haystack);
+  });
 }
 
 /**
@@ -929,17 +941,76 @@ function isLoadIntolerantLowerLegInjury(injury: InjuryFlagRecord): boolean {
 export function hasLoadIntolerantLowerLegInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): boolean {
-  return (openInjuries ?? []).some(isLoadIntolerantLowerLegInjury);
+  return hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
+}
+
+/** A concussion, or a structural/severe neck injury: both call for aerobic and
+ *  CNS downregulation rather than any exertion, even on a "safe" session. */
+function hasNeuroDownregulationInjury(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+): boolean {
+  return (openInjuries ?? []).some((injury) => {
+    if (!isActiveInjury(injury)) {
+      return false;
+    }
+    const haystack = injuryHaystack(injury);
+    // A concussion at ANY severity is disqualifying — it is never a green light
+    // for aerobic push. A neck injury only downregulates when structural/severe.
+    if (haystack.includes(" concussion ") || haystack.includes(" concussed ")) {
+      return true;
+    }
+    return injuryHitsRegion(haystack, "head_neck") && injuryIsLoadIntolerant(injury, haystack);
+  });
+}
+
+/**
+ * The adaptive "allowed" menu for the safe session, chosen so nothing on it ever
+ * loads an injured region. See the module notes above for the reasoning.
+ */
+export function resolveSafeSessionAllowed(
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): string[] {
+  const neuro = hasNeuroDownregulationInjury(openInjuries);
+  const lowerBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
+  const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
+
+  // The one aerobic/movement slot, matched to whichever limbs can take load.
+  let conditioning: string | null;
+  if (neuro) {
+    // Concussion / severe neck: no aerobic push on a rest day.
+    conditioning = null;
+  } else if (lowerBlocked && upperBlocked) {
+    // Neither the legs nor the arms can drive a cardio modality — defer to the
+    // coach-led item rather than name something unsafe.
+    conditioning = null;
+  } else if (lowerBlocked) {
+    // Spare the legs with seated, non-weight-bearing upper-body cardio.
+    conditioning = "Upper-body cardio (arm bike)";
+  } else {
+    conditioning = "Light bike or walk";
+  }
+
+  const allowed = ["Easy mobility"];
+  if (conditioning) {
+    allowed.push(conditioning);
+  }
+  allowed.push("Breathing reset");
+  // Activation can be steered to unaffected muscles — but a concussion rest-day
+  // holds even that back in favour of pure downregulation.
+  if (!neuro) {
+    allowed.push("Gentle activation");
+  }
+  allowed.push("Coach-approved rehab");
+  return allowed;
 }
 
 /**
  * The recovery/mobility-only session shown in place of the scheduled work when
  * today is a STOP. Coach copy — the scheduled session is named so the athlete
- * sees exactly what is being held. "Light bike or walk" both load the lower
- * kinetic chain, so they are offered only when the athlete has no load-intolerant
- * lower-leg injury; for a lower-leg fracture/rupture/tear/dislocation (or any
- * severe lower-leg injury) that option is dropped, leaving the coach-gated,
- * non-weight-bearing options.
+ * sees exactly what is being held. The "allowed" menu adapts to the athlete's
+ * active injuries so it never prescribes loading an injured region (see
+ * resolveSafeSessionAllowed); the "blocked" column stays the universal
+ * conservative set — it only ever adds restriction.
  */
 export function getSafeSessionView(
   blockedSessionName?: string,
@@ -948,14 +1019,11 @@ export function getSafeSessionView(
   const name = (blockedSessionName ?? "").trim();
   const blockedLead =
     name && name.toLowerCase() !== "today's session" ? `${name} is blocked today.` : "Hard combat work is blocked today.";
-  const allowed = ["Easy mobility", "Light bike or walk", "Breathing reset", "Gentle activation", "Coach-approved rehab"];
   return {
     eyebrow: "Today's safe session",
     title: "Recovery / mobility only",
     detail: `${blockedLead} Protect freshness, reduce risk, and keep the body moving without adding stress.`,
-    allowed: hasLoadIntolerantLowerLegInjury(openInjuries)
-      ? allowed.filter((item) => item !== "Light bike or walk")
-      : allowed,
+    allowed: resolveSafeSessionAllowed(openInjuries),
     blocked: ["Sparring", "Hard pads", "HIIT", "Heavy lifting", "Plyos or explosive lower-body work"],
   };
 }
