@@ -894,20 +894,26 @@ select:focus-visible {
   align-items: center;
 }
 
+/* Button scale. Deliberately trimmed from 44px/16px: at that size a row of
+   these read as slabs rather than controls, and the extra height bought
+   nothing on touch that 40px does not already clear. */
 .cta,
 .ghost-button,
 .secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 18px;
+  min-height: 40px;
+  padding: 0 16px;
   border-radius: var(--radius-btn);
   border: 1px solid transparent;
   cursor: pointer;
   font-size: var(--type-body-lg);
   font-weight: 600;
   letter-spacing: 0.01em;
+  /* A button label is a single phrase — it is never allowed to break across
+     two lines. */
+  white-space: nowrap;
   transition: background var(--transition-fast), border-color var(--transition-fast),
     color var(--transition-fast), box-shadow var(--transition-fast),
     transform var(--transition-fast);
@@ -7104,34 +7110,56 @@ html[data-theme="light"] .today-terminal-status {
   text-transform: uppercase;
 }
 
+/* Options are laid out by what their labels actually need, not by a fixed
+   column count. A rigid grid gave every option the same width whether its
+   label was "No" or "Spreading redness", so the long ones broke across two
+   lines inside the button — an option label must never stack. Here each
+   button is at least as wide as its own text, shares the leftover space, and
+   drops to the next line whole if the row runs out of room. */
 .today-segment-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
-/* Opt-in 2-up variant (SegmentGroup columns={2}) so a 4-option control lays out
-   as a clean 2×2 instead of leaving two empty cells in the 3-column default. */
-.today-segment-row-2col {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+/* Opt-in 2-up variant (SegmentGroup columns={2}): a 4-option control lays out
+   as a clean 2×2 instead of a 3 + orphan. */
+.today-segment-row-2col > .today-segment {
+  flex-basis: calc(50% - 4px);
+}
+
+/* Full-width rows, one option per line. For a set whose labels are too long to
+   share a line at any phone width — squeezing those into columns is what
+   broke their labels across two lines in the first place. */
+.today-segment-row-list {
+  flex-direction: column;
+}
+
+.today-segment-row-list > .today-segment {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .today-segment {
   display: flex;
+  /* Zero basis so every option in a row gets an equal share of it, then floors
+     at its own label width — the row stays an even segmented control whenever
+     the labels allow, and never squeezes one of them. */
+  flex: 1 1 0;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 6px 10px;
+  min-height: 38px;
+  padding: 6px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--text-secondary);
   font: inherit;
-  font-weight: 700;
-  /* Options like "Open or burst" have to be allowed to wrap to two lines —
-     grid keeps every button in the row the same height when they do. */
+  font-size: var(--type-body);
+  font-weight: 600;
   line-height: 1.2;
   text-align: center;
-  text-wrap: balance;
+  white-space: nowrap;
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
     box-shadow 160ms ease, transform 120ms ease;
@@ -7376,8 +7404,12 @@ html[data-theme="light"] .today-terminal-status {
   color: var(--text-muted);
 }
 
-.today-injury-status-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+/* Four short words go across one row wherever they fit. Below that, they break
+   2 + 2 — a squarer, more deliberate shape than 3 + a stranded fourth. */
+@media (max-width: 379px) {
+  .today-injury-status-row > .today-segment {
+    flex-basis: calc(50% - 4px);
+  }
 }
 
 .today-injury-status-note {
@@ -7518,11 +7550,13 @@ html[data-theme="light"] .today-terminal-status {
 
 .today-injury-confirm-yes,
 .today-injury-confirm-cancel {
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 10px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 9px;
   font: inherit;
-  font-weight: 700;
+  font-size: var(--type-body);
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--transition-fast), border-color var(--transition-fast),
     transform 120ms ease;
@@ -8395,15 +8429,6 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     gap: 6px;
   }
 
-  /* Four status actions do not fit across a phone, so they wrap to a 2×2.
-     Scoped to the status row on purpose: this rule used to match every segment
-     row inside the item, which forced the follow-up's three-option questions
-     into two columns and left a half-width orphan button hanging under each
-     one. */
-  .today-injury-status-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   /* Reclaim the horizontal space three levels of nesting eat: card padding +
      item padding + drawer padding was taking ~80px of a 390px screen. */
   .today-injury-item {
@@ -8431,8 +8456,6 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     flex: 0 0 auto;
   }
 
-  /* Three short options still read fine across a phone once the row is not
-     fighting the 2-column override; let long labels wrap instead of orphaning. */
   .today-injury-surface-followup .today-segment-row {
     gap: 6px;
   }
@@ -8474,14 +8497,13 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   }
 
   .today-segment {
-    min-height: 44px;
-    padding-inline: 8px;
-    font-size: 14px;
+    min-height: 40px;
+    padding-inline: 12px;
   }
 
   .today-injury-surface-followup .today-segment {
-    padding-inline: 6px;
-    font-size: 13px;
+    padding-inline: 8px;
+    font-size: var(--type-body-sm);
   }
 
   .today-sticky-actions {

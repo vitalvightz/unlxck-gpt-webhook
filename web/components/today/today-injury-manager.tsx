@@ -609,7 +609,10 @@ export function TodayInjuryManager({
                           ? `${surfaceAnswers.infection_signs.length} selected`
                           : "Tap any that apply — none is fine"}
                       </p>
-                      <div className="today-segment-row today-segment-row-2col">
+                      {/* One per row: these labels are the longest in the panel
+                          and will not share a line on a phone without being
+                          broken across two. */}
+                      <div className="today-segment-row today-segment-row-list">
                         {INFECTION_SIGN_OPTIONS.map((option) => {
                           const checked = surfaceAnswers.infection_signs.includes(option.value);
                           return (
