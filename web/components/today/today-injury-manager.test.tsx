@@ -145,6 +145,44 @@ function stubCheckin(options: { fail?: boolean; openInjuries?: InjuryFlagRecord[
   return { calls, restore: () => void (globalThis.fetch = originalFetch) };
 }
 
+test("the injury card never renders the planner's internal taxonomy tokens", async () => {
+  // A flag bootstrapped from guided intake stores the structured read of the
+  // injury in its description. The athlete gets the condition word; the routing
+  // keys ("surface injury", "surface_injury:blister") stay internal.
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager
+        openInjuries={[
+          {
+            ...BLISTER,
+            body_area: "Right shoulder",
+            // Both stored forms: the raw enum pair, and the humanized one the
+            // backend writes once the underscores are stripped.
+            description:
+              "Right shoulder: blister. surface_injury:blister. surface injury. surface injury:blister",
+            label: "Right shoulder blister",
+          },
+        ]}
+        token="t"
+        onRefresh={async () => {}}
+      />,
+    );
+  });
+
+  const text = container.textContent ?? "";
+  assert.match(text, /Right shoulder blister/);
+  assert.doesNotMatch(text, /surface injury/i);
+  assert.doesNotMatch(text, /surface_injury/i);
+  assert.equal(
+    container.querySelector(".today-injury-name small")?.textContent,
+    "blister",
+  );
+
+  cleanup();
+});
+
 test("marking a skin injury worse asks the surface follow-up before saving anything", async () => {
   const { calls, restore } = stubCheckin();
   const { container, root, cleanup } = mount();

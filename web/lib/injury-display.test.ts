@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { normalizeInjuryLabel } from "./injury-display.ts";
+import { formatInjuryDetail, normalizeInjuryLabel } from "./injury-display.ts";
 
 test("normalizes a literal bruise sentence into a short label", () => {
   assert.equal(normalizeInjuryLabel("Left shoulder is bruised"), "Left shoulder bruise");
@@ -74,4 +74,84 @@ test("strips duplicated condition debris from messy parser strings", () => {
 
 test("normalizes a leading condition with trailing location", () => {
   assert.equal(normalizeInjuryLabel("bruise, left shoulder"), "Left shoulder bruise");
+});
+
+// formatInjuryDetail ---------------------------------------------------------
+
+test("strips the planner's taxonomy tokens out of a guided-intake description", () => {
+  assert.equal(
+    formatInjuryDetail("Right shoulder: blister. surface injury. surface injury:blister", {
+      bodyArea: "Right shoulder",
+    }),
+    "blister",
+  );
+  // The raw stored form, before the backend humanizes the underscores away.
+  assert.equal(
+    formatInjuryDetail("Right shoulder: blister. surface_injury. surface_injury:blister", {
+      bodyArea: "Right shoulder",
+    }),
+    "blister",
+  );
+  // Casing is not guaranteed on a stored enum.
+  assert.equal(
+    formatInjuryDetail("Surface_Injury:Blister. Surface Injury", { bodyArea: "Right shoulder" }),
+    "",
+  );
+});
+
+// A colon is ordinary punctuation in athlete prose. Only a recognised taxonomy
+// family followed by a single bare token is internal vocabulary — everything
+// else is what the athlete typed, and dropping it loses their report.
+test("keeps athlete prose that happens to contain a colon", () => {
+  assert.equal(formatInjuryDetail("pain:sharp when running"), "pain:sharp when running");
+  assert.equal(formatInjuryDetail("worse:after sparring"), "worse:after sparring");
+  assert.equal(formatInjuryDetail("bruise. note:knocked it again"), "bruise. note:knocked it again");
+  assert.equal(formatInjuryDetail("surface_injury:blister"), "");
+});
+
+test("keeps the condition word and the athlete's own detail", () => {
+  assert.equal(
+    formatInjuryDetail("bruise. worse when sprinting"),
+    "bruise. worse when sprinting",
+  );
+  assert.equal(formatInjuryDetail("blister on left foot"), "blister on left foot");
+});
+
+test("drops a body-area segment that only restates the location", () => {
+  assert.equal(formatInjuryDetail("Left shoulder", { bodyArea: "Left shoulder" }), "");
+  assert.equal(
+    formatInjuryDetail("Left shoulder: soreness. this week", { bodyArea: "left shoulder" }),
+    "soreness. this week",
+  );
+});
+
+// The "<body area>: <condition>" prefix an athlete-facing description uses is
+// the one colon that must survive — only the space-less `family:specific` pair
+// is internal vocabulary.
+test("keeps a colon that separates the location from the condition", () => {
+  assert.equal(formatInjuryDetail("Left knee: sore after running"), "Left knee: sore after running");
+});
+
+// ". " is the separator the description is joined with. A bare period is not:
+// it is a decimal point, and splitting on it cut the athlete's own numbers in
+// half — "7.5/10" came out as "7. 5/10".
+test("reads an athlete's note back unchanged, decimals included", () => {
+  assert.equal(formatInjuryDetail("sore. 7.5/10 at worst"), "sore. 7.5/10 at worst");
+  assert.equal(formatInjuryDetail("pain 3.5/10 after 2.5 rounds"), "pain 3.5/10 after 2.5 rounds");
+  assert.equal(formatInjuryDetail("0.5kg dumbbell drop. bruise"), "0.5kg dumbbell drop. bruise");
+});
+
+test("treats a trailing period as the end of the last segment", () => {
+  assert.equal(formatInjuryDetail("blister on left foot."), "blister on left foot");
+  assert.equal(
+    formatInjuryDetail("Right shoulder: blister. surface injury.", { bodyArea: "Right shoulder" }),
+    "blister",
+  );
+});
+
+test("dedupes repeated segments and tolerates blank input", () => {
+  assert.equal(formatInjuryDetail("bruise. Bruise. bruise"), "bruise");
+  assert.equal(formatInjuryDetail(""), "");
+  assert.equal(formatInjuryDetail(null), "");
+  assert.equal(formatInjuryDetail(undefined), "");
 });

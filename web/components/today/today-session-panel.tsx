@@ -307,6 +307,13 @@ export function TodaySessionPanel({
   // session_relation stamp: a session that reaches the card without an explicit
   // session_relation but whose scope is not "today" must still read as pending,
   // never completable.
+  //
+  // Whether today HAS a session is the server's answer, not one re-derived here.
+  // An empty sessions array is not the same question: a headline-only support
+  // day ("Rhythm flush") carries no session objects and is still prescribed
+  // work, so reading rest-ness off the array disabled real sessions. The server
+  // resolves the plan card — and rejects completion writes on a rest day — so
+  // scope "today" is the single answer both sides use.
   const canCompleteSession = resolvedDecision.canCompleteSession;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral

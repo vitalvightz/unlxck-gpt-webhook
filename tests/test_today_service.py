@@ -5,6 +5,7 @@ an injected ``now``, so training-day boundaries and recommendation validity are
 deterministic without a live clock or database.
 """
 
+import copy
 from datetime import date, datetime, timedelta, timezone
 from types import MappingProxyType, SimpleNamespace
 from unittest import mock
@@ -20,6 +21,7 @@ from api.services import today_service as today_service_module
 from api.services.today_service import (
     _scan_forward_for_next_training,
     build_today_command_view,
+    resolve_today_landing,
     submit_today_checkin,
     submit_today_injury_checkin,
     upsert_session_completion,
@@ -774,7 +776,18 @@ class TestStructuredFillerDayResolution:
         assert entry["title"] == "Rhythm flush"
 
     def test_headline_only_rest_day_stays_rest(self):
-        for headline in ("Rest day.", "Full rest", "Off day", "Travel day", "No training today"):
+        for headline in (
+            "Rest day.",
+            "Full rest",
+            "Off day",
+            "Travel day",
+            "No training today",
+            # A day that opens by declaring rest is a rest day even when the
+            # sentence goes on to name recovery work — that is what the athlete
+            # MAY do, not a session to start.
+            "Rest or active recovery",
+            "Rest and light mobility if wanted",
+        ):
             entry = today_service_module._structured_today_session_entry(
                 self._plan_row(
                     {
@@ -819,6 +832,195 @@ class TestStructuredFillerDayResolution:
             store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW
         )
         assert view.today.next_session.get("title") == "Rhythm flush"
+        assert view.today.session_scope == "today"
+
+
+class TestOpenPlanRestDayResolution:
+    """An open plan's REST day must not be presented as today's session.
+
+    The card is weekday-only (its date projection is unavailable whenever the
+    card and the saved weekly template disagree), so the server used to find no
+    row for today and fall back to the intake template's generic weekly rhythm —
+    which calls every configured training weekday a session. Today then offered
+    "Start session" on a day whose own card read "Rest or active recovery".
+    """
+
+    # 2026-07-31 is a Friday.
+    NOW = datetime(2026, 7, 31, 12, 0, tzinfo=timezone.utc)
+    DAY = "2026-07-31"
+
+    @staticmethod
+    def _planning_brief() -> dict:
+        return {
+            "open_plan_spec": {
+                "plan_type": "open_ongoing_system",
+                "weekly_template": {
+                    "training_days": ["Monday", "Wednesday", "Friday", "Saturday"],
+                    "hard_sparring_days": [],
+                    "coach_owned_days": {},
+                },
+                "development_block": {
+                    "week_1": "Baseline",
+                    "week_2": "Progress",
+                    "week_3": "Highest controlled week",
+                    "week_4": "Deload and reassess",
+                },
+            },
+            "stage1_selection_summary": {"current_phase": "GPP"},
+        }
+
+    @staticmethod
+    def _structured_plan() -> dict:
+        def app_day(weekday: str, title: str) -> dict:
+            return {
+                "date": "",
+                "weekday": weekday,
+                "day_type": "moderate",
+                "today_card": {"headline": title},
+                "sessions": [{"title": title, "blocks": [{"display_name": "Main work"}]}],
+            }
+
+        days = [
+            app_day("Mon", "Support strength"),
+            app_day("Tue", "Technical rhythm"),
+            app_day("Wed", "Power transfer"),
+            {
+                "date": "",
+                "weekday": "Fri",
+                "day_type": "rest",
+                "today_card": {"headline": "Rest or active recovery"},
+                "sessions": [],
+            },
+            app_day("Sat", "Conditioning"),
+        ]
+        # Five authored rows against four configured training days: the card and
+        # the template disagree, so the projection refuses to guess dates and the
+        # rows stay weekday-only.
+        return {
+            "weeks": [
+                {"week_index": index, "days": [copy.deepcopy(day) for day in days]}
+                for index in range(1, 5)
+            ]
+        }
+
+    def _store(self) -> FakeStore:
+        store = _store_with_plan()
+        store.plans[PLAN].update(
+            {
+                "created_at": "2026-07-01T09:00:00+00:00",
+                "fight_date": None,
+                "planning_brief": self._planning_brief(),
+                "structured_plan": self._structured_plan(),
+            }
+        )
+        return store
+
+    def test_weekday_only_card_resolves_todays_row(self):
+        plan_row = self._store().plans[PLAN]
+        matched = today_service_module._structured_day_for_training_day(plan_row, self.DAY)
+        assert matched is not None
+        day, _week = matched
+        assert day["weekday"] == "Fri"
+        assert day["today_card"]["headline"] == "Rest or active recovery"
+
+    def test_rest_row_resolves_to_no_session_today(self):
+        plan_row = self._store().plans[PLAN]
+        assert today_service_module._structured_today_session_entry(plan_row, self.DAY) is None
+
+    def test_command_view_does_not_present_a_rest_day_as_todays_session(self):
+        view = build_today_command_view(
+            self._store(), athlete_id=ATHLETE, athlete_timezone="", now=self.NOW
+        )
+        # The weekly template calls Friday a training day; the authored card says
+        # rest, and the card owns today.
+        assert view.today.next_session.get("title") != "Fri training"
+        assert view.today.session_scope != "today"
+
+    def test_completion_writes_are_rejected_on_a_rest_day(self):
+        """The UI not offering it is not the guard — the write path is.
+
+        A direct call (or a client on a stale card) would otherwise persist a
+        session state the plan never prescribed, and that record is what then
+        drives "Resume" on a rest day.
+        """
+        store = self._store()
+        for status_value in ("started", "done", "modified", "skipped"):
+            with pytest.raises(HTTPException) as exc:
+                upsert_session_completion(
+                    store,
+                    athlete_id=ATHLETE,
+                    athlete_timezone="",
+                    payload={
+                        "plan_id": PLAN,
+                        "session_id": "Fri",
+                        "status": status_value,
+                        "modification_reason": "swapped to recovery",
+                        "notes": "logged anyway",
+                    },
+                    now=self.NOW,
+                )
+            assert exc.value.status_code == 409, status_value
+            assert "rest day" in str(exc.value.detail)
+
+    def test_a_rest_day_completion_can_still_be_reverted(self):
+        """``not_started`` stays open so an already-written record can be cleared."""
+        store = self._store()
+        row = upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"plan_id": PLAN, "session_id": "Fri", "status": "not_started"},
+            now=self.NOW,
+        )
+        assert row["status"] == "not_started"
+
+    def test_landing_ignores_a_stale_completion_on_a_rest_day(self):
+        store = self._store()
+        # A record written before the write path was guarded (or against a plan
+        # that has since changed) must not land the athlete on "Resume".
+        store.session_completions.setdefault(ATHLETE, []).append(
+            {
+                "athlete_id": ATHLETE,
+                "plan_id": PLAN,
+                "session_id": "Fri",
+                "training_day": self.DAY,
+                "status": "started",
+                "started_at": "2026-07-31T09:00:00+00:00",
+            }
+        )
+
+        decision = resolve_today_landing(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            has_interacted=True,
+            now=self.NOW,
+        )
+
+        assert decision.target != "resume_session"
+
+    def test_a_card_row_with_work_still_resolves_through_the_weekly_schedule(self):
+        """Only the rest decision is taken from a weekday-only row.
+
+        A row that schedules work carries no date to key a session on, so it
+        still resolves through the weekly schedule — session identity (and every
+        completion already logged against it) is unchanged.
+        """
+        store = self._store()
+        for week in store.plans[PLAN]["structured_plan"]["weeks"]:
+            week["days"][3] = {
+                "date": "",
+                "weekday": "Fri",
+                "day_type": "moderate",
+                "today_card": {"headline": "Power transfer"},
+                "sessions": [{"title": "Power transfer", "blocks": [{"display_name": "Main work"}]}],
+            }
+
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW
+        )
+
+        assert view.today.next_session.get("title") == "Fri training"
         assert view.today.session_scope == "today"
 
 
@@ -870,6 +1072,109 @@ class TestCommandView:
         assert seeded["severity"] == "severe"
         assert seeded["status"] == "open"
         assert "bruise" in seeded["description"]
+
+    def test_guided_intake_description_carries_no_taxonomy_tokens(self):
+        """The description is athlete-facing, so the routing keys stay internal.
+
+        Guided intake stores the family (``surface_injury``) and its
+        ``family:specific`` pair alongside the real condition word. Both used to
+        land in the description and render on the injury card as "Right
+        shoulder: blister. surface injury. surface injury:blister".
+        """
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Right shoulder",
+                        "severity": "moderate",
+                        "trend": "same",
+                        "injury_type": "surface_injury",
+                        "surface_type": "blister",
+                        "injury_subtypes": ["surface_injury:blister"],
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        description = view.open_injuries[0]["description"]
+        assert description == "Right shoulder: blister"
+        # The condition word survives, so the scorer still reads it as a wound.
+        assert view.open_injuries[0]["label"] == "Right shoulder blister"
+
+    def test_guided_intake_taxonomy_check_is_case_insensitive(self):
+        """Nothing guarantees the casing a stored enum comes back in."""
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Right shoulder",
+                        "severity": "moderate",
+                        "injury_type": "Surface_Injury",
+                        "surface_type": "Blister",
+                        "injury_subtypes": ["Surface_Injury:Blister"],
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["description"] == "Right shoulder: Blister"
+
+    def test_guided_intake_description_leaves_out_the_timeframe(self):
+        """When it happened is structured intake data, not the athlete's words.
+
+        "last month" / "one to three months" / "old cleared" are enum answers,
+        and they read as planner vocabulary sitting in the middle of the note.
+        """
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "severity": "moderate",
+                        "surface_type": "bruise",
+                        "timeframe": "last_month",
+                        "notes": "sore on overhead work",
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["description"] == (
+            "Left shoulder: bruise. sore on overhead work"
+        )
+
+    def test_guided_intake_keeps_a_type_with_no_specific_word(self):
+        """A non-surface type is the only word available, so it is kept."""
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left knee",
+                        "severity": "moderate",
+                        "injury_type": "tendon_ligament",
+                        "injury_subtypes": ["sprain"],
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["description"] == "Left knee: tendon ligament. sprain"
 
     def test_guided_intake_description_does_not_repeat_body_area(self):
         store = _store_with_plan()

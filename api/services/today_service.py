@@ -19,10 +19,12 @@ import logging
 import re
 import uuid
 from datetime import date, datetime, timezone
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, NamedTuple, Sequence
 
 from fastapi import HTTPException, status
 from pydantic import ValidationError
+
+from fightcamp.weekly_schedule_view import normalize_weekday
 
 from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
 from api.contracts.completion import (
@@ -60,7 +62,12 @@ from api.services.plan_schedule import (
     resolve_today_and_next,
     weekly_schedule_or_none,
 )
-from api.services.open_plan_timeline import project_open_structured_plan
+from api.services.open_plan_timeline import (
+    WEEKDAYS as WEEKDAY_TOKENS,
+    open_plan_anchor_date,
+    open_plan_spec,
+    project_open_structured_plan,
+)
 from api.services.readiness_failsafe import (
     CHECKINS_UNAVAILABLE,
     COMPLETIONS_UNAVAILABLE,
@@ -246,9 +253,13 @@ def _resolve_today_session_entry(plan_row: Mapping[str, Any], training_day: str)
     data — callers decide whether that is a best-effort skip or a degraded-context
     signal. An empty ``{}`` means "no scheduled session today" (a rest day), which
     is a normal, non-failure result."""
-    structured_entry = _structured_today_session_entry(plan_row, training_day)
-    if structured_entry:
-        return dict(structured_entry)
+    structured_today = _structured_today(plan_row, training_day)
+    if structured_today.entry:
+        return dict(structured_today.entry)
+    # The card has a row for today and it schedules nothing: a rest day, which is
+    # the normal empty result — not a reason to fall back to the weekly template.
+    if structured_today.is_rest_day:
+        return {}
 
     training_date = parse_iso_date(training_day)
     if training_date is None:
@@ -1012,6 +1023,18 @@ def upsert_session_completion(
         )
     training_day = requested_day or today
 
+    # A day the plan card schedules nothing on has no session to log. The UI does
+    # not offer it, but the UI is not the guard: without this, a direct call —
+    # or a client running against a stale card — writes a completion for a
+    # session that never existed, and that record then drives "Resume" on a rest
+    # day. ``not_started`` stays allowed so an already-written record can be
+    # cleared.
+    if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="That day is a rest day in your plan — there is no session to log.",
+        )
+
     # Server-side safety hold: an active severe injury blocks actually training
     # this session (start / done / modified) — not just in the UI. Skipping or
     # reverting to not-started stays allowed so the athlete can still log that
@@ -1236,20 +1259,6 @@ def _structured_effective_load(day_type: Any) -> str:
     return "technical"
 
 
-_STRUCTURED_TRAINING_HEADLINE_RE = re.compile(
-    r"\b(coach|spar|technical|boxing|pad\s?work|pads|mitts?|skill|primer|"
-    r"strength|conditioning|recovery|mobility|reset|fight\s+day|protocol)\b",
-    re.I,
-)
-# Headlines that mean "nothing is scheduled today". A day with no session
-# objects and a headline like these stays a rest day; anything else with real
-# copy ("Rhythm flush", "Breathing downshift") is a scheduled filler session —
-# the old allowlist above silently dropped those, so Today only ever surfaced
-# sparring/strength days and never the low-cost support work between them.
-_STRUCTURED_REST_HEADLINE_RE = re.compile(
-    r"^(?:full\s+|complete\s+|total\s+)?(?:rest|off|no\s+training|day\s+off|travel)\b",
-    re.I,
-)
 _STRUCTURED_COACH_CONTACT_RE = re.compile(
     r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
     re.I,
@@ -1291,18 +1300,24 @@ def _select_structured_primary_session(sessions: list[Mapping[str, Any]]) -> Map
     return sessions[0]
 
 
-def _structured_plan_weeks(
+def _projected_structured_plan(
     plan_row: Mapping[str, Any], *, training_day: str | None = None
-) -> list[Mapping[str, Any]]:
+) -> tuple[list[Mapping[str, Any]], Mapping[str, Any]]:
     structured_plan = plan_row.get("structured_plan")
     if not isinstance(structured_plan, Mapping):
-        return []
-    projected, _context = project_open_structured_plan(
+        return [], {}
+    projected, context = project_open_structured_plan(
         plan_row,
         structured_plan,
         current_training_day=training_day,
     )
-    return _iter_mapping_items(projected.get("weeks"))
+    return _iter_mapping_items(projected.get("weeks")), context
+
+
+def _structured_plan_weeks(
+    plan_row: Mapping[str, Any], *, training_day: str | None = None
+) -> list[Mapping[str, Any]]:
+    return _projected_structured_plan(plan_row, training_day=training_day)[0]
 
 
 def _normalized_structured_phase(value: Any) -> str:
@@ -1354,11 +1369,7 @@ def _structured_session_entry_for_day(
         session = dict(first_session)
     else:
         headline = _clean_text(today_card.get("headline"))
-        is_training_headline = bool(headline) and (
-            _STRUCTURED_TRAINING_HEADLINE_RE.search(headline) is not None
-            or not _STRUCTURED_REST_HEADLINE_RE.search(headline)
-        )
-        if not is_training_headline:
+        if not headline:
             return None
         session = {
             "session_id": day_date,
@@ -1389,7 +1400,7 @@ def _structured_session_entry_for_day(
     if effective_load == "none":
         effective_load = "reduced"
 
-    return {
+    entry = {
         **session,
         "calendar_date": day_date,
         "weekday": weekday,
@@ -1404,15 +1415,121 @@ def _structured_session_entry_for_day(
         "session_id": session_id,
         **({"coach_led_contact": coach_led_contact} if coach_led_contact else {}),
     }
+    # A day with no session objects is only a session when its headline names
+    # real work. "Rest or active recovery" is a rest day even though it says
+    # "recovery", while "Rhythm flush" is the low-cost support work Today should
+    # surface. has_scheduled_day_content (api/services/plan_schedule.py) owns
+    # that rule for the whole service, so this defers to it rather than keeping
+    # a second vocabulary that answers the same question differently.
+    if first_session is None and not has_scheduled_day_content(entry):
+        return None
+    return entry
+
+
+def _open_plan_week_position(
+    plan_row: Mapping[str, Any],
+    *,
+    week_count: int,
+    training_date: date | None,
+    context: Mapping[str, Any],
+) -> int | None:
+    """0-based index of the renewable block week containing today.
+
+    Mirrors the app (``resolveOpenPlanWeekNumber`` in web/lib/camp-map.ts): the
+    projection's own week number wins, otherwise the week is counted from the
+    anchor (first Monday on or after the plan was created), wrapping every block
+    so it renews indefinitely.
+    """
+    if week_count <= 0:
+        return None
+    explicit = context.get("current_week_number")
+    if isinstance(explicit, int) and not isinstance(explicit, bool) and explicit >= 1:
+        return min(explicit, week_count) - 1
+    anchor = _parse_structured_date(context.get("anchor_date")) or open_plan_anchor_date(plan_row)
+    if anchor is None or training_date is None:
+        return None
+    elapsed = (training_date - anchor).days
+    if elapsed < 0:
+        return 0
+    return (elapsed // 7) % week_count
+
+
+def _structured_day_for_training_day(
+    plan_row: Mapping[str, Any], training_day: str
+) -> tuple[Mapping[str, Any], Mapping[str, Any]] | None:
+    """Today's row in the plan card as ``(day, week)``, matched as the app matches it.
+
+    Calendar date first. An open / renewable plan's card carries a weekly rhythm
+    rather than live dates, and its date projection is unavailable whenever the
+    card and the saved weekly template disagree, so today's weekday inside the
+    current block week is the fallback — the same rule the app resolves the
+    blocks it renders with. Without it the server sees no card for today and
+    falls back to the template's generic guess, which is how a plan REST day
+    ended up presented as a startable session.
+    """
+    weeks, context = _projected_structured_plan(plan_row, training_day=training_day)
+    for week in weeks:
+        for day in _iter_mapping_items(week.get("days")):
+            if _clean_text(day.get("date"))[:10] == training_day:
+                return day, week
+
+    if not weeks or open_plan_spec(plan_row) is None:
+        return None
+    training_date = _parse_structured_date(training_day)
+    if training_date is None:
+        return None
+    target_weekday = WEEKDAY_TOKENS[training_date.weekday()]
+    preferred = _open_plan_week_position(
+        plan_row,
+        week_count=len(weeks),
+        training_date=training_date,
+        context=context,
+    )
+    # The block's current week owns the match; the other weeks are the fallback,
+    # so an open plan still resolves when no anchor is available (every week of
+    # a block shares the same weekly rhythm).
+    order = [preferred] if preferred is not None else []
+    order.extend(index for index in range(len(weeks)) if index != preferred)
+    for index in order:
+        week = weeks[index]
+        for day in _iter_mapping_items(week.get("days")):
+            if normalize_weekday(day.get("weekday")) == target_weekday:
+                return day, week
+    return None
+
+
+class _StructuredToday(NamedTuple):
+    """What the plan card says about today.
+
+    ``entry`` is today's session as the card describes it, present only for a
+    dated row (an entry has to be keyed on a calendar date). ``is_rest_day``
+    means the card has a row for today and that row schedules no work — the one
+    thing a weekday-only row can still answer, and the answer the intake weekly
+    template must not override.
+    """
+
+    entry: dict[str, Any] | None
+    is_rest_day: bool
+
+
+def _structured_today(plan_row: Mapping[str, Any], training_day: str) -> _StructuredToday:
+    matched = _structured_day_for_training_day(plan_row, training_day)
+    if matched is None:
+        return _StructuredToday(None, False)
+    day, week = matched
+    entry = _structured_session_entry_for_day(day, week=week)
+    if entry is not None:
+        return _StructuredToday(entry, False)
+    # A weekday-only row carries no date to key a session on, so it is asked the
+    # same question with today's date standing in for the missing one: does this
+    # row schedule work at all? Only its answer to that is used — a row with work
+    # still resolves through the weekly schedule, so session identity is unchanged.
+    dated = _structured_session_entry_for_day({**day, "date": training_day}, week=week)
+    return _StructuredToday(None, dated is None)
 
 
 def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
-    for week in _structured_plan_weeks(plan_row, training_day=training_day):
-        for day in _iter_mapping_items(week.get("days")):
-            if _clean_text(day.get("date"))[:10] != training_day:
-                continue
-            return _structured_session_entry_for_day(day, week=week)
-    return None
+    return _structured_today(plan_row, training_day).entry
 
 
 def _structured_next_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
@@ -1652,20 +1769,74 @@ def _details_already_include_body_area(body_area: str, details: str) -> bool:
     return bool(body_key and (details_key == body_key or details_key.startswith(f"{body_key} ")))
 
 
+def _humanized_guided_token(value: object) -> str:
+    return " ".join(str(value or "").replace("_", " ").split())
+
+
+def _guided_subtype_word(subtype: object) -> str:
+    """The athlete-facing condition word inside a taxonomy subtype token.
+
+    Subtypes are stored as ``family:specific`` (``surface_injury:blister``). Only
+    the specific half is a word an athlete recognises; the family is the routing
+    key, and it is already implied by the word it qualifies.
+    """
+    text = str(subtype or "").strip()
+    if not text:
+        return ""
+    return _humanized_guided_token(text.rsplit(":", 1)[-1]) or _humanized_guided_token(text)
+
+
 def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any]) -> str:
+    """Athlete-facing description for a flag bootstrapped from guided intake.
+
+    The description is rendered on the injury card and in history, so it carries
+    the condition and the athlete's own notes — never the taxonomy plumbing.
+    A blister reads "Right shoulder: blister", not "Right shoulder: blister.
+    surface injury. surface injury:blister". Nothing the injury scorer routes on
+    is lost: the specific condition word is what it reads, and the structured
+    wound answers travel in their own columns.
+    """
     parts: list[str] = []
-    for field in ("surface_type", "injury_type", "timeframe"):
-        value = str(injury.get(field) or "").strip()
-        if value:
-            parts.append(value.replace("_", " "))
-    subtypes = injury.get("injury_subtypes")
-    if isinstance(subtypes, list):
-        parts.extend(str(item).replace("_", " ").strip() for item in subtypes if str(item or "").strip())
+    surface_type = _humanized_guided_token(injury.get("surface_type"))
+    injury_type = _humanized_guided_token(injury.get("injury_type"))
+    raw_subtypes = injury.get("injury_subtypes")
+    subtype_words = (
+        [word for item in raw_subtypes if (word := _guided_subtype_word(item))]
+        if isinstance(raw_subtypes, list)
+        else []
+    )
+    if surface_type:
+        parts.append(surface_type)
+    # ``surface_injury`` is the family a wound is routed by, and its specific word
+    # (blister / graze / cut) says the same thing in the athlete's language. Keep
+    # the family only when nothing more specific is available to say it.
+    # Casefolded: the token is an enum, but nothing guarantees the casing it was
+    # stored in, and a "Surface_Injury" that misses this comparison leaks the
+    # family straight onto the card.
+    if injury_type and not (
+        injury_type.casefold() == "surface injury" and (surface_type or subtype_words)
+    ):
+        parts.append(injury_type)
+    # ``timeframe`` is deliberately absent: it is a structured enum about WHEN
+    # the injury happened ("last month", "one to three months", "old cleared"),
+    # not what it is, and it read as planner vocabulary in the middle of the
+    # athlete's own words. The intake payload still carries it.
+    parts.extend(subtype_words)
     for field in ("notes", "avoid"):
         value = str(injury.get(field) or "").strip()
         if value:
             parts.append(value)
-    details = ". ".join(dict.fromkeys(parts))
+    # Case-insensitive dedupe: a surface type and its subtype word are the same
+    # fact stored twice, and repeating it reads as noise.
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for part in parts:
+        key = part.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(part)
+    details = ". ".join(deduped)
     if body_area and details and _details_already_include_body_area(body_area, details):
         return details
     if body_area and details:
@@ -1995,8 +2166,14 @@ def build_today_command_view(
             today_entry = next_entry = None
             week = None
 
-    structured_today_entry = _structured_today_session_entry(plan_row, training_day)
-    today_session_entry = structured_today_entry or today_entry
+    # The plan card owns whether today is a rest day. The intake weekly template
+    # calls every configured training weekday a session ("Fri training"), so
+    # without this it resurrects a session on a day the athlete's own card reads
+    # "Rest or active recovery" — and Today then offers to start it.
+    structured_today = _structured_today(plan_row, training_day)
+    today_session_entry = (
+        None if structured_today.is_rest_day else (structured_today.entry or today_entry)
+    )
     has_today_session = has_scheduled_day_content(today_session_entry)
     today_session_id = _session_id_for_entry(today_session_entry) if has_today_session else None
     today_completion = (
@@ -2175,7 +2352,17 @@ def resolve_today_landing(
                 today_entry, next_entry = resolve_today_and_next(week, today=training_date)
             except Exception:
                 today_entry = next_entry = None
-        session_id = _session_id_for_entry(today_entry or next_entry)
+        # Same resolution Today uses, for the same reason: a rest day has no
+        # session, so a completion record left on one (written before this was
+        # enforced, or against a since-changed plan) must not land the athlete on
+        # "Resume". Otherwise the card the athlete is looking at and the landing
+        # decision would answer "is there a session today?" differently.
+        structured_today = _structured_today(plan_row, training_day)
+        session_id = (
+            None
+            if structured_today.is_rest_day
+            else _session_id_for_entry(structured_today.entry or today_entry or next_entry)
+        )
         if session_id:
             completion = store.get_session_completion(athlete_id, session_id, training_day)
             session_state = completion_landing_state(completion_status_of(completion))

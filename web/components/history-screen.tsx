@@ -22,7 +22,7 @@ import {
   sessionStatusLabel,
   sessionStatusTone,
 } from "@/lib/history";
-import { normalizeInjuryLabel } from "@/lib/injury-display";
+import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
 import type {
   InjuryFlagRecord,
   TodayCheckinHistoryRecord,
@@ -152,6 +152,10 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
       {rows.map((row) => {
         const title =
           row.label || normalizeInjuryLabel(row.body_area) || row.description;
+        // The stored description carries the planner's taxonomy tokens for a
+        // guided-intake injury, so the note line shows only the athlete-facing
+        // part of it.
+        const note = formatInjuryDetail(row.description, { bodyArea: row.body_area });
         return (
           <li key={row.id} className="history-row">
             <div className="history-row-head">
@@ -168,8 +172,8 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
                 <span>Latest: {row.latest_reported_status}</span>
               ) : null}
             </div>
-            {row.description && row.description !== title ? (
-              <p className="muted history-row-note">{row.description}</p>
+            {note && note !== title ? (
+              <p className="muted history-row-note">{note}</p>
             ) : null}
           </li>
         );

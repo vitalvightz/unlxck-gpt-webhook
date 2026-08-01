@@ -119,6 +119,109 @@ function buildLocation(remainder: string): string {
   return words.join(" ");
 }
 
+// Taxonomy family tokens. These are routing keys the planner classifies an
+// injury BY, never words an athlete wrote or should read. Guided intake seeds a
+// flag's description from its structured read of the injury, so the family token
+// and its `family:specific` pair both end up stored alongside the real condition
+// word ("blister. surface injury. surface injury:blister"). Display keeps the
+// condition word and drops the plumbing around it.
+const INTERNAL_TAXONOMY_SEGMENTS = new Set([
+  "surface injury",
+  "surface_injury",
+  "non surface",
+  "non_surface",
+  "unspecified",
+  "not sure",
+  "not_sure",
+]);
+
+// The injury_type values guided intake stores (see the type options in
+// components/guided-injury-card.tsx). Only these lead a `family:specific`
+// taxonomy pair, so only these can make a colon mean "internal".
+const TAXONOMY_FAMILIES = new Set([
+  "surface_injury",
+  "pain",
+  "tightness",
+  "sprain",
+  "strain",
+  "swelling",
+  "instability",
+  "unspecified",
+  "fracture",
+  "dislocation",
+  "tendon_ligament",
+  "post_surgery",
+  "head_impact",
+  "nerve_symptoms",
+  "chest_breathing",
+]);
+
+// A `family:specific` taxonomy pair — "surface_injury:blister", and the
+// underscore-stripped "surface injury:blister" the backend humanizes it into.
+// Deliberately narrow: the whole segment must BE the pair, a recognised family
+// on the left and a single bare token on the right. A colon is ordinary
+// punctuation in athlete prose ("pain:sharp when running", "Left knee: sore"),
+// and prose is what this is protecting.
+const TAXONOMY_PAIR = /^([a-z][a-z_ ]*):([a-z0-9_]+)$/i;
+
+function segmentIsInternal(segment: string): boolean {
+  const normalized = segment.toLowerCase();
+  if (INTERNAL_TAXONOMY_SEGMENTS.has(normalized)) {
+    return true;
+  }
+  const pair = TAXONOMY_PAIR.exec(normalized);
+  return pair !== null && TAXONOMY_FAMILIES.has(pair[1].replace(/\s+/g, "_"));
+}
+
+/**
+ * The athlete-facing detail line for an injury: what the injury IS (and any
+ * detail the athlete added), with the planner's internal taxonomy stripped out.
+ *
+ * Descriptions are stored as ". "-joined segments. A segment is dropped when it
+ * is an internal taxonomy token, and the redundant "<body area>: " prefix is
+ * removed so the line reads as the condition rather than restating the location
+ * the label already shows.
+ *
+ * "Right shoulder: blister. surface injury. surface injury:blister" (body area
+ * "Right shoulder") -> "blister"
+ * "bruise. worse when sprinting" -> "bruise. worse when sprinting"
+ * "sore. 7.5/10 at worst" -> "sore. 7.5/10 at worst" (a decimal is not a break)
+ */
+export function formatInjuryDetail(
+  description: string | null | undefined,
+  options: { bodyArea?: string | null } = {},
+): string {
+  const raw = collapseWhitespace(String(description ?? ""));
+  if (!raw) {
+    return "";
+  }
+  const bodyKey = collapseWhitespace(String(options.bodyArea ?? "")).toLowerCase();
+  const kept: string[] = [];
+  const seen = new Set<string>();
+
+  // The separator is ". ", not "." — splitting on every period cut the athlete's
+  // own numbers in half ("7.5/10" -> "7", "5/10"). A trailing period ends the
+  // last segment, so end-of-string counts as the separator too.
+  for (const rawSegment of raw.split(/\.(?:\s+|$)/)) {
+    let segment = collapseWhitespace(rawSegment);
+    if (!segment || segmentIsInternal(segment)) {
+      continue;
+    }
+    // "Right shoulder: blister" -> "blister". The location is already the label.
+    if (bodyKey && segment.toLowerCase().startsWith(`${bodyKey}:`)) {
+      segment = collapseWhitespace(segment.slice(bodyKey.length + 1));
+    }
+    const key = segment.toLowerCase();
+    if (!segment || key === bodyKey || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    kept.push(segment);
+  }
+
+  return kept.join(". ");
+}
+
 /**
  * Normalize a raw injury description into a short athlete-facing label.
  *
