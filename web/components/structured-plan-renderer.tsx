@@ -252,68 +252,81 @@ function blockTagLabel(block: StructuredBlock, policy: RehabLabelPolicy | null):
   return titleize(cleanText(block.block_type));
 }
 
+function uniqueBlockRules(rules: string[]): string[] {
+  return rules.filter(
+    (rule, index) =>
+      rules.findIndex(
+        (candidate) => candidate.trim().toLowerCase() === rule.trim().toLowerCase(),
+      ) === index,
+  );
+}
+
+function blockSafetyRules(block: StructuredBlock): string[] {
+  const progression = cleanText(block.progression_rule);
+  const { stopRules } = getBlockCoachingDisplay(block);
+  return uniqueBlockRules([
+    ...(progression && progressionRuleLabel(progression) === "Stop rule" ? [progression] : []),
+    ...stopRules,
+  ]);
+}
+
+function blockSecondaryCoaching(
+  block: StructuredBlock,
+  openWeekIntent?: OpenBlockWeekIntent | null,
+): {
+  detailCues: string[];
+  progression: string | null;
+  regressions: string[];
+  substitutions: string[];
+  weekDirective: ReturnType<typeof openBlockWeekDirective>;
+} {
+  const purpose = cleanText(block.purpose);
+  const { cues } = getBlockCoachingDisplay(block);
+  const weekDirective = openBlockWeekDirective(openWeekIntent, block);
+  const progression = cleanText(block.progression_rule);
+  return {
+    detailCues: purpose ? cues : cues.slice(1),
+    progression:
+      progression && progressionRuleLabel(progression) === "Progress" && !weekDirective
+        ? progression
+        : null,
+    regressions: getStringList(block.regression_options),
+    substitutions: getStringList(block.substitutions),
+    weekDirective,
+  };
+}
+
 function blockHasCoachingDetails(
   block: StructuredBlock,
   openWeekIntent?: OpenBlockWeekIntent | null,
 ): boolean {
-  const purpose = cleanText(block.purpose);
-  const { cues, stopRules } = getBlockCoachingDisplay(block);
-  const remainingCues = purpose ? cues : cues.slice(1);
+  const details = blockSecondaryCoaching(block, openWeekIntent);
   return Boolean(
-    cleanText(block.block_type) ||
-      openBlockWeekDirective(openWeekIntent, block) ||
-      remainingCues.length > 0 ||
-      getStringList(block.substitutions).length > 0 ||
-      getStringList(block.regression_options).length > 0 ||
-      cleanText(block.progression_rule) ||
-      stopRules.length > 0
+    details.weekDirective ||
+      details.detailCues.length > 0 ||
+      details.substitutions.length > 0 ||
+      details.regressions.length > 0 ||
+      details.progression
   );
 }
 
 export function BlockCard({
   block,
   index,
-  showCoachingNotes = true,
-  openWeekIntent,
 }: {
   block: StructuredBlock;
   index?: number;
-  showCoachingNotes?: boolean;
-  /** Development-block week intent of an open (renewable) plan. Adds the
-   * week-directed instruction (progress / deload) to the card; dated camps
-   * never pass it. */
-  openWeekIntent?: OpenBlockWeekIntent | null;
 }) {
-  const rehabLabelPolicy = useContext(RehabLabelContext);
   const title = cleanText(block.display_name) || "Block";
-  const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
   const metrics = selectBlockMetric(block);
   const work = formatMeasured(block.work);
   const rest = shouldShowRest(block.rest) ? formatMeasured(block.rest) : null;
   const effort = formatEffort(block);
   const purpose = cleanText(block.purpose);
-  const { cues, stopRules } = getBlockCoachingDisplay(block);
+  const { cues } = getBlockCoachingDisplay(block);
   const preview = purpose || cues[0] || null;
-  const detailCues = purpose ? cues : cues.slice(1);
-  const substitutions = getStringList(block.substitutions);
-  const regressions = getStringList(block.regression_options);
-  const progression = cleanText(block.progression_rule);
-  const weekDirective = openBlockWeekDirective(openWeekIntent, block);
-  // With a week directive on the card, the generic Progress aside is either the
-  // same rule again (progression weeks) or a contradiction (deload week), so it
-  // hides. A stop rule is safety wording and always stays.
-  const showProgressionAside = Boolean(
-    progression && (!weekDirective || progressionRuleLabel(progression) === "Stop rule"),
-  );
-  const adjustmentRules = [
-    ...(showProgressionAside && progression ? [progression] : []),
-    ...stopRules,
-  ].filter(
-    (rule, index, rules) =>
-      rules.findIndex((candidate) => candidate.trim().toLowerCase() === rule.trim().toLowerCase()) ===
-      index,
-  );
+  const safetyRules = blockSafetyRules(block);
 
   return (
     <div className="sp-block">
@@ -361,43 +374,72 @@ export function BlockCard({
         ) : null}
       </div>
 
-      {blockHasCoachingDetails(block, openWeekIntent) ? (
-        <div className="sp-block-coaching" hidden={!showCoachingNotes}>
-          {blockType ? <span className="sp-tag">{blockTagLabel(block, rehabLabelPolicy)}</span> : null}
-          {weekDirective ? (
-            <p className="sp-block-aside sp-week-directive">
-              <span className="sp-stat-label">{weekDirective.label}</span>
-              {weekDirective.text}
-            </p>
-          ) : null}
-          {detailCues.length > 0 ? (
-            <ul className="sp-cues">
-              {detailCues.map((cue, cueIndex) => (
-                <li key={`${cue}-${cueIndex}`}>{cue}</li>
-              ))}
-            </ul>
-          ) : null}
-          {substitutions.length > 0 ? (
-            <p className="sp-block-aside">
-              <span className="sp-stat-label">Swaps</span>
-              {substitutions.join(", ")}
-            </p>
-          ) : null}
-          {regressions.length > 0 ? (
-            <p className="sp-block-aside">
-              <span className="sp-stat-label">Easier</span>
-              {regressions.join(", ")}
-            </p>
-          ) : null}
-          {adjustmentRules.map((rule) => (
-            <p key={rule} className="sp-block-aside">
-              <span className="sp-stat-label">{progressionRuleLabel(rule)}</span>
-              {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
-            </p>
-          ))}
-        </div>
-      ) : null}
+      {safetyRules.map((rule) => (
+        <p key={rule} className="sp-block-stop-rule">
+          <span className="sp-stat-label">Stop rule</span>
+          {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
+        </p>
+      ))}
     </div>
+  );
+}
+
+function BlockCoachingNotes({
+  block,
+  index,
+  openWeekIntent,
+}: {
+  block: StructuredBlock;
+  index: number;
+  openWeekIntent?: OpenBlockWeekIntent | null;
+}) {
+  const rehabLabelPolicy = useContext(RehabLabelContext);
+  const title = cleanText(block.display_name) || "Block";
+  const blockType = cleanText(block.block_type);
+  const details = blockSecondaryCoaching(block, openWeekIntent);
+  if (!blockHasCoachingDetails(block, openWeekIntent)) {
+    return null;
+  }
+  return (
+    <section className="sp-block-coaching" aria-label={`${title} coaching notes`}>
+      <div className="sp-block-coaching-head">
+        <span className="sp-block-coaching-title">
+          {String(index + 1).padStart(2, "0")} / {title}
+        </span>
+        {blockType ? <span className="sp-tag">{blockTagLabel(block, rehabLabelPolicy)}</span> : null}
+      </div>
+      {details.weekDirective ? (
+        <p className="sp-block-aside sp-week-directive">
+          <span className="sp-stat-label">{details.weekDirective.label}</span>
+          {details.weekDirective.text}
+        </p>
+      ) : null}
+      {details.detailCues.length > 0 ? (
+        <ul className="sp-cues">
+          {details.detailCues.map((cue, cueIndex) => (
+            <li key={`${cue}-${cueIndex}`}>{cue}</li>
+          ))}
+        </ul>
+      ) : null}
+      {details.substitutions.length > 0 ? (
+        <p className="sp-block-aside">
+          <span className="sp-stat-label">Swaps</span>
+          {details.substitutions.join(", ")}
+        </p>
+      ) : null}
+      {details.regressions.length > 0 ? (
+        <p className="sp-block-aside">
+          <span className="sp-stat-label">Easier</span>
+          {details.regressions.join(", ")}
+        </p>
+      ) : null}
+      {details.progression ? (
+        <p className="sp-block-aside">
+          <span className="sp-stat-label">Progress</span>
+          {details.progression}
+        </p>
+      ) : null}
+    </section>
   );
 }
 
@@ -505,10 +547,10 @@ export function SessionCard({
   const additionalMindsetLines = sessionMindsetLines.filter(
     (line) => line.label !== "Intent" && line.label !== "Focus",
   );
-  const hasCoachingNotes =
-    blocks.length > 0 ||
-    additionalMindsetLines.length > 0 ||
-    blocks.some((block) => blockHasCoachingDetails(block, openWeekIntent));
+  const hasBlockCoachingNotes = blocks.some((block) =>
+    blockHasCoachingDetails(block, openWeekIntent),
+  );
+  const hasCoachingNotes = additionalMindsetLines.length > 0 || hasBlockCoachingNotes;
   const workoutToggle =
     blocks.length > 0 ? (
       <button
@@ -601,8 +643,6 @@ export function SessionCard({
                   key={cleanText(block.block_id) || `block-${index}`}
                   block={block}
                   index={index}
-                  showCoachingNotes={showCoachingNotes}
-                  openWeekIntent={openWeekIntent}
                 />
               ))}
             </div>
@@ -618,7 +658,7 @@ export function SessionCard({
                 onClick={() => setShowCoachingNotes((visible) => !visible)}
               >
                 <span>{showCoachingNotes ? "Hide coaching notes" : "View coaching notes"}</span>
-                <span className="sp-coaching-toggle-meta">Mindset, adjustments &amp; safety</span>
+                <span className="sp-coaching-toggle-meta">Mindset &amp; adjustments</span>
               </button>
               <div
                 id={coachingDetailsId}
@@ -635,15 +675,29 @@ export function SessionCard({
                     ))}
                   </div>
                 ) : null}
-                <section className="sp-video-placeholder" aria-label="Video coaching coming soon">
-                  <div>
-                    <p className="sp-eyebrow">Video coaching</p>
-                    <p className="sp-video-placeholder-title">Movement demos are coming soon.</p>
+                {hasBlockCoachingNotes ? (
+                  <div className="sp-session-block-coaching">
+                    {blocks.map((block, index) => (
+                      <BlockCoachingNotes
+                        key={cleanText(block.block_id) || `coaching-${index}`}
+                        block={block}
+                        index={index}
+                        openWeekIntent={openWeekIntent}
+                      />
+                    ))}
                   </div>
-                  <span className="sp-video-coming-soon">Coming soon</span>
-                </section>
+                ) : null}
               </div>
             </>
+          ) : null}
+          {showDetails ? (
+            <section className="sp-video-placeholder" aria-label="Video coaching coming soon">
+              <div>
+                <p className="sp-eyebrow">Video coaching</p>
+                <p className="sp-video-placeholder-title">Movement demos are coming soon.</p>
+              </div>
+              <span className="sp-video-coming-soon">Coming soon</span>
+            </section>
           ) : null}
           {showDetails ? workoutToggle : null}
         </>

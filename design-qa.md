@@ -28,7 +28,7 @@ browser verification:
 - The Codex in-app browser failed to attach reliably to the local Next.js preview, so the repository browser verification used the Playwright CLI with Microsoft Edge as a documented fallback.
 - Desktop collapsed, desktop expanded, mobile collapsed, and mobile expanded states were rendered.
 - Browser console check returned 0 errors and 0 warnings.
-- The real React click path was also exercised in `structured-plan-interaction.test.tsx`: opening coaching notes updates `aria-expanded`, reveals block notes, reveals mindset detail, and exposes the video placeholder.
+- The real React click path was also exercised in `structured-plan-interaction.test.tsx`: opening coaching notes updates `aria-expanded` and reveals every optional block and mindset note inside its single controlled region. Stop rules and the separate video placeholder remain visible outside it.
 
 ## Full-view comparison evidence
 
@@ -72,9 +72,9 @@ browser verification:
 
 - [x] Essential 01 information hierarchy.
 - [x] In your corner lead and support language.
-- [x] One coaching disclosure controlling mindset, adjustments, swaps, and safety detail.
+- [x] One coaching disclosure controlling optional mindset, adjustments, cues, swaps, and regressions; safety rules remain permanently visible beneath their exercise.
 - [x] Reserved responsive YouTube/video region with Coming soon state.
-- [x] Keyboard and screen-reader disclosure state through `button`, `aria-expanded`, `aria-controls`, and `hidden`.
+- [x] Keyboard and screen-reader disclosure state through `button`, `aria-expanded`, `aria-controls`, and one identified `hidden` region.
 - [x] Desktop and mobile responsive checks.
 - [x] Reduced-motion fallback.
 

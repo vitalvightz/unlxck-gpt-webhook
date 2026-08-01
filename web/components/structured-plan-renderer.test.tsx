@@ -631,7 +631,7 @@ test("labels the session objective as the Why and sentence-cases it", () => {
   assert.equal(html.includes(">Why<"), true);
 });
 
-test("uses an In your corner lead and reserves video space inside coaching notes", () => {
+test("uses an In your corner lead and keeps video separate from coaching notes", () => {
   const session = {
     session_id: "ses-coaching",
     session_type: "strength_power",
@@ -659,6 +659,7 @@ test("uses an In your corner lead and reserves video space inside coaching notes
   assert.equal(html.includes("In your corner"), true);
   assert.equal(html.includes("Stay controlled and calm during each set"), true);
   assert.equal(html.includes("View coaching notes"), true);
+  assert.equal(html.includes("Mindset &amp; adjustments"), true);
   assert.equal(html.includes('aria-expanded="false"'), true);
   assert.equal(html.includes("Movement demos are coming soon."), true);
   assert.equal(html.includes("Coming soon"), true);
@@ -802,6 +803,9 @@ test("labels a stop rule stored in progression_rule as Stop rule, not Progress",
 
   assert.equal(html.includes("Stop rule"), true);
   assert.equal(html.includes("Stop the set if ankle pain increases"), true);
+  assert.equal(html.includes("sp-block-stop-rule"), true);
+  assert.equal(html.includes("View coaching notes"), false);
+  assert.equal(html.includes("Movement demos are coming soon."), true);
 });
 
 test("cleans malformed Regression and Stop coaching cues at render time", () => {

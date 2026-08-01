@@ -18829,17 +18829,14 @@ html[data-theme="light"] .loading-operational-item {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px 18px;
-  margin: 16px 0 0 50px;
   padding: 15px 0 0;
   border-top: 1px solid var(--border-subtle);
 }
 
-.sp-block-coaching[hidden],
 .sp-session-coaching-panel[hidden] {
   display: none;
 }
 
-.sp-block-coaching .sp-tag,
 .sp-block-coaching .sp-cues {
   grid-column: 1 / -1;
   justify-self: start;
@@ -18848,6 +18845,38 @@ html[data-theme="light"] .loading-operational-item {
 .sp-block-coaching .sp-block-aside {
   margin: 0;
   line-height: 1.5;
+}
+
+.sp-block-coaching-head {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-block-coaching-title {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sp-block-stop-rule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  margin: 10px 0 0 50px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(219, 47, 64, 0.58);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.sp-block-stop-rule .sp-stat-label {
+  color: #ff6674;
 }
 
 .sp-coaching-toggle {
@@ -18896,7 +18925,6 @@ html[data-theme="light"] .loading-operational-item {
 
 .sp-session-coaching-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.78fr) minmax(320px, 1.22fr);
   gap: 22px;
   padding-top: 22px;
   animation: sp-coaching-reveal 180ms ease both;
@@ -18911,8 +18939,14 @@ html[data-theme="light"] .loading-operational-item {
 
 .sp-session-coaching-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   align-content: start;
+}
+
+.sp-session-block-coaching {
+  display: grid;
+  gap: 16px;
 }
 
 .sp-session-coaching-note p {
@@ -18933,6 +18967,10 @@ html[data-theme="light"] .loading-operational-item {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-stat);
   background: var(--bg-surface);
+}
+
+.sp-session > .sp-video-placeholder {
+  margin-top: 18px;
 }
 
 .sp-video-placeholder:only-child {
@@ -18992,6 +19030,9 @@ html[data-theme="light"] .loading-operational-item {
 
   .sp-block-coaching {
     grid-template-columns: 1fr;
+  }
+
+  .sp-block-stop-rule {
     margin-left: 40px;
   }
 
@@ -19001,10 +19042,6 @@ html[data-theme="light"] .loading-operational-item {
 
   .sp-coaching-toggle-meta {
     display: none;
-  }
-
-  .sp-session-coaching-panel {
-    grid-template-columns: 1fr;
   }
 
   .sp-video-placeholder {
