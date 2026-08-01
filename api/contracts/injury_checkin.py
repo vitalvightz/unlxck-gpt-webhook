@@ -175,12 +175,22 @@ _TRIAGE_DISPLAY_NOUN = {
 # underlying triage — and its clearance requirement — is unchanged.
 _RUPTURE_EVIDENCE_PATTERN = re.compile(
     r"\b(?:rupture[d]?|avuls(?:ion|ed)|detached|snap(?:ped)?|"
-    r"complete\s+(?:tear|rupture)|full[-\s]thickness(?:\s+tear)?|full\s+tear)\b",
+    r"complete(?:\s+[\w-]+){0,4}\s+(?:tear|rupture)|"
+    r"full[-\s]thickness(?:\s+[\w-]+){0,4}(?:\s+tear)?|full\s+tear)\b",
+    re.IGNORECASE,
+)
+
+# ``remove_negated_phrases`` covers the pipeline's standard denial language.
+# Keep this narrow fallback for the common "nothing is ruptured" construction,
+# which is a denial but is not one of Negex's configured leading cues.
+_NOTHING_RUPTURED_PATTERN = re.compile(
+    r"\bnothing\s+(?:is|was|has\s+been)\s+"
+    r"(?:rupture[d]?|avuls(?:ion|ed)|detached|snap(?:ped)?)\b",
     re.IGNORECASE,
 )
 
 
-def _triage_display_noun(triage_category: str, injury_text: str) -> str:
+def _triage_display_noun(triage_category: str, *injury_text_parts: str) -> str:
     """Athlete-facing type noun for a structural triage category.
 
     Mirrors ``_TRIAGE_DISPLAY_NOUN`` except that a ``tendon_rupture`` with no
@@ -188,10 +198,18 @@ def _triage_display_noun(triage_category: str, injury_text: str) -> str:
     "tear" rather than escalated to "rupture".
     """
     noun = _TRIAGE_DISPLAY_NOUN.get(triage_category, "")
-    if triage_category == "tendon_rupture" and not _RUPTURE_EVIDENCE_PATTERN.search(
-        injury_text or ""
-    ):
-        return "tear"
+    if triage_category == "tendon_rupture":
+        # Clean each field independently. Prefixing a structured body area before
+        # the description would hide a leading denial such as "not ruptured" from
+        # the clause-scoped negation cleaner.
+        from fightcamp.injury_negation import remove_negated_phrases
+
+        evidence_text = " ".join(
+            _NOTHING_RUPTURED_PATTERN.sub(" ", remove_negated_phrases(part or ""))
+            for part in injury_text_parts
+        )
+        if not _RUPTURE_EVIDENCE_PATTERN.search(evidence_text):
+            return "tear"
     return noun
 
 # Triage categories whose name already implies the body part (a named knee
@@ -240,7 +258,7 @@ _CONDITION_STRIP = re.compile(
 _LOCATION_FILLER = re.compile(
     r"\b(?:is|are|was|were|been|be|has|have|had|got|getting|gets|feels?|feeling|felt|"
     r"seems?|it|this|that|a|an|the|my|some|really|quite|very|bit|of|in|on|with|and|"
-    r"confirmed|suspected|possible|likely)\b",
+    r"confirmed|suspected|possible|likely|complete|full[-\s]thickness)\b",
     re.I,
 )
 _LOCATION_SIDE_WORDS = {"left", "right", "both", "bilateral"}
@@ -363,7 +381,7 @@ def build_injury_label(body_area: object, description: object) -> str:
     # resolved from the athlete's own words so a reported tear is not escalated to a
     # rupture (see _triage_display_noun).
     if condition_key in ("", "unspecified"):
-        condition_key = _triage_display_noun(triage_category, f"{body} {desc}") or condition_key
+        condition_key = _triage_display_noun(triage_category, body, desc) or condition_key
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"

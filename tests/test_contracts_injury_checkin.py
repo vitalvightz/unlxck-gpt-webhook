@@ -326,6 +326,17 @@ def test_reported_tear_is_not_escalated_to_rupture():
     assert build_injury_label("achilles rupture", "achilles rupture") == "Achilles rupture"
     assert build_injury_label("snapped achilles", "snapped achilles") == "Achilles rupture"
     assert build_injury_label("ruptured bicep", "ruptured bicep") == "Bicep rupture"
+    assert build_injury_label("achilles", "complete achilles tear") == "Achilles rupture"
+    assert build_injury_label("achilles", "complete achilles tendon tear") == "Achilles rupture"
+    assert build_injury_label("bicep", "full-thickness bicep tear") == "Bicep rupture"
+    assert build_injury_label("achilles", "achilles tear with avulsion") == "Achilles rupture"
+    assert build_injury_label("bicep", "bicep tear with detached tendon") == "Bicep rupture"
+
+
+def test_negated_rupture_evidence_does_not_upgrade_a_tear():
+    assert build_injury_label("bicep", "Not ruptured, just a bicep tear") == "Bicep tear"
+    assert build_injury_label("bicep", "nothing is ruptured, just a bicep tear") == "Bicep tear"
+    assert build_injury_label("achilles", "ruled out rupture but achilles tear") == "Achilles tear"
 
 
 def test_confirmed_tear_stays_a_tear():

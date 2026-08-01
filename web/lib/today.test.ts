@@ -745,6 +745,47 @@ test("safe session drops all cardio when both legs and arms cannot take load", (
   assert.deepEqual(view.allowed, ["Easy mobility", "Breathing reset", "Gentle activation", "Coach-approved rehab"]);
 });
 
+test("safe session recognizes generic arm injuries before offering upper-body cardio", () => {
+  for (const bodyArea of ["arm", "arms", "upper arm"]) {
+    const view = getSafeSessionView("Technical sparring", [
+      makeInjury({ id: "leg", body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate" }),
+      makeInjury({ id: "arm", body_area: bodyArea, description: `${bodyArea} fracture`, label: `${bodyArea} fracture`, severity: "moderate" }),
+    ]);
+    assert.equal(view.allowed.some((item) => item.toLowerCase().includes("cardio")), false, bodyArea);
+  }
+});
+
+test("safe session recognizes plural structural terms and canonical lower-limb locations", () => {
+  const cases = [
+    ["calf", "calf tears"],
+    ["ankle", "ankle fractures"],
+    ["achilles", "achilles ruptures"],
+    ["hip", "hip dislocations"],
+    ["quads", "quad tear"],
+    ["hamstrings", "hamstring tear"],
+  ] as const;
+  for (const [bodyArea, description] of cases) {
+    const view = getSafeSessionView("Technical sparring", [
+      makeInjury({ body_area: bodyArea, description, label: "Structural injury", severity: "moderate" }),
+    ]);
+    assert.equal(view.allowed.includes("Light bike or walk"), false, `${bodyArea}: ${description}`);
+  }
+});
+
+test("safe session ignores negated structural terms on a mild lower-limb injury", () => {
+  for (const description of [
+    "no fracture, mild ankle soreness",
+    "no fracture or tear, mild ankle soreness",
+    "doctor ruled out rupture; mild ankle soreness",
+    "nothing is ruptured, mild ankle soreness",
+  ]) {
+    const view = getSafeSessionView("Technical sparring", [
+      makeInjury({ body_area: "ankle", description, label: "Ankle soreness", severity: "mild" }),
+    ]);
+    assert.equal(view.allowed.includes("Light bike or walk"), true, description);
+  }
+});
+
 test("safe session downregulates to rest work for a concussion or head injury", () => {
   const view = getSafeSessionView("Technical sparring", [
     makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate" }),

@@ -874,13 +874,14 @@ const INJURY_REGION_TERMS = {
     "leg", "knee", "kneecap", "patella", "patellar", "meniscus",
     "acl", "mcl", "pcl", "lcl", "shin", "tibia", "fibula", "calf", "achilles",
     "ankle", "foot", "feet", "heel", "toe", "plantar",
-    "hamstring", "quad", "quadriceps", "thigh", "hip", "groin", "glute", "glutes", "adductor",
+    "hamstring", "hamstrings", "quad", "quads", "quadriceps", "thigh", "hip", "groin", "glute", "glutes", "adductor",
   ],
   // The arms/shoulders that drive an arm ergometer and any pressing/pulling.
   upper_limb: [
     "shoulder", "rotator", "cuff", "delt", "deltoid", "bicep", "biceps",
     "tricep", "triceps", "elbow", "forearm", "wrist", "hand", "finger", "fingers",
     "thumb", "knuckle", "knuckles", "clavicle", "collarbone",
+    "arm", "arms", "upper arm", "upper arms",
   ],
   // Brain/neck — the region that turns any aerobic push into a symptom risk. Bare
   // "head" is handled by INJURY_REGION_PATTERNS to avoid matching anatomical uses
@@ -918,16 +919,33 @@ const INJURY_REGION_PATTERNS: Partial<Record<InjuryRegion, readonly RegExp[]>> =
 // minor strain is NOT disqualifying — only a break/rupture/tear/dislocation is
 // (severity "severe" is handled alongside this).
 const LOAD_INTOLERANT_INJURY_TERMS = [
-  "fracture", "fractured", "broken", "break",
-  "rupture", "ruptured", "tear", "torn", "snap", "snapped",
-  "dislocation", "dislocated", "avulsion",
+  "fracture", "fractures", "fractured", "broken", "break", "breaks",
+  "rupture", "ruptures", "ruptured", "tear", "tears", "torn", "snap", "snaps", "snapped",
+  "dislocation", "dislocations", "dislocated", "avulsion", "avulsions",
 ] as const;
+
+const NEGATED_LOAD_INTOLERANT_PATTERN = new RegExp(
+  String.raw`\b(?:no|not|without|den(?:y|ies|ied)|ruled\s+out|nothing\s+(?:is|was))\s+` +
+    String.raw`(?:(?:signs?|evidence)\s+of\s+)?(?:an?\s+)?` +
+    String.raw`(?:fractures?|fractured|broken|breaks?|ruptures?|ruptured|tears?|torn|snaps?|snapped|dislocations?|dislocated|avulsions?)` +
+    String.raw`(?:\s*(?:,|or|and)\s*(?:fractures?|fractured|broken|breaks?|ruptures?|ruptured|tears?|torn|snaps?|snapped|dislocations?|dislocated|avulsions?))*\b`,
+  "gi",
+);
 
 function injuryHaystack(injury: InjuryFlagRecord): string {
   const raw = `${injury.label ?? ""} ${injury.body_area ?? ""} ${injury.description ?? ""}`.toLowerCase();
   // Reduce to space-delimited word tokens so a term only matches a whole word
   // (" hip " never matches "ship", " toe " never matches "together").
   return ` ${raw.replace(/[^a-z]+/g, " ").trim()} `;
+}
+
+function injuryLoadEvidenceHaystack(injury: InjuryFlagRecord): string {
+  const raw = `${injury.label ?? ""} ${injury.body_area ?? ""} ${injury.description ?? ""}`.toLowerCase();
+  // A denied structural diagnosis must not make a mild injury load-intolerant.
+  // Remove only the denied structural phrase, preserving positive evidence later
+  // in the same clause ("not ruptured, just a bicep tear").
+  const cleaned = raw.replace(NEGATED_LOAD_INTOLERANT_PATTERN, " ");
+  return ` ${cleaned.replace(/[^a-z]+/g, " ").trim()} `;
 }
 
 function isActiveInjury(injury: InjuryFlagRecord): boolean {
@@ -958,7 +976,8 @@ function hasLoadIntolerantInjuryInRegion(
       return false;
     }
     const haystack = injuryHaystack(injury);
-    return injuryHitsRegion(haystack, region) && injuryIsLoadIntolerant(injury, haystack);
+    const evidenceHaystack = injuryLoadEvidenceHaystack(injury);
+    return injuryHitsRegion(haystack, region) && injuryIsLoadIntolerant(injury, evidenceHaystack);
   });
 }
 
@@ -1035,7 +1054,7 @@ export function resolveSafeSessionAllowed(
     return ["Easy mobility", "Breathing reset", "Coach-approved rehab"];
   }
 
-  const lowerBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
+  const lowerBlocked = hasLoadIntolerantLowerLegInjury(openInjuries);
   const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
 
   // The one aerobic/movement slot, matched to whichever limbs can take load.
@@ -1073,7 +1092,7 @@ export function resolveSafeSessionAllowed(
 export function resolveSafeSessionBlocked(
   openInjuries?: readonly InjuryFlagRecord[] | null,
 ): string[] {
-  const lowerBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
+  const lowerBlocked = hasLoadIntolerantLowerLegInjury(openInjuries);
   const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
   const trunkBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine");
   const neuro = hasNeuroDownregulationInjury(openInjuries);
