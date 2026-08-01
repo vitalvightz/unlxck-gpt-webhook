@@ -894,26 +894,20 @@ select:focus-visible {
   align-items: center;
 }
 
-/* Button scale. Deliberately trimmed from 44px/16px: at that size a row of
-   these read as slabs rather than controls, and the extra height bought
-   nothing on touch that 40px does not already clear. */
 .cta,
 .ghost-button,
 .secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 0 16px;
+  min-height: 44px;
+  padding: 0 18px;
   border-radius: var(--radius-btn);
   border: 1px solid transparent;
   cursor: pointer;
   font-size: var(--type-body-lg);
   font-weight: 600;
   letter-spacing: 0.01em;
-  /* A button label is a single phrase — it is never allowed to break across
-     two lines. */
-  white-space: nowrap;
   transition: background var(--transition-fast), border-color var(--transition-fast),
     color var(--transition-fast), box-shadow var(--transition-fast),
     transform var(--transition-fast);
@@ -7148,7 +7142,7 @@ html[data-theme="light"] .today-terminal-status {
   flex: 1 1 0;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: 42px;
   padding: 6px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 9px;
@@ -7159,7 +7153,6 @@ html[data-theme="light"] .today-terminal-status {
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
-  white-space: nowrap;
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
     box-shadow 160ms ease, transform 120ms ease;
@@ -7396,6 +7389,17 @@ html[data-theme="light"] .today-terminal-status {
   white-space: nowrap;
 }
 
+/* Option labels on Today's pickers are a fixed set written in the component —
+   "Open or burst", "Spreading redness", "Very hard" — and a column layout used
+   to break them across two lines mid-phrase. Hold them to one line.
+   Deliberately scoped to these two forms rather than put on every button: a
+   .cta or .secondary-button elsewhere can carry dynamic text, and that would
+   rather wrap than overflow its container. */
+.today-injury-card .today-segment,
+.today-checkin-form .today-segment {
+  white-space: nowrap;
+}
+
 /* The four status actions were the only unlabelled control on the card — four
    bare words under an injury name, with the question they answer living only
    in the group's aria-label. */
@@ -7569,7 +7573,7 @@ html[data-theme="light"] .today-terminal-status {
 
 .today-injury-confirm-yes,
 .today-injury-confirm-cancel {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 16px;
   border-radius: 9px;
   font: inherit;
@@ -8524,7 +8528,7 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   }
 
   .today-segment {
-    min-height: 40px;
+    min-height: 44px;
     padding-inline: 12px;
   }
 
