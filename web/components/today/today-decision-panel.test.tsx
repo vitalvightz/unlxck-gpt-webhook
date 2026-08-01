@@ -37,7 +37,7 @@ test("the action reads before the reason", () => {
   assert.ok(html.indexOf(BANNER.action!) < html.indexOf(BANNER.detail));
 });
 
-test("evidence is in a collapsed native disclosure with separate trigger and context", () => {
+test("evidence is in an open native disclosure with separate trigger and context", () => {
   const html = render({
     banner: BANNER,
     triggers: ["Poor sleep for 3 days", "Feeling flat"],
@@ -49,7 +49,7 @@ test("evidence is in a collapsed native disclosure with separate trigger and con
   assert.ok(html.includes("Context"));
   assert.ok(html.includes("<details"));
   assert.ok(html.includes("<summary>Why this decision?</summary>"));
-  assert.ok(!html.includes("<details open"));
+  assert.ok(/<details[^>]*\sopen/.test(html));
   assert.equal((html.match(/today-decision-values/g) ?? []).length, 2);
   assert.ok(html.includes('data-evidence-count="2"'));
   assert.ok(!html.includes(" · "));
