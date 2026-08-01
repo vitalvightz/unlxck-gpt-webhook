@@ -36,7 +36,7 @@ def _open_plan_brief(*, plan_creation_weekday: str | None = None):
         "stage1_selection_summary": {"current_phase": "GPP"},
     }
     if plan_creation_weekday:
-        brief["athlete_model"] = {
+        brief["athlete_snapshot"] = {
             "plan_creation_weekday": plan_creation_weekday,
             "plan_creation_weekday_basis": "athlete_local_weekday",
         }
