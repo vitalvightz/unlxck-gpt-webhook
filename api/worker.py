@@ -11,11 +11,12 @@ from fightcamp.logging_utils import configure_logging
 
 from .environment import apply_production_environment_defaults, should_default_to_production
 from .error_sanitizer import sanitize_error_text
-from .generation_runtime import default_planner, is_stale_job, run_generation_job, utc_now_iso
+from .generation_runtime import default_planner, run_generation_job, utc_now_iso
 from .generation_config import generation_job_stale_after_seconds
 from .stage2_automation import build_default_stage2_automator
-from .store import AppStore, SupabaseAppStore
+from .store import AppStore, SupabaseAppStore, is_pre_start_stale_generation_job
 from .store_performance import list_claimable_generation_jobs
+from .worker_recovery import recover_stale_generation_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,10 @@ def _worker_max_concurrent_jobs() -> int:
 
 def _worker_shutdown_grace_seconds() -> int:
     return _int_env("UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS", 25, minimum=1)
+
+
+def _worker_recovery_sweep_interval_seconds() -> int:
+    return _int_env("UNLXCK_GENERATION_WORKER_RECOVERY_SWEEP_SECONDS", 15, minimum=5)
 
 
 def _morning_push_sweep_interval_seconds() -> int:
@@ -70,6 +75,27 @@ async def _run_morning_push_sweep_if_due(
         await asyncio.to_thread(run_morning_push_sweep, store)
     except Exception:  # noqa: BLE001 - the nudge sweep must never disturb generation
         logger.exception("[worker] morning push sweep failed")
+
+
+async def _run_generation_recovery_sweep_if_due(
+    *,
+    store: AppStore,
+    active_tasks: set[str],
+    stale_after_seconds: int,
+    state: dict[str, float],
+    interval_seconds: int,
+) -> None:
+    """Resolve non-claimable stale jobs on a bounded worker cadence."""
+
+    now = time.monotonic()
+    if now - state.get("last_sweep_at", 0.0) < interval_seconds:
+        return
+    state["last_sweep_at"] = now
+    await recover_stale_generation_jobs(
+        store=store,
+        active_tasks=active_tasks,
+        stale_after_seconds=stale_after_seconds,
+    )
 
 
 def _install_shutdown_handlers(
@@ -199,7 +225,18 @@ async def _tick(
     detached_tasks: set[asyncio.Task[None]],
     stale_after_seconds: int,
     max_concurrent_jobs: int,
+    recovery_state: dict[str, float] | None = None,
+    recovery_interval_seconds: int = 15,
 ) -> None:
+    recovery_state = recovery_state if recovery_state is not None else {}
+    await _run_generation_recovery_sweep_if_due(
+        store=store,
+        active_tasks=active_tasks,
+        stale_after_seconds=stale_after_seconds,
+        state=recovery_state,
+        interval_seconds=recovery_interval_seconds,
+    )
+
     remaining_capacity = max_concurrent_jobs - len(active_tasks)
     if remaining_capacity <= 0:
         return
@@ -223,11 +260,16 @@ async def _tick(
         if not job_id or job_id in active_tasks:
             continue
 
-        status = str(job.get("status") or "")
-        if status == "running" and not is_stale_job(
+        status = str(job.get("status") or "").strip().lower()
+        if status == "running" and not is_pre_start_stale_generation_job(
             job,
             stale_after_seconds=stale_after_seconds,
         ):
+            # Defense in depth: even if the compact RPC regresses, a job that
+            # already reached worker-claim, Stage 1, mid-pipeline or persistence
+            # must never be sent back through the claim/start path.
+            continue
+        if status not in {"", "queued", "running"}:
             continue
 
         active_tasks.add(job_id)
@@ -275,6 +317,7 @@ async def run_worker() -> None:
     stale_after_seconds = _worker_stale_after_seconds()
     max_concurrent_jobs = _worker_max_concurrent_jobs()
     shutdown_grace_seconds = _worker_shutdown_grace_seconds()
+    recovery_interval_seconds = _worker_recovery_sweep_interval_seconds()
 
     active_tasks: set[str] = set()
     detached_tasks: set[asyncio.Task[None]] = set()
@@ -283,16 +326,18 @@ async def run_worker() -> None:
     _install_shutdown_handlers(asyncio.get_running_loop(), shutdown_event)
 
     logger.info(
-        "[worker] started mode=%s interval_seconds=%s stale_after_seconds=%s max_concurrent_jobs=%s shutdown_grace_seconds=%s",
+        "[worker] started mode=%s interval_seconds=%s stale_after_seconds=%s max_concurrent_jobs=%s shutdown_grace_seconds=%s recovery_interval_seconds=%s",
         mode,
         interval_seconds,
         stale_after_seconds,
         max_concurrent_jobs,
         shutdown_grace_seconds,
+        recovery_interval_seconds,
     )
     if os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "0":
         logger.info("[worker] generation:worker_only_mode enabled")
 
+    recovery_sweep_state: dict[str, float] = {}
     morning_sweep_state: dict[str, float] = {}
     morning_sweep_interval = _morning_push_sweep_interval_seconds()
 
@@ -304,6 +349,8 @@ async def run_worker() -> None:
                 detached_tasks=detached_tasks,
                 stale_after_seconds=stale_after_seconds,
                 max_concurrent_jobs=max_concurrent_jobs,
+                recovery_state=recovery_sweep_state,
+                recovery_interval_seconds=recovery_interval_seconds,
             )
             await _run_morning_push_sweep_if_due(
                 store=store,
