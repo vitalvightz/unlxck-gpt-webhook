@@ -835,3 +835,86 @@ test("existing injury status actions still submit through the current refresh fl
     unmountMain(container, root);
   }
 });
+
+test("submitting without a type says so instead of refusing silently", async () => {
+  // The type has no default and is required. When the submit button simply went
+  // dead there was nothing on screen naming what was missing — the reported
+  // symptom was athletes concluding the app was broken.
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async () => {
+    requests += 1;
+    return new Response(JSON.stringify({ open_injuries: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  const { container, root } = mountMain();
+  try {
+    await click(button(container, "+ Add injury"));
+    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    assert.ok(area);
+    await setInput(area, "Left ankle");
+
+    const submit = button(container, "Add injury");
+    assert.equal(submit.disabled, false, "an incomplete form must still accept the tap");
+
+    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await settle();
+
+    assert.equal(requests, 0, "nothing may be sent without a type");
+    const alert = container.querySelector('[role="alert"]');
+    assert.ok(alert, "expected the missing answer to be named");
+    assert.match(alert?.textContent ?? "", /Pick a type/);
+    // And it points at the control that stopped the submit.
+    assert.ok(container.querySelector(".today-segment-row[data-invalid]"));
+
+    // Answering it clears the error without a second submit attempt.
+    await click(button(container, "Other"));
+    assert.equal(container.querySelector('[role="alert"]'), null);
+    assert.equal(container.querySelector(".today-segment-row[data-invalid]"), null);
+  } finally {
+    globalThis.fetch = originalFetch;
+    unmountMain(container, root);
+  }
+});
+
+test("submitting without an area names the area, not the type", async () => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async () => {
+    requests += 1;
+    return new Response(JSON.stringify({ open_injuries: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  const { container, root } = mountMain();
+  try {
+    await click(button(container, "+ Add injury"));
+    await click(button(container, "Soreness"));
+
+    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await settle();
+
+    assert.equal(requests, 0);
+    const alert = container.querySelector('[role="alert"]');
+    assert.match(alert?.textContent ?? "", /Say where it is/);
+
+    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    assert.ok(area);
+    await setInput(area, "Left ankle");
+    assert.equal(container.querySelector('[role="alert"]'), null);
+  } finally {
+    globalThis.fetch = originalFetch;
+    unmountMain(container, root);
+  }
+});

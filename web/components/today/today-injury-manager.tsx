@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useId, useRef, useState } from "react";
 
 import {
   BodyMap,
@@ -289,7 +289,15 @@ export function TodayInjuryManager({
   const [newZone, setNewZone] = useState("");
   const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
+  // Which required answer stopped the last submit attempt. Both the area and
+  // the type are required and neither has a default, so a form that only
+  // disabled its own submit button left the athlete tapping a dead control
+  // with nothing on screen naming what was missing.
+  const [addMissing, setAddMissing] = useState<"area" | "type" | null>(null);
+  const areaInputRef = useRef<HTMLInputElement>(null);
+  const typeGroupRef = useRef<HTMLDivElement>(null);
   const addFormId = useId();
+  const addErrorId = useId();
   const bodyMapVisibilityId = useId();
   const newInjurySelections: BodyMapSelection[] = newArea.trim()
     ? [
@@ -433,12 +441,25 @@ export function TodayInjuryManager({
 
   async function addInjury(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const area = newArea.trim();
-    // A type is a required, explicit choice — an area alone can no longer submit a
-    // blank report. ("Other" is a valid choice; it just carries no condition word.)
-    if (!area || !newType || isAdding) {
+    if (isAdding) {
       return;
     }
+    const area = newArea.trim();
+    // A type is a required, explicit choice — an area alone cannot submit a blank
+    // report. ("Other" is a valid choice; it just carries no condition word.)
+    // Say which answer is missing and put the cursor on it, rather than refusing
+    // the submit silently.
+    if (!area) {
+      setAddMissing("area");
+      areaInputRef.current?.focus();
+      return;
+    }
+    if (!newType) {
+      setAddMissing("type");
+      typeGroupRef.current?.querySelector("button")?.focus();
+      return;
+    }
+    setAddMissing(null);
     setIsAdding(true);
     try {
       const description = composeTodayInjuryDescription({ injuryType: newType, detail: newDetail });
@@ -452,6 +473,7 @@ export function TodayInjuryManager({
       setAreaLimited(false);
       setDetailLimited(false);
       setNewZone("");
+      setAddMissing(null);
       setIsAddFormOpen(false);
       showToast("Injury added.", { tone: "success" });
     } catch (error) {
@@ -464,6 +486,7 @@ export function TodayInjuryManager({
   function selectBodyMapZone(zone: string, label: string) {
     const sameZone = newZone === zone;
     setNewZone(zone);
+    setAddMissing((current) => (current === "area" ? null : current));
     if (!sameZone || !newArea.trim()) {
       // Body-map labels go through the same cap as typed text so an inserted label
       // can never exceed the limit either.
@@ -485,6 +508,7 @@ export function TodayInjuryManager({
     setNewDetail("");
     setAreaLimited(false);
     setDetailLimited(false);
+    setAddMissing(null);
   }
 
   return (
@@ -769,19 +793,27 @@ export function TodayInjuryManager({
             <small>Tap the same zone to raise severity, or Clear to start over.</small>
           </div>
         ) : null}
-        <label className="field" htmlFor="today-injury-area">
-          <span className="sr-only">Add injury</span>
+        <div className="field">
+          <label htmlFor="today-injury-area">
+            Where is it?
+            <span className="today-field-required">Required</span>
+          </label>
           <input
             id="today-injury-area"
+            ref={areaInputRef}
             value={newArea}
             spellCheck
             placeholder="e.g. left shoulder"
+            aria-invalid={addMissing === "area" || undefined}
+            aria-describedby={addMissing === "area" ? addErrorId : undefined}
             onChange={(event) => {
               const raw = event.target.value;
               const value = limitInjuryEntryText(raw);
               setAreaLimited(value !== raw);
               setNewArea(value);
-              if (!value.trim()) {
+              if (value.trim()) {
+                setAddMissing((current) => (current === "area" ? null : current));
+              } else {
                 setNewZone("");
               }
             }}
@@ -795,14 +827,21 @@ export function TodayInjuryManager({
               ? `${TODAY_INJURY_MAX_WORDS}-word limit — extra removed`
               : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
           </small>
-        </label>
-        <SegmentGroup
-          label="Type"
-          value={newType}
-          options={TODAY_INJURY_TYPE_OPTIONS}
-          onChange={setNewType}
-          columns={2}
-        />
+        </div>
+        <div ref={typeGroupRef}>
+          <SegmentGroup
+            label="Type"
+            value={newType}
+            options={TODAY_INJURY_TYPE_OPTIONS}
+            onChange={(value) => {
+              setNewType(value);
+              setAddMissing((current) => (current === "type" ? null : current));
+            }}
+            columns={2}
+            required
+            invalid={addMissing === "type"}
+          />
+        </div>
         <div className="field today-injury-detail">
           <label htmlFor="today-injury-detail">Anything else? — optional</label>
           <input
@@ -832,11 +871,18 @@ export function TodayInjuryManager({
           options={INJURY_SEVERITY_OPTIONS}
           onChange={setNewSeverity}
         />
-        <button
-          type="submit"
-          className="secondary-button"
-          disabled={isAdding || !newArea.trim() || !newType}
-        >
+        {addMissing ? (
+          <p id={addErrorId} className="today-inline-error" role="alert">
+            {addMissing === "area"
+              ? "Say where it is first — tap a spot on the body map, or type the area."
+              : "Pick a type first. If none of these fit, tap “Other”."}
+          </p>
+        ) : null}
+        {/* Deliberately not disabled on an incomplete form. A disabled submit is
+            the reason a missing type read as the app being broken: the only
+            feedback was a button that would not respond. Let the tap land, then
+            name what is missing. */}
+        <button type="submit" className="secondary-button" disabled={isAdding}>
           {isAdding ? "Adding..." : "Add injury"}
         </button>
       </form>

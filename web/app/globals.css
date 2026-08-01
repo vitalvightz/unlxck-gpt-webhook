@@ -7511,6 +7511,25 @@ html[data-theme="light"] .today-terminal-status {
   opacity: 0.75;
 }
 
+/* "Required" marker on a control that has no default. Quiet enough to scan
+   past, present enough that the requirement is never a surprise sprung by a
+   submit that will not go. */
+.today-field-required {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: 1px solid rgba(226, 58, 76, 0.32);
+  border-radius: var(--radius-pill);
+  color: var(--brand-red);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  vertical-align: 1px;
+}
+
+/* The control a submit attempt stopped on. */
+.today-segment-row[data-invalid] > .today-segment:not(.today-segment-active) {
+  border-color: rgba(226, 58, 76, 0.5);
+}
+
 /* Sub-label under a question (e.g. "multi-select, none is fine") — sentence
    case and unmissably lighter than the question it explains. */
 .today-field-hint {
@@ -7605,6 +7624,14 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 
 /* Light-theme parity for the drawer: the dark rules lean on white opacity,
    which is invisible on the light background. */
+html[data-theme="light"] .today-field-required {
+  border-color: rgba(189, 16, 32, 0.28);
+}
+
+html[data-theme="light"] .today-segment-row[data-invalid] > .today-segment:not(.today-segment-active) {
+  border-color: rgba(189, 16, 32, 0.42);
+}
+
 html[data-theme="light"] .today-injury-surface-followup {
   border-color: rgba(80, 81, 84, 0.12);
   border-left-color: rgba(189, 16, 32, 0.5);
