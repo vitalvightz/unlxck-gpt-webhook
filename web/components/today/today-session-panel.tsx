@@ -479,7 +479,7 @@ export function TodaySessionPanel({
         </div>
       ) : null}
 
-      {!canCompleteSession ? (
+      {!canCompleteSession && !safeSession ? (
         <div className="today-terminal-block">
           <p
             className="today-terminal-status"

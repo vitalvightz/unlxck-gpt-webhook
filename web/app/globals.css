@@ -6871,13 +6871,30 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   line-height: 1.45;
 }
 
+.today-decision-disclosure {
+  margin-top: 18px;
+}
+
+.today-decision-disclosure summary {
+  width: fit-content;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.today-decision-disclosure summary:focus-visible {
+  outline: 2px solid var(--decision-accent);
+  outline-offset: 4px;
+}
+
 /* Supporting evidence uses the width the old label/value table left empty. Each
    semantic group remains a stacked list; only the groups become a responsive
    rail. auto-fit lets sparse states expand without empty columns. */
 .today-decision-evidence {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  margin: 20px -22px 0;
+  margin: 12px -22px 0;
   padding: 0;
   border-top: 1px solid var(--border-default);
   background: rgba(255, 255, 255, 0.018);

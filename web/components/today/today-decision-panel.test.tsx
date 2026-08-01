@@ -37,7 +37,7 @@ test("the action reads before the reason", () => {
   assert.ok(html.indexOf(BANNER.action!) < html.indexOf(BANNER.detail));
 });
 
-test("triggers and context render as separate stacked lists", () => {
+test("evidence is in a collapsed native disclosure with separate trigger and context", () => {
   const html = render({
     banner: BANNER,
     triggers: ["Poor sleep for 3 days", "Feeling flat"],
@@ -47,6 +47,9 @@ test("triggers and context render as separate stacked lists", () => {
   assert.ok(html.includes("Poor sleep for 3 days"));
   assert.ok(html.includes("Feeling flat"));
   assert.ok(html.includes("Context"));
+  assert.ok(html.includes("<details"));
+  assert.ok(html.includes("<summary>Why this decision?</summary>"));
+  assert.ok(!html.includes("<details open"));
   assert.equal((html.match(/today-decision-values/g) ?? []).length, 2);
   assert.ok(html.includes('data-evidence-count="2"'));
   assert.ok(!html.includes(" · "));
@@ -82,6 +85,12 @@ test("a row with nothing in it does not render", () => {
   const html = render({ banner: BANNER, triggers: ["Poor sleep"] });
   assert.ok(html.includes("Trigger"));
   assert.ok(!html.includes("Context"));
+});
+
+test("empty evidence does not render a disclosure", () => {
+  const html = render({ banner: BANNER });
+  assert.ok(!html.includes("<details"));
+  assert.ok(!html.includes("Why this decision?"));
 });
 
 test("blank labels never render an empty row", () => {

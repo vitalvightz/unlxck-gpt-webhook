@@ -92,6 +92,8 @@ export function TodayDecisionPanel({
         {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
       </div>
       {hasEvidence ? (
+        <details className="today-decision-disclosure">
+          <summary>Why this decision?</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (
             <div className="today-decision-row">
@@ -145,6 +147,7 @@ export function TodayDecisionPanel({
             </div>
           ) : null}
         </dl>
+        </details>
       ) : null}
     </div>
   );
