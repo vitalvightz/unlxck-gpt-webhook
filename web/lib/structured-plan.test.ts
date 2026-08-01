@@ -657,7 +657,7 @@ test("getStringList cleans, drops blanks, and tolerates null", () => {
   assert.deepEqual(getStringList([]), []);
 });
 
-test("getMindsetLines surfaces the full mindset anchor including reset and confidence", () => {
+test("getMindsetLines surfaces the full mindset anchor with an accurate display label", () => {
   const lines = getMindsetLines({
     intent: "Move fast",
     focus_cue: "Drive",
@@ -667,7 +667,7 @@ test("getMindsetLines surfaces the full mindset anchor including reset and confi
   });
   assert.deepEqual(
     lines.map((l) => l.label),
-    ["Intent", "Focus", "Reset", "Confidence", "Context"],
+    ["Intent", "Focus", "Reset", "Anchor", "Context"],
   );
   assert.deepEqual(
     lines.map((l) => l.value),
@@ -963,7 +963,7 @@ test("splitMindsetLines keeps all mindset lines primary", () => {
   });
   assert.deepEqual(
     primary.map((line) => line.label),
-    ["Intent", "Focus", "Reset", "Confidence", "Context"],
+    ["Intent", "Focus", "Reset", "Anchor", "Context"],
   );
   assert.deepEqual(secondary, []);
 });

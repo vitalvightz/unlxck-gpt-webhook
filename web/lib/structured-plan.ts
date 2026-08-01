@@ -467,7 +467,7 @@ export function getStringList(value: string[] | null | undefined): string[] {
     .filter((item): item is string => item !== null);
 }
 
-/** The mindset anchor as label/value lines (Intent, Focus, Reset, Confidence,
+/** The mindset anchor as label/value lines (Intent, Focus, Reset, Anchor,
  * Context), in that order, skipping any field that is blank. Empty when the
  * anchor has no usable line, so the renderer can hide the card. */
 export function getMindsetLines(
@@ -497,7 +497,7 @@ export function getMindsetLines(
   if (intent) lines.push({ label: "Intent", value: capitalizeFirst(intent) });
   if (focus) lines.push({ label: "Focus", value: capitalizeFirst(focus) });
   if (reset) lines.push({ label: "Reset", value: capitalizeFirst(reset) });
-  if (confidence) lines.push({ label: "Confidence", value: capitalizeFirst(confidence) });
+  if (confidence) lines.push({ label: "Anchor", value: capitalizeFirst(confidence) });
   if (context) lines.push({ label: "Context", value: capitalizeFirst(context) });
   return lines;
 }
