@@ -1,0 +1,60 @@
+name: Apply PR 2143 review fixes
+
+on:
+  push:
+    branches:
+      - Main
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fixes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Main
+        uses: actions/checkout@v4
+        with:
+          ref: Main
+          fetch-depth: 0
+
+      - name: Apply Cubic review fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          test_path = Path("web/lib/today.test.ts")
+          test_text = test_path.read_text()
+          old_test = '  assert.match(banner?.detail ?? "", /until it is cleared/);'
+          new_test = '  assert.match(banner?.detail ?? "", /until it is cleared\\./);'
+          if old_test not in test_text:
+              raise SystemExit("Expected today.test.ts assertion was not found")
+          test_path.write_text(test_text.replace(old_test, new_test, 1))
+
+          service_path = Path("api/services/today_service.py")
+          service_text = service_path.read_text()
+          old_service = '''                detail=(
+                    f"Blocked by an active severe injury ({label}). Clear it or get it "
+                    "medically cleared before starting or completing this session."
+                ),'''
+          new_service = '''                detail=(
+                    f"Blocked by an active severe injury ({label}). "
+                    "Clear it before training this session."
+                ),'''
+          if old_service not in service_text:
+              raise SystemExit("Expected today_service.py completion guard was not found")
+          service_path.write_text(service_text.replace(old_service, new_service, 1))
+
+          Path(".github/workflows/apply-pr-2143-review-fixes.yml").unlink()
+          Path(".github/pr-2143-review-fix-trigger").unlink(missing_ok=True)
+          PY
+
+      - name: Commit fixes and remove temporary files
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix PR 2143 review findings"
+          git push origin HEAD:Main
