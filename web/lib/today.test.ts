@@ -404,7 +404,8 @@ test("severe injury override supersedes the daily recommendation banner", () => 
   assert.equal(banner?.tone, "red");
   assert.match(banner?.detail ?? "", /Active severe injury: Chest bruise/);
   assert.match(banner?.detail ?? "", /hard sparring/);
-  assert.match(banner?.detail ?? "", /easing does not lift/);
+  assert.match(banner?.detail ?? "", /until it is cleared or medically cleared/);
+  assert.doesNotMatch(banner?.detail ?? "", /easing does not lift/);
   assert.match(banner?.safety ?? "", /superseded by the injury warning/);
 });
 
