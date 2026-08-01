@@ -46,15 +46,28 @@ const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: str
 ];
 
 // Surface (skin) follow-up ----------------------------------------------------
-// A worsening blister, graze or cut is routed by what the skin is doing, not by
-// a blanket "injury is worse" rule — so a worse report on a KNOWN skin injury
-// asks these five questions first. They are never shown for other injuries.
+// A blister, graze or cut is routed by what the skin is doing, not by a blanket
+// "injury" rule — so the five skin questions are asked as soon as one is ADDED,
+// rather than lying dormant until it is later marked worse or easing. They are
+// never shown for other injuries.
 //
 // The same answers are what a wound is still restricted BY, so they also need a
 // way back down: an injury currently held at "no contact" or "needs checking"
 // gets a shortened recheck on Easing / Same, which is how an open blister that
 // has closed over stops blocking contact. Nothing is ever cleared without the
 // athlete confirming it — the recheck opens pre-filled with what is on record.
+//
+// The three follow-up modes differ only in framing and in the check-in status
+// they report: "initial" captures a freshly added wound's baseline (reported
+// ``ongoing`` — nothing has changed), "worse" is the way up, "recheck" the way
+// back down.
+type SurfaceFollowUpMode = "initial" | "worse" | "recheck";
+
+const SURFACE_FOLLOW_UP_STATUS: Record<SurfaceFollowUpMode, TodayInjuryCheckinStatus> = {
+  initial: "ongoing",
+  worse: "worse",
+  recheck: "improving",
+};
 
 /** Backend classes that mean "this is a skin injury we route by skin answers". */
 const SURFACE_FOLLOW_UP_CLASSES = new Set([
@@ -73,6 +86,13 @@ function needsSurfaceFollowUp(injury: InjuryFlagRecord): boolean {
 
 function needsSurfaceRecheck(injury: InjuryFlagRecord): boolean {
   return SURFACE_RECHECK_CLASSES.has(injury.surface_class ?? "non_surface");
+}
+
+/** True for any skin injury the surface pathway owns — every surface class,
+ * including the medical-review one. A freshly added surface injury asks the five
+ * questions straight away, whatever class it lands in with no answers yet. */
+function isSurfaceInjury(injury: InjuryFlagRecord): boolean {
+  return (injury.surface_class ?? "non_surface") !== "non_surface";
 }
 
 /** Bleeding and leaking read as one question to the athlete; the answer maps to
@@ -312,12 +332,13 @@ export function TodayInjuryManager({
   // answers so far. Nothing is sent — and nothing is marked selected — until it
   // is submitted.
   const [surfaceFollowUpId, setSurfaceFollowUpId] = useState<string | null>(null);
-  const [surfaceFollowUpStatus, setSurfaceFollowUpStatus] =
-    useState<TodayInjuryCheckinStatus>("worse");
+  const [surfaceFollowUpMode, setSurfaceFollowUpMode] = useState<SurfaceFollowUpMode>("worse");
   const [surfaceAnswers, setSurfaceAnswers] = useState<SurfaceFollowUpAnswers>(
     EMPTY_SURFACE_ANSWERS,
   );
-  const isSurfaceRecheck = surfaceFollowUpStatus !== "worse";
+  const surfaceFollowUpStatus = SURFACE_FOLLOW_UP_STATUS[surfaceFollowUpMode];
+  const isSurfaceRecheck = surfaceFollowUpMode === "recheck";
+  const isSurfaceInitial = surfaceFollowUpMode === "initial";
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
@@ -415,12 +436,13 @@ export function TodayInjuryManager({
   // known skin injury routes through the surface follow-up, because how a wound
   // is worse (open? bleeding? coverable?) is what decides whether anything about
   // today's session actually changes.
-  function openSurfaceFollowUp(injury: InjuryFlagRecord, status: TodayInjuryCheckinStatus) {
+  function openSurfaceFollowUp(injury: InjuryFlagRecord, mode: SurfaceFollowUpMode) {
     setConfirmingClearId(null);
     // Pre-filled with what is on record, so an untouched answer is preserved
-    // rather than blanked by the act of rechecking.
+    // rather than blanked by the act of rechecking. (A freshly added injury has
+    // nothing on record yet, so this opens on blanks — the baseline to capture.)
     setSurfaceAnswers(answersFromInjury(injury));
-    setSurfaceFollowUpStatus(status);
+    setSurfaceFollowUpMode(mode);
     setSurfaceFollowUpId(injury.id);
   }
 
@@ -438,14 +460,14 @@ export function TodayInjuryManager({
       return;
     }
     if (status === "worse" && needsSurfaceFollowUp(injury)) {
-      openSurfaceFollowUp(injury, status);
+      openSurfaceFollowUp(injury, "worse");
       return;
     }
     // An easing report on a wound that is currently restricting training has to
     // say what the skin is doing now — otherwise the restriction would either
     // stick forever or lift on nothing.
     if (status !== "worse" && needsSurfaceRecheck(injury)) {
-      openSurfaceFollowUp(injury, status);
+      openSurfaceFollowUp(injury, "recheck");
       return;
     }
     // Choosing a different answer abandons any pending confirmation/follow-up.
@@ -462,10 +484,11 @@ export function TodayInjuryManager({
   }
 
   async function submitSurfaceFollowUp(flagId: string) {
+    const status = surfaceFollowUpStatus;
     const saved = await updateInjury(
       flagId,
-      surfaceFollowUpStatus,
-      surfaceDeclaration(flagId, surfaceFollowUpStatus, surfaceAnswers),
+      status,
+      surfaceDeclaration(flagId, status, surfaceAnswers),
     );
     if (saved) {
       setSurfaceFollowUpId(null);
@@ -505,7 +528,10 @@ export function TodayInjuryManager({
     setIsAdding(true);
     try {
       const description = composeTodayInjuryDescription({ injuryType: newType, detail: newDetail });
-      await submit([
+      // Whatever open injury the reconcile returns that was not here before this
+      // add is the flag it just created — that is how we find it to route on.
+      const previousIds = new Set(openInjuries.map((injury) => injury.id));
+      const response = await submit([
         { body_area: area, description, severity: newSeverity, status: "ongoing" },
       ]);
       setNewArea("");
@@ -518,6 +544,14 @@ export function TodayInjuryManager({
       setAddMissing(null);
       setIsAddFormOpen(false);
       showToast("Injury added.", { tone: "success" });
+      // A skin injury is routed by what the skin is doing, so ask the five
+      // surface questions immediately instead of waiting for a later easing /
+      // worse report. The follow-up renders on the refreshed row, so it needs
+      // the just-created flag id from the response.
+      const created = response.open_injuries.find((injury) => !previousIds.has(injury.id));
+      if (created && isSurfaceInjury(created)) {
+        openSurfaceFollowUp(created, "initial");
+      }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Could not add injury.", { tone: "error" });
     } finally {
@@ -646,12 +680,14 @@ export function TodayInjuryManager({
                 {surfaceFollowUpId === injury.id ? (
                   <div
                     className="today-injury-surface-followup"
-                    data-mode={isSurfaceRecheck ? "recheck" : "worse"}
+                    data-mode={surfaceFollowUpMode}
                     role="group"
                     aria-label={
                       isSurfaceRecheck
                         ? `Recheck the ${getInjuryLabel(injury)}`
-                        : `How is the ${getInjuryLabel(injury)} worse?`
+                        : isSurfaceInitial
+                          ? `Skin check for the ${getInjuryLabel(injury)}`
+                          : `How is the ${getInjuryLabel(injury)} worse?`
                     }
                   >
                     <div className="today-injury-followup-head">
@@ -662,7 +698,9 @@ export function TodayInjuryManager({
                       <p className="today-injury-confirm-text">
                         {isSurfaceRecheck
                           ? "Quick recheck so we can lift what no longer applies."
-                          : "Quick check so we only change what we need to."}
+                          : isSurfaceInitial
+                            ? "Quick check so we protect the right thing from the start."
+                            : "Quick check so we only change what we need to."}
                       </p>
                     </div>
                     <SegmentGroup

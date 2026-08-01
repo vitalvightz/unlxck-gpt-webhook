@@ -7525,6 +7525,12 @@ html[data-theme="light"] .today-terminal-status {
   border-left-color: rgba(125, 226, 168, 0.42);
 }
 
+/* A freshly added wound is a baseline capture, not a "this got worse" alarm — so
+   it drops the red rule for a calm neutral one. */
+.today-injury-surface-followup[data-mode="initial"] {
+  border-left-color: var(--border-strong, rgba(255, 255, 255, 0.28));
+}
+
 .today-injury-followup-head {
   display: grid;
   gap: 4px;
@@ -7542,6 +7548,10 @@ html[data-theme="light"] .today-terminal-status {
 
 .today-injury-surface-followup[data-mode="recheck"] .today-injury-followup-eyebrow {
   color: var(--success-ink);
+}
+
+.today-injury-surface-followup[data-mode="initial"] .today-injury-followup-eyebrow {
+  color: var(--text-muted);
 }
 
 .today-injury-followup-eyebrow span {
@@ -7728,6 +7738,10 @@ html[data-theme="light"] .today-injury-surface-followup[data-mode="recheck"] {
   border-left-color: rgba(39, 174, 96, 0.5);
 }
 
+html[data-theme="light"] .today-injury-surface-followup[data-mode="initial"] {
+  border-left-color: rgba(80, 81, 84, 0.4);
+}
+
 html[data-theme="light"] .today-injury-surface-followup .today-field-group {
   border-top-color: rgba(80, 81, 84, 0.12);
 }
@@ -7740,6 +7754,11 @@ html[data-theme="light"] .today-injury-followup-actions {
 html[data-theme="light"] .today-injury-surface-followup[data-mode="recheck"]
   .today-injury-followup-eyebrow {
   color: #1f7a4d;
+}
+
+html[data-theme="light"] .today-injury-surface-followup[data-mode="initial"]
+  .today-injury-followup-eyebrow {
+  color: #6b7280;
 }
 
 html[data-theme="light"] .today-segment-multi.today-segment-active::before {

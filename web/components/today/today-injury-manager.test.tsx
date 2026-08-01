@@ -948,6 +948,158 @@ test("successful injury submission refreshes, resets, and collapses the form", a
   }
 });
 
+test("adding a skin injury asks the five surface questions immediately", async () => {
+  // The reported problem: a freshly added blister sat silent until the athlete
+  // later marked it easing or worse. The five skin questions now open on the add
+  // itself, so the wound is routed by what the skin is doing from the start.
+  const created: InjuryFlagRecord = {
+    ...BLISTER,
+    id: "flag-new-blister",
+    body_area: "left hand",
+    description: "blister",
+    label: "Left hand blister",
+    surface_class: "stable_surface",
+    latest_reported_status: "ongoing",
+  };
+  const { calls, restore } = stubCheckin({ openInjuries: [created] });
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  // The follow-up renders on the refreshed row, so onRefresh has to surface the
+  // just-created flag — exactly as the live Today screen re-fetches after a write.
+  let openInjuries: InjuryFlagRecord[] = [];
+  const renderTree = () => {
+    root.render(
+      <ToastProvider>
+        <TodayInjuryManager
+          openInjuries={openInjuries}
+          token="t"
+          onRefresh={async () => {
+            openInjuries = [created];
+            renderTree();
+          }}
+        />
+      </ToastProvider>,
+    );
+  };
+
+  try {
+    await act(async () => {
+      renderTree();
+    });
+
+    await click(button(container, "+ Add injury"));
+    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    assert.ok(area);
+    await setInput(area, "left hand");
+    const detail = container.querySelector<HTMLInputElement>("#today-injury-detail");
+    assert.ok(detail);
+    await setInput(detail, "blister");
+    await click(button(container, "Other"));
+
+    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await settle();
+
+    // One post so far (the create), and the skin questions are already on screen
+    // without the athlete having marked it easing or worse.
+    assert.equal(calls.length, 1);
+    const followup = container.querySelector(".today-injury-surface-followup");
+    assert.ok(followup, "expected the surface follow-up to open on add");
+    assert.equal(followup?.getAttribute("data-mode"), "initial");
+    assert.match(container.textContent ?? "", /Is it open or burst\?/);
+    assert.match(container.textContent ?? "", /Bleeding or weeping\?/);
+    assert.match(container.textContent ?? "", /Any infection signs\?/);
+    assert.match(container.textContent ?? "", /Can it stay covered\?/);
+    assert.match(container.textContent ?? "", /Is rubbing or contact the problem\?/);
+
+    // Answering and saving reports the baseline as "ongoing" — nothing has
+    // changed, it was only just added — carrying the skin answers.
+    await click(buttonNamed(container, "Open or burst"));
+    await click(buttonNamed(container, "Save update"));
+
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[1], {
+      injuries: [
+        {
+          flag_id: "flag-new-blister",
+          status: "ongoing",
+          skin_integrity: "open",
+          infection_signs: [],
+          coverable: "unknown",
+          friction_or_contact_problem: "unknown",
+          bleeding_status: "none",
+          drainage: "none",
+        },
+      ],
+    });
+    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+
+    act(() => root.unmount());
+    container.remove();
+  } finally {
+    restore();
+  }
+});
+
+test("adding a non-surface injury does not open the skin follow-up", async () => {
+  const created: InjuryFlagRecord = {
+    ...SHOULDER,
+    id: "flag-new-shoulder",
+    latest_reported_status: "ongoing",
+  };
+  const { calls, restore } = stubCheckin({ openInjuries: [created] });
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  let openInjuries: InjuryFlagRecord[] = [];
+  const renderTree = () => {
+    root.render(
+      <ToastProvider>
+        <TodayInjuryManager
+          openInjuries={openInjuries}
+          token="t"
+          onRefresh={async () => {
+            openInjuries = [created];
+            renderTree();
+          }}
+        />
+      </ToastProvider>,
+    );
+  };
+
+  try {
+    await act(async () => {
+      renderTree();
+    });
+
+    await click(button(container, "+ Add injury"));
+    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    assert.ok(area);
+    await setInput(area, "left shoulder");
+    await click(button(container, "Soreness"));
+
+    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await settle();
+
+    assert.equal(calls.length, 1);
+    assert.equal(container.querySelector(".today-injury-surface-followup"), null);
+    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
+
+    act(() => root.unmount());
+    container.remove();
+  } finally {
+    restore();
+  }
+});
+
 test("failed injury submission leaves the populated form open", async () => {
   const originalFetch = globalThis.fetch;
   let refreshes = 0;
