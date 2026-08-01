@@ -343,17 +343,54 @@ test("risk watch shows icon label text records with overflow count", () => {
 });
 
 function makeInjury(overrides: Partial<InjuryFlagRecord> = {}): InjuryFlagRecord {
+  // Legacy tests pre-date the structured Today payload. Production never
+  // classifies injury text in the browser; this helper only supplies the
+  // backend fields those existing fixtures would receive.
+  const bodyArea = overrides.body_area ?? "chest";
+  const description = overrides.description ?? "chest bruise";
+  const text = `${bodyArea} ${description}`.toLowerCase();
+  const hasAny = (terms: readonly string[]) => terms.some((term) => text.includes(term));
+  const bodyRegion =
+    overrides.body_region ??
+    (hasAny(["back of knee", "calf", "achilles", "ankle", "knee", "shin", "hip", "quad", "hamstring", "leg"])
+      ? "lower_limb"
+      : hasAny(["bicep", "wrist", "arm", "shoulder", "elbow", "hand"])
+        ? "upper_limb"
+        : hasAny(["concussion", "head", "neck", "cervical", "brain", "skull"])
+          ? "head_neck"
+          : hasAny(["lower back", "upper back", "spine", "spinal", "rib", "chest", "sternum", "back"])
+            ? "trunk_spine"
+            : "unknown");
+  const deniedStructural = hasAny([
+    "no fracture",
+    "no fracture or tear",
+    "ruled out rupture",
+    "nothing is ruptured",
+  ]);
+  const consequence =
+    overrides.consequence !== undefined
+      ? overrides.consequence
+      : hasAny(["concussion", "concussed"])
+        ? "neuro"
+        : !deniedStructural && hasAny([
+            "fracture",
+            "rupture",
+            "tear",
+            "torn",
+            "dislocation",
+            "avulsion",
+          ])
+          ? "structural"
+          : null;
   return {
     id: "inj-1",
     athlete_id: "ath-1",
     source: "checkin",
-    body_area: "chest",
-    description: "chest bruise",
+    body_area: bodyArea,
+    description,
     label: "Chest bruise",
-    canonical_location: "chest",
-    region_group: "spine_pelvis",
-    body_region: "trunk_spine",
-    consequence: null,
+    body_region: bodyRegion,
+    consequence,
     severity: "severe",
     status: "open",
     created_at: "2026-07-06T00:00:00Z",
