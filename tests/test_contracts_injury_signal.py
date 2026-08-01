@@ -94,46 +94,17 @@ def test_worst_reading_per_day_prevents_fake_trend():
     assert "2/10 -> 5/10" in risks[0].text
 
 
-def test_recent_symptom_decays_with_reminder():
-    # Elevated pain two days ago, nothing since -> a decaying reminder today.
-    risks = _derive(completions=[_completion("2026-06-16", pain_after=5)])
-    assert len(risks) == 1
-    assert risks[0].category == "reminder"
-    assert "2 days since" in risks[0].text
+def test_old_elevated_reading_does_not_create_a_stale_reminder():
+    # Current injury and check-in signals own today's advice. History must not
+    # add a generic "days since" message beside newer information.
+    assert _derive(completions=[_completion("2026-06-16", pain_after=5)]) == []
 
 
-def test_recent_symptom_decay_reminder_is_suppressed_in_taper():
-    risks = _derive(
-        completions=[_completion("2026-06-16", pain_after=5)],
-        current_phase="TAPER",
-    )
-    assert risks == []
+def test_old_checkin_does_not_create_a_stale_reminder():
+    assert _derive(checkins=[_checkin("2026-06-17", pain="high")]) == []
 
 
-def test_symptom_one_day_ago_uses_singular_day():
-    risks = _derive(checkins=[_checkin("2026-06-17", pain="high")])
-    assert len(risks) == 1
-    assert risks[0].category == "reminder"
-    assert "1 day since" in risks[0].text
-
-
-def test_same_day_symptom_is_not_a_decay_reminder():
-    # A symptom logged *today* is the same-day check-in's job, not the decay echo.
-    assert _derive(checkins=[_checkin(TODAY, pain="high")]) == []
-
-
-def test_old_symptom_past_decay_window_is_silent():
-    # Five days clean is past SYMPTOM_DECAY_DAYS — green should mean green again.
-    assert _derive(completions=[_completion("2026-06-13", pain_after=5)]) == []
-
-
-def test_active_injury_worse_counts_as_symptom():
-    risks = _derive(checkins=[_checkin("2026-06-16", active_injury="worse")])
-    assert len(risks) == 1
-    assert risks[0].category == "reminder"
-
-
-def test_escalation_beats_decay_when_both_present():
+def test_high_latest_reading_beats_older_elevated_reading():
     risks = _derive(
         completions=[
             _completion("2026-06-15", pain_after=5),
