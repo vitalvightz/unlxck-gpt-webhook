@@ -38,14 +38,16 @@ export function TodayRiskWatch({
                 <p className="today-risk-label">{timeframe || risk.label}</p>
                 {timeframe ? <p className="today-risk-signal">{risk.label}</p> : null}
               </div>
-              <p className="today-risk-text">{getRiskWatchText(risk)}</p>
-              {isHistoricalPain ? (
-                <a className="today-risk-action" href="#today-injury">
-                  {hasActiveInjury
-                    ? "Still present? Update your injury."
-                    : "Still present? Add an injury."}
-                </a>
-              ) : null}
+              <div className="today-risk-body">
+                <p className="today-risk-text">{getRiskWatchText(risk)}</p>
+                {isHistoricalPain ? (
+                  <a className="today-risk-action" href="#today-injury">
+                    {hasActiveInjury
+                      ? "Still present? Update your injury."
+                      : "Still present? Add an injury."}
+                  </a>
+                ) : null}
+              </div>
             </article>
           );
         })}
