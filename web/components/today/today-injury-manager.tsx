@@ -516,7 +516,12 @@ export function TodayInjuryManager({
                   <span className="badge status-badge-neutral">{injury.severity}</span>
                   {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
-                <div className="today-segment-row" role="group" aria-label={`Update ${getInjuryLabel(injury)}`}>
+                <p className="today-field-label today-injury-status-label">How is it today?</p>
+                <div
+                  className="today-segment-row today-injury-status-row"
+                  role="group"
+                  aria-label={`Update ${getInjuryLabel(injury)}`}
+                >
                   {INJURY_STATUS_ACTIONS.map((action) => {
                     // Selected styling means SAVED, and a confirmed backend
                     // write is the only thing that produces it. An answer that
@@ -554,12 +559,13 @@ export function TodayInjuryManager({
                 </div>
                 {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
                   <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
-                    Not saved yet — confirm below to log this.
+                    Not saved yet — confirm below.
                   </p>
                 ) : null}
                 {surfaceFollowUpId === injury.id ? (
                   <div
                     className="today-injury-surface-followup"
+                    data-mode={isSurfaceRecheck ? "recheck" : "worse"}
                     role="group"
                     aria-label={
                       isSurfaceRecheck
@@ -567,11 +573,17 @@ export function TodayInjuryManager({
                         : `How is the ${getInjuryLabel(injury)} worse?`
                     }
                   >
-                    <p className="today-injury-confirm-text">
-                      {isSurfaceRecheck
-                        ? "Quick recheck so we can lift what no longer applies."
-                        : "Quick check so we only change what we need to."}
-                    </p>
+                    <div className="today-injury-followup-head">
+                      <p className="today-injury-followup-eyebrow">
+                        {isSurfaceRecheck ? "Skin recheck" : "Skin check"}
+                        <span aria-hidden="true"> · 5 quick questions</span>
+                      </p>
+                      <p className="today-injury-confirm-text">
+                        {isSurfaceRecheck
+                          ? "Quick recheck so we can lift what no longer applies."
+                          : "Quick check so we only change what we need to."}
+                      </p>
+                    </div>
                     <SegmentGroup
                       label={isSurfaceRecheck ? "Is the skin closed now?" : "Is it open or burst?"}
                       value={surfaceAnswers.skin_integrity}
@@ -589,6 +601,14 @@ export function TodayInjuryManager({
                     />
                     <div className="today-field-group">
                       <p className="today-field-label">Any infection signs?</p>
+                      {/* Multi-select, unlike every other control in this panel — say
+                          so and keep a live count, so "none picked" reads as an
+                          answered question rather than a skipped one. */}
+                      <p className="today-field-hint" aria-live="polite">
+                        {surfaceAnswers.infection_signs.length
+                          ? `${surfaceAnswers.infection_signs.length} selected`
+                          : "Tap any that apply — none is fine"}
+                      </p>
                       <div className="today-segment-row today-segment-row-2col">
                         {INFECTION_SIGN_OPTIONS.map((option) => {
                           const checked = surfaceAnswers.infection_signs.includes(option.value);
@@ -596,7 +616,9 @@ export function TodayInjuryManager({
                             <button
                               key={option.value}
                               type="button"
-                              className={`today-segment${checked ? " today-segment-active" : ""}`}
+                              className={`today-segment today-segment-multi${
+                                checked ? " today-segment-active" : ""
+                              }`}
                               aria-pressed={checked}
                               onClick={() => toggleInfectionSign(option.value)}
                             >
@@ -629,7 +651,7 @@ export function TodayInjuryManager({
                         }))
                       }
                     />
-                    <div className="today-injury-confirm-actions">
+                    <div className="today-injury-confirm-actions today-injury-followup-actions">
                       <button
                         type="button"
                         className="today-injury-confirm-yes"
