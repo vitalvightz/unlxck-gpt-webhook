@@ -19507,6 +19507,13 @@ html[data-theme="light"] .loading-operational-item {
   text-align: center;
 }
 
+/* On the public entry / auth pages the footer sits under a sparse card, so the
+   rule read as a stray horizontal line rather than a divider. Drop it there and
+   let the disclaimer sit as quiet muted text; the workspace shell keeps it. */
+html[data-app-surface="brand"] .app-safety-footer {
+  border-top: none;
+}
+
 .app-safety-footer-tight {
   display: none;
 }
