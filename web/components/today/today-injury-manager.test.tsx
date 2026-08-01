@@ -158,7 +158,10 @@ test("the injury card never renders the planner's internal taxonomy tokens", asy
           {
             ...BLISTER,
             body_area: "Right shoulder",
-            description: "Right shoulder: blister. surface injury. surface injury:blister",
+            // Both stored forms: the raw enum pair, and the humanized one the
+            // backend writes once the underscores are stripped.
+            description:
+              "Right shoulder: blister. surface_injury:blister. surface injury. surface injury:blister",
             label: "Right shoulder blister",
           },
         ]}

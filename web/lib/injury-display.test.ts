@@ -85,6 +85,28 @@ test("strips the planner's taxonomy tokens out of a guided-intake description", 
     }),
     "blister",
   );
+  // The raw stored form, before the backend humanizes the underscores away.
+  assert.equal(
+    formatInjuryDetail("Right shoulder: blister. surface_injury. surface_injury:blister", {
+      bodyArea: "Right shoulder",
+    }),
+    "blister",
+  );
+  // Casing is not guaranteed on a stored enum.
+  assert.equal(
+    formatInjuryDetail("Surface_Injury:Blister. Surface Injury", { bodyArea: "Right shoulder" }),
+    "",
+  );
+});
+
+// A colon is ordinary punctuation in athlete prose. Only a recognised taxonomy
+// family followed by a single bare token is internal vocabulary — everything
+// else is what the athlete typed, and dropping it loses their report.
+test("keeps athlete prose that happens to contain a colon", () => {
+  assert.equal(formatInjuryDetail("pain:sharp when running"), "pain:sharp when running");
+  assert.equal(formatInjuryDetail("worse:after sparring"), "worse:after sparring");
+  assert.equal(formatInjuryDetail("bruise. note:knocked it again"), "bruise. note:knocked it again");
+  assert.equal(formatInjuryDetail("surface_injury:blister"), "");
 });
 
 test("keeps the condition word and the athlete's own detail", () => {

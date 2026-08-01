@@ -135,16 +135,42 @@ const INTERNAL_TAXONOMY_SEGMENTS = new Set([
   "not_sure",
 ]);
 
+// The injury_type values guided intake stores (see the type options in
+// components/guided-injury-card.tsx). Only these lead a `family:specific`
+// taxonomy pair, so only these can make a colon mean "internal".
+const TAXONOMY_FAMILIES = new Set([
+  "surface_injury",
+  "pain",
+  "tightness",
+  "sprain",
+  "strain",
+  "swelling",
+  "instability",
+  "unspecified",
+  "fracture",
+  "dislocation",
+  "tendon_ligament",
+  "post_surgery",
+  "head_impact",
+  "nerve_symptoms",
+  "chest_breathing",
+]);
+
 // A `family:specific` taxonomy pair — "surface_injury:blister", and the
 // underscore-stripped "surface injury:blister" the backend humanizes it into.
-// The colon carries no space, which is what separates it from the stored
-// "<body area>: <condition>" prefix an athlete-facing description legitimately
-// uses.
-const TAXONOMY_PAIR = /:\S/;
+// Deliberately narrow: the whole segment must BE the pair, a recognised family
+// on the left and a single bare token on the right. A colon is ordinary
+// punctuation in athlete prose ("pain:sharp when running", "Left knee: sore"),
+// and prose is what this is protecting.
+const TAXONOMY_PAIR = /^([a-z][a-z_ ]*):([a-z0-9_]+)$/i;
 
 function segmentIsInternal(segment: string): boolean {
   const normalized = segment.toLowerCase();
-  return INTERNAL_TAXONOMY_SEGMENTS.has(normalized) || TAXONOMY_PAIR.test(segment);
+  if (INTERNAL_TAXONOMY_SEGMENTS.has(normalized)) {
+    return true;
+  }
+  const pair = TAXONOMY_PAIR.exec(normalized);
+  return pair !== null && TAXONOMY_FAMILIES.has(pair[1].replace(/\s+/g, "_"));
 }
 
 /**

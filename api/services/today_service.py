@@ -1798,7 +1798,12 @@ def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any])
     # ``surface_injury`` is the family a wound is routed by, and its specific word
     # (blister / graze / cut) says the same thing in the athlete's language. Keep
     # the family only when nothing more specific is available to say it.
-    if injury_type and not (injury_type == "surface injury" and (surface_type or subtype_words)):
+    # Casefolded: the token is an enum, but nothing guarantees the casing it was
+    # stored in, and a "Surface_Injury" that misses this comparison leaks the
+    # family straight onto the card.
+    if injury_type and not (
+        injury_type.casefold() == "surface injury" and (surface_type or subtype_words)
+    ):
         parts.append(injury_type)
     timeframe = _humanized_guided_token(injury.get("timeframe"))
     if timeframe:
@@ -1813,7 +1818,7 @@ def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any])
     seen: set[str] = set()
     deduped: list[str] = []
     for part in parts:
-        key = part.lower()
+        key = part.casefold()
         if key in seen:
             continue
         seen.add(key)

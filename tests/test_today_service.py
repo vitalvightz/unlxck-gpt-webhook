@@ -1041,6 +1041,28 @@ class TestCommandView:
         # The condition word survives, so the scorer still reads it as a wound.
         assert view.open_injuries[0]["label"] == "Right shoulder blister"
 
+    def test_guided_intake_taxonomy_check_is_case_insensitive(self):
+        """Nothing guarantees the casing a stored enum comes back in."""
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Right shoulder",
+                        "severity": "moderate",
+                        "injury_type": "Surface_Injury",
+                        "surface_type": "Blister",
+                        "injury_subtypes": ["Surface_Injury:Blister"],
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["description"] == "Right shoulder: Blister"
+
     def test_guided_intake_keeps_a_type_with_no_specific_word(self):
         """A non-surface type is the only word available, so it is kept."""
         store = _store_with_plan()
