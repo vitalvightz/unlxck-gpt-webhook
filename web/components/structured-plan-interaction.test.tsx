@@ -7,8 +7,8 @@ import "./test-dom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-import { StructuredPlanRenderer } from "./structured-plan-renderer";
-import type { StructuredPlan } from "@/lib/types";
+import { SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
+import type { StructuredPlan, StructuredSession } from "@/lib/types";
 
 // A two-week plan whose weeks sit in different phases, each with its own
 // deterministic nutrition/recovery phase, so switching weeks should switch which
@@ -96,6 +96,60 @@ function weekPillByPhase(container: HTMLElement, phase: string): HTMLButtonEleme
   assert.ok(pill, `expected a week pill for phase "${phase}"`);
   return pill;
 }
+
+test("coaching notes expand the session rows and reveal the reserved video area", async () => {
+  const { container, root } = mount();
+  const session = {
+    session_id: "session-coaching",
+    session_type: "strength_power",
+    title: "Monday Strength",
+    objective: "Build transferable strength while protecting recovery",
+    mindset_anchor: {
+      intent: "Stay controlled and calm during each set",
+      focus_cue: "Own the lowering and keep breathing steady",
+      reset_cue: "Take two minutes to regulate if heart rate rises",
+    },
+    blocks: [
+      {
+        block_id: "pull-up",
+        block_type: "strength",
+        display_name: "Slow-Lowered Pull-Up",
+        sets: 4,
+        reps: 5,
+        coaching_cues: ["Four-second eccentric", "Full scapular engagement"],
+        substitutions: ["Band-assisted pull-up"],
+      },
+    ],
+  } as StructuredSession;
+
+  try {
+    await act(async () => {
+      root.render(<SessionCard session={session} defaultOpenBlocks />);
+    });
+
+    const toggle = container.querySelector<HTMLButtonElement>(".sp-coaching-toggle");
+    const panel = container.querySelector<HTMLElement>(".sp-session-coaching-panel");
+    const blockNotes = container.querySelector<HTMLElement>(".sp-block-coaching");
+    assert.ok(toggle);
+    assert.ok(panel);
+    assert.ok(blockNotes);
+    assert.equal(toggle.getAttribute("aria-expanded"), "false");
+    assert.equal(panel.hidden, true);
+    assert.equal(blockNotes.hidden, true);
+
+    await act(async () => {
+      toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    assert.equal(toggle.getAttribute("aria-expanded"), "true");
+    assert.equal(panel.hidden, false);
+    assert.equal(blockNotes.hidden, false);
+    assert.equal(panel.textContent?.includes("Movement demos are coming soon."), true);
+    assert.equal(panel.textContent?.includes("Coming soon"), true);
+  } finally {
+    cleanup(container, root);
+  }
+});
 
 test("selecting a different week re-opens the matching support phase after mount", async () => {
   const { container, root } = mount();

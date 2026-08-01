@@ -205,6 +205,24 @@ export function MindsetAnchorCard({
   );
 }
 
+function SessionCoachingCorner({
+  lines,
+}: {
+  lines: { label: string; value: string }[];
+}) {
+  const [lead, support] = lines;
+  if (!lead) {
+    return null;
+  }
+  return (
+    <section className="sp-session-corner" aria-label="In your corner">
+      <p className="sp-eyebrow">In your corner</p>
+      <p className="sp-session-corner-lead">{lead.value}</p>
+      {support ? <p className="sp-session-corner-support">{support.value}</p> : null}
+    </section>
+  );
+}
+
 // Once the injury that seeded a plan's rehab work has cleared, that work is no
 // longer rehabilitation — it is prophylactic (prehab). The decision is made per
 // body region (see web/lib/rehab-label.ts) from the server-derived policy, which
@@ -234,11 +252,33 @@ function blockTagLabel(block: StructuredBlock, policy: RehabLabelPolicy | null):
   return titleize(cleanText(block.block_type));
 }
 
+function blockHasCoachingDetails(
+  block: StructuredBlock,
+  openWeekIntent?: OpenBlockWeekIntent | null,
+): boolean {
+  const purpose = cleanText(block.purpose);
+  const { cues, stopRules } = getBlockCoachingDisplay(block);
+  const remainingCues = purpose ? cues : cues.slice(1);
+  return Boolean(
+    cleanText(block.block_type) ||
+      openBlockWeekDirective(openWeekIntent, block) ||
+      remainingCues.length > 0 ||
+      getStringList(block.substitutions).length > 0 ||
+      getStringList(block.regression_options).length > 0 ||
+      cleanText(block.progression_rule) ||
+      stopRules.length > 0
+  );
+}
+
 export function BlockCard({
   block,
+  index,
+  showCoachingNotes = true,
   openWeekIntent,
 }: {
   block: StructuredBlock;
+  index?: number;
+  showCoachingNotes?: boolean;
   /** Development-block week intent of an open (renewable) plan. Adds the
    * week-directed instruction (progress / deload) to the card; dated camps
    * never pass it. */
@@ -254,6 +294,8 @@ export function BlockCard({
   const effort = formatEffort(block);
   const purpose = cleanText(block.purpose);
   const { cues, stopRules } = getBlockCoachingDisplay(block);
+  const preview = purpose || cues[0] || null;
+  const detailCues = purpose ? cues : cues.slice(1);
   const substitutions = getStringList(block.substitutions);
   const regressions = getStringList(block.regression_options);
   const progression = cleanText(block.progression_rule);
@@ -275,76 +317,86 @@ export function BlockCard({
 
   return (
     <div className="sp-block">
-      <div className="sp-block-head">
-        <span className="sp-block-title">{title}</span>
-        {blockType ? <span className="sp-tag">{blockTagLabel(block, rehabLabelPolicy)}</span> : null}
+      <div className="sp-block-primary">
+        {index != null ? <span className="sp-block-index">{String(index + 1).padStart(2, "0")}</span> : null}
+        <div className="sp-block-copy">
+          <div className="sp-block-head">
+            <span className="sp-block-title">{title}</span>
+          </div>
+          {preview ? <p className="sp-block-purpose">{preview}</p> : null}
+        </div>
+        {metrics.length > 0 || work || load || rest || effort ? (
+          <div className="sp-block-stats">
+            {metrics.map((metric) => (
+              <span key={metric.label} className="sp-stat">
+                <span className="sp-stat-label">{metric.label}</span>
+                {metric.value}
+              </span>
+            ))}
+            {work ? (
+              <span className="sp-stat">
+                <span className="sp-stat-label">Work</span>
+                {work}
+              </span>
+            ) : null}
+            {load ? (
+              <span className="sp-stat">
+                <span className="sp-stat-label">Load</span>
+                {load}
+              </span>
+            ) : null}
+            {rest ? (
+              <span className="sp-stat">
+                <span className="sp-stat-label">Rest</span>
+                {rest}
+              </span>
+            ) : null}
+            {effort ? (
+              <span className="sp-stat">
+                <span className="sp-stat-label">Effort</span>
+                {effort}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-      {metrics.length > 0 || work || load || rest || effort ? (
-        <div className="sp-block-stats">
-          {metrics.map((metric) => (
-            <span key={metric.label} className="sp-stat">
-              <span className="sp-stat-label">{metric.label}</span>
-              {metric.value}
-            </span>
+
+      {blockHasCoachingDetails(block, openWeekIntent) ? (
+        <div className="sp-block-coaching" hidden={!showCoachingNotes}>
+          {blockType ? <span className="sp-tag">{blockTagLabel(block, rehabLabelPolicy)}</span> : null}
+          {weekDirective ? (
+            <p className="sp-block-aside sp-week-directive">
+              <span className="sp-stat-label">{weekDirective.label}</span>
+              {weekDirective.text}
+            </p>
+          ) : null}
+          {detailCues.length > 0 ? (
+            <ul className="sp-cues">
+              {detailCues.map((cue, cueIndex) => (
+                <li key={`${cue}-${cueIndex}`}>{cue}</li>
+              ))}
+            </ul>
+          ) : null}
+          {substitutions.length > 0 ? (
+            <p className="sp-block-aside">
+              <span className="sp-stat-label">Swaps</span>
+              {substitutions.join(", ")}
+            </p>
+          ) : null}
+          {regressions.length > 0 ? (
+            <p className="sp-block-aside">
+              <span className="sp-stat-label">Easier</span>
+              {regressions.join(", ")}
+            </p>
+          ) : null}
+          {adjustmentRules.map((rule) => (
+            <p key={rule} className="sp-block-aside">
+              <span className="sp-stat-label">{progressionRuleLabel(rule)}</span>
+              {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
+            </p>
           ))}
-          {work ? (
-            <span className="sp-stat">
-              <span className="sp-stat-label">Work</span>
-              {work}
-            </span>
-          ) : null}
-          {load ? (
-            <span className="sp-stat">
-              <span className="sp-stat-label">Load</span>
-              {load}
-            </span>
-          ) : null}
-          {rest ? (
-            <span className="sp-stat">
-              <span className="sp-stat-label">Rest</span>
-              {rest}
-            </span>
-          ) : null}
-          {effort ? (
-            <span className="sp-stat">
-              <span className="sp-stat-label">Effort</span>
-              {effort}
-            </span>
-          ) : null}
         </div>
       ) : null}
-      {weekDirective ? (
-        <p className="sp-block-aside sp-week-directive">
-          <span className="sp-stat-label">{weekDirective.label}</span>
-          {weekDirective.text}
-        </p>
-      ) : null}
-      {purpose ? <p className="sp-block-purpose">{purpose}</p> : null}
-      {cues.length > 0 ? (
-        <ul className="sp-cues">
-          {cues.map((cue, index) => (
-            <li key={`${cue}-${index}`}>{cue}</li>
-          ))}
-        </ul>
-      ) : null}
-      {substitutions.length > 0 ? (
-        <p className="sp-block-aside">
-          <span className="sp-stat-label">Swaps</span>
-          {substitutions.join(", ")}
-        </p>
-      ) : null}
-      {regressions.length > 0 ? (
-        <p className="sp-block-aside">
-          <span className="sp-stat-label">Easier</span>
-          {regressions.join(", ")}
-        </p>
-      ) : null}
-      {adjustmentRules.map((rule) => (
-        <p key={rule} className="sp-block-aside">
-          <span className="sp-stat-label">{progressionRuleLabel(rule)}</span>
-          {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
-        </p>
-      ))}
     </div>
   );
 }
@@ -381,6 +433,7 @@ export function SessionCard({
   session,
   day,
   defaultOpenBlocks,
+  defaultOpenCoachingNotes,
   showDayContext = true,
   showDayLabels = true,
   completionInfo,
@@ -389,6 +442,9 @@ export function SessionCard({
   session: StructuredSession;
   day?: StructuredDay;
   defaultOpenBlocks?: boolean;
+  /** Test/preview seam for the expanded coaching state. Production callers
+   * omit it so notes remain progressively disclosed by default. */
+  defaultOpenCoachingNotes?: boolean;
   /** When false, day-level context like warnings/nutrition/mindset is rendered by
    * the parent day card instead, so the same information does not repeat inside
    * every session. */
@@ -405,7 +461,9 @@ export function SessionCard({
   openWeekIntent?: OpenBlockWeekIntent | null;
 }) {
   const detailsId = useId();
+  const coachingDetailsId = useId();
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
+  const [showCoachingNotes, setShowCoachingNotes] = useState(Boolean(defaultOpenCoachingNotes));
   const userToggledDetails = useRef(false);
 
   useEffect(() => {
@@ -436,6 +494,37 @@ export function SessionCard({
       : showDayContext
         ? card?.mindset_anchor
         : undefined;
+  const mindsetDedupeTarget = normalizeForDedupe(objective);
+  const sessionMindsetLines = getMindsetLines(sessionMindset).filter(
+    (line) =>
+      !(line.label === "Context" && mindsetDedupeTarget === normalizeForDedupe(line.value)),
+  );
+  const cornerLines = sessionMindsetLines.filter(
+    (line) => line.label === "Intent" || line.label === "Focus",
+  );
+  const additionalMindsetLines = sessionMindsetLines.filter(
+    (line) => line.label !== "Intent" && line.label !== "Focus",
+  );
+  const hasCoachingNotes =
+    blocks.length > 0 ||
+    additionalMindsetLines.length > 0 ||
+    blocks.some((block) => blockHasCoachingDetails(block, openWeekIntent));
+  const workoutToggle =
+    blocks.length > 0 ? (
+      <button
+        type="button"
+        className="sp-more-toggle sp-session-toggle"
+        aria-expanded={showDetails}
+        aria-controls={detailsId}
+        aria-label={showDetails ? "Show less session detail" : `Show more session detail: ${blocksLabel}`}
+        onClick={() => {
+          userToggledDetails.current = true;
+          setShowDetails((prev) => !prev);
+        }}
+      >
+        {showDetails ? "Show less" : `Show more (${blocksLabel})`}
+      </button>
+    ) : null;
 
   return (
     <article className="sp-session">
@@ -494,7 +583,7 @@ export function SessionCard({
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
 
-      <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
+      <SessionCoachingCorner lines={cornerLines} />
       {/* The rehab/mobility summary is a compact PREVIEW of the inserts shown
           only while the full blocks are collapsed. Once expanded, every rehab
           block renders in full below, so keeping the summary too would print the
@@ -503,19 +592,7 @@ export function SessionCard({
 
       {blocks.length > 0 ? (
         <>
-          <button
-            type="button"
-            className="sp-more-toggle sp-session-toggle"
-            aria-expanded={showDetails}
-            aria-controls={detailsId}
-            aria-label={showDetails ? "Show less session detail" : `Show more session detail: ${blocksLabel}`}
-            onClick={() => {
-              userToggledDetails.current = true;
-              setShowDetails((prev) => !prev);
-            }}
-          >
-            {showDetails ? "Show less" : `Show more (${blocksLabel})`}
-          </button>
+          {!showDetails ? workoutToggle : null}
 
           {showDetails ? (
             <div id={detailsId} className="sp-blocks">
@@ -523,11 +600,52 @@ export function SessionCard({
                 <BlockCard
                   key={cleanText(block.block_id) || `block-${index}`}
                   block={block}
+                  index={index}
+                  showCoachingNotes={showCoachingNotes}
                   openWeekIntent={openWeekIntent}
                 />
               ))}
             </div>
           ) : null}
+
+          {showDetails && hasCoachingNotes ? (
+            <>
+              <button
+                type="button"
+                className="sp-coaching-toggle"
+                aria-expanded={showCoachingNotes}
+                aria-controls={coachingDetailsId}
+                onClick={() => setShowCoachingNotes((visible) => !visible)}
+              >
+                <span>{showCoachingNotes ? "Hide coaching notes" : "View coaching notes"}</span>
+                <span className="sp-coaching-toggle-meta">Mindset, adjustments &amp; safety</span>
+              </button>
+              <div
+                id={coachingDetailsId}
+                className="sp-session-coaching-panel"
+                hidden={!showCoachingNotes}
+              >
+                {additionalMindsetLines.length > 0 ? (
+                  <div className="sp-session-coaching-grid">
+                    {additionalMindsetLines.map((line) => (
+                      <div key={line.label} className="sp-session-coaching-note">
+                        <span className="sp-mindset-label">{line.label}</span>
+                        <p>{line.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                <section className="sp-video-placeholder" aria-label="Video coaching coming soon">
+                  <div>
+                    <p className="sp-eyebrow">Video coaching</p>
+                    <p className="sp-video-placeholder-title">Movement demos are coming soon.</p>
+                  </div>
+                  <span className="sp-video-coming-soon">Coming soon</span>
+                </section>
+              </div>
+            </>
+          ) : null}
+          {showDetails ? workoutToggle : null}
         </>
       ) : null}
     </article>
