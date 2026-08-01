@@ -132,6 +132,23 @@ test("keeps a colon that separates the location from the condition", () => {
   assert.equal(formatInjuryDetail("Left knee: sore after running"), "Left knee: sore after running");
 });
 
+// ". " is the separator the description is joined with. A bare period is not:
+// it is a decimal point, and splitting on it cut the athlete's own numbers in
+// half — "7.5/10" came out as "7. 5/10".
+test("reads an athlete's note back unchanged, decimals included", () => {
+  assert.equal(formatInjuryDetail("sore. 7.5/10 at worst"), "sore. 7.5/10 at worst");
+  assert.equal(formatInjuryDetail("pain 3.5/10 after 2.5 rounds"), "pain 3.5/10 after 2.5 rounds");
+  assert.equal(formatInjuryDetail("0.5kg dumbbell drop. bruise"), "0.5kg dumbbell drop. bruise");
+});
+
+test("treats a trailing period as the end of the last segment", () => {
+  assert.equal(formatInjuryDetail("blister on left foot."), "blister on left foot");
+  assert.equal(
+    formatInjuryDetail("Right shoulder: blister. surface injury.", { bodyArea: "Right shoulder" }),
+    "blister",
+  );
+});
+
 test("dedupes repeated segments and tolerates blank input", () => {
   assert.equal(formatInjuryDetail("bruise. Bruise. bruise"), "bruise");
   assert.equal(formatInjuryDetail(""), "");

@@ -185,6 +185,7 @@ function segmentIsInternal(segment: string): boolean {
  * "Right shoulder: blister. surface injury. surface injury:blister" (body area
  * "Right shoulder") -> "blister"
  * "bruise. worse when sprinting" -> "bruise. worse when sprinting"
+ * "sore. 7.5/10 at worst" -> "sore. 7.5/10 at worst" (a decimal is not a break)
  */
 export function formatInjuryDetail(
   description: string | null | undefined,
@@ -198,7 +199,10 @@ export function formatInjuryDetail(
   const kept: string[] = [];
   const seen = new Set<string>();
 
-  for (const rawSegment of raw.split(".")) {
+  // The separator is ". ", not "." — splitting on every period cut the athlete's
+  // own numbers in half ("7.5/10" -> "7", "5/10"). A trailing period ends the
+  // last segment, so end-of-string counts as the separator too.
+  for (const rawSegment of raw.split(/\.(?:\s+|$)/)) {
     let segment = collapseWhitespace(rawSegment);
     if (!segment || segmentIsInternal(segment)) {
       continue;

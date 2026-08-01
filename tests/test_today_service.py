@@ -21,6 +21,7 @@ from api.services import today_service as today_service_module
 from api.services.today_service import (
     _scan_forward_for_next_training,
     build_today_command_view,
+    resolve_today_landing,
     submit_today_checkin,
     submit_today_injury_checkin,
     upsert_session_completion,
@@ -935,6 +936,69 @@ class TestOpenPlanRestDayResolution:
         assert view.today.next_session.get("title") != "Fri training"
         assert view.today.session_scope != "today"
 
+    def test_completion_writes_are_rejected_on_a_rest_day(self):
+        """The UI not offering it is not the guard — the write path is.
+
+        A direct call (or a client on a stale card) would otherwise persist a
+        session state the plan never prescribed, and that record is what then
+        drives "Resume" on a rest day.
+        """
+        store = self._store()
+        for status_value in ("started", "done", "modified", "skipped"):
+            with pytest.raises(HTTPException) as exc:
+                upsert_session_completion(
+                    store,
+                    athlete_id=ATHLETE,
+                    athlete_timezone="",
+                    payload={
+                        "plan_id": PLAN,
+                        "session_id": "Fri",
+                        "status": status_value,
+                        "modification_reason": "swapped to recovery",
+                        "notes": "logged anyway",
+                    },
+                    now=self.NOW,
+                )
+            assert exc.value.status_code == 409, status_value
+            assert "rest day" in str(exc.value.detail)
+
+    def test_a_rest_day_completion_can_still_be_reverted(self):
+        """``not_started`` stays open so an already-written record can be cleared."""
+        store = self._store()
+        row = upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"plan_id": PLAN, "session_id": "Fri", "status": "not_started"},
+            now=self.NOW,
+        )
+        assert row["status"] == "not_started"
+
+    def test_landing_ignores_a_stale_completion_on_a_rest_day(self):
+        store = self._store()
+        # A record written before the write path was guarded (or against a plan
+        # that has since changed) must not land the athlete on "Resume".
+        store.session_completions.setdefault(ATHLETE, []).append(
+            {
+                "athlete_id": ATHLETE,
+                "plan_id": PLAN,
+                "session_id": "Fri",
+                "training_day": self.DAY,
+                "status": "started",
+                "started_at": "2026-07-31T09:00:00+00:00",
+            }
+        )
+
+        decision = resolve_today_landing(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            has_interacted=True,
+            now=self.NOW,
+        )
+
+        assert decision.target != "resume_session"
+
     def test_a_card_row_with_work_still_resolves_through_the_weekly_schedule(self):
         """Only the rest decision is taken from a weekday-only row.
 
@@ -1062,6 +1126,34 @@ class TestCommandView:
         view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
 
         assert view.open_injuries[0]["description"] == "Right shoulder: Blister"
+
+    def test_guided_intake_description_leaves_out_the_timeframe(self):
+        """When it happened is structured intake data, not the athlete's words.
+
+        "last month" / "one to three months" / "old cleared" are enum answers,
+        and they read as planner vocabulary sitting in the middle of the note.
+        """
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "severity": "moderate",
+                        "surface_type": "bruise",
+                        "timeframe": "last_month",
+                        "notes": "sore on overhead work",
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["description"] == (
+            "Left shoulder: bruise. sore on overhead work"
+        )
 
     def test_guided_intake_keeps_a_type_with_no_specific_word(self):
         """A non-surface type is the only word available, so it is kept."""

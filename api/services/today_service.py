@@ -1023,6 +1023,18 @@ def upsert_session_completion(
         )
     training_day = requested_day or today
 
+    # A day the plan card schedules nothing on has no session to log. The UI does
+    # not offer it, but the UI is not the guard: without this, a direct call —
+    # or a client running against a stale card — writes a completion for a
+    # session that never existed, and that record then drives "Resume" on a rest
+    # day. ``not_started`` stays allowed so an already-written record can be
+    # cleared.
+    if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="That day is a rest day in your plan — there is no session to log.",
+        )
+
     # Server-side safety hold: an active severe injury blocks actually training
     # this session (start / done / modified) — not just in the UI. Skipping or
     # reverting to not-started stays allowed so the athlete can still log that
@@ -1805,9 +1817,10 @@ def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any])
         injury_type.casefold() == "surface injury" and (surface_type or subtype_words)
     ):
         parts.append(injury_type)
-    timeframe = _humanized_guided_token(injury.get("timeframe"))
-    if timeframe:
-        parts.append(timeframe)
+    # ``timeframe`` is deliberately absent: it is a structured enum about WHEN
+    # the injury happened ("last month", "one to three months", "old cleared"),
+    # not what it is, and it read as planner vocabulary in the middle of the
+    # athlete's own words. The intake payload still carries it.
     parts.extend(subtype_words)
     for field in ("notes", "avoid"):
         value = str(injury.get(field) or "").strip()
@@ -2339,7 +2352,17 @@ def resolve_today_landing(
                 today_entry, next_entry = resolve_today_and_next(week, today=training_date)
             except Exception:
                 today_entry = next_entry = None
-        session_id = _session_id_for_entry(today_entry or next_entry)
+        # Same resolution Today uses, for the same reason: a rest day has no
+        # session, so a completion record left on one (written before this was
+        # enforced, or against a since-changed plan) must not land the athlete on
+        # "Resume". Otherwise the card the athlete is looking at and the landing
+        # decision would answer "is there a session today?" differently.
+        structured_today = _structured_today(plan_row, training_day)
+        session_id = (
+            None
+            if structured_today.is_rest_day
+            else _session_id_for_entry(structured_today.entry or today_entry or next_entry)
+        )
         if session_id:
             completion = store.get_session_completion(athlete_id, session_id, training_day)
             session_state = completion_landing_state(completion_status_of(completion))
