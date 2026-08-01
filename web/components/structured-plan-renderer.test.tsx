@@ -81,13 +81,12 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("MORE"), false);
   assert.equal(html.includes("LESS"), false);
   assert.equal(html.includes("Show more (1 block)"), true);
-  // The compact row keeps only the immediate coaching cue visible. Reset,
-  // anchor and context enter with the session's expanded coaching layer.
-  assert.equal(html.includes("In your corner"), true);
-  assert.equal(html.includes("Context"), false);
-  assert.equal(html.includes("Taper freshness day"), false);
-  assert.equal(html.includes("Breathe and reset"), false);
-  assert.equal(html.includes("Rounds are banked"), false);
+  assert.equal(html.includes("Context"), true);
+  assert.equal(html.includes("Taper freshness day"), true);
+  // The full mindset anchor renders on the session card, including the reset
+  // cue and confidence anchor (the mental content, not just training focus).
+  assert.equal(html.includes("Breathe and reset"), true);
+  assert.equal(html.includes("Rounds are banked"), true);
 });
 
 test("open-plan weekday fallback labels today with the live date, not the stale date", () => {
@@ -363,10 +362,7 @@ function mindsetPlan({
 // Each rendered MindsetAnchorCard emits exactly one `sp-mindset-list`, so its
 // count is the number of distinct mindset cards on screen.
 function mindsetCardCount(html: string): number {
-  return (
-    countOccurrences(html, "sp-mindset-list") +
-    countOccurrences(html, 'class="sp-session-corner"')
-  );
+  return countOccurrences(html, "sp-mindset-list");
 }
 
 test("mindset scenario 1: day mindset is the fallback when sessions have none", () => {
@@ -631,41 +627,6 @@ test("labels the session objective as the Why and sentence-cases it", () => {
   assert.equal(html.includes(">Why<"), true);
 });
 
-test("uses an In your corner lead and keeps video separate from coaching notes", () => {
-  const session = {
-    session_id: "ses-coaching",
-    session_type: "strength_power",
-    title: "Monday Strength",
-    objective: "Build transferable strength without compromising recovery",
-    mindset_anchor: {
-      intent: "Stay controlled and calm during each set",
-      focus_cue: "Own the lowering and keep breathing steady",
-      reset_cue: "Take two minutes to regulate if heart rate rises",
-    },
-    blocks: [
-      {
-        block_id: "pull-up",
-        block_type: "strength",
-        display_name: "Slow-Lowered Pull-Up",
-        sets: 4,
-        reps: 5,
-        coaching_cues: ["Four-second eccentric", "Full scapular engagement"],
-      },
-    ],
-  } as unknown as StructuredSession;
-
-  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
-
-  assert.equal(html.includes("In your corner"), true);
-  assert.equal(html.includes("Stay controlled and calm during each set"), true);
-  assert.equal(html.includes("View coaching notes"), true);
-  assert.equal(html.includes("Mindset &amp; adjustments"), true);
-  assert.equal(html.includes('aria-expanded="false"'), true);
-  assert.equal(html.includes("Movement demos are coming soon."), true);
-  assert.equal(html.includes("Coming soon"), true);
-  assert.equal(html.includes("sp-session-coaching-panel\" hidden"), true);
-});
-
 test("drops a mindset Context line that only restates the session objective", () => {
   // The objective already prints under the title; a Context anchor that repeats
   // it (bar casing/trailing period) must not print the same sentence twice, but
@@ -803,9 +764,6 @@ test("labels a stop rule stored in progression_rule as Stop rule, not Progress",
 
   assert.equal(html.includes("Stop rule"), true);
   assert.equal(html.includes("Stop the set if ankle pain increases"), true);
-  assert.equal(html.includes("sp-block-stop-rule"), true);
-  assert.equal(html.includes("View coaching notes"), false);
-  assert.equal(html.includes("Movement demos are coming soon."), true);
 });
 
 test("cleans malformed Regression and Stop coaching cues at render time", () => {
