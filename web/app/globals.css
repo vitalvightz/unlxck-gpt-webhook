@@ -6871,13 +6871,30 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   line-height: 1.45;
 }
 
+.today-decision-disclosure {
+  margin-top: 18px;
+}
+
+.today-decision-disclosure summary {
+  width: fit-content;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.today-decision-disclosure summary:focus-visible {
+  outline: 2px solid var(--decision-accent);
+  outline-offset: 4px;
+}
+
 /* Supporting evidence uses the width the old label/value table left empty. Each
    semantic group remains a stacked list; only the groups become a responsive
    rail. auto-fit lets sparse states expand without empty columns. */
 .today-decision-evidence {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  margin: 20px -22px 0;
+  margin: 12px -22px 0;
   padding: 0;
   border-top: 1px solid var(--border-default);
   background: rgba(255, 255, 255, 0.018);
@@ -7389,6 +7406,47 @@ html[data-theme="light"] .today-terminal-status {
   white-space: nowrap;
 }
 
+/* The session command stays in the Today decision banner. This compact strip is
+   deliberately subordinate and belongs to one injury: it keeps an actionable
+   skin restriction visible after the save toast has gone. */
+.today-injury-guidance {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(218, 169, 75, 0.28);
+  border-left: 3px solid rgba(218, 169, 75, 0.72);
+  border-radius: 9px;
+  background: rgba(218, 169, 75, 0.07);
+}
+
+.today-injury-guidance span {
+  color: #d9ad59;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.today-injury-guidance p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.today-injury-guidance[data-tone="danger"] {
+  border-color: rgba(226, 58, 76, 0.3);
+  border-left-color: rgba(226, 58, 76, 0.82);
+  background: rgba(181, 18, 43, 0.09);
+}
+
+.today-injury-guidance[data-tone="danger"] span {
+  color: #f26a79;
+}
+
 /* Option labels on Today's pickers are a fixed set written in the component —
    "Open or burst", "Spreading redness", "Very hard" — and a column layout used
    to break them across two lines mid-phrase. Hold them to one line.
@@ -7400,21 +7458,25 @@ html[data-theme="light"] .today-terminal-status {
   white-space: nowrap;
 }
 
-/* The four status actions were the only unlabelled control on the card — four
-   bare words under an injury name, with the question they answer living only
-   in the group's aria-label. */
+/* The status actions were the only unlabelled control on the card — bare words
+   under an injury name, with the question they answer living only in the
+   group's aria-label. */
 .today-injury-status-label {
-  margin: 2px 0 -4px;
+  margin: 2px 0 0;
   color: var(--text-muted);
 }
 
-/* Four short words go across one row wherever they fit. Below that, they break
-   2 + 2 — a squarer, more deliberate shape than 3 + a stranded fourth. */
-@media (max-width: 379px) {
-  .today-injury-status-row > .today-segment {
-    flex-basis: calc(50% - 4px);
-  }
+/* "Same" is no longer an option (silence means same), so the check-in reads as
+   "only tell us if it changed" — this line says so, since three change-only
+   buttons with no "no change" option would otherwise leave an athlete hunting
+   for one. */
+.today-injury-status-hint {
+  margin: 2px 0 6px;
 }
+
+/* No forced column basis on the status row: three short words — Easing / Worse /
+   Cleared — sit across one row on the default .today-segment flex wherever they
+   fit, and wrap on their own below that. (The old 2 + 2 rule was for four.) */
 
 .today-injury-status-note {
   margin: -2px 0 0;
@@ -7624,6 +7686,26 @@ html[data-theme="light"] .today-injury-confirm {
 html[data-theme="light"] .today-injury-confirm-cancel {
   border-color: rgba(20, 20, 30, 0.16);
   background: rgba(20, 20, 30, 0.04);
+}
+
+html[data-theme="light"] .today-injury-guidance {
+  border-color: rgba(157, 112, 24, 0.28);
+  border-left-color: rgba(157, 112, 24, 0.7);
+  background: rgba(218, 169, 75, 0.1);
+}
+
+html[data-theme="light"] .today-injury-guidance span {
+  color: #805b16;
+}
+
+html[data-theme="light"] .today-injury-guidance[data-tone="danger"] {
+  border-color: rgba(189, 16, 32, 0.28);
+  border-left-color: rgba(189, 16, 32, 0.72);
+  background: rgba(189, 16, 32, 0.07);
+}
+
+html[data-theme="light"] .today-injury-guidance[data-tone="danger"] span {
+  color: #a00e20;
 }
 
 /* Light-theme parity for the drawer: the dark rules lean on white opacity,
@@ -19336,6 +19418,18 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   border-left: 3px solid var(--brand-red);
   border-radius: var(--radius-support);
   background: var(--bg-support);
+}
+
+/* Today feedback trails the full session at the end of the page flow — spacing
+   comes from normal document flow, not absolute/sticky positioning. */
+.today-feedback-card {
+  margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .today-feedback-card {
+    margin-top: 20px;
+  }
 }
 
 .feedback-question {

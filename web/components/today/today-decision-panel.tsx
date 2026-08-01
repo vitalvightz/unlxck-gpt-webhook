@@ -3,6 +3,11 @@
 import { type TodayDecisionBanner, type TodayDecisionTier } from "@/lib/today";
 import type { TodaySafetyCheck } from "@/lib/types";
 
+function isSupersededReadinessMessage(value?: string): boolean {
+  return value?.trim() ===
+    "Previous readiness guidance is superseded by the injury warning.";
+}
+
 /**
  * Compact train/modify/pull-back banner shown above today's blocks once the
  * athlete has checked in. Returns null before check-in. It frames the original
@@ -89,9 +94,13 @@ export function TodayDecisionPanel({
         </div>
         {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
         <p className="today-decision-detail">{banner.detail}</p>
-        {banner.safety ? <p className="today-decision-safety">{banner.safety}</p> : null}
+        {banner.safety && !isSupersededReadinessMessage(banner.safety) ? (
+          <p className="today-decision-safety">{banner.safety}</p>
+        ) : null}
       </div>
       {hasEvidence ? (
+        <details className="today-decision-disclosure">
+          <summary>Why this decision?</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (
             <div className="today-decision-row">
@@ -145,6 +154,7 @@ export function TodayDecisionPanel({
             </div>
           ) : null}
         </dl>
+        </details>
       ) : null}
     </div>
   );

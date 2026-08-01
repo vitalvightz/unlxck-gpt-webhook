@@ -445,18 +445,18 @@ test("severe injury override supersedes the daily recommendation banner", () => 
   assert.equal(banner?.tone, "red");
   assert.match(banner?.detail ?? "", /Active severe injury: Chest bruise/);
   assert.match(banner?.detail ?? "", /hard sparring/);
-  assert.match(banner?.detail ?? "", /easing does not lift/);
+  assert.match(banner?.detail ?? "", /until it is cleared\./);
   assert.match(banner?.safety ?? "", /superseded by the injury warning/);
 });
 
-test("marking a severe injury easing does not lift the override (bypass fix)", () => {
+test("severe injury override remains active while monitoring", () => {
   const easing = getInjuryOverrideBanner(
     stateWithInjuries([makeInjury({ status: "monitoring" })]),
     "Hard sparring",
   );
   assert.ok(easing, "an easing severe injury must still block");
   assert.equal(easing?.displayState, "injury_blocked");
-  // Clearing (resolving) it is the only way to lift the hold.
+  // Resolving the injury is the only state that removes the override.
   assert.equal(getInjuryOverrideBanner(stateWithInjuries([makeInjury({ status: "resolved" })]), "Hard sparring"), null);
 });
 
@@ -534,7 +534,7 @@ test("Today session card uses short preview wording and Next session label", () 
   assert.equal(source.includes("resolvedDecision.blocksCurrentSession"), true);
   assert.equal(source.includes("resolvedDecision.severeInjuryBlocksCurrentSession"), true);
   assert.equal(
-    source.includes("Blocked by an active severe injury. Marking it easing does not lift the hold."),
+    source.includes("Blocked by an active severe injury."),
     true,
   );
   assert.equal(source.includes('href="#today-injury"'), true);
@@ -653,18 +653,25 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   const orderedMarkers = [
     "<TodayReadinessStrip",
     "<TodayDecisionPanel",
-    'surface="daily_recommendation"',
-    "<TodayRiskWatch",
-    "<TodayReadinessForm",
+    // Session renders via the {sessionPanel} slot so its safe-replacement
+    // ordering with the readiness form stays intact.
+    "{sessionPanel}",
     "<TodayInjuryManager",
-    "<TodaySessionPanel",
+    // Risk watch must stay supplementary so STOP-tier risks are not duplicated.
+    "<TodayRiskWatch risks={supplementaryRisks}",
+    // Feedback trails the full session — last in the DOM flow.
+    'surface="daily_recommendation"',
   ];
   const positions = orderedMarkers.map((marker) => screen.indexOf(marker));
 
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((left, right) => left - right), positions);
   assert.equal((screen.match(/<TodayDecisionPanel/g) ?? []).length, 1);
+  assert.equal((screen.match(/<TodayReadinessForm/g) ?? []).length, 1);
+  assert.equal((screen.match(/<TodaySessionPanel/g) ?? []).length, 1);
   assert.equal((screen.match(/surface="daily_recommendation"/g) ?? []).length, 1);
+  assert.ok(screen.includes("resolvedDecision.useSafeReplacement"));
+  assert.ok(screen.indexOf("{sessionPanel}\n          {readinessForm}") >= 0);
   assert.equal(sessionPanel.includes("TodayDecisionPanel"), false);
   assert.equal(sessionPanel.includes("ContextualFeedback"), false);
 });

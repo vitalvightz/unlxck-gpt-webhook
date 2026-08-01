@@ -91,6 +91,13 @@ export function getTodayDecisionBanner(
 
 export type AuthoritativeTodayTier = Exclude<TodayDecisionTier, "preview">;
 
+export type TodaySessionOutcome =
+  | "unchanged"
+  | "guidance_only"
+  | "blocked"
+  | "replaced_with_recovery"
+  | "preview";
+
 export type ResolvedTodayDecision = {
   recommendationState: TodayRecommendationState;
   authoritativeTier: AuthoritativeTodayTier;
@@ -103,6 +110,8 @@ export type ResolvedTodayDecision = {
   severeInjuryBlocksCurrentSession: boolean;
   canCompleteSession: boolean;
   useSafeReplacement: boolean;
+  /** Presentation only: describes what Today renders, never why it is safe. */
+  sessionOutcome: TodaySessionOutcome;
 };
 
 const FALLBACK_TIER_BY_RECOMMENDATION: Record<
@@ -132,22 +141,22 @@ const DEFAULT_COPY_BY_TIER: Record<
   stop: {
     title: "Stop today",
     detail: "A safety restriction is blocking training today.",
-    action: "Do not start today's planned session. Follow the injury and safety guidance below.",
+    action: "Today's planned session is blocked.",
   },
   pull_back: {
     title: "Pull back today",
     detail: "Your readiness is too low for hard combat work today.",
-    action: "Skip hard combat work today. Use recovery or light mobility instead.",
+    action: "Today's planned session is blocked. Follow today's limits.",
   },
   modify: {
-    title: "Modify today",
-    detail: "Your readiness is down, so reduce hard combat work today.",
-    action: "Follow the adjusted work and skip extras.",
+    title: "Follow today's limits",
+    detail: "Today's session has not been rewritten. Follow the limits below and skip extra work.",
+    action: "Follow today's limits.",
   },
   green: {
-    title: "Green light",
+    title: "Session unchanged",
     detail: "Your check-in is clear for today's planned work.",
-    action: "Start the session and keep the work clean.",
+    action: "Complete today's planned session.",
   },
   preview: {
     title: "Session preview",
@@ -287,10 +296,81 @@ function getPreviewCopy(
   };
 }
 
+const HARD_STOP_COPY = [
+  /\bno training today\b/i,
+  /\btraining is not safe today\b/i,
+  /\bstop training and seek medical advice\b/i,
+  /\bsession blocked\b/i,
+  /\bactive severe injury\b/i,
+  /\brehab only today\b/i,
+];
+const UNRESTRICTED_COPY = /\b(?:train normally|train as planned|everything feels good)\b/i;
+
+function containsHardStopCopy(copy: TodayDecisionBanner): boolean {
+  const text = [copy.title, copy.detail, copy.action, copy.safety]
+    .filter(Boolean)
+    .join(" ");
+  return HARD_STOP_COPY.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Return backend presentation copy only when its structured recommendation can
+ * safely sit beneath the authoritative tier. Copy never changes the tier or any
+ * session behaviour resolved below.
+ */
+export function getCompatibleRecommendationCopy(
+  recommendationState: TodayRecommendationState,
+  authoritativeTier: AuthoritativeTodayTier,
+  recommendationReason?: string | null,
+): TodayDecisionBanner | null {
+  if (!recommendationReason?.trim()) {
+    return null;
+  }
+
+  const copy = getLegacyTodayDecisionBanner(
+    recommendationState,
+    recommendationReason,
+    { isPreview: false },
+  );
+  if (!copy) {
+    return null;
+  }
+
+  const expectedTier = FALLBACK_TIER_BY_RECOMMENDATION[recommendationState];
+  if (expectedTier === authoritativeTier) {
+    if (
+      (authoritativeTier === "green" || authoritativeTier === "modify") &&
+      containsHardStopCopy(copy)
+    ) {
+      return null;
+    }
+    if (
+      authoritativeTier === "pull_back" &&
+      UNRESTRICTED_COPY.test(
+        [copy.title, copy.detail, copy.action, copy.safety].filter(Boolean).join(" "),
+      )
+    ) {
+      return null;
+    }
+    return copy;
+  }
+
+  // A pull-back recommendation may contain the stronger stop instruction that
+  // caused the backend to promote the authoritative tier to STOP.
+  if (
+    recommendationState === "pull_back" &&
+    authoritativeTier === "stop" &&
+    containsHardStopCopy(copy)
+  ) {
+    return copy;
+  }
+  return null;
+}
+
 function resolvePresentationBanner(
   recommendationState: TodayRecommendationState,
-  reason: string | null | undefined,
   displayTier: TodayDecisionTier,
+  recommendationReason?: string | null,
   injuryPresentation?: TodayDecisionBanner | null,
   previewSession?: TodaySession | null,
 ): TodayDecisionBanner | null {
@@ -314,29 +394,24 @@ function resolvePresentationBanner(
     };
   }
 
-  // STOP has no recommendation-state equivalent: the backend can raise it from
-  // severe injury or another safety authority before check-in. Use tier-safe
-  // copy so a stale or green-sounding recommendation can never contradict STOP.
-  const recommendationMatchesTier =
-    FALLBACK_TIER_BY_RECOMMENDATION[recommendationState] === displayTier;
-  const recommendationCopy =
-    displayTier === "stop" || !recommendationMatchesTier
-      ? null
-      : getTodayDecisionBanner(recommendationState, reason, {
-          isPreview: false,
-        });
-  const injuryCopy =
-    displayTier === "stop" ? injuryPresentation ?? null : null;
-  const copy = injuryCopy ?? recommendationCopy ?? fallback;
+  const recommendationCopy = getCompatibleRecommendationCopy(
+    recommendationState,
+    displayTier,
+    recommendationReason,
+  );
+  const injuryCopy = displayTier === "stop" ? injuryPresentation ?? null : null;
 
   return {
     state: recommendationState,
     displayState,
     chip: CHIP_BY_DISPLAY[displayState],
-    title: injuryCopy ? fallback.title : copy.title,
-    detail: copy.detail,
-    action: copy.action,
-    safety: injuryCopy?.safety ?? recommendationCopy?.safety,
+    // The fixed title/chip communicate the tier. Backend prose supplies the
+    // useful athlete-specific instruction without becoming a safety authority.
+    title: fallback.title,
+    detail: injuryCopy?.detail ?? recommendationCopy?.detail ?? fallback.detail,
+    action:
+      recommendationCopy?.action ?? injuryCopy?.action ?? fallback.action,
+    safety: recommendationCopy?.safety ?? injuryCopy?.safety,
     tone: TONE_BY_DISPLAY[displayState],
   };
 }
@@ -370,10 +445,21 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
           hasSession ? getSessionTitle(state.today.next_session) : undefined,
         )
       : null;
+  const useSafeReplacement =
+    authoritativeTier === "stop" && hasSession && sessionIsToday;
+  const sessionOutcome: TodaySessionOutcome = isPreview
+    ? "preview"
+    : authoritativeTier === "green" || authoritativeTier === "not_checked_in"
+      ? "unchanged"
+      : authoritativeTier === "modify"
+        ? "guidance_only"
+        : authoritativeTier === "stop" && useSafeReplacement
+          ? "replaced_with_recovery"
+          : "blocked";
   const banner = resolvePresentationBanner(
     recommendationState,
-    state.today.recommendation_reason,
     displayTier,
+    state.today.recommendation_reason,
     injuryPresentation,
     state.today.next_session,
   );
@@ -388,8 +474,6 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     canCompleteTodaySession(state.today.next_session) &&
     sessionIsToday &&
     !blocksCurrentSession;
-  const useSafeReplacement =
-    authoritativeTier === "stop" && hasSession && sessionIsToday;
 
   return {
     recommendationState,
@@ -403,7 +487,28 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     severeInjuryBlocksCurrentSession,
     canCompleteSession,
     useSafeReplacement,
+    sessionOutcome,
   };
+}
+
+/** Remove only warnings already expressed by today's authoritative main card. */
+export function getSupplementaryRiskWatch(
+  risks: TodayCommandView["risk_watch"] | null | undefined,
+  decision: ResolvedTodayDecision,
+): TodayCommandView["risk_watch"] {
+  const severeInjuryStop =
+    decision.authoritativeTier === "stop" &&
+    decision.sessionIsToday &&
+    decision.severeInjuryBlocksCurrentSession;
+  const mainDecisionAlreadyShowsBlock =
+    decision.sessionIsToday &&
+    (decision.authoritativeTier === "pull_back" ||
+      decision.authoritativeTier === "stop");
+  return (risks ?? []).filter(
+    (risk) =>
+      !(risk.category === "stop_red_flag" && mainDecisionAlreadyShowsBlock) &&
+      !(risk.category === "active_injury_worse" && severeInjuryStop),
+  );
 }
 
 /**

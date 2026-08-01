@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 from ..generation_config import generation_job_stale_after_seconds
 from ..store import AppStore, is_pre_start_stale_generation_job
+from ..store_performance import get_generation_job_status
 from .time_utils import utc_now_iso
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ async def heartbeat_generation_job(
             return
         except asyncio.TimeoutError:
             try:
-                current = await asyncio.to_thread(store.get_generation_job, job_id)
+                current = await asyncio.to_thread(get_generation_job_status, store, job_id)
             except Exception:
                 logger.exception("[jobs] generation:heartbeat_status_check_failed job_id=%s", job_id)
                 current = None

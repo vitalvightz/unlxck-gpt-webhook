@@ -12,7 +12,7 @@ import { CustomSelect } from "@/components/custom-select";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
-import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
+import { normalizeInjuryLabel, resolveInjuryTypeLabel } from "@/lib/injury-display";
 import { TODAY_INJURY_MAX_WORDS } from "@/lib/input-limits";
 import {
   NO_TODAY_INJURY_TYPE,
@@ -29,13 +29,18 @@ import type {
   InjuryFlagRecord,
   InjuryFlagSeverity,
   SkinIntegrity,
+  SurfaceInjuryClass,
   TodayInjuryCheckinStatus,
   TodayInjuryDeclaration,
 } from "@/lib/types";
 
+// "Same" is deliberately NOT an option. An injury left untouched stays exactly
+// where it is (the backend keeps it "ongoing"), so a per-day "nothing changed"
+// tap was pure ceremony — and a bright, pre-selectable "Same" button read to
+// athletes as a required daily confirmation. The check-in now only asks for a
+// CHANGE: easing, worse, or cleared. Silence means "same".
 const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: string }> = [
   { value: "improving", label: "Easing" },
-  { value: "ongoing", label: "Same" },
   { value: "worse", label: "Worse" },
   { value: "resolved", label: "Cleared" },
 ];
@@ -241,7 +246,40 @@ function getInjuryType(injury: InjuryFlagRecord): string {
   // leaks planner vocabulary — "Right shoulder: blister. surface injury.
   // surface injury:blister". The athlete gets the condition and their own
   // words; the routing keys stay internal.
-  return formatInjuryDetail(injury.description, { bodyArea: injury.body_area }) || "Type not specified";
+  return resolveInjuryTypeLabel(injury.description, {
+    bodyArea: injury.body_area,
+    label: injury.label,
+  });
+}
+
+type SurfaceGuidance = {
+  label: string;
+  message: string;
+  tone: "caution" | "danger";
+};
+
+const SURFACE_GUIDANCE: Partial<Record<SurfaceInjuryClass, SurfaceGuidance>> = {
+  surface_medical_review: {
+    label: "Check before training",
+    message: "This skin injury needs checking before training.",
+    tone: "danger",
+  },
+  surface_no_contact: {
+    label: "Contact restriction",
+    message: "Keep contact off it until the skin is closed and coverable.",
+    tone: "caution",
+  },
+  surface_local_restriction: {
+    label: "Protect the area",
+    message: "Protect it from rubbing or contact.",
+    tone: "caution",
+  },
+};
+
+/** Persistent, injury-owned guidance. The main Today decision remains the only
+ * session-level command; this only states the current local skin restriction. */
+function getSurfaceGuidance(injury: InjuryFlagRecord): SurfaceGuidance | null {
+  return SURFACE_GUIDANCE[injury.surface_class ?? "non_surface"] ?? null;
 }
 
 /**
@@ -372,7 +410,7 @@ export function TodayInjuryManager({
     }
   }
 
-  // "Easing" / "Same" apply straight away. "Cleared" routes through an inline
+  // "Easing" applies straight away. "Cleared" routes through an inline
   // confirmation because it removes the injury from tracking, and "Worse" on a
   // known skin injury routes through the surface follow-up, because how a wound
   // is worse (open? bleeding? coverable?) is what decides whether anything about
@@ -403,9 +441,9 @@ export function TodayInjuryManager({
       openSurfaceFollowUp(injury, status);
       return;
     }
-    // An easing / same report on a wound that is currently restricting training
-    // has to say what the skin is doing now — otherwise the restriction would
-    // either stick forever or lift on nothing.
+    // An easing report on a wound that is currently restricting training has to
+    // say what the skin is doing now — otherwise the restriction would either
+    // stick forever or lift on nothing.
     if (status !== "worse" && needsSurfaceRecheck(injury)) {
       openSurfaceFollowUp(injury, status);
       return;
@@ -527,6 +565,8 @@ export function TodayInjuryManager({
         <ul className="today-injury-list">
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
+            const injuryType = getInjuryType(injury);
+            const surfaceGuidance = getSurfaceGuidance(injury);
             const isPending = pendingFlagId === injury.id;
             // Any in-flight write locks every row's status actions, not just its
             // own. The store refuses concurrent writes, so leaving other rows
@@ -539,12 +579,25 @@ export function TodayInjuryManager({
                 <div className="today-injury-meta">
                   <span className="today-injury-name">
                     <strong>{getInjuryLabel(injury)}</strong>
-                    <small>{getInjuryType(injury)}</small>
+                    {injuryType ? <small>{injuryType}</small> : null}
                   </span>
                   <span className="badge status-badge-neutral">{injury.severity}</span>
                   {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
+                {surfaceGuidance ? (
+                  <div
+                    className="today-injury-guidance"
+                    data-tone={surfaceGuidance.tone}
+                    role="note"
+                  >
+                    <span>{surfaceGuidance.label}</span>
+                    <p>{surfaceGuidance.message}</p>
+                  </div>
+                ) : null}
                 <p className="today-field-label today-injury-status-label">How is it today?</p>
+                <p className="today-field-hint today-injury-status-hint">
+                  Only tap if it changed — we keep tracking it otherwise.
+                </p>
                 <div
                   className="today-segment-row today-injury-status-row"
                   role="group"

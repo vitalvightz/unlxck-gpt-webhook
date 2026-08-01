@@ -2,9 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { TodaySessionBlocks } from "./today-session-panel";
+import { ToastProvider } from "@/components/toast-provider";
+import { TodaySessionBlocks, TodaySessionPanel } from "./today-session-panel";
 import { resolveCurrentDay } from "@/lib/camp-map";
-import type { StructuredPlan } from "@/lib/types";
+import type { StructuredPlan, TodayCommandView } from "@/lib/types";
 
 test("weekday fallback never presents a stale template date as today", () => {
   const plan = {
@@ -69,4 +70,54 @@ test("today shows no session blocks while the plan's block has not started", () 
   assert.equal(current.inRange, false);
   assert.equal(current.matchType, null);
   assert.equal(html.includes("Saturday strength"), false);
+});
+
+test("safe replacement renders without blocked terminal or completion controls", () => {
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
+    today: {
+      training_day: "2026-08-01",
+      recommendation_state: "not_checked_in",
+      decision_tier: "stop",
+      warnings: [],
+      next_session: {
+        session_id: "session-1",
+        title: "Hard sparring",
+        effective_load: "hard",
+      },
+      session_scope: "today",
+      session_label: "Today",
+      completion_status: "not_started",
+    },
+    risk_watch: [],
+    open_injuries: [
+      {
+        id: "injury-1",
+        athlete_id: "athlete-1",
+        source: "today",
+        body_area: "knee",
+        description: "Left knee",
+        severity: "severe",
+        status: "open",
+        created_at: "2026-08-01T08:00:00Z",
+        updated_at: "2026-08-01T08:00:00Z",
+      },
+    ],
+    week_summary: {},
+    quick_actions: [],
+  };
+  const html = renderToStaticMarkup(
+    <ToastProvider>
+      <TodaySessionPanel
+        state={state}
+        structuredPlan={null}
+        token="token"
+        onRefresh={async () => {}}
+      />
+    </ToastProvider>,
+  );
+
+  assert.match(html, /Rest and recover/i);
+  assert.doesNotMatch(html, /Blocked by an active severe injury/);
+  assert.doesNotMatch(html, />Start session<|>Mark done<|>Mark modified<|>Resume session</);
 });

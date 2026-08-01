@@ -20,6 +20,7 @@ import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
   getCompletionLabel,
+  getSupplementaryRiskWatch,
   hasActivePlan,
   resolveTodayDecision,
   shouldShowTodayCheckin,
@@ -187,6 +188,28 @@ export function TodayScreen() {
     return <NoActivePlanState />;
   }
   const resolvedDecision = resolveTodayDecision(state);
+  const supplementaryRisks = getSupplementaryRiskWatch(
+    state.risk_watch,
+    resolvedDecision,
+  );
+  const readinessForm = showCheckin ? (
+    <TodayReadinessForm
+      plan={activePlan}
+      token={token ?? ""}
+      warnings={state.today.warnings}
+      onRefresh={refresh}
+    />
+  ) : null;
+  const sessionPanel = (
+    <TodaySessionPanel
+      state={state}
+      structuredPlan={structuredPlan}
+      rehabLabelPolicy={rehabLabelPolicy}
+      planSchedule={planSchedule}
+      token={token ?? ""}
+      onRefresh={refresh}
+    />
+  );
 
   return (
     <div className="today-page">
@@ -235,24 +258,19 @@ export function TodayScreen() {
           sources={state.today.recommendation_sources}
           confidenceNote={state.today.recommendation_confidence_note}
         />
-        {resolvedDecision.recommendationState !== "not_checked_in" ? (
-          <ContextualFeedback
-            key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
-            token={token ?? ""}
-            surface="daily_recommendation"
-          />
-        ) : null}
-        <TodayRiskWatch risks={state.risk_watch} />
       </section>
 
-      {showCheckin ? (
-        <TodayReadinessForm
-          plan={activePlan}
-          token={token ?? ""}
-          warnings={state.today.warnings}
-          onRefresh={refresh}
-        />
-      ) : null}
+      {resolvedDecision.useSafeReplacement ? (
+        <>
+          {sessionPanel}
+          {readinessForm}
+        </>
+      ) : (
+        <>
+          {readinessForm}
+          {sessionPanel}
+        </>
+      )}
 
       {token ? (
         <TodayInjuryManager
@@ -262,14 +280,16 @@ export function TodayScreen() {
         />
       ) : null}
 
-      <TodaySessionPanel
-        state={state}
-        structuredPlan={structuredPlan}
-        rehabLabelPolicy={rehabLabelPolicy}
-        planSchedule={planSchedule}
-        token={token ?? ""}
-        onRefresh={refresh}
-      />
+      <TodayRiskWatch risks={supplementaryRisks} />
+
+      {resolvedDecision.recommendationState !== "not_checked_in" ? (
+        <ContextualFeedback
+          key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
+          token={token ?? ""}
+          surface="daily_recommendation"
+          className="today-feedback-card"
+        />
+      ) : null}
     </div>
   );
 }

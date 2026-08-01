@@ -145,6 +145,58 @@ function stubCheckin(options: { fail?: boolean; openInjuries?: InjuryFlagRecord[
   return { calls, restore: () => void (globalThis.fetch = originalFetch) };
 }
 
+test("an unknown injury type leaves no placeholder or secondary line", async () => {
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager
+        openInjuries={[
+          {
+            ...SHOULDER,
+            description: "injury",
+            label: "Right shoulder injury",
+          },
+        ]}
+        token="t"
+        onRefresh={async () => {}}
+      />,
+    );
+  });
+
+  assert.equal(container.querySelector(".today-injury-name strong")?.textContent, "Right shoulder injury");
+  assert.equal(container.querySelector(".today-injury-name small"), null);
+  assert.doesNotMatch(container.textContent ?? "", /Type not specified/);
+  cleanup();
+});
+
+test("a cut card shows the normalised wound type beneath the injury name", async () => {
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager
+        openInjuries={[
+          {
+            ...BLISTER,
+            body_area: "right eye",
+            description: "Right eye cut",
+            label: "Right eye cut",
+            severity: "severe",
+          },
+        ]}
+        token="t"
+        onRefresh={async () => {}}
+      />,
+    );
+  });
+
+  assert.equal(container.querySelector(".today-injury-name strong")?.textContent, "Right eye cut");
+  assert.equal(container.querySelector(".today-injury-name small")?.textContent, "Cut / laceration");
+  assert.match(container.querySelector(".today-injury-meta")?.textContent ?? "", /severe/i);
+  cleanup();
+});
+
 test("the injury card never renders the planner's internal taxonomy tokens", async () => {
   // A flag bootstrapped from guided intake stores the structured read of the
   // injury in its description. The athlete gets the condition word; the routing
@@ -179,6 +231,95 @@ test("the injury card never renders the planner's internal taxonomy tokens", asy
     container.querySelector(".today-injury-name small")?.textContent,
     "blister",
   );
+
+  cleanup();
+});
+
+test("actionable skin guidance persists on its injury card", async () => {
+  const cases: Array<{
+    surfaceClass: InjuryFlagRecord["surface_class"];
+    label: string;
+    message: string;
+    tone: string;
+  }> = [
+    {
+      surfaceClass: "surface_medical_review",
+      label: "Check before training",
+      message: "This skin injury needs checking before training.",
+      tone: "danger",
+    },
+    {
+      surfaceClass: "surface_no_contact",
+      label: "Contact restriction",
+      message: "Keep contact off it until the skin is closed and coverable.",
+      tone: "caution",
+    },
+    {
+      surfaceClass: "surface_local_restriction",
+      label: "Protect the area",
+      message: "Protect it from rubbing or contact.",
+      tone: "caution",
+    },
+  ];
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager
+        openInjuries={cases.map((item, index) => ({
+          ...BLISTER,
+          id: `surface-${index}`,
+          surface_class: item.surfaceClass,
+        }))}
+        token="t"
+        onRefresh={async () => {}}
+      />,
+    );
+  });
+
+  const guidance = Array.from(container.querySelectorAll<HTMLElement>(".today-injury-guidance"));
+  assert.equal(guidance.length, cases.length);
+  cases.forEach((item, index) => {
+    assert.equal(guidance[index]?.dataset.tone, item.tone);
+    assert.ok(guidance[index]?.textContent?.includes(item.label));
+    assert.ok(guidance[index]?.textContent?.includes(item.message));
+  });
+
+  cleanup();
+});
+
+test("stable and non-surface injuries do not show persistent restriction guidance", async () => {
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager openInjuries={[BLISTER, SHOULDER]} token="t" onRefresh={async () => {}} />,
+    );
+  });
+
+  assert.equal(container.querySelector(".today-injury-guidance"), null);
+  cleanup();
+});
+
+test("persistent guidance follows refreshed injury data and clears with the injury", async () => {
+  const { container, root, cleanup } = mount();
+  const render = async (openInjuries: InjuryFlagRecord[]) => {
+    await act(async () => {
+      root.render(
+        <TodayInjuryManager openInjuries={openInjuries} token="t" onRefresh={async () => {}} />,
+      );
+    });
+  };
+
+  await render([{ ...BLISTER, surface_class: "surface_no_contact" }]);
+  assert.match(container.textContent ?? "", /Keep contact off it/);
+
+  await render([{ ...BLISTER, surface_class: "stable_surface" }]);
+  assert.equal(container.querySelector(".today-injury-guidance"), null);
+
+  await render([]);
+  assert.equal(container.querySelector(".today-injury-guidance"), null);
+  assert.match(container.textContent ?? "", /No injuries are being tracked/);
 
   cleanup();
 });
@@ -320,26 +461,25 @@ test("a non-surface injury marked worse saves directly, with no skin questions",
   }
 });
 
-test("an ordinary status update never shows the skin questions", async () => {
-  const { calls, restore } = stubCheckin();
+test("the check-in offers only change actions — no 'Same' to confirm", async () => {
+  // "Same" is the implicit default: an untouched injury stays ongoing in the
+  // backend, so the row only ever asks about a CHANGE. A bright 'Same' button
+  // read as a required daily confirmation — the confusion this removes.
   const { container, root, cleanup } = mount();
 
-  try {
-    await act(async () => {
-      root.render(
-        <TodayInjuryManager openInjuries={[BLISTER]} token="t" onRefresh={async () => {}} />,
-      );
-    });
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager openInjuries={[BLISTER]} token="t" onRefresh={async () => {}} />,
+    );
+  });
 
-    await click(statusButton(container, "Same"));
+  const labels = Array.from(
+    container.querySelectorAll<HTMLButtonElement>(".today-injury-status-row button"),
+  ).map((button) => button.textContent?.trim());
+  assert.deepEqual(labels, ["Easing", "Worse", "Cleared"]);
+  assert.doesNotMatch(container.textContent ?? "", /\bSame\b/);
 
-    assert.deepEqual(calls, [{ injuries: [{ flag_id: "flag-blister", status: "ongoing" }] }]);
-    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
-
-    cleanup();
-  } finally {
-    restore();
-  }
+  cleanup();
 });
 
 test("clearing an injury is not marked selected until the confirmed write succeeds", async () => {
@@ -451,7 +591,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
       );
     });
 
-    await click(statusButton(container, "Same"));
+    await click(statusButton(container, "Easing"));
     // Pre-filled from the record: the stored infection sign is still selected.
     assert.equal(buttonNamed(container, "Pus").getAttribute("aria-pressed"), "true");
     assert.equal(buttonNamed(container, "Open or burst").getAttribute("aria-pressed"), "true");
@@ -459,7 +599,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
     await click(buttonNamed(container, "Save update"));
 
     const sent = (calls[0].injuries as Array<Record<string, unknown>>)[0];
-    assert.equal(sent.status, "ongoing");
+    assert.equal(sent.status, "improving");
     // Untouched answers survive the recheck rather than being blanked by it.
     assert.deepEqual(sent.infection_signs, ["pus"]);
     assert.equal(sent.skin_integrity, "open");
