@@ -845,20 +845,117 @@ export type SafeSessionView = {
   blocked: string[];
 };
 
+// Body-location words for the weight-bearing lower kinetic chain — the leg that
+// both walking (body-weight gait through foot/ankle/shin/calf/knee) and a light
+// stationary-bike spin (repeated knee flexion + ankle plantarflexion under pedal
+// load, driven by the quads) actually load. An upper-body injury (e.g. a bicep
+// tear) leaves the legs free, so it never matches here.
+const LOWER_LEG_INJURY_TERMS = [
+  "leg",
+  "knee",
+  "kneecap",
+  "patella",
+  "patellar",
+  "meniscus",
+  "acl",
+  "mcl",
+  "pcl",
+  "lcl",
+  "shin",
+  "tibia",
+  "fibula",
+  "calf",
+  "achilles",
+  "ankle",
+  "foot",
+  "feet",
+  "heel",
+  "toe",
+  "plantar",
+  "hamstring",
+  "quad",
+  "quadriceps",
+  "thigh",
+] as const;
+
+// The "xyz" that makes gait / pedal loading unsafe: a structural failure that
+// cannot take load. A plain ache, tightness or minor strain in the same area is
+// NOT disqualifying — only a break, rupture, tear, dislocation or avulsion is
+// (severity "severe" is handled separately).
+const LOAD_INTOLERANT_INJURY_TERMS = [
+  "fracture",
+  "fractured",
+  "broken",
+  "break",
+  "rupture",
+  "ruptured",
+  "tear",
+  "torn",
+  "snap",
+  "snapped",
+  "dislocation",
+  "dislocated",
+  "avulsion",
+] as const;
+
+function injuryHaystack(injury: InjuryFlagRecord): string {
+  const raw = `${injury.label ?? ""} ${injury.body_area ?? ""} ${injury.description ?? ""}`.toLowerCase();
+  // Reduce to space-delimited word tokens so a term only matches a whole word
+  // (" hip " never matches "ship", " toe " never matches "together").
+  return ` ${raw.replace(/[^a-z]+/g, " ").trim()} `;
+}
+
+function isLoadIntolerantLowerLegInjury(injury: InjuryFlagRecord): boolean {
+  // Only an active (open / monitoring) injury constrains today's session.
+  if (injury.status !== "open" && injury.status !== "monitoring") {
+    return false;
+  }
+  const haystack = injuryHaystack(injury);
+  const hitsLowerLeg = LOWER_LEG_INJURY_TERMS.some((term) => haystack.includes(` ${term} `));
+  if (!hitsLowerLeg) {
+    return false;
+  }
+  if (injury.severity === "severe") {
+    return true;
+  }
+  return LOAD_INTOLERANT_INJURY_TERMS.some((term) => haystack.includes(` ${term} `));
+}
+
+/**
+ * Whether any active injury is a lower-leg injury that cannot take gait / pedal
+ * load — a lower-leg fracture, rupture, tear or dislocation, or any severe
+ * lower-leg injury. When true, "Light bike or walk" is not safe recovery work.
+ */
+export function hasLoadIntolerantLowerLegInjury(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+): boolean {
+  return (openInjuries ?? []).some(isLoadIntolerantLowerLegInjury);
+}
+
 /**
  * The recovery/mobility-only session shown in place of the scheduled work when
- * today is a STOP. Static coach copy — the scheduled session is named so the
- * athlete sees exactly what is being held.
+ * today is a STOP. Coach copy — the scheduled session is named so the athlete
+ * sees exactly what is being held. "Light bike or walk" both load the lower
+ * kinetic chain, so they are offered only when the athlete has no load-intolerant
+ * lower-leg injury; for a lower-leg fracture/rupture/tear/dislocation (or any
+ * severe lower-leg injury) that option is dropped, leaving the coach-gated,
+ * non-weight-bearing options.
  */
-export function getSafeSessionView(blockedSessionName?: string): SafeSessionView {
+export function getSafeSessionView(
+  blockedSessionName?: string,
+  openInjuries?: readonly InjuryFlagRecord[] | null,
+): SafeSessionView {
   const name = (blockedSessionName ?? "").trim();
   const blockedLead =
     name && name.toLowerCase() !== "today's session" ? `${name} is blocked today.` : "Hard combat work is blocked today.";
+  const allowed = ["Easy mobility", "Light bike or walk", "Breathing reset", "Gentle activation", "Coach-approved rehab"];
   return {
     eyebrow: "Today's safe session",
     title: "Recovery / mobility only",
     detail: `${blockedLead} Protect freshness, reduce risk, and keep the body moving without adding stress.`,
-    allowed: ["Easy mobility", "Light bike or walk", "Breathing reset", "Gentle activation", "Coach-approved rehab"],
+    allowed: hasLoadIntolerantLowerLegInjury(openInjuries)
+      ? allowed.filter((item) => item !== "Light bike or walk")
+      : allowed,
     blocked: ["Sparring", "Hard pads", "HIIT", "Heavy lifting", "Plyos or explosive lower-body work"],
   };
 }

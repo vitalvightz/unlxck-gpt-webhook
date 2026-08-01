@@ -300,7 +300,7 @@ export function TodaySessionPanel({
   // available under a stop. Future sessions stay visible but read as pending.
   const safeSession =
     resolvedDecision.useSafeReplacement
-      ? getSafeSessionView(getSessionTitle(session))
+      ? getSafeSessionView(getSessionTitle(session), state.open_injuries)
       : null;
   const nextIsHardCombat = isHardCombatSession(session);
   // Gate completion on the scope-aware "is this today" check, not just the

@@ -143,7 +143,7 @@ _CONDITION_DISPLAY_NOUN = {"contusion": "bruise"}
 # are routed by the triage category, not by ordinary rehab typing), but they
 # still have an obvious display noun. When the scorer nulls injury_type, the label
 # recovers the noun from the triage category so a tear/rupture/fracture never
-# loses its type — "knee tendon tear" reads "Knee tendon rupture", "acl tear"
+# loses its type — "knee tendon tear" reads "Knee tendon tear", "acl tear"
 # reads "ACL tear", "broken collarbone" reads "Collarbone fracture".
 _TRIAGE_DISPLAY_NOUN = {
     "fracture": "fracture",
@@ -160,6 +160,37 @@ _TRIAGE_DISPLAY_NOUN = {
     "infection": "infection",
     "nerve_involvement": "nerve issue",
 }
+
+# A reported *tear* is not a *rupture*. The ``tendon_rupture`` triage category is a
+# safety bucket that deliberately catches BOTH an honest "bicep tear" and a genuine
+# "achilles rupture" so both route to clinical clearance (see TRIAGE_CATEGORY_MAP).
+# That conflation is correct for routing, but the athlete-facing label must not put
+# the louder word in the athlete's mouth: relabelling "Left bicep tear" as "Left
+# bicep rupture" over-states a partial tear as a complete one. So the "rupture"
+# noun is earned only by explicit rupture evidence (ruptured / avulsion / detached
+# / snapped / a complete or full-thickness tear); a plain tear stays a "tear". The
+# underlying triage — and its clearance requirement — is unchanged.
+_RUPTURE_EVIDENCE_PATTERN = re.compile(
+    r"\b(?:rupture[d]?|avuls(?:ion|ed)|detached|snap(?:ped)?|"
+    r"complete\s+(?:tear|rupture)|full[-\s]thickness(?:\s+tear)?|full\s+tear|"
+    r"confirmed\s+(?:tear|rupture))\b",
+    re.IGNORECASE,
+)
+
+
+def _triage_display_noun(triage_category: str, injury_text: str) -> str:
+    """Athlete-facing type noun for a structural triage category.
+
+    Mirrors ``_TRIAGE_DISPLAY_NOUN`` except that a ``tendon_rupture`` with no
+    explicit rupture evidence in the athlete's own words is honestly labelled a
+    "tear" rather than escalated to "rupture".
+    """
+    noun = _TRIAGE_DISPLAY_NOUN.get(triage_category, "")
+    if triage_category == "tendon_rupture" and not _RUPTURE_EVIDENCE_PATTERN.search(
+        injury_text or ""
+    ):
+        return "tear"
+    return noun
 
 # Triage categories whose name already implies the body part (a named knee
 # ligament, or a head/brain injury), so the label shows the type alone rather
@@ -322,9 +353,11 @@ def build_injury_label(body_area: object, description: object) -> str:
     # Structural injuries (fracture / tear / rupture / dislocation / concussion)
     # deliberately null out injury_type, so recover the display noun from the
     # triage category. condition_key becomes the display noun; triage_category is
-    # kept separately to drive synonym stripping and location handling.
+    # kept separately to drive synonym stripping and location handling. The noun is
+    # resolved from the athlete's own words so a reported tear is not escalated to a
+    # rupture (see _triage_display_noun).
     if condition_key in ("", "unspecified"):
-        condition_key = _TRIAGE_DISPLAY_NOUN.get(triage_category, condition_key)
+        condition_key = _triage_display_noun(triage_category, f"{body} {desc}") or condition_key
     condition = (
         _CONDITION_DISPLAY_NOUN.get(condition_key, condition_key)
         if condition_key and condition_key != "unspecified"

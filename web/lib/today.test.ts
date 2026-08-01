@@ -689,8 +689,47 @@ test("safe session names the blocked work and lists allowed/blocked", () => {
   assert.match(view.detail, /Technical sparring is blocked today/);
   assert.equal(view.title, "Recovery / mobility only");
   assert.equal(view.allowed.length, 5);
+  assert.equal(view.allowed.includes("Light bike or walk"), true);
   assert.equal(view.blocked.includes("Sparring"), true);
   assert.equal(view.blocked.includes("Heavy lifting"), true);
+});
+
+test("safe session keeps bike/walk for an upper-body or minor lower-leg injury", () => {
+  // A bicep tear (upper body) leaves the legs free — the screenshot case.
+  const bicep = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "left bicep", description: "left bicep tear", label: "Left bicep tear", severity: "moderate" }),
+  ]);
+  assert.equal(bicep.allowed.includes("Light bike or walk"), true);
+
+  // A minor lower-leg niggle (not structural, not severe) still tolerates a spin.
+  const tightCalf = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "calf", description: "tight calf", label: "Calf tightness", severity: "mild" }),
+  ]);
+  assert.equal(tightCalf.allowed.includes("Light bike or walk"), true);
+
+  // A resolved lower-leg tear no longer constrains today.
+  const resolved = getSafeSessionView("Technical sparring", [
+    makeInjury({ body_area: "calf", description: "calf tear", label: "Calf tear", severity: "severe", status: "resolved" }),
+  ]);
+  assert.equal(resolved.allowed.includes("Light bike or walk"), true);
+});
+
+test("safe session drops bike/walk for a load-intolerant lower-leg injury", () => {
+  // Structural lower-leg injuries: gait / pedal load is not safe recovery work.
+  for (const injury of [
+    makeInjury({ body_area: "left calf", description: "calf tear", label: "Left calf tear", severity: "moderate" }),
+    makeInjury({ body_area: "achilles", description: "achilles rupture", label: "Achilles rupture", severity: "moderate" }),
+    makeInjury({ body_area: "ankle", description: "ankle fracture", label: "Ankle fracture", severity: "moderate" }),
+    makeInjury({ body_area: "knee", description: "acl tear", label: "ACL tear", severity: "moderate" }),
+    // Severe lower-leg injury of any type also disqualifies it.
+    makeInjury({ body_area: "shin", description: "shin pain", label: "Shin pain", severity: "severe" }),
+  ]) {
+    const view = getSafeSessionView("Technical sparring", [injury]);
+    assert.equal(view.allowed.includes("Light bike or walk"), false, injury.label);
+    assert.equal(view.allowed.length, 4, injury.label);
+    // The rest of the safe options are untouched.
+    assert.equal(view.allowed.includes("Coach-approved rehab"), true, injury.label);
+  }
 });
 
 test("camp day counts down from training day to fight date", () => {

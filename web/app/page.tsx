@@ -519,7 +519,7 @@ export default function HomePage() {
     // STOP + the scheduled session is today -> replace it with a safe session.
     // Any future scheduled session -> show it as pending clearance, never cleared.
     const safeSession = resolvedDecision?.useSafeReplacement
-      ? getSafeSessionView(nextSessionTitle)
+      ? getSafeSessionView(nextSessionTitle, commandState?.open_injuries)
       : null;
     const showNextPlanned = hasNextSession && !sessionIsToday;
     // When today's session has already been logged (modified / done / skipped),
