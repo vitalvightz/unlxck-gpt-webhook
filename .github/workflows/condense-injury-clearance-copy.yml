@@ -1,0 +1,77 @@
+name: Condense injury clearance copy
+
+on:
+  push:
+    branches:
+      - agent/condense-injury-clearance-copy
+
+permissions:
+  contents: write
+
+jobs:
+  update-copy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/condense-injury-clearance-copy
+
+      - name: Condense wording and verify repository
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              "until it is cleared or medically cleared": "until it is cleared",
+              "Clear it or get it medically cleared before training.": "Clear it before training.",
+          }
+          workflow = Path(".github/workflows/condense-injury-clearance-copy.yml")
+          counts = {old: 0 for old in replacements}
+
+          for path in Path(".").rglob("*"):
+              if path == workflow or not path.is_file() or ".git" in path.parts:
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              updated = text
+              for old, new in replacements.items():
+                  matches = updated.count(old)
+                  if matches:
+                      counts[old] += matches
+                      updated = updated.replace(old, new)
+              if updated != text:
+                  path.write_text(updated, encoding="utf-8")
+
+          missing = [old for old, count in counts.items() if count == 0]
+          if missing:
+              raise SystemExit("Expected wording was not found: " + ", ".join(missing))
+
+          banned = (
+              "cleared or medically cleared",
+              "get it medically cleared before training",
+          )
+          hits = []
+          for path in Path(".").rglob("*"):
+              if path == workflow or not path.is_file() or ".git" in path.parts:
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8").lower()
+              except UnicodeDecodeError:
+                  continue
+              for phrase in banned:
+                  if phrase in text:
+                      hits.append(f"{path}: {phrase}")
+          if hits:
+              raise SystemExit("Remaining redundant wording:\n" + "\n".join(hits))
+          PY
+
+          git rm -f .github/workflows/condense-injury-clearance-copy.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Condense injury clearance copy"
+          git push origin HEAD:agent/condense-injury-clearance-copy
