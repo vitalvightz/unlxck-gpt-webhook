@@ -12,7 +12,7 @@ import { CustomSelect } from "@/components/custom-select";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
-import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
+import { normalizeInjuryLabel, resolveInjuryTypeLabel } from "@/lib/injury-display";
 import { TODAY_INJURY_MAX_WORDS } from "@/lib/input-limits";
 import {
   NO_TODAY_INJURY_TYPE,
@@ -241,7 +241,10 @@ function getInjuryType(injury: InjuryFlagRecord): string {
   // leaks planner vocabulary — "Right shoulder: blister. surface injury.
   // surface injury:blister". The athlete gets the condition and their own
   // words; the routing keys stay internal.
-  return formatInjuryDetail(injury.description, { bodyArea: injury.body_area }) || "Type not specified";
+  return resolveInjuryTypeLabel(injury.description, {
+    bodyArea: injury.body_area,
+    label: injury.label,
+  });
 }
 
 /**
@@ -527,6 +530,7 @@ export function TodayInjuryManager({
         <ul className="today-injury-list">
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
+            const injuryType = getInjuryType(injury);
             const isPending = pendingFlagId === injury.id;
             // Any in-flight write locks every row's status actions, not just its
             // own. The store refuses concurrent writes, so leaving other rows
@@ -539,7 +543,7 @@ export function TodayInjuryManager({
                 <div className="today-injury-meta">
                   <span className="today-injury-name">
                     <strong>{getInjuryLabel(injury)}</strong>
-                    <small>{getInjuryType(injury)}</small>
+                    {injuryType ? <small>{injuryType}</small> : null}
                   </span>
                   <span className="badge status-badge-neutral">{injury.severity}</span>
                   {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}

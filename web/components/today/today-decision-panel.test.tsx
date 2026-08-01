@@ -180,6 +180,28 @@ test("the panel stays null before check-in even with an explanation supplied", (
   assert.equal(html, "");
 });
 
+test("the command hides only the superseded-readiness presentation message", () => {
+  const superseded = render({
+    banner: {
+      ...STOP_BANNER,
+      safety: " Previous readiness guidance is superseded by the injury warning. ",
+    },
+  });
+  assert.ok(!superseded.includes("Previous readiness guidance"));
+  assert.ok(!superseded.includes("today-decision-safety"));
+
+  for (const safety of [
+    "Seek medical advice.",
+    "Stop if it opens or bleeds.",
+    "Monitor worsening symptoms.",
+    "Keep the wound clean and covered.",
+  ]) {
+    const html = render({ banner: { ...STOP_BANNER, safety } });
+    assert.ok(html.includes(safety));
+    assert.ok(html.includes("today-decision-safety"));
+  }
+});
+
 test("the explanation never claims a signal caused the change", () => {
   const html = render({
     banner: BANNER,

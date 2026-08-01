@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatInjuryDetail, normalizeInjuryLabel } from "./injury-display.ts";
+import {
+  formatInjuryDetail,
+  normalizeInjuryLabel,
+  resolveInjuryTypeLabel,
+} from "./injury-display.ts";
 
 test("normalizes a literal bruise sentence into a short label", () => {
   assert.equal(normalizeInjuryLabel("Left shoulder is bruised"), "Left shoulder bruise");
@@ -154,4 +158,33 @@ test("dedupes repeated segments and tolerates blank input", () => {
   assert.equal(formatInjuryDetail(""), "");
   assert.equal(formatInjuryDetail(null), "");
   assert.equal(formatInjuryDetail(undefined), "");
+});
+
+// resolveInjuryTypeLabel -----------------------------------------------------
+
+test("maps clear cut, laceration, and gash wording to one display type", () => {
+  assert.equal(resolveInjuryTypeLabel("Right eye cut"), "Cut / laceration");
+  assert.equal(resolveInjuryTypeLabel("Left eyebrow laceration"), "Cut / laceration");
+  assert.equal(resolveInjuryTypeLabel("Small gash above eye"), "Cut / laceration");
+  assert.equal(resolveInjuryTypeLabel("split skin above eye"), "Cut / laceration");
+  assert.equal(resolveInjuryTypeLabel("open cut above eye"), "Cut / laceration");
+});
+
+test("can recognise cut wording from the injury label", () => {
+  assert.equal(
+    resolveInjuryTypeLabel("", { label: "Right eye cut" }),
+    "Cut / laceration",
+  );
+});
+
+test("omits missing, placeholder, and vague injury types", () => {
+  for (const detail of ["", "Type not specified", "sore", "painful", "bothering me", "injury"]) {
+    assert.equal(resolveInjuryTypeLabel(detail), "");
+  }
+});
+
+test("keeps existing recognised injury detail labels", () => {
+  assert.equal(resolveInjuryTypeLabel("bruise"), "bruise");
+  assert.equal(resolveInjuryTypeLabel("blister"), "blister");
+  assert.equal(resolveInjuryTypeLabel("ankle sprain"), "ankle sprain");
 });
