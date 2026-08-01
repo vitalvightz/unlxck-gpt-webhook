@@ -7927,16 +7927,28 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
 .today-risk-list {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Every row shares one column definition — label rail on the left, body on the
+   right — so nothing floats in a per-row track. Because the action link now
+   lives inside the body column (below its sentence) instead of a third `auto`
+   column that only some rows had, the fraction-based columns resolve to the
+   same widths on every row. That keeps all body text snapped to a single left
+   x-axis; previously the "Still present?" link stole width from the pain row
+   and dragged its text further left than the rows without a link. */
 .today-risk-item {
   display: grid;
-  grid-template-columns: minmax(112px, 0.3fr) minmax(0, 1fr) auto;
-  gap: 10px 16px;
+  grid-template-columns: minmax(104px, 0.26fr) minmax(0, 1fr);
+  gap: 4px 20px;
   align-items: baseline;
-  padding: 12px 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 14px 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 2px 0 0 var(--risk-rail, transparent);
+}
+
+.today-risk-item:last-child {
+  border-bottom: none;
 }
 
 .today-risk-heading {
@@ -7947,24 +7959,32 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
 
 .today-risk-signal {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 700;
+}
+
+.today-risk-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .today-risk-text {
   color: var(--text-secondary);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .today-risk-action {
+  align-self: flex-start;
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 750;
   text-decoration-color: rgba(255, 255, 255, 0.35);
   text-underline-offset: 3px;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .today-risk-action:hover,
@@ -7973,8 +7993,17 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   text-decoration-color: currentColor;
 }
 
+.today-risk-item[data-tone="caution"] {
+  --risk-rail: color-mix(in srgb, var(--progress-gold, #d6af6a) 60%, transparent);
+}
+
 .today-risk-item[data-tone="caution"] .today-risk-label {
   color: var(--progress-gold, #96713b);
+}
+
+.today-risk-item[data-tone="stop"],
+.today-risk-item[data-tone="warning"] {
+  --risk-rail: color-mix(in srgb, var(--danger-ink, #ff8da1) 60%, transparent);
 }
 
 .today-risk-item[data-tone="stop"] .today-risk-label,
@@ -7982,8 +8011,12 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   color: var(--danger-ink, #8e2d2f);
 }
 
+.today-risk-item[data-tone="info"] {
+  --risk-rail: color-mix(in srgb, #6fa0d0 60%, transparent);
+}
+
 .today-risk-item[data-tone="info"] .today-risk-label {
-  color: #2b5c8f;
+  color: #6fa0d0;
 }
 
 .today-risk-more {
@@ -7993,13 +8026,8 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
 @media (max-width: 720px) {
   .today-risk-item {
     grid-template-columns: 1fr;
-    gap: 6px;
-    padding: 12px 2px;
-  }
-
-  .today-risk-action {
-    width: fit-content;
-    white-space: normal;
+    gap: 8px;
+    padding: 14px 12px 14px 12px;
   }
 }
 
@@ -15352,14 +15380,12 @@ html[data-theme="light"] .today-decision-row + .today-decision-row {
   border-color: rgba(80, 81, 84, 0.1);
 }
 
-html[data-theme="light"] .today-risk-item[data-tone="info"] {
-  border-color: rgba(73, 105, 141, 0.18);
-  border-left-color: #49698d;
-  background: linear-gradient(135deg, rgba(73, 105, 141, 0.07), rgba(255, 255, 255, 0.62));
-}
-
+/* Light mode ran the risk list at ~0.12 alpha on every hairline, so the row
+   separators and tone rails all but disappeared on white — "hard to see". Keep
+   the card clean (no full-row wash) but firm up the structural lines and give
+   the info tone a rail/label dark enough to register on the light background. */
 html[data-theme="light"] .today-risk-list {
-  border-top-color: rgba(80, 81, 84, 0.12);
+  border-top-color: rgba(80, 81, 84, 0.2);
 }
 
 html[data-theme="light"] .today-risk-item,
@@ -15367,8 +15393,16 @@ html[data-theme="light"] .today-risk-item[data-tone="stop"],
 html[data-theme="light"] .today-risk-item[data-tone="warning"],
 html[data-theme="light"] .today-risk-item[data-tone="caution"],
 html[data-theme="light"] .today-risk-item[data-tone="info"] {
-  border-color: rgba(80, 81, 84, 0.12);
+  border-color: rgba(80, 81, 84, 0.16);
   background: transparent;
+}
+
+html[data-theme="light"] .today-risk-item[data-tone="info"] {
+  --risk-rail: #49698d;
+}
+
+html[data-theme="light"] .today-risk-item[data-tone="info"] .today-risk-label {
+  color: #2b5c8f;
 }
 
 html[data-theme="light"] .today-risk-action {
