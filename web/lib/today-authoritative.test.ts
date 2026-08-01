@@ -59,7 +59,24 @@ test("green remains completable despite stop-sounding prose", () => {
   assert.ok(resolved.banner);
   assert.equal(resolved.banner.displayState, "go");
   assert.equal(resolved.banner.tone, "green");
+  assert.equal(
+    resolved.banner.action,
+    "Session unchanged — complete today's planned session.",
+  );
   assert.equal("blocksTraining" in resolved.banner, false);
+});
+
+test("current session before check-in is not classified as blocked", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "not_checked_in",
+      decision_tier: "not_checked_in",
+    },
+  });
+  assert.equal(resolved.sessionOutcome, "unchanged");
+  assert.equal(resolved.banner, null);
 });
 
 test("pull-back remains blocking despite green-sounding prose", () => {
@@ -222,12 +239,25 @@ test("modify is guidance only and never claims the structured session was rewrit
       ...BASE_STATE.today,
       recommendation_state: "modify",
       decision_tier: "modify",
+      recommendation_reason: "Hard combat work needs to be controlled today.",
     },
   });
   assert.equal(resolved.sessionOutcome, "guidance_only");
   assert.equal(resolved.canCompleteSession, true);
   assert.match(resolved.banner?.action ?? "", /has not been automatically rewritten/);
   assert.doesNotMatch(resolved.banner?.action ?? "", /reduced|adjusted session/i);
+  assert.deepEqual(
+    {
+      chip: resolved.banner?.chip,
+      action: resolved.banner?.action,
+      detail: resolved.banner?.detail,
+    },
+    {
+      chip: "ADJUST",
+      action: "Follow today's limits. The planned session has not been automatically rewritten.",
+      detail: "Hard combat work needs to be controlled today.",
+    },
+  );
 });
 
 test("severe-injury STOP removes only matching injury and generic STOP risks", () => {

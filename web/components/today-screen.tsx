@@ -192,6 +192,24 @@ export function TodayScreen() {
     state.risk_watch,
     resolvedDecision,
   );
+  const readinessForm = showCheckin ? (
+    <TodayReadinessForm
+      plan={activePlan}
+      token={token ?? ""}
+      warnings={state.today.warnings}
+      onRefresh={refresh}
+    />
+  ) : null;
+  const sessionPanel = (
+    <TodaySessionPanel
+      state={state}
+      structuredPlan={structuredPlan}
+      rehabLabelPolicy={rehabLabelPolicy}
+      planSchedule={planSchedule}
+      token={token ?? ""}
+      onRefresh={refresh}
+    />
+  );
 
   return (
     <div className="today-page">
@@ -242,23 +260,17 @@ export function TodayScreen() {
         />
       </section>
 
-      {showCheckin ? (
-        <TodayReadinessForm
-          plan={activePlan}
-          token={token ?? ""}
-          warnings={state.today.warnings}
-          onRefresh={refresh}
-        />
-      ) : null}
-
-      <TodaySessionPanel
-        state={state}
-        structuredPlan={structuredPlan}
-        rehabLabelPolicy={rehabLabelPolicy}
-        planSchedule={planSchedule}
-        token={token ?? ""}
-        onRefresh={refresh}
-      />
+      {resolvedDecision.useSafeReplacement ? (
+        <>
+          {sessionPanel}
+          {readinessForm}
+        </>
+      ) : (
+        <>
+          {readinessForm}
+          {sessionPanel}
+        </>
+      )}
 
       {token ? (
         <TodayInjuryManager

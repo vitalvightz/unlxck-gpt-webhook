@@ -345,7 +345,7 @@ function resolvePresentationBanner(
       : sessionOutcome === "guidance_only"
         ? "Follow today's limits. The planned session has not been automatically rewritten."
         : sessionOutcome === "unchanged"
-          ? "Complete today's planned session."
+          ? "Session unchanged — complete today's planned session."
           : sessionOutcome === "blocked"
             ? "Today's planned session is blocked."
             : copy.action;
@@ -397,7 +397,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     authoritativeTier === "stop" && hasSession && sessionIsToday;
   const sessionOutcome: TodaySessionOutcome = isPreview
     ? "preview"
-    : authoritativeTier === "green"
+    : authoritativeTier === "green" || authoritativeTier === "not_checked_in"
       ? "unchanged"
       : authoritativeTier === "modify"
         ? "guidance_only"

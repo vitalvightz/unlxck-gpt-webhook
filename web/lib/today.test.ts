@@ -612,8 +612,6 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   const orderedMarkers = [
     "<TodayReadinessStrip",
     "<TodayDecisionPanel",
-    "<TodayReadinessForm",
-    "<TodaySessionPanel",
     "<TodayInjuryManager",
     "<TodayRiskWatch",
     'surface="daily_recommendation"',
@@ -623,7 +621,11 @@ test("Today renders one recommendation and feedback prompt in the required DOM o
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((left, right) => left - right), positions);
   assert.equal((screen.match(/<TodayDecisionPanel/g) ?? []).length, 1);
+  assert.equal((screen.match(/<TodayReadinessForm/g) ?? []).length, 1);
+  assert.equal((screen.match(/<TodaySessionPanel/g) ?? []).length, 1);
   assert.equal((screen.match(/surface="daily_recommendation"/g) ?? []).length, 1);
+  assert.ok(screen.includes("resolvedDecision.useSafeReplacement"));
+  assert.ok(screen.indexOf("{sessionPanel}\n          {readinessForm}") >= 0);
   assert.equal(sessionPanel.includes("TodayDecisionPanel"), false);
   assert.equal(sessionPanel.includes("ContextualFeedback"), false);
 });
