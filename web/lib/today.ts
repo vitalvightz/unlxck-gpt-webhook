@@ -846,187 +846,79 @@ export type SafeSessionView = {
 };
 
 // ── Safe-session activity gating ─────────────────────────────────────────────
-// The stop-day "safe session" offers a short menu of low-risk work. Which items
-// are genuinely safe depends on WHERE the injury is and HOW bad it is, so the
-// menu is resolved per athlete rather than shown as one static list. The
-// sports-science principles driving it:
-//   • Never prescribe loading the injured tissue. Walking and a light bike spin
-//     both drive the lower kinetic chain; an arm ergometer spares the legs but
-//     needs healthy arms. Mobility and activation can always be steered to
-//     unaffected regions by the coach, so they stay unless the whole athlete
-//     must rest.
-//   • A concussion / head injury (or a severe neck injury) needs downregulation,
-//     not aerobic exertion or neck-loading activation — only calm mobility,
-//     breathing and coach-led rehab remain.
-//   • A structural/severe spine, back or rib injury must not receive ANY generic
-//     movement advice — not cardio, not gravity-loaded mobility, not trunk
-//     activation. Only calm breathing and clinician-led rehab are safe there.
-//   • The gate is severity/structure, not mere presence: a niggle (tightness,
-//     minor strain, soreness) in a region still tolerates gentle conditioning;
-//     only a structural failure (fracture / rupture / tear / dislocation /
-//     avulsion) or a severe injury removes an option.
+// Anatomy and injury consequence are resolved by the backend's shared injury
+// system. This module consumes structured fields only; it never carries a second
+// body-part synonym list or re-parses athlete-entered injury text.
 
-// Whole-word body-location vocabulary per region. An injury can hit more than one
-// region; the menu reacts to each region it touches.
-const INJURY_REGION_TERMS = {
-  // The weight-bearing lower kinetic chain that gait and pedalling load.
-  lower_limb: [
-    "leg", "knee", "kneecap", "patella", "patellar", "meniscus",
-    "acl", "mcl", "pcl", "lcl", "shin", "tibia", "fibula", "calf", "achilles",
-    "ankle", "foot", "feet", "heel", "toe", "plantar",
-    "hamstring", "hamstrings", "quad", "quads", "quadriceps", "thigh", "hip", "groin", "glute", "glutes", "adductor",
-  ],
-  // The arms/shoulders that drive an arm ergometer and any pressing/pulling.
-  upper_limb: [
-    "shoulder", "rotator", "cuff", "delt", "deltoid", "bicep", "biceps",
-    "tricep", "triceps", "elbow", "forearm", "wrist", "hand", "finger", "fingers",
-    "thumb", "knuckle", "knuckles", "clavicle", "collarbone",
-    "arm", "arms", "upper arm", "upper arms",
-  ],
-  // Brain/neck — the region that turns any aerobic push into a symptom risk. Bare
-  // "head" is handled by INJURY_REGION_PATTERNS to avoid matching anatomical uses
-  // ("long head of biceps", "femoral head", "radial head").
-  head_neck: [
-    "concussion", "concussed", "brain", "skull", "whiplash",
-    "neck", "cervical", "jaw", "temple", "face", "facial",
-  ],
-  // Spine, back and rib cage — a structural/severe injury here cannot take any
-  // gravity-loaded or trunk-braced work. Bare "back" is handled by a pattern so
-  // it never matches "back of knee/thigh" (which are lower-limb).
-  trunk_spine: [
-    "spine", "spinal", "lumbar", "thoracic", "thorax",
-    "sacral", "sacrum", "coccyx", "tailbone", "vertebra", "vertebrae",
-    "disc", "sciatic", "sciatica", "rib", "ribs", "ribcage", "chest", "sternum",
-  ],
-} as const;
-
-type InjuryRegion = keyof typeof INJURY_REGION_TERMS;
-
-// Context-guarded region terms. Some body words are ambiguous as bare tokens —
-// "head" is usually anatomical ("long head", "femoral head") and "back" is often
-// a direction ("back of knee") — so they only count when they read as an injury
-// to that region.
-const INJURY_REGION_PATTERNS: Partial<Record<InjuryRegion, readonly RegExp[]>> = {
-  // "head" as a head injury, not "<bone> head" / "head of <bone>".
-  head_neck: [
-    /(?<!(?:long|short|radial|humeral|femoral|fibular|tibial|metatarsal|ulnar|lateral|medial|bicep|biceps|tricep|triceps|gastroc|gastrocnemius)\s)\bhead\b(?!\s+of\b)/,
-  ],
-  // "back" as the spine ("lower back", "back spasm"), not "back of <limb>".
-  trunk_spine: [/\bback\b(?!\s+of\b)/],
-};
-
-// The "cannot take load" tier: a structural failure. A plain ache, tightness or
-// minor strain is NOT disqualifying — only a break/rupture/tear/dislocation is
-// (severity "severe" is handled alongside this).
-const LOAD_INTOLERANT_INJURY_TERMS = [
-  "fracture", "fractures", "fractured", "broken", "break", "breaks",
-  "rupture", "ruptures", "ruptured", "tear", "tears", "torn", "snap", "snaps", "snapped",
-  "dislocation", "dislocations", "dislocated", "avulsion", "avulsions",
-] as const;
-
-const NEGATED_LOAD_INTOLERANT_PATTERN = new RegExp(
-  String.raw`\b(?:no|not|without|den(?:y|ies|ied)|ruled\s+out|nothing\s+(?:is|was))\s+` +
-    String.raw`(?:(?:signs?|evidence)\s+of\s+)?(?:an?\s+)?` +
-    String.raw`(?:fractures?|fractured|broken|breaks?|ruptures?|ruptured|tears?|torn|snaps?|snapped|dislocations?|dislocated|avulsions?)` +
-    String.raw`(?:\s*(?:,|or|and)\s*(?:fractures?|fractured|broken|breaks?|ruptures?|ruptured|tears?|torn|snaps?|snapped|dislocations?|dislocated|avulsions?))*\b`,
-  "gi",
-);
-
-function injuryHaystack(injury: InjuryFlagRecord): string {
-  const raw = `${injury.label ?? ""} ${injury.body_area ?? ""} ${injury.description ?? ""}`.toLowerCase();
-  // Reduce to space-delimited word tokens so a term only matches a whole word
-  // (" hip " never matches "ship", " toe " never matches "together").
-  return ` ${raw.replace(/[^a-z]+/g, " ").trim()} `;
-}
-
-function injuryLoadEvidenceHaystack(injury: InjuryFlagRecord): string {
-  const raw = `${injury.label ?? ""} ${injury.body_area ?? ""} ${injury.description ?? ""}`.toLowerCase();
-  // A denied structural diagnosis must not make a mild injury load-intolerant.
-  // Remove only the denied structural phrase, preserving positive evidence later
-  // in the same clause ("not ruptured, just a bicep tear").
-  const cleaned = raw.replace(NEGATED_LOAD_INTOLERANT_PATTERN, " ");
-  return ` ${cleaned.replace(/[^a-z]+/g, " ").trim()} `;
-}
+type InjuryRegion = Exclude<
+  NonNullable<InjuryFlagRecord["body_region"]>,
+  "unknown"
+>;
 
 function isActiveInjury(injury: InjuryFlagRecord): boolean {
-  // Only an active (open / monitoring) injury constrains today's session.
   return injury.status === "open" || injury.status === "monitoring";
 }
 
-function injuryHitsRegion(haystack: string, region: InjuryRegion): boolean {
-  if (INJURY_REGION_TERMS[region].some((term) => haystack.includes(` ${term} `))) {
-    return true;
-  }
-  return (INJURY_REGION_PATTERNS[region] ?? []).some((pattern) => pattern.test(haystack));
-}
-
-function injuryIsLoadIntolerant(injury: InjuryFlagRecord, haystack: string): boolean {
-  if (injury.severity === "severe") {
-    return true;
-  }
-  return LOAD_INTOLERANT_INJURY_TERMS.some((term) => haystack.includes(` ${term} `));
+function injuryIsLoadIntolerant(injury: InjuryFlagRecord): boolean {
+  return (
+    injury.severity === "severe" ||
+    injury.consequence === "structural" ||
+    injury.consequence === "neuro"
+  );
 }
 
 function hasLoadIntolerantInjuryInRegion(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
   region: InjuryRegion,
 ): boolean {
-  return (openInjuries ?? []).some((injury) => {
-    if (!isActiveInjury(injury)) {
-      return false;
-    }
-    const haystack = injuryHaystack(injury);
-    const evidenceHaystack = injuryLoadEvidenceHaystack(injury);
-    return injuryHitsRegion(haystack, region) && injuryIsLoadIntolerant(injury, evidenceHaystack);
-  });
+  return (openInjuries ?? []).some(
+    (injury) =>
+      isActiveInjury(injury) &&
+      injury.body_region === region &&
+      injuryIsLoadIntolerant(injury),
+  );
 }
 
-/**
- * Whether any active injury is a lower-leg injury that cannot take gait / pedal
- * load — a lower-leg fracture, rupture, tear or dislocation, or any severe
- * lower-leg injury. When true, "Light bike or walk" is not safe recovery work.
- */
+function hasUnclassifiedLoadIntolerantInjury(
+  openInjuries: readonly InjuryFlagRecord[] | null | undefined,
+): boolean {
+  return (openInjuries ?? []).some(
+    (injury) =>
+      isActiveInjury(injury) &&
+      (!injury.body_region || injury.body_region === "unknown") &&
+      injuryIsLoadIntolerant(injury),
+  );
+}
+
+/** Whether an active lower-limb injury cannot take gait or pedal load. */
 export function hasLoadIntolerantLowerLegInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): boolean {
   return hasLoadIntolerantInjuryInRegion(openInjuries, "lower_limb");
 }
 
-/** A concussion, or a structural/severe head or neck injury: all call for
- *  aerobic and CNS downregulation rather than any exertion, even on a "safe"
- *  session. */
 function hasNeuroDownregulationInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): boolean {
-  return (openInjuries ?? []).some((injury) => {
-    if (!isActiveInjury(injury)) {
-      return false;
-    }
-    const haystack = injuryHaystack(injury);
-    // A concussion at ANY severity is disqualifying — it is never a green light
-    // for aerobic push. Other head/neck injuries downregulate when structural/severe.
-    if (haystack.includes(" concussion ") || haystack.includes(" concussed ")) {
-      return true;
-    }
-    return injuryHitsRegion(haystack, "head_neck") && injuryIsLoadIntolerant(injury, haystack);
-  });
+  return (openInjuries ?? []).some(
+    (injury) =>
+      isActiveInjury(injury) &&
+      (injury.consequence === "neuro" ||
+        (injury.body_region === "head_neck" && injuryIsLoadIntolerant(injury))),
+  );
 }
 
-/**
- * How restrictive today's safe session has to be, resolved most-restrictive-first.
- * Drives the allowed menu AND the card copy, so the two can never contradict
- * (a rest-only day must not read "keep the body moving").
- *   • rest_only     — structural/severe spine, back or rib injury: no loaded or
- *                     gravity-loaded movement is safe as generic advice.
- *   • downregulate  — concussion / head / severe neck: calm work only, no exertion.
- *   • standard      — the ordinary stop-day menu, limb-matched.
- */
 type SafeSessionPosture = "rest_only" | "downregulate" | "standard";
 
 function resolveSafeSessionPosture(
   openInjuries?: readonly InjuryFlagRecord[] | null,
 ): SafeSessionPosture {
-  if (hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine")) {
+  // A structural/severe injury whose anatomy could not be classified is never a
+  // green light for generic movement. Fail closed rather than guessing a limb.
+  if (
+    hasUnclassifiedLoadIntolerantInjury(openInjuries) ||
+    hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine")
+  ) {
     return "rest_only";
   }
   if (hasNeuroDownregulationInjury(openInjuries)) {
@@ -1035,37 +927,24 @@ function resolveSafeSessionPosture(
   return "standard";
 }
 
-/**
- * The adaptive "allowed" menu for the safe session, chosen so nothing on it ever
- * loads an injured region. See the module notes above for the reasoning.
- */
 export function resolveSafeSessionAllowed(
   openInjuries?: readonly InjuryFlagRecord[] | null,
 ): string[] {
   const posture = resolveSafeSessionPosture(openInjuries);
-  // No cardio, no gravity-loaded mobility, no trunk activation — only calm
-  // breathing and clinician-led rehab.
   if (posture === "rest_only") {
-    return ["Breathing reset", "Coach-approved rehab"];
+    return ["Breathing reset", "Clinician-approved rehab"];
   }
-  // Gentle mobility is fine (and part of sub-symptom-threshold protocols), but no
-  // aerobic push and no activation.
   if (posture === "downregulate") {
-    return ["Easy mobility", "Breathing reset", "Coach-approved rehab"];
+    return ["Easy mobility", "Breathing reset", "Clinician-approved rehab"];
   }
 
   const lowerBlocked = hasLoadIntolerantLowerLegInjury(openInjuries);
   const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
 
-  // The one aerobic/movement slot, matched to whichever limbs can take load.
   let conditioning: string | null;
   if (lowerBlocked && upperBlocked) {
-    // Neither the legs nor the arms can drive a cardio modality — defer to the
-    // coach-led item rather than name something unsafe.
     conditioning = null;
   } else if (lowerBlocked) {
-    // Spare the legs. Not everyone owns an arm ergometer, so keep it optional and
-    // symptom-gated rather than prescribing a specific machine.
     conditioning = "Seated upper-body cardio — only if pain-free and available";
   } else {
     conditioning = "Light bike or walk";
@@ -1079,16 +958,6 @@ export function resolveSafeSessionAllowed(
   return allowed;
 }
 
-/**
- * The adaptive "blocked" column. The first four are universal for a stop day. The
- * explosive-work line names the region that is actually at risk — an upper-limb
- * injury makes explosive UPPER-body work the hazard, not lower — and each injured
- * region adds the loading pattern specifically dangerous to it. The extra patterns
- * mirror `blocked_training_tags` in the backend injury taxonomy
- * (fightcamp/injury_taxonomy.py) so both surfaces agree: dislocation blocks
- * overhead / press_heavy / explosive_upper_push, hernia blocks heavy_bracing and
- * valsalva (as rib injuries do rotation), concussion blocks head_impact.
- */
 export function resolveSafeSessionBlocked(
   openInjuries?: readonly InjuryFlagRecord[] | null,
 ): string[] {
@@ -1096,11 +965,10 @@ export function resolveSafeSessionBlocked(
   const upperBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "upper_limb");
   const trunkBlocked = hasLoadIntolerantInjuryInRegion(openInjuries, "trunk_spine");
   const neuro = hasNeuroDownregulationInjury(openInjuries);
+  const unclassified = hasUnclassifiedLoadIntolerantInjury(openInjuries);
 
-  // With no injury (or a lower-limb one) the default stays lower-body: it carries
-  // the highest impact and CNS cost on an ordinary stop day.
   let explosive: string;
-  if (upperBlocked && lowerBlocked) {
+  if (unclassified || (upperBlocked && lowerBlocked)) {
     explosive = "Plyos or explosive work";
   } else if (upperBlocked) {
     explosive = "Plyos or explosive upper-body work";
@@ -1118,12 +986,12 @@ export function resolveSafeSessionBlocked(
   if (neuro) {
     blocked.push("Head impact or contact drills");
   }
+  if (unclassified) {
+    blocked.push("Loaded movement");
+  }
   return blocked;
 }
 
-// Closing line of the safe-session card, matched to the posture so the copy never
-// contradicts the menu — telling an athlete on a rest-only day to "keep the body
-// moving" would invite exactly the loading the menu just removed.
 const SAFE_SESSION_POSTURE_DETAIL: Record<SafeSessionPosture, string> = {
   rest_only:
     "Protect the injured area and let it settle — no loaded movement today, and follow your clinician on what is safe.",
@@ -1133,11 +1001,9 @@ const SAFE_SESSION_POSTURE_DETAIL: Record<SafeSessionPosture, string> = {
 };
 
 /**
- * The recovery/mobility-only session shown in place of the scheduled work when
- * today is a STOP. Coach copy — the scheduled session is named so the athlete
- * sees exactly what is being held. Both columns adapt to the athlete's active
- * injuries: "allowed" never prescribes loading an injured region, and "blocked"
- * names the patterns that region specifically cannot take.
+ * The recovery-only session shown in place of scheduled work when today is a STOP.
+ * The backend classifies each active injury; this display only applies the supplied
+ * broad region and consequence fields.
  */
 export function getSafeSessionView(
   blockedSessionName?: string,
@@ -1145,12 +1011,12 @@ export function getSafeSessionView(
 ): SafeSessionView {
   const name = (blockedSessionName ?? "").trim();
   const blockedLead =
-    name && name.toLowerCase() !== "today's session" ? `${name} is blocked today.` : "Hard combat work is blocked today.";
+    name && name.toLowerCase() !== "today's session"
+      ? `${name} is blocked today.`
+      : "Hard combat work is blocked today.";
   const posture = resolveSafeSessionPosture(openInjuries);
   return {
     eyebrow: "Today's safe session",
-    // "mobility only" still describes the downregulate menu (mobility is on it),
-    // but a rest-only day has no movement at all — name it honestly.
     title: posture === "rest_only" ? "Rest and recover" : "Recovery / mobility only",
     detail: `${blockedLead} ${SAFE_SESSION_POSTURE_DETAIL[posture]}`,
     allowed: resolveSafeSessionAllowed(openInjuries),

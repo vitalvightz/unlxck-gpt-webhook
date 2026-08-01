@@ -343,13 +343,38 @@ test("risk watch shows icon label text records with overflow count", () => {
 });
 
 function makeInjury(overrides: Partial<InjuryFlagRecord> = {}): InjuryFlagRecord {
+  // Production receives these fields from the backend. This fixture mirrors that
+  // payload so safe-session tests exercise structured context rather than parsing.
+  const bodyArea = overrides.body_area ?? "chest";
+  const description = overrides.description ?? "chest bruise";
+  const text = `${bodyArea} ${description}`.toLowerCase();
+  const bodyRegion =
+    overrides.body_region ??
+    (/\b(?:calf|achilles|ankle|knee|shin|hip|quad|hamstring|leg)\b/.test(text)
+      ? "lower_limb"
+      : /\b(?:bicep|wrist|arm|shoulder|elbow|hand)\b/.test(text)
+        ? "upper_limb"
+        : /\b(?:head|neck|brain|skull)\b/.test(text)
+          ? "head_neck"
+          : /\b(?:back|spine|rib|chest|sternum)\b/.test(text)
+            ? "trunk_spine"
+            : "unknown");
+  const deniedStructural = /\b(?:no|not|ruled out|nothing is)\s+(?:fracture|tear|rupture)/.test(text);
+  const consequence =
+    overrides.consequence !== undefined
+      ? overrides.consequence
+      : !deniedStructural && /\b(?:fracture|fractures|rupture|ruptures|tear|tears|torn|dislocation|dislocations|avulsion)\b/.test(text)
+        ? "structural"
+        : null;
   return {
     id: "inj-1",
     athlete_id: "ath-1",
     source: "checkin",
-    body_area: "chest",
-    description: "chest bruise",
+    body_area: bodyArea,
+    description,
     label: "Chest bruise",
+    body_region: bodyRegion,
+    consequence,
     severity: "severe",
     status: "open",
     created_at: "2026-07-06T00:00:00Z",
@@ -791,13 +816,13 @@ test("safe session downregulates to rest work for a concussion or head injury", 
     makeInjury({ body_area: "head", description: "concussion", label: "Concussion", severity: "moderate" }),
   ]);
   // No aerobic push and no activation — only calm, non-provocative work.
-  assert.deepEqual(view.allowed, ["Easy mobility", "Breathing reset", "Coach-approved rehab"]);
+  assert.deepEqual(view.allowed, ["Easy mobility", "Breathing reset", "Clinician-approved rehab"]);
 
   // A generic severe head injury is caught too (not just the word "concussion").
   const head = getSafeSessionView("Technical sparring", [
     makeInjury({ body_area: "head", description: "head injury", label: "Head injury", severity: "severe" }),
   ]);
-  assert.deepEqual(head.allowed, ["Easy mobility", "Breathing reset", "Coach-approved rehab"]);
+  assert.deepEqual(head.allowed, ["Easy mobility", "Breathing reset", "Clinician-approved rehab"]);
 
   // A severe neck injury downregulates the same way…
   const neck = getSafeSessionView("Technical sparring", [
@@ -824,7 +849,7 @@ test("safe session restricts a structural or severe spine/back/rib injury to res
     makeInjury({ body_area: "chest", description: "severe chest injury", label: "Chest injury", severity: "severe" }),
   ]) {
     const view = getSafeSessionView("Technical sparring", [injury]);
-    assert.deepEqual(view.allowed, ["Breathing reset", "Coach-approved rehab"], injury.label);
+    assert.deepEqual(view.allowed, ["Breathing reset", "Clinician-approved rehab"], injury.label);
   }
 
   // A mild back niggle still keeps the standard menu…
@@ -903,7 +928,7 @@ test("safe session copy never contradicts the menu it shows", () => {
   const restOnly = getSafeSessionView("Technical sparring", [
     makeInjury({ body_area: "back", description: "spinal fracture", label: "Spinal fracture", severity: "moderate" }),
   ]);
-  assert.deepEqual(restOnly.allowed, ["Breathing reset", "Coach-approved rehab"]);
+  assert.deepEqual(restOnly.allowed, ["Breathing reset", "Clinician-approved rehab"]);
   assert.equal(restOnly.title, "Rest and recover");
   assert.equal(/keep the body moving/.test(restOnly.detail), false);
   assert.match(restOnly.detail, /no loaded movement today/);

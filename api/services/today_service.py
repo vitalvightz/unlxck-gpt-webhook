@@ -24,6 +24,7 @@ from typing import Any, Mapping, NamedTuple, Sequence
 from fastapi import HTTPException, status
 from pydantic import ValidationError
 
+from fightcamp.injury_body_region import injury_body_region_context
 from fightcamp.weekly_schedule_view import normalize_weekday
 
 from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
@@ -456,6 +457,39 @@ def _with_surface_class(injuries: Sequence[Mapping[str, Any]]) -> list[dict[str,
         except Exception:
             logger.exception("[today] surface_injury_classification_failed")
             row["surface_class"] = None
+        rows.append(row)
+    return rows
+
+
+def _with_safe_session_context(
+    injuries: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Attach backend-owned anatomy and consequence fields for Today.
+
+    The browser must never maintain a second injury synonym parser. Every body
+    phrase is resolved by the existing backend injury system, then its canonical
+    location is grouped for safe-session loading decisions.
+    """
+    rows: list[dict[str, Any]] = []
+    for injury in injuries or []:
+        row = dict(injury)
+        try:
+            row.update(
+                injury_body_region_context(
+                    row.get("body_area"), row.get("description")
+                )
+            )
+            row["consequence"] = injury_consequence_tier(
+                row.get("body_area"),
+                row.get("description"),
+                severity=row.get("severity"),
+            )
+        except Exception:
+            logger.exception("[today] safe_session_injury_classification_failed")
+            row.setdefault("canonical_location", None)
+            row.setdefault("region_group", "unknown")
+            row.setdefault("body_region", "unknown")
+            row.setdefault("consequence", None)
         rows.append(row)
     return rows
 
@@ -2214,12 +2248,14 @@ def build_today_command_view(
         structured_phase=structured_phase,
     )
 
-    open_injuries = _with_surface_class(
-        _ensure_intake_injury_flags(
-            store,
-            athlete_id=athlete_id,
-            plan_row=plan_row,
-            open_flags=_open_injury_flags(store, athlete_id),
+    open_injuries = _with_safe_session_context(
+        _with_surface_class(
+            _ensure_intake_injury_flags(
+                store,
+                athlete_id=athlete_id,
+                plan_row=plan_row,
+                open_flags=_open_injury_flags(store, athlete_id),
+            )
         )
     )
     # Attach a clean, athlete-facing label derived from the injury synonym logic
