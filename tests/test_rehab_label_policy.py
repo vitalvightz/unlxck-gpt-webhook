@@ -9,7 +9,9 @@ in the behaviours that matter:
     (the bug this replaces: one open flag pinned the whole plan to "Rehab");
   * a still-open injury keeps its own region on "Rehab";
   * an injury whose region cannot be resolved falls back to "rehab" for
-    everything, because it cannot be region-matched.
+    everything, because it cannot be region-matched;
+  * a surface (skin) injury is ignored entirely — it is a hygiene constraint,
+    not rehab work.
 """
 from tests.support import FakeStore
 
@@ -146,6 +148,69 @@ def test_unlocalizable_open_injury_does_not_hide_a_localized_one() -> None:
     policy = _policy(store)
     assert policy.default_mode == "rehab"
     assert [region.region for region in policy.active_regions] == ["quads"]
+
+
+def test_localized_skin_injury_does_not_claim_its_region() -> None:
+    # Regression: surface injuries started landing in injury_flags, and a graze
+    # on the ribs pinned the whole chest region to "Rehab". A skin wound is a
+    # hygiene constraint — there is no rehab work for it to keep named.
+    store = FakeStore()
+    store.create_injury_flag(
+        ATHLETE,
+        {
+            "body_area": "ribs",
+            "description": "graze",
+            "skin_integrity": "open",
+            "coverable": "yes",
+            "status": "open",
+        },
+    )
+    policy = _policy(store)
+    assert policy.default_mode == "prehab"
+    assert policy.active_regions == []
+
+
+def test_unlocalized_skin_injury_does_not_pin_the_plan_to_rehab() -> None:
+    # The regression that broke Rehab->Prehab outright: a skin injury with no
+    # resolvable body area counted as "unlocalizable", flipping default_mode to
+    # "rehab" and dragging EVERY cleared region back to "Rehab" plan-wide.
+    store = FakeStore()
+    _flag(store, body_area="left hamstring", description="strain", status="resolved")
+    store.create_injury_flag(
+        ATHLETE,
+        {
+            "body_area": "",
+            "description": "mat burn on my side",
+            "skin_integrity": "intact",
+            "coverable": "yes",
+            "status": "open",
+        },
+    )
+    policy = _policy(store)
+    assert policy.default_mode == "prehab"
+    assert policy.active_regions == []
+    assert _matches(policy, "Isometric Hamstring Bridge Hold") == set()
+
+
+def test_skin_injury_does_not_hide_a_real_injury_coming_back() -> None:
+    # The other half of the fix: skin is ignored, but a genuine (non-surface)
+    # injury returning on a location puts that region back on "Rehab".
+    store = FakeStore()
+    store.create_injury_flag(
+        ATHLETE,
+        {
+            "body_area": "ribs",
+            "description": "graze",
+            "skin_integrity": "intact",
+            "coverable": "yes",
+            "status": "open",
+        },
+    )
+    _flag(store, body_area="left hamstring", description="strain came back", status="open")
+    policy = _policy(store)
+    assert policy.default_mode == "prehab"
+    assert [region.region for region in policy.active_regions] == ["hamstring"]
+    assert _matches(policy, "Isometric Hamstring Bridge Hold") == {"hamstring"}
 
 
 def test_region_spellings_fold_to_one_entry() -> None:
