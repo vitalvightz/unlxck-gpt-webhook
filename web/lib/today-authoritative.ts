@@ -296,12 +296,83 @@ function getPreviewCopy(
   };
 }
 
+const HARD_STOP_COPY = [
+  /\bno training today\b/i,
+  /\btraining is not safe today\b/i,
+  /\bstop training and seek medical advice\b/i,
+  /\bsession blocked\b/i,
+  /\bactive severe injury\b/i,
+  /\brehab only today\b/i,
+];
+const UNRESTRICTED_COPY = /\b(?:train normally|train as planned|everything feels good)\b/i;
+
+function containsHardStopCopy(copy: TodayDecisionBanner): boolean {
+  const text = [copy.title, copy.detail, copy.action, copy.safety]
+    .filter(Boolean)
+    .join(" ");
+  return HARD_STOP_COPY.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Return backend presentation copy only when its structured recommendation can
+ * safely sit beneath the authoritative tier. Copy never changes the tier or any
+ * session behaviour resolved below.
+ */
+export function getCompatibleRecommendationCopy(
+  recommendationState: TodayRecommendationState,
+  authoritativeTier: AuthoritativeTodayTier,
+  recommendationReason?: string | null,
+): TodayDecisionBanner | null {
+  if (!recommendationReason?.trim()) {
+    return null;
+  }
+
+  const copy = getLegacyTodayDecisionBanner(
+    recommendationState,
+    recommendationReason,
+    { isPreview: false },
+  );
+  if (!copy) {
+    return null;
+  }
+
+  const expectedTier = FALLBACK_TIER_BY_RECOMMENDATION[recommendationState];
+  if (expectedTier === authoritativeTier) {
+    if (
+      (authoritativeTier === "green" || authoritativeTier === "modify") &&
+      containsHardStopCopy(copy)
+    ) {
+      return null;
+    }
+    if (
+      authoritativeTier === "pull_back" &&
+      UNRESTRICTED_COPY.test(
+        [copy.title, copy.detail, copy.action, copy.safety].filter(Boolean).join(" "),
+      )
+    ) {
+      return null;
+    }
+    return copy;
+  }
+
+  // A pull-back recommendation may contain the stronger stop instruction that
+  // caused the backend to promote the authoritative tier to STOP.
+  if (
+    recommendationState === "pull_back" &&
+    authoritativeTier === "stop" &&
+    containsHardStopCopy(copy)
+  ) {
+    return copy;
+  }
+  return null;
+}
+
 function resolvePresentationBanner(
   recommendationState: TodayRecommendationState,
   displayTier: TodayDecisionTier,
+  recommendationReason?: string | null,
   injuryPresentation?: TodayDecisionBanner | null,
   previewSession?: TodaySession | null,
-  sessionOutcome?: TodaySessionOutcome,
 ): TodayDecisionBanner | null {
   if (displayTier === "not_checked_in") {
     return null;
@@ -323,36 +394,24 @@ function resolvePresentationBanner(
     };
   }
 
-  // The command area must agree with the authoritative tier. Recommendation
-  // prose is retained in state/history, but is not trusted as command copy: an
-  // older reason can sound green on a blocked day (or vice versa).
-  const injuryCopy =
-    displayTier === "stop" ? injuryPresentation ?? null : null;
-  const copy = injuryCopy ?? fallback;
-
-  const action =
-    sessionOutcome === "replaced_with_recovery"
-      ? "Today's planned session has been replaced with Recovery / Mobility Only."
-      : sessionOutcome === "guidance_only"
-        ? "Follow today's limits. The planned session has not been automatically rewritten."
-        : sessionOutcome === "unchanged"
-          ? "Session unchanged — complete today's planned session."
-          : sessionOutcome === "blocked"
-            ? displayTier === "pull_back"
-              ? "Today's planned session is blocked. Follow today's limits."
-              : "Today's planned session is blocked."
-            : copy.action;
+  const recommendationCopy = getCompatibleRecommendationCopy(
+    recommendationState,
+    displayTier,
+    recommendationReason,
+  );
+  const injuryCopy = displayTier === "stop" ? injuryPresentation ?? null : null;
 
   return {
     state: recommendationState,
     displayState,
     chip: CHIP_BY_DISPLAY[displayState],
-    title: injuryCopy ? fallback.title : copy.title,
-    detail: copy.detail,
-    action,
-    // The injury STOP already establishes priority. Keep the legacy history in
-    // state, but do not repeat its "superseded" sentence as a highlighted command.
-    safety: undefined,
+    // The fixed title/chip communicate the tier. Backend prose supplies the
+    // useful athlete-specific instruction without becoming a safety authority.
+    title: fallback.title,
+    detail: injuryCopy?.detail ?? recommendationCopy?.detail ?? fallback.detail,
+    action:
+      recommendationCopy?.action ?? injuryCopy?.action ?? fallback.action,
+    safety: recommendationCopy?.safety ?? injuryCopy?.safety,
     tone: TONE_BY_DISPLAY[displayState],
   };
 }
@@ -400,9 +459,9 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const banner = resolvePresentationBanner(
     recommendationState,
     displayTier,
+    state.today.recommendation_reason,
     injuryPresentation,
     state.today.next_session,
-    sessionOutcome,
   );
   const blocksCurrentSession =
     sessionIsToday &&
@@ -432,7 +491,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   };
 }
 
-/** Remove only the severe-injury warning already expressed by the main STOP. */
+/** Remove only warnings already expressed by today's authoritative main card. */
 export function getSupplementaryRiskWatch(
   risks: TodayCommandView["risk_watch"] | null | undefined,
   decision: ResolvedTodayDecision,
@@ -441,11 +500,14 @@ export function getSupplementaryRiskWatch(
     decision.authoritativeTier === "stop" &&
     decision.sessionIsToday &&
     decision.severeInjuryBlocksCurrentSession;
-  if (!severeInjuryStop) {
-    return risks ?? [];
-  }
+  const mainDecisionAlreadyShowsBlock =
+    decision.sessionIsToday &&
+    (decision.authoritativeTier === "pull_back" ||
+      decision.authoritativeTier === "stop");
   return (risks ?? []).filter(
-    (risk) => risk.category !== "active_injury_worse",
+    (risk) =>
+      !(risk.category === "stop_red_flag" && mainDecisionAlreadyShowsBlock) &&
+      !(risk.category === "active_injury_worse" && severeInjuryStop),
   );
 }
 
