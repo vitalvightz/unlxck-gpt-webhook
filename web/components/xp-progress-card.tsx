@@ -9,16 +9,6 @@ import { XP_ACTIONS, resolveXpLevel, type XpState } from "@/lib/xp";
 const XP_TOTAL_ANIMATION_MS = 640;
 const numberFormatter = new Intl.NumberFormat("en-GB");
 
-type XpLedgerRow = {
-  key: "today" | "recent" | "next";
-  label: string;
-  value: string;
-  /** Gold — reserved for XP actually earned. */
-  isAward?: boolean;
-  /** An em dash standing in for a value that does not exist in this state. */
-  isPlaceholder?: boolean;
-};
-
 export type XpProgressCardViewProps = {
   state: XpState;
   dailyRewardStatus: XpDailyRewardStatus;
@@ -31,26 +21,37 @@ export function prefersReducedXpMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/* Mirrors the ledger structure exactly so hydration swaps content into a row
+/* Mirrors the card's structure exactly so hydration swaps content into a row
    that is already the right height. */
 export function XpProgressCardSkeleton() {
   return (
     <article className="status-card overview-command-card xp-progress-card xp-progress-card-skeleton" aria-busy="true">
       <div className="xp-progress-heading">
-        <Skeleton variant="text" width={92} height={12} />
+        <div className="xp-progress-skeleton-heading">
+          <Skeleton variant="text" width={92} height={11} />
+          <Skeleton variant="text" width={58} height={14} />
+        </div>
         <Skeleton variant="block" width={74} height={20} style={{ borderRadius: 999 }} />
       </div>
-      <div className="xp-progress-figure">
-        <Skeleton variant="text" width="36%" height={44} />
-        <Skeleton variant="text" width="32%" height={26} />
+      <div className="xp-progress-skeleton-total">
+        <Skeleton variant="text" width="42%" height={44} />
       </div>
       <div className="xp-progress-skeleton-track">
-        <Skeleton variant="block" width="100%" height={8} style={{ borderRadius: 999 }} />
+        <Skeleton variant="block" width="100%" height={9} style={{ borderRadius: 999 }} />
       </div>
-      <div className="xp-progress-ledger xp-progress-skeleton-ledger">
-        <Skeleton variant="text" width="100%" height={15} />
-        <Skeleton variant="text" width="100%" height={15} />
-        <Skeleton variant="text" width="100%" height={15} />
+      <div className="xp-progress-skeleton-meta">
+        <Skeleton variant="text" width={86} height={14} />
+        <Skeleton variant="text" width={104} height={14} />
+      </div>
+      <div className="xp-progress-details">
+        <section className="xp-progress-detail">
+          <Skeleton variant="text" width={92} height={10} />
+          <Skeleton variant="text" width="80%" height={14} />
+        </section>
+        <section className="xp-progress-detail">
+          <Skeleton variant="text" width={56} height={10} />
+          <Skeleton variant="text" width="88%" height={14} />
+        </section>
       </div>
     </article>
   );
@@ -120,45 +121,28 @@ export function XpProgressCardView({
     : "Max level reached";
   const dailyRewardAmount = XP_ACTIONS.daily_login.xp;
 
-  /* Three rows, always. A fixed row count keeps the card's height stable as
-     awards come and go, and the ledger reads as a ruled column rather than a
-     list that grows. Today's claimed daily login is dropped from the recent
-     row so the same award is never printed twice. */
-  const ledgerRows = useMemo<XpLedgerRow[]>(() => {
-    const todayRow: XpLedgerRow =
-      dailyRewardStatus === "earned"
-        ? { key: "today", label: "Today's reward", value: `+${dailyRewardAmount} XP`, isAward: true }
-        : dailyRewardStatus === "unavailable"
-          ? { key: "today", label: "Daily reward could not be saved", value: "—", isPlaceholder: true }
-          : { key: "today", label: "Checking today's reward", value: "—", isPlaceholder: true };
+  /* At max level the ratio would just restate the total sitting directly above
+     it, so the row carries the status alone. */
+  const progressRatio = progress.nextLevel
+    ? `${numberFormatter.format(progress.xpWithinLevel)} / ${numberFormatter.format(progress.xpForNextLevel)} XP`
+    : null;
+  const progressRemaining = progress.nextLevel
+    ? `${numberFormatter.format(progress.xpRemaining)} XP remaining`
+    : "Max level reached";
 
-    const remainingAwards = [...state.recentAwards];
+  /* The recent slot shows the latest award that is not the daily login already
+     reported beside it, so the same +10 is never printed twice on a day when
+     the login is the only thing earned. */
+  const recentAward = useMemo(() => {
+    const awards = [...state.recentAwards];
     if (dailyRewardStatus === "earned") {
-      const claimedToday = remainingAwards.findIndex((award) => award.action === "daily_login");
+      const claimedToday = awards.findIndex((award) => award.action === "daily_login");
       if (claimedToday !== -1) {
-        remainingAwards.splice(claimedToday, 1);
+        awards.splice(claimedToday, 1);
       }
     }
-    const [latest] = remainingAwards;
-    const recentRow: XpLedgerRow = latest
-      ? {
-          key: "recent",
-          label: XP_ACTIONS[latest.action].label,
-          value: `+${numberFormatter.format(latest.amount)} XP`,
-          isAward: true,
-        }
-      : { key: "recent", label: "No other XP yet", value: "—", isPlaceholder: true };
-
-    const nextRow: XpLedgerRow = progress.nextLevel
-      ? {
-          key: "next",
-          label: `To Level ${progress.nextLevel.level}`,
-          value: `${numberFormatter.format(progress.xpRemaining)} XP`,
-        }
-      : { key: "next", label: "Max level reached", value: "—", isPlaceholder: true };
-
-    return [todayRow, recentRow, nextRow];
-  }, [dailyRewardAmount, dailyRewardStatus, progress.nextLevel, progress.xpRemaining, state.recentAwards]);
+    return awards[0] ?? null;
+  }, [dailyRewardStatus, state.recentAwards]);
 
   return (
     <article
@@ -166,28 +150,17 @@ export function XpProgressCardView({
       data-new-award={isNewAward ? "true" : undefined}
     >
       <div className="xp-progress-heading">
-        <p className="status-label">XP PROGRESS</p>
+        <div>
+          <p className="status-label">XP PROGRESS</p>
+          <p className="xp-progress-level">Level {progress.currentLevel.level}</p>
+        </div>
         <p className="xp-progress-rank">{progress.currentLevel.title}</p>
       </div>
 
-      <div className="xp-progress-figure">
-        <p className="xp-progress-total" aria-label={`${numberFormatter.format(state.totalXp)} experience points`}>
-          <span className="xp-progress-number">{numberFormatter.format(displayTotal)}</span>
-          <span className="xp-progress-unit">XP</span>
-        </p>
-        <dl className="xp-progress-stats">
-          <div>
-            <dt>Level</dt>
-            <dd>{String(progress.currentLevel.level).padStart(2, "0")}</dd>
-          </div>
-          <div>
-            <dt>Next</dt>
-            <dd>
-              {progress.nextLevel ? numberFormatter.format(progress.nextLevel.threshold) : "—"}
-            </dd>
-          </div>
-        </dl>
-      </div>
+      <p className="xp-progress-total" aria-label={`${numberFormatter.format(state.totalXp)} experience points`}>
+        <span className="xp-progress-number">{numberFormatter.format(displayTotal)}</span>
+        <span className="xp-progress-unit">XP</span>
+      </p>
 
       <div
         className="xp-progress-track"
@@ -205,24 +178,40 @@ export function XpProgressCardView({
           <span className="xp-progress-shimmer" aria-hidden="true" />
         </span>
       </div>
-      <ul className="xp-progress-ledger">
-        {ledgerRows.map((row) => (
-          <li
-            key={row.key}
-            className="xp-progress-ledger-row"
-            data-new-reward={row.key === "today" && isNewDailyAward ? "true" : undefined}
+      <p className="xp-progress-meta">
+        {progressRatio ? <span className="xp-progress-ratio">{progressRatio}</span> : null}
+        <span>{progressRemaining}</span>
+      </p>
+
+      <div className="xp-progress-details">
+        <section className="xp-progress-detail" aria-labelledby="xp-daily-label">
+          <p id="xp-daily-label" className="xp-progress-section-label">TODAY&apos;S REWARD</p>
+          <p
+            className="xp-progress-detail-value xp-progress-daily-value"
+            data-new-reward={isNewDailyAward ? "true" : undefined}
           >
-            <span className="xp-progress-ledger-label">{row.label}</span>
-            <span className="xp-progress-leader" aria-hidden="true" />
-            <span
-              className={`xp-progress-ledger-value${row.isAward ? " xp-progress-award" : ""}`}
-              aria-hidden={row.isPlaceholder ? "true" : undefined}
-            >
-              {row.value}
-            </span>
-          </li>
-        ))}
-      </ul>
+            {dailyRewardStatus === "earned" ? (
+              <><span className="xp-progress-award">+{dailyRewardAmount} XP</span> claimed</>
+            ) : dailyRewardStatus === "unavailable" ? (
+              "Daily reward could not be saved"
+            ) : (
+              "Checking today's reward"
+            )}
+          </p>
+        </section>
+
+        <section className="xp-progress-detail" aria-labelledby="xp-recent-label">
+          <p id="xp-recent-label" className="xp-progress-section-label">RECENT</p>
+          {recentAward ? (
+            <p className="xp-progress-detail-value xp-progress-recent">
+              <span>{XP_ACTIONS[recentAward.action].label}</span>
+              <span className="xp-progress-award">+{numberFormatter.format(recentAward.amount)} XP</span>
+            </p>
+          ) : (
+            <p className="xp-progress-detail-value xp-progress-empty">No other XP yet</p>
+          )}
+        </section>
+      </div>
     </article>
   );
 }

@@ -37,17 +37,17 @@ test("XP card renders all required copy, formatted totals, recent awards, and pr
   );
 
   assert.match(html, /XP PROGRESS/);
+  assert.match(html, /Level 6/);
   assert.match(html, /Contender/);
   assert.match(html, /1,240/);
-  // Level and next threshold are tabular stats beside the figure, not prose.
-  assert.match(html, /<dt>Level<\/dt><dd>06<\/dd>/);
-  assert.match(html, /<dt>Next<\/dt><dd>1,300<\/dd>/);
-  // Ledger: today's reward, the most recent other award, distance to next level.
-  assert.match(html, /Today&#x27;s reward/);
+  // Under the bar: position within the level, then distance to the next one.
+  assert.match(html, /240 \/ 300 XP/);
+  assert.match(html, /60 XP remaining/);
+  assert.match(html, /TODAY&#x27;S REWARD/);
   assert.match(html, /\+10 XP/);
+  assert.match(html, /claimed/);
+  assert.match(html, /RECENT/);
   assert.match(html, /Training logged/);
-  assert.match(html, /To Level 7/);
-  assert.match(html, /60 XP/);
   assert.doesNotMatch(html, /Full training week completed/);
   assert.match(html, /role="progressbar"/);
   assert.match(html, /aria-valuemin="0"/);
@@ -69,8 +69,8 @@ test("today's claimed daily login is not printed twice", () => {
     <XpProgressCardView state={state} dailyRewardStatus="earned" />,
   );
 
-  assert.match(html, /Today&#x27;s reward/);
-  // The award behind "Today's reward" is dropped from the recent row rather
+  assert.match(html, /TODAY&#x27;S REWARD/);
+  // The award behind "Today's reward" is dropped from the recent slot rather
   // than repeated under its own label.
   assert.doesNotMatch(html, /Daily login/);
   assert.match(html, /No other XP yet/);
@@ -100,7 +100,7 @@ test("fresh XP card has a neutral recent state and no session or currency conten
     <XpProgressCardView state={createFreshXpState()} dailyRewardStatus="pending" />,
   );
 
-  assert.match(html, /<dt>Level<\/dt><dd>01<\/dd>/);
+  assert.match(html, /Level 1/);
   assert.match(html, /Rookie/);
   assert.match(html, />0</);
   assert.match(html, /No other XP yet/);
@@ -116,7 +116,7 @@ test("storage failure and maximum level states use explicit copy", () => {
     <XpProgressCardView state={state} dailyRewardStatus="unavailable" />,
   );
 
-  assert.match(html, /<dt>Level<\/dt><dd>08<\/dd>/);
+  assert.match(html, /Level 8/);
   assert.match(html, /Champion/);
   assert.match(html, /Max level reached/);
   assert.match(html, /Daily reward could not be saved/);
@@ -208,7 +208,7 @@ test("stylesheet disables every XP animation path for reduced motion", () => {
   assert.ok(xpBlock, "expected an XP-specific reduced-motion block");
   assert.match(xpBlock, /\.xp-progress-fill[\s\S]*transition:\s*none/);
   assert.match(xpBlock, /\.xp-progress-shimmer/);
-  assert.match(xpBlock, /\.xp-progress-ledger-row\[data-new-reward="true"\]/);
+  assert.match(xpBlock, /\.xp-progress-daily-value\[data-new-reward="true"\]/);
   assert.match(xpBlock, /animation:\s*none/);
 });
 
@@ -224,8 +224,8 @@ test("the XP card can fill the Overview row it sits in", () => {
   assert.match(card, /display:\s*flex/);
   assert.match(card, /flex-direction:\s*column/);
   assert.doesNotMatch(card, /min-height:\s*100%/);
-  // The ledger is what anchors to the base of a stretched card.
-  assert.match(css, /\.xp-progress-ledger \{[\s\S]*?margin:\s*auto 0 0/);
+  // The detail rail is what anchors to the base of a stretched card.
+  assert.match(css, /\.xp-progress-details \{[\s\S]*?margin-top:\s*auto/);
 });
 
 test("Overview reserves the established right-hand slot for XP without moving the left command card", () => {
