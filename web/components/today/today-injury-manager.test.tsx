@@ -372,26 +372,25 @@ test("a non-surface injury marked worse saves directly, with no skin questions",
   }
 });
 
-test("an ordinary status update never shows the skin questions", async () => {
-  const { calls, restore } = stubCheckin();
+test("the check-in offers only change actions — no 'Same' to confirm", async () => {
+  // "Same" is the implicit default: an untouched injury stays ongoing in the
+  // backend, so the row only ever asks about a CHANGE. A bright 'Same' button
+  // read as a required daily confirmation — the confusion this removes.
   const { container, root, cleanup } = mount();
 
-  try {
-    await act(async () => {
-      root.render(
-        <TodayInjuryManager openInjuries={[BLISTER]} token="t" onRefresh={async () => {}} />,
-      );
-    });
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager openInjuries={[BLISTER]} token="t" onRefresh={async () => {}} />,
+    );
+  });
 
-    await click(statusButton(container, "Same"));
+  const labels = Array.from(
+    container.querySelectorAll<HTMLButtonElement>(".today-injury-status-row button"),
+  ).map((button) => button.textContent?.trim());
+  assert.deepEqual(labels, ["Easing", "Worse", "Cleared"]);
+  assert.doesNotMatch(container.textContent ?? "", /\bSame\b/);
 
-    assert.deepEqual(calls, [{ injuries: [{ flag_id: "flag-blister", status: "ongoing" }] }]);
-    assert.doesNotMatch(container.textContent ?? "", /Is it open or burst\?/);
-
-    cleanup();
-  } finally {
-    restore();
-  }
+  cleanup();
 });
 
 test("clearing an injury is not marked selected until the confirmed write succeeds", async () => {
@@ -503,7 +502,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
       );
     });
 
-    await click(statusButton(container, "Same"));
+    await click(statusButton(container, "Easing"));
     // Pre-filled from the record: the stored infection sign is still selected.
     assert.equal(buttonNamed(container, "Pus").getAttribute("aria-pressed"), "true");
     assert.equal(buttonNamed(container, "Open or burst").getAttribute("aria-pressed"), "true");
@@ -511,7 +510,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
     await click(buttonNamed(container, "Save update"));
 
     const sent = (calls[0].injuries as Array<Record<string, unknown>>)[0];
-    assert.equal(sent.status, "ongoing");
+    assert.equal(sent.status, "improving");
     // Untouched answers survive the recheck rather than being blanked by it.
     assert.deepEqual(sent.infection_signs, ["pus"]);
     assert.equal(sent.skin_integrity, "open");
