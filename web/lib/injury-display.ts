@@ -28,6 +28,15 @@ const CONDITION_NOUNS: Array<[RegExp, string]> = [
   [/\b(?:pain(?:ful)?|hurts?|hurting)\b/i, "pain"],
 ];
 
+const CUT_OR_LACERATION = /\b(?:cuts?|lacerations?|gash(?:es)?|split\s+skin|open\s+cuts?)\b/i;
+const NON_TYPE_DETAILS = new Set([
+  "type not specified",
+  "sore",
+  "painful",
+  "bothering me",
+  "injury",
+]);
+
 // Filler words that connect the location to the condition in natural phrasing
 // ("shoulder is bruised", "my knee feels sore"). Removed so only the body
 // location remains. Laterality (left/right) is deliberately NOT in this list.
@@ -220,6 +229,23 @@ export function formatInjuryDetail(
   }
 
   return kept.join(". ");
+}
+
+/** Resolve the optional type line shown beneath an injury name. */
+export function resolveInjuryTypeLabel(
+  description: string | null | undefined,
+  options: { bodyArea?: string | null; label?: string | null } = {},
+): string {
+  const detail = formatInjuryDetail(description, { bodyArea: options.bodyArea });
+  const searchable = `${detail} ${options.label ?? ""}`;
+  if (CUT_OR_LACERATION.test(searchable)) {
+    return "Cut / laceration";
+  }
+
+  if (!detail || NON_TYPE_DETAILS.has(detail.toLowerCase())) {
+    return "";
+  }
+  return detail;
 }
 
 /**

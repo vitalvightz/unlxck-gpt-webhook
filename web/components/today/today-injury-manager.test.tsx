@@ -145,6 +145,58 @@ function stubCheckin(options: { fail?: boolean; openInjuries?: InjuryFlagRecord[
   return { calls, restore: () => void (globalThis.fetch = originalFetch) };
 }
 
+test("an unknown injury type leaves no placeholder or secondary line", async () => {
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager
+        openInjuries={[
+          {
+            ...SHOULDER,
+            description: "injury",
+            label: "Right shoulder injury",
+          },
+        ]}
+        token="t"
+        onRefresh={async () => {}}
+      />,
+    );
+  });
+
+  assert.equal(container.querySelector(".today-injury-name strong")?.textContent, "Right shoulder injury");
+  assert.equal(container.querySelector(".today-injury-name small"), null);
+  assert.doesNotMatch(container.textContent ?? "", /Type not specified/);
+  cleanup();
+});
+
+test("a cut card shows the normalised wound type beneath the injury name", async () => {
+  const { container, root, cleanup } = mount();
+
+  await act(async () => {
+    root.render(
+      <TodayInjuryManager
+        openInjuries={[
+          {
+            ...BLISTER,
+            body_area: "right eye",
+            description: "Right eye cut",
+            label: "Right eye cut",
+            severity: "severe",
+          },
+        ]}
+        token="t"
+        onRefresh={async () => {}}
+      />,
+    );
+  });
+
+  assert.equal(container.querySelector(".today-injury-name strong")?.textContent, "Right eye cut");
+  assert.equal(container.querySelector(".today-injury-name small")?.textContent, "Cut / laceration");
+  assert.match(container.querySelector(".today-injury-meta")?.textContent ?? "", /severe/i);
+  cleanup();
+});
+
 test("the injury card never renders the planner's internal taxonomy tokens", async () => {
   // A flag bootstrapped from guided intake stores the structured read of the
   // injury in its description. The athlete gets the condition word; the routing
