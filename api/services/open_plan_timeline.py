@@ -99,7 +99,11 @@ def _athlete_local_creation_date(plan_row: Mapping[str, Any]) -> date | None:
         return None
 
     planning_brief = _mapping(plan_row.get("planning_brief"))
-    athlete_model = planning_brief.get("athlete_model")
+    athlete_model = planning_brief.get("athlete_snapshot")
+    if not isinstance(athlete_model, Mapping):
+        # Compatibility for hand-built fixtures and any early brief shape that
+        # used the model's internal name instead of the persisted contract key.
+        athlete_model = planning_brief.get("athlete_model")
     if not isinstance(athlete_model, Mapping):
         return created
     if athlete_model.get("plan_creation_weekday_basis") != "athlete_local_weekday":
