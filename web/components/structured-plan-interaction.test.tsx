@@ -7,8 +7,8 @@ import "./test-dom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-import { StructuredPlanRenderer } from "./structured-plan-renderer";
-import type { StructuredPlan } from "@/lib/types";
+import { SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
+import type { StructuredPlan, StructuredSession } from "@/lib/types";
 
 // A two-week plan whose weeks sit in different phases, each with its own
 // deterministic nutrition/recovery phase, so switching weeks should switch which
@@ -96,6 +96,71 @@ function weekPillByPhase(container: HTMLElement, phase: string): HTMLButtonEleme
   assert.ok(pill, `expected a week pill for phase "${phase}"`);
   return pill;
 }
+
+test("coaching disclosure owns optional notes while safety and video remain outside it", async () => {
+  const { container, root } = mount();
+  const session = {
+    session_id: "session-coaching",
+    session_type: "strength_power",
+    title: "Monday Strength",
+    objective: "Build transferable strength while protecting recovery",
+    mindset_anchor: {
+      intent: "Stay controlled and calm during each set",
+      focus_cue: "Own the lowering and keep breathing steady",
+      reset_cue: "Take two minutes to regulate if heart rate rises",
+    },
+    blocks: [
+      {
+        block_id: "pull-up",
+        block_type: "strength",
+        display_name: "Slow-Lowered Pull-Up",
+        sets: 4,
+        reps: 5,
+        coaching_cues: ["Four-second eccentric", "Full scapular engagement"],
+        substitutions: ["Band-assisted pull-up"],
+        progression_rule: "Stop if sharp pain returns.",
+      },
+    ],
+  } as StructuredSession;
+
+  try {
+    await act(async () => {
+      root.render(<SessionCard session={session} defaultOpenBlocks />);
+    });
+
+    const toggle = container.querySelector<HTMLButtonElement>(".sp-coaching-toggle");
+    const panel = container.querySelector<HTMLElement>(".sp-session-coaching-panel");
+    const blockNotes = container.querySelector<HTMLElement>(".sp-block-coaching");
+    const stopRule = container.querySelector<HTMLElement>(".sp-block-stop-rule");
+    const video = container.querySelector<HTMLElement>(".sp-video-placeholder");
+    assert.ok(toggle);
+    assert.ok(panel);
+    assert.ok(blockNotes);
+    assert.ok(stopRule);
+    assert.ok(video);
+    assert.equal(toggle.getAttribute("aria-expanded"), "false");
+    assert.equal(toggle.getAttribute("aria-controls"), panel.id);
+    assert.equal(panel.hidden, true);
+    assert.equal(panel.contains(blockNotes), true);
+    assert.equal(stopRule.closest("[hidden]"), null);
+    assert.equal(stopRule.textContent?.includes("Stop if sharp pain returns."), true);
+    assert.equal(panel.contains(stopRule), false);
+    assert.equal(panel.contains(video), false);
+
+    await act(async () => {
+      toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    assert.equal(toggle.getAttribute("aria-expanded"), "true");
+    assert.equal(panel.hidden, false);
+    assert.equal(panel.contains(blockNotes), true);
+    assert.equal(panel.textContent?.includes("Full scapular engagement"), true);
+    assert.equal(video.textContent?.includes("Movement demos are coming soon."), true);
+    assert.equal(video.textContent?.includes("Coming soon"), true);
+  } finally {
+    cleanup(container, root);
+  }
+});
 
 test("selecting a different week re-opens the matching support phase after mount", async () => {
   const { container, root } = mount();
