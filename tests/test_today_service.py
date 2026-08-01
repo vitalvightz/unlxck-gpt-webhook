@@ -5,6 +5,7 @@ an injected ``now``, so training-day boundaries and recommendation validity are
 deterministic without a live clock or database.
 """
 
+import copy
 from datetime import date, datetime, timedelta, timezone
 from types import MappingProxyType, SimpleNamespace
 from unittest import mock
@@ -774,7 +775,18 @@ class TestStructuredFillerDayResolution:
         assert entry["title"] == "Rhythm flush"
 
     def test_headline_only_rest_day_stays_rest(self):
-        for headline in ("Rest day.", "Full rest", "Off day", "Travel day", "No training today"):
+        for headline in (
+            "Rest day.",
+            "Full rest",
+            "Off day",
+            "Travel day",
+            "No training today",
+            # A day that opens by declaring rest is a rest day even when the
+            # sentence goes on to name recovery work — that is what the athlete
+            # MAY do, not a session to start.
+            "Rest or active recovery",
+            "Rest and light mobility if wanted",
+        ):
             entry = today_service_module._structured_today_session_entry(
                 self._plan_row(
                     {
@@ -819,6 +831,132 @@ class TestStructuredFillerDayResolution:
             store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW
         )
         assert view.today.next_session.get("title") == "Rhythm flush"
+        assert view.today.session_scope == "today"
+
+
+class TestOpenPlanRestDayResolution:
+    """An open plan's REST day must not be presented as today's session.
+
+    The card is weekday-only (its date projection is unavailable whenever the
+    card and the saved weekly template disagree), so the server used to find no
+    row for today and fall back to the intake template's generic weekly rhythm —
+    which calls every configured training weekday a session. Today then offered
+    "Start session" on a day whose own card read "Rest or active recovery".
+    """
+
+    # 2026-07-31 is a Friday.
+    NOW = datetime(2026, 7, 31, 12, 0, tzinfo=timezone.utc)
+    DAY = "2026-07-31"
+
+    @staticmethod
+    def _planning_brief() -> dict:
+        return {
+            "open_plan_spec": {
+                "plan_type": "open_ongoing_system",
+                "weekly_template": {
+                    "training_days": ["Monday", "Wednesday", "Friday", "Saturday"],
+                    "hard_sparring_days": [],
+                    "coach_owned_days": {},
+                },
+                "development_block": {
+                    "week_1": "Baseline",
+                    "week_2": "Progress",
+                    "week_3": "Highest controlled week",
+                    "week_4": "Deload and reassess",
+                },
+            },
+            "stage1_selection_summary": {"current_phase": "GPP"},
+        }
+
+    @staticmethod
+    def _structured_plan() -> dict:
+        def app_day(weekday: str, title: str) -> dict:
+            return {
+                "date": "",
+                "weekday": weekday,
+                "day_type": "moderate",
+                "today_card": {"headline": title},
+                "sessions": [{"title": title, "blocks": [{"display_name": "Main work"}]}],
+            }
+
+        days = [
+            app_day("Mon", "Support strength"),
+            app_day("Tue", "Technical rhythm"),
+            app_day("Wed", "Power transfer"),
+            {
+                "date": "",
+                "weekday": "Fri",
+                "day_type": "rest",
+                "today_card": {"headline": "Rest or active recovery"},
+                "sessions": [],
+            },
+            app_day("Sat", "Conditioning"),
+        ]
+        # Five authored rows against four configured training days: the card and
+        # the template disagree, so the projection refuses to guess dates and the
+        # rows stay weekday-only.
+        return {
+            "weeks": [
+                {"week_index": index, "days": [copy.deepcopy(day) for day in days]}
+                for index in range(1, 5)
+            ]
+        }
+
+    def _store(self) -> FakeStore:
+        store = _store_with_plan()
+        store.plans[PLAN].update(
+            {
+                "created_at": "2026-07-01T09:00:00+00:00",
+                "fight_date": None,
+                "planning_brief": self._planning_brief(),
+                "structured_plan": self._structured_plan(),
+            }
+        )
+        return store
+
+    def test_weekday_only_card_resolves_todays_row(self):
+        plan_row = self._store().plans[PLAN]
+        matched = today_service_module._structured_day_for_training_day(plan_row, self.DAY)
+        assert matched is not None
+        day, _week = matched
+        assert day["weekday"] == "Fri"
+        assert day["today_card"]["headline"] == "Rest or active recovery"
+
+    def test_rest_row_resolves_to_no_session_today(self):
+        plan_row = self._store().plans[PLAN]
+        assert today_service_module._structured_today_session_entry(plan_row, self.DAY) is None
+
+    def test_command_view_does_not_present_a_rest_day_as_todays_session(self):
+        view = build_today_command_view(
+            self._store(), athlete_id=ATHLETE, athlete_timezone="", now=self.NOW
+        )
+        # The weekly template calls Friday a training day; the authored card says
+        # rest, and the card owns today.
+        assert view.today.next_session.get("title") != "Fri training"
+        assert view.today.session_scope != "today"
+
+    def test_a_card_row_with_work_still_resolves_through_the_weekly_schedule(self):
+        """Only the rest decision is taken from a weekday-only row.
+
+        A row that schedules work carries no date to key a session on, so it
+        still resolves through the weekly schedule — session identity (and every
+        completion already logged against it) is unchanged.
+        """
+        store = self._store()
+        for week in store.plans[PLAN]["structured_plan"]["weeks"]:
+            week["days"][3] = {
+                "date": "",
+                "weekday": "Fri",
+                "day_type": "moderate",
+                "today_card": {"headline": "Power transfer"},
+                "sessions": [{"title": "Power transfer", "blocks": [{"display_name": "Main work"}]}],
+            }
+
+        view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=self.NOW
+        )
+
+        assert view.today.next_session.get("title") == "Fri training"
         assert view.today.session_scope == "today"
 
 
