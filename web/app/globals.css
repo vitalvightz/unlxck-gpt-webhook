@@ -7104,25 +7104,55 @@ html[data-theme="light"] .today-terminal-status {
   text-transform: uppercase;
 }
 
+/* Options are laid out by what their labels actually need, not by a fixed
+   column count. A rigid grid gave every option the same width whether its
+   label was "No" or "Spreading redness", so the long ones broke across two
+   lines inside the button — an option label must never stack. Here each
+   button is at least as wide as its own text, shares the leftover space, and
+   drops to the next line whole if the row runs out of room. */
 .today-segment-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
-/* Opt-in 2-up variant (SegmentGroup columns={2}) so a 4-option control lays out
-   as a clean 2×2 instead of leaving two empty cells in the 3-column default. */
-.today-segment-row-2col {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+/* Opt-in 2-up variant (SegmentGroup columns={2}): a 4-option control lays out
+   as a clean 2×2 instead of a 3 + orphan. */
+.today-segment-row-2col > .today-segment {
+  flex-basis: calc(50% - 4px);
+}
+
+/* Full-width rows, one option per line. For a set whose labels are too long to
+   share a line at any phone width — squeezing those into columns is what
+   broke their labels across two lines in the first place. */
+.today-segment-row-list {
+  flex-direction: column;
+}
+
+.today-segment-row-list > .today-segment {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .today-segment {
+  display: flex;
+  /* Zero basis so every option in a row gets an equal share of it, then floors
+     at its own label width — the row stays an even segmented control whenever
+     the labels allow, and never squeezes one of them. */
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
   min-height: 42px;
+  padding: 6px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--text-secondary);
   font: inherit;
-  font-weight: 700;
+  font-size: var(--type-body);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
     box-shadow 160ms ease, transform 120ms ease;
@@ -7160,11 +7190,65 @@ html[data-theme="light"] .today-terminal-status {
 
 /* Says out loud what the dashed outline says visually. Announced to a screen
    reader via aria-describedby, because aria-pressed deliberately stays false
-   until the write is confirmed. */
+   until the write is confirmed.
+   It sits between the answer and the thing that confirms it, so it reads as a
+   connector — a warning-toned rule pointing down at the panel below rather
+   than a stray line of grey text. */
 .today-injury-pending-hint {
-  margin: 6px 0 0;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
   color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.today-injury-pending-hint::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--progress-gold);
+  box-shadow: 0 0 0 3px rgba(214, 175, 106, 0.16);
+}
+
+/* Multi-select chips (infection signs) sit in a row of controls that are
+   otherwise all single-choice. A checkbox mark on the leading edge is what
+   tells the athlete they can pick more than one — without it, tapping a second
+   sign feels like it should have replaced the first. */
+.today-segment-multi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-inline: 10px;
+  text-align: left;
+}
+
+.today-segment-multi::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid currentColor;
+  border-radius: 5px;
+  opacity: 0.45;
+  transition: opacity var(--transition-fast), background-color var(--transition-fast);
+}
+
+.today-segment-multi.today-segment-active::before {
+  border-color: #ffffff;
+  background-color: #ffffff;
+  /* Tick lives in the box's own background so the chip stays a single element —
+     no extra markup for a purely decorative mark. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.2 4.8 8.6 9.6 3.6' fill='none' stroke='%23b5122b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+  opacity: 1;
 }
 
 .today-segment:disabled {
@@ -7305,8 +7389,31 @@ html[data-theme="light"] .today-terminal-status {
   white-space: nowrap;
 }
 
-.today-injury-item .today-segment-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+/* Option labels on Today's pickers are a fixed set written in the component —
+   "Open or burst", "Spreading redness", "Very hard" — and a column layout used
+   to break them across two lines mid-phrase. Hold them to one line.
+   Deliberately scoped to these two forms rather than put on every button: a
+   .cta or .secondary-button elsewhere can carry dynamic text, and that would
+   rather wrap than overflow its container. */
+.today-injury-card .today-segment,
+.today-checkin-form .today-segment {
+  white-space: nowrap;
+}
+
+/* The four status actions were the only unlabelled control on the card — four
+   bare words under an injury name, with the question they answer living only
+   in the group's aria-label. */
+.today-injury-status-label {
+  margin: 2px 0 -4px;
+  color: var(--text-muted);
+}
+
+/* Four short words go across one row wherever they fit. Below that, they break
+   2 + 2 — a squarer, more deliberate shape than 3 + a stranded fourth. */
+@media (max-width: 379px) {
+  .today-injury-status-row > .today-segment {
+    flex-basis: calc(50% - 4px);
+  }
 }
 
 .today-injury-status-note {
@@ -7332,20 +7439,116 @@ html[data-theme="light"] .today-terminal-status {
   background: rgba(255, 90, 90, 0.08);
 }
 
+/* Surface follow-up drawer. On a phone this is five questions deep inside a
+   card inside a list item, so it earns its own container treatment: a brand
+   rule down the left ties it to the status button that opened it, and the
+   inset background says "this belongs to the row above", not "this is a new
+   card". */
 .today-injury-surface-followup {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px;
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.14));
+  border-left: 3px solid rgba(226, 58, 76, 0.55);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
+  counter-reset: injury-followup-q;
+}
+
+/* A recheck is the way back DOWN — it should not wear the same alarm rule as a
+   "this got worse" report. */
+.today-injury-surface-followup[data-mode="recheck"] {
+  border-left-color: rgba(125, 226, 168, 0.42);
+}
+
+.today-injury-followup-head {
+  display: grid;
+  gap: 4px;
+}
+
+.today-injury-followup-eyebrow {
+  margin: 0;
+  color: var(--brand-red);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.today-injury-surface-followup[data-mode="recheck"] .today-injury-followup-eyebrow {
+  color: var(--success-ink);
+}
+
+.today-injury-followup-eyebrow span {
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+/* Numbered questions. Five identical blocks with no ordinal read as an endless
+   scroll on a phone; a counter makes the form feel finite. Decorative only —
+   the label text is still the accessible name. */
+.today-injury-surface-followup .today-field-group {
+  counter-increment: injury-followup-q;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.today-injury-surface-followup .today-field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+}
+
+.today-injury-surface-followup .today-field-label::before {
+  content: counter(injury-followup-q);
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0;
+  opacity: 0.75;
+}
+
+/* "Required" marker on a control that has no default. Quiet enough to scan
+   past, present enough that the requirement is never a surprise sprung by a
+   submit that will not go. */
+.today-field-required {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: 1px solid rgba(226, 58, 76, 0.32);
+  border-radius: var(--radius-pill);
+  color: var(--brand-red);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  vertical-align: 1px;
+}
+
+/* The control a submit attempt stopped on. */
+.today-segment-row[data-invalid] > .today-segment:not(.today-segment-active) {
+  border-color: rgba(226, 58, 76, 0.5);
+}
+
+/* Sub-label under a question (e.g. "multi-select, none is fine") — sentence
+   case and unmissably lighter than the question it explains. */
+.today-field-hint {
+  margin: -2px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .today-injury-confirm-text {
+  margin: 0;
   color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .today-injury-confirm-actions {
@@ -7353,14 +7556,38 @@ html[data-theme="light"] .today-terminal-status {
   gap: 8px;
 }
 
+/* Footer bar for the drawer: bled to the panel edges and tinted so the end of
+   the questions is unmistakable, with Save taking the remaining width — on a
+   phone the primary action was a small pill floating at the far left. */
+.today-injury-followup-actions {
+  margin: 2px -14px -14px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 8px 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.today-injury-followup-actions .today-injury-confirm-yes {
+  min-width: 160px;
+}
+
 .today-injury-confirm-yes,
 .today-injury-confirm-cancel {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 16px;
   border-radius: 9px;
   font: inherit;
-  font-weight: 700;
+  font-size: var(--type-body);
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    transform 120ms ease;
+}
+
+.today-injury-confirm-yes:active:not(:disabled),
+.today-injury-confirm-cancel:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .today-injury-confirm-yes {
@@ -7381,6 +7608,14 @@ html[data-theme="light"] .today-terminal-status {
   color: var(--text-secondary);
 }
 
+/* Inside the drawer the brand fill is doing five jobs at once — three of them
+   on answers that were merely pre-filled from the record. Keep the fill (that
+   is the shared picker language) but drop the outer glow, so a panel of
+   answered questions reads as answered rather than as five alarms. */
+.today-injury-surface-followup .today-segment-active {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
 html[data-theme="light"] .today-injury-confirm {
   border-color: rgba(189, 16, 32, 0.3);
   background: rgba(189, 16, 32, 0.07);
@@ -7389,6 +7624,45 @@ html[data-theme="light"] .today-injury-confirm {
 html[data-theme="light"] .today-injury-confirm-cancel {
   border-color: rgba(20, 20, 30, 0.16);
   background: rgba(20, 20, 30, 0.04);
+}
+
+/* Light-theme parity for the drawer: the dark rules lean on white opacity,
+   which is invisible on the light background. */
+html[data-theme="light"] .today-field-required {
+  border-color: rgba(189, 16, 32, 0.28);
+}
+
+html[data-theme="light"] .today-segment-row[data-invalid] > .today-segment:not(.today-segment-active) {
+  border-color: rgba(189, 16, 32, 0.42);
+}
+
+html[data-theme="light"] .today-injury-surface-followup {
+  border-color: rgba(80, 81, 84, 0.12);
+  border-left-color: rgba(189, 16, 32, 0.5);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+html[data-theme="light"] .today-injury-surface-followup[data-mode="recheck"] {
+  border-left-color: rgba(39, 174, 96, 0.5);
+}
+
+html[data-theme="light"] .today-injury-surface-followup .today-field-group {
+  border-top-color: rgba(80, 81, 84, 0.12);
+}
+
+html[data-theme="light"] .today-injury-followup-actions {
+  border-top-color: rgba(80, 81, 84, 0.12);
+  background: rgba(252, 252, 253, 0.94);
+}
+
+html[data-theme="light"] .today-injury-surface-followup[data-mode="recheck"]
+  .today-injury-followup-eyebrow {
+  color: #1f7a4d;
+}
+
+html[data-theme="light"] .today-segment-multi.today-segment-active::before {
+  border-color: #ffffff;
+  background-color: #ffffff;
 }
 
 .today-injury-add {
@@ -7939,12 +8213,17 @@ html[data-theme="light"] .today-injury-confirm-cancel {
   }
 
   .today-segment,
+  .today-segment-multi::before,
+  .today-injury-confirm-yes,
+  .today-injury-confirm-cancel,
   .overview-progress-fill {
     transition: none;
   }
 
   .today-segment:hover:not(:disabled):not(.today-segment-active),
-  .today-segment:active:not(:disabled) {
+  .today-segment:active:not(:disabled),
+  .today-injury-confirm-yes:active:not(:disabled),
+  .today-injury-confirm-cancel:active:not(:disabled) {
     transform: none;
   }
 }
@@ -8181,8 +8460,53 @@ html[data-theme="light"] .today-injury-confirm-cancel {
     gap: 6px;
   }
 
-  .today-injury-item .today-segment-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Reclaim the horizontal space three levels of nesting eat: card padding +
+     item padding + drawer padding was taking ~80px of a 390px screen. */
+  .today-injury-item {
+    padding: 12px 10px;
+  }
+
+  .today-injury-surface-followup {
+    gap: 12px;
+    padding: 12px 10px;
+  }
+
+  .today-injury-followup-actions {
+    margin: 2px -10px -12px;
+    padding-inline: 10px;
+  }
+
+  /* Save takes the width it can get on a phone; Cancel stays a deliberate,
+     smaller target beside it rather than an equal-weight twin. */
+  .today-injury-followup-actions .today-injury-confirm-yes {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .today-injury-followup-actions .today-injury-confirm-cancel {
+    flex: 0 0 auto;
+  }
+
+  .today-injury-surface-followup .today-segment-row {
+    gap: 6px;
+  }
+
+  .today-injury-confirm-yes,
+  .today-injury-confirm-cancel {
+    padding-inline: 12px;
+  }
+
+  /* The clear confirmation is a decision, not a toolbar — stack it so both
+     answers are full-width targets instead of two small pills squeezed
+     alongside wrapped text. */
+  .today-injury-confirm {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 10px;
+  }
+
+  .today-injury-confirm .today-injury-confirm-actions > button {
+    flex: 1 1 0;
   }
 
   .today-injury-map-control {
@@ -8205,8 +8529,12 @@ html[data-theme="light"] .today-injury-confirm-cancel {
 
   .today-segment {
     min-height: 44px;
+    padding-inline: 12px;
+  }
+
+  .today-injury-surface-followup .today-segment {
     padding-inline: 8px;
-    font-size: 14px;
+    font-size: var(--type-body-sm);
   }
 
   .today-sticky-actions {
