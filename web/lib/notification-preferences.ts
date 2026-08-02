@@ -11,6 +11,7 @@ export type NotificationPreferences = {
   quiet_hours_enabled: boolean;
   quiet_hours_start: string;
   quiet_hours_end: string;
+  preferred_training_time: string | null;
 };
 
 export type NotificationPreferencesPatch = Partial<NotificationPreferences>;
@@ -26,7 +27,12 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   quiet_hours_enabled: true,
   quiet_hours_start: "22:00",
   quiet_hours_end: "07:00",
+  preferred_training_time: null,
 };
+
+function normalizeTime(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value.slice(0, 5) : fallback;
+}
 
 function normalizePreferences(value: unknown): NotificationPreferences {
   const candidate = value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -39,14 +45,18 @@ function normalizePreferences(value: unknown): NotificationPreferences {
     progress_milestones: candidate.progress_milestones !== false,
     coach_messages: candidate.coach_messages !== false,
     quiet_hours_enabled: candidate.quiet_hours_enabled !== false,
-    quiet_hours_start:
-      typeof candidate.quiet_hours_start === "string"
-        ? candidate.quiet_hours_start.slice(0, 5)
-        : DEFAULT_NOTIFICATION_PREFERENCES.quiet_hours_start,
-    quiet_hours_end:
-      typeof candidate.quiet_hours_end === "string"
-        ? candidate.quiet_hours_end.slice(0, 5)
-        : DEFAULT_NOTIFICATION_PREFERENCES.quiet_hours_end,
+    quiet_hours_start: normalizeTime(
+      candidate.quiet_hours_start,
+      DEFAULT_NOTIFICATION_PREFERENCES.quiet_hours_start,
+    ),
+    quiet_hours_end: normalizeTime(
+      candidate.quiet_hours_end,
+      DEFAULT_NOTIFICATION_PREFERENCES.quiet_hours_end,
+    ),
+    preferred_training_time:
+      typeof candidate.preferred_training_time === "string" && candidate.preferred_training_time
+        ? candidate.preferred_training_time.slice(0, 5)
+        : null,
   };
 }
 

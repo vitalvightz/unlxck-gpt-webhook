@@ -1,10 +1,9 @@
 """Profile-level coaching notification sweep in athlete-local time.
 
-The worker still calls the historical morning-sweep entrypoint every ten minutes,
-but candidate timing is now state-aware: morning safety/readiness decisions only
-exist in the morning window, while an unfinished started session can produce one
-later logging reminder. The delivery ledger remains the authoritative dedupe
-boundary across devices, retries and worker restarts.
+The worker calls this entrypoint every ten minutes. It always evaluates athlete-
+selected session timing, because a saved training time may be early, late or after
+midnight. Routine morning/session-log coaching keeps its own narrower windows,
+and STOP remains constrained inside the session-timing resolver.
 """
 
 from __future__ import annotations
@@ -22,14 +21,13 @@ from .intelligent_notifications import (
     dispatch_coaching_notification,
 )
 from .push_notifications import push_notifications_configured
+from .session_timing_notifications import dispatch_session_timing_notification
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MORNING_PUSH_LOCAL_HOUR = 7
 MORNING_SWEEP_BATCH_SIZE = 500
 DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR = 11
-SESSION_LOG_SWEEP_START_LOCAL_HOUR = 12
-SESSION_LOG_SWEEP_END_LOCAL_HOUR = 22
 
 
 def _int_env(name: str, default: int, *, minimum: int = 0, maximum: int = 23) -> int:
@@ -85,8 +83,6 @@ def is_morning_push_due(
 
 
 def _canonical_subscription_is_newer(candidate: dict[str, Any], current: dict[str, Any]) -> bool:
-    """Prefer the most recently refreshed device as the profile timezone hint."""
-
     candidate_updated = str(candidate.get("updated_at") or candidate.get("created_at") or "")
     current_updated = str(current.get("updated_at") or current.get("created_at") or "")
     if candidate_updated != current_updated:
@@ -121,24 +117,12 @@ def _list_canonical_profile_subscriptions(store: AppStore) -> list[dict[str, Any
     return list(canonical.values())
 
 
-def _coaching_window_is_open(local_now: datetime) -> bool:
-    morning_open = morning_push_local_hour() <= local_now.hour < morning_push_cutoff_local_hour()
-    session_log_open = (
-        SESSION_LOG_SWEEP_START_LOCAL_HOUR
-        <= local_now.hour
-        < SESSION_LOG_SWEEP_END_LOCAL_HOUR
-    )
-    return morning_open or session_log_open
-
-
 def _mark_profile_morning_sent(
     store: AppStore,
     subscription: dict[str, Any],
     *,
     local_day: str,
 ) -> None:
-    """Maintain the legacy device stamp; the profile ledger owns real dedupe."""
-
     profile_id = str(subscription.get("profile_id") or "").strip()
     rows = store.list_push_subscriptions(profile_id)
     for row in rows:
@@ -160,7 +144,7 @@ def run_morning_push_sweep(
 
     try:
         canonical_subscriptions = _list_canonical_profile_subscriptions(store)
-    except Exception:  # noqa: BLE001 - the sweep must never crash its host loop
+    except Exception:  # noqa: BLE001
         logger.exception("[morning_push] subscription listing failed")
         return 0
 
@@ -169,9 +153,21 @@ def run_morning_push_sweep(
         profile_id = str(subscription.get("profile_id") or "").strip()
         timezone_name = str(subscription.get("timezone") or "").strip() or "UTC"
         local_now = _local_now(subscription, now)
-        if not _coaching_window_is_open(local_now):
-            continue
         try:
+            # Always evaluate saved session timing. Its own window and the user's
+            # quiet-hour preferences decide whether an early/late reminder exists.
+            timed_result = dispatch_session_timing_notification(
+                store,
+                profile_id=profile_id,
+                timezone_name=timezone_name,
+                now_utc=now,
+            )
+            if timed_result is not None and timed_result.delivered_count > 0:
+                sent += timed_result.delivered_count
+                continue
+
+            # Existing intelligent coaching candidates enforce their own morning
+            # and session-log action windows, so evaluating them here is safe.
             result = dispatch_coaching_notification(
                 store,
                 profile_id=profile_id,
@@ -187,7 +183,7 @@ def run_morning_push_sweep(
                     subscription,
                     local_day=local_now.date().isoformat(),
                 )
-        except Exception:  # noqa: BLE001 - one bad profile must not stop the sweep
+        except Exception:  # noqa: BLE001
             logger.exception(
                 "[morning_push] coaching sweep failed profile_id=%s subscription_id=%s",
                 profile_id,

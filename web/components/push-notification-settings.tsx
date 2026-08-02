@@ -18,7 +18,7 @@ import {
 
 type BooleanPreferenceKey = Exclude<
   keyof NotificationPreferences,
-  "quiet_hours_start" | "quiet_hours_end"
+  "quiet_hours_start" | "quiet_hours_end" | "preferred_training_time"
 >;
 
 const PREFERENCE_ROWS: Array<{
@@ -63,18 +63,21 @@ const PREFERENCE_ROWS: Array<{
   },
 ];
 
-/**
- * Device Web Push opt-in plus server-owned account preferences. The legacy
- * local-only toggle list rendered by Settings is hidden below; this component
- * is now the single preference authority the backend actually enforces.
- */
 export function PushNotificationSettings({ token }: { token: string }) {
   const [state, setState] = useState<PushOptInState | "loading" | "working">("loading");
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [quietStart, setQuietStart] = useState(DEFAULT_NOTIFICATION_PREFERENCES.quiet_hours_start);
   const [quietEnd, setQuietEnd] = useState(DEFAULT_NOTIFICATION_PREFERENCES.quiet_hours_end);
+  const [trainingTime, setTrainingTime] = useState("");
   const [workingPreference, setWorkingPreference] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  function syncPreferences(updated: NotificationPreferences) {
+    setPreferences(updated);
+    setQuietStart(updated.quiet_hours_start);
+    setQuietEnd(updated.quiet_hours_end);
+    setTrainingTime(updated.preferred_training_time ?? "");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -85,14 +88,12 @@ export function PushNotificationSettings({ token }: { token: string }) {
           (settings as typeof settings & { preferences?: unknown }).preferences,
         );
         setState(resolvedState);
-        setPreferences(resolvedPreferences);
-        setQuietStart(resolvedPreferences.quiet_hours_start);
-        setQuietEnd(resolvedPreferences.quiet_hours_end);
+        syncPreferences(resolvedPreferences);
       })
       .catch(() => {
         if (!cancelled) {
           setState("unsupported");
-          setPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
+          syncPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
           setError("Unable to load notification settings right now.");
         }
       });
@@ -125,10 +126,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
     setWorkingPreference(key);
     setError(null);
     try {
-      const updated = await updateNotificationPreferences(token, { [key]: checked });
-      setPreferences(updated);
-      setQuietStart(updated.quiet_hours_start);
-      setQuietEnd(updated.quiet_hours_end);
+      syncPreferences(await updateNotificationPreferences(token, { [key]: checked }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to update preferences.");
     } finally {
@@ -141,15 +139,31 @@ export function PushNotificationSettings({ token }: { token: string }) {
     setWorkingPreference("quiet-hours");
     setError(null);
     try {
-      const updated = await updateNotificationPreferences(token, {
-        quiet_hours_start: quietStart,
-        quiet_hours_end: quietEnd,
-      });
-      setPreferences(updated);
-      setQuietStart(updated.quiet_hours_start);
-      setQuietEnd(updated.quiet_hours_end);
+      syncPreferences(
+        await updateNotificationPreferences(token, {
+          quiet_hours_start: quietStart,
+          quiet_hours_end: quietEnd,
+        }),
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to update quiet hours.");
+    } finally {
+      setWorkingPreference(null);
+    }
+  }
+
+  async function saveTrainingTime() {
+    if (!preferences || workingPreference) return;
+    setWorkingPreference("training-time");
+    setError(null);
+    try {
+      syncPreferences(
+        await updateNotificationPreferences(token, {
+          preferred_training_time: trainingTime || null,
+        }),
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to update training time.");
     } finally {
       setWorkingPreference(null);
     }
@@ -168,9 +182,6 @@ export function PushNotificationSettings({ token }: { token: string }) {
 
   return (
     <div className="settings-push-block">
-      {/* Settings previously rendered a second localStorage-only list directly
-          after this component. Hide that obsolete preview surface so athletes
-          see only the preferences the server enforces. */}
       <style>{"#notifications > .settings-toggle-list { display: none; }"}</style>
 
       <div className="settings-toggle-row settings-push-row">
@@ -210,6 +221,31 @@ export function PushNotificationSettings({ token }: { token: string }) {
               />
             </label>
           ))}
+
+          <div className="settings-control-grid">
+            <label className="field">
+              <span>Usual training time</span>
+              <input
+                type="time"
+                value={trainingTime}
+                disabled={!preferences.session_reminders || workingPreference !== null}
+                onChange={(event) => setTrainingTime(event.target.value)}
+              />
+              <small>Optional. Without a time, UNLXCK will not guess when you train.</small>
+            </label>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={
+                !preferences.session_reminders ||
+                workingPreference !== null ||
+                trainingTime === (preferences.preferred_training_time ?? "")
+              }
+              onClick={() => void saveTrainingTime()}
+            >
+              {workingPreference === "training-time" ? "Saving…" : "Save training time"}
+            </button>
+          </div>
 
           <div className="settings-toggle-row">
             <span>

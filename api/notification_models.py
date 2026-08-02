@@ -17,6 +17,19 @@ NotificationCategory = Literal[
 _TIME_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 
+def _normalize_time(value: Any, *, allow_none: bool) -> str | None:
+    if value is None and allow_none:
+        return None
+    text = str(value or "").strip()
+    if not text and allow_none:
+        return None
+    if len(text) >= 5:
+        text = text[:5]
+    if not _TIME_PATTERN.fullmatch(text):
+        raise ValueError("time must use 24-hour HH:MM format")
+    return text
+
+
 class NotificationPreferences(BaseModel):
     push_enabled: bool = True
     session_reminders: bool = True
@@ -28,16 +41,19 @@ class NotificationPreferences(BaseModel):
     quiet_hours_enabled: bool = True
     quiet_hours_start: str = "22:00"
     quiet_hours_end: str = "07:00"
+    preferred_training_time: str | None = None
 
     @field_validator("quiet_hours_start", "quiet_hours_end", mode="before")
     @classmethod
     def normalize_time(cls, value: Any) -> str:
-        text = str(value or "").strip()
-        if len(text) >= 5:
-            text = text[:5]
-        if not _TIME_PATTERN.fullmatch(text):
-            raise ValueError("quiet hours must use 24-hour HH:MM format")
-        return text
+        normalized = _normalize_time(value, allow_none=False)
+        assert normalized is not None
+        return normalized
+
+    @field_validator("preferred_training_time", mode="before")
+    @classmethod
+    def normalize_preferred_training_time(cls, value: Any) -> str | None:
+        return _normalize_time(value, allow_none=True)
 
 
 class NotificationPreferencesUpdate(BaseModel):
@@ -51,13 +67,19 @@ class NotificationPreferencesUpdate(BaseModel):
     quiet_hours_enabled: bool | None = None
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
+    preferred_training_time: str | None = None
 
     @field_validator("quiet_hours_start", "quiet_hours_end", mode="before")
     @classmethod
     def normalize_optional_time(cls, value: Any) -> str | None:
         if value is None:
             return None
-        return NotificationPreferences.normalize_time(value)
+        return _normalize_time(value, allow_none=False)
+
+    @field_validator("preferred_training_time", mode="before")
+    @classmethod
+    def normalize_optional_training_time(cls, value: Any) -> str | None:
+        return _normalize_time(value, allow_none=True)
 
 
 class PushSettingsResponse(BaseModel):
