@@ -20,7 +20,7 @@ from api.services.notification_foundation import (
 )
 from api.services.progress_notifications import send_coach_message_notification
 from api.services.push_notifications import push_notifications_configured, vapid_public_key
-from api.store import AppStore
+from api.store import AppStore, is_effective_admin_profile
 
 
 class CoachMessagePushRequest(BaseModel):
@@ -66,7 +66,7 @@ def _preference_patch(request: NotificationPreferencesUpdate) -> dict:
     }
 
 
-def build_push_router(*, require_profile, require_admin, get_store) -> APIRouter:
+def build_push_router(*, require_profile, get_store) -> APIRouter:
     router = APIRouter()
 
     @router.get("/api/push/settings", response_model=PushSettingsResponse)
@@ -129,12 +129,14 @@ def build_push_router(*, require_profile, require_admin, get_store) -> APIRouter
     @router.post("/api/admin/notifications/coach-message")
     def send_coach_message(
         request: CoachMessagePushRequest,
-        _: ProfileRecord = Depends(require_admin),
+        profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> dict[str, int | bool]:
-        # This endpoint sends only explicit human-authored copy. It never creates
-        # automated engagement messages and still respects the athlete's opt-out
-        # and quiet hours through the shared notification foundation.
+        if not is_effective_admin_profile(profile, store):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="admin access required",
+            )
         delivered = send_coach_message_notification(
             store,
             athlete_id=request.athlete_id,
