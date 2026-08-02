@@ -2,10 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { isTurnstileConfigured, TurnstileChallenge } from "@/components/turnstile-challenge";
 import { getMe } from "@/lib/api";
 import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@/lib/auth-feedback";
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
@@ -16,12 +25,12 @@ import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { UserRole } from "@/lib/types";
 
-// Roles a user may self-select at sign-up. Admin is intentionally excluded and
-// stays manually assigned only. Coach/gym_owner exist in the type system for the
-// future but are not yet selectable, so the live path is athlete-only.
 const SIGNUP_ROLE_LABELS: Partial<Record<UserRole, string>> = {
   athlete: "Athlete",
 };
+
+const CAPTCHA_REQUIRED_MESSAGE = "Complete the security check, then try again.";
+const CAPTCHA_UNAVAILABLE_MESSAGE = "The security check could not load. Refresh the page and try again.";
 
 export function AuthForm({
   mode,
@@ -32,8 +41,6 @@ export function AuthForm({
   mode: "signup" | "login";
   role?: UserRole;
   onChangeRole?: () => void;
-  /** Rendered inside the auth card below the form — e.g. the PWA install
-      prompt on login. Keeps page-level concerns out of this component. */
   footerSlot?: ReactNode;
 }) {
   const router = useRouter();
@@ -45,10 +52,26 @@ export function AuthForm({
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [isMagicLinkPending, startMagicLinkTransition] = useTransition();
   const passwordStrength = evaluatePasswordStrength(password, { fullName, email });
+  const requiresCaptcha = isTurnstileConfigured();
   const isSignupPasswordBlocked = mode === "signup" && !passwordStrength.isAcceptable;
+  const isCaptchaBlocked = requiresCaptcha && !captchaToken;
+
+  const handleCaptchaUnavailable = useCallback(() => {
+    setError(CAPTCHA_UNAVAILABLE_MESSAGE);
+  }, []);
+
+  function resetCaptcha() {
+    if (!requiresCaptcha) {
+      return;
+    }
+    setCaptchaToken(null);
+    setCaptchaResetKey((current) => current + 1);
+  }
 
   useEffect(() => {
     if (!isReady) {
@@ -65,10 +88,6 @@ export function AuthForm({
     }
   }, [mode]);
 
-  // Sign-in links and signup confirmations land back here. When Supabase
-  // rejects the token it appends the reason to the URL and creates no session,
-  // so without this the athlete is dropped on a blank form with no explanation
-  // of why the link they just clicked did nothing.
   useEffect(() => {
     const linkStatus = readAuthLinkStatus({
       hash: window.location.hash,
@@ -90,6 +109,12 @@ export function AuthForm({
       return;
     }
 
+    const captchaTokenForRequest = requiresCaptcha ? captchaToken : undefined;
+    if (requiresCaptcha && !captchaTokenForRequest) {
+      setError(CAPTCHA_REQUIRED_MESSAGE);
+      return;
+    }
+
     startTransition(async () => {
       let client;
       try {
@@ -100,22 +125,29 @@ export function AuthForm({
       }
 
       if (mode === "signup") {
-        // Only athlete is currently selectable; persist the chosen role in user
-        // metadata so the role foundation is explicit. The backend still owns the
-        // authoritative profiles.role (athlete by default, admin only via the
-        // service-role tooling), so this never grants elevated access.
         const selectedRole: UserRole = role ?? "athlete";
-        const { data, error: signUpError } = await client.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: buildAuthRedirectUrl("/login"),
-            data: {
-              full_name: fullName,
-              role: selectedRole,
+        let signUpResult;
+        try {
+          signUpResult = await client.auth.signUp({
+            email,
+            password,
+            options: {
+              captchaToken: captchaTokenForRequest,
+              emailRedirectTo: buildAuthRedirectUrl("/login"),
+              data: {
+                full_name: fullName,
+                role: selectedRole,
+              },
             },
-          },
-        });
+          });
+        } catch {
+          resetCaptcha();
+          setError(AUTH_FEEDBACK.connectionFailure);
+          return;
+        }
+        resetCaptcha();
+
+        const { data, error: signUpError } = signUpResult;
         if (signUpError) {
           setError(signUpError.message);
           return;
@@ -130,11 +162,17 @@ export function AuthForm({
 
       let loginResult;
       try {
-        loginResult = await client.auth.signInWithPassword({ email, password });
+        loginResult = await client.auth.signInWithPassword({
+          email,
+          password,
+          options: { captchaToken: captchaTokenForRequest },
+        });
       } catch {
+        resetCaptcha();
         setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
+      resetCaptcha();
 
       const { data, error: loginError } = loginResult;
       if (loginError) {
@@ -161,6 +199,13 @@ export function AuthForm({
       setError("Enter your email above, then request a sign-in link.");
       return;
     }
+
+    const captchaTokenForRequest = requiresCaptcha ? captchaToken : undefined;
+    if (requiresCaptcha && !captchaTokenForRequest) {
+      setError(CAPTCHA_REQUIRED_MESSAGE);
+      return;
+    }
+
     startMagicLinkTransition(async () => {
       let client;
       try {
@@ -175,14 +220,17 @@ export function AuthForm({
         magicLinkResult = await client.auth.signInWithOtp({
           email: trimmedEmail,
           options: {
+            captchaToken: captchaTokenForRequest,
             shouldCreateUser: mode === "signup",
             emailRedirectTo: redirectTo,
           },
         });
       } catch {
+        resetCaptcha();
         setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
+      resetCaptcha();
 
       const { error: otpError } = magicLinkResult;
       if (otpError) {
@@ -283,8 +331,19 @@ export function AuthForm({
             {mode === "signup" ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
           </div>
 
+          <TurnstileChallenge
+            action={mode}
+            onTokenChange={setCaptchaToken}
+            onUnavailable={handleCaptchaUnavailable}
+            resetKey={captchaResetKey}
+          />
+
           <div className="form-actions auth-form-actions">
-            <button type="submit" className="cta" disabled={isPending || isSignupPasswordBlocked}>
+            <button
+              type="submit"
+              className="cta"
+              disabled={isPending || isSignupPasswordBlocked || isCaptchaBlocked}
+            >
               {isPending
                 ? mode === "signup"
                   ? "Creating account…"
@@ -297,7 +356,7 @@ export function AuthForm({
               type="button"
               className="auth-text-link auth-magic-link-action"
               onClick={handleMagicLink}
-              disabled={isPending || isMagicLinkPending}
+              disabled={isPending || isMagicLinkPending || isCaptchaBlocked}
             >
               {isMagicLinkPending ? "Sending link…" : "Email sign-in link"}
             </button>
