@@ -108,7 +108,7 @@ create or replace function public.claim_notification_delivery(
   p_profile_id uuid,
   p_notification_type text,
   p_category text,
-  p_priority smallint,
+  p_priority integer,
   p_title text,
   p_body text,
   p_url text,
@@ -240,10 +240,10 @@ end;
 $$;
 
 revoke all on function public.claim_notification_delivery(
-  uuid, text, text, smallint, text, text, text, text, text, timestamptz
+  uuid, text, text, integer, text, text, text, text, text, timestamptz
 ) from public, anon, authenticated;
 grant execute on function public.claim_notification_delivery(
-  uuid, text, text, smallint, text, text, text, text, text, timestamptz
+  uuid, text, text, integer, text, text, text, text, text, timestamptz
 ) to service_role;
 
 revoke all on function public.finalize_notification_delivery(
