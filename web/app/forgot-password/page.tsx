@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
     setMessage(null);
     setError(null);
 
-    const captchaTokenForRequest = requiresCaptcha ? captchaToken : undefined;
+    const captchaTokenForRequest = requiresCaptcha ? captchaToken ?? undefined : undefined;
     if (requiresCaptcha && !captchaTokenForRequest) {
       setError(CAPTCHA_REQUIRED_MESSAGE);
       return;
