@@ -16,6 +16,7 @@ from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 from api.contracts.command_view import CommandView
+from api.contracts.training_day import resolve_training_day_str
 from api.services.notification_foundation import (
     NotificationCandidate,
     get_notification_preferences,
@@ -88,11 +89,13 @@ def _local_now(now_utc: datetime, timezone_name: str) -> datetime:
         return reference.astimezone(timezone.utc)
 
 
-def _local_day_of(value: Any, timezone_name: str) -> str | None:
+def _training_day_of(value: Any, timezone_name: str) -> str | None:
+    """Map a timestamp through the app's canonical 03:00 training-day rollover."""
+
     parsed = _parse_datetime(value)
     if parsed is None:
         return None
-    return _local_now(parsed, timezone_name).date().isoformat()
+    return resolve_training_day_str(parsed, athlete_timezone=timezone_name)
 
 
 def _active_plan(view: CommandView) -> bool:
@@ -140,7 +143,7 @@ def _injury_rank(injury: Mapping[str, Any]) -> tuple[int, int, str]:
 def _injury_needs_recheck(
     injury: Mapping[str, Any],
     *,
-    local_day: str,
+    training_day: str,
     timezone_name: str,
 ) -> bool:
     surface_class = str(injury.get("surface_class") or "")
@@ -154,11 +157,11 @@ def _injury_needs_recheck(
     )
     if not actionable:
         return False
-    updated_day = _local_day_of(
+    updated_day = _training_day_of(
         injury.get("updated_at") or injury.get("created_at"),
         timezone_name,
     )
-    return updated_day != local_day
+    return updated_day != training_day
 
 
 def _injury_copy(injury: Mapping[str, Any]) -> tuple[str, str]:
@@ -204,7 +207,7 @@ def _injury_candidate(
         for injury in _active_injuries(view)
         if _injury_needs_recheck(
             injury,
-            local_day=local_now.date().isoformat(),
+            training_day=view.today.training_day,
             timezone_name=timezone_name,
         )
     ]
@@ -228,7 +231,7 @@ def _injury_candidate(
         body=body,
         url="/today#today-injury",
         tag=f"injury-recheck-{injury_id}"[:80],
-        dedupe_key=f"injury-recheck:{injury_id}:{local_now.date().isoformat()}",
+        dedupe_key=f"injury-recheck:{injury_id}:{view.today.training_day}",
         expires_at=now_utc + timedelta(hours=4),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
@@ -240,7 +243,6 @@ def _recent_high_pain_completion(
     profile_id: str,
     *,
     training_day: str,
-    timezone_name: str,
     now_utc: datetime,
 ) -> dict[str, Any] | None:
     try:
@@ -274,8 +276,6 @@ def _recent_high_pain_completion(
             age = _aware_utc(now_utc) - completed_at
             if age < timedelta(0) or age > HIGH_PAIN_FOLLOWUP_MAX_AGE:
                 continue
-            if _local_day_of(completed_at, timezone_name) == training_day:
-                continue
         return dict(row)
     return None
 
@@ -299,7 +299,6 @@ def _high_pain_candidate(
         store,
         profile_id,
         training_day=view.today.training_day,
-        timezone_name=timezone_name,
         now_utc=now_utc,
     )
     if completion is None:
@@ -398,7 +397,7 @@ def _session_log_candidate(
     started_at = _parse_datetime(completion.get("started_at"))
     if started_at is None:
         return None
-    if _local_day_of(started_at, timezone_name) != view.today.training_day:
+    if _training_day_of(started_at, timezone_name) != view.today.training_day:
         return None
     age = _aware_utc(now_utc) - started_at
     if age < SESSION_LOG_MIN_AGE:
