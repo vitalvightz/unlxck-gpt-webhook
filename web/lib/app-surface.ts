@@ -49,13 +49,13 @@ export function getShellSurface(pathname: string, hasSession: boolean): ShellSur
   return BRAND_SURFACE_ROUTES.has(pathname) ? "brand" : "workspace";
 }
 
-// Surface the server can commit to before the client session is known. Only the
-// auth routes are certain server-side (they ignore session), so setting
-// data-app-surface for them on the SSR <html> removes the workspace-shell flash
-// on first paint. Every other route defers to the client effect (returns null),
-// because whether it is brand or workspace depends on the session.
+// Surface the server can safely commit before the client session is known.
+// Every public entry route starts with the brand shell so workspace navigation
+// cannot flash while authentication resolves. On `/`, a confirmed session
+// switches the client to the workspace surface after hydration; the final
+// signed-in workspace is unchanged. Other routes still defer to the client.
 export function getServerShellSurface(pathname: string | null | undefined): ShellSurface | null {
-  if (pathname && isAuthSurfaceRoute(pathname)) {
+  if (pathname && BRAND_SURFACE_ROUTES.has(pathname)) {
     return "brand";
   }
   return null;

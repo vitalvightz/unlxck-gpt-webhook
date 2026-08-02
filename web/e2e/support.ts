@@ -36,4 +36,4 @@ export async function isolateFromNetwork(page: Page, baseURL: string): Promise<v
 }
 
 /** Routes that should render for an anonymous visitor without crashing. */
-export const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password"] as const;
+export const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password"] as const;

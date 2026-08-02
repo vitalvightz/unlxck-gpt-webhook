@@ -30,18 +30,22 @@ test.describe("public routes load without crashing", () => {
   }
 });
 
-test("app shell and navigation render for an anonymous visitor", async ({ page, baseURL }) => {
+test("public entry stays on the brand shell while the anonymous session resolves", async ({ page, baseURL }) => {
   await isolateFromNetwork(page, baseURL ?? BASE_URL);
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  // The persistent sidebar shell renders on every route at desktop widths.
-  // (The semantic <nav> only renders once a session is hydrated, so we anchor
-  // on the always-present shell + its anonymous access links instead.)
-  const sidebar = page.locator("#app-sidebar");
-  await expect(sidebar).toBeVisible();
+  // The server commits the public shell before hydration, so workspace chrome
+  // cannot flash while the client checks whether a session exists.
+  await expect(page.locator("html")).toHaveAttribute("data-app-surface", "brand");
+  await expect(page.locator("#app-sidebar")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Open navigation" })).toBeHidden();
+  await expect(page.getByText("Loading your athlete workspace")).toBeHidden();
 
-  // Anonymous visitors get a navigable login link in the public shell.
+  // Once the anonymous session resolves, the public account navigation appears
+  // and the page remains on the brand surface.
+  await expect(page.getByLabel("UNLXCK entry navigation")).toBeVisible();
   await expect(page.getByLabel("Account access").getByRole("link", { name: /log in/i })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-app-surface", "brand");
 });
 
 test("protected route redirects unauthenticated users to login", async ({ page, baseURL }) => {
