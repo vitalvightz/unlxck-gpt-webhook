@@ -7,6 +7,7 @@ import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
+import { PrivateBetaNutritionGate } from "@/components/private-beta-nutrition-gate";
 import { PwaRegister } from "@/components/pwa-register";
 import { ToastProvider } from "@/components/toast-provider";
 import { XpProvider } from "@/components/xp-provider";
@@ -107,6 +108,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             {/* Recovery links can land on any route Supabase allows, so this
                 listens app-wide and moves the athlete to the reset form. */}
             <PasswordRecoveryRedirect />
+            <PrivateBetaNutritionGate />
             <ToastProvider>
               <PwaRegister buildVersion={pwaBuildVersion}>
                 <GenerationStatusShell>
