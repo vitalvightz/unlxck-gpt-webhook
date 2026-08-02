@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_MORNING_PUSH_LOCAL_HOUR = 7
 MORNING_SWEEP_BATCH_SIZE = 500
 DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR = 11
+SESSION_LOG_SWEEP_START_LOCAL_HOUR = 12
+SESSION_LOG_SWEEP_END_LOCAL_HOUR = 22
 
 
 def _int_env(name: str, default: int, *, minimum: int = 0, maximum: int = 23) -> int:
@@ -106,8 +108,6 @@ def _list_canonical_profile_subscriptions(store: AppStore) -> list[dict[str, Any
             if not isinstance(subscription, dict):
                 continue
             profile_id = str(subscription.get("profile_id") or "").strip()
-            # Malformed rows are skipped: intelligent candidates require an
-            # account-level preference and delivery key, never a device-only guess.
             if not profile_id:
                 continue
             current = canonical.get(profile_id)
@@ -119,6 +119,16 @@ def _list_canonical_profile_subscriptions(store: AppStore) -> list[dict[str, Any
         if not after_id:
             break
     return list(canonical.values())
+
+
+def _coaching_window_is_open(local_now: datetime) -> bool:
+    morning_open = morning_push_local_hour() <= local_now.hour < morning_push_cutoff_local_hour()
+    session_log_open = (
+        SESSION_LOG_SWEEP_START_LOCAL_HOUR
+        <= local_now.hour
+        < SESSION_LOG_SWEEP_END_LOCAL_HOUR
+    )
+    return morning_open or session_log_open
 
 
 def _mark_profile_morning_sent(
@@ -158,6 +168,9 @@ def run_morning_push_sweep(
     for subscription in canonical_subscriptions:
         profile_id = str(subscription.get("profile_id") or "").strip()
         timezone_name = str(subscription.get("timezone") or "").strip() or "UTC"
+        local_now = _local_now(subscription, now)
+        if not _coaching_window_is_open(local_now):
+            continue
         try:
             result = dispatch_coaching_notification(
                 store,
@@ -172,7 +185,7 @@ def run_morning_push_sweep(
                 _mark_profile_morning_sent(
                     store,
                     subscription,
-                    local_day=_local_now(subscription, now).date().isoformat(),
+                    local_day=local_now.date().isoformat(),
                 )
         except Exception:  # noqa: BLE001 - one bad profile must not stop the sweep
             logger.exception(
