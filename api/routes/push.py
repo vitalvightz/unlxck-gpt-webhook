@@ -36,8 +36,6 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PushSettingsResponse:
-        # The VAPID public key is not secret, but there is no reason to serve it
-        # unauthenticated — only signed-in users can register subscriptions.
         enabled = push_notifications_configured()
         try:
             preferences = get_notification_preferences(store, profile.athlete_id)
@@ -56,10 +54,12 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
         store: AppStore = Depends(get_store),
     ) -> NotificationPreferences:
         try:
+            # exclude_unset preserves an explicitly supplied null training time,
+            # allowing the athlete to turn timed reminders back off.
             return update_notification_preferences(
                 store,
                 profile.athlete_id,
-                request.model_dump(exclude_none=True),
+                request.model_dump(exclude_unset=True),
             )
         except NotificationStoreError as exc:
             raise _preferences_unavailable(exc) from exc
