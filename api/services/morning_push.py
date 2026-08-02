@@ -1,8 +1,9 @@
 """Profile-level coaching notification sweep in athlete-local time.
 
-The worker calls this entrypoint every ten minutes. It resolves at most one useful
-coach interruption per profile: safety/session timing first, then the existing
-morning readiness or unfinished-session logging actions.
+The worker calls this entrypoint every ten minutes. It always evaluates athlete-
+selected session timing, because a saved training time may be early, late or after
+midnight. Routine morning/session-log coaching keeps its own narrower windows,
+and STOP remains constrained inside the session-timing resolver.
 """
 
 from __future__ import annotations
@@ -27,8 +28,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_MORNING_PUSH_LOCAL_HOUR = 7
 MORNING_SWEEP_BATCH_SIZE = 500
 DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR = 11
-COACHING_SWEEP_START_LOCAL_HOUR = 7
-COACHING_SWEEP_END_LOCAL_HOUR = 22
 
 
 def _int_env(name: str, default: int, *, minimum: int = 0, maximum: int = 23) -> int:
@@ -118,10 +117,6 @@ def _list_canonical_profile_subscriptions(store: AppStore) -> list[dict[str, Any
     return list(canonical.values())
 
 
-def _coaching_window_is_open(local_now: datetime) -> bool:
-    return COACHING_SWEEP_START_LOCAL_HOUR <= local_now.hour < COACHING_SWEEP_END_LOCAL_HOUR
-
-
 def _mark_profile_morning_sent(
     store: AppStore,
     subscription: dict[str, Any],
@@ -158,9 +153,9 @@ def run_morning_push_sweep(
         profile_id = str(subscription.get("profile_id") or "").strip()
         timezone_name = str(subscription.get("timezone") or "").strip() or "UTC"
         local_now = _local_now(subscription, now)
-        if not _coaching_window_is_open(local_now):
-            continue
         try:
+            # Always evaluate saved session timing. Its own window and the user's
+            # quiet-hour preferences decide whether an early/late reminder exists.
             timed_result = dispatch_session_timing_notification(
                 store,
                 profile_id=profile_id,
@@ -171,6 +166,8 @@ def run_morning_push_sweep(
                 sent += timed_result.delivered_count
                 continue
 
+            # Existing intelligent coaching candidates enforce their own morning
+            # and session-log action windows, so evaluating them here is safe.
             result = dispatch_coaching_notification(
                 store,
                 profile_id=profile_id,
