@@ -1,22 +1,17 @@
-"""State-aware coaching notification candidates for Today.
-
-The Today command view remains the source of truth. This module does not rebuild
-readiness or injury rules; it translates already-derived state into at most one
-useful coach interruption. Silence is the default when no action changes today's
-decision or completes an unfinished training record.
-"""
+"""State-aware coaching notification candidates for Today."""
 
 from __future__ import annotations
 
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 from api.contracts.command_view import CommandView
 from api.contracts.training_day import resolve_training_day_str
+from api.notification_models import NotificationPreferences
 from api.services.notification_foundation import (
     NotificationCandidate,
     get_notification_preferences,
@@ -85,17 +80,66 @@ def _local_now(now_utc: datetime, timezone_name: str) -> datetime:
     reference = _aware_utc(now_utc)
     try:
         return reference.astimezone(ZoneInfo(timezone_name or "UTC"))
-    except Exception:  # noqa: BLE001 - device timezone is untrusted metadata
+    except Exception:  # noqa: BLE001
         return reference.astimezone(timezone.utc)
 
 
 def _training_day_of(value: Any, timezone_name: str) -> str | None:
-    """Map a timestamp through the app's canonical 03:00 training-day rollover."""
-
     parsed = _parse_datetime(value)
     if parsed is None:
         return None
     return resolve_training_day_str(parsed, athlete_timezone=timezone_name)
+
+
+def _window_expiry_utc(
+    now_utc: datetime,
+    local_now: datetime,
+    *,
+    end_hour: int,
+) -> datetime:
+    normal_expiry = _aware_utc(now_utc) + timedelta(hours=4)
+    local_end = local_now.replace(hour=end_hour, minute=0, second=0, microsecond=0)
+    return min(normal_expiry, local_end.astimezone(timezone.utc))
+
+
+def _next_quiet_start_utc(
+    now_utc: datetime,
+    timezone_name: str,
+    preferences: NotificationPreferences,
+) -> datetime | None:
+    if not preferences.quiet_hours_enabled:
+        return None
+    local_now = _local_now(now_utc, timezone_name)
+    start_hour, start_minute = (
+        int(part) for part in preferences.quiet_hours_start.split(":")
+    )
+    quiet_start = local_now.replace(
+        hour=start_hour,
+        minute=start_minute,
+        second=0,
+        microsecond=0,
+    )
+    if quiet_start <= local_now:
+        quiet_start += timedelta(days=1)
+    return quiet_start.astimezone(timezone.utc)
+
+
+def _bound_to_quiet_hours(
+    candidate: NotificationCandidate,
+    preferences: NotificationPreferences,
+    *,
+    now_utc: datetime,
+) -> NotificationCandidate:
+    if not candidate.respect_quiet_hours:
+        return candidate
+    quiet_start = _next_quiet_start_utc(
+        now_utc,
+        candidate.timezone_name,
+        preferences,
+    )
+    if quiet_start is None or quiet_start >= candidate.expires_at:
+        return candidate
+    return replace(candidate, expires_at=quiet_start)
 
 
 def _active_plan(view: CommandView) -> bool:
@@ -107,9 +151,7 @@ def _today_is_finished(view: CommandView) -> bool:
 
 
 def _morning_window(local_now: datetime) -> bool:
-    start = _morning_start_hour()
-    end = _morning_end_hour()
-    return start <= local_now.hour < end
+    return _morning_start_hour() <= local_now.hour < _morning_end_hour()
 
 
 def _session_log_window(local_now: datetime) -> bool:
@@ -125,19 +167,21 @@ def _active_injuries(view: CommandView) -> list[dict[str, Any]]:
 
 
 def _injury_rank(injury: Mapping[str, Any]) -> tuple[int, int, str]:
-    surface_rank = {
-        "surface_medical_review": 5,
-        "surface_no_contact": 4,
-        "surface_local_restriction": 3,
-        "stable_surface": 0,
-        "": 0,
-    }.get(str(injury.get("surface_class") or ""), 0)
-    severity_rank = {"severe": 3, "moderate": 2, "mild": 1}.get(
-        str(injury.get("severity") or "").strip().lower(),
-        0,
-    )
-    worse_rank = 2 if str(injury.get("latest_reported_status") or "").lower() == "worse" else 0
-    return surface_rank + worse_rank, severity_rank, str(injury.get("id") or "")
+    surface_class = str(injury.get("surface_class") or "")
+    severity = str(injury.get("severity") or "").strip().lower()
+    latest_status = str(injury.get("latest_reported_status") or "").strip().lower()
+    if surface_class == "surface_medical_review":
+        class_rank = 5
+    elif severity == "severe" or latest_status == "worse":
+        class_rank = 4
+    elif surface_class == "surface_no_contact":
+        class_rank = 3
+    elif surface_class == "surface_local_restriction":
+        class_rank = 2
+    else:
+        class_rank = 1
+    severity_rank = {"severe": 3, "moderate": 2, "mild": 1}.get(severity, 0)
+    return class_rank, severity_rank, str(injury.get("id") or "")
 
 
 def _injury_needs_recheck(
@@ -172,15 +216,9 @@ def _injury_copy(injury: Mapping[str, Any]) -> tuple[str, str]:
             "Get it checked before training. Update me when you know the next step.",
         )
     if surface_class == "surface_no_contact":
-        return (
-            "No contact until it closes",
-            "Update the wound before we clear contact.",
-        )
+        return ("No contact until it closes", "Update the wound before we clear contact.")
     if surface_class == "surface_local_restriction":
-        return (
-            "Protect it before training",
-            "Update the wound if it has changed.",
-        )
+        return ("Protect it before training", "Update the wound if it has changed.")
     return (
         "Update the injury first",
         "Tell me if it is easing or worse before we set today's load.",
@@ -201,7 +239,6 @@ def _injury_candidate(
         return None
     if view.today.recommendation_state != "not_checked_in" or _today_is_finished(view):
         return None
-
     injuries = [
         injury
         for injury in _active_injuries(view)
@@ -232,7 +269,7 @@ def _injury_candidate(
         url="/today#today-injury",
         tag=f"injury-recheck-{injury_id}"[:80],
         dedupe_key=f"injury-recheck:{injury_id}:{view.today.training_day}",
-        expires_at=now_utc + timedelta(hours=4),
+        expires_at=_window_expiry_utc(now_utc, local_now, end_hour=_morning_end_hour()),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
     )
@@ -247,7 +284,7 @@ def _recent_high_pain_completion(
 ) -> dict[str, Any] | None:
     try:
         rows = store.list_session_completions(profile_id, limit=6)
-    except Exception:  # noqa: BLE001 - missing context means silence, never a guess
+    except Exception:  # noqa: BLE001
         logger.exception("[notification] high-pain completion read failed profile_id=%s", profile_id)
         return None
     try:
@@ -317,7 +354,7 @@ def _high_pain_candidate(
         url="/today#today-checkin",
         tag="high-pain-followup",
         dedupe_key=f"high-pain-followup:{source}",
-        expires_at=now_utc + timedelta(hours=4),
+        expires_at=_window_expiry_utc(now_utc, local_now, end_hour=_morning_end_hour()),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
     )
@@ -347,7 +384,7 @@ def _readiness_candidate(
         url="/today#today-checkin",
         tag="readiness-checkin",
         dedupe_key=f"readiness-checkin:{view.today.training_day}",
-        expires_at=now_utc + timedelta(hours=4),
+        expires_at=_window_expiry_utc(now_utc, local_now, end_hour=_morning_end_hour()),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
     )
@@ -358,11 +395,7 @@ def _session_id(view: CommandView) -> str:
     return str(session.get("session_id") or session.get("id") or "").strip()
 
 
-def _started_completion(
-    store: AppStore,
-    view: CommandView,
-    profile_id: str,
-) -> dict[str, Any] | None:
+def _started_completion(store: AppStore, view: CommandView, profile_id: str) -> dict[str, Any] | None:
     session_id = _session_id(view)
     if not session_id:
         return None
@@ -399,8 +432,7 @@ def _session_log_candidate(
         return None
     if _training_day_of(started_at, timezone_name) != view.today.training_day:
         return None
-    age = _aware_utc(now_utc) - started_at
-    if age < SESSION_LOG_MIN_AGE:
+    if _aware_utc(now_utc) - started_at < SESSION_LOG_MIN_AGE:
         return None
     source = str(
         completion.get("id")
@@ -416,7 +448,7 @@ def _session_log_candidate(
         url="/today#today-session",
         tag="session-log-due",
         dedupe_key=f"session-log-due:{source}",
-        expires_at=now_utc + timedelta(hours=4),
+        expires_at=_window_expiry_utc(now_utc, local_now, end_hour=SESSION_LOG_END_HOUR),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
     )
@@ -430,41 +462,13 @@ def build_coaching_candidates_from_view(
     timezone_name: str,
     now_utc: datetime,
 ) -> list[NotificationCandidate]:
-    """Translate a command view into actionable candidates, ordered by policy."""
-
     reference = _aware_utc(now_utc)
     local_now = _local_now(reference, timezone_name)
     builders = (
-        lambda: _injury_candidate(
-            view,
-            profile_id=profile_id,
-            timezone_name=timezone_name,
-            local_now=local_now,
-            now_utc=reference,
-        ),
-        lambda: _high_pain_candidate(
-            store,
-            view,
-            profile_id=profile_id,
-            timezone_name=timezone_name,
-            local_now=local_now,
-            now_utc=reference,
-        ),
-        lambda: _readiness_candidate(
-            view,
-            profile_id=profile_id,
-            timezone_name=timezone_name,
-            local_now=local_now,
-            now_utc=reference,
-        ),
-        lambda: _session_log_candidate(
-            store,
-            view,
-            profile_id=profile_id,
-            timezone_name=timezone_name,
-            local_now=local_now,
-            now_utc=reference,
-        ),
+        lambda: _injury_candidate(view, profile_id=profile_id, timezone_name=timezone_name, local_now=local_now, now_utc=reference),
+        lambda: _high_pain_candidate(store, view, profile_id=profile_id, timezone_name=timezone_name, local_now=local_now, now_utc=reference),
+        lambda: _readiness_candidate(view, profile_id=profile_id, timezone_name=timezone_name, local_now=local_now, now_utc=reference),
+        lambda: _session_log_candidate(store, view, profile_id=profile_id, timezone_name=timezone_name, local_now=local_now, now_utc=reference),
     )
     return [candidate for build in builders if (candidate := build()) is not None]
 
@@ -483,7 +487,7 @@ def build_coaching_candidates(
             athlete_timezone=timezone_name,
             now=now_utc,
         )
-    except Exception:  # noqa: BLE001 - an incomplete command view must never create a guess
+    except Exception:  # noqa: BLE001
         logger.exception("[notification] Today command read failed profile_id=%s", profile_id)
         return []
     return build_coaching_candidates_from_view(
@@ -513,10 +517,13 @@ def dispatch_coaching_notification(
     try:
         preferences = get_notification_preferences(store, profile_id)
         selected = select_notification_candidate(candidates, preferences, now_utc=now_utc)
-    except Exception:  # noqa: BLE001 - preference failure must fail closed
+    except Exception:  # noqa: BLE001
         logger.exception("[notification] candidate arbitration failed profile_id=%s", profile_id)
         return None
     if selected is None:
+        return None
+    selected = _bound_to_quiet_hours(selected, preferences, now_utc=now_utc)
+    if selected.expires_at <= _aware_utc(now_utc):
         return None
     delivered = dispatch_push_candidate(store, selected, now_utc=now_utc)
     return CoachingDispatchResult(
