@@ -32,25 +32,46 @@ test("manifest exposes the production install contract and shortcuts", () => {
   assert.equal(value.theme_color, "#0a0a0b");
   assert.deepEqual(value.categories, ["fitness", "health", "sports"]);
   assert.deepEqual(
+    value.icons,
+    [
+      {
+        src: "/brand/unlxck-one-angle-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/brand/unlxck-one-angle-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+    ],
+  );
+  assert.deepEqual(
     value.shortcuts?.map((shortcut) => shortcut.name),
     ["Dashboard", "Today", "Plans"],
   );
-  assert.ok(value.icons?.some((icon) => icon.sizes === "512x512" && icon.purpose === "maskable"));
+  assert.ok(
+    value.shortcuts?.every(
+      (shortcut) => shortcut.icons?.[0]?.src === "/brand/unlxck-one-angle-192.png",
+    ),
+  );
 });
 
-test("all referenced app icons exist with exact dimensions", () => {
+test("all referenced one-angle icons exist with exact dimensions", () => {
   const expected = new Map([
-    ["icons/icon-192x192.png", 192],
-    ["icons/icon-512x512.png", 512],
-    ["icons/icon-maskable-512x512.png", 512],
-    ["icons/apple-touch-icon.png", 180],
-    ["icons/favicon-32x32.png", 32],
-    ["icons/favicon-16x16.png", 16],
+    ["brand/unlxck-one-angle-512.png", 512],
+    ["brand/unlxck-one-angle-192.png", 192],
+    ["brand/unlxck-one-angle-180.png", 180],
+    ["brand/unlxck-one-angle-48.png", 48],
+    ["brand/unlxck-one-angle-32.png", 32],
   ]);
 
   expected.forEach((size, relativePath) => {
     assert.deepEqual(pngDimensions(readPublic(relativePath)), { width: size, height: size }, relativePath);
   });
+  assert.ok(readPublic("favicon.ico").length > 0, "favicon.ico must exist");
 });
 
 test("offline fallback is branded, connection-honest, and retryable", () => {
@@ -71,6 +92,10 @@ test("service worker only runtime-caches safe static assets", () => {
   assert.match(source, /url\.pathname\.startsWith\("\/_next\/static\/"\)/);
   assert.match(source, /isVersionedNextAsset \|\| SAFE_STATIC_PATHS\.has\(url\.pathname\)/);
   assert.match(source, /event\.data\?\.type === "SKIP_WAITING"/);
+  assert.match(source, /const APP_ICON_192 = "\/brand\/unlxck-one-angle-192\.png"/);
+  assert.match(source, /icon: APP_ICON_192/);
+  assert.match(source, /badge: APP_ICON_192/);
+  assert.doesNotMatch(source, /\/icons\//);
   const navigationHandler = source.match(
     /async function networkFirstNavigation\(request\) \{[\s\S]*?\n\}/,
   )?.[0];
