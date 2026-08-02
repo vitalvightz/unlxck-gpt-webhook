@@ -15,6 +15,7 @@ DEFAULT_PREFERENCES = {
     "quiet_hours_enabled": True,
     "quiet_hours_start": "22:00",
     "quiet_hours_end": "07:00",
+    "preferred_training_time": None,
 }
 
 
@@ -67,6 +68,7 @@ def test_notification_preferences_round_trip_is_account_scoped():
             "progress_milestones": False,
             "quiet_hours_start": "23:15",
             "quiet_hours_end": "06:30",
+            "preferred_training_time": "20:30",
         },
     )
     assert updated.status_code == 200
@@ -76,6 +78,7 @@ def test_notification_preferences_round_trip_is_account_scoped():
     assert payload["plan_update_alerts"] is True
     assert payload["quiet_hours_start"] == "23:15"
     assert payload["quiet_hours_end"] == "06:30"
+    assert payload["preferred_training_time"] == "20:30"
 
     settings = client.get("/api/push/settings", headers=ATHLETE_HEADERS)
     assert settings.status_code == 200
@@ -87,6 +90,40 @@ def test_notification_preferences_round_trip_is_account_scoped():
     )
     assert admin_settings.status_code == 200
     assert admin_settings.json()["preferences"] == DEFAULT_PREFERENCES
+
+
+def test_preferred_training_time_can_be_explicitly_cleared():
+    client, _store, _ = _build_client()
+    saved = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"preferred_training_time": "06:00"},
+    )
+    assert saved.status_code == 200
+    assert saved.json()["preferred_training_time"] == "06:00"
+
+    cleared = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"preferred_training_time": None},
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["preferred_training_time"] is None
+
+
+def test_null_boolean_and_quiet_time_are_ignored_without_server_error():
+    client, _store, _ = _build_client()
+
+    response = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"session_reminders": None, "quiet_hours_start": None},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["session_reminders"] is True
+    assert payload["quiet_hours_start"] == "22:00"
+    assert payload["preferred_training_time"] is None
 
 
 def test_notification_preferences_validate_quiet_hour_format():
@@ -136,8 +173,6 @@ def test_resubscribing_same_endpoint_replaces_owner():
         json=_subscribe_payload(),
     )
     assert second.status_code == 200
-    # A shared-device endpoint follows its current owner: the previous account
-    # must never keep receiving pushes on this browser install.
     assert store.list_push_subscriptions("athlete-1") == []
     assert len(store.list_push_subscriptions("admin-1")) == 1
 
