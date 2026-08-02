@@ -7,7 +7,7 @@ This document is the production baseline for `unlxck.com` and `api.unlxck.com`.
 Do not enable Supabase CAPTCHA before the frontend is deployed with a valid Turnstile site key. Enabling the server-side requirement first would break signup, login, magic-link and password-recovery requests.
 
 1. Merge and deploy the Turnstile frontend changes.
-2. In Cloudflare, create a managed Turnstile widget for the production frontend hostnames:
+2. In Cloudflare, create a **Managed** Turnstile widget for the production frontend hostnames:
    - `unlxck.com`
    - `www.unlxck.com`
    - `app.unlxck.com`
@@ -51,7 +51,39 @@ Do not challenge all requests to `/api/*`. Browser API calls expect JSON and can
 
 ## Rate limiting
 
-Protect the expensive plan-generation endpoint first.
+Protect the expensive plan-generation endpoint first. Cloudflare exposes different expression fields and time windows by plan, so use the matching version below.
+
+### Free plan
+
+Free rate-limit rules can match the request path but not host or method.
+
+Expression:
+
+```text
+(http.request.uri.path eq "/api/plans/generate")
+```
+
+Threshold: **2 requests per 10 seconds per IP**.
+
+Mitigation timeout: **10 seconds**. This is the only timeout available on Free.
+
+### Pro plan
+
+Pro rules can match host and path but not method.
+
+Expression:
+
+```text
+(http.host eq "api.unlxck.com" and http.request.uri.path eq "/api/plans/generate")
+```
+
+Threshold: **5 requests per 60 seconds per IP**.
+
+Mitigation timeout: **10 minutes**.
+
+### Business or higher
+
+Business rules can also match the HTTP method.
 
 Expression:
 
@@ -59,22 +91,21 @@ Expression:
 (http.host eq "api.unlxck.com" and http.request.method eq "POST" and http.request.uri.path eq "/api/plans/generate")
 ```
 
-Recommended threshold:
+Threshold: **5 requests per 60 seconds per IP**.
 
-- Pro or above: 5 requests per 60 seconds per IP, mitigation timeout 10 minutes.
-- Free plan: 2 requests per 10 seconds per IP, mitigation timeout 10 minutes.
+Mitigation timeout: **10 minutes**.
 
-Action: **Block** rather than interactive challenge because this is a JSON endpoint.
+Action for every plan: **Block** rather than interactive challenge because this is a JSON endpoint.
 
-Application and database rate limits remain authoritative per account. Cloudflare's rule is an outer IP-based flood control.
+Application and database rate limits remain authoritative per account. Cloudflare's rule is an outer IP-based flood control and may allow a small excess burst before its distributed counters update.
 
-If a second rate-limit rule is available, protect large feedback uploads:
+Rule allowance by plan:
 
-```text
-(http.host eq "api.unlxck.com" and http.request.method eq "POST" and http.request.uri.path eq "/api/feedback/global")
-```
+- Free: 1 rate-limit rule.
+- Pro: 2 rate-limit rules.
+- Business: 5 rate-limit rules.
 
-Suggested threshold: 5 requests per 60 seconds per IP.
+If a second rule is available, protect large feedback uploads using the same plan-compatible expression pattern for `/api/feedback/global`. Suggested threshold: 5 requests per 60 seconds per IP on Pro or above.
 
 ## Bot controls
 
@@ -97,6 +128,7 @@ The public origin is the largest remaining Cloudflare bypass risk. Complete one 
 
 - Enable Authenticated Origin Pulls.
 - Install and require the origin-pull certificate at Caddy.
+- Prefer a zone-level or per-hostname client certificate over Cloudflare's shared global certificate.
 - Restrict Hetzner TCP 80/443 sources to Cloudflare's published IPv4 and IPv6 ranges.
 - Keep a tested local Caddy health check for deployments.
 - Update Cloudflare IP ranges whenever Cloudflare changes them.
