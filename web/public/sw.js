@@ -7,14 +7,15 @@ const BUILD_VERSION = (new URL(self.location.href).searchParams.get("build") || 
 const PRECACHE_NAME = `${CACHE_PREFIX}precache-${BUILD_VERSION}`;
 const STATIC_CACHE_NAME = `${CACHE_PREFIX}static-${BUILD_VERSION}`;
 const OFFLINE_URL = "/offline.html";
+const APP_ICON_192 = "/brand/unlxck-one-angle-192.png";
 const PRECACHE_URLS = [
   OFFLINE_URL,
-  "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png",
-  "/icons/icon-maskable-512x512.png",
-  "/icons/apple-touch-icon.png",
-  "/icons/favicon-32x32.png",
-  "/icons/favicon-16x16.png",
+  APP_ICON_192,
+  "/brand/unlxck-one-angle-512.png",
+  "/brand/unlxck-one-angle-180.png",
+  "/brand/unlxck-one-angle-48.png",
+  "/brand/unlxck-one-angle-32.png",
+  "/favicon.ico",
 ];
 const SAFE_STATIC_PATHS = new Set(PRECACHE_URLS.slice(1));
 
@@ -122,8 +123,8 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(payload.title, {
       body: payload.body,
       tag: payload.tag,
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-192x192.png",
+      icon: APP_ICON_192,
+      badge: APP_ICON_192,
       data: { url: payload.url },
     }),
   );
