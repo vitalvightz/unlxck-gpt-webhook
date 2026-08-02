@@ -1,22 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition, type FormEvent } from "react";
+import { useCallback, useState, useTransition, type FormEvent } from "react";
 
+import { isTurnstileConfigured, TurnstileChallenge } from "@/components/turnstile-challenge";
 import { AUTH_FEEDBACK, getPasswordResetErrorMessage } from "@/lib/auth-feedback";
 import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+
+const CAPTCHA_REQUIRED_MESSAGE = "Complete the security check, then try again.";
+const CAPTCHA_UNAVAILABLE_MESSAGE = "The security check could not load. Refresh the page and try again.";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
+  const requiresCaptcha = isTurnstileConfigured();
+
+  const handleCaptchaUnavailable = useCallback(() => {
+    setError(CAPTCHA_UNAVAILABLE_MESSAGE);
+  }, []);
+
+  function resetCaptcha() {
+    if (!requiresCaptcha) {
+      return;
+    }
+    setCaptchaToken(null);
+    setCaptchaResetKey((current) => current + 1);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
     setError(null);
+
+    const captchaTokenForRequest = requiresCaptcha ? captchaToken ?? undefined : undefined;
+    if (requiresCaptcha && !captchaTokenForRequest) {
+      setError(CAPTCHA_REQUIRED_MESSAGE);
+      return;
+    }
 
     startTransition(async () => {
       let client;
@@ -27,10 +52,20 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      const { error: resetError } = await client.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: buildAuthRedirectUrl("/reset-password"),
-      });
+      let resetResult;
+      try {
+        resetResult = await client.auth.resetPasswordForEmail(email.trim(), {
+          captchaToken: captchaTokenForRequest,
+          redirectTo: buildAuthRedirectUrl("/reset-password"),
+        });
+      } catch {
+        resetCaptcha();
+        setError(AUTH_FEEDBACK.connectionFailure);
+        return;
+      }
+      resetCaptcha();
 
+      const { error: resetError } = resetResult;
       if (resetError) {
         setError(getPasswordResetErrorMessage(resetError));
         return;
@@ -98,8 +133,15 @@ export default function ForgotPasswordPage() {
                 />
               </div>
 
+              <TurnstileChallenge
+                action="password_reset"
+                onTokenChange={setCaptchaToken}
+                onUnavailable={handleCaptchaUnavailable}
+                resetKey={captchaResetKey}
+              />
+
               <div className="form-actions">
-                <button type="submit" className="cta" disabled={isPending}>
+                <button type="submit" className="cta" disabled={isPending || (requiresCaptcha && !captchaToken)}>
                   {isPending ? "Sending..." : "Send reset link"}
                 </button>
                 <Link href="/login" className="ghost-button">

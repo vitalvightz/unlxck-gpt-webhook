@@ -1,10 +1,24 @@
+{
+    servers {
+        0rtt off
+        max_header_size 32KB
+        timeouts {
+            read_header 10s
+            idle 2m
+        }
+    }
+}
+
 {$API_DOMAIN} {
     encode zstd gzip
 
     header {
+        -Server
+        Cache-Control "no-store"
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
+        X-Robots-Tag "noindex, nofollow, noarchive"
         Referrer-Policy "no-referrer"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
     }

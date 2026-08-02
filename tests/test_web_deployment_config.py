@@ -10,6 +10,10 @@ WEB_ROOT = REPO_ROOT / "web"
 NEXT_CONFIG_SOURCE = (WEB_ROOT / "next.config.ts").read_text()
 ROOT_LAYOUT_SOURCE = (WEB_ROOT / "app" / "layout.tsx").read_text(encoding="utf-8")
 PROXY_SOURCE = (WEB_ROOT / "proxy.ts").read_text()
+AUTH_FORM_SOURCE = (WEB_ROOT / "components" / "auth-form.tsx").read_text(encoding="utf-8")
+TURNSTILE_SOURCE = (WEB_ROOT / "components" / "turnstile-challenge.tsx").read_text(encoding="utf-8")
+FORGOT_PASSWORD_SOURCE = (WEB_ROOT / "app" / "forgot-password" / "page.tsx").read_text(encoding="utf-8")
+ENV_EXAMPLE_SOURCE = (WEB_ROOT / ".env.local.example").read_text(encoding="utf-8")
 
 
 def _expected_destination(api_base_url: str) -> str:
@@ -54,7 +58,6 @@ def test_next_config_sets_baseline_security_headers():
         "Permissions-Policy",
     ):
         assert header_name in NEXT_CONFIG_SOURCE, f"missing security header: {header_name}"
-    # Header values
     assert "DENY" in NEXT_CONFIG_SOURCE
     assert "nosniff" in NEXT_CONFIG_SOURCE
     assert "strict-origin-when-cross-origin" in NEXT_CONFIG_SOURCE
@@ -73,12 +76,30 @@ def test_csp_uses_per_request_nonce_for_next_hydration_scripts():
     assert "'unsafe-inline'" not in PROXY_SOURCE.split("script-src", 1)[1].split("style-src", 1)[0]
 
 
+def test_turnstile_is_csp_allowlisted_and_optional_until_configured():
+    assert "NEXT_PUBLIC_TURNSTILE_SITE_KEY" in ENV_EXAMPLE_SOURCE
+    assert "NEXT_PUBLIC_TURNSTILE_SITE_KEY" in TURNSTILE_SOURCE
+    assert "if (!TURNSTILE_SITE_KEY)" in TURNSTILE_SOURCE
+    assert "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" in TURNSTILE_SOURCE
+
+    assert "https://challenges.cloudflare.com" in PROXY_SOURCE
+    assert "frame-src https://challenges.cloudflare.com" in PROXY_SOURCE
+
+
+def test_all_supabase_email_auth_requests_forward_turnstile_token():
+    for source in (AUTH_FORM_SOURCE, FORGOT_PASSWORD_SOURCE):
+        assert "TurnstileChallenge" in source
+        assert "captchaToken" in source
+
+    assert "client.auth.signUp" in AUTH_FORM_SOURCE
+    assert "client.auth.signInWithPassword" in AUTH_FORM_SOURCE
+    assert "client.auth.signInWithOtp" in AUTH_FORM_SOURCE
+    assert "client.auth.resetPasswordForEmail" in FORGOT_PASSWORD_SOURCE
+
+
 def test_delete_plan_uses_shared_request_pipeline():
     api_client_source = (WEB_ROOT / "lib" / "api.ts").read_text()
-    # deletePlan must route through requestVoid (which wraps the shared
-    # executeRequest pipeline) rather than calling fetch directly.
     assert "requestVoid" in api_client_source
-    # Ensure the old direct-fetch path is gone.
     delete_section_start = api_client_source.find("export async function deletePlan")
     assert delete_section_start != -1
     next_export = api_client_source.find("\nexport ", delete_section_start + 1)
