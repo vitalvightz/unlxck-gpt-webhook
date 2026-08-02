@@ -81,6 +81,21 @@ def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeyp
     assert PLAN_READY_TAG in captured[0]
 
 
+def test_transient_plan_ready_failure_keeps_device_and_retries(vapid_env, monkeypatch):
+    store = FakeStore()
+    _subscription(store, endpoint="https://push.example/retryable")
+    outcomes = iter([None, True])
+    monkeypatch.setattr(
+        push_notifications,
+        "send_push_to_subscription",
+        lambda *_args: next(outcomes),
+    )
+
+    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-retry") == 0
+    assert list(store.push_subscriptions) == ["https://push.example/retryable"]
+    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-retry") == 1
+
+
 def test_plan_ready_push_respects_account_preference(vapid_env, monkeypatch):
     store = FakeStore()
     _subscription(store)
