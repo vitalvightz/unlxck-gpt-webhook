@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from api.services import push_notifications
 from api.services.intelligent_notifications import CoachingDispatchResult
 from api.services.morning_push import is_morning_push_due, run_morning_push_sweep
-from api.services.notification_foundation import update_notification_preferences
+from api.services.notification_foundation import (
+    NotificationCandidate,
+    update_notification_preferences,
+)
 from api.services.push_notifications import (
     MORNING_CHECKIN_TAG,
     PLAN_READY_TAG,
     build_push_payload,
+    dispatch_push_candidate,
     push_notifications_configured,
     send_plan_ready_push,
     send_push_to_profile,
@@ -52,7 +56,7 @@ def test_send_push_to_profile_sends_and_prunes_dead_endpoints(vapid_env, monkeyp
     _subscription(store, endpoint="https://push.example/alive")
     _subscription(store, endpoint="https://push.example/dead")
 
-    def fake_send(subscription, payload):
+    def fake_send(subscription, payload, **_kwargs):
         return subscription["endpoint"].endswith("alive")
 
     monkeypatch.setattr(push_notifications, "send_push_to_subscription", fake_send)
@@ -69,7 +73,7 @@ def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeyp
     _subscription(store)
     captured: list[str] = []
 
-    def fake_send(subscription, payload):
+    def fake_send(subscription, payload, **_kwargs):
         captured.append(payload)
         return True
 
@@ -82,6 +86,35 @@ def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeyp
     assert PLAN_READY_TAG in captured[0]
 
 
+def test_candidate_expiry_bounds_web_push_ttl(vapid_env, monkeypatch):
+    store = FakeStore()
+    _subscription(store)
+    captured_ttls: list[int] = []
+
+    def fake_send(_subscription, _payload, *, ttl_seconds):
+        captured_ttls.append(ttl_seconds)
+        return True
+
+    monkeypatch.setattr(push_notifications, "send_push_to_subscription", fake_send)
+    now = datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc)
+    candidate = NotificationCandidate(
+        profile_id="athlete-1",
+        notification_type="ttl_test",
+        category="checkin_reminders",
+        priority=50,
+        title="Check in",
+        body="Give me the latest before we train.",
+        url="/today#today-checkin",
+        tag="ttl-test",
+        dedupe_key="ttl-test:2026-08-02",
+        expires_at=now + timedelta(minutes=5),
+        timezone_name="UTC",
+    )
+
+    assert dispatch_push_candidate(store, candidate, now_utc=now) == 1
+    assert captured_ttls == [300]
+
+
 def test_transient_plan_ready_failure_keeps_device_and_retries(vapid_env, monkeypatch):
     store = FakeStore()
     _subscription(store, endpoint="https://push.example/retryable")
@@ -89,7 +122,7 @@ def test_transient_plan_ready_failure_keeps_device_and_retries(vapid_env, monkey
     monkeypatch.setattr(
         push_notifications,
         "send_push_to_subscription",
-        lambda *_args: next(outcomes),
+        lambda *_args, **_kwargs: next(outcomes),
     )
 
     assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-retry") == 0
@@ -104,7 +137,7 @@ def test_plan_ready_push_respects_account_preference(vapid_env, monkeypatch):
     monkeypatch.setattr(
         push_notifications,
         "send_push_to_subscription",
-        lambda *_args: pytest.fail("disabled category must not send"),
+        lambda *_args, **_kwargs: pytest.fail("disabled category must not send"),
     )
     assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-10") == 0
 
@@ -286,7 +319,7 @@ def test_morning_checkin_payload_targets_today(vapid_env, monkeypatch):
     monkeypatch.setattr(
         push_notifications,
         "send_push_to_subscription",
-        lambda _sub, payload: captured.append(payload) or True,
+        lambda _sub, payload, **_kwargs: captured.append(payload) or True,
     )
     from api.services.push_notifications import send_morning_checkin_push
 
