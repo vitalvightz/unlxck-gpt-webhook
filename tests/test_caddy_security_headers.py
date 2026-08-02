@@ -11,6 +11,7 @@ from fastapi.openapi.docs import (
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CADDYFILE_SOURCE = (REPO_ROOT / "Caddyfile").read_text(encoding="utf-8")
+COMPOSE_SOURCE = (REPO_ROOT / "compose.yaml").read_text(encoding="utf-8")
 
 
 def _documentation_csp_directives() -> dict[str, set[str]]:
@@ -33,14 +34,17 @@ def _origins(urls: list[str]) -> set[str]:
 
 def test_production_caddyfile_preserves_api_proxy_and_security_headers():
     shared_headers = (
+        'Cache-Control "no-store"',
         'Strict-Transport-Security "max-age=31536000; includeSubDomains"',
         'X-Content-Type-Options "nosniff"',
         'X-Frame-Options "DENY"',
+        'X-Robots-Tag "noindex, nofollow, noarchive"',
         'Referrer-Policy "no-referrer"',
         'Permissions-Policy "camera=(), microphone=(), geolocation=()"',
     )
 
     assert "header {" in CADDYFILE_SOURCE
+    assert "-Server" in CADDYFILE_SOURCE
     for header in shared_headers:
         assert header in CADDYFILE_SOURCE
 
@@ -73,6 +77,19 @@ def test_production_caddyfile_preserves_api_proxy_and_security_headers():
         "format json",
     ):
         assert preserved_directive in CADDYFILE_SOURCE
+
+
+def test_cloudflare_facing_origin_rejects_early_data_and_unnecessary_http3_port():
+    for directive in (
+        "0rtt off",
+        "max_header_size 32KB",
+        "read_header 10s",
+        "idle 2m",
+    ):
+        assert directive in CADDYFILE_SOURCE
+
+    assert '"443:443"' in COMPOSE_SOURCE
+    assert '"443:443/udp"' not in COMPOSE_SOURCE
 
 
 def test_documentation_csp_allows_fastapi_default_assets():
