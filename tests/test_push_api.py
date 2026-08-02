@@ -4,6 +4,19 @@ from support import _build_client
 
 ATHLETE_HEADERS = {"Authorization": "Bearer athlete-token"}
 
+DEFAULT_PREFERENCES = {
+    "push_enabled": True,
+    "session_reminders": True,
+    "checkin_reminders": True,
+    "injury_followups": True,
+    "plan_update_alerts": True,
+    "progress_milestones": True,
+    "coach_messages": True,
+    "quiet_hours_enabled": True,
+    "quiet_hours_start": "22:00",
+    "quiet_hours_end": "07:00",
+}
+
 
 def _subscribe_payload(endpoint: str = "https://push.example/browser-1") -> dict:
     return {
@@ -13,25 +26,77 @@ def _subscribe_payload(endpoint: str = "https://push.example/browser-1") -> dict
     }
 
 
-def test_push_settings_reports_server_configuration(monkeypatch):
+def test_push_settings_reports_server_configuration_and_preferences(monkeypatch):
     client, _store, _ = _build_client()
 
     monkeypatch.delenv("UNLXCK_VAPID_PRIVATE_KEY", raising=False)
     monkeypatch.delenv("UNLXCK_VAPID_PUBLIC_KEY", raising=False)
     disabled = client.get("/api/push/settings", headers=ATHLETE_HEADERS)
     assert disabled.status_code == 200
-    assert disabled.json() == {"enabled": False, "public_key": ""}
+    assert disabled.json() == {
+        "enabled": False,
+        "public_key": "",
+        "preferences": DEFAULT_PREFERENCES,
+    }
 
     monkeypatch.setenv("UNLXCK_VAPID_PRIVATE_KEY", "private")
     monkeypatch.setenv("UNLXCK_VAPID_PUBLIC_KEY", "public-key")
     enabled = client.get("/api/push/settings", headers=ATHLETE_HEADERS)
     assert enabled.status_code == 200
-    assert enabled.json() == {"enabled": True, "public_key": "public-key"}
+    assert enabled.json() == {
+        "enabled": True,
+        "public_key": "public-key",
+        "preferences": DEFAULT_PREFERENCES,
+    }
 
 
 def test_push_settings_requires_auth():
     client, _store, _ = _build_client()
     assert client.get("/api/push/settings").status_code in (401, 403)
+    assert client.put("/api/push/preferences", json={"checkin_reminders": False}).status_code in (401, 403)
+
+
+def test_notification_preferences_round_trip_is_account_scoped():
+    client, _store, _ = _build_client()
+
+    updated = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={
+            "checkin_reminders": False,
+            "progress_milestones": False,
+            "quiet_hours_start": "23:15",
+            "quiet_hours_end": "06:30",
+        },
+    )
+    assert updated.status_code == 200
+    payload = updated.json()
+    assert payload["checkin_reminders"] is False
+    assert payload["progress_milestones"] is False
+    assert payload["plan_update_alerts"] is True
+    assert payload["quiet_hours_start"] == "23:15"
+    assert payload["quiet_hours_end"] == "06:30"
+
+    settings = client.get("/api/push/settings", headers=ATHLETE_HEADERS)
+    assert settings.status_code == 200
+    assert settings.json()["preferences"] == payload
+
+    admin_settings = client.get(
+        "/api/push/settings",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert admin_settings.status_code == 200
+    assert admin_settings.json()["preferences"] == DEFAULT_PREFERENCES
+
+
+def test_notification_preferences_validate_quiet_hour_format():
+    client, _store, _ = _build_client()
+    response = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"quiet_hours_start": "25:00"},
+    )
+    assert response.status_code == 422
 
 
 def test_subscribe_and_unsubscribe_round_trip():
