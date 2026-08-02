@@ -168,8 +168,6 @@ def test_coaching_sweep_sends_one_profile_decision_and_stamps_morning(vapid_env,
 
     def fake_dispatch(inner_store, *, profile_id, timezone_name, now_utc):
         calls.append(profile_id)
-        if profile_id != "athlete-1":
-            return None
         row = inner_store.list_push_subscriptions(profile_id)[0]
         if row.get("morning_last_sent_day"):
             return None
@@ -179,8 +177,8 @@ def test_coaching_sweep_sends_one_profile_decision_and_stamps_morning(vapid_env,
     now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
 
     assert run_morning_push_sweep(store, now_utc=now) == 1
-    assert set(calls) == {"athlete-1", "athlete-2"}
-    assert len(calls) == 2
+    # Los Angeles is 01:00 local and is skipped before Today state is loaded.
+    assert calls == ["athlete-1"]
     assert (
         store.push_subscriptions["https://push.example/utc"]["morning_last_sent_day"]
         == "2026-07-21"
