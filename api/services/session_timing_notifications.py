@@ -190,7 +190,15 @@ def _timed_session_candidate(
     if preferred_at is None:
         return None
     local_now = _local_now(now_utc, timezone_name)
-    window_start = preferred_at - SESSION_REMINDER_LEAD
+
+    # At exactly 03:00 the new training day does not exist until rollover, so a
+    # GREEN/MODIFY/PULL BACK decision cannot truthfully be current at 02:30. A
+    # 03:00 session is therefore eligible from 03:00 onward, while every other
+    # saved time keeps the normal 30-minute lead.
+    is_rollover_session = (
+        preferred_at.hour == TRAINING_DAY_ROLLOVER_HOUR and preferred_at.minute == 0
+    )
+    window_start = preferred_at if is_rollover_session else preferred_at - SESSION_REMINDER_LEAD
     window_end = preferred_at + SESSION_REMINDER_GRACE
     if not (window_start <= local_now < window_end):
         return None
