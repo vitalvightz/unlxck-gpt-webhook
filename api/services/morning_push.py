@@ -1,10 +1,10 @@
-"""Daily profile-level morning notification sweep in athlete-local time.
+"""Profile-level coaching notification sweep in athlete-local time.
 
-Subscriptions still carry the device timezone captured at opt-in, but the sweep
-now chooses one canonical subscription per profile, creates one coaching
-decision, and lets the notification delivery ledger fan that decision out to all
-current devices. Per-device morning stamps remain as a compatibility hint; the
-profile-level ledger is the authoritative dedupe boundary.
+The worker still calls the historical morning-sweep entrypoint every ten minutes,
+but candidate timing is now state-aware: morning safety/readiness decisions only
+exist in the morning window, while an unfinished started session can produce one
+later logging reminder. The delivery ledger remains the authoritative dedupe
+boundary across devices, retries and worker restarts.
 """
 
 from __future__ import annotations
@@ -17,13 +17,19 @@ from zoneinfo import ZoneInfo
 
 from api.store import AppStore
 
-from .push_notifications import push_notifications_configured, send_morning_checkin_push
+from .intelligent_notifications import (
+    MORNING_NOTIFICATION_TYPES,
+    dispatch_coaching_notification,
+)
+from .push_notifications import push_notifications_configured
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MORNING_PUSH_LOCAL_HOUR = 7
 MORNING_SWEEP_BATCH_SIZE = 500
 DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR = 11
+SESSION_LOG_SWEEP_START_LOCAL_HOUR = 12
+SESSION_LOG_SWEEP_END_LOCAL_HOUR = 22
 
 
 def _int_env(name: str, default: int, *, minimum: int = 0, maximum: int = 23) -> int:
@@ -67,7 +73,7 @@ def is_morning_push_due(
     local_hour: int,
     cutoff_local_hour: int,
 ) -> str | None:
-    """Return the athlete-local ISO date to stamp when a nudge is due, else None."""
+    """Compatibility helper: return the athlete-local morning date when due."""
 
     local_now = _local_now(subscription, now_utc)
     if not (local_hour <= local_now.hour < cutoff_local_hour):
@@ -102,12 +108,11 @@ def _list_canonical_profile_subscriptions(store: AppStore) -> list[dict[str, Any
             if not isinstance(subscription, dict):
                 continue
             profile_id = str(subscription.get("profile_id") or "").strip()
-            # A missing profile id should not happen in production, but keep an
-            # isolated key so a malformed row cannot suppress another athlete.
-            key = profile_id or f"subscription:{subscription.get('id') or subscription.get('endpoint')}"
-            current = canonical.get(key)
+            if not profile_id:
+                continue
+            current = canonical.get(profile_id)
             if current is None or _canonical_subscription_is_newer(subscription, current):
-                canonical[key] = subscription
+                canonical[profile_id] = subscription
         if len(batch) < MORNING_SWEEP_BATCH_SIZE:
             break
         after_id = str(batch[-1].get("id") or "")
@@ -116,20 +121,14 @@ def _list_canonical_profile_subscriptions(store: AppStore) -> list[dict[str, Any
     return list(canonical.values())
 
 
-def _cutoff_utc(
-    subscription: dict[str, Any],
-    *,
-    now_utc: datetime,
-    cutoff_local_hour: int,
-) -> datetime:
-    local_now = _local_now(subscription, now_utc)
-    local_cutoff = local_now.replace(
-        hour=cutoff_local_hour,
-        minute=0,
-        second=0,
-        microsecond=0,
+def _coaching_window_is_open(local_now: datetime) -> bool:
+    morning_open = morning_push_local_hour() <= local_now.hour < morning_push_cutoff_local_hour()
+    session_log_open = (
+        SESSION_LOG_SWEEP_START_LOCAL_HOUR
+        <= local_now.hour
+        < SESSION_LOG_SWEEP_END_LOCAL_HOUR
     )
-    return local_cutoff.astimezone(timezone.utc)
+    return morning_open or session_log_open
 
 
 def _mark_profile_morning_sent(
@@ -138,8 +137,10 @@ def _mark_profile_morning_sent(
     *,
     local_day: str,
 ) -> None:
+    """Maintain the legacy device stamp; the profile ledger owns real dedupe."""
+
     profile_id = str(subscription.get("profile_id") or "").strip()
-    rows = store.list_push_subscriptions(profile_id) if profile_id else [subscription]
+    rows = store.list_push_subscriptions(profile_id)
     for row in rows:
         subscription_id = str(row.get("id") or "")
         if subscription_id:
@@ -151,13 +152,11 @@ def run_morning_push_sweep(
     *,
     now_utc: datetime | None = None,
 ) -> int:
-    """Send at most one morning decision per profile and local day. Never raises."""
+    """Resolve and send at most one coaching decision per profile. Never raises."""
 
     if not morning_push_enabled():
         return 0
     now = now_utc or datetime.now(timezone.utc)
-    local_hour = morning_push_local_hour()
-    cutoff = morning_push_cutoff_local_hour()
 
     try:
         canonical_subscriptions = _list_canonical_profile_subscriptions(store)
@@ -167,35 +166,33 @@ def run_morning_push_sweep(
 
     sent = 0
     for subscription in canonical_subscriptions:
+        profile_id = str(subscription.get("profile_id") or "").strip()
+        timezone_name = str(subscription.get("timezone") or "").strip() or "UTC"
+        local_now = _local_now(subscription, now)
+        if not _coaching_window_is_open(local_now):
+            continue
         try:
-            local_day = is_morning_push_due(
-                subscription,
-                now_utc=now,
-                local_hour=local_hour,
-                cutoff_local_hour=cutoff,
-            )
-            if local_day is None:
-                continue
-            delivered = send_morning_checkin_push(
+            result = dispatch_coaching_notification(
                 store,
-                subscription,
-                local_day=local_day,
+                profile_id=profile_id,
+                timezone_name=timezone_name,
                 now_utc=now,
-                expires_at=_cutoff_utc(
-                    subscription,
-                    now_utc=now,
-                    cutoff_local_hour=cutoff,
-                ),
             )
-            if delivered > 0:
-                sent += delivered
-                _mark_profile_morning_sent(store, subscription, local_day=local_day)
+            if result is None or result.delivered_count <= 0:
+                continue
+            sent += result.delivered_count
+            if result.notification_type in MORNING_NOTIFICATION_TYPES:
+                _mark_profile_morning_sent(
+                    store,
+                    subscription,
+                    local_day=local_now.date().isoformat(),
+                )
         except Exception:  # noqa: BLE001 - one bad profile must not stop the sweep
             logger.exception(
-                "[morning_push] sweep failed for profile_id=%s subscription_id=%s",
-                subscription.get("profile_id"),
+                "[morning_push] coaching sweep failed profile_id=%s subscription_id=%s",
+                profile_id,
                 subscription.get("id"),
             )
     if sent:
-        logger.info("[morning_push] sweep sent=%s", sent)
+        logger.info("[morning_push] coaching sweep sent=%s", sent)
     return sent

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -25,6 +26,7 @@ from api.store import AppStore
 logger = logging.getLogger(__name__)
 
 DEFAULT_VAPID_SUBJECT = "mailto:unlxckedmind@gmail.com"
+DEFAULT_PUSH_TTL_SECONDS = 12 * 3600
 
 PLAN_READY_TAG = "plan-ready"
 MORNING_CHECKIN_TAG = "morning-checkin"
@@ -62,6 +64,21 @@ def build_push_payload(*, title: str, body: str, url: str, tag: str) -> str:
     return json.dumps({"title": title, "body": body, "url": url, "tag": tag})
 
 
+def _remaining_push_ttl_seconds(*, expires_at: datetime, now_utc: datetime) -> int:
+    """Candidate lifetime bounded by the existing 12-hour transport ceiling."""
+
+    expires = expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    reference = now_utc
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+    remaining = math.ceil(
+        (expires.astimezone(timezone.utc) - reference.astimezone(timezone.utc)).total_seconds()
+    )
+    return max(0, min(DEFAULT_PUSH_TTL_SECONDS, remaining))
+
+
 def _endpoint_is_gone(exc: Exception) -> bool:
     response = getattr(exc, "response", None)
     status_code = getattr(response, "status_code", None)
@@ -71,6 +88,8 @@ def _endpoint_is_gone(exc: Exception) -> bool:
 def send_push_to_subscription(
     subscription: dict[str, Any],
     payload: str,
+    *,
+    ttl_seconds: int = DEFAULT_PUSH_TTL_SECONDS,
 ) -> bool | None:
     """Send one push without raising.
 
@@ -98,7 +117,7 @@ def send_push_to_subscription(
             data=payload,
             vapid_private_key=vapid_private_key(),
             vapid_claims={"sub": vapid_subject()},
-            ttl=12 * 3600,
+            ttl=max(0, min(DEFAULT_PUSH_TTL_SECONDS, int(ttl_seconds))),
             timeout=10,
         )
         return True
@@ -126,6 +145,8 @@ def _send_payload_to_profile(
     store: AppStore,
     profile_id: str,
     payload: str,
+    *,
+    ttl_seconds: int = DEFAULT_PUSH_TTL_SECONDS,
 ) -> tuple[int, int, int]:
     try:
         subscriptions = store.list_push_subscriptions(profile_id)
@@ -140,7 +161,11 @@ def _send_payload_to_profile(
         if not isinstance(subscription, dict):
             continue
         attempted += 1
-        outcome = send_push_to_subscription(subscription, payload)
+        outcome = send_push_to_subscription(
+            subscription,
+            payload,
+            ttl_seconds=ttl_seconds,
+        )
         if outcome is True:
             sent += 1
         elif outcome is False:
@@ -204,6 +229,19 @@ def dispatch_push_candidate(
     if prepared is None:
         return 0
     selected, claim = prepared
+    ttl_seconds = _remaining_push_ttl_seconds(
+        expires_at=selected.expires_at,
+        now_utc=reference,
+    )
+    if ttl_seconds <= 0:
+        finalize_notification_delivery(
+            store,
+            claim,
+            status="failed",
+            delivered_count=0,
+            error_code="expired_before_delivery",
+        )
+        return 0
     payload = build_push_payload(
         title=selected.title,
         body=selected.body,
@@ -214,6 +252,7 @@ def dispatch_push_candidate(
         store,
         selected.profile_id,
         payload,
+        ttl_seconds=ttl_seconds,
     )
     if sent <= 0:
         final_status = "failed"
@@ -242,11 +281,12 @@ def dispatch_push_candidate(
     )
     if sent:
         logger.info(
-            "[push] sent type=%s profile_id=%s count=%s attempt=%s",
+            "[push] sent type=%s profile_id=%s count=%s attempt=%s ttl_seconds=%s",
             selected.notification_type,
             selected.profile_id,
             sent,
             claim.attempt_count,
+            ttl_seconds,
         )
     return sent
 

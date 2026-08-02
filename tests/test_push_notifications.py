@@ -1,16 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from api.services import push_notifications
+from api.services.intelligent_notifications import CoachingDispatchResult
 from api.services.morning_push import is_morning_push_due, run_morning_push_sweep
-from api.services.notification_foundation import update_notification_preferences
+from api.services.notification_foundation import (
+    NotificationCandidate,
+    update_notification_preferences,
+)
 from api.services.push_notifications import (
     MORNING_CHECKIN_TAG,
     PLAN_READY_TAG,
     build_push_payload,
+    dispatch_push_candidate,
     push_notifications_configured,
     send_plan_ready_push,
     send_push_to_profile,
@@ -51,7 +56,7 @@ def test_send_push_to_profile_sends_and_prunes_dead_endpoints(vapid_env, monkeyp
     _subscription(store, endpoint="https://push.example/alive")
     _subscription(store, endpoint="https://push.example/dead")
 
-    def fake_send(subscription, payload):
+    def fake_send(subscription, payload, **_kwargs):
         return subscription["endpoint"].endswith("alive")
 
     monkeypatch.setattr(push_notifications, "send_push_to_subscription", fake_send)
@@ -68,7 +73,7 @@ def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeyp
     _subscription(store)
     captured: list[str] = []
 
-    def fake_send(subscription, payload):
+    def fake_send(subscription, payload, **_kwargs):
         captured.append(payload)
         return True
 
@@ -81,6 +86,35 @@ def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeyp
     assert PLAN_READY_TAG in captured[0]
 
 
+def test_candidate_expiry_bounds_web_push_ttl(vapid_env, monkeypatch):
+    store = FakeStore()
+    _subscription(store)
+    captured_ttls: list[int] = []
+
+    def fake_send(_subscription, _payload, *, ttl_seconds):
+        captured_ttls.append(ttl_seconds)
+        return True
+
+    monkeypatch.setattr(push_notifications, "send_push_to_subscription", fake_send)
+    now = datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc)
+    candidate = NotificationCandidate(
+        profile_id="athlete-1",
+        notification_type="ttl_test",
+        category="checkin_reminders",
+        priority=50,
+        title="Check in",
+        body="Give me the latest before we train.",
+        url="/today#today-checkin",
+        tag="ttl-test",
+        dedupe_key="ttl-test:2026-08-02",
+        expires_at=now + timedelta(minutes=5),
+        timezone_name="UTC",
+    )
+
+    assert dispatch_push_candidate(store, candidate, now_utc=now) == 1
+    assert captured_ttls == [300]
+
+
 def test_transient_plan_ready_failure_keeps_device_and_retries(vapid_env, monkeypatch):
     store = FakeStore()
     _subscription(store, endpoint="https://push.example/retryable")
@@ -88,7 +122,7 @@ def test_transient_plan_ready_failure_keeps_device_and_retries(vapid_env, monkey
     monkeypatch.setattr(
         push_notifications,
         "send_push_to_subscription",
-        lambda *_args: next(outcomes),
+        lambda *_args, **_kwargs: next(outcomes),
     )
 
     assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-retry") == 0
@@ -103,7 +137,7 @@ def test_plan_ready_push_respects_account_preference(vapid_env, monkeypatch):
     monkeypatch.setattr(
         push_notifications,
         "send_push_to_subscription",
-        lambda *_args: pytest.fail("disabled category must not send"),
+        lambda *_args, **_kwargs: pytest.fail("disabled category must not send"),
     )
     assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-10") == 0
 
@@ -116,7 +150,7 @@ def test_push_payload_is_json_with_expected_fields():
     assert decoded == {"title": "T", "body": "B", "url": "/today", "tag": "x"}
 
 
-# --- morning sweep -----------------------------------------------------------
+# --- worker coaching sweep ---------------------------------------------------
 
 
 def _due_check(subscription: dict, *, at: str) -> str | None:
@@ -137,12 +171,9 @@ def test_morning_push_due_respects_local_window():
 
 
 def test_morning_push_due_uses_device_timezone():
-    # 13:00 UTC is 06:00 in Los Angeles (UTC-7 in July): not yet due there.
     sub = {"timezone": "America/Los_Angeles", "morning_last_sent_day": None}
     assert _due_check(sub, at="2026-07-21T13:00:00") is None
-    # 14:30 UTC is 07:30 local: due, stamped with the LOCAL date.
     assert _due_check(sub, at="2026-07-21T14:30:00") == "2026-07-21"
-    # Tokyo (UTC+9): 22:30 UTC on the 20th is 07:30 on the 21st locally.
     tokyo = {"timezone": "Asia/Tokyo", "morning_last_sent_day": None}
     assert _due_check(tokyo, at="2026-07-20T22:30:00") == "2026-07-21"
 
@@ -155,49 +186,40 @@ def test_morning_push_due_dedupes_per_local_day_and_tolerates_bad_timezone():
     assert _due_check(unknown, at="2026-07-21T08:00:00") == "2026-07-21"
 
 
-def test_morning_sweep_sends_once_and_stamps(vapid_env, monkeypatch):
+def test_coaching_sweep_sends_one_profile_decision_and_stamps_morning(vapid_env, monkeypatch):
     from api.services import morning_push
 
     store = FakeStore()
     _subscription(store, profile_id="athlete-1", endpoint="https://push.example/utc", timezone="UTC")
-    # Different profile: not yet morning in Los Angeles at 08:00 UTC.
     _subscription(
         store,
         profile_id="athlete-2",
         endpoint="https://push.example/la",
         timezone="America/Los_Angeles",
     )
+    calls: list[str] = []
 
-    sends: list[str] = []
+    def fake_dispatch(inner_store, *, profile_id, timezone_name, now_utc):
+        calls.append(profile_id)
+        row = inner_store.list_push_subscriptions(profile_id)[0]
+        if row.get("morning_last_sent_day"):
+            return None
+        return CoachingDispatchResult("readiness_checkin", 1)
 
-    def fake_send(inner_store, subscription, **_kwargs):
-        sends.append(subscription["endpoint"])
-        return 1
-
-    monkeypatch.setattr(morning_push, "send_morning_checkin_push", fake_send)
+    monkeypatch.setattr(morning_push, "dispatch_coaching_notification", fake_dispatch)
     now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
 
     assert run_morning_push_sweep(store, now_utc=now) == 1
-    assert sends == ["https://push.example/utc"]
+    # Los Angeles is 01:00 local and is skipped before Today state is loaded.
+    assert calls == ["athlete-1"]
     assert (
         store.push_subscriptions["https://push.example/utc"]["morning_last_sent_day"]
         == "2026-07-21"
     )
     assert run_morning_push_sweep(store, now_utc=now) == 0
-    assert sends == ["https://push.example/utc"]
 
 
-def test_morning_sweep_prunes_dead_endpoints(vapid_env, monkeypatch):
-    store = FakeStore()
-    _subscription(store, endpoint="https://push.example/dead", timezone="UTC")
-    monkeypatch.setattr(push_notifications, "send_push_to_subscription", lambda *_args: False)
-    now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
-
-    assert run_morning_push_sweep(store, now_utc=now) == 0
-    assert store.push_subscriptions == {}
-
-
-def test_morning_sweep_pages_past_one_batch(vapid_env, monkeypatch):
+def test_coaching_sweep_pages_every_profile(vapid_env, monkeypatch):
     from api.services import morning_push
 
     store = FakeStore()
@@ -209,51 +231,82 @@ def test_morning_sweep_pages_past_one_batch(vapid_env, monkeypatch):
             timezone="UTC",
         )
 
-    sends: list[str] = []
+    calls: list[str] = []
     monkeypatch.setattr(morning_push, "MORNING_SWEEP_BATCH_SIZE", 2)
     monkeypatch.setattr(
         morning_push,
-        "send_morning_checkin_push",
-        lambda _store, subscription, **_kwargs: sends.append(subscription["endpoint"]) or 1,
+        "dispatch_coaching_notification",
+        lambda _store, *, profile_id, **_kwargs: calls.append(profile_id)
+        or CoachingDispatchResult("readiness_checkin", 1),
     )
     now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
 
     assert run_morning_push_sweep(store, now_utc=now) == 5
-    assert len(sends) == 5
+    assert len(calls) == 5
 
 
-def test_morning_sweep_one_profile_fans_out_one_decision_to_all_devices(vapid_env, monkeypatch):
+def test_coaching_sweep_uses_one_canonical_timezone_hint_per_profile(vapid_env, monkeypatch):
+    from api.services import morning_push
+
     store = FakeStore()
     _subscription(store, endpoint="https://push.example/phone", timezone="UTC")
-    _subscription(store, endpoint="https://push.example/laptop", timezone="UTC")
-    sends: list[str] = []
+    _subscription(store, endpoint="https://push.example/laptop", timezone="Europe/London")
+    calls: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        push_notifications,
-        "send_push_to_subscription",
-        lambda subscription, _payload: sends.append(subscription["endpoint"]) or True,
+        morning_push,
+        "dispatch_coaching_notification",
+        lambda _store, *, profile_id, timezone_name, **_kwargs: calls.append(
+            (profile_id, timezone_name)
+        )
+        or None,
     )
-    now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
 
-    assert run_morning_push_sweep(store, now_utc=now) == 2
-    assert sorted(sends) == ["https://push.example/laptop", "https://push.example/phone"]
-    assert run_morning_push_sweep(store, now_utc=now) == 0
-    assert len(sends) == 2
+    run_morning_push_sweep(
+        store,
+        now_utc=datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc),
+    )
+    assert len(calls) == 1
+    assert calls[0][0] == "athlete-1"
 
 
-def test_morning_sweep_respects_checkin_preference(vapid_env, monkeypatch):
+def test_sweep_skips_today_state_reads_outside_action_windows(vapid_env, monkeypatch):
+    from api.services import morning_push
+
     store = FakeStore()
     _subscription(store, timezone="UTC")
-    update_notification_preferences(store, "athlete-1", {"checkin_reminders": False})
     monkeypatch.setattr(
-        push_notifications,
-        "send_push_to_subscription",
-        lambda *_args: pytest.fail("disabled category must not send"),
+        morning_push,
+        "dispatch_coaching_notification",
+        lambda *_args, **_kwargs: pytest.fail("outside-window state must not load"),
     )
-    now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
-    assert run_morning_push_sweep(store, now_utc=now) == 0
+
+    assert run_morning_push_sweep(
+        store,
+        now_utc=datetime(2026, 7, 21, 3, 0, tzinfo=timezone.utc),
+    ) == 0
+    assert run_morning_push_sweep(
+        store,
+        now_utc=datetime(2026, 7, 21, 23, 0, tzinfo=timezone.utc),
+    ) == 0
 
 
-def test_morning_sweep_disabled_without_keys(monkeypatch):
+def test_session_log_result_does_not_write_morning_stamp(vapid_env, monkeypatch):
+    from api.services import morning_push
+
+    store = FakeStore()
+    _subscription(store, timezone="UTC")
+    monkeypatch.setattr(
+        morning_push,
+        "dispatch_coaching_notification",
+        lambda *_args, **_kwargs: CoachingDispatchResult("session_log_due", 1),
+    )
+    now = datetime(2026, 7, 21, 19, 0, tzinfo=timezone.utc)
+
+    assert run_morning_push_sweep(store, now_utc=now) == 1
+    assert store.list_push_subscriptions("athlete-1")[0]["morning_last_sent_day"] is None
+
+
+def test_coaching_sweep_disabled_without_keys(monkeypatch):
     monkeypatch.delenv("UNLXCK_VAPID_PRIVATE_KEY", raising=False)
     monkeypatch.delenv("UNLXCK_VAPID_PUBLIC_KEY", raising=False)
     store = FakeStore()
@@ -266,7 +319,7 @@ def test_morning_checkin_payload_targets_today(vapid_env, monkeypatch):
     monkeypatch.setattr(
         push_notifications,
         "send_push_to_subscription",
-        lambda _sub, payload: captured.append(payload) or True,
+        lambda _sub, payload, **_kwargs: captured.append(payload) or True,
     )
     from api.services.push_notifications import send_morning_checkin_push
 

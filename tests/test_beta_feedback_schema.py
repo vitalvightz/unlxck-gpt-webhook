@@ -28,7 +28,15 @@ def test_feedback_tables_are_service_role_only_with_rls():
         assert "revoke all on public.beta_feedback from anon, authenticated;" in sql
         assert "revoke all on public.beta_feedback_rate_limits from anon, authenticated;" in sql
         assert "grant all on public.beta_feedback to service_role;" in sql
-        assert 'create policy' not in sql.split("alter table public.beta_feedback enable row level security;", 1)[1]
+        policy_statements = [
+            statement.lower()
+            for statement in sql.split(";")
+            if "create policy" in statement.lower()
+        ]
+        assert not any(
+            "on public.beta_feedback" in statement
+            for statement in policy_statements
+        )
 
 
 def test_feedback_rpc_is_atomic_configurable_and_private():
