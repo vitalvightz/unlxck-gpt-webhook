@@ -1,0 +1,54 @@
+name: Upgrade one-angle icons
+
+on:
+  push:
+    branches:
+      - codex/upgrade-one-angle-icons-20260802
+    paths:
+      - .github/workflows/upgrade-one-angle-icons.yml
+      - .github/scripts/upgrade_one_angle_icons.py
+
+permissions:
+  contents: write
+
+jobs:
+  upgrade-icons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/upgrade-one-angle-icons-20260802
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install image tooling
+        run: python -m pip install --disable-pip-version-check pillow cairosvg
+
+      - name: Generate and install icons
+        run: python .github/scripts/upgrade_one_angle_icons.py
+
+      - name: Verify requested assets
+        run: |
+          test -n "$(find . -path '*/public/brand/unlxck-one-angle-24.png' -print -quit)"
+          test -n "$(find . -path '*/public/brand/unlxck-one-angle-32.png' -print -quit)"
+          test -n "$(find . -path '*/public/brand/unlxck-one-angle-48.png' -print -quit)"
+          test -n "$(find . -path '*/public/brand/unlxck-one-angle-120.png' -print -quit)"
+
+      - name: Remove temporary migration files
+        run: |
+          rm .github/scripts/upgrade_one_angle_icons.py
+          rm .github/workflows/upgrade-one-angle-icons.yml
+
+      - name: Commit generated app changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "Upgrade app and landing icons"
+          git push origin HEAD:codex/upgrade-one-angle-icons-20260802
