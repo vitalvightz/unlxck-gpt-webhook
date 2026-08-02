@@ -20,15 +20,6 @@
     linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(13, 14, 17, 0.98));
 }
 
-/* PR #2185 replaced the bytes behind the legacy landing-page filename, but
- * Next/Image and browser caches can continue serving its previous optimized
- * response. Point the rendered mark at the canonical new asset URL so it gets
- * a fresh cache key while preserving the existing dimensions and layout.
- */
-.public-section-break-logo {
-  content: url("/brand/unlxck-codex-icon-upgrade/assets/brand/unlxck-mark-120.png");
-}
-
 /* `/` is session-dependent, but starts on the brand surface server-side. Hide
  * its workspace-specific loading card until auth resolves, then the client
  * reveals either the public landing page or the unchanged signed-in workspace.
