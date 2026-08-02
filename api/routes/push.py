@@ -28,6 +28,17 @@ def _preferences_unavailable(exc: NotificationStoreError) -> HTTPException:
     )
 
 
+def _preference_patch(request: NotificationPreferencesUpdate) -> dict:
+    """Preserve explicit null only for the optional preferred training time."""
+
+    raw = request.model_dump(exclude_unset=True)
+    return {
+        key: value
+        for key, value in raw.items()
+        if value is not None or key == "preferred_training_time"
+    }
+
+
 def build_push_router(*, require_profile, get_store) -> APIRouter:
     router = APIRouter()
 
@@ -54,12 +65,10 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
         store: AppStore = Depends(get_store),
     ) -> NotificationPreferences:
         try:
-            # exclude_unset preserves an explicitly supplied null training time,
-            # allowing the athlete to turn timed reminders back off.
             return update_notification_preferences(
                 store,
                 profile.athlete_id,
-                request.model_dump(exclude_unset=True),
+                _preference_patch(request),
             )
         except NotificationStoreError as exc:
             raise _preferences_unavailable(exc) from exc
