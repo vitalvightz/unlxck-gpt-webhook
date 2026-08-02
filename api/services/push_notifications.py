@@ -68,11 +68,17 @@ def _endpoint_is_gone(exc: Exception) -> bool:
     return status_code in (404, 410)
 
 
-def send_push_to_subscription(subscription: dict[str, Any], payload: str) -> bool:
-    """Send one push. Returns False when the endpoint is dead and should be pruned.
+def send_push_to_subscription(
+    subscription: dict[str, Any],
+    payload: str,
+) -> bool | None:
+    """Send one push without raising.
 
-    Any other failure (transient network, misconfiguration) logs and returns
-    True so the subscription is kept for future attempts. Never raises.
+    Returns ``True`` when the push service accepted the message, ``False`` only
+    for a missing/dead endpoint that should be pruned, and ``None`` for a
+    temporary or configuration failure. Keeping those outcomes separate lets
+    the delivery ledger retry transient failures without deleting the device or
+    falsely recording a successful notification.
     """
 
     endpoint = str(subscription.get("endpoint") or "")
@@ -101,7 +107,10 @@ def send_push_to_subscription(subscription: dict[str, Any], payload: str) -> boo
             from pywebpush import WebPushException
 
             if isinstance(exc, WebPushException) and _endpoint_is_gone(exc):
-                logger.info("[push] endpoint gone, pruning subscription_id=%s", subscription.get("id"))
+                logger.info(
+                    "[push] endpoint gone, pruning subscription_id=%s",
+                    subscription.get("id"),
+                )
                 return False
         except Exception:  # noqa: BLE001 - even the import must not break the caller
             pass
@@ -110,37 +119,43 @@ def send_push_to_subscription(subscription: dict[str, Any], payload: str) -> boo
             subscription.get("id"),
             type(exc).__name__,
         )
-        return True
+        return None
 
 
 def _send_payload_to_profile(
     store: AppStore,
     profile_id: str,
     payload: str,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     try:
         subscriptions = store.list_push_subscriptions(profile_id)
     except Exception:  # noqa: BLE001 - lookups must not break the triggering flow
         logger.exception("[push] subscription lookup failed profile_id=%s", profile_id)
-        return 0, 0
+        return 0, 0, 1
 
     attempted = 0
     sent = 0
+    transient_failures = 0
     for subscription in subscriptions:
         if not isinstance(subscription, dict):
             continue
         attempted += 1
-        if send_push_to_subscription(subscription, payload):
+        outcome = send_push_to_subscription(subscription, payload)
+        if outcome is True:
             sent += 1
-        else:
+        elif outcome is False:
             try:
-                store.delete_push_subscription_by_endpoint(str(subscription.get("endpoint") or ""))
+                store.delete_push_subscription_by_endpoint(
+                    str(subscription.get("endpoint") or "")
+                )
             except Exception:  # noqa: BLE001 - pruning is best-effort
                 logger.warning(
                     "[push] failed to prune dead endpoint subscription_id=%s",
                     subscription.get("id"),
                 )
-    return sent, attempted
+        else:
+            transient_failures += 1
+    return sent, attempted, transient_failures
 
 
 def send_push_to_profile(
@@ -164,7 +179,11 @@ def send_push_to_profile(
     if not profile_id:
         return 0
     payload = build_push_payload(title=title, body=body, url=url, tag=tag)
-    sent, _attempted = _send_payload_to_profile(store, profile_id, payload)
+    sent, _attempted, _transient_failures = _send_payload_to_profile(
+        store,
+        profile_id,
+        payload,
+    )
     if sent:
         logger.info("[push] sent tag=%s profile_id=%s count=%s", tag, profile_id, sent)
     return sent
@@ -191,13 +210,26 @@ def dispatch_push_candidate(
         url=_push_url(selected.url),
         tag=selected.tag,
     )
-    sent, attempted = _send_payload_to_profile(store, selected.profile_id, payload)
+    sent, attempted, transient_failures = _send_payload_to_profile(
+        store,
+        selected.profile_id,
+        payload,
+    )
     if sent <= 0:
         final_status = "failed"
-        error_code = "no_active_subscription" if attempted == 0 else "delivery_failed"
+        if attempted == 0:
+            error_code = "no_active_subscription"
+        elif transient_failures:
+            error_code = "delivery_failed"
+        else:
+            error_code = "dead_endpoint_pruned"
     elif sent < attempted:
         final_status = "partial"
-        error_code = "dead_endpoint_pruned"
+        error_code = (
+            "partial_delivery_failure"
+            if transient_failures
+            else "dead_endpoint_pruned"
+        )
     else:
         final_status = "sent"
         error_code = None
@@ -277,7 +309,8 @@ def send_morning_checkin_push(
             url=_push_url("/today"),
             tag=MORNING_CHECKIN_TAG,
         )
-        return 1 if send_push_to_subscription(subscription, payload) else 0
+        outcome = send_push_to_subscription(subscription, payload)
+        return 1 if outcome is True else 0
 
     candidate = NotificationCandidate(
         profile_id=profile_id,
