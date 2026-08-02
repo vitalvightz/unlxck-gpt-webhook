@@ -1,18 +1,9 @@
 """Best-effort web push delivery to athlete browsers.
 
-Sends VAPID-signed Web Push messages to the subscriptions saved by the PWA
-(``push_subscriptions``). Delivery is always best-effort and failure-isolated:
-a push must never break the flow that triggered it (plan approval, structured
-card landing, the morning sweep). Dead endpoints reported by the push service
-(404/410) are pruned so lists stay clean.
-
-Configuration (all optional — push is silently disabled when unset):
-  - ``UNLXCK_VAPID_PRIVATE_KEY``: base64url-encoded VAPID private key
-    (as produced by ``npx web-push generate-vapid-keys`` / ``vapid``).
-  - ``UNLXCK_VAPID_PUBLIC_KEY``: matching base64url public key; served to the
-    browser for ``PushManager.subscribe``.
-  - ``UNLXCK_VAPID_SUBJECT``: contact URI claim, defaults to the operator email.
-  - ``UNLXCK_PUSH_SITE_URL``: origin used to build notification deep links.
+Sends VAPID-signed Web Push messages to subscriptions saved by the PWA. Every
+account-level notification now passes through the notification foundation first:
+preferences, quiet hours, expiry, priority and a profile-level delivery claim are
+resolved before fan-out to the athlete's devices.
 """
 
 from __future__ import annotations
@@ -20,8 +11,15 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from api.services.notification_foundation import (
+    NotificationCandidate,
+    finalize_notification_delivery,
+    prepare_notification_delivery,
+)
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -34,8 +32,8 @@ MORNING_CHECKIN_TAG = "morning-checkin"
 PLAN_READY_TITLE = "Your camp is LXCKED IN"
 PLAN_READY_BODY = "Your final camp is live."
 
-MORNING_CHECKIN_TITLE = "Morning check-in"
-MORNING_CHECKIN_BODY = "Log how you're feeling before today's session."
+MORNING_CHECKIN_TITLE = "Check in before we train"
+MORNING_CHECKIN_BODY = "Give me sleep, body and pain so I can set today's call."
 
 
 def vapid_private_key() -> str:
@@ -70,11 +68,17 @@ def _endpoint_is_gone(exc: Exception) -> bool:
     return status_code in (404, 410)
 
 
-def send_push_to_subscription(subscription: dict[str, Any], payload: str) -> bool:
-    """Send one push. Returns False when the endpoint is dead and should be pruned.
+def send_push_to_subscription(
+    subscription: dict[str, Any],
+    payload: str,
+) -> bool | None:
+    """Send one push without raising.
 
-    Any other failure (transient network, misconfiguration) logs and returns
-    True so the subscription is kept for future attempts. Never raises.
+    Returns ``True`` when the push service accepted the message, ``False`` only
+    for a missing/dead endpoint that should be pruned, and ``None`` for a
+    temporary or configuration failure. Keeping those outcomes separate lets
+    the delivery ledger retry transient failures without deleting the device or
+    falsely recording a successful notification.
     """
 
     endpoint = str(subscription.get("endpoint") or "")
@@ -103,7 +107,10 @@ def send_push_to_subscription(subscription: dict[str, Any], payload: str) -> boo
             from pywebpush import WebPushException
 
             if isinstance(exc, WebPushException) and _endpoint_is_gone(exc):
-                logger.info("[push] endpoint gone, pruning subscription_id=%s", subscription.get("id"))
+                logger.info(
+                    "[push] endpoint gone, pruning subscription_id=%s",
+                    subscription.get("id"),
+                )
                 return False
         except Exception:  # noqa: BLE001 - even the import must not break the caller
             pass
@@ -112,7 +119,43 @@ def send_push_to_subscription(subscription: dict[str, Any], payload: str) -> boo
             subscription.get("id"),
             type(exc).__name__,
         )
-        return True
+        return None
+
+
+def _send_payload_to_profile(
+    store: AppStore,
+    profile_id: str,
+    payload: str,
+) -> tuple[int, int, int]:
+    try:
+        subscriptions = store.list_push_subscriptions(profile_id)
+    except Exception:  # noqa: BLE001 - lookups must not break the triggering flow
+        logger.exception("[push] subscription lookup failed profile_id=%s", profile_id)
+        return 0, 0, 1
+
+    attempted = 0
+    sent = 0
+    transient_failures = 0
+    for subscription in subscriptions:
+        if not isinstance(subscription, dict):
+            continue
+        attempted += 1
+        outcome = send_push_to_subscription(subscription, payload)
+        if outcome is True:
+            sent += 1
+        elif outcome is False:
+            try:
+                store.delete_push_subscription_by_endpoint(
+                    str(subscription.get("endpoint") or "")
+                )
+            except Exception:  # noqa: BLE001 - pruning is best-effort
+                logger.warning(
+                    "[push] failed to prune dead endpoint subscription_id=%s",
+                    subscription.get("id"),
+                )
+        else:
+            transient_failures += 1
+    return sent, attempted, transient_failures
 
 
 def send_push_to_profile(
@@ -124,10 +167,10 @@ def send_push_to_profile(
     url: str,
     tag: str,
 ) -> int:
-    """Send a push to every subscription the profile has. Returns the send count.
+    """Low-level push fan-out with no preference or ledger decision.
 
-    Best-effort throughout: a missing configuration or store failure logs and
-    returns 0. Dead endpoints are pruned as they are discovered.
+    Kept for isolated delivery tests and internal compatibility. Product-level
+    notifications should use :func:`dispatch_push_candidate` instead.
     """
 
     if not push_notifications_configured():
@@ -135,53 +178,152 @@ def send_push_to_profile(
     profile_id = str(profile_id or "").strip()
     if not profile_id:
         return 0
-    try:
-        subscriptions = store.list_push_subscriptions(profile_id)
-    except Exception:  # noqa: BLE001 - lookups must not break the triggering flow
-        logger.exception("[push] subscription lookup failed profile_id=%s", profile_id)
-        return 0
-
     payload = build_push_payload(title=title, body=body, url=url, tag=tag)
-    sent = 0
-    for subscription in subscriptions:
-        if not isinstance(subscription, dict):
-            continue
-        if send_push_to_subscription(subscription, payload):
-            sent += 1
-        else:
-            try:
-                store.delete_push_subscription_by_endpoint(str(subscription.get("endpoint") or ""))
-            except Exception:  # noqa: BLE001 - pruning is best-effort
-                logger.warning(
-                    "[push] failed to prune dead endpoint subscription_id=%s",
-                    subscription.get("id"),
-                )
+    sent, _attempted, _transient_failures = _send_payload_to_profile(
+        store,
+        profile_id,
+        payload,
+    )
     if sent:
         logger.info("[push] sent tag=%s profile_id=%s count=%s", tag, profile_id, sent)
     return sent
 
 
+def dispatch_push_candidate(
+    store: AppStore,
+    candidate: NotificationCandidate,
+    *,
+    now_utc: datetime | None = None,
+) -> int:
+    """Apply notification policy, claim one durable decision, then fan out."""
+
+    if not push_notifications_configured():
+        return 0
+    reference = now_utc or datetime.now(timezone.utc)
+    prepared = prepare_notification_delivery(store, [candidate], now_utc=reference)
+    if prepared is None:
+        return 0
+    selected, claim = prepared
+    payload = build_push_payload(
+        title=selected.title,
+        body=selected.body,
+        url=_push_url(selected.url),
+        tag=selected.tag,
+    )
+    sent, attempted, transient_failures = _send_payload_to_profile(
+        store,
+        selected.profile_id,
+        payload,
+    )
+    if sent <= 0:
+        final_status = "failed"
+        if attempted == 0:
+            error_code = "no_active_subscription"
+        elif transient_failures:
+            error_code = "delivery_failed"
+        else:
+            error_code = "dead_endpoint_pruned"
+    elif sent < attempted:
+        final_status = "partial"
+        error_code = (
+            "partial_delivery_failure"
+            if transient_failures
+            else "dead_endpoint_pruned"
+        )
+    else:
+        final_status = "sent"
+        error_code = None
+    finalize_notification_delivery(
+        store,
+        claim,
+        status=final_status,
+        delivered_count=sent,
+        error_code=error_code,
+    )
+    if sent:
+        logger.info(
+            "[push] sent type=%s profile_id=%s count=%s attempt=%s",
+            selected.notification_type,
+            selected.profile_id,
+            sent,
+            claim.attempt_count,
+        )
+    return sent
+
+
 def send_plan_ready_push(store: AppStore, *, athlete_id: str, plan_id: str) -> int:
-    """The lock-in card's "we'll notify you": the enhanced card just went live."""
+    """The enhanced camp card went live; dedupe once per athlete and plan."""
 
     plan_id = str(plan_id or "").strip()
-    return send_push_to_profile(
-        store,
-        athlete_id,
+    profile_id = str(athlete_id or "").strip()
+    if not profile_id:
+        return 0
+    candidate = NotificationCandidate(
+        profile_id=profile_id,
+        notification_type="plan_ready",
+        category="plan_update_alerts",
+        priority=40,
         title=PLAN_READY_TITLE,
         body=PLAN_READY_BODY,
-        url=_push_url(f"/plans/{plan_id}" if plan_id else "/plans"),
+        url=f"/plans/{plan_id}" if plan_id else "/plans",
         tag=PLAN_READY_TAG,
+        dedupe_key=f"plan-ready:{plan_id or 'latest'}",
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        # Plan completion is an explicit product event, not a routine coaching
+        # nudge. Preserve the current immediate alert behaviour.
+        respect_quiet_hours=False,
     )
+    return dispatch_push_candidate(store, candidate)
 
 
-def send_morning_checkin_push(store: AppStore, subscription: dict[str, Any]) -> bool:
-    """One morning nudge to one subscription. Returns False when it should be pruned."""
+def _local_day(now_utc: datetime, timezone_name: str) -> str:
+    try:
+        return now_utc.astimezone(ZoneInfo(timezone_name)).date().isoformat()
+    except Exception:  # noqa: BLE001
+        return now_utc.astimezone(timezone.utc).date().isoformat()
 
-    payload = build_push_payload(
+
+def send_morning_checkin_push(
+    store: AppStore,
+    subscription: dict[str, Any],
+    *,
+    local_day: str | None = None,
+    now_utc: datetime | None = None,
+    expires_at: datetime | None = None,
+) -> int:
+    """Submit one profile-level morning coaching candidate.
+
+    The delivery ledger decides once per profile/day, then the winning decision
+    fans out to every current device. A subscription without profile_id is only
+    supported for the low-level unit-test compatibility path.
+    """
+
+    reference = now_utc or datetime.now(timezone.utc)
+    profile_id = str(subscription.get("profile_id") or "").strip()
+    timezone_name = str(subscription.get("timezone") or "").strip() or "UTC"
+    day = str(local_day or "").strip() or _local_day(reference, timezone_name)
+    if not profile_id:
+        payload = build_push_payload(
+            title=MORNING_CHECKIN_TITLE,
+            body=MORNING_CHECKIN_BODY,
+            url=_push_url("/today"),
+            tag=MORNING_CHECKIN_TAG,
+        )
+        outcome = send_push_to_subscription(subscription, payload)
+        return 1 if outcome is True else 0
+
+    candidate = NotificationCandidate(
+        profile_id=profile_id,
+        notification_type="morning_checkin",
+        category="checkin_reminders",
+        priority=50,
         title=MORNING_CHECKIN_TITLE,
         body=MORNING_CHECKIN_BODY,
-        url=_push_url("/today"),
+        url="/today#today-checkin",
         tag=MORNING_CHECKIN_TAG,
+        dedupe_key=f"morning-checkin:{day}",
+        expires_at=expires_at or (reference + timedelta(hours=4)),
+        timezone_name=timezone_name,
+        respect_quiet_hours=True,
     )
-    return send_push_to_subscription(subscription, payload)
+    return dispatch_push_candidate(store, candidate, now_utc=reference)

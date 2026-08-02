@@ -1,13 +1,10 @@
-"""Daily morning check-in push, scheduled per-device in athlete-local time.
+"""Daily profile-level morning notification sweep in athlete-local time.
 
-The generation worker calls :func:`run_morning_push_sweep` periodically. Each
-subscription row carries the device's IANA timezone (captured at subscribe
-time); a nudge goes out once per athlete-local day, at or after the configured
-local morning hour. ``morning_last_sent_day`` on the row is the dedupe key, so
-the sweep is idempotent regardless of cadence and safe across restarts.
-
-A subscription with an unknown/empty timezone falls back to UTC rather than
-being skipped — a slightly offset nudge beats none.
+Subscriptions still carry the device timezone captured at opt-in, but the sweep
+now chooses one canonical subscription per profile, creates one coaching
+decision, and lets the notification delivery ledger fan that decision out to all
+current devices. Per-device morning stamps remain as a compatibility hint; the
+profile-level ledger is the authoritative dedupe boundary.
 """
 
 from __future__ import annotations
@@ -25,11 +22,7 @@ from .push_notifications import push_notifications_configured, send_morning_chec
 logger = logging.getLogger(__name__)
 
 DEFAULT_MORNING_PUSH_LOCAL_HOUR = 7
-# Keyset page size for walking the whole subscription table; the sweep keeps
-# paging until a short batch, so growth past any one page is never truncated.
 MORNING_SWEEP_BATCH_SIZE = 500
-# Past this local hour the nudge is stale: check-in value drops once the
-# training day is underway, and a "morning" ping in the evening reads as noise.
 DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR = 11
 
 
@@ -64,7 +57,7 @@ def _local_now(subscription: dict[str, Any], now_utc: datetime) -> datetime:
             return now_utc.astimezone(ZoneInfo(tz_name))
         except Exception:  # noqa: BLE001 - a bad device timezone must not kill the sweep
             logger.debug("[morning_push] unknown timezone %r; falling back to UTC", tz_name)
-    return now_utc
+    return now_utc.astimezone(timezone.utc)
 
 
 def is_morning_push_due(
@@ -85,16 +78,80 @@ def is_morning_push_due(
     return local_day
 
 
+def _canonical_subscription_is_newer(candidate: dict[str, Any], current: dict[str, Any]) -> bool:
+    """Prefer the most recently refreshed device as the profile timezone hint."""
+
+    candidate_updated = str(candidate.get("updated_at") or candidate.get("created_at") or "")
+    current_updated = str(current.get("updated_at") or current.get("created_at") or "")
+    if candidate_updated != current_updated:
+        return candidate_updated > current_updated
+    return str(candidate.get("id") or "") > str(current.get("id") or "")
+
+
+def _list_canonical_profile_subscriptions(store: AppStore) -> list[dict[str, Any]]:
+    canonical: dict[str, dict[str, Any]] = {}
+    after_id: str | None = None
+    while True:
+        batch = store.list_all_push_subscriptions(
+            limit=MORNING_SWEEP_BATCH_SIZE,
+            after_id=after_id,
+        )
+        if not batch:
+            break
+        for subscription in batch:
+            if not isinstance(subscription, dict):
+                continue
+            profile_id = str(subscription.get("profile_id") or "").strip()
+            # A missing profile id should not happen in production, but keep an
+            # isolated key so a malformed row cannot suppress another athlete.
+            key = profile_id or f"subscription:{subscription.get('id') or subscription.get('endpoint')}"
+            current = canonical.get(key)
+            if current is None or _canonical_subscription_is_newer(subscription, current):
+                canonical[key] = subscription
+        if len(batch) < MORNING_SWEEP_BATCH_SIZE:
+            break
+        after_id = str(batch[-1].get("id") or "")
+        if not after_id:
+            break
+    return list(canonical.values())
+
+
+def _cutoff_utc(
+    subscription: dict[str, Any],
+    *,
+    now_utc: datetime,
+    cutoff_local_hour: int,
+) -> datetime:
+    local_now = _local_now(subscription, now_utc)
+    local_cutoff = local_now.replace(
+        hour=cutoff_local_hour,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    return local_cutoff.astimezone(timezone.utc)
+
+
+def _mark_profile_morning_sent(
+    store: AppStore,
+    subscription: dict[str, Any],
+    *,
+    local_day: str,
+) -> None:
+    profile_id = str(subscription.get("profile_id") or "").strip()
+    rows = store.list_push_subscriptions(profile_id) if profile_id else [subscription]
+    for row in rows:
+        subscription_id = str(row.get("id") or "")
+        if subscription_id:
+            store.mark_push_subscription_morning_sent(subscription_id, sent_day=local_day)
+
+
 def run_morning_push_sweep(
     store: AppStore,
     *,
     now_utc: datetime | None = None,
 ) -> int:
-    """Send due morning nudges across all subscriptions. Returns the send count.
-
-    Never raises: each subscription is handled independently so one bad row
-    cannot stop the sweep, and any store failure logs and aborts quietly.
-    """
+    """Send at most one morning decision per profile and local day. Never raises."""
 
     if not morning_push_enabled():
         return 0
@@ -102,43 +159,14 @@ def run_morning_push_sweep(
     local_hour = morning_push_local_hour()
     cutoff = morning_push_cutoff_local_hour()
 
-    sent = 0
-    after_id: str | None = None
-    while True:
-        try:
-            batch = store.list_all_push_subscriptions(
-                limit=MORNING_SWEEP_BATCH_SIZE, after_id=after_id
-            )
-        except Exception:  # noqa: BLE001 - the sweep must never crash its host loop
-            logger.exception("[morning_push] subscription listing failed")
-            return sent
-        if not batch:
-            break
-        sent += _sweep_batch(
-            store, batch, now=now, local_hour=local_hour, cutoff=cutoff
-        )
-        if len(batch) < MORNING_SWEEP_BATCH_SIZE:
-            break
-        after_id = str(batch[-1].get("id") or "")
-        if not after_id:
-            break
-    if sent:
-        logger.info("[morning_push] sweep sent=%s", sent)
-    return sent
+    try:
+        canonical_subscriptions = _list_canonical_profile_subscriptions(store)
+    except Exception:  # noqa: BLE001 - the sweep must never crash its host loop
+        logger.exception("[morning_push] subscription listing failed")
+        return 0
 
-
-def _sweep_batch(
-    store: AppStore,
-    batch: list[dict[str, Any]],
-    *,
-    now: datetime,
-    local_hour: int,
-    cutoff: int,
-) -> int:
     sent = 0
-    for subscription in batch:
-        if not isinstance(subscription, dict):
-            continue
+    for subscription in canonical_subscriptions:
         try:
             local_day = is_morning_push_due(
                 subscription,
@@ -148,19 +176,26 @@ def _sweep_batch(
             )
             if local_day is None:
                 continue
-            # Stamp BEFORE sending: a crash between stamp and send costs one
-            # nudge, while the reverse order could re-ping a device on retry.
-            store.mark_push_subscription_morning_sent(
-                str(subscription.get("id") or ""), sent_day=local_day
+            delivered = send_morning_checkin_push(
+                store,
+                subscription,
+                local_day=local_day,
+                now_utc=now,
+                expires_at=_cutoff_utc(
+                    subscription,
+                    now_utc=now,
+                    cutoff_local_hour=cutoff,
+                ),
             )
-            if send_morning_checkin_push(store, subscription):
-                sent += 1
-            else:
-                store.delete_push_subscription_by_endpoint(
-                    str(subscription.get("endpoint") or "")
-                )
-        except Exception:  # noqa: BLE001 - one bad subscription must not stop the sweep
+            if delivered > 0:
+                sent += delivered
+                _mark_profile_morning_sent(store, subscription, local_day=local_day)
+        except Exception:  # noqa: BLE001 - one bad profile must not stop the sweep
             logger.exception(
-                "[morning_push] sweep failed for subscription_id=%s", subscription.get("id")
+                "[morning_push] sweep failed for profile_id=%s subscription_id=%s",
+                subscription.get("profile_id"),
+                subscription.get("id"),
             )
+    if sent:
+        logger.info("[morning_push] sweep sent=%s", sent)
     return sent
