@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 from api.services.notification_foundation import NotificationCandidate
 from api.services.push_notifications import dispatch_push_candidate
@@ -76,7 +76,7 @@ def build_level_up_candidate(
         profile_id=athlete_id,
         notification_type="xp_level_up",
         category="progress_milestones",
-        priority=60,
+        priority=50,
         title=f"Level {current_level[0]}: {current_level[1]}",
         body="Earned through completed work. See what moved you forward.",
         url="/#progress",
@@ -124,7 +124,6 @@ def dispatch_progress_award_notification(
 ) -> int:
     if not bool(award_result.get("awarded")):
         return 0
-    # Opening the app is not a milestone and must never create a push.
     if action == "daily_login":
         return 0
     reference = now_utc or datetime.now(timezone.utc)
@@ -151,7 +150,6 @@ def dispatch_progress_award_notification(
         candidates.append(level_candidate)
     if not candidates:
         return 0
-    # A level-up outranks the weekly recap if both happen on one award.
     selected = min(candidates, key=lambda candidate: candidate.priority)
     return dispatch_push_candidate(store, selected, now_utc=reference)
 
@@ -237,8 +235,6 @@ def send_coach_message_notification(
         dedupe_key=f"coach-message:{message_id}"[:160],
         expires_at=reference + timedelta(days=2),
         timezone_name=timezone_name,
-        # Even urgent coach copy is not an emergency-services channel. Respect
-        # the athlete's quiet hours and category opt-out.
         respect_quiet_hours=True,
     )
     return dispatch_push_candidate(store, candidate, now_utc=reference)
