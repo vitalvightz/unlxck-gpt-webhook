@@ -19,11 +19,12 @@ def _payload() -> dict:
 
 
 def test_coach_message_requires_effective_admin(monkeypatch):
-    client, _store, _ = _build_client()
+    client, store, _ = _build_client()
+    captured: list[dict] = []
     monkeypatch.setattr(
         push_routes,
         "send_coach_message_notification",
-        lambda *_args, **_kwargs: 1,
+        lambda *_args, **kwargs: captured.append(kwargs) or 1,
     )
 
     denied = client.post(
@@ -33,6 +34,15 @@ def test_coach_message_requires_effective_admin(monkeypatch):
     )
     assert denied.status_code == 403
 
+    malformed = client.post(
+        "/api/admin/notifications/coach-message",
+        headers=ATHLETE_HEADERS,
+        json={},
+    )
+    assert malformed.status_code == 403
+
+    store.profiles["athlete-1"]["athlete_timezone"] = "Europe/London"
+
     allowed = client.post(
         "/api/admin/notifications/coach-message",
         headers=ADMIN_HEADERS,
@@ -40,6 +50,7 @@ def test_coach_message_requires_effective_admin(monkeypatch):
     )
     assert allowed.status_code == 200
     assert allowed.json() == {"ok": True, "delivered_count": 1}
+    assert captured == [{**_payload(), "timezone_name": "Europe/London"}]
 
 
 def test_coach_message_rejects_external_or_oversized_copy():

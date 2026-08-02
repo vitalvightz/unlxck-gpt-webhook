@@ -20,7 +20,7 @@ from api.services.notification_foundation import (
 )
 from api.services.progress_notifications import send_coach_message_notification
 from api.services.push_notifications import push_notifications_configured, vapid_public_key
-from api.store import AppStore, is_effective_admin_profile
+from api.store import AppStore
 
 
 class CoachMessagePushRequest(BaseModel):
@@ -66,7 +66,7 @@ def _preference_patch(request: NotificationPreferencesUpdate) -> dict:
     }
 
 
-def build_push_router(*, require_profile, get_store) -> APIRouter:
+def build_push_router(*, require_profile, require_admin, get_store) -> APIRouter:
     router = APIRouter()
 
     @router.get("/api/push/settings", response_model=PushSettingsResponse)
@@ -129,14 +129,13 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
     @router.post("/api/admin/notifications/coach-message")
     def send_coach_message(
         request: CoachMessagePushRequest,
-        profile: ProfileRecord = Depends(require_profile),
+        _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> dict[str, int | bool]:
-        if not is_effective_admin_profile(profile, store):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="admin access required",
-            )
+        athlete = store.get_admin_athlete(request.athlete_id)
+        if not athlete:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        athlete_timezone = str(athlete.get("athlete_timezone") or "").strip() or "UTC"
         delivered = send_coach_message_notification(
             store,
             athlete_id=request.athlete_id,
@@ -144,6 +143,7 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
             title=request.title,
             body=request.body,
             url=request.url,
+            timezone_name=athlete_timezone,
             urgent=request.urgent,
         )
         return {"ok": True, "delivered_count": delivered}

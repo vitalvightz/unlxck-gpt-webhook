@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from api.services import push_notifications
+from api.services.notification_foundation import update_notification_preferences
 from api.services import progress_notifications
 from api.services.progress_notifications import (
     award_session_progress,
@@ -10,6 +12,7 @@ from api.services.progress_notifications import (
     resolve_xp_level,
     send_coach_message_notification,
 )
+from support import FakeStore
 
 
 class ProgressStore:
@@ -164,3 +167,51 @@ def test_coach_message_uses_explicit_copy_and_dedupe_key(monkeypatch):
     assert candidate.category == "coach_messages"
     assert candidate.dedupe_key == "coach-message:message-9"
     assert candidate.respect_quiet_hours is True
+
+
+def test_coach_message_respects_athlete_local_quiet_hours(monkeypatch):
+    monkeypatch.setenv("UNLXCK_VAPID_PRIVATE_KEY", "test-private-key")
+    monkeypatch.setenv("UNLXCK_VAPID_PUBLIC_KEY", "test-public-key")
+    store = FakeStore()
+    store.upsert_push_subscription(
+        "athlete-1",
+        {
+            "endpoint": "https://push.example/athlete-1",
+            "p256dh": "p256dh-key",
+            "auth": "auth-key",
+            "timezone": "Europe/London",
+        },
+    )
+    update_notification_preferences(
+        store,
+        "athlete-1",
+        {"quiet_hours_enabled": True, "quiet_hours_start": "22:00", "quiet_hours_end": "07:00"},
+    )
+    sent: list[str] = []
+    monkeypatch.setattr(
+        push_notifications,
+        "send_push_to_subscription",
+        lambda _subscription, payload, **_kwargs: sent.append(payload) or True,
+    )
+
+    assert send_coach_message_notification(
+        store,
+        athlete_id="athlete-1",
+        message_id="quiet-hours-message",
+        title="One change for today",
+        body="Keep the final round technical. Open Today before training.",
+        timezone_name="Europe/London",
+        now_utc=datetime(2026, 8, 2, 22, 30, tzinfo=timezone.utc),
+    ) == 0
+    assert sent == []
+
+    assert send_coach_message_notification(
+        store,
+        athlete_id="athlete-1",
+        message_id="daytime-message",
+        title="One change for today",
+        body="Keep the final round technical. Open Today before training.",
+        timezone_name="Europe/London",
+        now_utc=datetime(2026, 8, 2, 8, 30, tzinfo=timezone.utc),
+    ) == 1
+    assert len(sent) == 1
