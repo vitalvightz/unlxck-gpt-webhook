@@ -3,6 +3,15 @@ import { expect, test } from "@playwright/test";
 import { isolateFromNetwork } from "./support";
 
 const BASE_URL = "http://127.0.0.1:3100";
+const PRECACHED_STATIC_PATHS = new Set([
+  "/offline.html",
+  "/brand/unlxck-one-angle-192.png",
+  "/brand/unlxck-one-angle-512.png",
+  "/brand/unlxck-one-angle-180.png",
+  "/brand/unlxck-one-angle-48.png",
+  "/brand/unlxck-one-angle-32.png",
+  "/favicon.ico",
+]);
 
 test("manifest, service worker, icon, and offline assets are production-ready", async ({ request }) => {
   const manifestResponse = await request.get("/manifest.webmanifest");
@@ -78,9 +87,7 @@ test("root-scoped worker caches only the offline shell and static assets", async
   for (const value of cachedUrls) {
     const url = new URL(value);
     expect(
-      url.pathname === "/offline.html" ||
-        url.pathname.startsWith("/icons/") ||
-        url.pathname.startsWith("/_next/static/"),
+      PRECACHED_STATIC_PATHS.has(url.pathname) || url.pathname.startsWith("/_next/static/"),
       value,
     ).toBe(true);
   }
