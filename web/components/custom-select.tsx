@@ -136,6 +136,10 @@ export function CustomSelect({
   }
 
   function selectValue(nextValue: string) {
+    const option = optionList.find((item) => item.value === nextValue);
+    if (option?.disabled) {
+      return;
+    }
     onChange(nextValue);
     closeMenu({ restoreFocus: true });
   }
@@ -158,6 +162,12 @@ export function CustomSelect({
   }
 
   function handleOptionKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number, nextValue: string) {
+    const option = optionList[index];
+    if (option?.disabled) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setActiveIndex((current) => (current + 1) % optionList.length);
@@ -308,12 +318,19 @@ export function CustomSelect({
                         type="button"
                         role="option"
                         aria-selected={isSelected}
-                        className={`custom-select-option ${isSelected ? "custom-select-option-selected" : ""} ${isActive ? "custom-select-option-active" : ""}`.trim()}
+                        aria-disabled={option.disabled ? true : undefined}
+                        disabled={option.disabled}
+                        className={`custom-select-option ${isSelected ? "custom-select-option-selected" : ""} ${isActive ? "custom-select-option-active" : ""} ${option.disabled ? "custom-select-option-disabled" : ""}`.trim()}
                         onClick={() => selectValue(option.value)}
                         onKeyDown={(event) => handleOptionKeyDown(event, index, option.value)}
-                        onMouseEnter={() => setActiveIndex(index)}
+                        onMouseEnter={() => {
+                          if (!option.disabled) {
+                            setActiveIndex(index);
+                          }
+                        }}
                       >
                         <span className="custom-select-option-label">{option.label}</span>
+                        {option.disabled ? <span className="badge role-card-badge">🚫 Coming soon</span> : null}
                       </button>
                     );
                   })}
