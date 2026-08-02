@@ -1,0 +1,104 @@
+name: Configure Production Push Notifications
+
+on:
+  push:
+    branches:
+      - Main
+    paths:
+      - ".github/workflows/configure-push-notifications.yml"
+      - "scripts/ensure_vapid_env.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Share the deployment lock: environment changes and container recreation must
+# never run at the same time as a normal Hetzner deployment.
+concurrency:
+  group: hetzner-backend-deployment
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    name: Generate keys on Hetzner and reload services
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+      HETZNER_USER: ${{ secrets.HETZNER_USER }}
+      REMOTE_SCRIPT: /tmp/unlxck-ensure-vapid-${{ github.run_id }}.sh
+
+    steps:
+      - name: Check out setup script
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/unlxck_deploy
+          chmod 600 ~/.ssh/unlxck_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload setup script
+        run: |
+          set -euo pipefail
+          SCP="scp -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SCP scripts/ensure_vapid_env.sh "$HETZNER_USER@$HETZNER_HOST:$REMOTE_SCRIPT"
+
+      - name: Configure VAPID keys and reload backend
+        run: |
+          set -euo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SSH "$HETZNER_USER@$HETZNER_HOST" \
+            "REMOTE_SCRIPT='$REMOTE_SCRIPT' bash -s" <<'REMOTE_SCRIPT_BODY'
+              set -Eeuo pipefail
+              cleanup() { rm -f "$REMOTE_SCRIPT"; }
+              trap cleanup EXIT
+
+              cd /opt/unlxck
+              result="$(bash "$REMOTE_SCRIPT" /opt/unlxck/.env.production)"
+              echo "VAPID setup: ${result}"
+
+              # Recreate both processes so the new server-only environment is
+              # loaded. The key values are never printed or passed through GitHub.
+              docker compose up -d --force-recreate api worker
+
+              for attempt in $(seq 1 18); do
+                api_running="$(docker compose ps --status running -q api)"
+                worker_running="$(docker compose ps --status running -q worker)"
+                if [[ -n "$api_running" && -n "$worker_running" ]]; then
+                  break
+                fi
+                if [[ "$attempt" -eq 18 ]]; then
+                  echo "ERROR: API or worker failed to restart." >&2
+                  docker compose ps >&2
+                  docker compose logs --tail=150 api worker >&2
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              # Verify both containers received non-empty values without ever
+              # displaying either credential.
+              for service in api worker; do
+                docker compose exec -T "$service" sh -c \
+                  'test -n "$UNLXCK_VAPID_PRIVATE_KEY" && test -n "$UNLXCK_VAPID_PUBLIC_KEY"'
+              done
+
+              echo "Production Web Push credentials are configured in API and worker."
+              docker compose ps api worker
+          REMOTE_SCRIPT_BODY
+
+      - name: Remove uploaded script after failure
+        if: always()
+        run: |
+          set -uo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SSH "$HETZNER_USER@$HETZNER_HOST" "rm -f '$REMOTE_SCRIPT'" || true
