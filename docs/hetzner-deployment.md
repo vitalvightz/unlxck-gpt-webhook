@@ -27,6 +27,16 @@ APP_CORS_ORIGINS=https://your-frontend.example.com
 APP_ENV=production
 UNLXCK_ENV=production
 SENTRY_DSN=
+
+# Web Push notifications. Both keys must come from the same VAPID key pair.
+UNLXCK_VAPID_PRIVATE_KEY=
+UNLXCK_VAPID_PUBLIC_KEY=
+UNLXCK_VAPID_SUBJECT=mailto:ops@example.com
+UNLXCK_PUSH_SITE_URL=https://your-frontend.example.com
+UNLXCK_MORNING_PUSH_ENABLED=1
+UNLXCK_MORNING_PUSH_LOCAL_HOUR=7
+UNLXCK_MORNING_PUSH_CUTOFF_LOCAL_HOUR=11
+UNLXCK_MORNING_PUSH_SWEEP_INTERVAL_SECONDS=600
 ```
 
 Retain the generation timeout, rate-limit, feedback, and Stage 2 variables from `.env.example` that are used in production.
@@ -36,6 +46,57 @@ Protect the file:
 ```bash
 chmod 600 .env.production
 ```
+
+## Activate Web Push notifications
+
+The Web Push implementation is already part of the API, worker, PWA service worker, and Supabase schema. It remains silently disabled until both VAPID keys are present in `.env.production`.
+
+Generate one VAPID key pair on a trusted machine or directly on the server:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Copy the matching public and private keys into `.env.production`:
+
+```env
+UNLXCK_VAPID_PRIVATE_KEY=<private-key>
+UNLXCK_VAPID_PUBLIC_KEY=<public-key>
+UNLXCK_VAPID_SUBJECT=mailto:ops@example.com
+UNLXCK_PUSH_SITE_URL=https://your-production-pwa-origin.example.com
+```
+
+Rules:
+
+- Keep the private key server-only. Never commit it, expose it through a `NEXT_PUBLIC_*` variable, or place it in the frontend deployment.
+- Keep the same key pair across deployments. Replacing the pair invalidates existing browser subscriptions and requires users to opt in again.
+- Set `UNLXCK_PUSH_SITE_URL` to the canonical origin from which users install the PWA.
+- The current deployment workflow preserves `.env.production`; with the present architecture the VAPID keys belong on Hetzner, not in the repository.
+
+Recreate the API and worker containers so they read the new environment values:
+
+```bash
+cd /opt/unlxck
+docker compose up -d --force-recreate api worker
+docker compose ps
+```
+
+Verify the backend sees a complete key pair without printing either key:
+
+```bash
+docker compose exec api python -c "from api.services.push_notifications import push_notifications_configured; assert push_notifications_configured(); print('web push configured')"
+docker compose exec worker python -c "from api.services.push_notifications import push_notifications_configured; assert push_notifications_configured(); print('web push configured')"
+```
+
+Then validate the full flow:
+
+1. Sign in to the production PWA and open **Settings → Notifications**. The control must no longer say that notifications are disabled on the server.
+2. Install the PWA first on iPhone, then turn notifications on and grant browser permission.
+3. Confirm a row appears in Supabase `push_subscriptions` for that device.
+4. Complete a real plan-ready flow and confirm the notification opens the correct plan.
+5. Confirm the morning check-in nudge arrives once during the device-local configured window and does not repeat that day.
+
+There is currently no dedicated admin test-send endpoint, so production validation uses an opted-in device and the real plan-ready or morning flow.
 
 ## Server preparation
 
