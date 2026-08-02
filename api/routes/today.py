@@ -27,6 +27,7 @@ from api.models import (
 )
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
+from api.services.progress_notifications import award_session_progress
 from api.services.today_readiness_boundary import (
     build_today_command_view,
     resolve_today_landing,
@@ -64,8 +65,6 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=request_body.model_dump(),
         )
         record = _checkin_record(row)
-        # Backend-owned typed safety signal (additive to the response). Defaults
-        # keep the field set stable even if the signal is ever absent.
         signal = row.get("readiness_signal") or {}
         return TodayCheckinResponse(
             checkin=record,
@@ -114,8 +113,6 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> list[SessionCompletionRecordResponse]:
-        # History is System B only (session_completions). The legacy
-        # session_logs table has no web UI and stays out of this view.
         rows = store.list_session_completions(profile.athlete_id, limit=limit)
         return [SessionCompletionRecordResponse(**row) for row in rows]
 
@@ -147,8 +144,6 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> LandingResponse:
-        # A returning athlete has at least one persisted plan; cold users do not.
-        # get_latest_plan is a limit(1) lookup — cheaper than fetching all plans.
         has_interacted = store.get_latest_plan(profile.athlete_id) is not None
         decision = resolve_today_landing(
             store,
@@ -180,6 +175,14 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=request_body.model_dump(),
         )
         completion_status = completion_status_of(row)
+        # Best-effort and idempotent: XP/push failures must never undo the saved
+        # training record. Only done/modified sessions qualify inside the service.
+        award_session_progress(
+            store,
+            athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
+            completion=row,
+        )
         return SessionCompletionResponse(
             completion=row,
             completion_status=completion_status,

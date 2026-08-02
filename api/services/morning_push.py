@@ -18,6 +18,8 @@ from api.store import AppStore
 
 from .intelligent_notifications import (
     MORNING_NOTIFICATION_TYPES,
+    SESSION_LOG_END_HOUR,
+    SESSION_LOG_START_HOUR,
     dispatch_coaching_notification,
 )
 from .push_notifications import push_notifications_configured
@@ -131,6 +133,13 @@ def _mark_profile_morning_sent(
             store.mark_push_subscription_morning_sent(subscription_id, sent_day=local_day)
 
 
+def _is_routine_coaching_action_window(local_now: datetime) -> bool:
+    return (
+        morning_push_local_hour() <= local_now.hour < morning_push_cutoff_local_hour()
+        or SESSION_LOG_START_HOUR <= local_now.hour < SESSION_LOG_END_HOUR
+    )
+
+
 def run_morning_push_sweep(
     store: AppStore,
     *,
@@ -166,8 +175,9 @@ def run_morning_push_sweep(
                 sent += timed_result.delivered_count
                 continue
 
-            # Existing intelligent coaching candidates enforce their own morning
-            # and session-log action windows, so evaluating them here is safe.
+            if not _is_routine_coaching_action_window(local_now):
+                continue
+
             result = dispatch_coaching_notification(
                 store,
                 profile_id=profile_id,

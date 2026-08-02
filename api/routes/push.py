@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field, field_validator
 
 from api.models import (
     ProfileRecord,
@@ -17,8 +18,34 @@ from api.services.notification_foundation import (
     get_notification_preferences,
     update_notification_preferences,
 )
+from api.services.progress_notifications import send_coach_message_notification
 from api.services.push_notifications import push_notifications_configured, vapid_public_key
 from api.store import AppStore
+
+
+class CoachMessagePushRequest(BaseModel):
+    athlete_id: str = Field(min_length=1, max_length=80)
+    message_id: str = Field(min_length=1, max_length=120)
+    title: str = Field(min_length=1, max_length=40)
+    body: str = Field(min_length=1, max_length=90)
+    url: str = Field(default="/today", min_length=1, max_length=500)
+    urgent: bool = False
+
+    @field_validator("athlete_id", "message_id", "title", "body")
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("value is required")
+        return cleaned
+
+    @field_validator("url")
+    @classmethod
+    def validate_app_url(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned.startswith("/") or cleaned.startswith("//"):
+            raise ValueError("url must be an app-relative path")
+        return cleaned
 
 
 def _preferences_unavailable(exc: NotificationStoreError) -> HTTPException:
@@ -39,7 +66,7 @@ def _preference_patch(request: NotificationPreferencesUpdate) -> dict:
     }
 
 
-def build_push_router(*, require_profile, get_store) -> APIRouter:
+def build_push_router(*, require_profile, require_admin, get_store) -> APIRouter:
     router = APIRouter()
 
     @router.get("/api/push/settings", response_model=PushSettingsResponse)
@@ -98,5 +125,27 @@ def build_push_router(*, require_profile, get_store) -> APIRouter:
     ) -> dict[str, bool]:
         store.delete_push_subscription(profile.athlete_id, request.endpoint)
         return {"ok": True}
+
+    @router.post("/api/admin/notifications/coach-message")
+    def send_coach_message(
+        request: CoachMessagePushRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> dict[str, int | bool]:
+        athlete = store.get_admin_athlete(request.athlete_id)
+        if not athlete:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        athlete_timezone = str(athlete.get("athlete_timezone") or "").strip() or "UTC"
+        delivered = send_coach_message_notification(
+            store,
+            athlete_id=request.athlete_id,
+            message_id=request.message_id,
+            title=request.title,
+            body=request.body,
+            url=request.url,
+            timezone_name=athlete_timezone,
+            urgent=request.urgent,
+        )
+        return {"ok": True, "delivered_count": delivered}
 
     return router
