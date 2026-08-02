@@ -1,6 +1,7 @@
 export type IntakeOption = {
   label: string;
   value: string;
+  disabled?: boolean;
 };
 
 export const GUIDED_INJURY_SEVERITY_VALUES = ["low", "moderate", "high"] as const;
@@ -37,10 +38,10 @@ export function cycleGuidedInjurySeverity(value: string | null | undefined): Gui
 export const TECHNICAL_STYLE_OPTIONS: IntakeOption[] = [
   { label: "Boxing", value: "boxing" },
   { label: "Kickboxing", value: "kickboxing" },
-  { label: "Muay Thai", value: "muay_thai" },
+  { label: "Muay Thai", value: "muay_thai", disabled: true },
   { label: "MMA", value: "mma" },
-  { label: "Wrestling", value: "wrestling" },
-  { label: "BJJ", value: "bjj" },
+  { label: "Wrestling", value: "wrestling", disabled: true },
+  { label: "BJJ", value: "bjj", disabled: true },
 ];
 
 export const TACTICAL_STYLE_OPTIONS: IntakeOption[] = [
@@ -157,7 +158,7 @@ export function toggleListValue(values: string[], target: string): string[] {
 }
 
 export function retainKnownOptionValues(values: string[] | undefined, options: IntakeOption[]): string[] {
-  const knownValues = new Set(options.map((option) => option.value));
+  const knownValues = new Set(options.filter((option) => !option.disabled).map((option) => option.value));
   return (values ?? []).filter((value) => knownValues.has(value));
 }
 

@@ -73,6 +73,21 @@ export function CustomSelect({
   const triggerLabel = selectedLabel || placeholder;
   const hasValue = Boolean(value);
 
+  function findEnabledIndex(startIndex: number, direction: 1 | -1): number {
+    if (!optionList.length) {
+      return -1;
+    }
+
+    for (let offset = 0; offset < optionList.length; offset += 1) {
+      const index = (startIndex + offset * direction + optionList.length) % optionList.length;
+      if (!optionList[index]?.disabled) {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
   const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);
@@ -123,8 +138,11 @@ export function CustomSelect({
     }
     clearCloseTimer();
     updateMenuPosition();
-    const fallbackIndex = optionList.length > 0 ? 0 : -1;
-    setActiveIndex(preferredIndex ?? (selectedIndex >= 0 ? selectedIndex : fallbackIndex));
+    const requestedIndex = preferredIndex ?? (selectedIndex >= 0 ? selectedIndex : 0);
+    const nextIndex = optionList[requestedIndex]?.disabled
+      ? findEnabledIndex(requestedIndex, 1)
+      : requestedIndex;
+    setActiveIndex(nextIndex);
     if (!isMounted) {
       setIsMounted(true);
     }
@@ -136,6 +154,10 @@ export function CustomSelect({
   }
 
   function selectValue(nextValue: string) {
+    const option = optionList.find((item) => item.value === nextValue);
+    if (option?.disabled) {
+      return;
+    }
     onChange(nextValue);
     closeMenu({ restoreFocus: true });
   }
@@ -158,27 +180,33 @@ export function CustomSelect({
   }
 
   function handleOptionKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number, nextValue: string) {
+    const option = optionList[index];
+    if (option?.disabled) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveIndex((current) => (current + 1) % optionList.length);
+      setActiveIndex((current) => findEnabledIndex(current + 1, 1));
       return;
     }
 
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActiveIndex((current) => (current - 1 + optionList.length) % optionList.length);
+      setActiveIndex((current) => findEnabledIndex(current - 1, -1));
       return;
     }
 
     if (event.key === "Home") {
       event.preventDefault();
-      setActiveIndex(0);
+      setActiveIndex(findEnabledIndex(0, 1));
       return;
     }
 
     if (event.key === "End") {
       event.preventDefault();
-      setActiveIndex(optionList.length - 1);
+      setActiveIndex(findEnabledIndex(optionList.length - 1, -1));
       return;
     }
 
@@ -308,12 +336,19 @@ export function CustomSelect({
                         type="button"
                         role="option"
                         aria-selected={isSelected}
-                        className={`custom-select-option ${isSelected ? "custom-select-option-selected" : ""} ${isActive ? "custom-select-option-active" : ""}`.trim()}
+                        aria-disabled={option.disabled ? true : undefined}
+                        disabled={option.disabled}
+                        className={`custom-select-option ${isSelected ? "custom-select-option-selected" : ""} ${isActive ? "custom-select-option-active" : ""} ${option.disabled ? "custom-select-option-disabled" : ""}`.trim()}
                         onClick={() => selectValue(option.value)}
                         onKeyDown={(event) => handleOptionKeyDown(event, index, option.value)}
-                        onMouseEnter={() => setActiveIndex(index)}
+                        onMouseEnter={() => {
+                          if (!option.disabled) {
+                            setActiveIndex(index);
+                          }
+                        }}
                       >
                         <span className="custom-select-option-label">{option.label}</span>
+                        {option.disabled ? <span className="badge role-card-badge">🚫 Coming soon</span> : null}
                       </button>
                     );
                   })}
