@@ -179,7 +179,8 @@ def test_coaching_sweep_sends_one_profile_decision_and_stamps_morning(vapid_env,
     now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
 
     assert run_morning_push_sweep(store, now_utc=now) == 1
-    assert calls == ["athlete-1", "athlete-2"]
+    assert set(calls) == {"athlete-1", "athlete-2"}
+    assert len(calls) == 2
     assert (
         store.push_subscriptions["https://push.example/utc"]["morning_last_sent_day"]
         == "2026-07-21"
@@ -235,6 +236,27 @@ def test_coaching_sweep_uses_one_canonical_timezone_hint_per_profile(vapid_env, 
     )
     assert len(calls) == 1
     assert calls[0][0] == "athlete-1"
+
+
+def test_sweep_skips_today_state_reads_outside_action_windows(vapid_env, monkeypatch):
+    from api.services import morning_push
+
+    store = FakeStore()
+    _subscription(store, timezone="UTC")
+    monkeypatch.setattr(
+        morning_push,
+        "dispatch_coaching_notification",
+        lambda *_args, **_kwargs: pytest.fail("outside-window state must not load"),
+    )
+
+    assert run_morning_push_sweep(
+        store,
+        now_utc=datetime(2026, 7, 21, 3, 0, tzinfo=timezone.utc),
+    ) == 0
+    assert run_morning_push_sweep(
+        store,
+        now_utc=datetime(2026, 7, 21, 23, 0, tzinfo=timezone.utc),
+    ) == 0
 
 
 def test_session_log_result_does_not_write_morning_stamp(vapid_env, monkeypatch):
