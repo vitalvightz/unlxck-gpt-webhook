@@ -73,6 +73,21 @@ export function CustomSelect({
   const triggerLabel = selectedLabel || placeholder;
   const hasValue = Boolean(value);
 
+  function findEnabledIndex(startIndex: number, direction: 1 | -1): number {
+    if (!optionList.length) {
+      return -1;
+    }
+
+    for (let offset = 0; offset < optionList.length; offset += 1) {
+      const index = (startIndex + offset * direction + optionList.length) % optionList.length;
+      if (!optionList[index]?.disabled) {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
   const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);
@@ -123,8 +138,11 @@ export function CustomSelect({
     }
     clearCloseTimer();
     updateMenuPosition();
-    const fallbackIndex = optionList.length > 0 ? 0 : -1;
-    setActiveIndex(preferredIndex ?? (selectedIndex >= 0 ? selectedIndex : fallbackIndex));
+    const requestedIndex = preferredIndex ?? (selectedIndex >= 0 ? selectedIndex : 0);
+    const nextIndex = optionList[requestedIndex]?.disabled
+      ? findEnabledIndex(requestedIndex, 1)
+      : requestedIndex;
+    setActiveIndex(nextIndex);
     if (!isMounted) {
       setIsMounted(true);
     }
@@ -170,25 +188,25 @@ export function CustomSelect({
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveIndex((current) => (current + 1) % optionList.length);
+      setActiveIndex((current) => findEnabledIndex(current + 1, 1));
       return;
     }
 
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActiveIndex((current) => (current - 1 + optionList.length) % optionList.length);
+      setActiveIndex((current) => findEnabledIndex(current - 1, -1));
       return;
     }
 
     if (event.key === "Home") {
       event.preventDefault();
-      setActiveIndex(0);
+      setActiveIndex(findEnabledIndex(0, 1));
       return;
     }
 
     if (event.key === "End") {
       event.preventDefault();
-      setActiveIndex(optionList.length - 1);
+      setActiveIndex(findEnabledIndex(optionList.length - 1, -1));
       return;
     }
 
