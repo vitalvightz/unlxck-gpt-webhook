@@ -42,16 +42,14 @@ test("workspace routes resolve to the workspace surface", () => {
   assert.equal(getShellSurface("/today", true), "workspace");
 });
 
-test("the server commits the brand surface only for auth routes", () => {
+test("the server commits the brand surface for every public entry route", () => {
+  assert.equal(getServerShellSurface("/"), "brand", "/ should start without workspace chrome");
   for (const route of AUTH_ROUTES) {
     assert.equal(getServerShellSurface(route), "brand", `${route} should be SSR brand`);
   }
 });
 
-test("the server defers non-auth routes to the client (returns null)", () => {
-  // The homepage and workspace routes depend on the client session, which the
-  // server cannot know, so it must not commit a surface for them.
-  assert.equal(getServerShellSurface("/"), null);
+test("the server defers workspace routes to the client (returns null)", () => {
   assert.equal(getServerShellSurface("/plans"), null);
   assert.equal(getServerShellSurface(null), null);
   assert.equal(getServerShellSurface(undefined), null);
