@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useId,
   useRef,
@@ -25,10 +24,7 @@ type CustomSelectProps = {
   describedBy?: string;
 };
 
-type MenuPhase = "closed" | "opening" | "open" | "closing";
-
 const MENU_OFFSET = 8;
-const MENU_ANIMATION_MS = 140;
 const SHEET_MEDIA_QUERY = "(max-width: 720px)";
 
 export function CustomSelect({
@@ -46,18 +42,103 @@ export function CustomSelect({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const closeTimerRef = useRef<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [menuPhase, setMenuPhase] = useState<MenuPhase>("closed");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const [isSheetMode, setIsSheetMode] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
+  const optionList: IntakeOption[] = includeEmptyOption
+    ? [{ label: placeholder, value: "" }, ...options]
+    : options;
+  const selectedIndex = optionList.findIndex((option) => option.value === value);
+  const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
+  const triggerLabel = selectedLabel || placeholder;
+
+  const enabledIndices = optionList
+    .map((option, index) => (!option.disabled ? index : -1))
+    .filter((index) => index >= 0);
+
+  function nearestEnabledIndex(preferredIndex: number): number {
+    if (!enabledIndices.length) return -1;
+    if (enabledIndices.includes(preferredIndex)) return preferredIndex;
+    return enabledIndices.find((index) => index > preferredIndex) ?? enabledIndices[0];
+  }
+
+  function moveEnabled(current: number, direction: 1 | -1): number {
+    if (!enabledIndices.length) return -1;
+    const position = enabledIndices.indexOf(current);
+    if (position < 0) return direction === 1 ? enabledIndices[0] : enabledIndices[enabledIndices.length - 1];
+    return enabledIndices[(position + direction + enabledIndices.length) % enabledIndices.length];
+  }
+
+  function updateMenuPosition() {
+    if (isSheetMode) {
+      setMenuStyle({});
       return;
     }
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuStyle({ left: rect.left, top: rect.bottom + MENU_OFFSET, width: rect.width });
+  }
+
+  function closeMenu(restoreFocus = false) {
+    setIsOpen(false);
+    if (restoreFocus) requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
+  function openMenu(preferredIndex = selectedIndex >= 0 ? selectedIndex : 0) {
+    if (disabled) return;
+    updateMenuPosition();
+    setActiveIndex(nearestEnabledIndex(preferredIndex));
+    setIsOpen(true);
+  }
+
+  function selectOption(option: IntakeOption) {
+    if (option.disabled) return;
+    onChange(option.value);
+    closeMenu(true);
+  }
+
+  function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (disabled) return;
+    if (["Enter", " ", "ArrowDown"].includes(event.key)) {
+      event.preventDefault();
+      openMenu();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      openMenu(enabledIndices[enabledIndices.length - 1] ?? 0);
+    }
+  }
+
+  function handleOptionKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number, option: IntakeOption) {
+    if (option.disabled) {
+      event.preventDefault();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex(moveEnabled(index, 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex(moveEnabled(index, -1));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setActiveIndex(enabledIndices[0] ?? -1);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setActiveIndex(enabledIndices[enabledIndices.length - 1] ?? -1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectOption(option);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu(true);
+    } else if (event.key === "Tab") {
+      closeMenu();
+    }
+  }
+
+  useEffect(() => {
     const mediaQuery = window.matchMedia(SHEET_MEDIA_QUERY);
     const sync = () => setIsSheetMode(mediaQuery.matches);
     sync();
@@ -65,194 +146,28 @@ export function CustomSelect({
     return () => mediaQuery.removeEventListener("change", sync);
   }, []);
 
-  const optionList = includeEmptyOption
-    ? [{ label: placeholder, value: "" }, ...options]
-    : options;
-  const selectedIndex = optionList.findIndex((option) => option.value === value);
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
-  const triggerLabel = selectedLabel || placeholder;
-  const hasValue = Boolean(value);
-
-  const clearCloseTimer = useCallback(() => {
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-  }, []);
-
-  const updateMenuPosition = useCallback(() => {
-    if (isSheetMode) {
-      setMenuStyle({});
-      return;
-    }
-    if (!triggerRef.current) {
-      return;
-    }
-    const rect = triggerRef.current.getBoundingClientRect();
-    setMenuStyle({
-      left: rect.left,
-      top: rect.bottom + MENU_OFFSET,
-      width: rect.width,
-    });
-  }, [isSheetMode]);
-
-  const closeMenu = useCallback((options?: { restoreFocus?: boolean }) => {
-    const restoreFocus = options?.restoreFocus ?? false;
-    clearCloseTimer();
-    setIsOpen(false);
-    if (!isMounted) {
-      if (restoreFocus) {
-        triggerRef.current?.focus();
-      }
-      return;
-    }
-    setMenuPhase("closing");
-    closeTimerRef.current = window.setTimeout(() => {
-      setIsMounted(false);
-      setMenuPhase("closed");
-      closeTimerRef.current = null;
-      if (restoreFocus) {
-        triggerRef.current?.focus();
-      }
-    }, MENU_ANIMATION_MS);
-  }, [clearCloseTimer, isMounted]);
-
-  function openMenu(preferredIndex?: number) {
-    if (disabled) {
-      return;
-    }
-    clearCloseTimer();
-    updateMenuPosition();
-    const fallbackIndex = optionList.length > 0 ? 0 : -1;
-    setActiveIndex(preferredIndex ?? (selectedIndex >= 0 ? selectedIndex : fallbackIndex));
-    if (!isMounted) {
-      setIsMounted(true);
-    }
-    setIsOpen(true);
-    setMenuPhase("opening");
-    window.requestAnimationFrame(() => {
-      setMenuPhase("open");
-    });
-  }
-
-  function selectValue(nextValue: string) {
-    onChange(nextValue);
-    closeMenu({ restoreFocus: true });
-  }
-
-  function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    if (disabled) {
-      return;
-    }
-
-    if (["Enter", " ", "ArrowDown"].includes(event.key)) {
-      event.preventDefault();
-      openMenu(selectedIndex >= 0 ? selectedIndex : 0);
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      openMenu(selectedIndex >= 0 ? selectedIndex : optionList.length - 1);
-    }
-  }
-
-  function handleOptionKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number, nextValue: string) {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveIndex((current) => (current + 1) % optionList.length);
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveIndex((current) => (current - 1 + optionList.length) % optionList.length);
-      return;
-    }
-
-    if (event.key === "Home") {
-      event.preventDefault();
-      setActiveIndex(0);
-      return;
-    }
-
-    if (event.key === "End") {
-      event.preventDefault();
-      setActiveIndex(optionList.length - 1);
-      return;
-    }
-
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      selectValue(nextValue);
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeMenu({ restoreFocus: true });
-      return;
-    }
-
-    if (event.key === "Tab") {
-      closeMenu();
-      return;
-    }
-
-    setActiveIndex(index);
-  }
-
   useEffect(() => {
-    if (!isMounted) {
-      return;
-    }
-
+    if (!isOpen) return;
     updateMenuPosition();
-
-    function handlePointerDown(event: PointerEvent) {
+    const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
-      if (!target) {
-        return;
-      }
-      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) {
-        return;
-      }
+      if (!target || triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       closeMenu();
-    }
-
-    function handleViewportChange() {
-      if (!isOpen) {
-        return;
-      }
-      updateMenuPosition();
-    }
-
+    };
+    const handleViewport = () => updateMenuPosition();
     window.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
-
+    window.addEventListener("resize", handleViewport);
+    window.addEventListener("scroll", handleViewport, true);
     return () => {
       window.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
+      window.removeEventListener("resize", handleViewport);
+      window.removeEventListener("scroll", handleViewport, true);
     };
-  }, [closeMenu, isMounted, isOpen, updateMenuPosition]);
+  }, [isOpen, isSheetMode]);
 
   useEffect(() => {
-    if (!isOpen || activeIndex < 0) {
-      return;
-    }
-    const nextTarget = optionRefs.current[activeIndex];
-    if (nextTarget) {
-      nextTarget.focus({ preventScroll: true });
-    }
+    if (isOpen && activeIndex >= 0) optionRefs.current[activeIndex]?.focus({ preventScroll: true });
   }, [activeIndex, isOpen]);
-
-  useEffect(() => {
-    return () => {
-      clearCloseTimer();
-    };
-  }, [clearCloseTimer]);
 
   return (
     <>
@@ -261,7 +176,7 @@ export function CustomSelect({
         id={id}
         type="button"
         role="combobox"
-        className={`custom-select-trigger ${!hasValue ? "custom-select-trigger-placeholder" : ""}`.trim()}
+        className={`custom-select-trigger ${!value ? "custom-select-trigger-placeholder" : ""}`.trim()}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={menuId}
@@ -274,26 +189,20 @@ export function CustomSelect({
         <span className="custom-select-trigger-label">{triggerLabel}</span>
         <span className="custom-select-chevron" aria-hidden="true" />
       </button>
-      {isMounted
+
+      {isOpen
         ? createPortal(
             <>
               {isSheetMode ? (
-                <div
-                  className="custom-select-sheet-backdrop"
-                  data-state={menuPhase}
-                  aria-hidden="true"
-                  onClick={() => closeMenu()}
-                />
+                <div className="custom-select-sheet-backdrop" data-state="open" aria-hidden="true" onClick={() => closeMenu()} />
               ) : null}
               <div
                 ref={menuRef}
                 className={`custom-select-menu${isSheetMode ? " custom-select-menu-sheet" : ""}`}
-                data-state={menuPhase}
+                data-state="open"
                 style={menuStyle}
               >
-                {isSheetMode ? (
-                  <div className="custom-select-sheet-handle" aria-hidden="true" />
-                ) : null}
+                {isSheetMode ? <div className="custom-select-sheet-handle" aria-hidden="true" /> : null}
                 <div className="custom-select-menu-scroll" role="listbox" id={menuId} aria-labelledby={id}>
                   {optionList.map((option, index) => {
                     const isSelected = option.value === value;
@@ -301,19 +210,39 @@ export function CustomSelect({
                     return (
                       <button
                         key={`${option.value || "empty"}-${index}`}
-                        ref={(node) => {
-                          optionRefs.current[index] = node;
-                        }}
+                        ref={(node) => { optionRefs.current[index] = node; }}
                         id={`${menuId}-option-${index}`}
                         type="button"
                         role="option"
                         aria-selected={isSelected}
+                        aria-disabled={option.disabled || undefined}
+                        disabled={option.disabled}
+                        tabIndex={option.disabled ? -1 : undefined}
                         className={`custom-select-option ${isSelected ? "custom-select-option-selected" : ""} ${isActive ? "custom-select-option-active" : ""}`.trim()}
-                        onClick={() => selectValue(option.value)}
-                        onKeyDown={(event) => handleOptionKeyDown(event, index, option.value)}
-                        onMouseEnter={() => setActiveIndex(index)}
+                        style={option.disabled ? { opacity: 0.48, cursor: "not-allowed" } : undefined}
+                        onClick={() => selectOption(option)}
+                        onKeyDown={(event) => handleOptionKeyDown(event, index, option)}
+                        onMouseEnter={() => { if (!option.disabled) setActiveIndex(index); }}
                       >
                         <span className="custom-select-option-label">{option.label}</span>
+                        {option.disabledLabel ? (
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              marginLeft: "auto",
+                              border: "1px solid rgba(220, 38, 64, 0.35)",
+                              borderRadius: 999,
+                              padding: "0.2rem 0.5rem",
+                              color: "rgba(240, 154, 165, 0.9)",
+                              fontFamily: "IBM Plex Mono, monospace",
+                              fontSize: "0.68rem",
+                              letterSpacing: "0.08em",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {option.disabledLabel}
+                          </span>
+                        ) : null}
                       </button>
                     );
                   })}
