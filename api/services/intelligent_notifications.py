@@ -9,15 +9,15 @@ decision or completes an unfinished training record.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Mapping, Sequence
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 from api.contracts.command_view import CommandView
 from api.services.notification_foundation import (
     NotificationCandidate,
-    NotificationStoreError,
     get_notification_preferences,
     select_notification_candidate,
 )
@@ -27,8 +27,8 @@ from api.store import AppStore
 
 logger = logging.getLogger(__name__)
 
-MORNING_START_HOUR = 7
-MORNING_END_HOUR = 11
+DEFAULT_MORNING_START_HOUR = 7
+DEFAULT_MORNING_END_HOUR = 11
 SESSION_LOG_START_HOUR = 12
 SESSION_LOG_END_HOUR = 22
 SESSION_LOG_MIN_AGE = timedelta(minutes=90)
@@ -43,6 +43,23 @@ MORNING_NOTIFICATION_TYPES = frozenset(
 class CoachingDispatchResult:
     notification_type: str
     delivered_count: int
+
+
+def _env_hour(name: str, default: int) -> int:
+    raw = os.getenv(name, str(default)).strip()
+    try:
+        return min(23, max(0, int(raw)))
+    except ValueError:
+        logger.warning("[notification] invalid hour env %s=%r; using %s", name, raw, default)
+        return default
+
+
+def _morning_start_hour() -> int:
+    return _env_hour("UNLXCK_MORNING_PUSH_LOCAL_HOUR", DEFAULT_MORNING_START_HOUR)
+
+
+def _morning_end_hour() -> int:
+    return _env_hour("UNLXCK_MORNING_PUSH_CUTOFF_LOCAL_HOUR", DEFAULT_MORNING_END_HOUR)
 
 
 def _aware_utc(value: datetime) -> datetime:
@@ -87,7 +104,9 @@ def _today_is_finished(view: CommandView) -> bool:
 
 
 def _morning_window(local_now: datetime) -> bool:
-    return MORNING_START_HOUR <= local_now.hour < MORNING_END_HOUR
+    start = _morning_start_hour()
+    end = _morning_end_hour()
+    return start <= local_now.hour < end
 
 
 def _session_log_window(local_now: datetime) -> bool:
@@ -135,8 +154,6 @@ def _injury_needs_recheck(
     )
     if not actionable:
         return False
-    # A response already recorded today must not immediately trigger another
-    # "how is it?" notification. Silence means unchanged until tomorrow.
     updated_day = _local_day_of(
         injury.get("updated_at") or injury.get("created_at"),
         timezone_name,
@@ -191,6 +208,12 @@ def _injury_candidate(
             timezone_name=timezone_name,
         )
     ]
+    if view.today.injury_hold_exempt:
+        injuries = [
+            injury
+            for injury in injuries
+            if str(injury.get("surface_class") or "") == "surface_medical_review"
+        ]
     if not injuries:
         return None
     injury = max(injuries, key=_injury_rank)
@@ -217,6 +240,7 @@ def _recent_high_pain_completion(
     profile_id: str,
     *,
     training_day: str,
+    timezone_name: str,
     now_utc: datetime,
 ) -> dict[str, Any] | None:
     try:
@@ -224,10 +248,15 @@ def _recent_high_pain_completion(
     except Exception:  # noqa: BLE001 - missing context means silence, never a guess
         logger.exception("[notification] high-pain completion read failed profile_id=%s", profile_id)
         return None
+    try:
+        previous_day = (date.fromisoformat(training_day) - timedelta(days=1)).isoformat()
+    except ValueError:
+        previous_day = ""
     for row in rows or []:
         if not isinstance(row, Mapping):
             continue
-        if str(row.get("training_day") or "") == training_day:
+        row_day = str(row.get("training_day") or "")
+        if row_day == training_day:
             continue
         if str(row.get("status") or "") not in {"done", "modified"}:
             continue
@@ -238,9 +267,14 @@ def _recent_high_pain_completion(
         if pain_after < 7:
             continue
         completed_at = _parse_datetime(row.get("completed_at"))
-        if completed_at is not None:
+        if completed_at is None:
+            if row_day != previous_day:
+                continue
+        else:
             age = _aware_utc(now_utc) - completed_at
             if age < timedelta(0) or age > HIGH_PAIN_FOLLOWUP_MAX_AGE:
+                continue
+            if _local_day_of(completed_at, timezone_name) == training_day:
                 continue
         return dict(row)
     return None
@@ -257,14 +291,15 @@ def _high_pain_candidate(
 ) -> NotificationCandidate | None:
     if not _morning_window(local_now):
         return None
-    if not _active_plan(view) or view.today.recommendation_state != "not_checked_in":
+    if not _active_plan(view) or view.today.session_scope != "today":
         return None
-    if _today_is_finished(view):
+    if view.today.recommendation_state != "not_checked_in" or _today_is_finished(view):
         return None
     completion = _recent_high_pain_completion(
         store,
         profile_id,
         training_day=view.today.training_day,
+        timezone_name=timezone_name,
         now_utc=now_utc,
     )
     if completion is None:
@@ -362,6 +397,8 @@ def _session_log_candidate(
         return None
     started_at = _parse_datetime(completion.get("started_at"))
     if started_at is None:
+        return None
+    if _local_day_of(started_at, timezone_name) != view.today.training_day:
         return None
     age = _aware_utc(now_utc) - started_at
     if age < SESSION_LOG_MIN_AGE:
@@ -477,7 +514,8 @@ def dispatch_coaching_notification(
     try:
         preferences = get_notification_preferences(store, profile_id)
         selected = select_notification_candidate(candidates, preferences, now_utc=now_utc)
-    except NotificationStoreError:
+    except Exception:  # noqa: BLE001 - preference failure must fail closed
+        logger.exception("[notification] candidate arbitration failed profile_id=%s", profile_id)
         return None
     if selected is None:
         return None
