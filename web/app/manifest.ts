@@ -3,6 +3,9 @@ import type { MetadataRoute } from "next";
 const APP_DESCRIPTION =
   "Athlete-first fight camp planning, daily training intelligence, and coach review.";
 
+const APP_ICON_192 = "/brand/unlxck-one-angle-192.png";
+const APP_ICON_512 = "/brand/unlxck-one-angle-512.png";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
@@ -17,22 +20,16 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["fitness", "health", "sports"],
     icons: [
       {
-        src: "/icons/icon-192x192.png",
+        src: APP_ICON_192,
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/icon-512x512.png",
+        src: APP_ICON_512,
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
-      },
-      {
-        src: "/icons/icon-maskable-512x512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
       },
     ],
     shortcuts: [
@@ -41,21 +38,21 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: "Dashboard",
         description: "Open your athlete dashboard.",
         url: "/dashboard?source=pwa-shortcut",
-        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
+        icons: [{ src: APP_ICON_192, sizes: "192x192", type: "image/png" }],
       },
       {
         name: "Today",
         short_name: "Today",
         description: "Open today’s readiness and training command centre.",
         url: "/today?source=pwa-shortcut",
-        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
+        icons: [{ src: APP_ICON_192, sizes: "192x192", type: "image/png" }],
       },
       {
         name: "Plans",
         short_name: "Plans",
         description: "Open your active and saved fight camps.",
         url: "/plans?source=pwa-shortcut",
-        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
+        icons: [{ src: APP_ICON_192, sizes: "192x192", type: "image/png" }],
       },
     ],
   };
