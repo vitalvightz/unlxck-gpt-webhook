@@ -6,6 +6,7 @@ import pytest
 
 from api.services import push_notifications
 from api.services.morning_push import is_morning_push_due, run_morning_push_sweep
+from api.services.notification_foundation import update_notification_preferences
 from api.services.push_notifications import (
     MORNING_CHECKIN_TAG,
     PLAN_READY_TAG,
@@ -62,7 +63,7 @@ def test_send_push_to_profile_sends_and_prunes_dead_endpoints(vapid_env, monkeyp
     assert list(store.push_subscriptions) == ["https://push.example/alive"]
 
 
-def test_plan_ready_push_targets_the_plan_deep_link(vapid_env, monkeypatch):
+def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeypatch):
     store = FakeStore()
     _subscription(store)
     captured: list[str] = []
@@ -74,8 +75,22 @@ def test_plan_ready_push_targets_the_plan_deep_link(vapid_env, monkeypatch):
     monkeypatch.setattr(push_notifications, "send_push_to_subscription", fake_send)
 
     assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-9") == 1
+    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-9") == 0
+    assert len(captured) == 1
     assert "/plans/plan-9" in captured[0]
     assert PLAN_READY_TAG in captured[0]
+
+
+def test_plan_ready_push_respects_account_preference(vapid_env, monkeypatch):
+    store = FakeStore()
+    _subscription(store)
+    update_notification_preferences(store, "athlete-1", {"plan_update_alerts": False})
+    monkeypatch.setattr(
+        push_notifications,
+        "send_push_to_subscription",
+        lambda *_args: pytest.fail("disabled category must not send"),
+    )
+    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-10") == 0
 
 
 def test_push_payload_is_json_with_expected_fields():
@@ -129,15 +144,20 @@ def test_morning_sweep_sends_once_and_stamps(vapid_env, monkeypatch):
     from api.services import morning_push
 
     store = FakeStore()
-    _subscription(store, endpoint="https://push.example/utc", timezone="UTC")
-    # Not yet morning in Los Angeles at 08:00 UTC, so only the UTC device fires.
-    _subscription(store, endpoint="https://push.example/la", timezone="America/Los_Angeles")
+    _subscription(store, profile_id="athlete-1", endpoint="https://push.example/utc", timezone="UTC")
+    # Different profile: not yet morning in Los Angeles at 08:00 UTC.
+    _subscription(
+        store,
+        profile_id="athlete-2",
+        endpoint="https://push.example/la",
+        timezone="America/Los_Angeles",
+    )
 
     sends: list[str] = []
 
-    def fake_send(inner_store, subscription):
+    def fake_send(inner_store, subscription, **_kwargs):
         sends.append(subscription["endpoint"])
-        return True
+        return 1
 
     monkeypatch.setattr(morning_push, "send_morning_checkin_push", fake_send)
     now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
@@ -148,19 +168,14 @@ def test_morning_sweep_sends_once_and_stamps(vapid_env, monkeypatch):
         store.push_subscriptions["https://push.example/utc"]["morning_last_sent_day"]
         == "2026-07-21"
     )
-    # Second sweep in the same window: dedupe keeps it silent.
     assert run_morning_push_sweep(store, now_utc=now) == 0
     assert sends == ["https://push.example/utc"]
 
 
 def test_morning_sweep_prunes_dead_endpoints(vapid_env, monkeypatch):
-    from api.services import morning_push
-
     store = FakeStore()
     _subscription(store, endpoint="https://push.example/dead", timezone="UTC")
-    monkeypatch.setattr(
-        morning_push, "send_morning_checkin_push", lambda *_args: False
-    )
+    monkeypatch.setattr(push_notifications, "send_push_to_subscription", lambda *_args: False)
     now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
 
     assert run_morning_push_sweep(store, now_utc=now) == 0
@@ -168,25 +183,59 @@ def test_morning_sweep_prunes_dead_endpoints(vapid_env, monkeypatch):
 
 
 def test_morning_sweep_pages_past_one_batch(vapid_env, monkeypatch):
-    # Gemini review finding: a single capped listing silently dropped every
-    # subscriber past the cap. The sweep must keyset-paginate the whole table.
     from api.services import morning_push
 
     store = FakeStore()
     for index in range(5):
-        _subscription(store, endpoint=f"https://push.example/device-{index}", timezone="UTC")
+        _subscription(
+            store,
+            profile_id=f"athlete-{index}",
+            endpoint=f"https://push.example/device-{index}",
+            timezone="UTC",
+        )
 
     sends: list[str] = []
     monkeypatch.setattr(morning_push, "MORNING_SWEEP_BATCH_SIZE", 2)
     monkeypatch.setattr(
         morning_push,
         "send_morning_checkin_push",
-        lambda _store, subscription: sends.append(subscription["endpoint"]) or True,
+        lambda _store, subscription, **_kwargs: sends.append(subscription["endpoint"]) or 1,
     )
     now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
 
     assert run_morning_push_sweep(store, now_utc=now) == 5
     assert len(sends) == 5
+
+
+def test_morning_sweep_one_profile_fans_out_one_decision_to_all_devices(vapid_env, monkeypatch):
+    store = FakeStore()
+    _subscription(store, endpoint="https://push.example/phone", timezone="UTC")
+    _subscription(store, endpoint="https://push.example/laptop", timezone="UTC")
+    sends: list[str] = []
+    monkeypatch.setattr(
+        push_notifications,
+        "send_push_to_subscription",
+        lambda subscription, _payload: sends.append(subscription["endpoint"]) or True,
+    )
+    now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
+
+    assert run_morning_push_sweep(store, now_utc=now) == 2
+    assert sorted(sends) == ["https://push.example/laptop", "https://push.example/phone"]
+    assert run_morning_push_sweep(store, now_utc=now) == 0
+    assert len(sends) == 2
+
+
+def test_morning_sweep_respects_checkin_preference(vapid_env, monkeypatch):
+    store = FakeStore()
+    _subscription(store, timezone="UTC")
+    update_notification_preferences(store, "athlete-1", {"checkin_reminders": False})
+    monkeypatch.setattr(
+        push_notifications,
+        "send_push_to_subscription",
+        lambda *_args: pytest.fail("disabled category must not send"),
+    )
+    now = datetime(2026, 7, 21, 8, 0, tzinfo=timezone.utc)
+    assert run_morning_push_sweep(store, now_utc=now) == 0
 
 
 def test_morning_sweep_disabled_without_keys(monkeypatch):
@@ -206,6 +255,6 @@ def test_morning_checkin_payload_targets_today(vapid_env, monkeypatch):
     )
     from api.services.push_notifications import send_morning_checkin_push
 
-    assert send_morning_checkin_push(FakeStore(), {"endpoint": "https://push.example/x"})
+    assert send_morning_checkin_push(FakeStore(), {"endpoint": "https://push.example/x"}) == 1
     assert "/today" in captured[0]
     assert MORNING_CHECKIN_TAG in captured[0]
