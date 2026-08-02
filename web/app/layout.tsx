@@ -14,6 +14,7 @@ import { getServerShellSurface } from "@/lib/app-surface";
 import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
 import "./globals.css";
+import "./brand-surface.css";
 
 // Runs synchronously in <head> before first paint: restore the athlete's saved
 // appearance mode so a light-theme user never sees the dark SSR default flash to

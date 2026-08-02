@@ -1,0 +1,19 @@
+/* Logged-out brand surface only.
+ *
+ * Keep the existing colour washes, depth gradients and CTA sheen while
+ * removing the repeated 135deg stripe layers that rendered as diagonal lines.
+ * Workspace surfaces, the global body::before grid, borders and dividers are
+ * intentionally untouched.
+ */
+html[data-app-surface="brand"] .public-hero-panel {
+  background-image:
+    linear-gradient(135deg, rgba(181, 18, 43, 0.22), transparent 24%),
+    linear-gradient(315deg, rgba(181, 18, 43, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(17, 19, 23, 0.98), rgba(9, 10, 12, 0.98));
+}
+
+html[data-app-surface="brand"] .public-final-cta {
+  background-image:
+    linear-gradient(90deg, rgba(181, 18, 43, 0.22), rgba(255, 255, 255, 0.035)),
+    linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(13, 14, 17, 0.98));
+}
