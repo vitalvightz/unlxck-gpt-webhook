@@ -7,7 +7,6 @@ import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
-import { PrivateBetaNavigationGate } from "@/components/private-beta-navigation-gate";
 import { PwaRegister } from "@/components/pwa-register";
 import { ToastProvider } from "@/components/toast-provider";
 import { XpProvider } from "@/components/xp-provider";
@@ -17,6 +16,9 @@ import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
 import "./globals.css";
 import "./brand-surface.css";
 
+// Runs synchronously in <head> before first paint: restore the athlete's saved
+// appearance mode so a light-theme user never sees the dark SSR default flash to
+// light after hydration. Kept dependency-free so it can be inlined as a string.
 const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.stringify(
   APPEARANCE_STORAGE_KEY,
 )});if(m==="light"||m==="dark"){var d=document.documentElement;d.dataset.theme=m;d.style.colorScheme=m;}}catch(e){}})();`;
@@ -35,10 +37,20 @@ export const metadata: Metadata = {
       { url: "/brand/unlxck-one-angle-48.png", sizes: "48x48", type: "image/png" },
       { url: "/brand/unlxck-one-angle-192.png", sizes: "192x192", type: "image/png" },
     ],
-    apple: [{ url: "/brand/unlxck-one-angle-180.png", sizes: "180x180", type: "image/png" }],
+    apple: [
+      { url: "/brand/unlxck-one-angle-180.png", sizes: "180x180", type: "image/png" },
+    ],
   },
-  appleWebApp: { capable: true, title: "UNLXCK", statusBarStyle: "black-translucent" },
-  formatDetection: { address: false, email: false, telephone: false },
+  appleWebApp: {
+    capable: true,
+    title: "UNLXCK",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    address: false,
+    email: false,
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -52,16 +64,26 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  // The per-request CSP (set in proxy.ts) uses a nonce + 'strict-dynamic', so the
+  // inline theme-init script must carry that nonce or it is blocked and the flash
+  // returns. Undefined when no CSP is present — the attribute is simply omitted.
+  //
+  // Only accept a value matching the shape proxy.ts generates (btoa of a random
+  // UUID -> 48-char unpadded base64). On routes the middleware excludes there is
+  // no CSP, but a client could still supply an arbitrary x-nonce header; this
+  // guard means such a value is never reflected into the page as a nonce.
   const requestHeaders = await headers();
   const rawNonce = requestHeaders.get("x-nonce");
   const nonce = rawNonce && /^[A-Za-z0-9+/]{48}$/.test(rawNonce) ? rawNonce : undefined;
+  // Commit the brand shell for auth routes on the server so the workspace
+  // sidebar/menu never flash before the client session resolves. Other routes
+  // return null here and let the client AppNav effect set the surface.
   const serverSurface = getServerShellSurface(requestHeaders.get("x-pathname"));
   const pwaBuildVersion =
     process.env.VERCEL_GIT_COMMIT_SHA ??
     process.env.VERCEL_DEPLOYMENT_ID ??
     process.env.VERCEL_URL ??
     "local";
-
   return (
     <html
       lang="en"
@@ -82,8 +104,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <AuthProvider>
           <XpProvider>
+            {/* Recovery links can land on any route Supabase allows, so this
+                listens app-wide and moves the athlete to the reset form. */}
             <PasswordRecoveryRedirect />
-            <PrivateBetaNavigationGate />
             <ToastProvider>
               <PwaRegister buildVersion={pwaBuildVersion}>
                 <GenerationStatusShell>
