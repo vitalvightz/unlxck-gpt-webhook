@@ -1,6 +1,8 @@
 export type IntakeOption = {
   label: string;
   value: string;
+  disabled?: boolean;
+  disabledLabel?: string;
 };
 
 export const GUIDED_INJURY_SEVERITY_VALUES = ["low", "moderate", "high"] as const;
@@ -25,22 +27,21 @@ export function normalizeGuidedInjurySeverity(value: string | null | undefined):
   return GUIDED_INJURY_SEVERITY_ALIASES[normalized] ?? "";
 }
 
-// Advances severity one step for the body-map tap-to-set interaction:
-// unset/unknown → low → moderate → high → low. Always lands on a concrete
-// severity so a marked zone is never left without a colour against the legend.
 export function cycleGuidedInjurySeverity(value: string | null | undefined): GuidedInjurySeverity {
   const current = normalizeGuidedInjurySeverity(value);
   const index = current ? GUIDED_INJURY_SEVERITY_VALUES.indexOf(current) : -1;
   return GUIDED_INJURY_SEVERITY_VALUES[(index + 1) % GUIDED_INJURY_SEVERITY_VALUES.length];
 }
 
+const COMING_SOON = "🚫 COMING SOON";
+
 export const TECHNICAL_STYLE_OPTIONS: IntakeOption[] = [
   { label: "Boxing", value: "boxing" },
   { label: "Kickboxing", value: "kickboxing" },
-  { label: "Muay Thai", value: "muay_thai" },
+  { label: "Muay Thai", value: "muay_thai", disabled: true, disabledLabel: COMING_SOON },
   { label: "MMA", value: "mma" },
-  { label: "Wrestling", value: "wrestling" },
-  { label: "BJJ", value: "bjj" },
+  { label: "Wrestling", value: "wrestling", disabled: true, disabledLabel: COMING_SOON },
+  { label: "BJJ", value: "bjj", disabled: true, disabledLabel: COMING_SOON },
 ];
 
 export const TACTICAL_STYLE_OPTIONS: IntakeOption[] = [
@@ -128,16 +129,12 @@ const LEGACY_OPTION_LABELS: Record<string, string> = {
 };
 
 export function detectDeviceTimeZone(): string {
-  if (typeof window === "undefined" || typeof Intl === "undefined") {
-    return "";
-  }
+  if (typeof window === "undefined" || typeof Intl === "undefined") return "";
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
 }
 
 export function detectDeviceLocale(): string {
-  if (typeof navigator === "undefined") {
-    return "";
-  }
+  if (typeof navigator === "undefined") return "";
   return navigator.language || "";
 }
 
@@ -157,8 +154,8 @@ export function toggleListValue(values: string[], target: string): string[] {
 }
 
 export function retainKnownOptionValues(values: string[] | undefined, options: IntakeOption[]): string[] {
-  const knownValues = new Set(options.map((option) => option.value));
-  return (values ?? []).filter((value) => knownValues.has(value));
+  const enabledValues = new Set(options.filter((option) => !option.disabled).map((option) => option.value));
+  return (values ?? []).filter((value) => enabledValues.has(value));
 }
 
 export function getOptionLabel(options: IntakeOption[], value: string): string {
