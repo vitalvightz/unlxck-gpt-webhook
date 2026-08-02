@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from api.contracts.command_view import CommandView
+from api.contracts.training_day import resolve_training_day_str
 from api.notification_models import NotificationPreferences, NotificationPreferencesUpdate
 from api.services.session_timing_notifications import build_session_timing_candidates_from_view
 
@@ -111,11 +112,9 @@ def test_early_and_late_saved_times_are_valid_when_quiet_hours_are_disabled():
 
 
 def test_after_midnight_times_follow_the_0300_training_day_rollover_in_london():
-    # In August, Europe/London is UTC+1. Training day Aug 1 plus 00:30/02:59
-    # therefore occurs on calendar Aug 2 at 00:30/02:59 local.
     before_midnight_window = _candidates(
         _view(training_day="2026-08-01"),
-        at=datetime(2026, 8, 1, 23, 0, tzinfo=timezone.utc),  # 00:00 local Aug 2
+        at=datetime(2026, 8, 1, 23, 0, tzinfo=timezone.utc),
         training_time="00:30",
         quiet_enabled=False,
         timezone_name="Europe/London",
@@ -129,23 +128,53 @@ def test_after_midnight_times_follow_the_0300_training_day_rollover_in_london():
 
     at_0259 = _candidates(
         _view(training_day="2026-08-01"),
-        at=datetime(2026, 8, 2, 1, 40, tzinfo=timezone.utc),  # 02:40 local
+        at=datetime(2026, 8, 2, 1, 40, tzinfo=timezone.utc),
         training_time="02:59",
         quiet_enabled=False,
         timezone_name="Europe/London",
     )
     assert [candidate.notification_type for candidate in at_0259] == ["session_ready"]
 
-    # 03:00 belongs to the calendar date represented by training_day itself.
-    at_0300 = _candidates(
-        _view(training_day="2026-08-02"),
-        at=datetime(2026, 8, 2, 1, 30, tzinfo=timezone.utc),  # 02:30 local
+
+def test_0300_session_waits_for_real_training_day_rollover():
+    timezone_name = "Europe/London"
+
+    before_rollover = datetime(2026, 8, 2, 1, 30, tzinfo=timezone.utc)  # 02:30 local
+    before_training_day = resolve_training_day_str(
+        before_rollover,
+        athlete_timezone=timezone_name,
+    )
+    assert before_training_day == "2026-08-01"
+    # Production still exposes the upcoming Aug 2 session as NEXT at this point,
+    # with no current Aug 2 readiness decision. It must not claim work is set.
+    assert _candidates(
+        _view(
+            training_day=before_training_day,
+            recommendation_state="not_checked_in",
+            decision_tier="not_checked_in",
+            session_scope="next",
+        ),
+        at=before_rollover,
         training_time="03:00",
         quiet_enabled=False,
-        timezone_name="Europe/London",
+        timezone_name=timezone_name,
+    ) == []
+
+    at_rollover = datetime(2026, 8, 2, 2, 0, tzinfo=timezone.utc)  # 03:00 local
+    current_training_day = resolve_training_day_str(
+        at_rollover,
+        athlete_timezone=timezone_name,
     )
-    assert [candidate.notification_type for candidate in at_0300] == ["session_ready"]
-    assert at_0300[0].expires_at == datetime(2026, 8, 2, 2, 15, tzinfo=timezone.utc)
+    assert current_training_day == "2026-08-02"
+    candidates = _candidates(
+        _view(training_day=current_training_day),
+        at=at_rollover,
+        training_time="03:00",
+        quiet_enabled=False,
+        timezone_name=timezone_name,
+    )
+    assert [candidate.notification_type for candidate in candidates] == ["session_ready"]
+    assert candidates[0].expires_at == datetime(2026, 8, 2, 2, 15, tzinfo=timezone.utc)
 
 
 def test_modified_and_pull_back_decisions_use_adjusted_copy():
