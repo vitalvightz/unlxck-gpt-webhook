@@ -30,6 +30,7 @@ SESSION_REMINDER_LEAD = timedelta(minutes=30)
 SESSION_REMINDER_GRACE = timedelta(minutes=15)
 STOP_WINDOW_START_HOUR = 7
 STOP_WINDOW_END_HOUR = 22
+TRAINING_DAY_ROLLOVER_HOUR = 3
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,13 @@ def _preferred_training_at(
         training_day = datetime.fromisoformat(view.today.training_day)
     except (TypeError, ValueError):
         return None
+
+    # UNLXCK's training day rolls at 03:00. Therefore, a saved time between
+    # 00:00 and 02:59 belongs to the following calendar date while remaining
+    # part of the previous training day.
+    if hour < TRAINING_DAY_ROLLOVER_HOUR:
+        training_day += timedelta(days=1)
+
     local_tz = _timezone(timezone_name)
     return training_day.replace(
         hour=hour,
