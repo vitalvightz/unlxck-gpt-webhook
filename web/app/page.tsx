@@ -661,7 +661,7 @@ export default function HomePage() {
           <p className="kicker">How it works</p>
           <h2 id="public-journey-heading">From setup to review.</h2>
         </div>
-        <Image className="public-section-break-logo" src="/unlxck-icon.jpg" alt="" width={72} height={72} aria-hidden="true" />
+        <Image className="public-section-break-logo" src="/brand/unlxck-one-angle-120.png" alt="" width={72} height={72} aria-hidden="true" />
       </section>
 
       <section className="metric-grid public-journey-grid">
