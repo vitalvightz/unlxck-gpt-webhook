@@ -9,22 +9,22 @@ import {
   STANDALONE_NUTRITION_ENABLED,
 } from "./beta-navigation.ts";
 
-test("bottom nav shows exactly four beta tabs in order: Overview, Today, Plan, Intake", () => {
+test("bottom nav shows Overview, Today, Plan and Progress", () => {
   assert.deepEqual(
     BOTTOM_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "Intake"],
+    ["Overview", "Today", "Plan", "Progress"],
   );
 });
 
-test("bottom nav replaces Nutrition with a first-class Plan tab", () => {
-  const labels = BOTTOM_NAV_ITEMS.map((item) => item.label);
-  assert.equal(labels.includes("Nutrition"), false);
-  assert.equal(labels.includes("Plan"), true);
+test("Progress replaces Intake only in the compact bottom nav", () => {
+  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Progress"), true);
+  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Intake"), false);
+  assert.equal(SIDE_NAV_ITEMS.some((item) => item.label === "Intake"), true);
 });
 
-test("Plan tab routes to the plans workspace", () => {
-  const planTab = BOTTOM_NAV_ITEMS.find((item) => item.label === "Plan");
-  assert.equal(planTab?.href, "/plans");
+test("Progress routes to the full XP interface", () => {
+  const progress = BOTTOM_NAV_ITEMS.find((item) => item.label === "Progress");
+  assert.equal(progress?.href, "/progress");
 });
 
 test("bottom nav never links to the standalone Nutrition route", () => {
@@ -34,16 +34,11 @@ test("bottom nav never links to the standalone Nutrition route", () => {
   );
 });
 
-test("side menu exposes Overview, Today, Plan, History, Intake, Settings", () => {
+test("side menu places Progress between Plan and History", () => {
   assert.deepEqual(
     SIDE_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "History", "Intake", "Settings"],
+    ["Overview", "Today", "Plan", "Progress", "History", "Intake", "Settings"],
   );
-});
-
-test("History routes to the history page", () => {
-  const historyItem = SIDE_NAV_ITEMS.find((item) => item.label === "History");
-  assert.equal(historyItem?.href, "/history");
 });
 
 test("side menu no longer exposes standalone Nutrition", () => {
@@ -65,6 +60,7 @@ test("isStandaloneNutritionPath matches the workspace and its sub-pages only", (
   assert.equal(isStandaloneNutritionPath("/nutrition/bodyweight-log"), true);
   assert.equal(isStandaloneNutritionPath("/nutrition?tab=weight"), true);
   assert.equal(isStandaloneNutritionPath("/nutrition#readiness"), true);
+  assert.equal(isStandaloneNutritionPath("/progress"), false);
   assert.equal(isStandaloneNutritionPath("/plans"), false);
   assert.equal(isStandaloneNutritionPath("/"), false);
   assert.equal(isStandaloneNutritionPath("/plans/abc#nutrition"), false);

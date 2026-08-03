@@ -29,10 +29,11 @@ const TAB_ICONS: Record<string, ReactNode> = {
       <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   ),
-  "/onboarding": (
+  "/progress": (
     <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
-      <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M6 8h8M6 11h6M6 14h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4 15V9M10 15V5M16 15v-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M3 17h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4 7l4-3 4 3 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
 };
