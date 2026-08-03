@@ -169,24 +169,6 @@
   font-size: var(--type-body-sm);
 }
 
-.xp-award-toggle {
-  width: 100%;
-  margin-top: 8px;
-  padding: 11px 14px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: var(--type-body-sm);
-  font-weight: 600;
-}
-
-.xp-award-toggle:hover {
-  border-color: var(--progress-gold-border);
-  color: var(--text-primary);
-}
-
 .xp-explanation-disclosure {
   padding: 0 !important;
   overflow: hidden;
