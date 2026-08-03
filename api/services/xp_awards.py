@@ -20,7 +20,7 @@ ACTIVATION_READY_PLAN_STATUSES = frozenset({"ready", "publishable_with_flags"})
 # the activation profile milestone.
 ACTIVATION_COMBAT_SPORTS = frozenset({"boxing", "kickboxing", "mma"})
 _XP_HARDENING_LOCK = Lock()
-_VALIDATED_XP_CLIENT_IDS: set[int] = set()
+_XP_HARDENING_VALIDATED_ATTR = "_unlxck_xp_abuse_hardening_validated"
 
 
 def ensure_xp_abuse_hardening(store: AppStore) -> None:
@@ -28,7 +28,7 @@ def ensure_xp_abuse_hardening(store: AppStore) -> None:
 
     In-memory/test stores have no Supabase client and are allowed through. The
     live AppStore must expose the validation RPC added by the hardening
-    migration. Successful validation is cached per client instance.
+    migration. Successful validation is cached on that exact store instance.
     """
 
     custom = getattr(store, "validate_xp_abuse_hardening", None)
@@ -41,12 +41,11 @@ def ensure_xp_abuse_hardening(store: AppStore) -> None:
     client: Any | None = getattr(store, "client", None)
     if client is None:
         return
-    client_id = id(client)
-    if client_id in _VALIDATED_XP_CLIENT_IDS:
+    if getattr(store, _XP_HARDENING_VALIDATED_ATTR, False) is True:
         return
 
     with _XP_HARDENING_LOCK:
-        if client_id in _VALIDATED_XP_CLIENT_IDS:
+        if getattr(store, _XP_HARDENING_VALIDATED_ATTR, False) is True:
             return
         response = client.rpc("validate_xp_abuse_hardening").execute()
         payload = getattr(response, "data", None)
@@ -54,7 +53,7 @@ def ensure_xp_abuse_hardening(store: AppStore) -> None:
             payload = payload[0] if payload else None
         if not isinstance(payload, Mapping) or payload.get("ok") is not True:
             raise RuntimeError("XP abuse hardening validation failed")
-        _VALIDATED_XP_CLIENT_IDS.add(client_id)
+        setattr(store, _XP_HARDENING_VALIDATED_ATTR, True)
 
 
 def _award(
