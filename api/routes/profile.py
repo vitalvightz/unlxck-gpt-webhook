@@ -26,6 +26,8 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         store: AppStore,
     ) -> MeResponse:
         response = _build_me_response(profile, store)
+        if profile.role != "athlete":
+            return response
         try:
             reconcile_activation_xp(
                 store,
