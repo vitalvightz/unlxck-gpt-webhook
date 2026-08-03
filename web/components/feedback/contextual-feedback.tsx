@@ -123,6 +123,8 @@ export function ContextualFeedback({
       const saved = isPlan && planId
         ? await putPlanFeedback(token, planId, payload)
         : await putTodayFeedback(token, payload);
+      // The feedback route awards XP before it returns. Refresh the shared XP
+      // state immediately so the user sees that reward with the saved response.
       requestXpRefresh();
       setRecord(saved);
       setChoice(saved.response);
