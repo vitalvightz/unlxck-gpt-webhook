@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends
 
 from api.models import (
@@ -13,6 +15,8 @@ from api.plan_mappers import _build_me_response, _map_profile_row
 from api.services.xp_awards import reconcile_activation_xp
 from api.store import AppStore
 
+logger = logging.getLogger(__name__)
+
 
 def build_profile_router(*, require_profile, get_store) -> APIRouter:
     router = APIRouter()
@@ -22,13 +26,19 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         store: AppStore,
     ) -> MeResponse:
         response = _build_me_response(profile, store)
-        reconcile_activation_xp(
-            store,
-            athlete_id=profile.athlete_id,
-            profile=response.profile,
-            latest_intake=response.latest_intake,
-            latest_plan=response.latest_plan,
-        )
+        try:
+            reconcile_activation_xp(
+                store,
+                athlete_id=profile.athlete_id,
+                profile=response.profile,
+                latest_intake=response.latest_intake,
+                latest_plan=response.latest_plan,
+            )
+        except Exception:  # noqa: BLE001 - XP must never break profile reads
+            logger.exception(
+                "[xp] activation route reconciliation failed athlete_id=%s",
+                profile.athlete_id,
+            )
         return response
 
     @router.get("/api/me", response_model=MeResponse)
