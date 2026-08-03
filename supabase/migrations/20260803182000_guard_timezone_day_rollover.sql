@@ -122,8 +122,3 @@ revoke all on function public.validate_xp_abuse_hardening()
   from public, anon, authenticated;
 grant execute on function public.validate_xp_abuse_hardening()
   to service_role;
-
-revoke all on function public.validate_xp_abuse_hardening()
-  from public, anon, authenticated;
-grant execute on function public.validate_xp_abuse_hardening()
-  to service_role;
