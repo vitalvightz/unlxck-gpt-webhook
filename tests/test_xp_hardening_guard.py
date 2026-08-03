@@ -18,14 +18,28 @@ class RpcBuilder:
         if self.client.error:
             raise RuntimeError("missing hardening migration")
         return SimpleNamespace(
-            data={"ok": True, "version": self.client.hardening_version}
+            data={
+                "ok": True,
+                "version": self.client.hardening_version,
+                "rollout_ready": self.client.rollout_ready,
+                "open_plan_scope_ready": self.client.open_plan_scope_ready,
+            }
         )
 
 
 class Client:
-    def __init__(self, *, error=False, hardening_version=XP_ABUSE_HARDENING_VERSION):
+    def __init__(
+        self,
+        *,
+        error=False,
+        hardening_version=XP_ABUSE_HARDENING_VERSION,
+        rollout_ready=True,
+        open_plan_scope_ready=True,
+    ):
         self.error = error
         self.hardening_version = hardening_version
+        self.rollout_ready = rollout_ready
+        self.open_plan_scope_ready = open_plan_scope_ready
         self.calls = []
 
     def rpc(self, name, payload=None):
@@ -39,10 +53,14 @@ class Store:
         *,
         hardening_error=False,
         hardening_version=XP_ABUSE_HARDENING_VERSION,
+        rollout_ready=True,
+        open_plan_scope_ready=True,
     ):
         self.client = Client(
             error=hardening_error,
             hardening_version=hardening_version,
+            rollout_ready=rollout_ready,
+            open_plan_scope_ready=open_plan_scope_ready,
         )
         self.awards = []
         self.feedback_calls = []
@@ -73,6 +91,21 @@ def test_activation_and_daily_awards_fail_closed_when_migration_is_missing():
 
 def test_partial_hardening_version_fails_closed_and_is_not_cached():
     store = Store(hardening_version="20260803181000")
+
+    assert award_checkin_xp(
+        store,
+        athlete_id="athlete-1",
+        checkin={"id": "checkin-1", "training_day": "2026-08-03"},
+    ) == []
+    assert store.awards == []
+    assert store.client.calls == [
+        "validate_xp_abuse_hardening",
+        "validate_xp_abuse_hardening",
+    ]
+
+
+def test_version_only_payload_fails_closed_and_is_not_cached():
+    store = Store(rollout_ready=False, open_plan_scope_ready=False)
 
     assert award_checkin_xp(
         store,
