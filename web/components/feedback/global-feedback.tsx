@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { submitGlobalFeedback } from "@/lib/api";
 import type { GlobalFeedbackRequest } from "@/lib/types";
+import { requestXpRefresh } from "@/lib/xp-events";
 
 const CATEGORIES: Array<{ value: GlobalFeedbackRequest["category"]; label: string }> = [
   { value: "bug_report", label: "Report a bug" },
@@ -62,6 +63,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         contact_allowed: contactAllowed,
         screenshot,
       });
+      requestXpRefresh();
       setDescription("");
       removeScreenshot();
       setContactAllowed(false);
