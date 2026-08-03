@@ -81,7 +81,7 @@ begin
     raise exception 'invalid lifecycle week id' using errcode = '22023';
   end if;
 
-  insert into public.week_lifecycle_reconciliations (
+  insert into public.week_lifecycle_reconciliations as existing (
     athlete_id,
     plan_id,
     week_id
@@ -92,7 +92,7 @@ begin
   )
   on conflict (athlete_id, plan_id, week_id) do update
   set
-    attempt_count = public.week_lifecycle_reconciliations.attempt_count + 1,
+    attempt_count = existing.attempt_count + 1,
     last_attempt_at = clock_timestamp(),
     updated_at = clock_timestamp()
   returning * into v_row;
