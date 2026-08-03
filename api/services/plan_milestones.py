@@ -223,57 +223,10 @@ def _milestone_candidate(
     )
 
 
-def _dispatch_milestone_notification(
+def _record_milestone_safely(
     store: AppStore,
     *,
     athlete_id: str,
-    athlete_timezone: str,
-    milestone_type: str,
-    milestone_key: str,
-    phase_label: str | None,
-    result: Mapping[str, Any],
-    now_utc: datetime | None = None,
-) -> int:
-    award = _award_result(result)
-    if not bool(award.get("awarded")):
-        return 0
-    reference = now_utc or datetime.now(timezone.utc)
-    previous, total = _result_totals(award)
-    candidates: list[NotificationCandidate] = []
-    milestone_candidate = _milestone_candidate(
-        athlete_id=athlete_id,
-        milestone_type=milestone_type,
-        milestone_key=milestone_key,
-        phase_label=phase_label,
-        timezone_name=athlete_timezone or "UTC",
-        now_utc=reference,
-    )
-    if milestone_candidate is not None:
-        candidates.append(milestone_candidate)
-    level_candidate = build_level_up_candidate(
-        athlete_id=athlete_id,
-        previous_total_xp=previous,
-        total_xp=total,
-        source_key=milestone_key,
-        timezone_name=athlete_timezone or "UTC",
-        now_utc=reference,
-    )
-    if level_candidate is not None:
-        candidates.append(level_candidate)
-    if not candidates:
-        return 0
-    return dispatch_push_candidate(
-        store,
-        min(candidates, key=lambda candidate: candidate.priority),
-        now_utc=reference,
-    )
-
-
-def _record_and_notify(
-    store: AppStore,
-    *,
-    athlete_id: str,
-    athlete_timezone: str,
     plan_id: str,
     milestone_type: str,
     milestone_key: str,
@@ -281,7 +234,7 @@ def _record_and_notify(
     metadata: Mapping[str, Any],
 ) -> dict[str, Any] | None:
     try:
-        result = _record_milestone(
+        return _record_milestone(
             store,
             athlete_id=athlete_id,
             plan_id=plan_id,
@@ -290,19 +243,6 @@ def _record_and_notify(
             phase_label=phase_label,
             metadata=metadata,
         )
-        if not isinstance(result, Mapping):
-            return None
-        normalized = dict(result)
-        _dispatch_milestone_notification(
-            store,
-            athlete_id=athlete_id,
-            athlete_timezone=athlete_timezone,
-            milestone_type=milestone_type,
-            milestone_key=milestone_key,
-            phase_label=phase_label,
-            result=normalized,
-        )
-        return normalized
     except Exception:  # noqa: BLE001 - milestones must never break session logging
         logger.exception(
             "[xp] plan milestone failed athlete_id=%s plan_id=%s type=%s key=%s",
@@ -312,6 +252,53 @@ def _record_and_notify(
             milestone_key,
         )
         return None
+
+
+def _dispatch_best_notification(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str,
+    recorded: Sequence[tuple[str, str, str | None, Mapping[str, Any]]],
+    now_utc: datetime | None = None,
+) -> int:
+    reference = now_utc or datetime.now(timezone.utc)
+    milestone_candidates: list[NotificationCandidate] = []
+    level_candidates: list[tuple[int, NotificationCandidate]] = []
+
+    for milestone_type, milestone_key, phase_label, result in recorded:
+        award = _award_result(result)
+        if not bool(award.get("awarded")):
+            continue
+        candidate = _milestone_candidate(
+            athlete_id=athlete_id,
+            milestone_type=milestone_type,
+            milestone_key=milestone_key,
+            phase_label=phase_label,
+            timezone_name=athlete_timezone or "UTC",
+            now_utc=reference,
+        )
+        if candidate is not None:
+            milestone_candidates.append(candidate)
+        previous, total = _result_totals(award)
+        level_candidate = build_level_up_candidate(
+            athlete_id=athlete_id,
+            previous_total_xp=previous,
+            total_xp=total,
+            source_key=milestone_key,
+            timezone_name=athlete_timezone or "UTC",
+            now_utc=reference,
+        )
+        if level_candidate is not None:
+            level_candidates.append((total, level_candidate))
+
+    if level_candidates:
+        selected = max(level_candidates, key=lambda item: item[0])[1]
+    elif milestone_candidates:
+        selected = min(milestone_candidates, key=lambda candidate: candidate.priority)
+    else:
+        return 0
+    return dispatch_push_candidate(store, selected, now_utc=reference)
 
 
 def record_plan_milestones_after_completed_week(
@@ -329,16 +316,16 @@ def record_plan_milestones_after_completed_week(
     if not plan_id or not current_week_id or not weeks:
         return []
 
+    recorded: list[tuple[str, str, str | None, Mapping[str, Any]]] = []
     results: list[dict[str, Any]] = []
     phase_weeks = _phase_segment(weeks, current_week_id=current_week_id)
     phase = _phase_label(completed_week)
     if phase_weeks and phase and _all_weeks_complete(phase_weeks, completions):
         phase_week_ids = [_week_id(week) for week in phase_weeks]
         phase_key = f"phase:{phase}:{phase_week_ids[0]}:{phase_week_ids[-1]}"
-        result = _record_and_notify(
+        result = _record_milestone_safely(
             store,
             athlete_id=athlete_id,
-            athlete_timezone=athlete_timezone,
             plan_id=plan_id,
             milestone_type="phase_completed",
             milestone_key=phase_key,
@@ -346,17 +333,26 @@ def record_plan_milestones_after_completed_week(
             metadata={"week_ids": phase_week_ids, "phase_label": phase},
         )
         if result:
-            results.append(result)
+            results.append(dict(result))
+            recorded.append(("phase_completed", phase_key, phase, result))
 
     plan_type = _plan_type(plan)
-    if plan_type in OPEN_ENDED_PLAN_TYPES or not _all_weeks_complete(weeks, completions):
+    if not plan_type or plan_type in OPEN_ENDED_PLAN_TYPES or not _all_weeks_complete(weeks, completions):
+        try:
+            _dispatch_best_notification(
+                store,
+                athlete_id=athlete_id,
+                athlete_timezone=athlete_timezone,
+                recorded=recorded,
+            )
+        except Exception:  # noqa: BLE001 - push must never break milestone persistence
+            logger.exception("[notification] plan milestone delivery failed athlete_id=%s", athlete_id)
         return results
 
     week_ids = [_week_id(week) for week in weeks]
-    plan_result = _record_and_notify(
+    plan_result = _record_milestone_safely(
         store,
         athlete_id=athlete_id,
-        athlete_timezone=athlete_timezone,
         plan_id=plan_id,
         milestone_type="plan_completed",
         milestone_key="plan-complete",
@@ -364,13 +360,13 @@ def record_plan_milestones_after_completed_week(
         metadata={"week_ids": week_ids, "plan_type": plan_type},
     )
     if plan_result:
-        results.append(plan_result)
+        results.append(dict(plan_result))
+        recorded.append(("plan_completed", "plan-complete", None, plan_result))
 
     if plan_type == "fight_camp":
-        camp_result = _record_and_notify(
+        camp_result = _record_milestone_safely(
             store,
             athlete_id=athlete_id,
-            athlete_timezone=athlete_timezone,
             plan_id=plan_id,
             milestone_type="camp_completed",
             milestone_key="camp-complete",
@@ -378,7 +374,18 @@ def record_plan_milestones_after_completed_week(
             metadata={"week_ids": week_ids, "plan_type": plan_type},
         )
         if camp_result:
-            results.append(camp_result)
+            results.append(dict(camp_result))
+            recorded.append(("camp_completed", "camp-complete", None, camp_result))
+
+    try:
+        _dispatch_best_notification(
+            store,
+            athlete_id=athlete_id,
+            athlete_timezone=athlete_timezone,
+            recorded=recorded,
+        )
+    except Exception:  # noqa: BLE001 - push must never break milestone persistence
+        logger.exception("[notification] plan milestone delivery failed athlete_id=%s", athlete_id)
     return results
 
 
