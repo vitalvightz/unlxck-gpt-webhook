@@ -1,6 +1,6 @@
--- The athlete timezone owns Today's server-side training date. Without a
--- durable change boundary, repeatedly hopping between far-ahead and far-behind
--- zones could expose adjacent-day check-ins or scheduled sessions early.
+-- The athlete timezone owns Today's server-side training date. Without durable
+-- change boundaries, hopping between far-ahead and far-behind zones can expose
+-- adjacent-day check-ins or scheduled sessions early.
 
 alter table public.profiles
   add column if not exists athlete_timezone_updated_at timestamptz;
@@ -17,6 +17,7 @@ declare
     when tg_op = 'UPDATE' then btrim(coalesce(old.athlete_timezone, ''))
     else ''
   end;
+  v_recent_activity_cutoff timestamptz := clock_timestamp() - interval '12 hours';
 begin
   if v_new_timezone <> '' and not exists (
     select 1
@@ -45,9 +46,33 @@ begin
       using errcode = '23514';
   end if;
 
-  -- Initial setup from an empty timezone is allowed. Later changes are genuine
-  -- travel/account events, but cannot be repeated fast enough to hop between
-  -- adjacent server-owned training dates.
+  -- This also covers first-time setup from an empty timezone after the athlete
+  -- has already trained or earned XP. Otherwise UTC activity could be followed
+  -- immediately by a far-ahead timezone and expose a second reward day.
+  if exists (
+    select 1
+    from public.xp_awards as award
+    where award.athlete_id = new.id
+      and award.awarded_at > v_recent_activity_cutoff
+  )
+  or exists (
+    select 1
+    from public.session_completions as completion
+    where completion.athlete_id = new.id
+      and completion.updated_at > v_recent_activity_cutoff
+  )
+  or exists (
+    select 1
+    from public.today_checkins as checkin
+    where checkin.athlete_id = new.id
+      and checkin.updated_at > v_recent_activity_cutoff
+  ) then
+    raise exception 'athlete_timezone cannot change within 12 hours of training or XP activity'
+      using errcode = '23514';
+  end if;
+
+  -- Later changes are genuine travel/account events, but cannot be repeated fast
+  -- enough to walk through adjacent server-owned training dates.
   if v_old_timezone <> ''
     and old.athlete_timezone_updated_at is not null
     and old.athlete_timezone_updated_at > clock_timestamp() - interval '24 hours' then
@@ -89,6 +114,12 @@ begin
   if to_regclass('public.xp_awards_one_time_action_per_athlete') is null
     or to_regclass('public.xp_awards_one_daily_action_per_athlete') is null
     or not exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'xp_awards'
+        and column_name = 'source_plan_id'
+    )
+    or not exists (
       select 1 from pg_trigger
       where tgrelid = 'public.xp_awards'::regclass
         and tgname = 'xp_awards_source_integrity'
@@ -98,6 +129,12 @@ begin
       select 1 from pg_trigger
       where tgrelid = 'public.xp_awards'::regclass
         and tgname = 'xp_awards_plan_lock_and_week_completion'
+        and not tgisinternal
+    )
+    or not exists (
+      select 1 from pg_trigger
+      where tgrelid = 'public.xp_awards'::regclass
+        and tgname = 'xp_awards_source_plan_immutable'
         and not tgisinternal
     )
     or not exists (
