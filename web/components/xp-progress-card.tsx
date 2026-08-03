@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 
 import { Skeleton } from "@/components/skeleton";
 import { useXp } from "@/components/xp-provider";
@@ -10,23 +10,50 @@ import type { XpOpportunity, XpProgress } from "@/lib/xp-progress";
 
 const numberFormatter = new Intl.NumberFormat("en-GB");
 
+type XpProgressCardMode = "overview" | "page";
+
 export type XpProgressCardViewProps = {
   progress: XpProgress;
   error?: string | null;
+  mode?: XpProgressCardMode;
 };
 
-function OpportunityRow({ opportunity }: { opportunity: XpOpportunity }) {
-  return (
-    <p className="xp-progress-detail-value xp-progress-action-row">
+function OpportunityRow({
+  opportunity,
+  interactive,
+}: {
+  opportunity: XpOpportunity;
+  interactive: boolean;
+}) {
+  const content: ReactNode = (
+    <>
       <span className="xp-progress-action-label">{opportunity.label}</span>
       <span className="xp-progress-award">+{numberFormatter.format(opportunity.xp)} XP</span>
-    </p>
+    </>
   );
+
+  if (interactive) {
+    return (
+      <Link
+        href={opportunity.href}
+        className="xp-progress-detail-value xp-progress-action-row xp-progress-action-link"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <p className="xp-progress-detail-value xp-progress-action-row">{content}</p>;
 }
 
-export function XpProgressCardSkeleton() {
+export function XpProgressCardSkeleton({ mode = "overview" }: { mode?: XpProgressCardMode }) {
   return (
-    <article className="status-card overview-command-card xp-progress-card xp-progress-card-skeleton" aria-busy="true">
+    <article
+      className={`status-card overview-command-card xp-progress-card xp-progress-card-skeleton${
+        mode === "page" ? " xp-progress-card--page" : ""
+      }`}
+      aria-busy="true"
+    >
       <div className="xp-progress-heading">
         <div className="xp-progress-skeleton-heading">
           <Skeleton variant="text" width={92} height={11} />
@@ -58,7 +85,11 @@ export function XpProgressCardSkeleton() {
   );
 }
 
-export function XpProgressCardView({ progress, error = null }: XpProgressCardViewProps) {
+export function XpProgressCardView({
+  progress,
+  error = null,
+  mode = "overview",
+}: XpProgressCardViewProps) {
   const level = useMemo(() => resolveXpLevel(progress.state.totalXp), [progress.state.totalXp]);
   const ratio = level.nextLevel
     ? `${numberFormatter.format(progress.state.totalXp)} / ${numberFormatter.format(level.nextLevel.threshold)} XP`
@@ -72,72 +103,89 @@ export function XpProgressCardView({ progress, error = null }: XpProgressCardVie
     ? `${numberFormatter.format(level.xpRemaining)} XP remaining`
     : "Max level reached";
   const [primaryOpportunity, ...remainingOpportunities] = progress.opportunities;
+  const interactiveActions = mode === "page";
+
+  const card = (
+    <article
+      className={`status-card overview-command-card xp-progress-card${
+        mode === "page" ? " xp-progress-card--page" : ""
+      }`}
+    >
+      <div className="xp-progress-heading">
+        <div>
+          <p className="status-label">XP PROGRESS</p>
+          <p className="xp-progress-level">Level {level.currentLevel.level}</p>
+        </div>
+        <p className="xp-progress-rank">{level.currentLevel.title}</p>
+      </div>
+
+      <p
+        className="xp-progress-total"
+        aria-label={`${numberFormatter.format(progress.state.totalXp)} experience points`}
+      >
+        <span className="xp-progress-number">{numberFormatter.format(progress.state.totalXp)}</span>
+        <span className="xp-progress-unit">XP</span>
+      </p>
+
+      <div
+        className="xp-progress-track"
+        role="progressbar"
+        aria-label={level.nextLevel ? `XP progress to Level ${level.nextLevel.level}` : "Maximum XP level reached"}
+        aria-valuemin={0}
+        aria-valuemax={progressMaximum}
+        aria-valuenow={progressNow}
+        aria-valuetext={progressText}
+      >
+        <span
+          className="xp-progress-fill"
+          style={{ "--xp-progress-width": `${level.percentage}%` } as CSSProperties}
+        />
+      </div>
+
+      <p className="xp-progress-meta">
+        {ratio ? <span className="xp-progress-ratio">{ratio}</span> : null}
+        <span>{progressRemaining}</span>
+      </p>
+
+      <div className="xp-progress-details">
+        <section className="xp-progress-detail" aria-labelledby={`${mode}-xp-next-label`}>
+          <p id={`${mode}-xp-next-label`} className="xp-progress-section-label">NEXT</p>
+          {primaryOpportunity ? (
+            <OpportunityRow opportunity={primaryOpportunity} interactive={interactiveActions} />
+          ) : (
+            <p className="xp-progress-detail-value xp-progress-empty">No XP action is due right now.</p>
+          )}
+        </section>
+
+        <section className="xp-progress-detail" aria-labelledby={`${mode}-xp-more-label`}>
+          <p id={`${mode}-xp-more-label`} className="xp-progress-section-label">MORE XP</p>
+          {remainingOpportunities.length > 0 ? (
+            <div className="xp-progress-action-list">
+              {remainingOpportunities.map((opportunity) => (
+                <OpportunityRow
+                  key={opportunity.code}
+                  opportunity={opportunity}
+                  interactive={interactiveActions}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="xp-progress-detail-value xp-progress-empty">No other action is due.</p>
+          )}
+        </section>
+      </div>
+
+      {error ? <p className="xp-progress-error">Showing your last saved XP view.</p> : null}
+    </article>
+  );
+
+  if (mode === "page") {
+    return card;
+  }
 
   return (
     <Link href="/progress" className="xp-progress-card-link" aria-label="Open XP progress">
-      <article className="status-card overview-command-card xp-progress-card">
-        <div className="xp-progress-heading">
-          <div>
-            <p className="status-label">XP PROGRESS</p>
-            <p className="xp-progress-level">Level {level.currentLevel.level}</p>
-          </div>
-          <p className="xp-progress-rank">{level.currentLevel.title}</p>
-        </div>
-
-        <p
-          className="xp-progress-total"
-          aria-label={`${numberFormatter.format(progress.state.totalXp)} experience points`}
-        >
-          <span className="xp-progress-number">{numberFormatter.format(progress.state.totalXp)}</span>
-          <span className="xp-progress-unit">XP</span>
-        </p>
-
-        <div
-          className="xp-progress-track"
-          role="progressbar"
-          aria-label={level.nextLevel ? `XP progress to Level ${level.nextLevel.level}` : "Maximum XP level reached"}
-          aria-valuemin={0}
-          aria-valuemax={progressMaximum}
-          aria-valuenow={progressNow}
-          aria-valuetext={progressText}
-        >
-          <span
-            className="xp-progress-fill"
-            style={{ "--xp-progress-width": `${level.percentage}%` } as CSSProperties}
-          />
-        </div>
-
-        <p className="xp-progress-meta">
-          {ratio ? <span className="xp-progress-ratio">{ratio}</span> : null}
-          <span>{progressRemaining}</span>
-        </p>
-
-        <div className="xp-progress-details">
-          <section className="xp-progress-detail" aria-labelledby="xp-next-label">
-            <p id="xp-next-label" className="xp-progress-section-label">NEXT</p>
-            {primaryOpportunity ? (
-              <OpportunityRow opportunity={primaryOpportunity} />
-            ) : (
-              <p className="xp-progress-detail-value xp-progress-empty">No XP action is due right now.</p>
-            )}
-          </section>
-
-          <section className="xp-progress-detail" aria-labelledby="xp-more-label">
-            <p id="xp-more-label" className="xp-progress-section-label">MORE XP</p>
-            {remainingOpportunities.length > 0 ? (
-              <div className="xp-progress-action-list">
-                {remainingOpportunities.map((opportunity) => (
-                  <OpportunityRow key={opportunity.code} opportunity={opportunity} />
-                ))}
-              </div>
-            ) : (
-              <p className="xp-progress-detail-value xp-progress-empty">No other action is due.</p>
-            )}
-          </section>
-        </div>
-
-        {error ? <p className="xp-progress-error">Showing your last saved XP view.</p> : null}
-      </article>
+      {card}
     </Link>
   );
 }

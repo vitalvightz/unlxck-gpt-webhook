@@ -63,6 +63,44 @@ test("Overview card restores the compact level, rank, total and action rail", ()
   assert.doesNotMatch(html, /daily reward|daily login|claimed/i);
 });
 
+test("Progress-page card uses the same hierarchy without nesting action links", () => {
+  const html = renderToStaticMarkup(
+    <XpProgressCardView
+      mode="page"
+      progress={progress({
+        state: {
+          totalXp: 350,
+          lastDailyLoginDate: null,
+          recentAwards: [],
+        },
+        opportunities: [
+          {
+            code: "complete_today_session",
+            label: "Complete today's session",
+            xp: 75,
+            href: "/today",
+            priority: 30,
+          },
+          {
+            code: "complete_training_week",
+            label: "Complete this training week",
+            xp: 100,
+            href: "/progress",
+            priority: 40,
+          },
+        ],
+      })}
+    />,
+  );
+
+  assert.match(html, /xp-progress-card--page/);
+  assert.match(html, /xp-progress-number[^>]*>350</);
+  assert.match(html, /350 \/ 750 XP/);
+  assert.match(html, /href="\/today"/);
+  assert.match(html, /xp-progress-action-link/);
+  assert.doesNotMatch(html, /aria-label="Open XP progress"/);
+});
+
 test("Overview card displays all three server-supplied opportunities compactly", () => {
   const html = renderToStaticMarkup(
     <XpProgressCardView
@@ -124,16 +162,33 @@ test("restored Overview card CSS disables progress motion when requested", () =>
   assert.doesNotMatch(css, /xp-progress-open/);
 });
 
-test("Progress route remains mounted but is entered through the Overview card", () => {
+test("Progress route keeps the compact card, athlete identity and latest-three history", () => {
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/progress/page.tsx", import.meta.url), "utf8");
+  const pageCss = readFileSync(new URL("../app/xp-progress-page.css", import.meta.url), "utf8");
   const card = readFileSync(new URL("./xp-progress-card.tsx", import.meta.url), "utf8");
 
   assert.match(layout, /<XpAwardFeedback \/>/);
   assert.match(layout, /xp-interface\.css/);
   assert.match(layout, /xp-overview-card\.css/);
+  assert.match(layout, /xp-progress-page\.css/);
   assert.match(card, /<Link href="\/progress"/);
-  assert.match(page, /UNLXCK rank reflects your progress and completed work inside UNLXCK/);
-  assert.match(page, /There is no public leaderboard during private beta/);
+  assert.match(page, /<XpProgressCardView progress=\{xp\.progress\} mode="page" \/>/);
+  assert.match(page, /profile\.full_name/);
+  assert.match(page, /profile\.technical_style/);
+  assert.match(page, /profile\.tactical_style/);
+  assert.match(page, /profile\.stance/);
+  assert.match(page, /recentAwards\.slice\(0, 3\)/);
+  assert.match(page, /Latest 3/);
+  assert.doesNotMatch(page, /Show all|showAllAwards|hiddenAwardCount/);
+  assert.doesNotMatch(pageCss, /xp-award-toggle/);
+  assert.match(page, /<details className="xp-page-panel xp-explanation xp-explanation-disclosure">/);
+  assert.match(page, /UNLXCK XP tracks your progress inside the app\./);
+  assert.match(page, /Earn XP by completing training, check-ins and plan milestones\./);
+  assert.match(page, /Your rank reflects personal progress, not your official amateur or professional status\./);
+  assert.match(page, /In future, XP may also unlock discounts, rewards and opportunities through UNLXCK\./);
+  assert.match(page, /Public leaderboards are not available during private beta\./);
+  assert.doesNotMatch(page, /Work banked\. Level earned\./);
+  assert.doesNotMatch(page, /Available XP actions/);
   assert.doesNotMatch(page, /global leaderboard/i);
 });

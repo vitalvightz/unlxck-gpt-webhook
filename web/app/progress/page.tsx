@@ -5,8 +5,15 @@ import { useMemo } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { Skeleton } from "@/components/skeleton";
+import { XpProgressCardSkeleton, XpProgressCardView } from "@/components/xp-progress-card";
 import { useXp } from "@/components/xp-provider";
-import { XP_ACTIONS, resolveXpLevel } from "@/lib/xp";
+import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
+import {
+  getOptionLabels,
+  TACTICAL_STYLE_OPTIONS,
+  TECHNICAL_STYLE_OPTIONS,
+} from "@/lib/intake-options";
+import { XP_ACTIONS } from "@/lib/xp";
 
 const numberFormatter = new Intl.NumberFormat("en-GB");
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -21,20 +28,57 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
+function titleCase(value: string): string {
+  return value
+    .trim()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getInitials(name: string): string {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return initials || "A";
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M15.4 6.4A6.5 6.5 0 1 0 16.2 12M15.4 6.4V2.8M15.4 6.4h-3.6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ProgressSkeleton() {
   return (
-    <div className="xp-page" aria-busy="true">
-      <section className="xp-page-hero">
-        <Skeleton variant="text" width={120} height={12} />
-        <Skeleton variant="text" width="52%" height={54} />
-        <Skeleton variant="block" width="100%" height={10} style={{ borderRadius: 999 }} />
+    <div className="xp-page xp-page--refined" aria-busy="true">
+      <section className="xp-athlete-header">
+        <Skeleton variant="block" width={52} height={52} style={{ borderRadius: 999 }} />
+        <div className="xp-athlete-skeleton-copy">
+          <Skeleton variant="text" width={72} height={10} />
+          <Skeleton variant="text" width="46%" height={26} />
+          <Skeleton variant="text" width="62%" height={13} />
+        </div>
       </section>
-      <section className="xp-page-grid">
-        {[0, 1, 2, 3].map((item) => (
+      <XpProgressCardSkeleton mode="page" />
+      <section className="xp-page-grid xp-page-summary-grid">
+        {[0, 1].map((item) => (
           <article key={item} className="xp-page-panel">
-            <Skeleton variant="text" width={100} height={14} />
-            <Skeleton variant="text" width="80%" height={18} />
-            <Skeleton variant="text" width="64%" height={18} />
+            <Skeleton variant="text" width={100} height={11} />
+            <Skeleton variant="text" width="72%" height={20} />
+            <Skeleton variant="text" width="58%" height={14} />
           </article>
         ))}
       </section>
@@ -45,10 +89,19 @@ function ProgressSkeleton() {
 export default function ProgressPage() {
   const { session, isReady, isMeHydrated, me } = useAppSession();
   const xp = useXp();
-  const level = useMemo(
-    () => resolveXpLevel(xp.progress.state.totalXp),
-    [xp.progress.state.totalXp],
-  );
+
+  const fighterIdentity = useMemo(() => {
+    if (!me) return [];
+
+    const profile = me.profile;
+    const labels = [
+      ...getOptionLabels(TECHNICAL_STYLE_OPTIONS, profile.technical_style),
+      ...getOptionLabels(TACTICAL_STYLE_OPTIONS, profile.tactical_style),
+      profile.stance ? titleCase(profile.stance) : "",
+    ].filter(Boolean);
+
+    return [...new Set(labels)];
+  }, [me]);
 
   if (!isReady || (session && !isMeHydrated) || !xp.isHydrated) {
     return <ProgressSkeleton />;
@@ -65,29 +118,47 @@ export default function ProgressPage() {
     );
   }
 
-  const total = xp.progress.state.totalXp;
-  const nextThreshold = level.nextLevel?.threshold ?? level.currentLevel.threshold;
-  const headlineRatio = level.nextLevel
-    ? `${numberFormatter.format(total)} / ${numberFormatter.format(nextThreshold)} XP`
-    : `${numberFormatter.format(total)} XP`;
+  const profile = me.profile;
+  const athleteName = profile.full_name.trim() || "Your progress";
+  const avatarUrl = isSafeAvatarImageUrl(profile.avatar_url) ? profile.avatar_url : null;
+  const statusAndRecord = [
+    profile.professional_status ? titleCase(profile.professional_status) : "",
+    profile.record?.trim() || "",
+  ].filter(Boolean);
+  const visibleAwards = xp.progress.state.recentAwards.slice(0, 3);
 
   return (
-    <div className="xp-page">
-      <header className="xp-page-header">
-        <div>
-          <p className="kicker">Progress</p>
-          <h1>Work banked. Level earned.</h1>
-          <p className="muted">
-            Your UNLXCK rank grows through completed training, useful check-ins and major plan milestones.
-          </p>
+    <div className="xp-page xp-page--refined">
+      <header className="xp-athlete-header">
+        <div className="xp-athlete-avatar" aria-hidden="true">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" />
+          ) : (
+            <span>{getInitials(athleteName)}</span>
+          )}
         </div>
+
+        <div className="xp-athlete-identity">
+          <p className="status-label">PROGRESS</p>
+          <h1>{athleteName}</h1>
+          {fighterIdentity.length > 0 ? (
+            <p className="xp-athlete-style-line">{fighterIdentity.join(" · ")}</p>
+          ) : (
+            <p className="xp-athlete-style-line">Complete your fighter profile to personalise this page.</p>
+          )}
+          {statusAndRecord.length > 0 ? (
+            <p className="xp-athlete-record-line">{statusAndRecord.join(" · ")}</p>
+          ) : null}
+        </div>
+
         <button
           type="button"
-          className="secondary-button"
+          className="xp-refresh-button"
           onClick={() => void xp.refresh()}
           disabled={xp.isRefreshing}
+          aria-label={xp.isRefreshing ? "Refreshing XP progress" : "Refresh XP progress"}
         >
-          {xp.isRefreshing ? "Refreshing…" : "Refresh"}
+          <RefreshIcon />
         </button>
       </header>
 
@@ -97,77 +168,20 @@ export default function ProgressPage() {
         </div>
       ) : null}
 
-      <section className="xp-page-hero" aria-labelledby="xp-rank-heading">
-        <div className="xp-page-rank-heading">
-          <div>
-            <p className="status-label">CURRENT UNLXCK RANK</p>
-            <h2 id="xp-rank-heading">
-              LEVEL {level.currentLevel.level} — {level.currentLevel.title.toUpperCase()}
-            </h2>
-          </div>
-          <span className="xp-page-total">{numberFormatter.format(total)} XP</span>
-        </div>
-        <p className="xp-page-ratio">{headlineRatio}</p>
-        <div
-          className="xp-page-progress-track"
-          role="progressbar"
-          aria-label={level.nextLevel ? `Progress to ${level.nextLevel.title}` : "Maximum level reached"}
-          aria-valuemin={0}
-          aria-valuemax={level.nextLevel ? level.xpForNextLevel : 100}
-          aria-valuenow={level.nextLevel ? level.xpWithinLevel : 100}
-          aria-valuetext={
-            level.nextLevel
-              ? `${level.xpRemaining} XP to Level ${level.nextLevel.level}`
-              : "Maximum level reached"
-          }
-        >
-          <span style={{ width: `${level.percentage}%` }} />
-        </div>
-        <div className="xp-page-rank-meta">
-          <span>
-            {level.nextLevel
-              ? `${numberFormatter.format(level.xpRemaining)} XP to ${level.nextLevel.title}`
-              : "Maximum level reached"}
-          </span>
-          <span>{level.nextLevel ? `Next: Level ${level.nextLevel.level}` : "Champion"}</span>
-        </div>
-      </section>
+      <XpProgressCardView progress={xp.progress} mode="page" />
 
-      <section className="xp-page-panel xp-page-next" aria-labelledby="xp-next-title">
-        <div className="xp-page-section-heading">
-          <div>
-            <p className="status-label">NEXT</p>
-            <h2 id="xp-next-title">Available XP actions</h2>
-          </div>
-          <span>Only actions possible now</span>
-        </div>
-        {xp.progress.opportunities.length > 0 ? (
-          <div className="xp-opportunity-list">
-            {xp.progress.opportunities.map((opportunity) => (
-              <Link key={opportunity.code} href={opportunity.href} className="xp-opportunity-row">
-                <span className="xp-opportunity-amount">+{numberFormatter.format(opportunity.xp)} XP</span>
-                <span>{opportunity.label}</span>
-                <span aria-hidden="true">→</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="xp-page-empty">No XP action is due right now.</p>
-        )}
-      </section>
-
-      <section className="xp-page-grid">
+      <section className="xp-page-grid xp-page-summary-grid">
         <article className="xp-page-panel xp-week-panel" aria-labelledby="xp-week-title">
           <div className="xp-page-section-heading">
             <div>
-              <p className="status-label">WEEKLY PROGRESS</p>
+              <p className="status-label">THIS WEEK</p>
               <h2 id="xp-week-title">
                 {xp.progress.currentWeek
                   ? `Week ${
                       xp.progress.currentWeek.weekIndex === null
                         ? ""
                         : xp.progress.currentWeek.weekIndex + 1
-                    } ${xp.progress.currentWeek.phaseLabel ? `— ${xp.progress.currentWeek.phaseLabel}` : ""}`
+                    }${xp.progress.currentWeek.phaseLabel ? ` — ${xp.progress.currentWeek.phaseLabel}` : ""}`
                   : "No active training week"}
               </h2>
             </div>
@@ -176,7 +190,7 @@ export default function ProgressPage() {
             <>
               <p className="xp-week-count">
                 <strong>{xp.progress.currentWeek.completedSessions}</strong>
-                <span>/ {xp.progress.currentWeek.plannedSessions} planned sessions complete</span>
+                <span>/ {xp.progress.currentWeek.plannedSessions} sessions</span>
               </p>
               <div className="xp-week-track" aria-hidden="true">
                 <span
@@ -198,7 +212,7 @@ export default function ProgressPage() {
                     : "Week complete. XP reconciliation is pending."
                   : `${xp.progress.currentWeek.remainingSessions} session${
                       xp.progress.currentWeek.remainingSessions === 1 ? "" : "s"
-                    } remaining. +100 XP when the week is complete.`}
+                    } remaining. +100 XP when complete.`}
               </p>
             </>
           ) : (
@@ -209,8 +223,8 @@ export default function ProgressPage() {
         <article className="xp-page-panel" aria-labelledby="xp-milestones-title">
           <div className="xp-page-section-heading">
             <div>
-              <p className="status-label">MAJOR MILESTONES</p>
-              <h2 id="xp-milestones-title">Plan journey</h2>
+              <p className="status-label">JOURNEY</p>
+              <h2 id="xp-milestones-title">Plan milestones</h2>
             </div>
           </div>
           {xp.progress.majorMilestones.length > 0 ? (
@@ -231,17 +245,17 @@ export default function ProgressPage() {
         </article>
       </section>
 
-      <section className="xp-page-panel" aria-labelledby="xp-awards-title">
+      <section className="xp-page-panel xp-awards-panel" aria-labelledby="xp-awards-title">
         <div className="xp-page-section-heading">
           <div>
-            <p className="status-label">RECENT AWARDS</p>
-            <h2 id="xp-awards-title">Latest XP earned</h2>
+            <p className="status-label">RECENT XP</p>
+            <h2 id="xp-awards-title">Latest earned</h2>
           </div>
-          <span>Latest 20</span>
+          <span>Latest 3</span>
         </div>
-        {xp.progress.state.recentAwards.length > 0 ? (
+        {visibleAwards.length > 0 ? (
           <div className="xp-award-list">
-            {xp.progress.state.recentAwards.map((award) => (
+            {visibleAwards.map((award) => (
               <div key={award.id} className="xp-award-row">
                 <div>
                   <strong>{XP_ACTIONS[award.action].label}</strong>
@@ -256,20 +270,21 @@ export default function ProgressPage() {
         )}
       </section>
 
-      <section className="xp-page-panel xp-explanation" aria-labelledby="xp-explanation-title">
-        <p className="status-label">HOW XP WORKS</p>
-        <h2 id="xp-explanation-title">Progress, not competitive status</h2>
-        <p>
-          UNLXCK rank reflects your progress and completed work inside UNLXCK. It is not an official amateur,
-          professional or competitive ranking.
-        </p>
-        <ul>
-          <li>XP is earned through real actions such as training, check-ins and completed plan milestones.</li>
-          <li>Reopening the app does not generate XP.</li>
-          <li>Repeating an already-recorded action does not duplicate XP.</li>
-          <li>There is no public leaderboard during private beta.</li>
-        </ul>
-      </section>
+      <details className="xp-page-panel xp-explanation xp-explanation-disclosure">
+        <summary>
+          <span>
+            <span className="status-label">HOW XP WORKS</span>
+            <strong>UNLXCK XP tracks your progress inside the app.</strong>
+          </span>
+          <span className="xp-details-chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div className="xp-explanation-content">
+          <p>Earn XP by completing training, check-ins and plan milestones. As your XP grows, so does your UNLXCK rank.</p>
+          <p>Your rank reflects personal progress, not your official amateur or professional status.</p>
+          <p>In future, XP may also unlock discounts, rewards and opportunities through UNLXCK.</p>
+          <p>Public leaderboards are not available during private beta.</p>
+        </div>
+      </details>
     </div>
   );
 }
