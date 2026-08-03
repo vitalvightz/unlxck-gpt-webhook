@@ -13,7 +13,12 @@ logger = logging.getLogger(__name__)
 
 CANONICAL_HARD_SPARRING_LABEL = "Hard sparring — controlled hard contact"
 CANONICAL_HARD_SPARRING_BAN_LABEL = "Technical-only combat"
-CANONICAL_HARD_SPARRING_NOTE = "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
+# Two distinct notes: a hard-sparring day and a D-17+ technical-only day must never
+# share wording, or a technical-only card would tell the athlete to spar hard. Both
+# keep the "no extra S&C" + "freshness priority" tokens the validator's minimal
+# coach-owned render check looks for.
+CANONICAL_HARD_SPARRING_NOTE = "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority."
+CANONICAL_TECHNICAL_ONLY_NOTE = "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
 
 
 _PAYLOAD_MODE_MAP = {
@@ -2369,10 +2374,11 @@ def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]
                 session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
                 session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
             elif role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day":
-                # Downgraded context entries (D-17 ban) and downgraded roles
-                # both render as coach-led technical-only combat.
+                # Downgraded context entries (D-17 ban) and downgraded roles both
+                # render as technical-only combat — the note must say "no hard
+                # sparring", never the hard-sparring note.
                 session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
-                session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
+                session_copy["display_text"] = CANONICAL_TECHNICAL_ONLY_NOTE
             coach_owned.append(session_copy)
     return coach_owned
 
@@ -4686,7 +4692,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities.\n"
-"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe the sparring and never deloads it. At D-18 or further out render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"MMA — hard sparring / controlled hard contact\"). From D-17 onward hard sparring is banned: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent). No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else — never schedule or list programmed S&C on a declared hard-sparring/contact day."
+"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe the sparring and never deloads it. At D-18 or further out render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"MMA — hard sparring / controlled hard contact\") followed by exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" From D-17 onward hard sparring is banned: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent) followed by exactly one note: \"" + CANONICAL_TECHNICAL_ONLY_NOTE + "\" — a technical-only day must never carry the hard-sparring note. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. Nothing else — never schedule or list programmed S&C on a declared hard-sparring/contact day."
     )
     if payload_mode == "fight_day_protocol_payload":
         return (

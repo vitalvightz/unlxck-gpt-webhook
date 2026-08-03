@@ -1,4 +1,6 @@
 from fightcamp.stage2_payload_late_fight import (
+    CANONICAL_HARD_SPARRING_NOTE,
+    CANONICAL_TECHNICAL_ONLY_NOTE,
     _coach_owned_context_session_sequence,
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
@@ -1214,7 +1216,9 @@ def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
     assert context[0]["role_key"] == "technical_touch_day"
     assert context[0]["downgraded_from_role_key"] == "hard_sparring_day"
     assert context[0]["athlete_facing_label"] == "Technical-only combat"
-    assert context[0]["display_text"] == "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
+    # A technical-only (D-17+ ban) day must carry the technical note, never the
+    # hard-sparring note — it must not tell the athlete to spar hard.
+    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
 
 
 def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
@@ -1229,7 +1233,7 @@ def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
     assert len(context) == 1
     assert context[0]["role_key"] == "hard_sparring_day"
     assert context[0]["athlete_facing_label"] == "Hard sparring — controlled hard contact"
-    assert context[0]["display_text"] == "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
+    assert context[0]["display_text"] == "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority."
 
 
 def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
@@ -1245,7 +1249,34 @@ def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
     context = _coach_owned_context_session_sequence(sessions)
     assert len(context) == 1
     assert context[0]["athlete_facing_label"] == "Technical-only combat"
-    assert context[0]["display_text"] == "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
+    # Downgraded (D-17+ ban) day gets the technical note, never the hard-sparring note.
+    assert context[0]["display_text"] == "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
+
+
+def test_technical_only_context_never_carries_hard_sparring_note():
+    # Regression: the technical-only (D-17+ ban) label and the hard-sparring label
+    # must use distinct notes, so a technical-only card never tells the athlete to
+    # perform their hard sparring/contact work.
+    assert CANONICAL_HARD_SPARRING_NOTE != CANONICAL_TECHNICAL_ONLY_NOTE
+    hard = [{"role_key": "hard_sparring_day", "scheduled_day_hint": "friday", "countdown_offset": 20}]
+    technical = [
+        {
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "friday",
+            "countdown_offset": 6,
+            "downgraded": True,
+            "downgraded_to_role_key": "technical_touch_day",
+        }
+    ]
+    hard_note = _coach_owned_context_session_sequence(hard)[0]["display_text"]
+    technical_note = _coach_owned_context_session_sequence(technical)[0]["display_text"]
+
+    assert hard_note == CANONICAL_HARD_SPARRING_NOTE
+    assert technical_note == CANONICAL_TECHNICAL_ONLY_NOTE
+    # The technical note only ever *negates* hard sparring ("no hard sparring"); it
+    # never prescribes it the way the hard note does ("your declared hard-sparring...").
+    assert "no hard sparring" in technical_note.lower()
+    assert "your declared hard-sparring" not in technical_note.lower()
 
 
 def test_declared_coach_combat_spine_keeps_tuesday_friday_thursday_fight_visible():

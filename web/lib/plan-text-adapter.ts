@@ -613,7 +613,7 @@ function inferSessionType(session: PlanTextSession): string {
     .map((block) => `${block.tag || ""} ${block.name}`)
     .join(" ");
   const value = `${session.title} ${blocks}`.toLowerCase();
-  if (/spar|coach-led|boxing|grappling|wrestling|muay thai|kickbox|combat/.test(value)) {
+  if (/spar|coach-led|boxing|grappling|wrestling|muay thai|kickbox/.test(value)) {
     return "skill";
   }
   if (/recover|reset|mobility|breath|rest/.test(value)) {

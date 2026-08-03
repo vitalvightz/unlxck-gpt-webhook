@@ -937,13 +937,47 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   // The contact day surfaces its headline and the coach-neutral note instead of
-  // collapsing into a rest day.
+  // collapsing into a rest day. A technical-only day must carry the technical note
+  // ("no hard sparring"), never the hard-sparring note.
   assert.equal(html.includes("Coach-led boxing — technical only"), true);
-  assert.equal(html.includes("your own hard sparring/contact work"), true);
+  assert.equal(html.includes("Technical-only contact today"), true);
+  assert.equal(html.includes("no hard sparring"), true);
+  assert.equal(html.includes("this is your declared hard-sparring/contact work"), false);
   assert.equal(html.includes("sp-day-card-technical"), true);
   // The genuine rest day renders as a single compact, non-expandable rest row.
   assert.equal(countOccurrences(html, "cm-rest-day"), 1);
   assert.equal(html.includes("Rest day."), false);
+});
+
+test("a hard-sparring day carries the hard-sparring note, not the technical note", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-20",
+            countdown_label: "D-20",
+            day_type: "high",
+            today_card: { headline: "Hard sparring — controlled hard contact" },
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Hard sparring — controlled hard contact"), true);
+  assert.equal(html.includes("this is your declared hard-sparring/contact work"), true);
+  // A hard-sparring day must not borrow the technical-only "no hard sparring" wording.
+  assert.equal(html.includes("Technical-only contact today"), false);
+  assert.equal(html.includes("sp-day-card-sparring"), true);
 });
 
 test("open plans keep session categories inside chronological day cards", () => {
@@ -1099,10 +1133,12 @@ test("surfaces coach-led contact alongside app sessions in the same day card", (
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   // Both the coach-owned contact and the app session render in the one day card,
-  // with the contact surfaced above the app work.
+  // with the contact surfaced above the app work. A technical-only contact must
+  // read "no hard sparring", never the hard-sparring wording.
   assert.equal(html.includes("Coach-led boxing — technical only"), true);
   assert.equal(html.includes("Tactical Cue Card"), true);
-  assert.equal(html.includes("Your own hard sparring/contact work today"), true);
+  assert.equal(html.includes("Technical-only contact today (no hard sparring)"), true);
+  assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
   assert.ok(
     html.indexOf("Coach-led boxing — technical only") < html.indexOf(">Tactical Cue Card<"),
   );
