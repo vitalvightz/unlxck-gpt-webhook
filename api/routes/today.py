@@ -28,6 +28,7 @@ from api.models import (
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.services.progress_notifications import award_session_progress
+from api.services.week_progress import try_award_completed_week_for_completion
 from api.services.xp_awards import award_checkin_xp, award_injury_update_xp
 from api.services.today_readiness_boundary import (
     build_today_command_view,
@@ -187,6 +188,12 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         )
         completion_status = completion_status_of(row)
         award_session_progress(
+            store,
+            athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
+            completion=row,
+        )
+        try_award_completed_week_for_completion(
             store,
             athlete_id=profile.athlete_id,
             athlete_timezone=profile.athlete_timezone,
