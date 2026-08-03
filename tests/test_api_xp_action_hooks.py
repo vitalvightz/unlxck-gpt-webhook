@@ -16,10 +16,6 @@ def _seed_plan(store) -> None:
     }
 
 
-def _actions(store) -> list[str]:
-    return [award["action"] for award in store.xp_awards.get("athlete-1", [])]
-
-
 def test_checkin_route_awards_first_and_daily_xp_once_for_repeated_same_day_saves():
     client, store, _ = _build_client()
     _seed_plan(store)
