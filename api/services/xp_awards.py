@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
 
@@ -12,6 +12,11 @@ from api.store import AppStore
 logger = logging.getLogger(__name__)
 
 MIN_FEEDBACK_COMMENT_CHARS = 20
+ACTIVATION_READY_PLAN_STATUSES = frozenset({"ready", "publishable_with_flags"})
+# Keep aligned with the combat sports that are selectable in the private beta.
+# Disabled coming-soon options and arbitrary persisted strings do not complete
+# the activation profile milestone.
+ACTIVATION_COMBAT_SPORTS = frozenset({"boxing", "kickboxing", "mma"})
 
 
 def _award(
@@ -36,6 +41,135 @@ def _award(
             idempotency_key,
         )
         return None
+
+
+def _value(source: object, key: str) -> object:
+    try:
+        if isinstance(source, Mapping):
+            return source.get(key)
+        return getattr(source, key, None)
+    except Exception:  # noqa: BLE001 - eligibility must fail closed
+        return None
+
+
+def _normalized_values(value: object) -> frozenset[str]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return frozenset()
+    try:
+        return frozenset(
+            normalized
+            for item in value
+            if (normalized := str(item or "").strip().lower())
+        )
+    except Exception:  # noqa: BLE001 - malformed persisted state fails closed
+        return frozenset()
+
+
+def profile_activation_complete(profile: object) -> bool:
+    """Return whether the persisted profile has a live combat sport and name."""
+
+    try:
+        full_name = str(_value(profile, "full_name") or "").strip()
+        technical_styles = _normalized_values(_value(profile, "technical_style"))
+        return bool(full_name and technical_styles.intersection(ACTIVATION_COMBAT_SPORTS))
+    except Exception:  # noqa: BLE001 - malformed profile state fails closed
+        return False
+
+
+def plan_activation_ready(plan: object) -> bool:
+    """Return whether a persisted athlete-visible plan is ready for use."""
+
+    try:
+        plan_id = str(_value(plan, "plan_id") or _value(plan, "id") or "").strip()
+        status = str(_value(plan, "status") or "").strip().lower()
+        return bool(plan_id and status in ACTIVATION_READY_PLAN_STATUSES)
+    except Exception:  # noqa: BLE001 - malformed plan state fails closed
+        return False
+
+
+def _reconcile_activation_milestone(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    action: str,
+    idempotency_key: str,
+    eligible: Callable[[], bool],
+) -> dict | None:
+    """Reconcile one activation milestone without affecting later milestones."""
+
+    try:
+        if not eligible():
+            return None
+        return _award(
+            store,
+            athlete_id=athlete_id,
+            action=action,
+            idempotency_key=idempotency_key,
+        )
+    except Exception:  # noqa: BLE001 - one milestone cannot block another
+        logger.exception(
+            "[xp] activation milestone failed athlete_id=%s action=%s key=%s",
+            athlete_id,
+            action,
+            idempotency_key,
+        )
+        return None
+
+
+def reconcile_activation_xp(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    profile: object,
+    latest_intake: object | None,
+    latest_plan: object | None,
+) -> list[dict]:
+    """Repair athlete-wide activation awards from persisted authoritative state.
+
+    This deliberately runs on repeatable state reads rather than a one-shot
+    mutation callback. A transient XP failure is therefore retried on the next
+    ``/api/me`` request, while athlete-wide idempotency keys prevent duplicates.
+    Each milestone is isolated so a failure in one cannot block reconciliation
+    of the remaining eligible milestones. Awards are monotonic: later profile
+    edits or plan archival never remove XP.
+    """
+
+    results: list[dict] = []
+
+    profile_result = _reconcile_activation_milestone(
+        store,
+        athlete_id=athlete_id,
+        action="profile_completed",
+        idempotency_key=f"profile-completed:{athlete_id}",
+        eligible=lambda: profile_activation_complete(profile),
+    )
+    if profile_result:
+        results.append(profile_result)
+
+    # ``latest_intake`` is supplied only when _build_me_response found a
+    # persisted athlete_intakes row. The intake payload itself does not need
+    # to expose the row id because the reward is athlete-wide and first-only.
+    intake_result = _reconcile_activation_milestone(
+        store,
+        athlete_id=athlete_id,
+        action="first_intake_completed",
+        idempotency_key=f"first-intake-completed:{athlete_id}",
+        eligible=lambda: latest_intake is not None,
+    )
+    if intake_result:
+        results.append(intake_result)
+
+    plan_result = _reconcile_activation_milestone(
+        store,
+        athlete_id=athlete_id,
+        action="first_plan_ready",
+        idempotency_key=f"first-plan-ready:{athlete_id}",
+        eligible=lambda: latest_plan is not None and plan_activation_ready(latest_plan),
+    )
+    if plan_result:
+        results.append(plan_result)
+
+    return results
 
 
 def award_checkin_xp(
