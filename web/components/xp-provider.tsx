@@ -58,6 +58,22 @@ const initialViewState = (): XpViewState => ({
 
 function feedbackLabel(awards: XpAwardRecord[]): string {
   const actions = new Set(awards.map((award) => award.action));
+
+  // A final session can trigger several lifecycle rewards at once. Name the
+  // most important milestone in the batch rather than reducing it to the
+  // ordinary session action that happened to trigger reconciliation.
+  if (actions.has("camp_completed")) {
+    return "Fight camp complete";
+  }
+  if (actions.has("first_plan_completed")) {
+    return "Training plan complete";
+  }
+  if (actions.has("phase_completed")) {
+    return "Training phase complete";
+  }
+  if (actions.has("full_training_week_completed")) {
+    return "Training week complete";
+  }
   if (
     actions.has("training_logged") ||
     actions.has("planned_session_completed")
@@ -72,15 +88,6 @@ function feedbackLabel(awards: XpAwardRecord[]): string {
   }
   if (actions.has("injury_update_completed")) {
     return "Injury update complete";
-  }
-  if (actions.has("full_training_week_completed")) {
-    return "Training week complete";
-  }
-  if (actions.has("camp_completed")) {
-    return "Fight camp complete";
-  }
-  if (actions.has("phase_completed")) {
-    return "Training phase complete";
   }
   if (awards.length === 1) {
     return XP_ACTIONS[awards[0].action].label;
@@ -105,6 +112,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
   const baselineReadyRef = useRef(false);
   const seenAwardIdsRef = useRef<Set<string>>(new Set());
   const inFlightRef = useRef<Promise<void> | null>(null);
+  const trailingRefreshRef = useRef(false);
 
   useEffect(() => {
     activeIdentityRef.current = identityKey;
@@ -115,6 +123,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
     baselineReadyRef.current = false;
     seenAwardIdsRef.current = new Set();
     inFlightRef.current = null;
+    trailingRefreshRef.current = false;
     setView({
       ...initialViewState(),
       athleteId: athleteId || null,
@@ -174,6 +183,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
   const load = useCallback(async () => {
     if (!athleteId || !accessToken || !identityKey) return;
     if (inFlightRef.current) {
+      trailingRefreshRef.current = true;
       await inFlightRef.current;
       return;
     }
@@ -187,19 +197,25 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
     }));
 
     const request = (async () => {
-      try {
-        const progress = await getXpProgress(accessToken);
-        applyProgress(progress, targetAthleteId, targetIdentityKey);
-      } catch {
-        if (activeIdentityRef.current !== targetIdentityKey) return;
-        setView((current) => ({
-          ...current,
-          athleteId: targetAthleteId,
-          isHydrated: true,
-          isRefreshing: false,
-          error: "XP progress is temporarily unavailable.",
-        }));
-      }
+      do {
+        trailingRefreshRef.current = false;
+        try {
+          const progress = await getXpProgress(accessToken);
+          applyProgress(progress, targetAthleteId, targetIdentityKey);
+        } catch {
+          if (activeIdentityRef.current !== targetIdentityKey) return;
+          setView((current) => ({
+            ...current,
+            athleteId: targetAthleteId,
+            isHydrated: true,
+            isRefreshing: false,
+            error: "XP progress is temporarily unavailable.",
+          }));
+        }
+      } while (
+        trailingRefreshRef.current &&
+        activeIdentityRef.current === targetIdentityKey
+      );
     })();
 
     inFlightRef.current = request;
