@@ -37,6 +37,7 @@ import {
   selectBlockMetric,
   shouldShowRest,
   weekLabel,
+  type SessionlessDayKind,
 } from "@/lib/structured-plan";
 import {
   buildCompletionIndex,
@@ -100,8 +101,19 @@ const titleize = formatPlanLabel;
 const LIGHT_TECHNICAL_NOTE =
   "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
 
-const COACH_LED_CONTACT_NOTE =
-  "Coach-owned contact today — done with your coach alongside the app work below. Keep freshness the priority.";
+// A sessionless contact day carries no app S&C. The note must match the day kind:
+// a technical-only day (D-17+ ban) must never tell the athlete to spar hard.
+const HARD_SPARRING_SESSIONLESS_NOTE =
+  "No extra S&C today — this is your declared hard-sparring/contact work. Keep freshness the priority.";
+const TECHNICAL_ONLY_SESSIONLESS_NOTE =
+  "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness the priority.";
+
+// Coach-owned contact that coexists with app work on the same day, keyed the same
+// way so a technical-only contact block never reads as hard sparring.
+const HARD_SPARRING_CONTACT_NOTE =
+  "Your declared hard-sparring/contact work today, alongside the app work below. Keep freshness the priority.";
+const TECHNICAL_ONLY_CONTACT_NOTE =
+  "Technical-only contact today (no hard sparring), alongside the app work below. Keep freshness the priority.";
 
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
@@ -609,7 +621,9 @@ export function SessionlessDayCard({
       {kind === "light_combat" ? (
         <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
       ) : coachLed ? (
-        <p className="sp-today-note">No extra S&amp;C today — train with your coach and keep freshness priority.</p>
+        <p className="sp-today-note">
+          {kind === "technical" ? TECHNICAL_ONLY_SESSIONLESS_NOTE : HARD_SPARRING_SESSIONLESS_NOTE}
+        </p>
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
@@ -646,9 +660,11 @@ function LightTechnicalDayContext({
 function CoachLedDayContext({
   title,
   tag,
+  kind,
 }: {
   title: string;
   tag: string | null;
+  kind: SessionlessDayKind;
 }) {
   return (
     <div className="cm-light-technical cm-coach-led-contact">
@@ -656,7 +672,9 @@ function CoachLedDayContext({
         {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
         <p className="sp-today-headline">{title}</p>
       </div>
-      <p className="sp-today-note">{COACH_LED_CONTACT_NOTE}</p>
+      <p className="sp-today-note">
+        {kind === "technical" ? TECHNICAL_ONLY_CONTACT_NOTE : HARD_SPARRING_CONTACT_NOTE}
+      </p>
     </div>
   );
 }
@@ -694,7 +712,11 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
         <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
       ) : null}
       {coachLedContact ? (
-        <CoachLedDayContext title={coachLedContact.title} tag={coachLedContact.tag} />
+        <CoachLedDayContext
+          title={coachLedContact.title}
+          tag={coachLedContact.tag}
+          kind={coachLedContact.kind}
+        />
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
@@ -1592,7 +1614,7 @@ function WeekOverview({
       value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
     },
     {
-      label: "Coach-led",
+      label: "Sparring/contact",
       value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
     },
     {

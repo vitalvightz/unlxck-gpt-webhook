@@ -659,7 +659,7 @@ def _apply_per_day_countdown_overrides(
             "effective_load": "hard",
             "reason_codes": codes,
             "reason": (
-                "Coach-owned combat lock: declared hard sparring at D-18 or further out "
+                "Athlete-owned combat lock: declared hard sparring at D-18 or further out "
                 "stays hard; readiness concerns are advisory only."
             ),
             "d_day": d_day,

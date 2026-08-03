@@ -25,7 +25,13 @@ from fightcamp.weekly_schedule_view import normalize_weekday
 
 
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-_COACH_LED_RE = re.compile(r"\b(coach|spar|boxing|pads?|mitts?|technical\s+only)\b", re.I)
+# Detects an athlete-owned hard-sparring / contact day from its card text. Matches
+# the coach-neutral labels ("Hard sparring", "Technical-only combat", "controlled
+# hard contact") and the legacy "coach-led" wording so stored plans still resolve.
+_COACH_LED_RE = re.compile(
+    r"\b(coach|spar|boxing|pads?|mitts?|technical[-\s]+only|controlled\s+hard\s+contact)\b",
+    re.I,
+)
 
 
 def _mapping(value: Any) -> dict[str, Any]:

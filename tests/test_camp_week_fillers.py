@@ -271,4 +271,4 @@ def test_session_body_renders_support_insert_display_text():
 def test_session_body_support_insert_without_text_falls_back():
     role = {"category": "support_insert", "role_key": "tactical_cue_card"}
     body = _session_body(role, "SPP", [], {}, is_primary_strength=False)
-    assert body == ["- Coach-led session aligned with this week's focus."]
+    assert body == ["- Session aligned with this week's focus."]

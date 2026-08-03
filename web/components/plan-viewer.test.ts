@@ -1170,6 +1170,31 @@ test("fallback week goals omit duplicated week and countdown metadata", () => {
   assert.equal(synthetic.weeks?.[0]?.week_goal, null);
 });
 
+test("session-type inference keeps 'Combat conditioning' as conditioning and 'Technical-only combat' as skill", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "SPP - Week 1 (D-30 to D-24) - Build",
+      "D-30 (Monday) - Combat conditioning",
+      "Why: raise repeatable output.",
+      "Assault Bike Intervals - 6 x 40s; RPE 8.",
+      "D-28 (Wednesday) - Technical-only combat",
+      "Why: sharpen timing.",
+      "Tactical Cue-Card Review - 3 x 2 min.",
+    ].join("\n"),
+    "2026-07-23",
+  );
+
+  const days = plan.weeks?.[0]?.days ?? [];
+  const combatConditioning = days.find((d) => d.sessions?.[0]?.title === "Combat conditioning");
+  const technicalCombat = days.find((d) => d.sessions?.[0]?.title === "Technical-only combat");
+
+  // Regression: the generic word "combat" must not force a conditioning session
+  // into the skill bucket.
+  assert.equal(combatConditioning?.sessions?.[0]?.session_type, "conditioning");
+  // "Technical-only combat" still classifies as a skill session (via "technical").
+  assert.equal(technicalCombat?.sessions?.[0]?.session_type, "skill");
+});
+
 test("coach-only plan text remains a visible enhanced day card", () => {
   const plan = buildStructuredPlanFromText(
     [

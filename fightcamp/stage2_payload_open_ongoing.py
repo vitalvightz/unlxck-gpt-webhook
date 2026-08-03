@@ -92,7 +92,7 @@ def build_open_ongoing_payload(*, athlete_model: dict[str, Any]) -> dict[str, An
             },
             "priority_hierarchy": [
                 "Protect restrictions and injury constraints first",
-                "Preserve coach-owned boxing and sparring schedule",
+                "Preserve declared hard sparring and contact schedule",
                 "Keep one main adaptation focus + one limiter focus",
                 "Use support work only after anchor quality is protected",
             ],

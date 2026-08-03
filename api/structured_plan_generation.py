@@ -2036,27 +2036,29 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   morning check-in only.
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
-- Coach-led, sparring, or technical days where NO programmed S&C work is
-  prescribed (e.g. "Coach-led boxing — hard sparring / controlled hard contact",
-  "Coach-led boxing — technical-only combat", "coach-owned combat session", or
-  the legacy "Coach-led boxing session", "no extra S&C today", "no app S&C
-  today", "technical only") MUST still be emitted as a day. Leave that day's
-  "sessions" as [] and set a concise today_card.headline naming what it is (e.g.
-  "Coach-led boxing", "Hard sparring", "Technical only") so the day renders as
+- Hard-sparring, sparring, or technical contact days where NO programmed S&C work
+  is prescribed (e.g. "Hard sparring — controlled hard contact", "Technical-only
+  combat", "your own hard sparring/contact work", or the legacy "Coach-led boxing —
+  hard sparring / controlled hard contact", "Coach-led boxing — technical-only
+  combat", "coach-owned combat session", "Coach-led boxing session", "no extra S&C
+  today", "no app S&C today", "technical only") MUST still be emitted as a day.
+  Leave that day's "sessions" as [] and set a concise today_card.headline naming
+  what it is (e.g. "Hard sparring", "Technical-only combat") so the day renders as
   its own card. Do NOT invent S&C blocks for these days and do NOT drop the day.
-- A coach-led / sparring / technical day can ALSO carry a low-load programmed
-  session on the SAME day (e.g. the plan lists "Coach-led boxing — technical
-  only" AND a short touch such as a tactical cue card, mobility reset, or
-  freshness primer). When that happens the two COEXIST — never drop one for the
-  other: emit the programmed S&C work as normal entries in "sessions" (with its
-  blocks), AND set today_card.coach_led_contact to the coach-owned label (e.g.
-  "Coach-led boxing — technical only"). Put the coach-owned label in
-  coach_led_contact, NOT in headline (set headline to a generic title like
-  "Training Day" or the programmed session's title instead, as headline is still
-  required), so the programmed session keeps its own title; the renderer shows the
-  coach-owned contact as a context line above it. The "coach-owned combat
-  session" / legacy "no extra S&C today" wording only applies when there is
-  genuinely no programmed work — if a session is listed for the day, keep it.
+  Never label these days "coach-led" or "coach-owned" — name the contact work as
+  the athlete's own hard sparring / contact work.
+- A hard-sparring / sparring / technical contact day can ALSO carry a low-load
+  programmed session on the SAME day (e.g. the plan lists "Technical-only combat"
+  AND a short touch such as a tactical cue card, mobility reset, or freshness
+  primer). When that happens the two COEXIST — never drop one for the other: emit
+  the programmed S&C work as normal entries in "sessions" (with its blocks), AND
+  set today_card.coach_led_contact to the contact label (e.g. "Technical-only
+  combat"). Put the contact label in coach_led_contact, NOT in headline (set
+  headline to a generic title like "Training Day" or the programmed session's
+  title instead, as headline is still required), so the programmed session keeps
+  its own title; the renderer shows the contact work as a context line above it.
+  The contact-only wording only applies when there is genuinely no programmed
+  work — if a session is listed for the day, keep it.
 - Preserve compact plan-output formats reliably:
   * A day header like `D-18 (Wednesday) — Power Transfer Touch` starts a day.
     A following `Why:` line is the session/day objective, not a separate block.
@@ -2073,10 +2075,11 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     mindset support, NOT physical conditioning. Use session_type "skill" or
     "recovery" as appropriate and block_type "skill" or "mindset"; do not label
     these as conditioning/strength/plyometric blocks.
-  * If a coach-only day says `Coach-owned combat session` (or the legacy
-    `No extra S&C today` / `No app S&C today`), keep sessions as []. If it also
-    lists any prescribed touch on the same D-day, keep that touch as a session
-    and put the coach-owned contact in today_card.coach_led_contact.
+  * If a contact-only day says `Your own hard sparring/contact work` (or the
+    legacy `Coach-owned combat session` / `No extra S&C today` / `No app S&C
+    today`), keep sessions as []. If it also lists any prescribed touch on the
+    same D-day, keep that touch as a session and put the contact label in
+    today_card.coach_led_contact.
 - Optimize for a valid first-pass card: omit optional fields you cannot fill
   from the source rather than emitting partial objects that fail schema
   validation. Preserve every dated day and every listed prescription, but do not

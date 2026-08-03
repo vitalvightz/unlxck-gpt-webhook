@@ -477,8 +477,8 @@ test("classifies coach-led / sparring / technical days from the headline", () =>
     classifySessionlessDay(make("Coach-led boxing — no hard sparring / technical only")).kind,
     "technical",
   );
-  // A coach-led/sparring/technical day carries its headline as the card title
-  // and flags the "train with your coach" note.
+  // A sparring/technical contact day carries its headline as the card title
+  // and flags the coach-neutral "your own hard sparring/contact work" note.
   const sparring = classifySessionlessDay(make("Hard sparring"));
   assert.equal(sparring.title, "Hard sparring");
   assert.equal(sparring.tag, "Sparring");

@@ -524,8 +524,10 @@ def test_rendered_plan_text_contains_fight_day_protocol_line():
 
     assert "Fight day (Friday)" in text
     assert FIGHT_DAY_PROTOCOL_TEXT in text
-    # Sanity: the canonical "Coach-led boxing session" string must NOT appear
-    # next to the Friday tag in this athlete-facing summary.
+    # Sanity: the fight day must NOT render as a hard sparring / contact session
+    # next to the Friday tag in this athlete-facing summary (current label plus the
+    # legacy "Coach-led boxing session" wording).
+    assert "Friday — Hard sparring" not in text
     assert "Friday — Coach-led boxing session" not in text
 
 
