@@ -45,34 +45,14 @@ begin
       using errcode = '23514';
   end if;
 
-  -- Initial setup from an empty timezone is allowed. Later changes are rare
-  -- travel/account events, not an action that should move the XP day repeatedly.
-  if v_old_timezone <> '' then
-    if old.athlete_timezone_updated_at is not null
-      and old.athlete_timezone_updated_at > clock_timestamp() - interval '24 hours' then
-      raise exception 'athlete_timezone can only be changed once every 24 hours'
-        using errcode = '23514';
-    end if;
-
-    if exists (
-      select 1
-      from public.xp_awards as award
-      where award.athlete_id = old.id
-        and award.awarded_at > clock_timestamp() - interval '12 hours'
-    ) or exists (
-      select 1
-      from public.today_checkins as checkin
-      where checkin.athlete_id = old.id
-        and checkin.created_at > clock_timestamp() - interval '12 hours'
-    ) or exists (
-      select 1
-      from public.session_completions as completion
-      where completion.athlete_id = old.id
-        and completion.updated_at > clock_timestamp() - interval '12 hours'
-    ) then
-      raise exception 'athlete_timezone cannot change within 12 hours of training or XP activity'
-        using errcode = '23514';
-    end if;
+  -- Initial setup from an empty timezone is allowed. Later changes are genuine
+  -- travel/account events, but cannot be repeated fast enough to hop between
+  -- adjacent server-owned training dates.
+  if v_old_timezone <> ''
+    and old.athlete_timezone_updated_at is not null
+    and old.athlete_timezone_updated_at > clock_timestamp() - interval '24 hours' then
+    raise exception 'athlete_timezone can only be changed once every 24 hours'
+      using errcode = '23514';
   end if;
 
   new.athlete_timezone_updated_at := clock_timestamp();
@@ -136,6 +116,11 @@ $$;
 revoke all on function public.validate_profile_athlete_timezone()
   from public, anon, authenticated;
 grant execute on function public.validate_profile_athlete_timezone()
+  to service_role;
+
+revoke all on function public.validate_xp_abuse_hardening()
+  from public, anon, authenticated;
+grant execute on function public.validate_xp_abuse_hardening()
   to service_role;
 
 revoke all on function public.validate_xp_abuse_hardening()
