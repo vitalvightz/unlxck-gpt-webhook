@@ -1,9 +1,9 @@
 // Beta navigation contract.
 //
 // For the live beta the standalone Nutrition workspace is switched off and Plan
-// access is promoted to a first-class destination. Progress replaces Intake in
-// the compact bottom navigation; Intake remains available in the side nav and
-// through setup actions.
+// access is promoted to a first-class destination. Intake remains in the compact
+// bottom navigation. The Progress page is deliberately reached from the XP card
+// on Overview for now, rather than being promoted into primary navigation.
 
 export type NavItem = {
   href: string;
@@ -21,14 +21,13 @@ export const BOTTOM_NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Overview" },
   { href: "/today", label: "Today" },
   { href: "/plans", label: "Plan" },
-  { href: "/progress", label: "Progress" },
+  { href: "/onboarding", label: "Intake" },
 ] as const;
 
 export const SIDE_NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Overview", meta: "Camp status" },
   { href: "/today", label: "Today", meta: "Check-in and session log" },
   { href: "/plans", label: "Plan", meta: "Active and saved plans" },
-  { href: "/progress", label: "Progress", meta: "XP, weekly work and milestones" },
   { href: "/history", label: "History", meta: "Sessions, check-ins, injuries" },
   { href: "/onboarding", label: "Intake", meta: "Profile and camp setup" },
   { href: "/settings", label: "Settings", meta: "Athlete profile" },
