@@ -1,0 +1,159 @@
+"""Best-effort, idempotent XP hooks for product actions."""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Mapping
+from datetime import datetime, timezone
+from typing import Any
+
+from api.store import AppStore
+
+logger = logging.getLogger(__name__)
+
+MIN_FEEDBACK_COMMENT_CHARS = 20
+
+
+def _award(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    action: str,
+    idempotency_key: str,
+) -> dict | None:
+    try:
+        result = store.award_xp(
+            athlete_id,
+            action=action,
+            idempotency_key=idempotency_key,
+        )
+        return result if isinstance(result, dict) else None
+    except Exception:  # noqa: BLE001 - XP must never break the primary action
+        logger.exception(
+            "[xp] award failed athlete_id=%s action=%s key=%s",
+            athlete_id,
+            action,
+            idempotency_key,
+        )
+        return None
+
+
+def award_checkin_xp(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    checkin: Mapping[str, object],
+) -> list[dict]:
+    checkin_id = str(checkin.get("id") or "").strip()
+    training_day = str(checkin.get("training_day") or "").strip()
+    if not checkin_id or not training_day:
+        return []
+
+    results: list[dict] = []
+    first = _award(
+        store,
+        athlete_id=athlete_id,
+        action="first_checkin_completed",
+        idempotency_key=f"first-checkin:{athlete_id}",
+    )
+    if first:
+        results.append(first)
+
+    daily = _award(
+        store,
+        athlete_id=athlete_id,
+        action="readiness_checkin_completed",
+        idempotency_key=f"checkin:{athlete_id}:{training_day}",
+    )
+    if daily:
+        results.append(daily)
+    return results
+
+
+def _normalized_comment(record: Mapping[str, object]) -> str:
+    return " ".join(str(record.get("comment") or "").split())
+
+
+def _feedback_reconcile_result(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    feedback_id: str,
+    target_amount: int,
+) -> dict | None:
+    custom = getattr(store, "reconcile_feedback_xp", None)
+    if callable(custom):
+        result = custom(
+            athlete_id,
+            feedback_id=feedback_id,
+            target_amount=target_amount,
+        )
+        return result if isinstance(result, dict) else None
+
+    client: Any | None = getattr(store, "client", None)
+    if client is None:
+        logger.error("[xp] feedback reconciliation unavailable athlete_id=%s", athlete_id)
+        return None
+
+    response = client.rpc(
+        "reconcile_feedback_xp",
+        {
+            "p_athlete_id": athlete_id,
+            "p_feedback_id": feedback_id,
+            "p_target_amount": target_amount,
+        },
+    ).execute()
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if payload else None
+    return payload if isinstance(payload, dict) else None
+
+
+def award_feedback_xp(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    feedback: Mapping[str, object],
+) -> dict | None:
+    feedback_id = str(feedback.get("id") or "").strip()
+    if not feedback_id:
+        return None
+    comment = _normalized_comment(feedback)
+    target_amount = 3 if len(comment) >= MIN_FEEDBACK_COMMENT_CHARS else 1
+    try:
+        return _feedback_reconcile_result(
+            store,
+            athlete_id=athlete_id,
+            feedback_id=feedback_id,
+            target_amount=target_amount,
+        )
+    except Exception:  # noqa: BLE001 - XP must never break feedback persistence
+        logger.exception(
+            "[xp] feedback reconciliation failed athlete_id=%s feedback_id=%s target_amount=%s",
+            athlete_id,
+            feedback_id,
+            target_amount,
+        )
+        return None
+
+
+def award_injury_update_xp(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    injury: Mapping[str, object],
+    training_day: str,
+) -> dict | None:
+    injury_id = str(injury.get("id") or "").strip()
+    if not injury_id or not training_day:
+        return None
+    return _award(
+        store,
+        athlete_id=athlete_id,
+        action="injury_update_completed",
+        idempotency_key=f"injury-update:{injury_id}:{training_day}",
+    )
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
