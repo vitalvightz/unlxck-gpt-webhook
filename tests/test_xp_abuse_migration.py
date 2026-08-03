@@ -61,10 +61,14 @@ def test_session_awards_require_active_scheduled_terminal_completions():
     assert "xp_resolved_active_plan_id" in sql
 
 
-def test_same_day_session_xp_is_locked_to_one_plan_without_a_count_cap():
+def test_same_day_session_xp_uses_immutable_plan_provenance_without_a_count_cap():
     sql = _sql()
+    assert "add column if not exists source_plan_id uuid" in sql
+    assert "new.source_plan_id := v_completion_plan_id" in sql
+    assert "previous_award.source_plan_id is distinct from v_completion_plan_id" in sql
+    assert "session xp source plan is immutable" in sql
+    assert "xp_awards_source_plan_immutable" in sql
     assert "session xp is already locked to another plan for this training day" in sql
-    assert "previous_completion.plan_id <> v_completion_plan_id" in sql
     final_rpc = _final_rpc_sql()
     assert "v_daily_count" not in final_rpc
     assert "< 2" not in final_rpc
@@ -113,6 +117,9 @@ def test_timezone_hopping_cannot_move_the_xp_training_day_repeatedly():
     assert "athlete_timezone cannot be cleared after it is set" in sql
     assert "athlete_timezone can only be changed once every 24 hours" in sql
     assert "athlete_timezone cannot change within 12 hours of training or xp activity" in sql
+    assert "from public.xp_awards as award" in sql
+    assert "from public.session_completions as completion" in sql
+    assert "from public.today_checkins as checkin" in sql
     assert "profiles_validate_athlete_timezone_update" in sql
 
 
@@ -128,9 +135,12 @@ def test_hardening_readiness_rpc_requires_indexes_and_all_source_guards():
     assert "validate_xp_abuse_hardening" in sql
     assert "xp_awards_one_time_action_per_athlete" in sql
     assert "xp_awards_one_daily_action_per_athlete" in sql
+    assert "column_name = 'source_plan_id'" in sql
     assert "xp_awards_source_integrity" in sql
     assert "xp_awards_plan_lock_and_week_completion" in sql
+    assert "xp_awards_source_plan_immutable" in sql
     assert "profiles_validate_athlete_timezone_update" in sql
+    assert "'version', '20260803182000'" in sql
     assert "xp abuse hardening is incomplete" in sql
 
 
@@ -140,6 +150,7 @@ def test_all_xp_mutation_and_validation_rpcs_are_service_role_only():
         "public.award_athlete_xp(uuid, text, text, date)",
         "public.reconcile_feedback_xp(uuid, uuid, integer)",
         "public.record_plan_milestone(uuid, uuid, text, text, text, jsonb)",
+        "public.prevent_xp_source_plan_rewrite()",
         "public.validate_xp_abuse_hardening()",
     ):
         assert f"revoke all on function {signature} from public, anon, authenticated" in sql
