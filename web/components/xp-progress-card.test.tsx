@@ -24,7 +24,7 @@ const award = (
 test("XP card renders all required copy, formatted totals, recent awards, and progress ARIA", () => {
   const state = {
     ...createFreshXpState(),
-    totalXp: 1_240,
+    totalXp: 3_625,
     lastDailyLoginDate: "2026-08-01",
     recentAwards: [
       award("training-1", "training_logged", 25),
@@ -37,12 +37,12 @@ test("XP card renders all required copy, formatted totals, recent awards, and pr
   );
 
   assert.match(html, /XP PROGRESS/);
-  assert.match(html, /Level 6/);
-  assert.match(html, /Contender/);
-  assert.match(html, /1,240/);
+  assert.match(html, /Level 5/);
+  assert.match(html, /Ranked/);
+  assert.match(html, /3,625/);
   // Under the bar: position within the level, then distance to the next one.
-  assert.match(html, /240 \/ 300 XP/);
-  assert.match(html, /60 XP remaining/);
+  assert.match(html, /875 \/ 1,750 XP/);
+  assert.match(html, /875 XP remaining/);
   assert.match(html, /TODAY&#x27;S REWARD/);
   assert.match(html, /\+10 XP/);
   assert.match(html, /claimed/);
@@ -51,11 +51,11 @@ test("XP card renders all required copy, formatted totals, recent awards, and pr
   assert.doesNotMatch(html, /Full training week completed/);
   assert.match(html, /role="progressbar"/);
   assert.match(html, /aria-valuemin="0"/);
-  assert.match(html, /aria-valuemax="300"/);
-  assert.match(html, /aria-valuenow="240"/);
+  assert.match(html, /aria-valuemax="1750"/);
+  assert.match(html, /aria-valuenow="875"/);
   // The full sentence survives for assistive tech even though the visible
   // ledger splits it across two columns.
-  assert.match(html, /aria-valuetext="60 XP to Level 7"/);
+  assert.match(html, /aria-valuetext="875 XP to Level 6"/);
 });
 
 test("today's claimed daily login is not printed twice", () => {
@@ -111,7 +111,7 @@ test("fresh XP card has a neutral recent state and no session or currency conten
 });
 
 test("storage failure and maximum level states use explicit copy", () => {
-  const state = { ...createFreshXpState(), totalXp: 1_700 };
+  const state = { ...createFreshXpState(), totalXp: 10_000 };
   const html = renderToStaticMarkup(
     <XpProgressCardView state={state} dailyRewardStatus="unavailable" />,
   );
@@ -191,7 +191,7 @@ test("reduced motion resolves the XP total and bar immediately", async () => {
     );
     assert.equal(
       (container.querySelector(".xp-progress-fill") as HTMLElement | null)?.style.getPropertyValue("--xp-progress-width"),
-      "10%",
+      "4%",
     );
   } finally {
     await act(async () => root.unmount());
