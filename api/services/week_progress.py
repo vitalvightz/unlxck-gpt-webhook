@@ -252,6 +252,9 @@ def award_completed_week(
             athlete_id,
             action="full_training_week_completed",
             idempotency_key=f"full-week:{source_key}",
+            # The database allows one full-week reward at a given week boundary,
+            # even if regenerated/overlapping plans carry different week IDs.
+            calendar_date=start_date,
         )
         if isinstance(award, Mapping):
             normalized = dict(award)
