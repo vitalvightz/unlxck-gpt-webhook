@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { reconcileSettingsMe } from "./settings-session-shield";
-import type { MeResponse } from "./types";
+import { reconcileSettingsMe } from "./settings-session-shield.ts";
+import type { MeResponse } from "./types.ts";
 
 function makeMe(): MeResponse {
   return {
