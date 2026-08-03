@@ -2,14 +2,41 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+LEGACY_COMPATIBILITY = (
+    ROOT
+    / "supabase"
+    / "migrations"
+    / "20260803174400_prepare_xp_legacy_compatibility.sql"
+)
+INITIAL_HARDENING = (
+    ROOT
+    / "supabase"
+    / "migrations"
+    / "20260803174500_harden_xp_abuse_boundaries.sql"
+)
+FEEDBACK_CAP = (
+    ROOT / "supabase" / "migrations" / "20260803174600_cap_feedback_xp.sql"
+)
+FINAL_AWARD_MIGRATION = (
+    ROOT
+    / "supabase"
+    / "migrations"
+    / "20260803180000_remove_xp_session_sample_cap.sql"
+)
 MIGRATIONS = (
-    ROOT / "supabase" / "migrations" / "20260803174500_harden_xp_abuse_boundaries.sql",
+    LEGACY_COMPATIBILITY,
+    INITIAL_HARDENING,
+    FEEDBACK_CAP,
     ROOT / "supabase" / "migrations" / "20260803175500_enforce_xp_source_integrity.sql",
-    ROOT / "supabase" / "migrations" / "20260803180000_remove_xp_session_sample_cap.sql",
+    FINAL_AWARD_MIGRATION,
     ROOT / "supabase" / "migrations" / "20260803181000_lock_xp_to_one_plan_per_day.sql",
     ROOT / "supabase" / "migrations" / "20260803182000_guard_timezone_day_rollover.sql",
 )
 TODAY_ROUTE = ROOT / "api" / "routes" / "today.py"
+
+
+def _normalized(path: Path) -> str:
+    return " ".join(path.read_text(encoding="utf-8").lower().split())
 
 
 def _sql() -> str:
@@ -21,7 +48,37 @@ def _sql() -> str:
 
 
 def _final_rpc_sql() -> str:
-    return " ".join(MIGRATIONS[2].read_text(encoding="utf-8").lower().split())
+    return _normalized(FINAL_AWARD_MIGRATION)
+
+
+def test_legacy_compatibility_precedes_every_strict_xp_boundary():
+    assert LEGACY_COMPATIBILITY.name < INITIAL_HARDENING.name < FEEDBACK_CAP.name
+
+    compatibility = _normalized(LEGACY_COMPATIBILITY)
+    hardening = _normalized(INITIAL_HARDENING)
+
+    assert "create or replace function public.xp_legacy_calendar_date" in compatibility
+    assert compatibility.index(
+        "create or replace function public.xp_legacy_calendar_date"
+    ) < compatibility.index("create or replace function public.award_athlete_xp")
+    assert "p_calendar_date date default null" in compatibility
+    assert "v_calendar_date date := p_calendar_date" in compatibility
+    assert (
+        "if v_calendar_scoped and v_calendar_date is null then "
+        "v_calendar_date := public.xp_legacy_calendar_date"
+    ) in compatibility
+
+    # The deployed backend sends only athlete/action/key. Session dates must be
+    # recovered from terminal completion ids, while check-in/injury dates come
+    # from the existing server-owned YYYY-MM-DD key suffix.
+    assert "v_action in ('training_logged', 'planned_session_completed')" in compatibility
+    assert "from public.session_completions as completion" in compatibility
+    assert "substring(v_key from '([0-9]{4}-[0-9]{2}-[0-9]{2})$')" in compatibility
+
+    # No later initial-boundary migration may replace the compatible RPC with a
+    # version that rejects those old three-parameter calls mid-deployment.
+    assert "create or replace function public.award_athlete_xp" not in hardening
+    assert "calendar date is required for this xp action" not in hardening
 
 
 def test_one_time_activation_rewards_are_unique_by_action_not_only_key():
