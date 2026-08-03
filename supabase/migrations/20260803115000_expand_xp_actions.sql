@@ -196,3 +196,144 @@ begin
   );
 end;
 $$;
+
+create or replace function public.reconcile_feedback_xp(
+  p_athlete_id uuid,
+  p_feedback_id uuid,
+  p_target_amount integer
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = pg_catalog, public
+as $$
+declare
+  v_key text := 'feedback:' || p_feedback_id::text;
+  v_existing public.xp_awards%rowtype;
+  v_previous_total bigint;
+  v_total bigint;
+  v_delta integer := 0;
+  v_award public.xp_awards%rowtype;
+  v_recent_awards jsonb;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    raise exception 'reconcile_feedback_xp is restricted to the backend service role'
+      using errcode = '42501';
+  end if;
+
+  if p_athlete_id is null or not exists (
+    select 1 from public.profiles where id = p_athlete_id
+  ) then
+    raise exception 'xp athlete profile not found' using errcode = '23503';
+  end if;
+
+  if p_feedback_id is null or not exists (
+    select 1
+    from public.beta_feedback
+    where id = p_feedback_id
+      and submitted_by_profile_id = p_athlete_id
+  ) then
+    raise exception 'feedback not found for athlete' using errcode = '23503';
+  end if;
+
+  if p_target_amount not in (1, 3) then
+    raise exception 'invalid feedback XP target' using errcode = '22023';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_athlete_id::text, 0));
+
+  insert into public.xp_accounts (athlete_id)
+  values (p_athlete_id)
+  on conflict (athlete_id) do nothing;
+
+  select total_xp
+    into v_previous_total
+  from public.xp_accounts
+  where athlete_id = p_athlete_id
+  for update;
+
+  select *
+    into v_existing
+  from public.xp_awards
+  where athlete_id = p_athlete_id
+    and idempotency_key = v_key
+  for update;
+
+  if v_existing.id is null then
+    insert into public.xp_awards (
+      athlete_id,
+      action,
+      amount,
+      idempotency_key,
+      calendar_date
+    ) values (
+      p_athlete_id,
+      case when p_target_amount = 3 then 'feedback_with_comment' else 'feedback_submitted' end,
+      p_target_amount,
+      v_key,
+      null
+    )
+    returning * into v_award;
+    v_delta := p_target_amount;
+  elsif v_existing.amount < p_target_amount then
+    update public.xp_awards
+    set
+      action = 'feedback_with_comment',
+      amount = 3
+    where id = v_existing.id
+    returning * into v_award;
+    v_delta := 3 - v_existing.amount;
+  else
+    v_award := v_existing;
+  end if;
+
+  if v_delta > 0 then
+    update public.xp_accounts
+    set
+      total_xp = total_xp + v_delta,
+      updated_at = clock_timestamp()
+    where athlete_id = p_athlete_id
+    returning total_xp into v_total;
+  else
+    v_total := v_previous_total;
+  end if;
+
+  select coalesce(
+    jsonb_agg(recent.item order by recent.awarded_at desc, recent.id desc),
+    '[]'::jsonb
+  )
+  into v_recent_awards
+  from (
+    select
+      award.id,
+      award.awarded_at,
+      jsonb_strip_nulls(jsonb_build_object(
+        'id', award.id,
+        'action', award.action,
+        'amount', award.amount,
+        'awarded_at', award.awarded_at,
+        'calendar_date', award.calendar_date
+      )) as item
+    from public.xp_awards as award
+    where award.athlete_id = p_athlete_id
+    order by award.awarded_at desc, award.id desc
+    limit 20
+  ) as recent;
+
+  return jsonb_build_object(
+    'state', jsonb_build_object(
+      'total_xp', v_total,
+      'recent_awards', v_recent_awards
+    ),
+    'previous_total_xp', v_previous_total,
+    'awarded', v_delta > 0,
+    'xp_delta', v_delta,
+    'award', jsonb_strip_nulls(jsonb_build_object(
+      'id', v_award.id,
+      'action', v_award.action,
+      'amount', v_award.amount,
+      'awarded_at', v_award.awarded_at
+    ))
+  );
+end;
+$$;
