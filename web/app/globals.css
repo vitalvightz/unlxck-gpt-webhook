@@ -17653,14 +17653,14 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   color: var(--text-primary);
 }
 
+/* Portalled onto <body> and positioned from the trigger's viewport rect (see
+   why-tooltip.tsx), so no ancestor `overflow: hidden` can clip it and no screen
+   edge can cut it off. `top`/`left` are set inline by the component. */
 .why-tooltip-bubble {
-  position: absolute;
-  z-index: 30;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 220px;
-  max-width: 320px;
+  position: fixed;
+  z-index: 120;
+  min-width: min(220px, calc(100vw - 16px));
+  max-width: min(320px, calc(100vw - 16px));
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -17693,30 +17693,47 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   color: var(--text-secondary);
 }
 
+/* The arrow tracks the trigger via --why-tooltip-arrow-left, which the component
+   clamps to the bubble's own edges — so a bubble pushed sideways by the viewport
+   still points back at the "?" it belongs to. */
 .why-tooltip-bubble::after {
   content: "";
   position: absolute;
-  top: 100%;
-  left: 50%;
+  left: var(--why-tooltip-arrow-left, 50%);
   transform: translateX(-50%);
   border: 6px solid transparent;
+}
+
+.why-tooltip-bubble[data-placement="above"]::after {
+  top: 100%;
   border-top-color: rgba(18, 12, 14, 0.96);
 }
 
-@media (max-width: 540px) {
-  .why-tooltip-bubble {
-    left: auto;
-    right: 0;
-    transform: none;
-    min-width: 200px;
-    max-width: min(320px, calc(100vw - 24px));
-  }
+.why-tooltip-bubble[data-placement="below"]::after {
+  bottom: 100%;
+  border-bottom-color: rgba(18, 12, 14, 0.96);
+}
 
-  .why-tooltip-bubble::after {
-    left: auto;
-    right: 18px;
-    transform: none;
-  }
+/* The compact "?" that glosses a jargon label on the plan surfaces. Sized to sit
+   beside a 0.68rem small-caps label without inflating the line. */
+.glossary-tooltip {
+  margin-inline-start: 4px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.glossary-tooltip .why-tooltip-trigger {
+  min-width: 15px;
+  height: 15px;
+  padding: 0;
+  font-size: 9px;
+}
+
+/* The stat label and its "?" share one row above the value; without this the
+   tooltip would become a third row in the .sp-stat column. */
+.sp-stat-head {
+  display: inline-flex;
+  align-items: center;
 }
 
 .blocked-context-line {
@@ -18401,6 +18418,17 @@ html[data-theme="light"] .why-tooltip-bubble {
   background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(243, 245, 248, 0.98));
   color: var(--text-secondary);
   box-shadow: 0 18px 38px rgba(63, 64, 67, 0.16);
+}
+
+/* The arrow keeps the dark-theme fill unless it is repainted here, which left a
+   near-black wedge under the light bubble. Match each edge to the gradient stop
+   the arrow actually touches. */
+html[data-theme="light"] .why-tooltip-bubble[data-placement="above"]::after {
+  border-top-color: rgba(243, 245, 248, 0.98);
+}
+
+html[data-theme="light"] .why-tooltip-bubble[data-placement="below"]::after {
+  border-bottom-color: rgba(250, 252, 255, 0.98);
 }
 
 html[data-theme="light"] .loading-milestone-feed,

@@ -2011,3 +2011,212 @@ test("weekStripCenterOffset centres the active card and clamps at the start", ()
   // The very first card sits flush at 0.
   assert.equal(weekStripCenterOffset(300, 0, 80), 0);
 });
+
+// --- jargon glossary "?" affordances ---------------------------------------
+
+/** The aria-labels of every glossary "?" in a rendered markup string. */
+function glossaryTerms(html: string): string[] {
+  return Array.from(html.matchAll(/aria-label="What ([^"]+) means"/g)).map((match) => match[1]);
+}
+
+/** A one-block session whose ONLY glossable stat is the effort prescription, so
+ * the assertions below read the effort tooltip and nothing else. */
+function effortSession(effort: unknown): StructuredSession {
+  return {
+    session_id: "ses-effort",
+    session_type: "strength_power",
+    title: "Trap Bar Jump",
+    blocks: [
+      {
+        block_id: "jump",
+        block_type: "power",
+        display_name: "Trap Bar Jump",
+        effort,
+      },
+    ],
+  } as unknown as StructuredSession;
+}
+
+test("a non-RPE effort method is glossed as itself, never as the RPE scale", () => {
+  // The blocker: EffortMethod also covers RIR, intent, velocity, heart_rate_zone,
+  // pace and max_effort_percent. A fixed RPE tooltip would have told an athlete
+  // that "intent max" is a 10-out-of-10 perceived-exertion score.
+  const html = renderToStaticMarkup(
+    <SessionCard session={effortSession({ method: "intent", value: "max" })} defaultOpenBlocks />,
+  );
+
+  assert.equal(html.includes("intent max"), true);
+  assert.deepEqual(glossaryTerms(html), ["Intent"]);
+  assert.equal(html.includes("Rate of Perceived Exertion"), false);
+});
+
+test("every EffortMethod in the schema is glossed with its own definition", () => {
+  // Mirrors EffortMethod in api/structured_plan_models.py. If the backend adds a
+  // method, this fails until the glossary covers it.
+  const expected: Array<[string, string]> = [
+    ["RPE", "RPE"],
+    ["RIR", "RIR"],
+    ["intent", "Intent"],
+    ["velocity", "Velocity"],
+    ["heart_rate_zone", "Heart rate zone"],
+    ["pace", "Pace"],
+    ["max_effort_percent", "Max effort %"],
+  ];
+
+  for (const [method, term] of expected) {
+    const html = renderToStaticMarkup(
+      <SessionCard session={effortSession({ method, value: 5 })} defaultOpenBlocks />,
+    );
+    assert.deepEqual(glossaryTerms(html), [term], `${method} should gloss as ${term}`);
+  }
+});
+
+test("the mindset card stays unglossed, so its Intent line cannot borrow the effort definition", () => {
+  // "Intent" is both an EffortMethod and a mindset label, and the two mean
+  // different things. The mindset card deliberately renders no "?" at all; this
+  // pins that, because glossing it from the label would explain a focus cue as
+  // bar speed.
+  const session = {
+    session_id: "ses-mindset",
+    session_type: "mobility",
+    title: "Mobility Reset Flow",
+    mindset_anchor: {
+      intent: "relax the system and move gently",
+      focus_cue: "slow thoracic mobility",
+    },
+    blocks: [],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes(">Intent</span>"), true);
+  assert.deepEqual(glossaryTerms(html), []);
+});
+
+test("an unrecognised effort method shows no tooltip rather than a wrong one", () => {
+  // Fail-safe: the renderer is defensive about payloads, so an unknown method
+  // (or a missing one) must stay silent instead of guessing a scale.
+  for (const effort of [
+    { method: "vibes", value: 5 },
+    { method: "", value: 5 },
+    { value: "max" },
+  ]) {
+    const html = renderToStaticMarkup(
+      <SessionCard session={effortSession(effort)} defaultOpenBlocks />,
+    );
+    assert.deepEqual(glossaryTerms(html), [], `${JSON.stringify(effort)} should gloss nothing`);
+  }
+});
+
+test("the effort stat carries a ? that explains the RPE scale", () => {
+  // The card prints "RPE 1.5" with no scale attached — the number is meaningless
+  // to an athlete who has never met Rate of Perceived Exertion.
+  const session = {
+    session_id: "ses-mobility",
+    session_type: "mobility",
+    title: "Mobility Reset Flow",
+    blocks: [
+      {
+        block_id: "mobility",
+        block_type: "mobility",
+        display_name: "Mobility Reset Flow",
+        duration: { value: 8, unit: "minutes" },
+        effort: { method: "RPE", value: 1.5 },
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes("RPE 1.5"), true);
+  assert.equal(glossaryTerms(html).includes("RPE"), true);
+});
+
+test("plain-English stat labels get no ?, so the ones that matter stand out", () => {
+  const session = {
+    session_id: "ses-cond",
+    session_type: "conditioning",
+    title: "Bike Intervals",
+    blocks: [
+      {
+        block_id: "bike",
+        block_type: "conditioning",
+        display_name: "Bike Intervals",
+        duration: { value: 20, unit: "minutes" },
+        distance: { value: 5, unit: "km" },
+        rounds: 6,
+        work: { value: 30, unit: "seconds" },
+        rest: { value: 90, unit: "seconds" },
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  // Duration / Distance / Rounds / Work / Rest all render, none is glossed.
+  assert.equal(html.includes(">Rounds</span>"), true);
+  assert.equal(html.includes(">Rest</span>"), true);
+  assert.deepEqual(glossaryTerms(html), []);
+});
+
+test("volume, load and a rehab tag are glossed on the block card", () => {
+  const session = {
+    session_id: "ses-strength",
+    session_type: "strength_power",
+    title: "Rear-Foot Elevated Split Squat",
+    blocks: [
+      {
+        block_id: "rfess",
+        block_type: "rehab",
+        display_name: "Rear-Foot Elevated Split Squat",
+        sets: 3,
+        reps: "8",
+        load: { display: "60% 1RM" },
+        effort: { method: "RPE", value: 7 },
+        progression_rule: "Stop the set if knee pain rises above 3/10.",
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+  const terms = glossaryTerms(html);
+
+  assert.equal(terms.includes("Volume"), true);
+  assert.equal(terms.includes("Load"), true);
+  assert.equal(terms.includes("RPE"), true);
+  assert.equal(terms.includes("Rehab"), true);
+  assert.equal(terms.includes("Stop rule"), true);
+});
+
+test("AMRAP-style modes are glossed rather than left as bare acronyms", () => {
+  const session = {
+    session_id: "ses-amrap",
+    session_type: "conditioning",
+    title: "Circuit",
+    blocks: [
+      {
+        block_id: "circuit",
+        block_type: "conditioning",
+        display_name: "Circuit",
+        reps: "AMRAP",
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes(">Mode</span>"), true);
+  assert.equal(glossaryTerms(html).includes("Mode"), true);
+});
+
+test("a cleared region's Prehab summary is glossed with the prehab definition", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={hamstringRehabPlan()}
+      rehabLabelPolicy={QUAD_OPEN_HAMSTRING_CLEARED}
+    />,
+  );
+
+  assert.equal(html.includes("Prehab / Mobility"), true);
+  assert.equal(glossaryTerms(html).includes("Prehab"), true);
+});

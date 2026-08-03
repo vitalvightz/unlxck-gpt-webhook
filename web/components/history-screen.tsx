@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { Skeleton } from "@/components/skeleton";
 import {
   listInjuryFlags,
@@ -81,7 +82,12 @@ function SessionRows({ rows }: { rows: TodaySessionCompletionRecord[] }) {
             <StatusBadge tone={sessionStatusTone(row.status)} label={sessionStatusLabel(row.status)} />
           </div>
           <div className="history-row-meta">
-            {row.session_rpe != null ? <span>RPE {row.session_rpe}/10</span> : null}
+            {row.session_rpe != null ? (
+              <span>
+                RPE {row.session_rpe}/10
+                <GlossaryTooltip term="RPE" />
+              </span>
+            ) : null}
             {row.pain_after != null ? <span>Pain after {row.pain_after}/10</span> : null}
           </div>
           {row.modification_reason ? (
