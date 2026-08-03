@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping, Sequence
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
 from api.services.today_readiness_boundary import build_today_command_view
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import evaluate_week_completion, find_week_for_training_day
-from api.services.xp_awards import plan_activation_ready, profile_activation_complete
+from api.services.xp_awards import profile_activation_complete
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,15 @@ logger = logging.getLogger(__name__)
 RECENT_AWARDS_LIMIT = 20
 MILESTONES_LIMIT = 50
 COMPLETED_SESSION_STATUSES = frozenset({"done", "modified"})
+RecordReadStatus = Literal["found", "not_found", "unavailable"]
+
+
+@dataclass(frozen=True)
+class _RecordRead:
+    """Result of an optional-record read without collapsing failure into absence."""
+
+    status: RecordReadStatus
+    value: Mapping[str, Any] | None = None
 
 
 def _rows(value: object) -> list[dict[str, Any]]:
@@ -69,7 +79,13 @@ def _read_xp_state(store: AppStore, athlete_id: str) -> dict[str, Any]:
             "recent_awards": [
                 {
                     key: row[key]
-                    for key in ("id", "action", "amount", "awarded_at", "calendar_date")
+                    for key in (
+                        "id",
+                        "action",
+                        "amount",
+                        "awarded_at",
+                        "calendar_date",
+                    )
                     if row.get(key) is not None
                 }
                 for row in awards[:RECENT_AWARDS_LIMIT]
@@ -115,17 +131,24 @@ def _list_milestones(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
     if isinstance(in_memory, Mapping):
         values = in_memory.get(athlete_id)
         milestones = _rows(values)
-    elif isinstance(in_memory, Sequence) and not isinstance(in_memory, (str, bytes, bytearray)):
+    elif isinstance(in_memory, Sequence) and not isinstance(
+        in_memory,
+        (str, bytes, bytearray),
+    ):
         milestones = [
             dict(row)
             for row in in_memory
-            if isinstance(row, Mapping) and str(row.get("athlete_id") or "") == athlete_id
+            if isinstance(row, Mapping)
+            and str(row.get("athlete_id") or "") == athlete_id
         ]
     else:
         milestones = []
 
     if milestones:
-        milestones.sort(key=lambda row: str(row.get("completed_at") or ""), reverse=True)
+        milestones.sort(
+            key=lambda row: str(row.get("completed_at") or ""),
+            reverse=True,
+        )
         return milestones[:MILESTONES_LIMIT]
 
     client = _client(store)
@@ -185,22 +208,42 @@ def _award_exists(
     return bool(_rows(_response_data(query.limit(1).execute())))
 
 
-def _safe_latest_intake(store: AppStore, athlete_id: str) -> Mapping[str, Any] | None:
+def _optional_record_read(row: object, *, source: str, athlete_id: str) -> _RecordRead:
+    if row is None:
+        return _RecordRead(status="not_found")
+    if isinstance(row, Mapping):
+        return _RecordRead(status="found", value=dict(row))
+    logger.error(
+        "[xp] malformed %s progress read athlete_id=%s type=%s",
+        source,
+        athlete_id,
+        type(row).__name__,
+    )
+    return _RecordRead(status="unavailable")
+
+
+def _safe_latest_intake(store: AppStore, athlete_id: str) -> _RecordRead:
     try:
-        row = store.get_latest_intake(athlete_id)
-        return row if isinstance(row, Mapping) else None
-    except Exception:  # noqa: BLE001 - one opportunity cannot break the read model
+        return _optional_record_read(
+            store.get_latest_intake(athlete_id),
+            source="intake",
+            athlete_id=athlete_id,
+        )
+    except Exception:  # noqa: BLE001 - activation opportunities fail closed
         logger.exception("[xp] intake progress read failed athlete_id=%s", athlete_id)
-        return None
+        return _RecordRead(status="unavailable")
 
 
-def _safe_latest_plan(store: AppStore, athlete_id: str) -> Mapping[str, Any] | None:
+def _safe_latest_plan(store: AppStore, athlete_id: str) -> _RecordRead:
     try:
-        row = store.get_latest_plan(athlete_id)
-        return row if isinstance(row, Mapping) else None
-    except Exception:  # noqa: BLE001 - one opportunity cannot break the read model
+        return _optional_record_read(
+            store.get_latest_plan(athlete_id),
+            source="plan",
+            athlete_id=athlete_id,
+        )
+    except Exception:  # noqa: BLE001 - activation opportunities fail closed
         logger.exception("[xp] plan progress read failed athlete_id=%s", athlete_id)
-        return None
+        return _RecordRead(status="unavailable")
 
 
 def _today_command(
@@ -350,8 +393,8 @@ def _opportunities(
     *,
     athlete_id: str,
     profile: object,
-    latest_intake: Mapping[str, Any] | None,
-    latest_plan: Mapping[str, Any] | None,
+    latest_intake: _RecordRead,
+    latest_plan: _RecordRead,
     command: object | None,
     current_week: Mapping[str, Any] | None,
 ) -> list[dict[str, Any]]:
@@ -371,8 +414,8 @@ def _opportunities(
             )
         )
     if (
-        not _award_exists(store, athlete_id, action="first_intake_completed")
-        and latest_intake is None
+        latest_intake.status == "not_found"
+        and not _award_exists(store, athlete_id, action="first_intake_completed")
     ):
         choices.append(
             _opportunity(
@@ -384,15 +427,15 @@ def _opportunities(
             )
         )
     if (
-        not _award_exists(store, athlete_id, action="first_plan_ready")
-        and not plan_activation_ready(latest_plan or {})
+        latest_plan.status == "not_found"
+        and not _award_exists(store, athlete_id, action="first_plan_ready")
     ):
         choices.append(
             _opportunity(
                 code="build_first_plan",
                 label="Build your first training plan",
                 xp=100,
-                href="/onboarding" if latest_plan is None else "/plans",
+                href="/onboarding",
                 priority=70,
             )
         )
