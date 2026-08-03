@@ -1,4 +1,9 @@
-from api.services.week_progress import award_completed_week, evaluate_week_completion, find_week_for_training_day
+from api.services.week_progress import (
+    award_completed_week,
+    evaluate_week_completion,
+    find_week_for_training_day,
+    try_award_completed_week_for_completion,
+)
 
 
 def _week():
@@ -17,6 +22,21 @@ def _week():
 
 def _plan():
     return {"id": "plan-1", "structured_plan": {"weeks": [_week()]}}
+
+
+def _complete_other_sessions():
+    return [
+        {
+            "session_id": "wed-1",
+            "status": "modified",
+            "updated_at": "2026-08-05T12:00:00+00:00",
+        },
+        {
+            "session_id": "fri-1",
+            "status": "done",
+            "updated_at": "2026-08-07T12:00:00+00:00",
+        },
+    ]
 
 
 def test_find_week_uses_structured_plan_dates():
@@ -63,14 +83,128 @@ def test_week_incomplete_when_session_skipped_without_authoritative_stop_evidenc
     assert result["skipped_session_ids"] == ["wed-1"]
 
 
+def test_skipped_followed_by_done_uses_newer_done():
+    result = evaluate_week_completion(
+        week=_week(),
+        completions=[
+            {
+                "session_id": "mon-1",
+                "status": "skipped",
+                "updated_at": "2026-08-03T10:00:00+00:00",
+            },
+            {
+                "session_id": "mon-1",
+                "status": "done",
+                "updated_at": "2026-08-03T11:00:00+00:00",
+            },
+            *_complete_other_sessions(),
+        ],
+    )
+    assert result["complete"] is True
+
+
+def test_done_followed_by_skipped_uses_newer_skipped():
+    result = evaluate_week_completion(
+        week=_week(),
+        completions=[
+            {
+                "session_id": "mon-1",
+                "status": "done",
+                "updated_at": "2026-08-03T10:00:00+00:00",
+            },
+            {
+                "session_id": "mon-1",
+                "status": "skipped",
+                "updated_at": "2026-08-03T11:00:00+00:00",
+            },
+            *_complete_other_sessions(),
+        ],
+    )
+    assert result["complete"] is False
+    assert result["skipped_session_ids"] == ["mon-1"]
+
+
+def test_reverse_chronological_rows_do_not_overwrite_newer_status():
+    result = evaluate_week_completion(
+        week=_week(),
+        completions=[
+            {
+                "session_id": "mon-1",
+                "status": "done",
+                "updated_at": "2026-08-03T11:00:00+00:00",
+            },
+            {
+                "session_id": "mon-1",
+                "status": "skipped",
+                "updated_at": "2026-08-03T10:00:00+00:00",
+            },
+            *_complete_other_sessions(),
+        ],
+    )
+    assert result["complete"] is True
+
+
+def test_conflicting_equal_timestamps_are_ambiguous_and_do_not_award():
+    result = evaluate_week_completion(
+        week=_week(),
+        completions=[
+            {
+                "session_id": "mon-1",
+                "status": "done",
+                "updated_at": "2026-08-03T11:00:00+00:00",
+            },
+            {
+                "session_id": "mon-1",
+                "status": "skipped",
+                "updated_at": "2026-08-03T11:00:00+00:00",
+            },
+            *_complete_other_sessions(),
+        ],
+    )
+    assert result["complete"] is False
+    assert result["ambiguous_session_ids"] == ["mon-1"]
+    assert result["unresolved_session_ids"] == ["mon-1"]
+
+
+def test_conflicting_missing_timestamps_are_ambiguous_and_do_not_award():
+    result = evaluate_week_completion(
+        week=_week(),
+        completions=[
+            {"session_id": "mon-1", "status": "done"},
+            {"session_id": "mon-1", "status": "skipped"},
+            *_complete_other_sessions(),
+        ],
+    )
+    assert result["complete"] is False
+    assert result["ambiguous_session_ids"] == ["mon-1"]
+
+
 class FakeStore:
     def __init__(self):
         self.awards = []
         self.completions = [
-            {"session_id": "mon-1", "training_day": "2026-08-03", "status": "done"},
-            {"session_id": "wed-1", "training_day": "2026-08-05", "status": "modified"},
-            {"session_id": "fri-1", "training_day": "2026-08-07", "status": "done"},
+            {
+                "session_id": "mon-1",
+                "training_day": "2026-08-03",
+                "status": "done",
+                "updated_at": "2026-08-03T12:00:00+00:00",
+            },
+            {
+                "session_id": "wed-1",
+                "training_day": "2026-08-05",
+                "status": "modified",
+                "updated_at": "2026-08-05T12:00:00+00:00",
+            },
+            {
+                "session_id": "fri-1",
+                "training_day": "2026-08-07",
+                "status": "done",
+                "updated_at": "2026-08-07T12:00:00+00:00",
+            },
         ]
+
+    def get_plan_for_athlete(self, plan_id, athlete_id):
+        return _plan()
 
     def list_plan_session_completions(self, athlete_id, plan_id, *, limit=500):
         return list(self.completions)
@@ -130,3 +264,19 @@ def test_full_week_does_not_award_early(monkeypatch):
         training_day="2026-08-05",
     ) is None
     assert store.awards == []
+
+
+def test_plan_lookup_failure_is_best_effort():
+    class FailingStore:
+        def get_plan_for_athlete(self, plan_id, athlete_id):
+            raise RuntimeError("database unavailable")
+
+    assert try_award_completed_week_for_completion(
+        FailingStore(),
+        athlete_id="athlete-1",
+        athlete_timezone="Europe/London",
+        completion={
+            "plan_id": "plan-1",
+            "training_day": "2026-08-07",
+        },
+    ) is None
