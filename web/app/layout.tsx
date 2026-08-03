@@ -19,6 +19,7 @@ import "./globals.css";
 import "./brand-surface.css";
 import "./xp-interface.css";
 import "./xp-overview-card.css";
+import "./xp-progress-page.css";
 
 const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.stringify(
   APPEARANCE_STORAGE_KEY,
