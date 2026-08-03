@@ -223,6 +223,29 @@ def award_completed_week(
         source_key=source_key,
         timezone_name=athlete_timezone or "UTC",
     )
+
+    try:
+        # Local import avoids a module cycle: plan milestones reuse this module's
+        # authoritative latest-completion evaluator for every week.
+        from api.services.plan_milestones import (
+            record_plan_milestones_after_completed_week,
+        )
+
+        record_plan_milestones_after_completed_week(
+            store,
+            athlete_id=athlete_id,
+            athlete_timezone=athlete_timezone,
+            plan=plan,
+            completed_week=week,
+            completions=completions,
+        )
+    except Exception:  # noqa: BLE001 - milestones must never break week/session XP
+        logger.exception(
+            "[xp] plan milestone evaluation failed athlete_id=%s plan_id=%s week_id=%s",
+            athlete_id,
+            plan_id,
+            week_id,
+        )
     return normalized
 
 
