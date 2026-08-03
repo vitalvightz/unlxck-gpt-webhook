@@ -360,6 +360,8 @@ export default function SettingsPage() {
   // edits pending, a floating bar takes over so the save is never far away.
   const accountActionsRef = useRef<HTMLDivElement | null>(null);
   const [isAccountActionsVisible, setIsAccountActionsVisible] = useState(true);
+  // Device time zone we have already pushed, so a drift is synced once.
+  const syncedTimeZoneRef = useRef<string | null>(null);
   const hydratedProfile = useMemo(() => hydratePlanRequest(me), [me]);
   const currentUsername = (me?.profile.username ?? "").trim();
   const detectedTimeZone = detectDeviceTimeZone() || me?.profile.athlete_timezone || "Automatic";
@@ -465,6 +467,29 @@ export default function SettingsPage() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [isReady]);
+
+  // The device time zone is not something the athlete edits, so it cannot ride
+  // along with Save: that button is disabled until the name or photo changes,
+  // which would strand a travelled athlete on a stale zone — the one Today and
+  // XP date the training day from. Persist a drift on its own instead, once per
+  // detected value so a normalising server can't start a loop.
+  useEffect(() => {
+    const token = session?.access_token;
+    const deviceTimeZone = detectDeviceTimeZone();
+    if (!token || !me || !deviceTimeZone) {
+      return;
+    }
+    if (deviceTimeZone === me.profile.athlete_timezone || syncedTimeZoneRef.current === deviceTimeZone) {
+      return;
+    }
+    syncedTimeZoneRef.current = deviceTimeZone;
+    updateMe(token, { athlete_timezone: deviceTimeZone })
+      .then(replaceMe)
+      .catch(() => {
+        // Stay silent: the stored zone is untouched and the next visit retries.
+        syncedTimeZoneRef.current = null;
+      });
+  }, [me, replaceMe, session?.access_token]);
 
   async function saveAppearanceMode(nextMode: AppearanceMode) {
     if (!session?.access_token) {
@@ -1276,7 +1301,9 @@ export default function SettingsPage() {
               {isAdmin ? "Account access, organisation setup, coach access, programme defaults, templates, and billing." : "Account, access, profile updates, notifications, subscription, and privacy."}
             </p>
           </div>
-          <div className="status-card athlete-motion-slot athlete-motion-status">
+          <div
+            className={`status-card athlete-motion-slot athlete-motion-status${isAdmin ? "" : " settings-sync-card"}`}
+          >
             <p className="status-label">{isAdmin ? "Admin profile" : "Profile sync"}</p>
             <h2 className="plan-summary-title">{isAdmin ? professionalStatusLabel : "Saved to account"}</h2>
             <p className="muted">{isAdmin ? me?.profile.email || "Unavailable" : `Last updated ${lastUpdatedLabel}`}</p>

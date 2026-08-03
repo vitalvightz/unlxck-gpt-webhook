@@ -6310,9 +6310,10 @@ button.mobile-step-rail-item {
     margin-left: 0;
   }
 
-  /* The sync card costs most of the first screen on a phone and repeats the
-     "last saved" line the account card now carries. */
-  .settings-page > .section-heading > .status-card {
+  /* The athlete sync card costs most of the first screen on a phone and repeats
+     the "last saved" line the account card now carries. The admin profile card
+     shares the .status-card markup but is not a duplicate, so it stays. */
+  .settings-sync-card {
     display: none;
   }
 
