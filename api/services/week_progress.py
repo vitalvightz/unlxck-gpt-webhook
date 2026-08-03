@@ -8,6 +8,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from api.services.progress_notifications import dispatch_progress_award_notification
+from api.services.xp_awards import ensure_xp_abuse_hardening
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -188,8 +189,6 @@ def _reconcile_completed_week_lifecycle(
     plan_id = str(plan.get("id") or "").strip()
     week_id = str(week.get("week_id") or "").strip()
     try:
-        # Local import avoids a module cycle: plan milestones reuse this module's
-        # authoritative latest-completion evaluator for every structured week.
         from api.services.plan_milestones import (
             reconcile_plan_milestones_after_completed_week,
         )
@@ -219,7 +218,7 @@ def award_completed_week(
     plan: Mapping[str, Any],
     training_day: str,
 ) -> dict[str, Any] | None:
-    """Confirm a week, idempotently award XP, then always reconcile lifecycle."""
+    """Confirm a week, idempotently award XP, then reconcile lifecycle."""
 
     week = find_week_for_training_day(plan, training_day)
     if week is None:
@@ -245,6 +244,16 @@ def award_completed_week(
     if not result["complete"]:
         return None
 
+    try:
+        ensure_xp_abuse_hardening(store)
+    except Exception:  # noqa: BLE001 - completed sessions remain persisted
+        logger.exception(
+            "[xp] week and lifecycle awards disabled because hardening is unavailable athlete_id=%s plan_id=%s",
+            athlete_id,
+            plan_id,
+        )
+        return None
+
     source_key = f"{plan_id}:{week_id}"
     normalized: dict[str, Any] | None = None
     try:
@@ -252,8 +261,6 @@ def award_completed_week(
             athlete_id,
             action="full_training_week_completed",
             idempotency_key=f"full-week:{source_key}",
-            # The database allows one full-week reward at a given week boundary,
-            # even if regenerated/overlapping plans carry different week IDs.
             calendar_date=start_date,
         )
         if isinstance(award, Mapping):
@@ -284,8 +291,6 @@ def award_completed_week(
                 week_id,
             )
 
-    # This is intentionally independent of ``award_result.awarded``. A retry
-    # after weekly XP already exists repairs missing phase/plan/camp milestones.
     _reconcile_completed_week_lifecycle(
         store,
         athlete_id=athlete_id,
