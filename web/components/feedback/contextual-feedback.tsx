@@ -13,6 +13,7 @@ import type {
   FeedbackRecord,
   FeedbackResponseValue,
 } from "@/lib/types";
+import { requestXpRefresh } from "@/lib/xp-events";
 
 const PLAN_REASONS = [
   ["Too hard", "too_hard"],
@@ -122,6 +123,7 @@ export function ContextualFeedback({
       const saved = isPlan && planId
         ? await putPlanFeedback(token, planId, payload)
         : await putTodayFeedback(token, payload);
+      requestXpRefresh();
       setRecord(saved);
       setChoice(saved.response);
       setReason(saved.reason);
