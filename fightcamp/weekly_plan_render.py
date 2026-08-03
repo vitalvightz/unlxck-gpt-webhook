@@ -302,7 +302,7 @@ def _recovery_session_lines() -> list[str]:
 
 
 def _sparring_session_lines() -> list[str]:
-    return ["- Coach owns this session (hard sparring). Coach-owned combat day — keep freshness priority."]
+    return ["- Your own hard sparring/contact session — no extra S&C. Keep freshness priority."]
 
 
 def _technical_session_lines() -> list[str]:
@@ -339,7 +339,7 @@ def _session_body(
     if category == "conditioning":
         return _conditioning_session_lines(role, grouped_drills)
     # Unknown category: keep it decisive but generic rather than empty.
-    return ["- Coach-led session aligned with this week's focus."]
+    return ["- Session aligned with this week's focus."]
 
 
 def _is_primary_strength_role(role: dict[str, Any]) -> bool:

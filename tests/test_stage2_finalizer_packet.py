@@ -369,5 +369,5 @@ def test_finalizer_packet_explains_reduced_count_for_bad_boxing_profile():
     assert "target-weight" in joined_reasons
     assert "d-17" in joined_reasons
     assert "injury" in joined_reasons
-    assert "coach-led contact" in joined_reasons
+    assert "hard sparring / contact" in joined_reasons
     assert "intentional compression" in joined_reasons

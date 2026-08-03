@@ -176,7 +176,7 @@ def _append_render_guard_writing_rules(
             [
                 "Late-fight countdown mode is active: do not render standalone GPP, SPP, or TAPER toolbox/reference sections.",
                 "Candidate pools are internal selection data only. Do not output 'key drills to keep in your toolbox', 'available options', 'SPP tools', 'GPP tools', or phase reference menus.",
-                "In late-fight countdown mode, only render scheduled D-day prescriptions, coach-owned days, explicit transition windows, and fight-day protocol.",
+                "In late-fight countdown mode, only render scheduled D-day prescriptions, declared hard-sparring/contact days, explicit transition windows, and fight-day protocol.",
             ]
         )
     updated["writing_rules"] = dedupe_preserve_order(rules)

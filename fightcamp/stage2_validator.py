@@ -107,6 +107,9 @@ _SESSION_TITLE_HINTS = {
     "glycolytic",
     "alactic",
     "technical polish",
+    "hard sparring",
+    "technical-only combat",
+    "controlled hard contact",
 }
 _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 _OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
@@ -164,8 +167,18 @@ _INTERNAL_RENDER_LABEL_PATTERNS = (
     ("validator", re.compile(r"\bvalidator\b", re.IGNORECASE)),
     ("planning brief", re.compile(r"\bplanning\s+brief\b", re.IGNORECASE)),
 )
+# Recognises an athlete-owned hard-sparring / contact session *label* heading.
+# Anchored on the distinctive label phrases ("… controlled hard contact",
+# "… reduced dose", "technical-only combat") plus the legacy "coach-led boxing/MMA…"
+# wording, so stored plans still validate. Deliberately NOT a bare "hard sparring"
+# match: advisory lines ("run all declared hard sparring as technical rounds only")
+# mention hard sparring without being a coach-owned session heading, and matching
+# them would misfire the minimal-render detail check.
 _COACH_LED_SESSION_PATTERN = re.compile(
-    r"\bcoach[-\s]+led\s+(?:boxing|mma|muay\s+thai|kickboxing)\b",
+    r"\bcoach[-\s]+led\s+(?:boxing|mma|muay\s+thai|kickboxing)\b"
+    r"|\bcontrolled\s+hard\s+contact\b"
+    r"|\bhard\s+sparring\s*[/—–-]\s*reduced\s+dose\b"
+    r"|\btechnical[-\s]+only\s+combat\b",
     re.IGNORECASE,
 )
 _COACH_LED_DETAIL_PATTERN = re.compile(
@@ -264,6 +277,9 @@ _LATE_FIGHT_ALLOWED_GENERIC_PHRASES = (
     "technical touch",
     "rehab",
     "prehab",
+    "hard sparring",
+    "technical-only combat",
+    "controlled hard contact",
     "coach-led",
     "coach led",
     "warm-up",
@@ -1592,7 +1608,7 @@ def _coach_owned_sparring_detail_warnings(final_plan_text: str) -> list[dict]:
         warnings.append(
             {
                 "code": "coach_owned_sparring_overdetailed",
-                "message": "Coach-led sparring/boxing day includes app-authored detail beyond the minimal coach-owned render.",
+                "message": "Hard sparring / contact day includes app-authored detail beyond the minimal declared-contact render.",
                 "line": heading,
                 "matched_lines": (detailed_lines or non_minimal_body or body_lines)[:3],
                 "blocking": True,

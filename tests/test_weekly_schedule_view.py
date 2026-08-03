@@ -103,7 +103,7 @@ def test_extract_weekly_schedule_maps_open_ongoing_weekly_template():
     assert monday["status"] == "open_plan_session"
     assert monday["title"] == "Mon training"
     assert wednesday["effective_load"] == "hard"
-    assert wednesday["title"] == "Wed coach-led sparring"
+    assert wednesday["title"] == "Wed hard sparring"
     assert sunday["effective_load"] == "none"
     assert extract_weekly_schedule(planning_brief, week_index=4) is None
 

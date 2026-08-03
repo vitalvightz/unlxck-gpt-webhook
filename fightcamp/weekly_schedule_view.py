@@ -301,8 +301,8 @@ def _open_ongoing_weekly_schedule(
                     "sparring_day_class": "primary_hard" if is_hard else "none",
                     "effective_load": "hard" if is_hard else "reduced",
                     "status": "hard_as_planned" if is_hard else "coach_led_session",
-                    "title": f"{weekday} coach-led {'sparring' if is_hard else 'boxing'}",
-                    "reason": f"Coach-owned {'sparring' if is_hard else 'boxing'} day from the renewable weekly rhythm.",
+                    "title": f"{weekday} {'hard sparring' if is_hard else 'technical boxing'}",
+                    "reason": f"Declared {'hard sparring' if is_hard else 'technical'} contact day from the renewable weekly rhythm.",
                 }
             )
         else:

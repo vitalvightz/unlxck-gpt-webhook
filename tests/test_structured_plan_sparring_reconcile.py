@@ -196,7 +196,7 @@ def test_stamps_coach_led_headline_on_mislabelled_rest_day():
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
     headline = plan["weeks"][0]["days"][0]["today_card"]["headline"]
-    assert headline == "Coach-led sparring"
+    assert headline == "Hard sparring"
     assert _classifies_coach_led(headline)
     assert notes and "stamped" in notes[0]
 
@@ -204,7 +204,7 @@ def test_stamps_coach_led_headline_on_mislabelled_rest_day():
 def test_stamps_when_headline_is_blank():
     plan = _structured_plan([_day("D-31", headline="")])
     reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
-    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Coach-led sparring"
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring"
 
 
 def test_inserts_dropped_sparring_day_into_covering_week():
@@ -216,7 +216,7 @@ def test_inserts_dropped_sparring_day_into_covering_week():
     days = plan["weeks"][0]["days"]
     assert [d["countdown_label"] for d in days] == ["D-33", "D-31", "D-30"]
     inserted = days[1]
-    assert inserted["today_card"]["headline"] == "Coach-led sparring"
+    assert inserted["today_card"]["headline"] == "Hard sparring"
     assert inserted["sessions"] == []
     assert inserted["phase_label"] == "SPP"
     assert any("inserted" in note for note in notes)
@@ -235,7 +235,7 @@ def test_surfaces_coach_led_contact_alongside_real_app_sessions():
     assert day["today_card"]["headline"] == "Fight Tactical Watch"
     assert day["sessions"] == real_session
     # ...but the coach-owned contact is surfaced on its own field for the renderer.
-    assert day["today_card"]["coach_led_contact"] == "Coach-led sparring"
+    assert day["today_card"]["coach_led_contact"] == "Hard sparring"
     assert any("surfaced coach-led contact" in note for note in notes)
 
 
@@ -243,11 +243,11 @@ def test_does_not_double_surface_coach_led_contact():
     # An already-set coach_led_contact (e.g. a re-run) is left as-is.
     real_session = [{"title": "Fight Tactical Watch", "blocks": []}]
     day = _day("D-31", headline="Fight Tactical Watch", sessions=real_session)
-    day["today_card"]["coach_led_contact"] = "Coach-led sparring"
+    day["today_card"]["coach_led_contact"] = "Hard sparring"
     plan = _structured_plan([day])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
-    assert plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Coach-led sparring"
+    assert plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Hard sparring"
     assert notes == []
 
 
@@ -266,7 +266,7 @@ def test_surfaces_coach_led_contact_even_when_app_headline_already_coach_led():
     assert day["today_card"]["headline"] == "Coach-led boxing session"
     assert day["sessions"] == real_session
     # ...and the coach-owned contact is still surfaced so it cannot be hidden.
-    assert day["today_card"]["coach_led_contact"] == "Coach-led sparring"
+    assert day["today_card"]["coach_led_contact"] == "Hard sparring"
     assert any("surfaced coach-led contact" in note for note in notes)
 
 
@@ -277,7 +277,7 @@ def test_d9_declared_technical_day_keeps_tactical_watch_as_attached_filler():
 
     day = plan["weeks"][0]["days"][0]
     assert day["today_card"]["headline"] == "Fight Tactical Watch"
-    assert day["today_card"]["coach_led_contact"] == "Coach-led boxing — technical-only combat"
+    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
     assert day["sessions"] == tactical_watch
     assert any("surfaced coach-led contact" in note for note in notes)
 
@@ -288,7 +288,7 @@ def test_declared_technical_day_rejects_strength_as_same_day_filler():
     notes = reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=13, downgraded=True))
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Coach-led boxing — technical-only combat"
+    assert day["today_card"]["headline"] == "Technical-only combat"
     assert day["sessions"] == []
     assert "coach_led_contact" not in day["today_card"]
     assert any("removed incompatible same-day app work" in note for note in notes)
@@ -307,7 +307,7 @@ def test_allowed_filler_ignores_blocked_words_in_free_text_notes():
 
     day = plan["weeks"][0]["days"][0]
     assert day["sessions"] == tactical_watch
-    assert day["today_card"]["coach_led_contact"] == "Coach-led boxing — technical-only combat"
+    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
 
 
 def test_numeric_rpe_blocks_otherwise_allowed_technical_filler():
@@ -316,7 +316,7 @@ def test_numeric_rpe_blocks_otherwise_allowed_technical_filler():
     reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=9, downgraded=True))
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Coach-led boxing — technical-only combat"
+    assert day["today_card"]["headline"] == "Technical-only combat"
     assert day["sessions"] == []
 
 
@@ -334,7 +334,7 @@ def test_d20_declared_hard_day_can_be_recovered_from_context_role():
     plan = _structured_plan([_day("D-20", headline="Recovery")])
     reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=20, downgraded=False))
 
-    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Coach-led sparring"
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring"
 
 
 def test_declared_late_technical_context_days_remain_visible():
@@ -343,7 +343,7 @@ def test_declared_late_technical_context_days_remain_visible():
         reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=d_day, downgraded=True))
 
         assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == (
-            "Coach-led boxing — technical-only combat"
+            "Technical-only combat"
         )
 
 
@@ -367,8 +367,8 @@ def test_technical_and_reduced_loads_get_classifiable_headlines():
 
     technical = plan["weeks"][0]["days"][0]["today_card"]["headline"]
     reduced = plan["weeks"][0]["days"][1]["today_card"]["headline"]
-    assert technical == "Coach-led boxing — technical-only combat"
-    assert reduced == "Coach-led sparring — reduced dose"
+    assert technical == "Technical-only combat"
+    assert reduced == "Hard sparring — reduced dose"
     assert _classifies_coach_led(technical)
     assert _classifies_coach_led(reduced)
 
@@ -395,7 +395,7 @@ def test_does_not_double_insert_when_day_present_with_sessions():
     plan = _structured_plan([_day("D-31", headline="Fight Tactical Watch", sessions=real_session)])
     reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
     assert len(plan["weeks"][0]["days"]) == 1
-    assert plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Coach-led sparring"
+    assert plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Hard sparring"
 
 
 def test_inserts_dropped_boundary_sparring_day():
@@ -407,7 +407,7 @@ def test_inserts_dropped_boundary_sparring_day():
 
     days = plan["weeks"][0]["days"]
     assert [d["countdown_label"] for d in days] == ["D-31", "D-30", "D-29"]
-    assert days[0]["today_card"]["headline"] == "Coach-led sparring"
+    assert days[0]["today_card"]["headline"] == "Hard sparring"
     assert any("inserted" in note for note in notes)
 
 
@@ -440,7 +440,7 @@ def test_no_duplicate_when_present_by_dday_only_but_contact_has_date():
 
     days = plan["weeks"][0]["days"]
     assert len(days) == 1
-    assert days[0]["today_card"]["headline"] == "Coach-led sparring"
+    assert days[0]["today_card"]["headline"] == "Hard sparring"
     assert not any("inserted" in note for note in notes)
 
 
@@ -483,7 +483,7 @@ def test_hard_sparring_wins_when_support_work_overlaps_same_day():
     days = plan["weeks"][0]["days"]
     inserted = [day for day in days if day["countdown_label"] == "D-30"]
     assert len(inserted) == 1
-    assert inserted[0]["today_card"]["headline"] == "Coach-led sparring"
+    assert inserted[0]["today_card"]["headline"] == "Hard sparring"
 
 
 def test_malformed_support_work_brief_is_noop():

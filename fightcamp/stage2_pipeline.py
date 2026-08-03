@@ -302,7 +302,7 @@ def _warning_detail_line(warning: dict) -> str:
     if warning.get("code") == "late_fight_d0_protocol_expanded":
         return "Reduce D-0 to fight day protocol only."
     if warning.get("code") == "coach_owned_sparring_overdetailed":
-        return "Reduce coach-led sparring days to the minimal coach-owned label and one app-owned freshness note."
+        return "Reduce hard sparring / contact days to the minimal hard-sparring/contact label and one freshness note."
     if warning.get("code") == "internal_render_contract_leak":
         return "Remove internal scaffolding labels from the athlete-facing plan."
     if warning.get("code") == "missing_injury_lead_summary":

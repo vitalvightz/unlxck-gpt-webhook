@@ -1213,8 +1213,8 @@ def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
     assert len(context) == 1
     assert context[0]["role_key"] == "technical_touch_day"
     assert context[0]["downgraded_from_role_key"] == "hard_sparring_day"
-    assert context[0]["athlete_facing_label"] == "Coach-led boxing — technical-only combat"
-    assert context[0]["display_text"] == "Coach-owned combat session. Keep freshness priority."
+    assert context[0]["athlete_facing_label"] == "Technical-only combat"
+    assert context[0]["display_text"] == "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
 
 
 def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
@@ -1228,8 +1228,8 @@ def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
     context = _coach_owned_context_session_sequence(sessions)
     assert len(context) == 1
     assert context[0]["role_key"] == "hard_sparring_day"
-    assert context[0]["athlete_facing_label"] == "Coach-led boxing — hard sparring / controlled hard contact"
-    assert context[0]["display_text"] == "Coach-owned combat session. Keep freshness priority."
+    assert context[0]["athlete_facing_label"] == "Hard sparring — controlled hard contact"
+    assert context[0]["display_text"] == "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
 
 
 def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
@@ -1244,8 +1244,8 @@ def test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label():
     ]
     context = _coach_owned_context_session_sequence(sessions)
     assert len(context) == 1
-    assert context[0]["athlete_facing_label"] == "Coach-led boxing — technical-only combat"
-    assert context[0]["display_text"] == "Coach-owned combat session. Keep freshness priority."
+    assert context[0]["athlete_facing_label"] == "Technical-only combat"
+    assert context[0]["display_text"] == "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
 
 
 def test_declared_coach_combat_spine_keeps_tuesday_friday_thursday_fight_visible():
@@ -1267,7 +1267,7 @@ def test_declared_coach_combat_spine_keeps_tuesday_friday_thursday_fight_visible
     assert roles_by_label["D-20"].get("downgraded") is not True
     for label in ["D-16", "D-13", "D-9", "D-6", "D-2"]:
         assert roles_by_label[label].get("downgraded") is True
-        assert "technical-only combat" in roles_by_label[label].get("athlete_facing_label", "")
+        assert "technical-only combat" in roles_by_label[label].get("athlete_facing_label", "").lower()
 
 
 def test_declared_coach_combat_spine_coexists_with_same_day_fillers():

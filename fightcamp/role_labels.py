@@ -66,8 +66,8 @@ ROLE_LABELS: dict[str, str] = {
     # --- Taper / fight week ----------------------------------------------
     "fight_week_freshness_day": "Fight-week freshness",
     "fight_day_protocol": "Fight-day warm-up",
-    # --- Coach-owned ------------------------------------------------------
-    "hard_sparring_day": "Coach-led sparring",
+    # --- Athlete-owned contact (not programmed by the plan) ---------------
+    "hard_sparring_day": "Hard sparring",
     "light_combat_day": "Light technical combat",
 }
 

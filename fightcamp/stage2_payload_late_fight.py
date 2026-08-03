@@ -11,9 +11,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-CANONICAL_HARD_SPARRING_LABEL = "Coach-led boxing — hard sparring / controlled hard contact"
-CANONICAL_HARD_SPARRING_BAN_LABEL = "Coach-led boxing — technical-only combat"
-CANONICAL_HARD_SPARRING_NOTE = "Coach-owned combat session. Keep freshness priority."
+CANONICAL_HARD_SPARRING_LABEL = "Hard sparring — controlled hard contact"
+CANONICAL_HARD_SPARRING_BAN_LABEL = "Technical-only combat"
+CANONICAL_HARD_SPARRING_NOTE = "Your own hard sparring/contact work — no extra S&C. Keep freshness priority."
 
 
 _PAYLOAD_MODE_MAP = {
@@ -2504,7 +2504,7 @@ def ensure_declared_coach_combat_spine(
                 "downgraded": downgraded,
                 "placement_basis": "locked",
                 "day_assignment_reason": (
-                    "Declared coach-owned combat day restored to the calendar spine before app-owned placement."
+                    "Declared hard-sparring/contact day restored to the calendar spine before app-owned placement."
                 ),
             }
         )
@@ -2622,7 +2622,7 @@ def _late_fight_candidate_roles(
                     selection_rule="Keep declared hard sparring only when it still lives inside the active legal countdown slice.",
                     placement_rule=(
                         "Keep this declared hard sparring slot fixed on the athlete's stated day inside the active "
-                        "countdown window. The coach owns the whole day: render it as hard sparring / controlled hard "
+                        "countdown window. This is the athlete's own contact day: render it as hard sparring / controlled hard "
                         "contact and do not stack any programmed S&C on it."
                     ),
                     selection_priority=120,
@@ -2697,11 +2697,11 @@ def _late_fight_candidate_roles(
                     preferred_system="glycolytic",
                     selection_rule=(
                         "D-20 to D-18: one controlled fight-pace pressure touch. This is the bridge window's "
-                        "single pressure exposure when no coach hard-sparring day owns D-21 to D-18."
+                        "single pressure exposure when no declared hard-sparring day owns D-21 to D-18."
                     ),
                     placement_rule=(
                         "Place it on D-20, D-19, or D-18. Keep it controlled — a short pressure touch, "
-                        "not a conditioning build — and never on a coach-owned combat day."
+                        "not a conditioning build — and never on a declared hard-sparring/contact day."
                     ),
                     selection_priority=106,
                     required=True,
@@ -4049,17 +4049,17 @@ def _append_declared_hard_spar_context(
                 "role_key": "hard_sparring_day",
                 "preferred_pool": "declared_hard_sparring_days",
                 "selection_rule": (
-                    "Coach-owned boxing day converted to technical-only combat "
-                    "under the D-17 hard-sparring ban; render it as a coach-owned "
-                    "label, never as a programmed S&C session. The coach owns the "
+                    "Declared hard-sparring/contact day converted to technical-only combat "
+                    "under the D-17 hard-sparring ban; render it as a hard-sparring/contact "
+                    "label, never as a programmed S&C session. The athlete owns the "
                     "whole day — do not stack any programmed S&C on it."
                 ),
                 "anchor": _role_anchor("hard_sparring_day"),
                 "placement_rule": (
-                    "Keep this declared boxing day fixed on the athlete's stated weekday. "
-                    "Always surface the coach-owned label on that day and keep the day "
-                    "clean: no programmed S&C session is scheduled on a coach-owned "
-                    "combat day."
+                    "Keep this declared contact day fixed on the athlete's stated weekday. "
+                    "Always surface the hard-sparring/contact label on that day and keep the day "
+                    "clean: no programmed S&C session is scheduled on a declared hard-sparring/"
+                    "contact day."
                 ),
                 "cost_class": "low",
                 "stress_class": "support",
@@ -4080,7 +4080,7 @@ def _append_declared_hard_spar_context(
                 "downgraded_to_role_key": "technical_touch_day",
                 "downgrade_reason_code": "d17_hard_sparring_ban",
                 "day_assignment_reason": (
-                    "Coach-owned boxing day fixed by declaration; downgraded to "
+                    "Declared hard-sparring/contact day fixed by declaration; downgraded to "
                     "technical/rhythm under the D-17 hard-sparring ban."
                 ),
                 "placement_basis": "locked",
@@ -4137,9 +4137,9 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     if mode == "bridge_compression_payload":
         return (
             "Use a bridge compression week: taper-on-ramp rather than full camp. "
-            "Declared hard sparring days in D-21 to D-18 are coach-owned and stay hard. Keep one meaningful strength touch, "
-            "one freshness/mobility reset, and one controlled pressure touch on D-20 to D-18 when no coach hard-sparring day owns that band. "
-            "From D-17 onward, all declared hard sparring is coach-led technical-only combat. Never stack programmed S&C on a coach-owned combat day. No double-stress days."
+            "Declared hard sparring days in D-21 to D-18 are athlete-owned and stay hard. Keep one meaningful strength touch, "
+            "one freshness/mobility reset, and one controlled pressure touch on D-20 to D-18 when no declared hard-sparring day owns that band. "
+            "From D-17 onward, all declared hard sparring is technical-only combat. Never stack programmed S&C on a declared hard-sparring/contact day. No double-stress days."
         )
     if mode == "pre_fight_compressed_payload":
         return (
@@ -4674,19 +4674,19 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "COUNTDOWN CONTRACT\n"
         "One coherent countdown truth. Lead every active day D-N first, weekday second — use resolved countdown_display_label when present.\n"
         "Placement governs day assignment only — it never expands the visible session list.\n"
-        "State the ownership split to the athlete plainly: the gym/coach owns the boxing load; the S&C and rehab inserts are programmed for you. Never call these 'app-owned' or 'app-provided' in athlete-facing text — name the work directly.\n"
-        "Render only the programmed S&C/rehab roles as athlete-facing sessions; boxing schedule is context.\n"
-        "Partial prescription: label exactly — Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
+        "State the ownership split to the athlete plainly: your hard sparring / contact work is yours to run (in your gym, with or without a coach); the S&C and rehab inserts are programmed for you. Never call these 'app-owned' or 'app-provided' in athlete-facing text, and never assume a coach ('coach-led', 'coach-owned', 'train with your coach') — name the work directly.\n"
+        "Render only the programmed S&C/rehab roles as athlete-facing sessions; hard sparring / contact schedule is context.\n"
+        "Partial prescription: label exactly — Programmed S&C / rehab schedule only. Hard sparring / contact schedule remains as you set it.\n"
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
         "From D-10 to the fight, the progression/regression line offers regressions and stop rules only — never a progression/advance option (no add load/sets, heavier ball, stronger band, or \"to progress\").\n"
         "Write meaningful adjustment lines as \"Easier: <action>\" and \"Stop: <trigger/action>\". Never emit a bare \"Regression /\", \"Regression\", or slash-separated structural label.\n"
         "From D-13, strength & conditioning sessions (strength, power, alactic, aerobic, fight-pace, neural speed work) also lock to regressions and stop rules only; fillers, rehab, mobility, and light recovery work may still progress on D-13 to D-11.\n"
-        "Declared hard-spar days are fixed coach-owned combat locks. Never move, drop, or deload them; from D-17 onward they render as coach-led technical-only combat.\n"
+        "Declared hard-spar days are fixed athlete-owned combat locks. Never move, drop, or deload them; from D-17 onward they render as technical-only combat.\n"
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities.\n"
-"Hard sparring days are gym/coach-owned combat locks. The app must not prescribe the sparring and never deloads it. At D-18 or further out render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"Coach-led MMA — hard sparring / controlled hard contact\"). From D-17 onward hard sparring is banned: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent). No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else — never schedule or list programmed S&C on a coach-owned combat day."
+"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe the sparring and never deloads it. At D-18 or further out render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"MMA — hard sparring / controlled hard contact\"). From D-17 onward hard sparring is banned: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent). No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else — never schedule or list programmed S&C on a declared hard-sparring/contact day."
     )
     if payload_mode == "fight_day_protocol_payload":
         return (
@@ -4711,9 +4711,9 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         return (
             "BRIDGE COMPRESSION WEEK (D-21 to D-14)\n"
             "Taper-on-ramp, not full camp. 5 blocks per session max.\n"
-            "Meaningful stress cap: 3 per rolling 7 days. Declared hard sparring in D-21 to D-18 is coach-owned and stays hard; from D-17 onward all declared hard sparring converts to technical-only combat.\n"
-            "Strength/power: 1 touch max; when it lands at D-17 or closer, render it as a low-volume neural maintenance touch (2-3 crisp sets, RPE 6-7 max) — never a loaded strength-transfer session. Pressure exposure: one controlled fight-pace pressure touch on D-20, D-19, or D-18 when no coach hard-sparring day owns D-21 to D-18; otherwise 0.\n"
-            "One freshness/mobility reset is mandatory. Never stack programmed S&C on a coach-owned combat day. No double-stress day.\n\n"
+            "Meaningful stress cap: 3 per rolling 7 days. Declared hard sparring in D-21 to D-18 is athlete-owned and stays hard; from D-17 onward all declared hard sparring converts to technical-only combat.\n"
+            "Strength/power: 1 touch max; when it lands at D-17 or closer, render it as a low-volume neural maintenance touch (2-3 crisp sets, RPE 6-7 max) — never a loaded strength-transfer session. Pressure exposure: one controlled fight-pace pressure touch on D-20, D-19, or D-18 when no declared hard-sparring day owns D-21 to D-18; otherwise 0.\n"
+            "One freshness/mobility reset is mandatory. Never stack programmed S&C on a declared hard-sparring/contact day. No double-stress day.\n\n"
             + _CONTRACT
         )
     if payload_mode == "pre_fight_compressed_payload":

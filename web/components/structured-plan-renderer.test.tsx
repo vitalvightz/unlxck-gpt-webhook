@@ -936,10 +936,10 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  // The coach-led day surfaces its headline and the coach note instead of
+  // The contact day surfaces its headline and the coach-neutral note instead of
   // collapsing into a rest day.
   assert.equal(html.includes("Coach-led boxing — technical only"), true);
-  assert.equal(html.includes("train with your coach"), true);
+  assert.equal(html.includes("your own hard sparring/contact work"), true);
   assert.equal(html.includes("sp-day-card-technical"), true);
   // The genuine rest day renders as a single compact, non-expandable rest row.
   assert.equal(countOccurrences(html, "cm-rest-day"), 1);
@@ -1102,7 +1102,7 @@ test("surfaces coach-led contact alongside app sessions in the same day card", (
   // with the contact surfaced above the app work.
   assert.equal(html.includes("Coach-led boxing — technical only"), true);
   assert.equal(html.includes("Tactical Cue Card"), true);
-  assert.equal(html.includes("Coach-owned contact today"), true);
+  assert.equal(html.includes("Your own hard sparring/contact work today"), true);
   assert.ok(
     html.indexOf("Coach-led boxing — technical only") < html.indexOf(">Tactical Cue Card<"),
   );
@@ -1496,7 +1496,7 @@ test("week overview separates training days, app sessions, and coach-led session
   assert.equal(html.includes("Training days"), true);
   // The week-overview stats no longer say "app" — the athlete just sees their work.
   assert.equal(html.includes("Sessions</span>"), true);
-  assert.equal(html.includes("Coach-led</span>"), true);
+  assert.equal(html.includes("Sparring/contact</span>"), true);
   assert.equal(html.includes("Completion</span>"), true);
   assert.equal(html.includes("App sessions"), false);
   assert.equal(html.includes("App completion"), false);

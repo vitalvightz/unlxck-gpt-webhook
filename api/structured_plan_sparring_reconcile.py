@@ -2,9 +2,9 @@
 
 The athlete-facing structured plan is a *second* LLM conversion of the Stage 2
 text. A declared hard-sparring (or technical / reduced) day legitimately carries
-no app S&C work — the contact load is coach-owned — so the converter is supposed
-to emit it as a day with empty ``sessions`` and a headline naming it (e.g.
-"Coach-led sparring"). The web renderer then classifies the card *purely* from
+no app S&C work — the contact load is the athlete's own (run with or without a
+coach) — so the converter is supposed to emit it as a day with empty ``sessions``
+and a headline naming it (e.g. "Hard sparring"). The web renderer then classifies the card *purely* from
 that free-text headline (``classifySessionlessDay`` in
 ``web/lib/structured-plan.ts``). That single fragile signal is the only thing
 standing between a declared sparring day and a "Rest day." card: if the LLM drops
@@ -44,13 +44,14 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 _CONTACT_EFFECTIVE_LOADS = {"hard", "technical", "reduced"}
 
 # Canonical headlines chosen so the web classifier reliably tags the day:
-#   "spar"      -> SPARRING_RE  -> kind "sparring"  (coachLed = true)
-#   "technical" -> TECHNICAL_RE -> kind "technical" (coachLed = true)
-# Each also reads as coach-owned so the "train with your coach" note shows.
+#   "spar"      -> SPARRING_RE  -> kind "sparring"  (athlete-owned contact note shows)
+#   "technical" -> TECHNICAL_RE -> kind "technical" (athlete-owned contact note shows)
+# The labels are coach-neutral: a declared hard-sparring day is the athlete's own
+# contact work (run with or without a coach), so nothing here asserts a coach.
 _HEADLINE_BY_LOAD = {
-    "hard": "Coach-led sparring",
-    "reduced": "Coach-led sparring — reduced dose",
-    "technical": "Coach-led boxing — technical-only combat",
+    "hard": "Hard sparring",
+    "reduced": "Hard sparring — reduced dose",
+    "technical": "Technical-only combat",
 }
 # day_type carries no sparring value (high/moderate/low/...), so pick the closest
 # intensity bucket purely for the day's intensity tag. It does NOT drive the

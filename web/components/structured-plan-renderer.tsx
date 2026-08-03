@@ -101,7 +101,7 @@ const LIGHT_TECHNICAL_NOTE =
   "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
 
 const COACH_LED_CONTACT_NOTE =
-  "Coach-owned contact today — done with your coach alongside the app work below. Keep freshness the priority.";
+  "Your own hard sparring/contact work today, alongside the app work below. Keep freshness the priority.";
 
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
@@ -609,7 +609,7 @@ export function SessionlessDayCard({
       {kind === "light_combat" ? (
         <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
       ) : coachLed ? (
-        <p className="sp-today-note">No extra S&amp;C today — train with your coach and keep freshness priority.</p>
+        <p className="sp-today-note">No extra S&amp;C today — this is your own hard sparring/contact work. Keep freshness the priority.</p>
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
@@ -1592,7 +1592,7 @@ function WeekOverview({
       value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
     },
     {
-      label: "Coach-led",
+      label: "Sparring/contact",
       value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
     },
     {

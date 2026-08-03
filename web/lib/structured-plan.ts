@@ -1081,12 +1081,12 @@ export type SessionlessDayView = {
   title: string;
   /** Short tag for the day kind, or null when no kind tag should show. */
   tag: string | null;
-  /** Whether to surface the "no app S&C — train with your coach" note. */
+  /** Whether to surface the "no app S&C — your own hard sparring/contact work" note. */
   coachLed: boolean;
 };
 
 const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
-  coach_led: "Coach-led",
+  coach_led: "Contact",
   light_combat: "Light combat",
   sparring: "Sparring",
   technical: "Technical",
