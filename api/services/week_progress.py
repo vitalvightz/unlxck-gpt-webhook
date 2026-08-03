@@ -174,6 +174,43 @@ def evaluate_week_completion(
     }
 
 
+def _reconcile_completed_week_lifecycle(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str,
+    plan: Mapping[str, Any],
+    week: Mapping[str, Any],
+    completions: Sequence[Mapping[str, Any]],
+) -> None:
+    """Best-effort durable repair pass, independent of the weekly XP result."""
+
+    plan_id = str(plan.get("id") or "").strip()
+    week_id = str(week.get("week_id") or "").strip()
+    try:
+        # Local import avoids a module cycle: plan milestones reuse this module's
+        # authoritative latest-completion evaluator for every structured week.
+        from api.services.plan_milestones import (
+            reconcile_plan_milestones_after_completed_week,
+        )
+
+        reconcile_plan_milestones_after_completed_week(
+            store,
+            athlete_id=athlete_id,
+            athlete_timezone=athlete_timezone,
+            plan=plan,
+            completed_week=week,
+            completions=completions,
+        )
+    except Exception:  # noqa: BLE001 - repair must never break week/session logging
+        logger.exception(
+            "[xp] lifecycle reconciliation failed athlete_id=%s plan_id=%s week_id=%s",
+            athlete_id,
+            plan_id,
+            week_id,
+        )
+
+
 def award_completed_week(
     store: AppStore,
     *,
@@ -182,6 +219,8 @@ def award_completed_week(
     plan: Mapping[str, Any],
     training_day: str,
 ) -> dict[str, Any] | None:
+    """Confirm a week, idempotently award XP, then always reconcile lifecycle."""
+
     week = find_week_for_training_day(plan, training_day)
     if week is None:
         return None
@@ -207,21 +246,50 @@ def award_completed_week(
         return None
 
     source_key = f"{plan_id}:{week_id}"
-    award = store.award_xp(
-        athlete_id,
-        action="full_training_week_completed",
-        idempotency_key=f"full-week:{source_key}",
-    )
-    if not isinstance(award, Mapping):
-        return None
-    normalized = dict(award)
-    dispatch_progress_award_notification(
+    normalized: dict[str, Any] | None = None
+    try:
+        award = store.award_xp(
+            athlete_id,
+            action="full_training_week_completed",
+            idempotency_key=f"full-week:{source_key}",
+        )
+        if isinstance(award, Mapping):
+            normalized = dict(award)
+    except Exception:  # noqa: BLE001 - weekly XP must not block lifecycle repair
+        logger.exception(
+            "[xp] full week award failed athlete_id=%s plan_id=%s week_id=%s",
+            athlete_id,
+            plan_id,
+            week_id,
+        )
+
+    if normalized is not None:
+        try:
+            dispatch_progress_award_notification(
+                store,
+                athlete_id=athlete_id,
+                action="full_training_week_completed",
+                award_result=normalized,
+                source_key=source_key,
+                timezone_name=athlete_timezone or "UTC",
+            )
+        except Exception:  # noqa: BLE001 - push must not block lifecycle persistence
+            logger.exception(
+                "[notification] week completion delivery failed athlete_id=%s plan_id=%s week_id=%s",
+                athlete_id,
+                plan_id,
+                week_id,
+            )
+
+    # This is intentionally independent of ``award_result.awarded``. A retry
+    # after weekly XP already exists repairs missing phase/plan/camp milestones.
+    _reconcile_completed_week_lifecycle(
         store,
         athlete_id=athlete_id,
-        action="full_training_week_completed",
-        award_result=normalized,
-        source_key=source_key,
-        timezone_name=athlete_timezone or "UTC",
+        athlete_timezone=athlete_timezone,
+        plan=plan,
+        week=week,
+        completions=completions,
     )
     return normalized
 
@@ -233,7 +301,7 @@ def try_award_completed_week_for_completion(
     athlete_timezone: str,
     completion: Mapping[str, Any],
 ) -> dict[str, Any] | None:
-    """Best-effort wrapper covering plan lookup, evaluation, XP and push."""
+    """Best-effort wrapper covering plan lookup, evaluation, XP and repair."""
 
     plan_id = str(completion.get("plan_id") or "").strip()
     training_day = str(completion.get("training_day") or "").strip()
@@ -251,7 +319,7 @@ def try_award_completed_week_for_completion(
             plan=plan,
             training_day=training_day,
         )
-    except Exception:  # noqa: BLE001 - week XP must never break session logging
+    except Exception:  # noqa: BLE001 - week work must never break session logging
         logger.exception(
             "[xp] week evaluation failed athlete_id=%s plan_id=%s training_day=%s",
             athlete_id,
