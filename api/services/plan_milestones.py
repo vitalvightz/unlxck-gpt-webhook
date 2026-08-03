@@ -120,6 +120,26 @@ def _rpc_payload(response: object) -> dict[str, Any] | None:
     return dict(payload) if isinstance(payload, Mapping) else None
 
 
+def _call_store_or_rpc(
+    store: AppStore,
+    *,
+    method_name: str,
+    rpc_name: str,
+    method_args: tuple[Any, ...],
+    method_kwargs: Mapping[str, Any],
+    rpc_params: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    method = getattr(store, method_name, None)
+    if callable(method):
+        result = method(*method_args, **dict(method_kwargs))
+        return dict(result) if isinstance(result, Mapping) else None
+
+    client = getattr(store, "client", None)
+    if client is None:
+        return None
+    return _rpc_payload(client.rpc(rpc_name, dict(rpc_params)).execute())
+
+
 def _record_milestone(
     store: AppStore,
     *,
@@ -130,24 +150,19 @@ def _record_milestone(
     phase_label: str | None,
     metadata: Mapping[str, Any],
 ) -> dict[str, Any] | None:
-    recorder = getattr(store, "record_plan_milestone", None)
-    if callable(recorder):
-        result = recorder(
-            athlete_id,
-            plan_id=plan_id,
-            milestone_type=milestone_type,
-            milestone_key=milestone_key,
-            phase_label=phase_label,
-            metadata=dict(metadata),
-        )
-        return dict(result) if isinstance(result, Mapping) else None
-
-    client = getattr(store, "client", None)
-    if client is None:
-        return None
-    response = client.rpc(
-        "record_plan_milestone",
-        {
+    return _call_store_or_rpc(
+        store,
+        method_name="record_plan_milestone",
+        rpc_name="record_plan_milestone",
+        method_args=(athlete_id,),
+        method_kwargs={
+            "plan_id": plan_id,
+            "milestone_type": milestone_type,
+            "milestone_key": milestone_key,
+            "phase_label": phase_label,
+            "metadata": dict(metadata),
+        },
+        rpc_params={
             "p_athlete_id": athlete_id,
             "p_plan_id": plan_id,
             "p_milestone_type": milestone_type,
@@ -155,8 +170,49 @@ def _record_milestone(
             "p_phase_label": phase_label,
             "p_metadata": dict(metadata),
         },
-    ).execute()
-    return _rpc_payload(response)
+    )
+
+
+def _begin_week_reconciliation(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_id: str,
+    week_id: str,
+) -> dict[str, Any] | None:
+    return _call_store_or_rpc(
+        store,
+        method_name="begin_week_lifecycle_reconciliation",
+        rpc_name="begin_week_lifecycle_reconciliation",
+        method_args=(athlete_id,),
+        method_kwargs={"plan_id": plan_id, "week_id": week_id},
+        rpc_params={
+            "p_athlete_id": athlete_id,
+            "p_plan_id": plan_id,
+            "p_week_id": week_id,
+        },
+    )
+
+
+def _complete_week_reconciliation(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_id: str,
+    week_id: str,
+) -> dict[str, Any] | None:
+    return _call_store_or_rpc(
+        store,
+        method_name="complete_week_lifecycle_reconciliation",
+        rpc_name="complete_week_lifecycle_reconciliation",
+        method_args=(athlete_id,),
+        method_kwargs={"plan_id": plan_id, "week_id": week_id},
+        rpc_params={
+            "p_athlete_id": athlete_id,
+            "p_plan_id": plan_id,
+            "p_week_id": week_id,
+        },
+    )
 
 
 def _award_result(result: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -180,9 +236,11 @@ def _result_totals(result: Mapping[str, Any]) -> tuple[int, int]:
 def _milestone_candidate(
     *,
     athlete_id: str,
+    plan_id: str,
     milestone_type: str,
     milestone_key: str,
     phase_label: str | None,
+    first_plan_xp_awarded: bool,
     timezone_name: str,
     now_utc: datetime,
 ) -> NotificationCandidate | None:
@@ -193,10 +251,16 @@ def _milestone_candidate(
         tag = "training-phase-complete"
         priority = 58
     elif milestone_type == "plan_completed":
-        title = "First plan complete"
-        body = "You finished the full plan. Review what moved you forward."
-        notification_type = "first_plan_complete"
-        tag = "first-plan-complete"
+        title = "First plan complete" if first_plan_xp_awarded else "Plan complete"
+        body = (
+            "You finished your first full plan. Review what moved you forward."
+            if first_plan_xp_awarded
+            else "You finished this plan. Review what moved you forward."
+        )
+        notification_type = (
+            "first_plan_complete" if first_plan_xp_awarded else "plan_complete"
+        )
+        tag = "plan-complete"
         priority = 56
     elif milestone_type == "camp_completed":
         title = "Camp complete"
@@ -216,7 +280,7 @@ def _milestone_candidate(
         body=body,
         url="/history",
         tag=tag,
-        dedupe_key=f"{tag}:{milestone_key}"[:160],
+        dedupe_key=f"{tag}:{plan_id}:{milestone_key}"[:160],
         expires_at=now_utc + timedelta(days=4),
         timezone_name=timezone_name or "UTC",
         respect_quiet_hours=True,
@@ -254,11 +318,79 @@ def _record_milestone_safely(
         return None
 
 
+def _milestone_specs(
+    *,
+    plan: Mapping[str, Any],
+    completed_week: Mapping[str, Any],
+    completions: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    weeks = _ordered_weeks(plan)
+    current_week_id = _week_id(completed_week)
+    if not weeks or not current_week_id:
+        return []
+
+    specs: list[dict[str, Any]] = []
+    phase_weeks = _phase_segment(weeks, current_week_id=current_week_id)
+    phase = _phase_label(completed_week)
+    if phase_weeks and phase and _all_weeks_complete(phase_weeks, completions):
+        phase_week_ids = [_week_id(week) for week in phase_weeks]
+        specs.append(
+            {
+                "milestone_type": "phase_completed",
+                "milestone_key": (
+                    f"phase:{phase}:{phase_week_ids[0]}:{phase_week_ids[-1]}"
+                ),
+                "phase_label": phase,
+                "metadata": {"week_ids": phase_week_ids, "phase_label": phase},
+            }
+        )
+
+    plan_type = _plan_type(plan)
+    if (
+        not plan_type
+        or plan_type in OPEN_ENDED_PLAN_TYPES
+        or not _all_weeks_complete(weeks, completions)
+    ):
+        return specs
+
+    week_ids = [_week_id(week) for week in weeks]
+    specs.append(
+        {
+            "milestone_type": "plan_completed",
+            "milestone_key": "plan-complete",
+            "phase_label": None,
+            "metadata": {"week_ids": week_ids, "plan_type": plan_type},
+        }
+    )
+    if plan_type == "fight_camp":
+        specs.append(
+            {
+                "milestone_type": "camp_completed",
+                "milestone_key": "camp-complete",
+                "phase_label": None,
+                "metadata": {"week_ids": week_ids, "plan_type": plan_type},
+            }
+        )
+    return specs
+
+
+def _result_identity(result: Mapping[str, Any]) -> tuple[str, str] | None:
+    milestone = result.get("milestone")
+    if not isinstance(milestone, Mapping):
+        return None
+    milestone_type = str(milestone.get("milestone_type") or "").strip()
+    milestone_key = str(milestone.get("milestone_key") or "").strip()
+    if not milestone_type or not milestone_key:
+        return None
+    return milestone_type, milestone_key
+
+
 def _dispatch_best_notification(
     store: AppStore,
     *,
     athlete_id: str,
     athlete_timezone: str,
+    plan_id: str,
     recorded: Sequence[tuple[str, str, str | None, Mapping[str, Any]]],
     now_utc: datetime | None = None,
 ) -> int:
@@ -268,29 +400,37 @@ def _dispatch_best_notification(
 
     for milestone_type, milestone_key, phase_label, result in recorded:
         award = _award_result(result)
-        if not bool(award.get("awarded")):
-            continue
-        candidate = _milestone_candidate(
-            athlete_id=athlete_id,
-            milestone_type=milestone_type,
-            milestone_key=milestone_key,
-            phase_label=phase_label,
-            timezone_name=athlete_timezone or "UTC",
-            now_utc=reference,
-        )
-        if candidate is not None:
-            milestone_candidates.append(candidate)
-        previous, total = _result_totals(award)
-        level_candidate = build_level_up_candidate(
-            athlete_id=athlete_id,
-            previous_total_xp=previous,
-            total_xp=total,
-            source_key=milestone_key,
-            timezone_name=athlete_timezone or "UTC",
-            now_utc=reference,
-        )
-        if level_candidate is not None:
-            level_candidates.append((total, level_candidate))
+        award_was_new = bool(award.get("awarded"))
+        milestone_was_new = bool(result.get("milestone_inserted"))
+
+        if milestone_was_new:
+            candidate = _milestone_candidate(
+                athlete_id=athlete_id,
+                plan_id=plan_id,
+                milestone_type=milestone_type,
+                milestone_key=milestone_key,
+                phase_label=phase_label,
+                first_plan_xp_awarded=(
+                    milestone_type == "plan_completed" and award_was_new
+                ),
+                timezone_name=athlete_timezone or "UTC",
+                now_utc=reference,
+            )
+            if candidate is not None:
+                milestone_candidates.append(candidate)
+
+        if award_was_new:
+            previous, total = _result_totals(award)
+            level_candidate = build_level_up_candidate(
+                athlete_id=athlete_id,
+                previous_total_xp=previous,
+                total_xp=total,
+                source_key=f"{plan_id}:{milestone_key}",
+                timezone_name=athlete_timezone or "UTC",
+                now_utc=reference,
+            )
+            if level_candidate is not None:
+                level_candidates.append((total, level_candidate))
 
     if level_candidates:
         selected = max(level_candidates, key=lambda item: item[0])[1]
@@ -310,86 +450,161 @@ def record_plan_milestones_after_completed_week(
     completed_week: Mapping[str, Any],
     completions: Sequence[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
+    """Idempotently record every lifecycle milestone now implied by the plan."""
+
     plan_id = str(plan.get("id") or "").strip()
-    current_week_id = _week_id(completed_week)
-    weeks = _ordered_weeks(plan)
-    if not plan_id or not current_week_id or not weeks:
+    if not plan_id:
         return []
 
+    specs = _milestone_specs(
+        plan=plan,
+        completed_week=completed_week,
+        completions=completions,
+    )
     recorded: list[tuple[str, str, str | None, Mapping[str, Any]]] = []
     results: list[dict[str, Any]] = []
-    phase_weeks = _phase_segment(weeks, current_week_id=current_week_id)
-    phase = _phase_label(completed_week)
-    if phase_weeks and phase and _all_weeks_complete(phase_weeks, completions):
-        phase_week_ids = [_week_id(week) for week in phase_weeks]
-        phase_key = f"phase:{phase}:{phase_week_ids[0]}:{phase_week_ids[-1]}"
+
+    for spec in specs:
+        milestone_type = str(spec["milestone_type"])
+        milestone_key = str(spec["milestone_key"])
+        phase_label = spec.get("phase_label")
         result = _record_milestone_safely(
             store,
             athlete_id=athlete_id,
             plan_id=plan_id,
-            milestone_type="phase_completed",
-            milestone_key=phase_key,
-            phase_label=phase,
-            metadata={"week_ids": phase_week_ids, "phase_label": phase},
+            milestone_type=milestone_type,
+            milestone_key=milestone_key,
+            phase_label=str(phase_label) if phase_label is not None else None,
+            metadata=spec["metadata"],
         )
         if result:
-            results.append(dict(result))
-            recorded.append(("phase_completed", phase_key, phase, result))
-
-    plan_type = _plan_type(plan)
-    if not plan_type or plan_type in OPEN_ENDED_PLAN_TYPES or not _all_weeks_complete(weeks, completions):
-        try:
-            _dispatch_best_notification(
-                store,
-                athlete_id=athlete_id,
-                athlete_timezone=athlete_timezone,
-                recorded=recorded,
+            normalized = dict(result)
+            results.append(normalized)
+            recorded.append(
+                (
+                    milestone_type,
+                    milestone_key,
+                    str(phase_label) if phase_label is not None else None,
+                    normalized,
+                )
             )
-        except Exception:  # noqa: BLE001 - push must never break milestone persistence
-            logger.exception("[notification] plan milestone delivery failed athlete_id=%s", athlete_id)
-        return results
-
-    week_ids = [_week_id(week) for week in weeks]
-    plan_result = _record_milestone_safely(
-        store,
-        athlete_id=athlete_id,
-        plan_id=plan_id,
-        milestone_type="plan_completed",
-        milestone_key="plan-complete",
-        phase_label=None,
-        metadata={"week_ids": week_ids, "plan_type": plan_type},
-    )
-    if plan_result:
-        results.append(dict(plan_result))
-        recorded.append(("plan_completed", "plan-complete", None, plan_result))
-
-    if plan_type == "fight_camp":
-        camp_result = _record_milestone_safely(
-            store,
-            athlete_id=athlete_id,
-            plan_id=plan_id,
-            milestone_type="camp_completed",
-            milestone_key="camp-complete",
-            phase_label=None,
-            metadata={"week_ids": week_ids, "plan_type": plan_type},
-        )
-        if camp_result:
-            results.append(dict(camp_result))
-            recorded.append(("camp_completed", "camp-complete", None, camp_result))
 
     try:
         _dispatch_best_notification(
             store,
             athlete_id=athlete_id,
             athlete_timezone=athlete_timezone,
+            plan_id=plan_id,
             recorded=recorded,
         )
     except Exception:  # noqa: BLE001 - push must never break milestone persistence
-        logger.exception("[notification] plan milestone delivery failed athlete_id=%s", athlete_id)
+        logger.exception(
+            "[notification] plan milestone delivery failed athlete_id=%s plan_id=%s",
+            athlete_id,
+            plan_id,
+        )
     return results
+
+
+def reconcile_plan_milestones_after_completed_week(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str,
+    plan: Mapping[str, Any],
+    completed_week: Mapping[str, Any],
+    completions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Durably reconcile lifecycle milestones for an already-confirmed week.
+
+    A pending checkpoint is written before milestone work starts. Repeated calls
+    repair any missing phase, plan or camp rows idempotently. The checkpoint is
+    marked completed only when every milestone currently implied by the
+    authoritative plan/completion state has been observed.
+    """
+
+    plan_id = str(plan.get("id") or "").strip()
+    week_id = _week_id(completed_week)
+    if not plan_id or not week_id:
+        return {"reconciled": False, "expected": [], "results": []}
+
+    checkpoint: dict[str, Any] | None = None
+    try:
+        checkpoint = _begin_week_reconciliation(
+            store,
+            athlete_id=athlete_id,
+            plan_id=plan_id,
+            week_id=week_id,
+        )
+    except Exception:  # noqa: BLE001 - checkpoint failure must not break session logging
+        logger.exception(
+            "[xp] lifecycle checkpoint start failed athlete_id=%s plan_id=%s week_id=%s",
+            athlete_id,
+            plan_id,
+            week_id,
+        )
+
+    if checkpoint and str(checkpoint.get("status") or "") == "completed":
+        return {
+            "reconciled": True,
+            "expected": [],
+            "results": [],
+            "checkpoint": checkpoint,
+        }
+
+    specs = _milestone_specs(
+        plan=plan,
+        completed_week=completed_week,
+        completions=completions,
+    )
+    expected = {
+        (str(spec["milestone_type"]), str(spec["milestone_key"]))
+        for spec in specs
+    }
+    results = record_plan_milestones_after_completed_week(
+        store,
+        athlete_id=athlete_id,
+        athlete_timezone=athlete_timezone,
+        plan=plan,
+        completed_week=completed_week,
+        completions=completions,
+    )
+    observed = {
+        identity
+        for result in results
+        if (identity := _result_identity(result)) is not None
+    }
+    reconciled = expected.issubset(observed)
+
+    if reconciled and checkpoint is not None:
+        try:
+            completed_checkpoint = _complete_week_reconciliation(
+                store,
+                athlete_id=athlete_id,
+                plan_id=plan_id,
+                week_id=week_id,
+            )
+            if completed_checkpoint is not None:
+                checkpoint = completed_checkpoint
+        except Exception:  # noqa: BLE001 - retry will safely repair this marker
+            logger.exception(
+                "[xp] lifecycle checkpoint completion failed athlete_id=%s plan_id=%s week_id=%s",
+                athlete_id,
+                plan_id,
+                week_id,
+            )
+            reconciled = False
+
+    return {
+        "reconciled": reconciled,
+        "expected": sorted(expected),
+        "results": results,
+        "checkpoint": checkpoint,
+    }
 
 
 __all__ = [
     "OPEN_ENDED_PLAN_TYPES",
     "record_plan_milestones_after_completed_week",
+    "reconcile_plan_milestones_after_completed_week",
 ]
