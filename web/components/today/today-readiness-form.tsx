@@ -16,7 +16,6 @@ import type {
   TodayCheckinSleep,
   TodayPreviousSession,
 } from "@/lib/types";
-import { requestXpRefresh } from "@/lib/xp-events";
 
 const SLEEP_OPTIONS: Array<{ value: TodayCheckinSleep; label: string }> = [
   { value: "poor", label: "Poor" },
@@ -127,7 +126,6 @@ export function TodayReadinessForm({
       if (response.warnings?.length) {
         showToast(response.warnings[0], { tone: "info" });
       }
-      requestXpRefresh();
       await onRefresh();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Check-in failed.", { tone: "error" });
