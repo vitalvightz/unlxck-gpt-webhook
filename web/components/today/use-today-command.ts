@@ -12,6 +12,7 @@ import type {
   StructuredPlan,
   TodayCommandView,
 } from "@/lib/types";
+import { requestXpRefresh } from "@/lib/xp-events";
 
 /**
  * The plan Today renders blocks from: the saved server card when present,
@@ -80,6 +81,9 @@ export function useTodayCommand(token: string | null): TodayCommand {
       const nextState = await getToday(token);
       setState(nextState);
       setError(null);
+      // Every successful Today write calls this refresh. Re-read the XP progress
+      // immediately so session/check-in/injury rewards do not wait for polling.
+      requestXpRefresh();
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Today failed to load.");
     } finally {
