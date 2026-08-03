@@ -29,7 +29,11 @@ from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.services.progress_notifications import award_session_progress
 from api.services.week_progress import try_award_completed_week_for_completion
-from api.services.xp_awards import award_checkin_xp, award_injury_update_xp
+from api.services.xp_awards import (
+    award_checkin_xp,
+    award_injury_update_xp,
+    plan_completion_xp_eligible,
+)
 from api.services.today_readiness_boundary import (
     build_today_command_view,
     resolve_today_landing,
@@ -104,14 +108,15 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=request_body.model_dump(),
         )
         training_day = str(result.get("training_day") or "")
-        for injury in result.get("open_injuries", []):
-            if isinstance(injury, dict):
-                award_injury_update_xp(
-                    store,
-                    athlete_id=profile.athlete_id,
-                    injury=injury,
-                    training_day=training_day,
-                )
+        # One successful declaration batch earns one daily reward. Returning all
+        # open injury rows must never multiply XP, and an empty/no-op request
+        # cannot farm the reward merely by re-reading existing injuries.
+        award_injury_update_xp(
+            store,
+            athlete_id=profile.athlete_id,
+            training_day=training_day,
+            updated_injuries=request_body.injuries,
+        )
         return TodayInjuryCheckinResponse(
             open_injuries=[InjuryFlagRecord(**row) for row in result.get("open_injuries", [])],
         )
@@ -187,18 +192,26 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=request_body.model_dump(),
         )
         completion_status = completion_status_of(row)
-        award_session_progress(
+        # Preserve the completion record, but only the single server-resolved
+        # active plan may drive XP. This closes the overlapping/inactive-plan
+        # path without deleting legitimate history or retro logs.
+        if plan_completion_xp_eligible(
             store,
             athlete_id=profile.athlete_id,
-            athlete_timezone=profile.athlete_timezone,
             completion=row,
-        )
-        try_award_completed_week_for_completion(
-            store,
-            athlete_id=profile.athlete_id,
-            athlete_timezone=profile.athlete_timezone,
-            completion=row,
-        )
+        ):
+            award_session_progress(
+                store,
+                athlete_id=profile.athlete_id,
+                athlete_timezone=profile.athlete_timezone,
+                completion=row,
+            )
+            try_award_completed_week_for_completion(
+                store,
+                athlete_id=profile.athlete_id,
+                athlete_timezone=profile.athlete_timezone,
+                completion=row,
+            )
         return SessionCompletionResponse(
             completion=row,
             completion_status=completion_status,
