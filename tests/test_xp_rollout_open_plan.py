@@ -8,12 +8,25 @@ import api.services.week_progress as week_progress
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ROLLOUT_MIGRATION = (
-    ROOT
-    / "supabase"
-    / "migrations"
-    / "20260803183000_stage_xp_hardening_rollout.sql"
+ROLLOUT_MIGRATIONS = tuple(
+    ROOT / "supabase" / "migrations" / name
+    for name in (
+        "20260803183000_add_xp_rollout_projection_helpers.sql",
+        "20260803183100_validate_xp_sources_with_projected_weeks.sql",
+        "20260803183200_enforce_projected_full_week_completion.sql",
+        "20260803183300_keep_legacy_xp_calls_compatible.sql",
+        "20260803183400_scope_open_plan_phase_rewards.sql",
+        "20260803183500_finalize_xp_rollout_readiness.sql",
+    )
 )
+
+
+def _rollout_sql() -> str:
+    return " ".join(
+        "\n".join(path.read_text(encoding="utf-8") for path in ROLLOUT_MIGRATIONS)
+        .lower()
+        .split()
+    )
 
 
 class _Store:
@@ -197,8 +210,8 @@ def test_open_plan_week_does_not_award_until_every_session_is_complete(monkeypat
     assert store.award_calls == []
 
 
-def test_final_migration_is_legacy_compatible_and_rollout_gated() -> None:
-    sql = " ".join(ROLLOUT_MIGRATION.read_text(encoding="utf-8").lower().split())
+def test_final_migrations_are_legacy_compatible_and_rollout_gated() -> None:
+    sql = _rollout_sql()
 
     assert "xp_legacy_calendar_date" in sql
     assert "v_calendar_date := public.xp_legacy_calendar_date" in sql
@@ -207,5 +220,7 @@ def test_final_migration_is_legacy_compatible_and_rollout_gated() -> None:
     assert "xp_open_plan_week_item" in sql
     assert "xp_full_week_planned_sessions" in sql
     assert "from public.xp_full_week_planned_sessions" in sql
+    assert "'open-anchor:'" in sql
     assert "'rollout_ready', true" in sql
+    assert "'open_plan_scope_ready', true" in sql
     assert "'version', '20260803182000'" in sql
