@@ -3,7 +3,13 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from api.routes import xp as xp_routes
-from api.services.xp_progress import _current_week, _opportunities
+from api.services.xp_progress import (
+    _RecordRead,
+    _current_week,
+    _opportunities,
+    _safe_latest_intake,
+    _safe_latest_plan,
+)
 from support import _build_client
 
 
@@ -20,6 +26,16 @@ class ProgressStore:
         assert athlete_id == "athlete-1"
         assert plan_id == "plan-1"
         return list(self.completions)
+
+
+class FailingActivationStore(ProgressStore):
+    def get_latest_intake(self, athlete_id):
+        assert athlete_id == "athlete-1"
+        raise RuntimeError("intake database unavailable")
+
+    def get_latest_plan(self, athlete_id):
+        assert athlete_id == "athlete-1"
+        raise RuntimeError("plan database unavailable")
 
 
 def command(
@@ -44,17 +60,20 @@ def command(
     )
 
 
+def found(record: dict) -> _RecordRead:
+    return _RecordRead(status="found", value=record)
+
+
 def opportunity_codes(store, *, today=None, week=None):
-    result = _opportunities(
+    return _opportunities(
         store,
         athlete_id="athlete-1",
         profile={"full_name": "Ari Mensah", "technical_style": ["boxing"]},
-        latest_intake={"id": "intake-1"},
-        latest_plan={"id": "plan-1", "status": "ready"},
+        latest_intake=found({"id": "intake-1"}),
+        latest_plan=found({"id": "plan-1", "status": "ready"}),
         command=today or command(),
         current_week=week,
     )
-    return result
 
 
 def test_first_checkin_is_35_xp_then_daily_checkin_is_10():
@@ -124,8 +143,8 @@ def test_only_three_highest_priority_opportunities_are_returned():
         store,
         athlete_id="athlete-1",
         profile={"full_name": "", "technical_style": []},
-        latest_intake=None,
-        latest_plan=None,
+        latest_intake=_RecordRead(status="not_found"),
+        latest_plan=_RecordRead(status="not_found"),
         command=command(
             injuries=[{"id": "injury-1", "status": "open"}],
         ),
@@ -141,6 +160,55 @@ def test_only_three_highest_priority_opportunities_are_returned():
         "update_active_injury",
         "complete_today_session",
     ]
+
+
+def test_activation_actions_require_confirmed_absence():
+    store = ProgressStore()
+    result = _opportunities(
+        store,
+        athlete_id="athlete-1",
+        profile={"full_name": "Ari Mensah", "technical_style": ["boxing"]},
+        latest_intake=_RecordRead(status="not_found"),
+        latest_plan=_RecordRead(status="not_found"),
+        command=command(
+            recommendation_state="train_as_planned",
+            session_scope="none",
+            with_session=False,
+        ),
+        current_week=None,
+    )
+
+    assert {item["code"] for item in result} == {
+        "complete_first_intake",
+        "build_first_plan",
+    }
+
+
+def test_failed_activation_reads_do_not_create_false_actions():
+    store = FailingActivationStore()
+    intake_read = _safe_latest_intake(store, "athlete-1")
+    plan_read = _safe_latest_plan(store, "athlete-1")
+
+    assert intake_read.status == "unavailable"
+    assert plan_read.status == "unavailable"
+
+    result = _opportunities(
+        store,
+        athlete_id="athlete-1",
+        profile={"full_name": "Ari Mensah", "technical_style": ["boxing"]},
+        latest_intake=intake_read,
+        latest_plan=plan_read,
+        command=command(
+            recommendation_state="train_as_planned",
+            session_scope="none",
+            with_session=False,
+        ),
+        current_week=None,
+    )
+    codes = {item["code"] for item in result}
+
+    assert "complete_first_intake" not in codes
+    assert "build_first_plan" not in codes
 
 
 def test_week_progress_ignores_rest_days_and_week_action_disappears_after_award():
