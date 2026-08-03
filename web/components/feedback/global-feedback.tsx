@@ -63,6 +63,8 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         contact_allowed: contactAllowed,
         screenshot,
       });
+      // The backend has already committed the award when this resolves. Refresh
+      // the shared XP state now instead of waiting for its one-minute poll.
       requestXpRefresh();
       setDescription("");
       removeScreenshot();
