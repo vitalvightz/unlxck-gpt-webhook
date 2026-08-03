@@ -162,7 +162,7 @@ test("restored Overview card CSS disables progress motion when requested", () =>
   assert.doesNotMatch(css, /xp-progress-open/);
 });
 
-test("Progress route keeps the compact card, athlete identity and progressive disclosure", () => {
+test("Progress route keeps the compact card, athlete identity and latest-three history", () => {
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/progress/page.tsx", import.meta.url), "utf8");
   const card = readFileSync(new URL("./xp-progress-card.tsx", import.meta.url), "utf8");
@@ -177,8 +177,10 @@ test("Progress route keeps the compact card, athlete identity and progressive di
   assert.match(page, /profile\.technical_style/);
   assert.match(page, /profile\.tactical_style/);
   assert.match(page, /profile\.stance/);
-  assert.match(page, /recentAwards\.slice\(0, 5\)/);
-  assert.match(page, /Show all/);
+  assert.match(page, /recentAwards\.slice\(0, 3\)/);
+  assert.match(page, /Latest 3/);
+  assert.doesNotMatch(page, /Show all/);
+  assert.doesNotMatch(page, /showAllAwards/);
   assert.match(page, /<details className="xp-page-panel xp-explanation xp-explanation-disclosure">/);
   assert.match(page, /UNLXCK rank reflects your progress and completed work inside UNLXCK/);
   assert.match(page, /There is no public leaderboard during private beta/);
