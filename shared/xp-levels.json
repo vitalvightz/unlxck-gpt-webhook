@@ -1,0 +1,10 @@
+[
+  { "level": 1, "title": "Rookie", "threshold": 0 },
+  { "level": 2, "title": "Prospect", "threshold": 250 },
+  { "level": 3, "title": "Amateur", "threshold": 750 },
+  { "level": 4, "title": "Challenger", "threshold": 1500 },
+  { "level": 5, "title": "Ranked", "threshold": 2750 },
+  { "level": 6, "title": "Contender", "threshold": 4500 },
+  { "level": 7, "title": "Elite", "threshold": 7000 },
+  { "level": 8, "title": "Champion", "threshold": 10000 }
+]
