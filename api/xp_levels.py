@@ -22,7 +22,7 @@ def _load_xp_levels() -> tuple[tuple[int, str, int], ...]:
         level = item.get("level")
         title = item.get("title")
         threshold = item.get("threshold")
-        if level != expected_level:
+        if isinstance(level, bool) or not isinstance(level, int) or level != expected_level:
             raise RuntimeError("XP levels must be contiguous and start at 1")
         if not isinstance(title, str) or not title.strip():
             raise RuntimeError("XP level titles must be non-empty strings")
@@ -43,7 +43,7 @@ XP_LEVELS = _load_xp_levels()
 def resolve_xp_level(total_xp: Any) -> tuple[int, str, int]:
     try:
         total = max(0, int(total_xp))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         total = 0
     current = XP_LEVELS[0]
     for level in XP_LEVELS[1:]:
