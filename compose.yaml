@@ -15,9 +15,13 @@ services:
     expose:
       - "8000"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/health"]
+      test:
+        - CMD-SHELL
+        - >-
+          python tools/check_xp_hardening_rollout.py &&
+          curl --fail --silent http://127.0.0.1:8000/health
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
       start_period: 45s
     logging:
