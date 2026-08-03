@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
 
+from api.services.active_plan import resolve_active_plan
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -25,12 +26,14 @@ def _award(
     athlete_id: str,
     action: str,
     idempotency_key: str,
+    calendar_date: str | None = None,
 ) -> dict | None:
     try:
         result = store.award_xp(
             athlete_id,
             action=action,
             idempotency_key=idempotency_key,
+            calendar_date=calendar_date,
         )
         return result if isinstance(result, dict) else None
     except Exception:  # noqa: BLE001 - XP must never break the primary action
@@ -85,6 +88,42 @@ def plan_activation_ready(plan: object) -> bool:
         return bool(plan_id and status in ACTIVATION_READY_PLAN_STATUSES)
     except Exception:  # noqa: BLE001 - malformed plan state fails closed
         return False
+
+
+def plan_completion_xp_eligible(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    completion: Mapping[str, object],
+) -> bool:
+    """Allow plan-derived XP only for the one server-resolved active plan.
+
+    Session completion persistence remains separate: a legitimate retro record
+    can still be saved, but an owned inactive/overlapping plan cannot be used as
+    a second XP track. Any ownership, plan-resolution or schedule read failure
+    fails closed.
+    """
+
+    plan_id = str(completion.get("plan_id") or "").strip()
+    training_day = str(completion.get("training_day") or "").strip()
+    if not plan_id or not training_day:
+        return False
+    try:
+        resolution = resolve_active_plan(
+            store,
+            athlete_id,
+            current_training_day=training_day,
+        )
+    except Exception:  # noqa: BLE001 - reward eligibility must fail closed
+        logger.exception(
+            "[xp] active plan eligibility failed athlete_id=%s plan_id=%s training_day=%s",
+            athlete_id,
+            plan_id,
+            training_day,
+        )
+        return False
+    active_plan_id = str(resolution.plan_id or "").strip()
+    return bool(active_plan_id and active_plan_id == plan_id)
 
 
 def _reconcile_activation_milestone(
@@ -198,6 +237,7 @@ def award_checkin_xp(
         athlete_id=athlete_id,
         action="readiness_checkin_completed",
         idempotency_key=f"checkin:{athlete_id}:{training_day}",
+        calendar_date=training_day,
     )
     if daily:
         results.append(daily)
@@ -275,17 +315,19 @@ def award_injury_update_xp(
     store: AppStore,
     *,
     athlete_id: str,
-    injury: Mapping[str, object],
     training_day: str,
+    updated_injuries: Sequence[object],
 ) -> dict | None:
-    injury_id = str(injury.get("id") or "").strip()
-    if not injury_id or not training_day:
+    """Award one injury-update reward per athlete-day, never per injury row."""
+
+    if not training_day or not updated_injuries:
         return None
     return _award(
         store,
         athlete_id=athlete_id,
         action="injury_update_completed",
-        idempotency_key=f"injury-update:{injury_id}:{training_day}",
+        idempotency_key=f"injury-update:{athlete_id}:{training_day}",
+        calendar_date=training_day,
     )
 
 
