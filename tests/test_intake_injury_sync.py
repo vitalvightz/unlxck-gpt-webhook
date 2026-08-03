@@ -45,6 +45,7 @@ def _seed_generated_plan(store, *, intake: dict | None = None) -> dict:
         request=_build_request(),
         result=finalized_result(),
     )
+    store.set_active_plan_id(ATHLETE, plan["id"])
     store.intakes.setdefault(ATHLETE, []).append(
         {
             "id": INTAKE_ID,
