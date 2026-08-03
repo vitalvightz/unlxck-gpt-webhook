@@ -1,0 +1,335 @@
+.xp-page--refined {
+  width: min(100%, 920px);
+  gap: var(--space-3);
+}
+
+.xp-athlete-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 2px 4px;
+}
+
+.xp-athlete-avatar {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-surface-alt);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.xp-athlete-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.xp-athlete-identity {
+  min-width: 0;
+}
+
+.xp-athlete-identity h1 {
+  margin: 3px 0 2px;
+  overflow-wrap: anywhere;
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.xp-athlete-style-line,
+.xp-athlete-record-line {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+}
+
+.xp-athlete-style-line {
+  font-family: var(--font-mono);
+  font-size: var(--type-meta);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.xp-athlete-record-line {
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+.xp-refresh-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: 50%;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.xp-refresh-button:hover:not(:disabled) {
+  border-color: var(--progress-gold-border);
+  color: var(--text-primary);
+}
+
+.xp-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.xp-athlete-skeleton-copy {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.xp-progress-card.xp-progress-card--page {
+  min-height: 0;
+  padding: 20px;
+  border-radius: var(--radius-card);
+}
+
+.xp-progress-card--page .xp-progress-action-link {
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.xp-progress-card--page .xp-progress-action-link:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.xp-progress-card--page .xp-progress-action-link:focus-visible {
+  box-shadow: 0 0 0 2px var(--border-active);
+}
+
+.xp-page-summary-grid {
+  align-items: stretch;
+}
+
+.xp-page--refined .xp-page-panel {
+  padding: 20px;
+}
+
+.xp-page--refined .xp-page-section-heading {
+  margin-bottom: 14px;
+}
+
+.xp-page--refined .xp-page-section-heading h2,
+.xp-page--refined .xp-explanation-disclosure summary strong {
+  margin: 4px 0 0;
+  font-size: clamp(18px, 2vw, 20px);
+  line-height: 1.18;
+}
+
+.xp-page--refined .xp-week-count {
+  margin: 4px 0 12px;
+}
+
+.xp-page--refined .xp-week-count strong {
+  font-size: clamp(32px, 5vw, 42px);
+}
+
+.xp-page--refined .xp-week-track {
+  margin-bottom: 12px;
+}
+
+.xp-page--refined .xp-milestone-list li {
+  min-height: 52px;
+}
+
+.xp-awards-panel .xp-page-section-heading > span {
+  white-space: nowrap;
+}
+
+.xp-page--refined .xp-award-row {
+  min-height: 54px;
+  padding: 10px 0;
+}
+
+.xp-page--refined .xp-award-row strong {
+  font-size: var(--type-body);
+}
+
+.xp-page--refined .xp-award-row .xp-award-amount {
+  white-space: nowrap;
+  font-size: var(--type-body-sm);
+}
+
+.xp-award-toggle {
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-btn);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--type-body-sm);
+  font-weight: 600;
+}
+
+.xp-award-toggle:hover {
+  border-color: var(--progress-gold-border);
+  color: var(--text-primary);
+}
+
+.xp-explanation-disclosure {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.xp-explanation-disclosure summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.xp-explanation-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.xp-explanation-disclosure summary > span:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.xp-explanation-disclosure summary strong {
+  display: block;
+}
+
+.xp-explanation-disclosure summary small {
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+  font-weight: 400;
+}
+
+.xp-details-chevron {
+  flex: 0 0 auto;
+  color: var(--progress-gold);
+  font-family: var(--font-mono);
+  font-size: 22px;
+  transition: transform var(--transition-base);
+}
+
+.xp-explanation-disclosure[open] .xp-details-chevron {
+  transform: rotate(180deg);
+}
+
+.xp-explanation-content {
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.xp-explanation-content > p {
+  margin: 18px 0 0;
+}
+
+.xp-explanation-content ul {
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .xp-page--refined {
+    gap: 14px;
+  }
+
+  .xp-athlete-header {
+    gap: 11px;
+    padding-top: 2px;
+  }
+
+  .xp-athlete-avatar {
+    width: 46px;
+    height: 46px;
+    font-size: 14px;
+  }
+
+  .xp-athlete-identity h1 {
+    font-size: 22px;
+  }
+
+  .xp-athlete-style-line {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .xp-athlete-record-line {
+    font-size: 12px;
+  }
+
+  .xp-progress-card.xp-progress-card--page,
+  .xp-page--refined .xp-page-panel {
+    padding: 18px;
+  }
+
+  .xp-page--refined .xp-page-section-heading {
+    align-items: flex-start;
+  }
+
+  .xp-awards-panel .xp-page-section-heading > span {
+    max-width: none;
+    text-align: right;
+  }
+
+  .xp-explanation-disclosure summary {
+    padding: 16px 18px;
+  }
+
+  .xp-explanation-content {
+    padding: 0 18px 18px;
+  }
+}
+
+@media (max-width: 420px) {
+  .xp-athlete-header {
+    grid-template-columns: 42px minmax(0, 1fr) 40px;
+  }
+
+  .xp-athlete-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .xp-refresh-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .xp-progress-card.xp-progress-card--page,
+  .xp-page--refined .xp-page-panel {
+    padding: 16px;
+  }
+
+  .xp-explanation-disclosure summary {
+    padding: 15px 16px;
+  }
+
+  .xp-explanation-content {
+    padding: 0 16px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-details-chevron {
+    transition: none;
+  }
+}
