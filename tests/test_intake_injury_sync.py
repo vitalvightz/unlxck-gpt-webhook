@@ -1,5 +1,6 @@
 """Regression coverage for intake injuries entering live daily tracking."""
 
+from api.auth import AuthenticatedUser
 from api.rehab_labels import resolve_rehab_label_policy
 from api.services.intake_injury_sync import sync_intake_injuries_for_plan
 from tests.support import FakeStore, _build_client, _build_request, finalized_result
@@ -29,6 +30,15 @@ def _active_ankle_intake(*, timeframe: str = "three_plus_months") -> dict:
 
 
 def _seed_generated_plan(store, *, intake: dict | None = None) -> dict:
+    if ATHLETE not in store.profiles:
+        store.ensure_profile(
+            AuthenticatedUser(
+                user_id=ATHLETE,
+                email="ari@example.com",
+                full_name="Ari Mensah",
+                metadata={},
+            )
+        )
     plan = store.create_plan(
         athlete_id=ATHLETE,
         intake_id=INTAKE_ID,
