@@ -1,3 +1,4 @@
+from api.routes import today as today_routes
 from support import _build_client
 
 
@@ -29,11 +30,28 @@ def _complete(client, plan_id: str, session_id: str):
     )
 
 
-def test_owned_inactive_plan_completion_persists_but_cannot_trigger_xp():
+def test_owned_inactive_plan_completion_is_accepted_but_cannot_trigger_xp(monkeypatch):
     client, store, _ = _build_client()
     store.plans[ACTIVE_PLAN] = _plan(ACTIVE_PLAN, created_at="2026-07-01T00:00:00Z")
     store.plans[INACTIVE_PLAN] = _plan(INACTIVE_PLAN, created_at="2026-07-02T00:00:00Z")
     store.set_active_plan_id("athlete-1", ACTIVE_PLAN)
+
+    captured = []
+
+    def fake_completion(_store, *, athlete_id, athlete_timezone, payload):
+        captured.append((athlete_id, athlete_timezone, dict(payload)))
+        return {
+            "id": f"completion-{len(captured)}",
+            "athlete_id": athlete_id,
+            "plan_id": payload["plan_id"],
+            "session_id": payload["session_id"],
+            "training_day": "2026-08-03",
+            "status": payload["status"],
+            "created_at": "2026-08-03T12:00:00Z",
+            "updated_at": "2026-08-03T12:00:00Z",
+        }
+
+    monkeypatch.setattr(today_routes, "upsert_session_completion", fake_completion)
 
     inactive = _complete(client, INACTIVE_PLAN, "inactive-session")
 
@@ -51,4 +69,5 @@ def test_owned_inactive_plan_completion_persists_but_cannot_trigger_xp():
     ]
     assert {
         award["calendar_date"] for award in store.xp_awards["athlete-1"]
-    } == {active.json()["completion"]["training_day"]}
+    } == {"2026-08-03"}
+    assert [call[2]["plan_id"] for call in captured] == [INACTIVE_PLAN, ACTIVE_PLAN]
