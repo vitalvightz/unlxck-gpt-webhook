@@ -1111,9 +1111,12 @@ def test_three_taper_warnings_still_use_stronger_pull_back_stack_copy():
 
 
 def test_high_risk_combat_session_uses_combat_reduction_copy():
+    # Non-contact combat work (bag/conditioning) so this stays a modify and keeps
+    # exercising the combat-reduction copy — poor sleep before *contact* sparring
+    # now pulls back (see TestPoorSleepContactPullBack).
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),
-        ReadinessContext(today_session=_session(title="Sparring and hard conditioning", session_type="sparring")),
+        ReadinessContext(today_session=_session(title="Hard bag work and conditioning", session_type="skill")),
     )
 
     assert adjustment.decision == "modify"
@@ -1162,8 +1165,11 @@ def test_manageable_pain_on_lower_risk_session_stays_modify():
 
 def test_hyphenated_combat_sports_are_recognized_for_contact_guidance():
     for style in ("muay-thai", "jiu-jitsu"):
+        # Flat body (not poor sleep) keeps this a modify on a contact session, so
+        # the subject — sport recognition + contact-suffix handling — is unchanged;
+        # poor sleep before contact sparring now pulls back.
         adjustment = build_readiness_adjustment(
-            ReadinessCheckin(sleep="poor"),
+            ReadinessCheckin(body="flat"),
             ReadinessContext(
                 intake={"athlete": {"technical_style": [style]}},
                 today_session=_session(title="Sparring and hard conditioning", session_type="sparring"),
@@ -1405,10 +1411,12 @@ def test_strength_session_poor_sleep_uses_sets_not_rounds():
 
 
 def test_combat_session_poor_sleep_still_uses_rounds():
-    # Regression: the combat framing is unchanged for a pure combat session.
+    # Regression: the combat framing (rounds, not sets) is unchanged for a combat
+    # modify. Non-contact bag work keeps it a modify — poor sleep before contact
+    # sparring now pulls back (see TestPoorSleepContactPullBack).
     adjustment = build_readiness_adjustment(
         ReadinessCheckin(sleep="poor"),
-        ReadinessContext(today_session=_session(title="Hard sparring", session_type="sparring")),
+        ReadinessContext(today_session=_session(title="Hard bag work", session_type="skill")),
     )
 
     assert adjustment.decision == "modify"
@@ -1523,9 +1531,10 @@ _CONTACT_SPORT_PLAN = {"technical_style": "MMA"}
 @pytest.mark.parametrize("session_type", ["sparring", "mixed"])
 def test_contact_suffix_skipped_when_action_already_drops_contact(session_type):
     # High-risk contact day whose action already says "Skip sparring…": appending
-    # "and do not add extra contact rounds" only restated it.
+    # "and do not add extra contact rounds" only restated it. Flat body keeps this
+    # a modify on a contact session (poor sleep before contact now pulls back).
     adjustment = build_readiness_adjustment(
-        ReadinessCheckin(sleep="poor"),
+        ReadinessCheckin(body="flat"),
         ReadinessContext(
             today_session=_session(title="Hard sparring and max squat", session_type=session_type),
             active_plan=_CONTACT_SPORT_PLAN,
@@ -1604,7 +1613,8 @@ class TestContextIsNotASignal:
             session=_session(title="Technical drilling", session_type="skill"),
         )
         assert trigger_labels(adjustment.triggers) == ("Poor sleep",)
-        assert context_labels(adjustment.triggers) == ("Fight week", "Taper phase")
+        # Fight week and taper are the same camp context, shown as one chip.
+        assert context_labels(adjustment.triggers) == ("Fight week / taper",)
 
     def test_context_alone_is_a_planned_reduction_not_a_problem(self):
         adjustment = self._adjust(
@@ -1703,3 +1713,128 @@ def test_the_stacked_signal_tier_still_pulls_back_on_exposure_and_pain():
         session_risk="medium", phase="GPP", fight_week=False,
     )
     assert painful == "pull_back"
+
+
+class TestFightWeekTaperContextLabel:
+    """Fight week and taper are the same camp context, shown as one CONTEXT chip.
+
+    Taper can run longer than a week, so each still stands alone when only it
+    fired — the collapse happens only on a day that is both.
+    """
+
+    def test_both_collapse_to_one_chip(self):
+        assert context_labels(("fight_week", "taper_poor_readiness")) == ("Fight week / taper",)
+
+    def test_taper_alone_stays_taper(self):
+        assert context_labels(("taper_poor_readiness",)) == ("Taper phase",)
+
+    def test_fight_week_alone_stays_fight_week(self):
+        assert context_labels(("fight_week",)) == ("Fight week",)
+
+    def test_reintegration_is_not_merged(self):
+        assert context_labels(("fight_week", "reintegration_poor_readiness")) == (
+            "Fight week",
+            "Return phase",
+        )
+
+    def test_merged_chip_keeps_fight_weeks_position_before_other_context(self):
+        assert context_labels(
+            ("fight_week", "taper_poor_readiness", "session_risk_high")
+        ) == ("Fight week / taper", "Hard session planned")
+
+
+class TestPoorSleepContactPullBack:
+    """Poor sleep before hard, live contact is a pull-back in ANY phase; hard
+    non-contact work (S&C, conditioning, bag work) stays a modify unless pain or
+    other signals stack it up. Camp phase never acts here — it acts only through
+    _escalate_for_stakes."""
+
+    SPAR = {"session_type": "sparring", "title": "Hard sparring"}
+    BAG = {"session_type": "skill", "title": "Hard bag work"}  # combat, non-contact
+    SANDC = {"session_type": "strength", "title": "Heavy squat 1RM"}
+    CONDITIONING = {"session_type": "conditioning", "title": "Hard conditioning intervals"}
+    LIGHT_CONTACT = {"session_type": "skill", "title": "Partner drills", "tags": ["contact"]}
+
+    def _decision(self, *, phase="GPP", fight_date=None, session=None, recent_checkins=(), **checkin):
+        return build_readiness_adjustment(
+            ReadinessCheckin(phase=phase, **checkin),
+            ReadinessContext(
+                training_day="2026-06-18",
+                phase=phase,
+                active_plan={"fight_date": fight_date} if fight_date else None,
+                today_session=session,
+                recent_checkins=list(recent_checkins),
+            ),
+        )
+
+    @staticmethod
+    def _streak():
+        return (
+            {"training_day": "2026-06-17", "sleep": "poor"},
+            {"training_day": "2026-06-16", "sleep": "poor"},
+        )
+
+    # --- single poor night ---
+
+    @pytest.mark.parametrize("phase", ["GPP", "SPP", "TAPER"])
+    def test_single_poor_night_before_hard_sparring_pulls_back_any_phase(self, phase):
+        assert self._decision(sleep="poor", phase=phase, session=self.SPAR).decision == "pull_back"
+
+    def test_single_poor_night_before_hard_sandc_stays_modify(self):
+        assert self._decision(sleep="poor", session=self.SANDC).decision == "modify"
+
+    def test_single_poor_night_before_hard_conditioning_stays_modify(self):
+        assert self._decision(sleep="poor", session=self.CONDITIONING).decision == "modify"
+
+    def test_single_poor_night_before_bag_work_stays_modify(self):
+        # Bag work is impact without a partner — non-contact — so it modifies.
+        assert self._decision(sleep="poor", session=self.BAG).decision == "modify"
+
+    def test_light_contact_that_is_not_hard_stays_modify(self):
+        # Contact, but not classified "high" risk — not the hard sparring the rule
+        # targets.
+        adjustment = self._decision(sleep="poor", session=self.LIGHT_CONTACT)
+        assert adjustment.session_risk != "high"
+        assert adjustment.decision == "modify"
+
+    def test_clean_check_in_before_sparring_is_not_touched(self):
+        # The rule needs a real signal; a clean check-in trains as planned.
+        assert self._decision(sleep="good", session=self.SPAR).decision == "train_as_planned"
+
+    def test_pull_back_copy_names_contact_and_keeps_card_shape(self):
+        adjustment = self._decision(sleep="poor", session=self.SPAR)
+        assert adjustment.decision == "pull_back"
+        assert adjustment.title == "Pull back today."
+        assert "sparring" in adjustment.action.lower()
+        _assert_card_shape(adjustment)
+
+    # --- repeated poor sleep (3-day streak) ---
+
+    def test_streak_before_hard_sparring_pulls_back(self):
+        assert self._decision(
+            sleep="poor", session=self.SPAR, recent_checkins=self._streak()
+        ).decision == "pull_back"
+
+    def test_streak_before_hard_sandc_stays_modify(self):
+        adjustment = self._decision(
+            sleep="poor", session=self.SANDC, recent_checkins=self._streak()
+        )
+        assert "poor_sleep_3_day_streak" in adjustment.triggers
+        assert adjustment.decision == "modify"
+
+    def test_streak_plus_pain_before_hard_sandc_pulls_back(self):
+        # "Unless pain or other signals stack": pain before hard loading pulls back
+        # even without contact.
+        assert self._decision(
+            sleep="poor", pain="manageable", session=self.SANDC, recent_checkins=self._streak()
+        ).decision == "pull_back"
+
+    def test_camp_phase_is_not_counted_as_a_second_signal(self):
+        # Same poor-sleep night on a medium-risk (non-costly) session is a modify
+        # in GPP and in taper alike — the phase is context, not a stacked warning.
+        # (A *hard* session in taper still escalates through _escalate_for_stakes;
+        # that is deliberate and covered by TestStakesEscalation.)
+        moderate = {"session_type": "strength", "title": "Moderate strength"}
+        gpp = self._decision(sleep="poor", phase="GPP", session=moderate).decision
+        taper = self._decision(sleep="poor", phase="TAPER", session=moderate).decision
+        assert gpp == taper == "modify"
