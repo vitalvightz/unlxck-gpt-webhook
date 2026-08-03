@@ -14,6 +14,7 @@ from typing import Any, Mapping
 
 from api.services.notification_foundation import NotificationCandidate
 from api.services.push_notifications import dispatch_push_candidate
+from api.services.xp_awards import ensure_xp_abuse_hardening
 from api.store import AppStore
 from api.xp_levels import XP_LEVELS, resolve_xp_level
 
@@ -142,11 +143,17 @@ def award_session_progress(
     status = str(completion.get("status") or "").strip().lower()
     if status not in TERMINAL_TRAINING_STATUSES:
         return []
-    completion_id = str(
-        completion.get("id")
-        or f"{completion.get('session_id') or 'session'}:{completion.get('training_day') or 'day'}"
-    ).strip()
-    if not completion_id:
+    completion_id = str(completion.get("id") or "").strip()
+    training_day = str(completion.get("training_day") or "").strip()
+    if not completion_id or not training_day:
+        return []
+    try:
+        ensure_xp_abuse_hardening(store)
+    except Exception:  # noqa: BLE001 - session persistence must remain available
+        logger.exception(
+            "[xp] session awards disabled because hardening is unavailable athlete_id=%s",
+            athlete_id,
+        )
         return []
 
     results: list[dict[str, Any]] = []
@@ -156,6 +163,7 @@ def award_session_progress(
                 athlete_id,
                 action=action,
                 idempotency_key=f"{action}:{completion_id}",
+                calendar_date=training_day,
             )
         except Exception:  # noqa: BLE001 - XP must never break session completion
             logger.exception(

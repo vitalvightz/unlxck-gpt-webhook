@@ -225,7 +225,7 @@ class FakeStore:
         }
 
 
-def test_full_week_award_uses_plan_and_week_id(monkeypatch):
+def test_full_week_award_uses_plan_week_and_calendar_scope(monkeypatch):
     store = FakeStore()
     monkeypatch.setattr(
         "api.services.week_progress.dispatch_progress_award_notification",
@@ -244,7 +244,7 @@ def test_full_week_award_uses_plan_and_week_id(monkeypatch):
             "athlete-1",
             "full_training_week_completed",
             "full-week:plan-1:week-1",
-            None,
+            "2026-08-03",
         )
     ]
 

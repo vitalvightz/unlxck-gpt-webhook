@@ -162,6 +162,30 @@ def test_only_three_highest_priority_opportunities_are_returned():
     ]
 
 
+def test_injury_action_disappears_after_any_update_on_the_training_day():
+    store = ProgressStore()
+    today = command(
+        recommendation_state="train_as_planned",
+        session_scope="none",
+        with_session=False,
+        injuries=[{"id": "injury-1", "status": "open"}, {"id": "injury-2", "status": "open"}],
+    )
+    assert "update_active_injury" in {
+        item["code"] for item in opportunity_codes(store, today=today)
+    }
+
+    store.xp_awards["athlete-1"].append(
+        {
+            "action": "injury_update_completed",
+            "idempotency_key": "injury-update:athlete-1:2026-08-03",
+            "calendar_date": "2026-08-03",
+        }
+    )
+    assert "update_active_injury" not in {
+        item["code"] for item in opportunity_codes(store, today=today)
+    }
+
+
 def test_activation_actions_require_confirmed_absence():
     store = ProgressStore()
     result = _opportunities(
@@ -275,7 +299,8 @@ def test_week_progress_ignores_rest_days_and_week_action_disappears_after_award(
     store.xp_awards["athlete-1"].append(
         {
             "action": "full_training_week_completed",
-            "idempotency_key": "full-week:plan-1:week-1",
+            "idempotency_key": "full-week:another-regenerated-plan:another-week-id",
+            "calendar_date": "2026-08-03",
         }
     )
     repaired_week = _current_week(

@@ -18,10 +18,10 @@ from support import FakeStore
 class ProgressStore:
     def __init__(self) -> None:
         self.total = 230
-        self.calls: list[tuple[str, str]] = []
+        self.calls: list[tuple[str, str, str | None]] = []
 
     def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
-        self.calls.append((action, idempotency_key))
+        self.calls.append((action, idempotency_key, calendar_date))
         amount = 25 if action == "training_logged" else 50
         previous = self.total
         self.total += amount
@@ -113,7 +113,14 @@ def test_completed_session_awards_training_and_planned_session_xp(monkeypatch):
         "training_logged",
         "planned_session_completed",
     ]
-    assert store.calls[0][1] == "training_logged:completion-1"
+    assert store.calls == [
+        ("training_logged", "training_logged:completion-1", "2026-08-02"),
+        (
+            "planned_session_completed",
+            "planned_session_completed:completion-1",
+            "2026-08-02",
+        ),
+    ]
     # 230 + 25 crosses Level 2 once; the second award does not send it again.
     assert dispatched == ["xp_level_up"]
 

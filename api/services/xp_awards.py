@@ -5,8 +5,10 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
+from threading import Lock
 from typing import Any
 
+from api.services.active_plan import resolve_active_plan
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -17,6 +19,52 @@ ACTIVATION_READY_PLAN_STATUSES = frozenset({"ready", "publishable_with_flags"})
 # Disabled coming-soon options and arbitrary persisted strings do not complete
 # the activation profile milestone.
 ACTIVATION_COMBAT_SPORTS = frozenset({"boxing", "kickboxing", "mma"})
+XP_ABUSE_HARDENING_VERSION = "20260803182000"
+_XP_HARDENING_LOCK = Lock()
+_XP_HARDENING_VALIDATED_ATTR = "_unlxck_xp_abuse_hardening_validated"
+
+
+def _hardening_payload_is_current(value: object) -> bool:
+    if isinstance(value, list):
+        value = value[0] if value else None
+    return bool(
+        isinstance(value, Mapping)
+        and value.get("ok") is True
+        and str(value.get("version") or "") == XP_ABUSE_HARDENING_VERSION
+        and value.get("rollout_ready") is True
+        and value.get("open_plan_scope_ready") is True
+    )
+
+
+def ensure_xp_abuse_hardening(store: AppStore) -> None:
+    """Fail XP writes closed unless the complete database rollout is live.
+
+    In-memory/test stores have no Supabase client and are allowed through. The
+    live AppStore must expose the validation RPC added by the final hardening
+    migration. Successful validation is cached on that exact store instance only
+    after the version and final rollout flags exactly match the backend contract.
+    """
+
+    custom = getattr(store, "validate_xp_abuse_hardening", None)
+    if callable(custom):
+        if not _hardening_payload_is_current(custom()):
+            raise RuntimeError("XP abuse hardening validation failed")
+        return
+
+    client: Any | None = getattr(store, "client", None)
+    if client is None:
+        return
+    if getattr(store, _XP_HARDENING_VALIDATED_ATTR, False) is True:
+        return
+
+    with _XP_HARDENING_LOCK:
+        if getattr(store, _XP_HARDENING_VALIDATED_ATTR, False) is True:
+            return
+        response = client.rpc("validate_xp_abuse_hardening").execute()
+        payload = getattr(response, "data", None)
+        if not _hardening_payload_is_current(payload):
+            raise RuntimeError("XP abuse hardening validation failed")
+        setattr(store, _XP_HARDENING_VALIDATED_ATTR, True)
 
 
 def _award(
@@ -25,12 +73,15 @@ def _award(
     athlete_id: str,
     action: str,
     idempotency_key: str,
+    calendar_date: str | None = None,
 ) -> dict | None:
     try:
+        ensure_xp_abuse_hardening(store)
         result = store.award_xp(
             athlete_id,
             action=action,
             idempotency_key=idempotency_key,
+            calendar_date=calendar_date,
         )
         return result if isinstance(result, dict) else None
     except Exception:  # noqa: BLE001 - XP must never break the primary action
@@ -85,6 +136,42 @@ def plan_activation_ready(plan: object) -> bool:
         return bool(plan_id and status in ACTIVATION_READY_PLAN_STATUSES)
     except Exception:  # noqa: BLE001 - malformed plan state fails closed
         return False
+
+
+def plan_completion_xp_eligible(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    completion: Mapping[str, object],
+) -> bool:
+    """Allow plan-derived XP only for the one server-resolved active plan.
+
+    Session completion persistence remains separate: a legitimate retro record
+    can still be saved, but an owned inactive/overlapping plan cannot be used as
+    a second XP track. Any ownership, plan-resolution or schedule read failure
+    fails closed.
+    """
+
+    plan_id = str(completion.get("plan_id") or "").strip()
+    training_day = str(completion.get("training_day") or "").strip()
+    if not plan_id or not training_day:
+        return False
+    try:
+        resolution = resolve_active_plan(
+            store,
+            athlete_id,
+            current_training_day=training_day,
+        )
+    except Exception:  # noqa: BLE001 - reward eligibility must fail closed
+        logger.exception(
+            "[xp] active plan eligibility failed athlete_id=%s plan_id=%s training_day=%s",
+            athlete_id,
+            plan_id,
+            training_day,
+        )
+        return False
+    active_plan_id = str(resolution.plan_id or "").strip()
+    return bool(active_plan_id and active_plan_id == plan_id)
 
 
 def _reconcile_activation_milestone(
@@ -146,9 +233,6 @@ def reconcile_activation_xp(
     if profile_result:
         results.append(profile_result)
 
-    # ``latest_intake`` is supplied only when _build_me_response found a
-    # persisted athlete_intakes row. The intake payload itself does not need
-    # to expose the row id because the reward is athlete-wide and first-only.
     intake_result = _reconcile_activation_milestone(
         store,
         athlete_id=athlete_id,
@@ -198,6 +282,7 @@ def award_checkin_xp(
         athlete_id=athlete_id,
         action="readiness_checkin_completed",
         idempotency_key=f"checkin:{athlete_id}:{training_day}",
+        calendar_date=training_day,
     )
     if daily:
         results.append(daily)
@@ -215,6 +300,7 @@ def _feedback_reconcile_result(
     feedback_id: str,
     target_amount: int,
 ) -> dict | None:
+    ensure_xp_abuse_hardening(store)
     custom = getattr(store, "reconcile_feedback_xp", None)
     if callable(custom):
         result = custom(
@@ -275,17 +361,19 @@ def award_injury_update_xp(
     store: AppStore,
     *,
     athlete_id: str,
-    injury: Mapping[str, object],
     training_day: str,
+    updated_injuries: Sequence[object],
 ) -> dict | None:
-    injury_id = str(injury.get("id") or "").strip()
-    if not injury_id or not training_day:
+    """Award one injury-update reward per athlete-day, never per injury row."""
+
+    if not training_day or not updated_injuries:
         return None
     return _award(
         store,
         athlete_id=athlete_id,
         action="injury_update_completed",
-        idempotency_key=f"injury-update:{injury_id}:{training_day}",
+        idempotency_key=f"injury-update:{athlete_id}:{training_day}",
+        calendar_date=training_day,
     )
 
 
