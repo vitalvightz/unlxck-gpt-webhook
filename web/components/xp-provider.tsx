@@ -95,7 +95,10 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
   const athleteId = me?.profile.role === "athlete" ? me.profile.athlete_id.trim() : "";
   const accessToken = session?.access_token ?? "";
   const identityKey = athleteId && accessToken ? `${athleteId}:${accessToken}` : "";
-  const [view, setView] = useState<XpViewState>(initialViewState);
+  const [view, setView] = useState<XpViewState>(() => ({
+    ...initialViewState(),
+    isHydrated: !athleteId,
+  }));
   const activeIdentityRef = useRef(identityKey);
   const activeAthleteRef = useRef(athleteId);
   const progressRef = useRef(createFreshXpProgress());
