@@ -88,3 +88,9 @@
   color: var(--danger-ink);
   font-size: 12px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-progress-fill {
+    transition: none;
+  }
+}
