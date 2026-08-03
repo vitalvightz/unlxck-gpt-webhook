@@ -16,7 +16,7 @@ import { getXpProgress } from "@/lib/xp-api";
 import { XP_REFRESH_EVENT } from "@/lib/xp-events";
 import { createFreshXpProgress, type XpProgress } from "@/lib/xp-progress";
 
-export const XP_PROGRESS_POLL_MS = 15_000;
+export const XP_PROGRESS_POLL_MS = 60_000;
 
 export type XpFeedbackEvent =
   | {
