@@ -83,17 +83,26 @@ def award_feedback_xp(
     if not feedback_id:
         return None
     comment = _normalized_comment(feedback)
-    action = (
-        "feedback_with_comment"
-        if len(comment) >= MIN_FEEDBACK_COMMENT_CHARS
-        else "feedback_submitted"
-    )
-    return _award(
-        store,
-        athlete_id=athlete_id,
-        action=action,
-        idempotency_key=f"feedback:{feedback_id}",
-    )
+    target_amount = 3 if len(comment) >= MIN_FEEDBACK_COMMENT_CHARS else 1
+    reconcile = getattr(store, "reconcile_feedback_xp", None)
+    if not callable(reconcile):
+        logger.error("[xp] feedback reconciliation unavailable athlete_id=%s", athlete_id)
+        return None
+    try:
+        result = reconcile(
+            athlete_id,
+            feedback_id=feedback_id,
+            target_amount=target_amount,
+        )
+        return result if isinstance(result, dict) else None
+    except Exception:  # noqa: BLE001 - XP must never break feedback persistence
+        logger.exception(
+            "[xp] feedback reconciliation failed athlete_id=%s feedback_id=%s target_amount=%s",
+            athlete_id,
+            feedback_id,
+            target_amount,
+        )
+        return None
 
 
 def award_injury_update_xp(
