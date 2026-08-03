@@ -1,5 +1,7 @@
--- Final award RPC: source-integrity triggers define eligibility, so legitimate
--- structured plans are not limited by a hard-coded sample session count.
+-- Source-integrity triggers now define session eligibility, so legitimate plans
+-- are not limited by a hard-coded session count. Keep the compatibility date
+-- derivation installed at the start of the rollout: the currently deployed
+-- backend still omits p_calendar_date until the new container is deployed.
 
 create or replace function public.award_athlete_xp(
   p_athlete_id uuid,
@@ -23,14 +25,17 @@ declare
   v_awarded boolean := false;
   v_recent jsonb;
   v_calendar_scoped boolean;
+  v_calendar_date date := p_calendar_date;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'award_athlete_xp is restricted to the backend service role'
       using errcode = '42501';
   end if;
   if p_athlete_id is null or not exists (
-    select 1 from public.profiles
-    where id = p_athlete_id and role::text = 'athlete'
+    select 1
+    from public.profiles
+    where id = p_athlete_id
+      and role::text = 'athlete'
   ) then
     raise exception 'xp athlete profile not found' using errcode = '23503';
   end if;
@@ -61,87 +66,153 @@ begin
     raise exception 'unknown XP action' using errcode = '22023';
   end if;
   if v_action in ('feedback_submitted', 'feedback_with_comment') then
-    raise exception 'feedback XP must use reconcile_feedback_xp' using errcode = '22023';
+    raise exception 'feedback XP must use reconcile_feedback_xp'
+      using errcode = '22023';
   end if;
 
   v_calendar_scoped := v_action in (
-    'daily_login', 'training_logged', 'planned_session_completed',
-    'full_training_week_completed', 'readiness_checkin_completed',
-    'injury_update_completed', 'stop_decision_followed'
+    'daily_login',
+    'training_logged',
+    'planned_session_completed',
+    'full_training_week_completed',
+    'readiness_checkin_completed',
+    'injury_update_completed',
+    'stop_decision_followed'
   );
-  if v_calendar_scoped <> (p_calendar_date is not null) then
+
+  if v_calendar_scoped and v_calendar_date is null then
+    v_calendar_date := public.xp_legacy_calendar_date(
+      p_athlete_id,
+      v_action,
+      v_key
+    );
+  end if;
+
+  if v_action <> 'daily_login'
+    and v_calendar_scoped
+    and v_calendar_date is null then
+    raise exception 'invalid calendar scope for XP action' using errcode = '22023';
+  end if;
+  if not v_calendar_scoped and v_calendar_date is not null then
     raise exception 'invalid calendar scope for XP action' using errcode = '22023';
   end if;
 
   if v_action = 'profile_completed' and not exists (
-    select 1 from public.profiles p
+    select 1
+    from public.profiles p
     where p.id = p_athlete_id
       and char_length(btrim(coalesce(p.full_name, ''))) > 0
       and exists (
-        select 1 from unnest(coalesce(p.technical_style, array[]::text[])) sport(value)
+        select 1
+        from unnest(coalesce(p.technical_style, array[]::text[])) sport(value)
         where lower(btrim(sport.value)) in ('boxing', 'kickboxing', 'mma')
       )
   ) then
-    raise exception 'profile activation milestone is not complete' using errcode = '23514';
+    raise exception 'profile activation milestone is not complete'
+      using errcode = '23514';
   end if;
+
   if v_action = 'first_intake_completed' and not exists (
-    select 1 from public.athlete_intakes where athlete_id = p_athlete_id
+    select 1
+    from public.athlete_intakes
+    where athlete_id = p_athlete_id
   ) then
-    raise exception 'intake activation milestone is not complete' using errcode = '23514';
+    raise exception 'intake activation milestone is not complete'
+      using errcode = '23514';
   end if;
+
   if v_action = 'first_plan_ready' and not exists (
-    select 1 from public.plans
-    where athlete_id = p_athlete_id and status in ('ready', 'publishable_with_flags')
+    select 1
+    from public.plans
+    where athlete_id = p_athlete_id
+      and status in ('ready', 'publishable_with_flags')
   ) then
-    raise exception 'plan activation milestone is not complete' using errcode = '23514';
+    raise exception 'plan activation milestone is not complete'
+      using errcode = '23514';
   end if;
+
   if v_action = 'first_checkin_completed' and not exists (
-    select 1 from public.today_checkins where athlete_id = p_athlete_id
+    select 1
+    from public.today_checkins
+    where athlete_id = p_athlete_id
   ) then
-    raise exception 'first check-in milestone is not complete' using errcode = '23514';
+    raise exception 'first check-in milestone is not complete'
+      using errcode = '23514';
   end if;
+
   if v_action = 'readiness_checkin_completed' and not exists (
-    select 1 from public.today_checkins
-    where athlete_id = p_athlete_id and training_day = p_calendar_date
+    select 1
+    from public.today_checkins
+    where athlete_id = p_athlete_id
+      and training_day = v_calendar_date
   ) then
-    raise exception 'daily check-in milestone is not complete' using errcode = '23514';
+    raise exception 'daily check-in milestone is not complete'
+      using errcode = '23514';
   end if;
 
   perform pg_advisory_xact_lock(hashtextextended(p_athlete_id::text, 0));
+
   insert into public.xp_accounts (athlete_id)
-  values (p_athlete_id) on conflict (athlete_id) do nothing;
-  select total_xp, last_daily_login_date into v_previous, v_last_login
-  from public.xp_accounts where athlete_id = p_athlete_id for update;
+  values (p_athlete_id)
+  on conflict (athlete_id) do nothing;
+
+  select total_xp, last_daily_login_date
+  into v_previous, v_last_login
+  from public.xp_accounts
+  where athlete_id = p_athlete_id
+  for update;
 
   if v_action <> 'daily_login' then
     insert into public.xp_awards (
-      athlete_id, action, amount, idempotency_key, calendar_date
+      athlete_id,
+      action,
+      amount,
+      idempotency_key,
+      calendar_date
     ) values (
-      p_athlete_id, v_action, v_amount, v_key, p_calendar_date
-    ) on conflict do nothing returning * into v_award;
+      p_athlete_id,
+      v_action,
+      v_amount,
+      v_key,
+      v_calendar_date
+    )
+    on conflict do nothing
+    returning * into v_award;
     v_awarded := v_award.id is not null;
   end if;
 
   if v_awarded then
     update public.xp_accounts
-    set total_xp = total_xp + v_amount, updated_at = clock_timestamp()
+    set
+      total_xp = total_xp + v_amount,
+      updated_at = clock_timestamp()
     where athlete_id = p_athlete_id
-    returning total_xp, last_daily_login_date into v_total, v_last_login;
+    returning total_xp, last_daily_login_date
+    into v_total, v_last_login;
   else
     v_total := v_previous;
   end if;
 
-  select coalesce(jsonb_agg(item order by awarded_at desc, id desc), '[]'::jsonb)
+  select coalesce(
+    jsonb_agg(item order by awarded_at desc, id desc),
+    '[]'::jsonb
+  )
   into v_recent
   from (
-    select award.id, award.awarded_at,
+    select
+      award.id,
+      award.awarded_at,
       jsonb_strip_nulls(jsonb_build_object(
-        'id', award.id, 'action', award.action, 'amount', award.amount,
-        'awarded_at', award.awarded_at, 'calendar_date', award.calendar_date
+        'id', award.id,
+        'action', award.action,
+        'amount', award.amount,
+        'awarded_at', award.awarded_at,
+        'calendar_date', award.calendar_date
       )) item
     from public.xp_awards award
     where award.athlete_id = p_athlete_id
-    order by award.awarded_at desc, award.id desc limit 20
+    order by award.awarded_at desc, award.id desc
+    limit 20
   ) recent;
 
   return jsonb_build_object(
@@ -152,10 +223,16 @@ begin
     ),
     'previous_total_xp', v_previous,
     'awarded', v_awarded,
-    'award', case when v_awarded then jsonb_strip_nulls(jsonb_build_object(
-      'id', v_award.id, 'action', v_award.action, 'amount', v_award.amount,
-      'awarded_at', v_award.awarded_at, 'calendar_date', v_award.calendar_date
-    )) else 'null'::jsonb end
+    'award', case
+      when v_awarded then jsonb_strip_nulls(jsonb_build_object(
+        'id', v_award.id,
+        'action', v_award.action,
+        'amount', v_award.amount,
+        'awarded_at', v_award.awarded_at,
+        'calendar_date', v_award.calendar_date
+      ))
+      else 'null'::jsonb
+    end
   );
 end;
 $$;
