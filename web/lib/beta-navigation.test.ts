@@ -9,22 +9,17 @@ import {
   STANDALONE_NUTRITION_ENABLED,
 } from "./beta-navigation.ts";
 
-test("bottom nav shows Overview, Today, Plan and Progress", () => {
+test("bottom nav shows Overview, Today, Plan and Intake", () => {
   assert.deepEqual(
     BOTTOM_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "Progress"],
+    ["Overview", "Today", "Plan", "Intake"],
   );
 });
 
-test("Progress replaces Intake only in the compact bottom nav", () => {
-  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Progress"), true);
-  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Intake"), false);
-  assert.equal(SIDE_NAV_ITEMS.some((item) => item.label === "Intake"), true);
-});
-
-test("Progress routes to the full XP interface", () => {
-  const progress = BOTTOM_NAV_ITEMS.find((item) => item.label === "Progress");
-  assert.equal(progress?.href, "/progress");
+test("Progress is not promoted into primary navigation", () => {
+  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Progress"), false);
+  assert.equal(SIDE_NAV_ITEMS.some((item) => item.label === "Progress"), false);
+  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Intake"), true);
 });
 
 test("bottom nav never links to the standalone Nutrition route", () => {
@@ -34,10 +29,10 @@ test("bottom nav never links to the standalone Nutrition route", () => {
   );
 });
 
-test("side menu places Progress between Plan and History", () => {
+test("side menu keeps Intake without exposing Progress", () => {
   assert.deepEqual(
     SIDE_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "Progress", "History", "Intake", "Settings"],
+    ["Overview", "Today", "Plan", "History", "Intake", "Settings"],
   );
 });
 

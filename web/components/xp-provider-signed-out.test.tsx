@@ -29,10 +29,14 @@ test("signed-out users are hydrated immediately instead of seeing an endless XP 
     );
   });
 
-  assert.ok(value);
-  assert.equal(value.isHydrated, true);
-  assert.equal(value.progress.state.totalXp, 0);
-  assert.equal(value.feedback, null);
+  // React assigns this from the nested Probe render. Copy through the declared
+  // context type so TypeScript does not incorrectly narrow the closure-owned
+  // variable to `never` after the null assertion.
+  const current = value as ReturnType<typeof useXp> | null;
+  assert.ok(current);
+  assert.equal(current.isHydrated, true);
+  assert.equal(current.progress.state.totalXp, 0);
+  assert.equal(current.feedback, null);
 
   await act(async () => root.unmount());
   container.remove();
