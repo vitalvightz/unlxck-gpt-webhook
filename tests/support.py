@@ -32,7 +32,7 @@ from api.state_machine import (
 from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
-from api.xp import XP_REWARD_AMOUNTS, XpAction
+from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -1496,7 +1496,13 @@ class FakeStore:
                     "action": action,
                     "amount": amount,
                     "idempotency_key": idempotency_key,
-                    "calendar_date": calendar_date if action == "daily_login" else None,
+                    # Matches xp_awards_calendar_scope_check: calendar-scoped
+                    # actions persist the date, everything else stores null.
+                    "calendar_date": (
+                        calendar_date
+                        if action in XP_CALENDAR_SCOPED_ACTIONS
+                        else None
+                    ),
                     "awarded_at": _now(),
                 }
                 awards.append(award)

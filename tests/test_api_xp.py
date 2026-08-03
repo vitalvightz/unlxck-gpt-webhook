@@ -12,12 +12,27 @@ ADMIN = {"Authorization": "Bearer admin-token"}
 
 
 def test_reward_configuration_contains_every_planned_action():
+    # Must stay identical to the amounts in the award_athlete_xp database
+    # function; the ledger CHECK constraint rejects any other pairing.
+    # daily_login is retired and banks 0 XP while the route stays available.
     assert XP_REWARD_AMOUNTS == {
-        "daily_login": 10,
+        "daily_login": 0,
         "training_logged": 25,
         "planned_session_completed": 50,
         "recommended_fighter_content_watched": 10,
         "full_training_week_completed": 100,
+        "profile_completed": 25,
+        "first_intake_completed": 50,
+        "first_plan_ready": 100,
+        "first_checkin_completed": 25,
+        "readiness_checkin_completed": 10,
+        "injury_update_completed": 10,
+        "stop_decision_followed": 15,
+        "feedback_submitted": 1,
+        "feedback_with_comment": 3,
+        "first_plan_completed": 250,
+        "phase_completed": 200,
+        "camp_completed": 500,
     }
 
 
@@ -39,11 +54,14 @@ def test_daily_login_endpoint_awards_once_and_returns_account_scoped_state():
     assert repeated.status_code == 200
     assert first.json()["awarded"] is True
     assert first.json()["previous_total_xp"] == 0
-    assert first.json()["state"]["total_xp"] == 10
+    # Retired action: the ledger row is still written once per calendar date,
+    # but it banks no XP.
+    assert first.json()["state"]["total_xp"] == 0
     assert first.json()["award"]["action"] == "daily_login"
+    assert first.json()["award"]["amount"] == 0
     assert repeated.json()["awarded"] is False
     assert repeated.json()["award"] is None
-    assert repeated.json()["state"]["total_xp"] == 10
+    assert repeated.json()["state"]["total_xp"] == 0
     assert len(store.xp_awards["athlete-1"]) == 1
     assert "athlete_id" not in first.json()["award"]
     assert "idempotency_key" not in first.json()["award"]
@@ -66,7 +84,7 @@ def test_daily_login_next_account_day_awards_again():
 
     assert first["awarded"] is True
     assert next_day["awarded"] is True
-    assert next_day["state"]["total_xp"] == 20
+    assert next_day["state"]["total_xp"] == 0
     assert next_day["state"]["last_daily_login_date"] == "2026-08-02"
 
 
@@ -79,11 +97,19 @@ def test_xp_is_isolated_by_authenticated_account():
             athlete_timezone="UTC",
             now=datetime(2026, 8, 1, 12, tzinfo=timezone.utc),
         )
+        # daily_login is retired at 0 XP, so bank a scoring action too and keep
+        # the balance assertion below meaningful.
+        store.award_xp(
+            athlete_id,
+            action="training_logged",
+            idempotency_key="training-logged:2026-08-01",
+            calendar_date="2026-08-01",
+        )
 
-    assert store.xp_accounts["athlete-1"]["total_xp"] == 10
-    assert store.xp_accounts["athlete-2"]["total_xp"] == 10
-    assert store.xp_awards["athlete-1"][0]["athlete_id"] == "athlete-1"
-    assert store.xp_awards["athlete-2"][0]["athlete_id"] == "athlete-2"
+    assert store.xp_accounts["athlete-1"]["total_xp"] == 25
+    assert store.xp_accounts["athlete-2"]["total_xp"] == 25
+    assert all(row["athlete_id"] == "athlete-1" for row in store.xp_awards["athlete-1"])
+    assert all(row["athlete_id"] == "athlete-2" for row in store.xp_awards["athlete-2"])
 
 
 def test_duplicate_concurrent_awards_are_idempotent():
@@ -101,7 +127,26 @@ def test_duplicate_concurrent_awards_are_idempotent():
         results = list(executor.map(lambda _: claim(), range(16)))
 
     assert sum(result["awarded"] for result in results) == 1
-    assert store.xp_accounts["athlete-1"]["total_xp"] == 10
+    assert store.xp_accounts["athlete-1"]["total_xp"] == 0
+    assert len(store.xp_awards["athlete-1"]) == 1
+
+
+def test_duplicate_concurrent_scoring_awards_bank_xp_once():
+    store = FakeStore()
+
+    def claim():
+        return store.award_xp(
+            "athlete-1",
+            action="training_logged",
+            idempotency_key="training-logged:session-7",
+            calendar_date="2026-08-01",
+        )
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(lambda _: claim(), range(16)))
+
+    assert sum(result["awarded"] for result in results) == 1
+    assert store.xp_accounts["athlete-1"]["total_xp"] == 25
     assert len(store.xp_awards["athlete-1"]) == 1
 
 

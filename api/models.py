@@ -29,6 +29,7 @@ from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_fi
 from .performance_focus import get_performance_focus_cap
 from .state_machine import GenerationJobStatus
 from .structured_plan_models import StructuredTrainingPlan
+from .xp import XpAction
 
 # Role foundation: `athlete` and `admin` are live in private beta. `coach` and
 # `gym_owner` are reserved for public beta and are not yet selectable at sign-up
@@ -2062,19 +2063,13 @@ class PlanCompletionsResponse(BaseModel):
 # Durable account XP
 # ---------------------------------------------------------------------------
 
-XpAction = Literal[
-    "daily_login",
-    "training_logged",
-    "planned_session_completed",
-    "recommended_fighter_content_watched",
-    "full_training_week_completed",
-]
-
-
 class XpAwardRecord(BaseModel):
     id: str
+    # `XpAction` and the reward amounts live in api/xp.py, which mirrors the
+    # award_athlete_xp database function. Retired actions stay in the ledger at
+    # 0 XP (daily_login), so the amount floor is 0 rather than 1.
     action: XpAction
-    amount: int = Field(ge=1)
+    amount: int = Field(ge=0)
     awarded_at: datetime
     calendar_date: date | None = None
 

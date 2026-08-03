@@ -51,6 +51,22 @@ XP_REWARD_AMOUNTS: dict[XpAction, int] = {
     "camp_completed": 500,
 }
 
+# Mirrors the xp_awards_calendar_scope_check constraint: these actions must
+# carry a calendar_date and every other action must leave it null.
+XP_CALENDAR_SCOPED_ACTIONS: frozenset[str] = frozenset(
+    {
+        "daily_login",
+        "training_logged",
+        "planned_session_completed",
+        "full_training_week_completed",
+        "readiness_checkin_completed",
+        "injury_update_completed",
+        "stop_decision_followed",
+        "feedback_submitted",
+        "feedback_with_comment",
+    }
+)
+
 
 class XpAwardStore(Protocol):
     def award_xp(
