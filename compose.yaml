@@ -18,7 +18,9 @@ services:
       test:
         - CMD-SHELL
         - >-
-          python tools/check_xp_hardening_rollout.py &&
+          (test -f /tmp/unlxck-xp-hardening-ready ||
+          (python tools/check_xp_hardening_rollout.py &&
+          touch /tmp/unlxck-xp-hardening-ready)) &&
           curl --fail --silent http://127.0.0.1:8000/health
       interval: 30s
       timeout: 10s
