@@ -31,16 +31,18 @@ def _hardening_payload_is_current(value: object) -> bool:
         isinstance(value, Mapping)
         and value.get("ok") is True
         and str(value.get("version") or "") == XP_ABUSE_HARDENING_VERSION
+        and value.get("rollout_ready") is True
+        and value.get("open_plan_scope_ready") is True
     )
 
 
 def ensure_xp_abuse_hardening(store: AppStore) -> None:
-    """Fail XP writes closed unless the exact database hardening is live.
+    """Fail XP writes closed unless the complete database rollout is live.
 
     In-memory/test stores have no Supabase client and are allowed through. The
     live AppStore must expose the validation RPC added by the final hardening
     migration. Successful validation is cached on that exact store instance only
-    after the returned version exactly matches the backend contract.
+    after the version and final rollout flags exactly match the backend contract.
     """
 
     custom = getattr(store, "validate_xp_abuse_hardening", None)
