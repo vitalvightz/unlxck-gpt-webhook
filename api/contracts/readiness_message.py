@@ -1415,6 +1415,44 @@ def _session_has_contact(session: Mapping[str, Any] | None) -> bool:
     return False
 
 
+# Reduced-intensity contact — technical-only, light, controlled, reduced-dose
+# sparring — still classifies "high" on the risk axis (it is sparring), but it is
+# NOT the hard, live contact the poor-sleep pull-back exists for. The schedule
+# stamps a structured ``effective_load`` on coach-owned contact days
+# (fightcamp: "hard" / "technical" / "reduced"), which is authoritative; session
+# wording is the fallback for a day that carries only a label. Hard wording wins
+# over a reduced marker, so a "hard sparring / controlled hard contact" day still
+# reads as hard.
+_HARD_CONTACT_LOAD = "hard"
+_REDUCED_CONTACT_LOADS = frozenset({"technical", "reduced", "light"})
+_HARD_CONTACT_TERMS = ("hard", "live", "full contact", "full-contact", "all-out", "all out", "competition")
+_REDUCED_CONTACT_TERMS = ("technical", "light", "controlled", "reduced", "positional", "flow")
+
+
+def _is_hard_live_contact(session: Mapping[str, Any] | None, session_risk: SessionRisk) -> bool:
+    """True only for genuinely hard, live contact — not technical/light/controlled
+    sparring.
+
+    The risk classifier marks any sparring "high", so reduced-intensity contact
+    (technical-only, light, controlled, reduced dose) would otherwise read as
+    hard. The structured ``effective_load`` is authoritative; title/label wording
+    is the fallback, and an unqualified live-contact session defaults to hard.
+    """
+    if session_risk != "high" or not _session_has_contact(session):
+        return False
+    load = _clean(session.get("effective_load")).lower() if isinstance(session, Mapping) else ""
+    if load == _HARD_CONTACT_LOAD:
+        return True
+    if load in _REDUCED_CONTACT_LOADS:
+        return False
+    text = f"{_session_text(session)} {_mapping_executable_text(session)}".lower()
+    if any(term in text for term in _HARD_CONTACT_TERMS):
+        return True
+    if any(term in text for term in _REDUCED_CONTACT_TERMS):
+        return False
+    return True
+
+
 def _active_context_injury_stop(context: ReadinessContext) -> tuple[str, str] | None:
     """Return the active injury reason that should stop training.
 
@@ -3070,21 +3108,21 @@ def _resolve_readiness_adjustment(
 
     # Poor sleep before hard, live contact is a pull-back, not a modify, in ANY
     # phase: reaction time and defensive sharpness both fall with poor sleep, and
-    # in sparring an opponent is throwing hard shots regardless. Hard non-contact
-    # work (heavy S&C, conditioning, bag work) stays a modify — it is
-    # athlete-controlled with no opponent — unless pain or other signals stack it
-    # up through the aggregation above. Camp phase deliberately has no say here;
-    # fight week / taper still act only through _escalate_for_stakes.
+    # in hard sparring an opponent is throwing hard shots regardless. Technical /
+    # light / controlled / reduced-dose sparring is NOT hard contact and stays a
+    # modify, as does hard non-contact work (heavy S&C, conditioning, bag work) —
+    # both are athlete- or coach-controlled — unless pain or other signals stack
+    # it up through the aggregation above. Camp phase deliberately has no say
+    # here; fight week / taper still act only through _escalate_for_stakes.
     if (
         decision != "pull_back"
         and checkin.sleep == "poor"
-        and session_risk == "high"
-        and _session_has_contact(context.today_session)
+        and _is_hard_live_contact(context.today_session, session_risk)
     ):
         decision = "pull_back"
         title = "Pull back today."
-        reason = "Poor sleep before hard contact work raises injury risk too much today."
-        action = "Skip sparring, clinch, and grappling; keep it to technical, controlled, or recovery work."
+        reason = "Poor sleep before hard sparring raises injury risk too much today."
+        action = "Skip sparring and hard contact; keep it to technical, controlled, or recovery work."
 
     # Raise a clean/soft decision to the injury modify-floor, and never tell an
     # athlete carrying an open injury that their "check is clear".

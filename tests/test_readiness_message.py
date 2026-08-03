@@ -1808,6 +1808,56 @@ class TestPoorSleepContactPullBack:
         assert "sparring" in adjustment.action.lower()
         _assert_card_shape(adjustment)
 
+    # --- technical / reduced contact is NOT hard contact (review blocker) ---
+    #
+    # The risk classifier marks any sparring "high", so these all classify high
+    # while being reduced-intensity contact that must stay a modify. Real formats:
+    # session_type "sparring" with technical/light/controlled titles, the
+    # structured effective_load buckets the schedule stamps
+    # (technical / reduced / hard), and the canonical coach-led labels.
+
+    @pytest.mark.parametrize(
+        "session",
+        [
+            {"session_type": "sparring", "title": "Saturday technical sparring"},
+            {"session_type": "sparring", "title": "Coach-led boxing - technical only"},
+            {"session_type": "sparring", "title": "Light sparring rounds"},
+            {"session_type": "sparring", "title": "Controlled sparring"},
+            {"session_type": "sparring", "title": "Coach-led sparring", "effective_load": "reduced"},
+            {"session_type": "sparring", "title": "Coach-led sparring", "effective_load": "technical"},
+            {
+                "session_type": "sparring",
+                "athlete_facing_label": "Coach-led boxing — technical-only combat",
+                "effective_load": "technical",
+            },
+        ],
+    )
+    def test_poor_sleep_before_reduced_intensity_contact_stays_modify(self, session):
+        adjustment = self._decision(sleep="poor", session=session)
+        # Still "high" on the risk axis — exactly why the reduced-intensity check
+        # is needed — but it is not the hard live contact the rule targets.
+        assert adjustment.session_risk == "high"
+        assert adjustment.decision == "modify"
+
+    @pytest.mark.parametrize(
+        "session",
+        [
+            {"session_type": "sparring", "title": "Hard sparring"},
+            {"session_type": "sparring", "title": "Live sparring rounds"},
+            {"session_type": "sparring", "title": "Sparring"},  # unqualified live contact
+            {"session_type": "sparring", "title": "Coach-led sparring", "effective_load": "hard"},
+            # "hard" wording wins over the co-occurring "controlled" reduced marker.
+            {"session_type": "sparring", "title": "Coach-led boxing — hard sparring / controlled hard contact"},
+            {
+                "session_type": "sparring",
+                "athlete_facing_label": "Coach-led boxing — hard sparring / controlled hard contact",
+                "effective_load": "hard",
+            },
+        ],
+    )
+    def test_poor_sleep_before_hard_live_contact_pulls_back(self, session):
+        assert self._decision(sleep="poor", session=session).decision == "pull_back"
+
     # --- repeated poor sleep (3-day streak) ---
 
     def test_streak_before_hard_sparring_pulls_back(self):
