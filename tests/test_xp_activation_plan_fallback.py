@@ -40,7 +40,7 @@ def test_newer_held_plan_does_not_hide_an_older_ready_plan_from_activation_xp():
     response = client.get("/api/me", headers=ATHLETE)
 
     assert response.status_code == 200
-    assert response.json()["latest_plan"]["id"] == "newer-held-plan"
+    assert response.json()["latest_plan"]["plan_id"] == "newer-held-plan"
     assert [award["action"] for award in store.xp_awards["athlete-1"]] == [
         "profile_completed",
         "first_intake_completed",
