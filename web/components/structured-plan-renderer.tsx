@@ -71,6 +71,7 @@ import { useTrainingDay } from "@/lib/use-training-day";
 import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/date-format";
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
+import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import type {
@@ -285,17 +286,31 @@ export function BlockCard({
       index,
   );
 
+  const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
+
   return (
     <div className="sp-block">
       <div className="sp-block-head">
         <span className="sp-block-title">{title}</span>
-        {blockType ? <span className="sp-tag">{blockTagLabel(block, rehabLabelPolicy)}</span> : null}
+        {tagLabel ? (
+          <span className="sp-tag">
+            {tagLabel}
+            {/* Silent for ordinary types (Strength, Conditioning); only the
+                Rehab/Prehab/Mobility tags carry a definition. */}
+            <GlossaryTooltip term={tagLabel} />
+          </span>
+        ) : null}
       </div>
       {metrics.length > 0 || work || load || rest || effort ? (
         <div className="sp-block-stats">
           {metrics.map((metric) => (
             <span key={metric.label} className="sp-stat">
-              <span className="sp-stat-label">{metric.label}</span>
+              <span className="sp-stat-head">
+                <span className="sp-stat-label">{metric.label}</span>
+                {/* Volume and Mode are glossed; Duration/Distance/Rounds are
+                    plain English and stay unadorned. */}
+                <GlossaryTooltip term={metric.label} />
+              </span>
               {metric.value}
             </span>
           ))}
@@ -307,7 +322,10 @@ export function BlockCard({
           ) : null}
           {load ? (
             <span className="sp-stat">
-              <span className="sp-stat-label">Load</span>
+              <span className="sp-stat-head">
+                <span className="sp-stat-label">Load</span>
+                <GlossaryTooltip term="Load" />
+              </span>
               {load}
             </span>
           ) : null}
@@ -319,7 +337,12 @@ export function BlockCard({
           ) : null}
           {effort ? (
             <span className="sp-stat">
-              <span className="sp-stat-label">Effort</span>
+              <span className="sp-stat-head">
+                <span className="sp-stat-label">Effort</span>
+                {/* The value reads "RPE 1.5" with no scale attached, so the
+                    gloss explains the scale, not the word "Effort". */}
+                <GlossaryTooltip term="RPE" />
+              </span>
               {effort}
             </span>
           ) : null}
@@ -351,12 +374,17 @@ export function BlockCard({
           {regressions.join(", ")}
         </p>
       ) : null}
-      {adjustmentRules.map((rule) => (
-        <p key={rule} className="sp-block-aside">
-          <span className="sp-stat-label">{progressionRuleLabel(rule)}</span>
-          {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
-        </p>
-      ))}
+      {adjustmentRules.map((rule) => {
+        const ruleLabel = progressionRuleLabel(rule);
+        return (
+          <p key={rule} className="sp-block-aside">
+            <span className="sp-stat-label">{ruleLabel}</span>
+            {/* "Stop rule" is glossed; "Progress" reads plainly on its own. */}
+            <GlossaryTooltip term={ruleLabel} />
+            {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -372,7 +400,10 @@ function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
   const summaryLabel = resolveRehabSummaryLabel(blocks, rehabLabelPolicy);
   return (
     <div className="sp-rehab-summary">
-      <p className="sp-eyebrow">{summaryLabel} / Mobility</p>
+      <p className="sp-eyebrow">
+        {summaryLabel} / Mobility
+        <GlossaryTooltip term={summaryLabel} />
+      </p>
       <ul className="sp-rehab-list">
         {blocks.map((block, index) => {
           const title = cleanText(block.display_name) || "Rehab block";
@@ -484,9 +515,12 @@ export function SessionCard({
       {completionInfo?.completion &&
       (completionInfo.completion.session_rpe != null || completionInfo.completion.modification_reason) ? (
         <p className="sp-session-log-meta">
-          {completionInfo.completion.session_rpe != null
-            ? `RPE ${completionInfo.completion.session_rpe}/10`
-            : null}
+          {completionInfo.completion.session_rpe != null ? (
+            <>
+              {`RPE ${completionInfo.completion.session_rpe}/10`}
+              <GlossaryTooltip term="RPE" />
+            </>
+          ) : null}
           {completionInfo.completion.session_rpe != null && completionInfo.completion.modification_reason
             ? " · "
             : null}

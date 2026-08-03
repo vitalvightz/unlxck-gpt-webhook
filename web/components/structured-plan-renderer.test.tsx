@@ -2011,3 +2011,123 @@ test("weekStripCenterOffset centres the active card and clamps at the start", ()
   // The very first card sits flush at 0.
   assert.equal(weekStripCenterOffset(300, 0, 80), 0);
 });
+
+// --- jargon glossary "?" affordances ---------------------------------------
+
+/** The aria-labels of every glossary "?" in a rendered markup string. */
+function glossaryTerms(html: string): string[] {
+  return Array.from(html.matchAll(/aria-label="What ([^"]+) means"/g)).map((match) => match[1]);
+}
+
+test("the effort stat carries a ? that explains the RPE scale", () => {
+  // The card prints "RPE 1.5" with no scale attached — the number is meaningless
+  // to an athlete who has never met Rate of Perceived Exertion.
+  const session = {
+    session_id: "ses-mobility",
+    session_type: "mobility",
+    title: "Mobility Reset Flow",
+    blocks: [
+      {
+        block_id: "mobility",
+        block_type: "mobility",
+        display_name: "Mobility Reset Flow",
+        duration: { value: 8, unit: "minutes" },
+        effort: { method: "RPE", value: 1.5 },
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes("RPE 1.5"), true);
+  assert.equal(glossaryTerms(html).includes("RPE"), true);
+});
+
+test("plain-English stat labels get no ?, so the ones that matter stand out", () => {
+  const session = {
+    session_id: "ses-cond",
+    session_type: "conditioning",
+    title: "Bike Intervals",
+    blocks: [
+      {
+        block_id: "bike",
+        block_type: "conditioning",
+        display_name: "Bike Intervals",
+        duration: { value: 20, unit: "minutes" },
+        distance: { value: 5, unit: "km" },
+        rounds: 6,
+        work: { value: 30, unit: "seconds" },
+        rest: { value: 90, unit: "seconds" },
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  // Duration / Distance / Rounds / Work / Rest all render, none is glossed.
+  assert.equal(html.includes(">Rounds</span>"), true);
+  assert.equal(html.includes(">Rest</span>"), true);
+  assert.deepEqual(glossaryTerms(html), []);
+});
+
+test("volume, load and a rehab tag are glossed on the block card", () => {
+  const session = {
+    session_id: "ses-strength",
+    session_type: "strength_power",
+    title: "Rear-Foot Elevated Split Squat",
+    blocks: [
+      {
+        block_id: "rfess",
+        block_type: "rehab",
+        display_name: "Rear-Foot Elevated Split Squat",
+        sets: 3,
+        reps: "8",
+        load: { display: "60% 1RM" },
+        effort: { method: "RPE", value: 7 },
+        progression_rule: "Stop the set if knee pain rises above 3/10.",
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+  const terms = glossaryTerms(html);
+
+  assert.equal(terms.includes("Volume"), true);
+  assert.equal(terms.includes("Load"), true);
+  assert.equal(terms.includes("RPE"), true);
+  assert.equal(terms.includes("Rehab"), true);
+  assert.equal(terms.includes("Stop rule"), true);
+});
+
+test("AMRAP-style modes are glossed rather than left as bare acronyms", () => {
+  const session = {
+    session_id: "ses-amrap",
+    session_type: "conditioning",
+    title: "Circuit",
+    blocks: [
+      {
+        block_id: "circuit",
+        block_type: "conditioning",
+        display_name: "Circuit",
+        reps: "AMRAP",
+      },
+    ],
+  } as unknown as StructuredSession;
+
+  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(html.includes(">Mode</span>"), true);
+  assert.equal(glossaryTerms(html).includes("Mode"), true);
+});
+
+test("a cleared region's Prehab summary is glossed with the prehab definition", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={hamstringRehabPlan()}
+      rehabLabelPolicy={QUAD_OPEN_HAMSTRING_CLEARED}
+    />,
+  );
+
+  assert.equal(html.includes("Prehab / Mobility"), true);
+  assert.equal(glossaryTerms(html).includes("Prehab"), true);
+});
