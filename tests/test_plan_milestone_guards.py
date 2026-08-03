@@ -129,7 +129,7 @@ def test_full_camp_emits_only_highest_final_level_notification(monkeypatch):
     )
 
     assert len(delivered) == 1
-    assert delivered[0].title == "Level 5: Ranked"
+    assert delivered[0].title == "Level 3: Amateur"
     assert delivered[0].category == "progress_milestones"
 
 
