@@ -1,4 +1,4 @@
-import xpLevelContract from "./xp-levels.json";
+import xpLevelContract from "../../shared/xp-levels.json";
 
 export type XpAction =
   | "daily_login"
