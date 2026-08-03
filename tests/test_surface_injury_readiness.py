@@ -256,7 +256,9 @@ class TestStableSurfaceDoesNotDrive:
             ReadinessContext(today_session=HARD_SPARRING, open_injuries=[_blister()]),
         )
 
-        assert adjustment.decision == "modify"
+        # Poor sleep before hard sparring pulls the session back; the blister still
+        # changes nothing (a safety check, not a cause).
+        assert adjustment.decision == "pull_back"
         assert "tracked_injury_high_risk_session" not in adjustment.triggers
         assert "active_injury_worse" not in adjustment.triggers
 
@@ -374,8 +376,8 @@ class TestWorseningSurfaceInjury:
         assert _surface_check(adjustment)["result"] == "local_protection_only"
 
     def test_poor_sleep_and_open_wound_accumulate_mixed_exposure_restrictions(self):
-        # Poor sleep already reduced the session. The wound adds both targeted
-        # removals on top without erasing the readiness modification.
+        # Poor sleep before hard contact pulls the session back. The wound adds
+        # both targeted removals on top without erasing the readiness call.
         adjustment = build_readiness_adjustment(
             ReadinessCheckin(sleep="poor"),
             ReadinessContext(
@@ -391,12 +393,11 @@ class TestWorseningSurfaceInjury:
             ),
         )
 
-        assert adjustment.decision in {"modify", "pull_back"}
+        assert adjustment.decision == "pull_back"
         assert "Skip all contact work today, including sparring, clinch, and grappling." in adjustment.action
         assert "Remove or replace only the direct-impact block(s)" in adjustment.action
         assert "Repeated depth jumps" in adjustment.action
-        # The poor-sleep restriction is still there in full.
-        assert "conditioning finishers" in adjustment.action
+        # The poor-sleep readiness call still leads the reason.
         assert "Poor sleep" in adjustment.reason
 
         metadata = explanation_metadata(adjustment.triggers)

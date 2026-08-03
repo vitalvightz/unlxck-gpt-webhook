@@ -1383,6 +1383,76 @@ def _session_surface_exposure(
     )
 
 
+def _session_has_contact(session: Mapping[str, Any] | None) -> bool:
+    """True when today's session exposes live, full-contact partner work.
+
+    Sparring, clinch, grappling, takedowns, live rounds and competition are
+    contact; bag work and pad work are impact WITHOUT a partner and are not.
+    Reuses the same structured-first, prose-fallback detection (with the "no
+    contact" / "non-contact" negation guard) as the surface-injury evaluator, so
+    the two never disagree about what counts as contact.
+    """
+    if not isinstance(session, Mapping) or not session:
+        return False
+    # An explicit contact-free declaration on the session as a whole wins outright.
+    if _mapping_structured_exposure(session, "contact_exposure") is False:
+        return False
+    has_nested = _mapping_has_nested_entries(session)
+    for mapping in _iter_session_mappings(session):
+        if mapping is session and has_nested:
+            continue
+        structured = _mapping_structured_exposure(mapping, "contact_exposure")
+        if structured is True:
+            return True
+        if structured is None and _text_mentions_exposure(
+            _mapping_executable_text(mapping), _CONTACT_EXPOSURE_TERMS
+        ):
+            return True
+    # A positive parent declaration whose children are too generic to name the
+    # block still describes real contact exposure.
+    if has_nested and _mapping_structured_exposure(session, "contact_exposure") is True:
+        return True
+    return False
+
+
+# Reduced-intensity contact — technical-only, light, controlled, reduced-dose
+# sparring — still classifies "high" on the risk axis (it is sparring), but it is
+# NOT the hard, live contact the poor-sleep pull-back exists for. The schedule
+# stamps a structured ``effective_load`` on coach-owned contact days
+# (fightcamp: "hard" / "technical" / "reduced"), which is authoritative; session
+# wording is the fallback for a day that carries only a label. Hard wording wins
+# over a reduced marker, so a "hard sparring / controlled hard contact" day still
+# reads as hard.
+_HARD_CONTACT_LOAD = "hard"
+_REDUCED_CONTACT_LOADS = frozenset({"technical", "reduced", "light"})
+_HARD_CONTACT_TERMS = ("hard", "live", "full contact", "full-contact", "all-out", "all out", "competition")
+_REDUCED_CONTACT_TERMS = ("technical", "light", "controlled", "reduced", "positional", "flow")
+
+
+def _is_hard_live_contact(session: Mapping[str, Any] | None, session_risk: SessionRisk) -> bool:
+    """True only for genuinely hard, live contact — not technical/light/controlled
+    sparring.
+
+    The risk classifier marks any sparring "high", so reduced-intensity contact
+    (technical-only, light, controlled, reduced dose) would otherwise read as
+    hard. The structured ``effective_load`` is authoritative; title/label wording
+    is the fallback, and an unqualified live-contact session defaults to hard.
+    """
+    if session_risk != "high" or not _session_has_contact(session):
+        return False
+    load = _clean(session.get("effective_load")).lower() if isinstance(session, Mapping) else ""
+    if load == _HARD_CONTACT_LOAD:
+        return True
+    if load in _REDUCED_CONTACT_LOADS:
+        return False
+    text = f"{_session_text(session)} {_mapping_executable_text(session)}".lower()
+    if any(term in text for term in _HARD_CONTACT_TERMS):
+        return True
+    if any(term in text for term in _REDUCED_CONTACT_TERMS):
+        return False
+    return True
+
+
 def _active_context_injury_stop(context: ReadinessContext) -> tuple[str, str] | None:
     """Return the active injury reason that should stop training.
 
@@ -3036,6 +3106,24 @@ def _resolve_readiness_adjustment(
         )
         action = "Skip sparring and hard work; use recovery, rehab, or light mobility instead."
 
+    # Poor sleep before hard, live contact is a pull-back, not a modify, in ANY
+    # phase: reaction time and defensive sharpness both fall with poor sleep, and
+    # in hard sparring an opponent is throwing hard shots regardless. Technical /
+    # light / controlled / reduced-dose sparring is NOT hard contact and stays a
+    # modify, as does hard non-contact work (heavy S&C, conditioning, bag work) —
+    # both are athlete- or coach-controlled — unless pain or other signals stack
+    # it up through the aggregation above. Camp phase deliberately has no say
+    # here; fight week / taper still act only through _escalate_for_stakes.
+    if (
+        decision != "pull_back"
+        and checkin.sleep == "poor"
+        and _is_hard_live_contact(context.today_session, session_risk)
+    ):
+        decision = "pull_back"
+        title = "Pull back today."
+        reason = "Poor sleep before hard sparring raises injury risk too much today."
+        action = "Skip sparring and hard contact; keep it to technical, controlled, or recovery work."
+
     # Raise a clean/soft decision to the injury modify-floor, and never tell an
     # athlete carrying an open injury that their "check is clear".
     if injury_floor == "modify" and decision == "train_as_planned":
@@ -3181,6 +3269,17 @@ _CONTEXT_LABELS: dict[str, str] = {
     "session_risk_high": "Hard session planned",
 }
 
+# Fight week and taper describe the same camp context on a day that is both, so
+# the CONTEXT row collapses them into ONE chip rather than two that read as
+# separate reasons to be cautious. Taper can run longer than a week, so each code
+# still stands alone when only it fired (taper-only -> "Taper phase",
+# fight-week-only -> "Fight week"). The decision math never double-counted them —
+# _escalate_for_stakes already OR-gates the pair into a single escalation — so
+# this is purely how the one shared context is shown.
+_FIGHT_WEEK_TAPER_CODES = frozenset({"fight_week", "taper_poor_readiness"})
+_FIGHT_WEEK_TAPER_MERGED = "__fight_week_taper__"
+_FIGHT_WEEK_TAPER_LABEL = "Fight week / taper"
+
 # When both codes fire, the first is fully covered by the second and would read
 # as the same thing twice ("Poor sleep" next to "Poor sleep for 3 days").
 _CONTRIBUTOR_SUPERSEDED_BY: tuple[tuple[str, str], ...] = (
@@ -3241,8 +3340,23 @@ def context_labels(
     Never a claim that anything is wrong. Being in taper is a plan, not a
     symptom, and this list exists so it can be shown without being mistaken for
     one.
+
+    On a day that is both fight week and taper the two codes collapse to a single
+    "Fight week / taper" chip, placed where fight week would have rendered, so the
+    one shared camp context is never shown twice.
     """
-    return _labels_from(triggers, _CONTEXT_LABELS, limit=limit)
+    present = {str(trigger).strip() for trigger in triggers if str(trigger).strip()}
+    if not _FIGHT_WEEK_TAPER_CODES <= present:
+        return _labels_from(triggers, _CONTEXT_LABELS, limit=limit)
+    merged: list[str] = []
+    for trigger in triggers:
+        if str(trigger).strip() in _FIGHT_WEEK_TAPER_CODES:
+            if _FIGHT_WEEK_TAPER_MERGED not in merged:
+                merged.append(_FIGHT_WEEK_TAPER_MERGED)
+            continue
+        merged.append(trigger)
+    labels_by_code = {**_CONTEXT_LABELS, _FIGHT_WEEK_TAPER_MERGED: _FIGHT_WEEK_TAPER_LABEL}
+    return _labels_from(merged, labels_by_code, limit=limit)
 
 
 # ---------------------------------------------------------------------------

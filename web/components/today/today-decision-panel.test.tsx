@@ -41,7 +41,7 @@ test("evidence is in an open native disclosure with separate trigger and context
   const html = render({
     banner: BANNER,
     triggers: ["Poor sleep for 3 days", "Feeling flat"],
-    context: ["Fight week", "Taper phase"],
+    context: ["Fight week / taper", "Hard session planned"],
   });
   assert.ok(html.includes("Trigger"));
   assert.ok(html.includes("Poor sleep for 3 days"));
@@ -218,7 +218,7 @@ test("nothing on the card calls context a warning", () => {
   const html = render({
     banner: BANNER,
     triggers: ["Poor sleep"],
-    context: ["Fight week", "Taper phase"],
+    context: ["Fight week / taper"],
     confidenceNote: "Less to go on today: today's session isn't resolved yet.",
   }).toLowerCase();
   assert.ok(!html.includes("warning"));
