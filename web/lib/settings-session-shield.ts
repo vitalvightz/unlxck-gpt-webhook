@@ -20,7 +20,7 @@ export function reconcileSettingsMe(
   current: MeResponse | null,
   next: MeResponse | null,
 ): MeResponse | null {
-  if (!current || !next || current.profile.id !== next.profile.id) {
+  if (!current || !next || current.profile.athlete_id !== next.profile.athlete_id) {
     return next;
   }
 
