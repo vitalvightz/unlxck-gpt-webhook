@@ -182,8 +182,6 @@ export function PushNotificationSettings({ token }: { token: string }) {
 
   return (
     <div className="settings-push-block">
-      <style>{"#notifications > .settings-toggle-list { display: none; }"}</style>
-
       <div className="settings-toggle-row settings-push-row">
         <span>
           <span className="settings-toggle-title">Push notifications on this device</span>
@@ -222,77 +220,90 @@ export function PushNotificationSettings({ token }: { token: string }) {
             </label>
           ))}
 
-          <div className="settings-control-grid">
-            <label className="field">
-              <span>Usual training time</span>
-              <input
-                type="time"
-                value={trainingTime}
-                disabled={!preferences.session_reminders || workingPreference !== null}
-                onChange={(event) => setTrainingTime(event.target.value)}
-              />
-              <small>Optional. Without a time, UNLXCK will not guess when you train.</small>
-            </label>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={
-                !preferences.session_reminders ||
-                workingPreference !== null ||
-                trainingTime === (preferences.preferred_training_time ?? "")
-              }
-              onClick={() => void saveTrainingTime()}
-            >
-              {workingPreference === "training-time" ? "Saving…" : "Save training time"}
-            </button>
+          <div className="settings-subsection">
+            <div className="settings-subsection-header">
+              <h3 className="settings-subsection-title">Session timing</h3>
+            </div>
+            <div className="settings-control-grid">
+              <label className="field">
+                <span>Usual training time</span>
+                <input
+                  type="time"
+                  value={trainingTime}
+                  disabled={!preferences.session_reminders || workingPreference !== null}
+                  onChange={(event) => setTrainingTime(event.target.value)}
+                />
+                <small>Optional. Without a time, UNLXCK will not guess when you train.</small>
+              </label>
+            </div>
+            <div className="form-actions settings-subsection-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={
+                  !preferences.session_reminders ||
+                  workingPreference !== null ||
+                  trainingTime === (preferences.preferred_training_time ?? "")
+                }
+                onClick={() => void saveTrainingTime()}
+              >
+                {workingPreference === "training-time" ? "Saving…" : "Save training time"}
+              </button>
+            </div>
           </div>
 
-          <div className="settings-toggle-row">
-            <span>
-              <span className="settings-toggle-title">Quiet hours</span>
-              <span className="settings-toggle-detail">
-                Routine coaching notifications wait outside this window.
+          <div className="settings-subsection">
+            <div className="settings-subsection-header">
+              <h3 className="settings-subsection-title">Quiet hours</h3>
+            </div>
+            <label className="settings-toggle-row">
+              <span>
+                <span className="settings-toggle-title">Hold routine notifications</span>
+                <span className="settings-toggle-detail">
+                  Routine coaching notifications wait outside this window.
+                </span>
               </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={preferences.quiet_hours_enabled}
-              disabled={workingPreference !== null}
-              onChange={(event) => void savePreference("quiet_hours_enabled", event.target.checked)}
-            />
-          </div>
-
-          <div className="settings-control-grid">
-            <label className="field">
-              <span>Quiet hours start</span>
               <input
-                type="time"
-                value={quietStart}
-                disabled={!preferences.quiet_hours_enabled || workingPreference !== null}
-                onChange={(event) => setQuietStart(event.target.value)}
+                type="checkbox"
+                checked={preferences.quiet_hours_enabled}
+                disabled={workingPreference !== null}
+                onChange={(event) => void savePreference("quiet_hours_enabled", event.target.checked)}
               />
             </label>
-            <label className="field">
-              <span>Quiet hours end</span>
-              <input
-                type="time"
-                value={quietEnd}
-                disabled={!preferences.quiet_hours_enabled || workingPreference !== null}
-                onChange={(event) => setQuietEnd(event.target.value)}
-              />
-            </label>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={
-                !preferences.quiet_hours_enabled ||
-                workingPreference !== null ||
-                (quietStart === preferences.quiet_hours_start && quietEnd === preferences.quiet_hours_end)
-              }
-              onClick={() => void saveQuietHours()}
-            >
-              {workingPreference === "quiet-hours" ? "Saving…" : "Save quiet hours"}
-            </button>
+            <div className="settings-control-grid">
+              <label className="field">
+                <span>Start</span>
+                <input
+                  type="time"
+                  value={quietStart}
+                  disabled={!preferences.quiet_hours_enabled || workingPreference !== null}
+                  onChange={(event) => setQuietStart(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>End</span>
+                <input
+                  type="time"
+                  value={quietEnd}
+                  disabled={!preferences.quiet_hours_enabled || workingPreference !== null}
+                  onChange={(event) => setQuietEnd(event.target.value)}
+                />
+              </label>
+            </div>
+            <div className="form-actions settings-subsection-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={
+                  !preferences.quiet_hours_enabled ||
+                  workingPreference !== null ||
+                  (quietStart === preferences.quiet_hours_start && quietEnd === preferences.quiet_hours_end)
+                }
+                onClick={() => void saveQuietHours()}
+              >
+                {workingPreference === "quiet-hours" ? "Saving…" : "Save quiet hours"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
