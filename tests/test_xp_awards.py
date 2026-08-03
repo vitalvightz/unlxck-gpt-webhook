@@ -46,13 +46,22 @@ class IdempotentActivationStore(FakeStore):
         return {"awarded": awarded, "action": action}
 
 
-def test_profile_activation_requires_name_and_combat_sport():
+def test_profile_activation_requires_name_and_live_combat_sport():
     assert profile_activation_complete(
         {"full_name": "Ari Mensah", "technical_style": ["boxing"]}
     ) is True
     assert profile_activation_complete(
-        SimpleNamespace(full_name="Ari Mensah", technical_style=["mma"])
+        SimpleNamespace(full_name="Ari Mensah", technical_style=["MMA"])
     ) is True
+    assert profile_activation_complete(
+        {"full_name": "Ari Mensah", "technical_style": ["running"]}
+    ) is False
+    assert profile_activation_complete(
+        {"full_name": "Ari Mensah", "technical_style": ["unknown", "test"]}
+    ) is False
+    assert profile_activation_complete(
+        {"full_name": "Ari Mensah", "technical_style": ["muay_thai"]}
+    ) is False
     assert profile_activation_complete(
         {"full_name": "Ari Mensah", "technical_style": []}
     ) is False
@@ -90,6 +99,34 @@ def test_activation_reconciliation_awards_all_persisted_milestones():
             None,
         ),
         ("athlete-1", "first_plan_ready", "first-plan-ready:athlete-1", None),
+    ]
+
+
+def test_profile_award_failure_does_not_block_intake_or_plan_reconciliation():
+    class ProfileFailureStore(FakeStore):
+        def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
+            self.calls.append((athlete_id, action, idempotency_key, calendar_date))
+            if action == "profile_completed":
+                raise RuntimeError("profile XP unavailable")
+            return {"awarded": True, "action": action}
+
+    store = ProfileFailureStore()
+    results = reconcile_activation_xp(
+        store,
+        athlete_id="athlete-1",
+        profile={"full_name": "Ari Mensah", "technical_style": ["boxing"]},
+        latest_intake={"athlete": {"full_name": "Ari Mensah"}},
+        latest_plan={"plan_id": "plan-1", "status": "ready"},
+    )
+
+    assert [result["action"] for result in results] == [
+        "first_intake_completed",
+        "first_plan_ready",
+    ]
+    assert [call[1] for call in store.calls] == [
+        "profile_completed",
+        "first_intake_completed",
+        "first_plan_ready",
     ]
 
 
