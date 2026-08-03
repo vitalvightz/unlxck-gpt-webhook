@@ -19,6 +19,11 @@ RUN useradd --create-home --uid 10001 appuser \
 
 COPY --chown=appuser:appuser . .
 
+# Fail the backend image build if the neutral shared XP contract is missing,
+# malformed or no longer importable from the deployed /app layout.
+RUN test -f /app/shared/xp-levels.json \
+    && python -c "from api.xp_levels import XP_LEVELS; assert XP_LEVELS[-1] == (8, 'Champion', 10000)"
+
 USER appuser
 
 EXPOSE 8000

@@ -15,34 +15,11 @@ from typing import Any, Mapping
 from api.services.notification_foundation import NotificationCandidate
 from api.services.push_notifications import dispatch_push_candidate
 from api.store import AppStore
+from api.xp_levels import XP_LEVELS, resolve_xp_level
 
 logger = logging.getLogger(__name__)
 
-XP_LEVELS: tuple[tuple[int, str, int], ...] = (
-    (1, "Rookie", 0),
-    (2, "Prospect", 100),
-    (3, "Amateur", 250),
-    (4, "Challenger", 450),
-    (5, "Ranked", 700),
-    (6, "Contender", 1_000),
-    (7, "Elite", 1_300),
-    (8, "Champion", 1_700),
-)
-
 TERMINAL_TRAINING_STATUSES = frozenset({"done", "modified"})
-
-
-def resolve_xp_level(total_xp: Any) -> tuple[int, str, int]:
-    try:
-        total = max(0, int(total_xp))
-    except (TypeError, ValueError):
-        total = 0
-    current = XP_LEVELS[0]
-    for level in XP_LEVELS[1:]:
-        if total < level[2]:
-            break
-        current = level
-    return current
 
 
 def _result_totals(result: Mapping[str, Any]) -> tuple[int, int]:

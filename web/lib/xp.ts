@@ -1,9 +1,23 @@
+import xpLevelContract from "../../shared/xp-levels.json";
+
 export type XpAction =
   | "daily_login"
   | "training_logged"
   | "planned_session_completed"
   | "recommended_fighter_content_watched"
-  | "full_training_week_completed";
+  | "full_training_week_completed"
+  | "profile_completed"
+  | "first_intake_completed"
+  | "first_plan_ready"
+  | "first_checkin_completed"
+  | "readiness_checkin_completed"
+  | "injury_update_completed"
+  | "stop_decision_followed"
+  | "feedback_submitted"
+  | "feedback_with_comment"
+  | "first_plan_completed"
+  | "phase_completed"
+  | "camp_completed";
 
 export type XpActionConfig = {
   label: string;
@@ -49,24 +63,65 @@ export type XpLevelProgress = {
 
 export const XP_RECENT_AWARDS_LIMIT = 20;
 
+/**
+ * Ledger values accepted from the backend. Daily login remains 10 here only so
+ * historical awards can still be displayed; new daily-login awards are retired.
+ */
 export const XP_ACTIONS: Record<XpAction, XpActionConfig> = {
   daily_login: { label: "Daily login", xp: 10 },
   training_logged: { label: "Training logged", xp: 25 },
   planned_session_completed: { label: "Planned session completed", xp: 50 },
   recommended_fighter_content_watched: { label: "Recommended fighter content watched", xp: 10 },
   full_training_week_completed: { label: "Full training week completed", xp: 100 },
+  profile_completed: { label: "Profile completed", xp: 25 },
+  first_intake_completed: { label: "First intake completed", xp: 50 },
+  first_plan_ready: { label: "First plan ready", xp: 100 },
+  first_checkin_completed: { label: "First check-in completed", xp: 25 },
+  readiness_checkin_completed: { label: "Readiness check-in completed", xp: 10 },
+  injury_update_completed: { label: "Injury update completed", xp: 10 },
+  stop_decision_followed: { label: "STOP decision followed", xp: 15 },
+  feedback_submitted: { label: "Feedback submitted", xp: 1 },
+  feedback_with_comment: { label: "Feedback with comment", xp: 3 },
+  first_plan_completed: { label: "First plan completed", xp: 250 },
+  phase_completed: { label: "Training phase completed", xp: 200 },
+  camp_completed: { label: "Fight camp completed", xp: 500 },
 };
 
-export const XP_LEVELS: readonly XpLevelConfig[] = [
-  { level: 1, title: "Rookie", threshold: 0 },
-  { level: 2, title: "Prospect", threshold: 100 },
-  { level: 3, title: "Amateur", threshold: 250 },
-  { level: 4, title: "Challenger", threshold: 450 },
-  { level: 5, title: "Ranked", threshold: 700 },
-  { level: 6, title: "Contender", threshold: 1_000 },
-  { level: 7, title: "Elite", threshold: 1_300 },
-  { level: 8, title: "Champion", threshold: 1_700 },
-] as const;
+function parseXpLevelContract(value: unknown): readonly XpLevelConfig[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("XP level contract must be a non-empty list.");
+  }
+
+  let previousThreshold = -1;
+  const levels = value.map((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      throw new Error("XP level contract entries must be objects.");
+    }
+    const candidate = entry as Record<string, unknown>;
+    const expectedLevel = index + 1;
+    const level = candidate.level;
+    const title = candidate.title;
+    const threshold = candidate.threshold;
+    if (
+      level !== expectedLevel ||
+      typeof title !== "string" ||
+      !title.trim() ||
+      typeof threshold !== "number" ||
+      !Number.isSafeInteger(threshold) ||
+      threshold < 0 ||
+      (expectedLevel === 1 && threshold !== 0) ||
+      threshold <= previousThreshold
+    ) {
+      throw new Error("XP level contract is invalid.");
+    }
+    previousThreshold = threshold;
+    return Object.freeze({ level, title: title.trim(), threshold });
+  });
+
+  return Object.freeze(levels);
+}
+
+export const XP_LEVELS = parseXpLevelContract(xpLevelContract);
 
 const XP_ACTION_NAMES = new Set<XpAction>(Object.keys(XP_ACTIONS) as XpAction[]);
 
