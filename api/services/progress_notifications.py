@@ -142,11 +142,9 @@ def award_session_progress(
     status = str(completion.get("status") or "").strip().lower()
     if status not in TERMINAL_TRAINING_STATUSES:
         return []
-    completion_id = str(
-        completion.get("id")
-        or f"{completion.get('session_id') or 'session'}:{completion.get('training_day') or 'day'}"
-    ).strip()
-    if not completion_id:
+    completion_id = str(completion.get("id") or "").strip()
+    training_day = str(completion.get("training_day") or "").strip()
+    if not completion_id or not training_day:
         return []
 
     results: list[dict[str, Any]] = []
@@ -156,6 +154,7 @@ def award_session_progress(
                 athlete_id,
                 action=action,
                 idempotency_key=f"{action}:{completion_id}",
+                calendar_date=training_day,
             )
         except Exception:  # noqa: BLE001 - XP must never break session completion
             logger.exception(
