@@ -6,6 +6,7 @@ MIGRATIONS = (
     ROOT / "supabase" / "migrations" / "20260803174500_harden_xp_abuse_boundaries.sql",
     ROOT / "supabase" / "migrations" / "20260803175500_enforce_xp_source_integrity.sql",
     ROOT / "supabase" / "migrations" / "20260803180000_remove_xp_session_sample_cap.sql",
+    ROOT / "supabase" / "migrations" / "20260803181000_lock_xp_to_one_plan_per_day.sql",
 )
 TODAY_ROUTE = ROOT / "api" / "routes" / "today.py"
 
@@ -19,7 +20,7 @@ def _sql() -> str:
 
 
 def _final_rpc_sql() -> str:
-    return " ".join(MIGRATIONS[-1].read_text(encoding="utf-8").lower().split())
+    return " ".join(MIGRATIONS[2].read_text(encoding="utf-8").lower().split())
 
 
 def test_one_time_activation_rewards_are_unique_by_action_not_only_key():
@@ -59,11 +60,21 @@ def test_session_awards_require_active_scheduled_terminal_completions():
     assert "xp_resolved_active_plan_id" in sql
 
 
-def test_final_award_rpc_has_no_sample_based_session_count_cap():
-    sql = _final_rpc_sql()
-    assert "v_daily_count" not in sql
-    assert "< 2" not in sql
-    assert "insert into public.xp_awards" in sql
+def test_same_day_session_xp_is_locked_to_one_plan_without_a_count_cap():
+    sql = _sql()
+    assert "session xp is already locked to another plan for this training day" in sql
+    assert "previous_completion.plan_id <> v_completion_plan_id" in sql
+    final_rpc = _final_rpc_sql()
+    assert "v_daily_count" not in final_rpc
+    assert "< 2" not in final_rpc
+    assert "insert into public.xp_awards" in final_rpc
+
+
+def test_full_week_award_requires_every_structured_session():
+    sql = _sql()
+    assert "full-week xp source has no planned sessions" in sql
+    assert "full-week xp requires every planned session to be completed or modified" in sql
+    assert "completion.status in ('done', 'modified')" in sql
 
 
 def test_activation_awards_require_authoritative_persisted_state_and_athlete_role():
@@ -101,12 +112,13 @@ def test_dormant_reward_types_are_rejected_until_live_hooks_exist():
     assert "xp action has no live authoritative earning hook" in sql
 
 
-def test_hardening_readiness_rpc_requires_indexes_and_source_trigger():
+def test_hardening_readiness_rpc_requires_indexes_and_both_source_triggers():
     sql = _sql()
     assert "validate_xp_abuse_hardening" in sql
     assert "xp_awards_one_time_action_per_athlete" in sql
     assert "xp_awards_one_daily_action_per_athlete" in sql
     assert "xp_awards_source_integrity" in sql
+    assert "xp_awards_plan_lock_and_week_completion" in sql
     assert "xp abuse hardening is incomplete" in sql
 
 
