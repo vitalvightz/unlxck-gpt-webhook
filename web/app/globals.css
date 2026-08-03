@@ -5125,7 +5125,7 @@ button.mobile-step-rail-item {
 
 .settings-push-block {
   display: grid;
-  gap: 6px;
+  gap: 12px;
 }
 
 .settings-push-row {
@@ -5764,10 +5764,6 @@ button.mobile-step-rail-item {
   gap: 8px;
 }
 
-.settings-mobile-save {
-  display: none;
-}
-
 .settings-page {
   display: grid;
   gap: 24px;
@@ -5779,44 +5775,10 @@ button.mobile-step-rail-item {
 
 .settings-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 32px;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 28px;
   align-items: start;
-}
-
-.settings-nav {
-  position: sticky;
-  top: 24px;
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-  border-radius: var(--settings-inner-radius);
-  border: 1px solid var(--border-default);
-  background: rgba(17, 19, 23, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.settings-nav a {
-  display: block;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
-
-.settings-nav a:hover,
-.settings-nav a:focus-visible {
-  color: var(--text-primary);
-  border-color: rgba(181, 18, 43, 0.42);
-  background: rgba(181, 18, 43, 0.12);
-  outline: none;
+  min-width: 0;
 }
 
 .settings-main {
@@ -5923,34 +5885,28 @@ button.mobile-step-rail-item {
   padding-left: 30px;
 }
 
-.settings-password-toggle {
-  position: static;
-  transform: none;
-}
-
+/* Desktop: a sticky rail beside the cards. The stacked layout below 960px
+   turns it into a horizontal chip scroller (see the media queries). */
 .settings-section-nav {
   position: sticky;
-  top: 12px;
+  top: 20px;
   z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 24px;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: var(--settings-inner-radius);
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
     rgba(14, 16, 20, 0.84);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
 
-.settings-section-nav::before {
-  content: "Sections";
-  flex: 0 0 auto;
-  padding: 0 8px 0 2px;
+.settings-section-nav-label {
+  margin: 0 0 6px;
+  padding-inline: 8px;
   font-family: var(--font-mono), monospace;
   font-size: 10px;
   font-weight: 700;
@@ -5960,15 +5916,20 @@ button.mobile-step-rail-item {
   color: var(--text-muted);
 }
 
+.settings-section-nav-list {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .settings-section-nav-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 8px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.03);
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
   font-family: var(--font-mono), monospace;
   font-size: 11px;
   font-weight: 700;
@@ -5976,7 +5937,7 @@ button.mobile-step-rail-item {
   text-transform: uppercase;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 .settings-section-nav-link:hover,
@@ -5985,40 +5946,86 @@ button.mobile-step-rail-item {
   border-color: rgba(181, 18, 43, 0.42);
   background: rgba(181, 18, 43, 0.14);
   outline: none;
-  transform: translateY(-1px);
 }
 
-.settings-section-save {
-  margin-left: auto;
-  display: inline-flex;
+.settings-section-nav-link[aria-current="true"] {
+  color: var(--text-primary);
+  border-color: rgba(181, 18, 43, 0.55);
+  background: rgba(181, 18, 43, 0.18);
+}
+
+/* Save controls live with the fields they save; this bar only appears once
+   those controls scroll away with edits still pending. */
+.settings-save-bar {
+  position: fixed;
+  z-index: 60;
+  right: calc(24px + var(--safe-area-right));
+  bottom: calc(24px + var(--safe-area-bottom));
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 8px 18px;
-  border: 1px solid rgba(181, 18, 43, 0.62);
-  border-radius: 14px;
-  background: linear-gradient(135deg, #e01438, #9f1026);
-  color: #fff;
-  font-family: var(--font-display), var(--font-sans), sans-serif;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 12px 12px 12px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(181, 18, 43, 0.38);
+  background: #101216;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.42);
+  animation: settings-save-bar-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.settings-save-bar-text {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.settings-save-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@keyframes settings-save-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-save-bar {
+    animation: none;
+  }
+}
+
+.settings-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.settings-account-actions-status {
+  margin: 0;
+  color: var(--text-muted);
   font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  box-shadow: 0 14px 30px rgba(181, 18, 43, 0.24);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
-.settings-section-save:hover,
-.settings-section-save:focus-visible {
-  outline: none;
-  transform: translateY(-1px);
-  box-shadow: 0 18px 38px rgba(181, 18, 43, 0.32);
-}
-
-.settings-section-save:disabled {
-  cursor: progress;
-  opacity: 0.72;
-  transform: none;
+.settings-account-actions-buttons {
+  margin: 0;
+  justify-content: flex-end;
 }
 
 .settings-stack {
@@ -6206,21 +6213,60 @@ button.mobile-step-rail-item {
 
 @media (max-width: 960px) {
   .settings-layout {
-    grid-template-columns: 1fr;
+    /* minmax(0, …) — an auto minimum would let the chip scroller's content
+       push the whole column past the viewport. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }
 
-  .settings-nav {
+  /* Stacked layout: the rail becomes a one-line chip scroller so it costs a
+     single row of height instead of a block of the first screen. */
+  .settings-section-nav {
     position: static;
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 10px;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 16px;
+    box-shadow: none;
   }
 
-  .settings-nav a {
-    flex: 1 1 auto;
-    text-align: center;
+  .settings-section-nav-label {
+    margin: 0;
+    padding-inline: 0;
+    flex: 0 0 auto;
+  }
+
+  .settings-section-nav-list {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .settings-section-nav-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-section-nav-link {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.03);
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  /* Anchor jumps must clear the floating nav toggle pinned to the top edge. */
+  .settings-card {
+    scroll-margin-top: calc(var(--mobile-nav-clearance) + 8px);
   }
 
   .settings-card-grid {
@@ -6238,33 +6284,15 @@ button.mobile-step-rail-item {
 
 @media (max-width: 720px) {
   .settings-section-nav {
-    position: static;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 12px;
-    border-radius: 20px;
-    box-shadow: none;
-  }
-
-  .settings-section-nav::before {
-    grid-column: 1 / -1;
-    padding: 0 0 2px;
   }
 
   .settings-section-nav-link {
-    width: 100%;
-    min-height: 42px;
-    padding: 9px 10px;
+    min-height: 40px;
     font-size: 10.5px;
     letter-spacing: 0.08em;
-    white-space: normal;
-    text-align: center;
-  }
-
-  .settings-section-nav-link:hover,
-  .settings-section-nav-link:focus-visible {
-    transform: none;
   }
 
   .settings-subsection {
@@ -6280,6 +6308,53 @@ button.mobile-step-rail-item {
   .settings-utility-card {
     max-width: none;
     margin-left: 0;
+  }
+
+  /* The sync card costs most of the first screen on a phone and repeats the
+     "last saved" line the account card now carries. */
+  .settings-page > .section-heading > .status-card {
+    display: none;
+  }
+
+  .settings-account-actions {
+    justify-content: stretch;
+  }
+
+  .settings-account-actions-status {
+    order: 2;
+  }
+
+  .settings-account-actions-buttons {
+    width: 100%;
+    order: 1;
+  }
+
+  .settings-account-actions-buttons .cta,
+  .settings-account-actions-buttons .ghost-button {
+    flex: 1 1 140px;
+  }
+
+  /* Full-width above the tab bar: on a phone the bar is the save affordance. */
+  .settings-save-bar {
+    right: calc(12px + var(--safe-area-right));
+    left: calc(12px + var(--safe-area-left));
+    bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 10px 10px 14px;
+  }
+
+  .settings-save-bar-text {
+    flex: 1 1 100%;
+    font-size: 10px;
+  }
+
+  .settings-save-bar-actions {
+    flex: 1 1 auto;
+  }
+
+  .settings-save-bar-actions .cta {
+    flex: 1 1 auto;
   }
 }
 
@@ -6330,6 +6405,16 @@ button.mobile-step-rail-item {
   color: var(--text-primary);
   border-color: rgba(181, 18, 43, 0.52);
   outline: none;
+}
+
+/* In settings the toggle sits in a subsection header rather than inside a
+   password field, so it must stay in flow. Declared after .password-toggle so
+   the absolute positioning above cannot win on source order and float the
+   button loose over the page. */
+.settings-password-toggle {
+  position: static;
+  transform: none;
+  min-height: 36px;
 }
 
 .auth-rail-extras {
@@ -10237,11 +10322,6 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     border-left: 0;
   }
 
-  .settings-section-save {
-    width: 100%;
-    margin-left: 0;
-  }
-
   .onboarding-panel {
     gap: 18px;
     padding-bottom: calc(110px + var(--safe-area-bottom));
@@ -10518,6 +10598,12 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   width: 100%;
 }
 
+/* With no photo saved there is no Remove button, so upload takes the full row
+   instead of leaving a dead column beside it. */
+.avatar-editor-actions > .avatar-upload-btn:only-of-type {
+  grid-column: 1 / -1;
+}
+
 /* Clickable trigger button — resets browser button styling */
 .avatar-upload-trigger {
   display: flex;
@@ -10658,9 +10744,9 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     padding: 16px;
   }
 
+  /* Keep photo actions side by side so the editor stays one screen-block tall. */
   .avatar-editor-actions {
     width: 100%;
-    grid-template-columns: 1fr;
   }
 }
 
@@ -14483,23 +14569,6 @@ html[data-theme="light"] .empty-state-card {
   background: rgba(255, 255, 255, 0.38);
 }
 
-html[data-theme="light"] .settings-nav {
-  border-color: rgba(68, 69, 72, 0.12);
-  background: rgba(249, 251, 254, 0.86);
-  box-shadow: 0 16px 30px rgba(63, 64, 67, 0.12);
-}
-
-html[data-theme="light"] .settings-nav a {
-  color: #595a5d;
-}
-
-html[data-theme="light"] .settings-nav a:hover,
-html[data-theme="light"] .settings-nav a:focus-visible {
-  border-color: rgba(189, 16, 32, 0.18);
-  background: rgba(189, 16, 32, 0.07);
-  color: var(--brand-red);
-}
-
 html[data-theme="light"] .settings-section-nav {
   border-color: rgba(68, 69, 72, 0.14);
   background:
@@ -14508,21 +14577,51 @@ html[data-theme="light"] .settings-section-nav {
   box-shadow: 0 18px 36px rgba(63, 64, 67, 0.12);
 }
 
-html[data-theme="light"] .settings-section-nav::before {
+/* The default pill is dark-on-dark; in light mode it has to invert or it reads
+   as a disabled block sitting on white. */
+html[data-theme="light"] .password-toggle {
+  border-color: rgba(68, 69, 72, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: #595a5d;
+}
+
+html[data-theme="light"] .password-toggle:hover,
+html[data-theme="light"] .password-toggle:focus-visible {
+  border-color: rgba(189, 16, 32, 0.24);
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .settings-section-nav-label {
   color: #696a6d;
 }
 
 html[data-theme="light"] .settings-section-nav-link {
-  border-color: rgba(68, 69, 72, 0.12);
-  background: rgba(255, 255, 255, 0.58);
   color: #494a4d;
 }
 
 html[data-theme="light"] .settings-section-nav-link:hover,
-html[data-theme="light"] .settings-section-nav-link:focus-visible {
+html[data-theme="light"] .settings-section-nav-link:focus-visible,
+html[data-theme="light"] .settings-section-nav-link[aria-current="true"] {
   border-color: rgba(189, 16, 32, 0.2);
   background: rgba(189, 16, 32, 0.08);
   color: var(--brand-red);
+}
+
+@media (max-width: 960px) {
+  html[data-theme="light"] .settings-section-nav-link {
+    border-color: rgba(68, 69, 72, 0.12);
+    background: rgba(255, 255, 255, 0.58);
+  }
+}
+
+html[data-theme="light"] .settings-save-bar {
+  border-color: rgba(189, 16, 32, 0.24);
+  background: #ffffff;
+  box-shadow: 0 22px 44px rgba(63, 64, 67, 0.18);
+}
+
+html[data-theme="light"] .settings-save-bar-text {
+  color: #595a5d;
 }
 
 html[data-theme="light"] .mobile-nav-toggle,
@@ -15490,12 +15589,6 @@ html[data-theme="light"] .settings-segmented-control button:focus-visible,
 html[data-theme="light"] .settings-segmented-control .settings-segment-active {
   border-color: rgba(189, 16, 32, 0.2);
   background: rgba(189, 16, 32, 0.08);
-}
-
-html[data-theme="light"] .settings-mobile-save {
-  border-color: rgba(80, 81, 84, 0.12);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 36px rgba(63, 64, 67, 0.12);
 }
 
 /* Today uses custom dark cards; keep light mode explicit so it cannot regress. */
@@ -16972,29 +17065,6 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
   .public-final-cta h2 {
     font-size: 28px;
-  }
-
-  .settings-mobile-save {
-    position: sticky;
-    bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
-    z-index: 30;
-    display: flex;
-    margin-top: 4px;
-    margin-bottom: 0;
-    padding: 8px;
-    border-radius: 14px;
-    border: 1px solid var(--border-default);
-    background: var(--bg-panel);
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.26);
-    backdrop-filter: blur(14px);
-  }
-
-  .settings-mobile-save .cta {
-    width: 100%;
-  }
-
-  .settings-desktop-save {
-    display: none;
   }
 
   .plan-inline-rename-row,

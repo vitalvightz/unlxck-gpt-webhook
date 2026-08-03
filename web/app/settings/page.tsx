@@ -35,10 +35,6 @@ type SettingsSection = {
   label: string;
 };
 
-type NotificationKey = "sessionReminders" | "checkInReminders" | "planUpdateAlerts" | "coachMessages";
-
-type NotificationSettings = Record<NotificationKey, boolean>;
-
 type ProgrammeControls = {
   injuryFiltering: "light" | "strict";
   fatigueAdjustment: "light" | "strict";
@@ -114,7 +110,6 @@ async function compressAvatarImage(file: File): Promise<string> {
 const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 24;
-const NOTIFICATION_STORAGE_KEY = "unlxck.notificationSettings";
 const PROGRAMME_CONTROLS_STORAGE_KEY = "unlxck.adminProgrammeControls";
 const ADMIN_TEMPLATES_STORAGE_KEY = "unlxck.adminTemplateDrafts";
 
@@ -151,24 +146,6 @@ const APPEARANCE_OPTIONS: Array<{
     label: "Light",
     description: "Brighter workspace.",
   },
-];
-
-const DEFAULT_NOTIFICATIONS: NotificationSettings = {
-  sessionReminders: true,
-  checkInReminders: true,
-  planUpdateAlerts: true,
-  coachMessages: true,
-};
-
-const NOTIFICATION_ROWS: Array<{
-  key: NotificationKey;
-  title: string;
-  detail: string;
-}> = [
-  { key: "sessionReminders", title: "Session reminders", detail: "Training-session timing" },
-  { key: "checkInReminders", title: "Check-in reminders", detail: "Fatigue, soreness, and readiness prompts" },
-  { key: "planUpdateAlerts", title: "Plan update alerts", detail: "New plan versions and releases" },
-  { key: "coachMessages", title: "Coach messages", detail: "Direct admin or coach notes" },
 ];
 
 const DEFAULT_PROGRAMME_CONTROLS: ProgrammeControls = {
@@ -307,26 +284,27 @@ function writeLocalJson(key: string, value: unknown) {
 }
 
 function SettingsNav({
-  isSaving,
-  disabled = false,
-  onSave,
+  activeSection,
   sections,
 }: Readonly<{
-  isSaving: boolean;
-  disabled?: boolean;
-  onSave: () => void;
+  activeSection: string;
   sections: SettingsSection[];
 }>) {
   return (
     <nav className="settings-section-nav" aria-label="Settings sections">
-      {sections.map((section) => (
-        <a key={section.id} href={`#${section.id}`} className="settings-section-nav-link">
-          {section.label}
-        </a>
-      ))}
-      <button type="button" className="settings-section-save" onClick={onSave} disabled={isSaving || disabled}>
-        {isSaving ? "Saving..." : "Save"}
-      </button>
+      <p className="settings-section-nav-label">Sections</p>
+      <div className="settings-section-nav-list">
+        {sections.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            className="settings-section-nav-link"
+            aria-current={activeSection === section.id ? "true" : undefined}
+          >
+            {section.label}
+          </a>
+        ))}
+      </div>
     </nav>
   );
 }
@@ -370,12 +348,18 @@ export default function SettingsPage() {
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [isPasswordPending, startPasswordTransition] = useTransition();
 
-  const [notifications, setNotifications] = useState<NotificationSettings>(DEFAULT_NOTIFICATIONS);
   const [programmeControls, setProgrammeControls] = useState<ProgrammeControls>(DEFAULT_PROGRAMME_CONTROLS);
   const [adminTemplates, setAdminTemplates] = useState<AdminTemplateDraft>(DEFAULT_ADMIN_TEMPLATES);
 
   const isAdmin = me?.profile.role === "admin";
   const sections = isAdmin ? ADMIN_SETTINGS_SECTIONS : ATHLETE_SETTINGS_SECTIONS;
+  const isReady = isMeHydrated && Boolean(me);
+
+  const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "");
+  // The account card owns the save controls. When they scroll out of view with
+  // edits pending, a floating bar takes over so the save is never far away.
+  const accountActionsRef = useRef<HTMLDivElement | null>(null);
+  const [isAccountActionsVisible, setIsAccountActionsVisible] = useState(true);
   const hydratedProfile = useMemo(() => hydratePlanRequest(me), [me]);
   const currentUsername = (me?.profile.username ?? "").trim();
   const detectedTimeZone = detectDeviceTimeZone() || me?.profile.athlete_timezone || "Automatic";
@@ -409,6 +393,12 @@ export default function SettingsPage() {
     [hydratedProfile],
   );
 
+  const savedFullName = (me?.profile.full_name ?? "").trim();
+  const savedAvatarUrl = (me?.profile.avatar_url ?? "").trim();
+  const hasUnsavedAccountChanges =
+    isReady && (fullName.trim() !== savedFullName || avatarUrl.trim() !== savedAvatarUrl);
+  const showFloatingSave = hasUnsavedAccountChanges && !isAccountActionsVisible;
+
   useEffect(() => {
     if (!me) {
       return;
@@ -424,7 +414,6 @@ export default function SettingsPage() {
   }, [currentUsername, me]);
 
   useEffect(() => {
-    setNotifications(readLocalJson(NOTIFICATION_STORAGE_KEY, DEFAULT_NOTIFICATIONS));
     setProgrammeControls(readLocalJson(PROGRAMME_CONTROLS_STORAGE_KEY, DEFAULT_PROGRAMME_CONTROLS));
     setAdminTemplates(readLocalJson(ADMIN_TEMPLATES_STORAGE_KEY, DEFAULT_ADMIN_TEMPLATES));
   }, []);
@@ -434,6 +423,48 @@ export default function SettingsPage() {
       previewAppearanceMode(null);
     };
   }, [previewAppearanceMode]);
+
+  // Highlight the section the reader is actually on. The rootMargin keeps the
+  // "active" band near the top of the viewport so a card lights up as its
+  // heading arrives, not when its footer finally scrolls in.
+  useEffect(() => {
+    if (!isReady || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const cards = sections
+      .map((section) => document.getElementById(section.id))
+      .filter((card): card is HTMLElement => card !== null);
+    if (!cards.length) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const topMost = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (topMost) {
+          setActiveSection(topMost.target.id);
+        }
+      },
+      { rootMargin: "-15% 0px -70% 0px" },
+    );
+    cards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
+  }, [isReady, sections]);
+
+  useEffect(() => {
+    const node = accountActionsRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsAccountActionsVisible(entry.isIntersecting),
+      { rootMargin: "0px 0px -96px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [isReady]);
 
   async function saveAppearanceMode(nextMode: AppearanceMode) {
     if (!session?.access_token) {
@@ -629,12 +660,19 @@ export default function SettingsPage() {
     }
   }
 
-  function updateNotification(key: NotificationKey, checked: boolean) {
-    setNotifications((current) => {
-      const next = { ...current, [key]: checked };
-      writeLocalJson(NOTIFICATION_STORAGE_KEY, next);
-      return next;
-    });
+  function handleDiscardAccountChanges() {
+    // Invalidate any in-flight compression so it can't repopulate the avatar.
+    avatarRequestRef.current += 1;
+    const storedAvatar = me?.profile.avatar_url ?? "";
+    setFullName(me?.profile.full_name ?? "");
+    setAvatarUrl(storedAvatar);
+    setUrlInputValue(isDataAvatarImageUrl(storedAvatar) ? "" : storedAvatar);
+    setIsAvatarProcessing(false);
+    setMessage(null);
+    setError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   function updateProgrammeControls(next: ProgrammeControls) {
@@ -936,6 +974,27 @@ export default function SettingsPage() {
         </div>
 
         <InstallUnlxck />
+
+        <div ref={accountActionsRef} className="settings-account-actions">
+          <p className="settings-account-actions-status" aria-live="polite">
+            {hasUnsavedAccountChanges ? "Unsaved changes to your name or photo." : `Last saved ${lastUpdatedLabel}`}
+          </p>
+          <div className="form-actions settings-account-actions-buttons">
+            {hasUnsavedAccountChanges ? (
+              <button type="button" className="ghost-button" onClick={handleDiscardAccountChanges} disabled={isPending}>
+                Discard
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="cta"
+              onClick={handleSaveAccount}
+              disabled={isPending || isAvatarProcessing || !hasUnsavedAccountChanges}
+            >
+              {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
+            </button>
+          </div>
+        </div>
       </>
     );
   }
@@ -976,22 +1035,9 @@ export default function SettingsPage() {
           </div>
           {session?.access_token ? (
             <PushNotificationSettings token={session.access_token} />
-          ) : null}
-          <div className="settings-toggle-list">
-            {NOTIFICATION_ROWS.map((row) => (
-              <label key={row.key} className="settings-toggle-row">
-                <span>
-                  <span className="settings-toggle-title">{row.title}</span>
-                  <span className="settings-toggle-detail">{row.detail}</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={notifications[row.key]}
-                  onChange={(event) => updateNotification(row.key, event.target.checked)}
-                />
-              </label>
-            ))}
-          </div>
+          ) : (
+            <p className="muted">Sign in again to manage notification preferences.</p>
+          )}
         </article>
 
         <article id="subscription" className="step-card settings-card">
@@ -1237,24 +1283,37 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <SettingsNav sections={sections} isSaving={isPending} disabled={isAvatarProcessing} onSave={handleSaveAccount} />
+        <div className="settings-layout">
+          <SettingsNav sections={sections} activeSection={activeSection} />
 
-        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+          <div className="settings-main">
+            <div aria-live="polite">
+              {message ? <div className="success-banner">{message}</div> : null}
+              {error ? <div className="error-banner">{error}</div> : null}
+            </div>
 
-        {isAdmin ? renderAdminSettings() : renderAthleteSettings()}
-
-        <div className="form-actions settings-mobile-save athlete-motion-slot athlete-motion-rail">
-          <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending || isAvatarProcessing}>
-            {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
-          </button>
+            {isAdmin ? renderAdminSettings() : renderAthleteSettings()}
+          </div>
         </div>
 
-        <div className="form-actions settings-desktop-save athlete-motion-slot athlete-motion-rail">
-          <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending || isAvatarProcessing}>
-            {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
-          </button>
-        </div>
+        {showFloatingSave ? (
+          <div className="settings-save-bar" role="group" aria-label="Unsaved account changes">
+            <p className="settings-save-bar-text">Unsaved account changes</p>
+            <div className="settings-save-bar-actions">
+              <button type="button" className="ghost-button" onClick={handleDiscardAccountChanges} disabled={isPending}>
+                Discard
+              </button>
+              <button
+                type="button"
+                className="cta"
+                onClick={handleSaveAccount}
+                disabled={isPending || isAvatarProcessing}
+              >
+                {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </RequireAuth>
   );
