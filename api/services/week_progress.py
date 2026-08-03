@@ -215,14 +215,23 @@ def award_completed_week(
     if not isinstance(award, Mapping):
         return None
     normalized = dict(award)
-    dispatch_progress_award_notification(
-        store,
-        athlete_id=athlete_id,
-        action="full_training_week_completed",
-        award_result=normalized,
-        source_key=source_key,
-        timezone_name=athlete_timezone or "UTC",
-    )
+
+    try:
+        dispatch_progress_award_notification(
+            store,
+            athlete_id=athlete_id,
+            action="full_training_week_completed",
+            award_result=normalized,
+            source_key=source_key,
+            timezone_name=athlete_timezone or "UTC",
+        )
+    except Exception:  # noqa: BLE001 - push must not block lifecycle persistence
+        logger.exception(
+            "[notification] week completion delivery failed athlete_id=%s plan_id=%s week_id=%s",
+            athlete_id,
+            plan_id,
+            week_id,
+        )
 
     try:
         # Local import avoids a module cycle: plan milestones reuse this module's
