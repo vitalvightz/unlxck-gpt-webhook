@@ -21,7 +21,13 @@ def test_get_me_reconciles_activation_xp_from_persisted_response(monkeypatch):
     assert len(captured) == 1
     assert captured[0]["athlete_id"] == "athlete-1"
     assert captured[0]["profile"].athlete_id == "athlete-1"
-    assert captured[0]["latest_intake"] == response.json()["latest_intake"]
+    latest_intake = captured[0]["latest_intake"]
+    captured_intake = (
+        latest_intake.model_dump(mode="json")
+        if hasattr(latest_intake, "model_dump")
+        else latest_intake
+    )
+    assert captured_intake == response.json()["latest_intake"]
 
 
 def test_profile_update_reconciles_against_the_persisted_updated_profile(monkeypatch):
