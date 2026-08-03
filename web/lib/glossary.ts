@@ -1,12 +1,12 @@
 // Plain-English definitions for the coaching jargon the plan surfaces print.
 //
-// The plan renderer speaks S&C shorthand — "RPE 7", "AMRAP", "Prehab" — that a
+// The plan renderer speaks S&C shorthand ("RPE 7", "AMRAP", "Prehab") that a
 // fighter reading their own plan has no reason to know. Every term here is
 // rendered with the same "?" affordance the intake form already uses, so the
 // definition is one tap away instead of something the athlete has to look up.
 //
 // Keep definitions to one or two sentences: the bubble is a glance, not a
-// lesson. Add a term only when the label itself is opaque — plain words like
+// lesson. Add a term only when the label itself is opaque. Plain words like
 // Duration, Rest or Swaps do not belong here, and a "?" on every label would
 // bury the ones that matter.
 
@@ -25,7 +25,7 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   rpe: {
     term: "RPE",
     definition:
-      "Rate of Perceived Exertion — how hard the work should feel, from 1 (barely working) to 10 (all-out). Around 7-8 you could still manage 2-3 more reps; anything under 3 is easy, recovery-pace work.",
+      "Rate of Perceived Exertion: how hard the work should feel, from 1 (barely working) to 10 (all-out). Around 7-8 you could still manage 2-3 more reps; anything under 3 is easy, recovery-pace work.",
   },
   effort: {
     term: "Effort",
@@ -35,7 +35,7 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   load: {
     term: "Load",
     definition:
-      "How heavy to go — a weight, a percentage of the heaviest single rep you could manage (1RM), or a cue like bodyweight. Pick the load that lets you hit the target effort with clean technique.",
+      "How heavy to go: a weight, a percentage of the heaviest single rep you could manage (1RM), or a cue like bodyweight. Pick the load that lets you hit the target effort with clean technique.",
   },
   volume: {
     term: "Volume",
@@ -50,7 +50,7 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   rehab: {
     term: "Rehab",
     definition:
-      "Targeted work for an injury you are still carrying — it settles the area down and rebuilds it. Shorten or skip it on a day it hurts, and keep it well inside pain-free range.",
+      "Targeted work for an injury you are still carrying. It settles the area down and rebuilds it. Shorten or skip it on a day it hurts, and keep it well inside pain-free range.",
   },
   prehab: {
     term: "Prehab",
@@ -60,12 +60,12 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   mobility: {
     term: "Mobility",
     definition:
-      "Controlled range-of-motion work — moving a joint through its full range under your own control. It is preparation and maintenance, not stretching for its own sake.",
+      "Controlled range-of-motion work: moving a joint through its full range under your own control. It is preparation and maintenance, not stretching for its own sake.",
   },
   "stop rule": {
     term: "Stop rule",
     definition:
-      "The signal to end this block early. If it shows up, stop — finishing the prescription is never worth the setback.",
+      "The signal to end this block early. If it shows up, stop. Finishing the prescription is never worth the setback.",
   },
   deload: {
     term: "Deload",
@@ -80,12 +80,12 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   gpp: {
     term: "GPP",
     definition:
-      "General Physical Preparation — the base-building phase. Broad strength, conditioning and durability work that is not yet specific to your opponent or ruleset.",
+      "General Physical Preparation: the base-building phase. Broad strength, conditioning and durability work that is not yet specific to your opponent or ruleset.",
   },
   spp: {
     term: "SPP",
     definition:
-      "Specific Physical Preparation — the phase where training narrows to the demands of your fight: your rounds, your positions, your pace.",
+      "Specific Physical Preparation. Training narrows to the demands of your fight: your rounds, your positions, your pace.",
   },
 };
 

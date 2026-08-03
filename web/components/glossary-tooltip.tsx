@@ -4,7 +4,7 @@ import { WhyTooltip } from "@/components/why-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 
 /**
- * The "?" that explains a jargon label on a plan surface — same affordance the
+ * The "?" that explains a jargon label on a plan surface. Same affordance the
  * intake form uses for its unavailable options, sized down to sit beside a
  * small-caps stat label.
  *

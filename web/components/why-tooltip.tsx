@@ -12,7 +12,7 @@ import {
 import { createPortal } from "react-dom";
 
 /** useLayoutEffect measures the bubble before paint, but React warns when it is
- * used during SSR — and this component IS server-rendered (closed, so the effect
+ * used during SSR, and this component IS server-rendered (closed, so the effect
  * has nothing to do). Fall back to useEffect on the server. */
 const useMeasureEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -52,7 +52,7 @@ type BubblePosition = {
  * with `overflow: hidden` (the plan accordion, the week rail) clipped it, and a
  * trigger near a screen edge pushed it off-screen. It now renders in a portal on
  * <body> with fixed coordinates measured from the trigger, flipping below when
- * there is no room above and clamping to the viewport on both axes — so wherever
+ * there is no room above and clamping to the viewport on both axes, so wherever
  * the "?" appears, the explanation is fully readable.
  */
 export function WhyTooltip({
@@ -95,7 +95,7 @@ export function WhyTooltip({
   }, [cancelClose]);
 
   /** Leaves the bubble open briefly so the pointer can travel into it. A pinned
-   * bubble ignores this — it was opened on purpose and stays until dismissed. */
+   * bubble ignores this: it was opened on purpose and stays until dismissed. */
   const closeSoon = useCallback(() => {
     if (pinned.current) {
       return;
@@ -120,7 +120,7 @@ export function WhyTooltip({
     const bubbleRect = bubble.getBoundingClientRect();
     // clientWidth/Height is the layout viewport (it excludes the scrollbar,
     // which innerWidth does not), but it reads 0 before the document has a
-    // layout box — fall back rather than clamp everything into the corner.
+    // layout box, so fall back rather than clamp everything into the corner.
     const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
     const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
     const { width, height } = bubbleRect;
@@ -255,7 +255,7 @@ export function WhyTooltip({
         aria-label={ariaLabel ?? `Why this changed: ${title}`}
         onFocus={openNow}
         // Blur is an unambiguous "focus has left" signal, so it dismisses even a
-        // pinned bubble — otherwise tabbing away would strand it on screen.
+        // pinned bubble, otherwise tabbing away would strand it on screen.
         onBlur={closeNow}
         onClick={(event) => {
           event.preventDefault();
