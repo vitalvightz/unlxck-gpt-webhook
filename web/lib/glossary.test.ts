@@ -36,13 +36,60 @@ test("a missing or non-string label is not a lookup error", () => {
   assert.equal(glossaryEntry(""), null);
 });
 
+// Mirrors EffortMethod in api/structured_plan_models.py. A block's effort card is
+// glossed from block.effort.method, so every value the backend can emit needs its
+// own definition or the athlete reads the wrong scale.
+const EFFORT_METHODS: Array<[string, string]> = [
+  ["RPE", "RPE"],
+  ["RIR", "RIR"],
+  ["intent", "Intent"],
+  ["velocity", "Velocity"],
+  ["heart_rate_zone", "Heart rate zone"],
+  ["pace", "Pace"],
+  ["max_effort_percent", "Max effort %"],
+];
+
+test("each effort method resolves to its own definition, not to RPE's", () => {
+  for (const [method, term] of EFFORT_METHODS) {
+    const entry = glossaryEntry(method);
+    assert.ok(entry, `expected an entry for effort method "${method}"`);
+    assert.equal(entry.term, term);
+    if (method !== "RPE") {
+      assert.doesNotMatch(
+        entry.definition,
+        /Rate of Perceived Exertion/,
+        `"${method}" must not be explained as RPE`,
+      );
+    }
+  }
+});
+
+test("the bare label \"Effort\" resolves to nothing", () => {
+  // The label alone does not say which scale is in play, and a generic RPE-ish
+  // definition sitting under that key is exactly how a wrong gloss creeps back.
+  assert.equal(glossaryEntry("Effort"), null);
+});
+
 test("every definition stays short enough to read in a tooltip", () => {
-  for (const term of ["RPE", "Load", "Volume", "Mode", "Rehab", "Prehab", "Stop rule", "Deload", "Taper", "GPP", "SPP"]) {
+  const terms = [
+    ...EFFORT_METHODS.map(([method]) => method),
+    "Load",
+    "Volume",
+    "Mode",
+    "Rehab",
+    "Prehab",
+    "Stop rule",
+    "Deload",
+    "Taper",
+    "GPP",
+    "SPP",
+  ];
+  for (const term of terms) {
     const entry = glossaryEntry(term);
     assert.ok(entry, `expected an entry for "${term}"`);
     assert.ok(
       entry.definition.length <= 320,
-      `"${term}" definition is ${entry.definition.length} chars — too long for a glance`,
+      `"${term}" definition is ${entry.definition.length} chars, too long for a glance`,
     );
   }
 });

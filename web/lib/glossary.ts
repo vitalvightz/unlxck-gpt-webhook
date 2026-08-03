@@ -20,6 +20,18 @@ export type GlossaryEntry = {
  * Keyed by the lowercased term as it is rendered on screen, so a caller can pass
  * the label it is already printing (`Volume`, `Stop rule`, a Rehab/Prehab tag)
  * and get a definition only when one exists.
+ *
+ * The effort keys are the EffortMethod enum values from
+ * api/structured_plan_models.py, because a block's effort card is glossed from
+ * block.effort.method, never from the word "Effort". A block prescribing
+ * "intent max" or "RIR 2" must not be explained with the RPE scale. There is
+ * deliberately NO "effort" entry: the label alone does not say which scale is in
+ * play, so an unrecognised method renders no tooltip at all.
+ *
+ * Careful with `intent`: it is an EffortMethod here (how fast you try to move),
+ * and ALSO a mindset-anchor label meaning something entirely different. The
+ * mindset card renders no tooltips for that reason; gloss it from a label and it
+ * would explain a focus cue as bar speed.
  */
 const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   rpe: {
@@ -27,10 +39,35 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
     definition:
       "Rate of Perceived Exertion: how hard the work should feel, from 1 (barely working) to 10 (all-out). Around 7-8 you could still manage 2-3 more reps; anything under 3 is easy, recovery-pace work.",
   },
-  effort: {
-    term: "Effort",
+  rir: {
+    term: "RIR",
     definition:
-      "How hard to push, given as RPE (Rate of Perceived Exertion) from 1 (barely working) to 10 (all-out). Around 7-8 you could still manage 2-3 more reps; anything under 3 is easy, recovery-pace work.",
+      "Reps In Reserve: how many more reps you should have left when you rack the set. RIR 2 means stopping with 2 clean reps still in you; RIR 0 means going to failure.",
+  },
+  intent: {
+    term: "Intent",
+    definition:
+      "How hard you try to move, not how heavy the load is. Max intent means driving every rep as fast as you can, even when the weight itself is light.",
+  },
+  velocity: {
+    term: "Velocity",
+    definition:
+      "Bar or limb speed, usually in metres per second. Hold the prescribed speed and drop the load once you fall below it, rather than grinding slower reps.",
+  },
+  heart_rate_zone: {
+    term: "Heart rate zone",
+    definition:
+      "The heart-rate band to stay inside. Zones 1-2 are easy aerobic work you could hold a conversation through, zones 3-4 are hard breathing, zone 5 is close to your maximum.",
+  },
+  pace: {
+    term: "Pace",
+    definition:
+      "The speed to hold, usually time per kilometre or per round. Pace is the target, so let effort rise and fall with terrain or fatigue to keep it honest.",
+  },
+  max_effort_percent: {
+    term: "Max effort %",
+    definition:
+      "A percentage of your maximum for this movement. 90% sits near your top end; 60% is comfortably submaximal work you can repeat cleanly.",
   },
   load: {
     term: "Load",
