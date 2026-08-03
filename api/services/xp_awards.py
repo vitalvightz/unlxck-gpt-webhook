@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
+from threading import Lock
 from typing import Any
 
 from api.services.active_plan import resolve_active_plan
@@ -18,6 +19,42 @@ ACTIVATION_READY_PLAN_STATUSES = frozenset({"ready", "publishable_with_flags"})
 # Disabled coming-soon options and arbitrary persisted strings do not complete
 # the activation profile milestone.
 ACTIVATION_COMBAT_SPORTS = frozenset({"boxing", "kickboxing", "mma"})
+_XP_HARDENING_LOCK = Lock()
+_VALIDATED_XP_CLIENT_IDS: set[int] = set()
+
+
+def ensure_xp_abuse_hardening(store: AppStore) -> None:
+    """Fail XP writes closed unless the matching database migration is live.
+
+    In-memory/test stores have no Supabase client and are allowed through. The
+    live AppStore must expose the validation RPC added by the hardening
+    migration. Successful validation is cached per client instance.
+    """
+
+    custom = getattr(store, "validate_xp_abuse_hardening", None)
+    if callable(custom):
+        result = custom()
+        if result is False:
+            raise RuntimeError("XP abuse hardening validation failed")
+        return
+
+    client: Any | None = getattr(store, "client", None)
+    if client is None:
+        return
+    client_id = id(client)
+    if client_id in _VALIDATED_XP_CLIENT_IDS:
+        return
+
+    with _XP_HARDENING_LOCK:
+        if client_id in _VALIDATED_XP_CLIENT_IDS:
+            return
+        response = client.rpc("validate_xp_abuse_hardening").execute()
+        payload = getattr(response, "data", None)
+        if isinstance(payload, list):
+            payload = payload[0] if payload else None
+        if not isinstance(payload, Mapping) or payload.get("ok") is not True:
+            raise RuntimeError("XP abuse hardening validation failed")
+        _VALIDATED_XP_CLIENT_IDS.add(client_id)
 
 
 def _award(
@@ -29,6 +66,7 @@ def _award(
     calendar_date: str | None = None,
 ) -> dict | None:
     try:
+        ensure_xp_abuse_hardening(store)
         result = store.award_xp(
             athlete_id,
             action=action,
@@ -185,9 +223,6 @@ def reconcile_activation_xp(
     if profile_result:
         results.append(profile_result)
 
-    # ``latest_intake`` is supplied only when _build_me_response found a
-    # persisted athlete_intakes row. The intake payload itself does not need
-    # to expose the row id because the reward is athlete-wide and first-only.
     intake_result = _reconcile_activation_milestone(
         store,
         athlete_id=athlete_id,
@@ -255,6 +290,7 @@ def _feedback_reconcile_result(
     feedback_id: str,
     target_amount: int,
 ) -> dict | None:
+    ensure_xp_abuse_hardening(store)
     custom = getattr(store, "reconcile_feedback_xp", None)
     if callable(custom):
         result = custom(
