@@ -101,7 +101,7 @@ test("global feedback requests an immediate XP refresh after a successful save",
     const form = container.querySelector<HTMLFormElement>("form");
     assert.ok(form);
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
     });
     await settle();
 
