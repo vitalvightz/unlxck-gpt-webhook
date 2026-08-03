@@ -52,6 +52,16 @@ function progressResponse(totalXp: number, awards: ApiAward[] = []): Response {
   );
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 function installFetchStub(
   handler: (index: number) => Promise<Response> | Response,
 ): FetchStub {
@@ -205,6 +215,44 @@ test("two session awards are aggregated into one +75 routine event", async () =>
   }
 });
 
+test("milestone feedback outranks the session label in a reconciled batch", async () => {
+  const milestoneBatch: ApiAward[] = [
+    {
+      id: "phase-1",
+      action: "phase_completed",
+      amount: 200,
+      awarded_at: "2026-08-03T15:00:04Z",
+    },
+    {
+      id: "week-1",
+      action: "full_training_week_completed",
+      amount: 100,
+      awarded_at: "2026-08-03T15:00:03Z",
+    },
+    ...sessionAwards,
+  ];
+  const responses = [
+    progressResponse(1_000),
+    progressResponse(1_375, milestoneBatch),
+  ];
+  const fetchStub = installFetchStub((index) => responses[index] ?? responses.at(-1)!);
+  const harness = await mountProvider({ athleteId: "athlete-1", accessToken: "token-1" });
+
+  try {
+    await waitFor(() => harness.read().isHydrated, "baseline progress read did not finish");
+    await harness.refresh();
+    assert.deepEqual(harness.read().feedback, {
+      kind: "routine",
+      amount: 375,
+      label: "Training phase complete",
+      awardIds: ["phase-1", "week-1", "planned-1", "logged-1"],
+    });
+  } finally {
+    await harness.unmount();
+    fetchStub.restore();
+  }
+});
+
 test("level-up feedback wins over the routine award message", async () => {
   const levelAward: ApiAward = {
     id: "week-1",
@@ -233,12 +281,17 @@ test("level-up feedback wins over the routine award message", async () => {
 });
 
 test("the global refresh event rereads progress immediately", async () => {
-  const responses = [progressResponse(100), progressResponse(110, [{
-    id: "checkin-1",
-    action: "readiness_checkin_completed",
-    amount: 10,
-    awarded_at: "2026-08-03T15:20:00Z",
-  }])];
+  const responses = [
+    progressResponse(100),
+    progressResponse(110, [
+      {
+        id: "checkin-1",
+        action: "readiness_checkin_completed",
+        amount: 10,
+        awarded_at: "2026-08-03T15:20:00Z",
+      },
+    ]),
+  ];
   const fetchStub = installFetchStub((index) => responses[index] ?? responses.at(-1)!);
   const harness = await mountProvider({ athleteId: "athlete-1", accessToken: "token-1" });
 
@@ -247,6 +300,48 @@ test("the global refresh event rereads progress immediately", async () => {
     await act(async () => requestXpRefresh());
     await waitFor(() => fetchStub.calls.length === 2, "XP refresh event did not read progress");
     assert.equal(harness.read().progress.state.totalXp, 110);
+  } finally {
+    await harness.unmount();
+    fetchStub.restore();
+  }
+});
+
+test("a refresh event during an active read queues a trailing GET", async () => {
+  const initialRead = deferred<Response>();
+  const checkinAward: ApiAward = {
+    id: "checkin-queued",
+    action: "readiness_checkin_completed",
+    amount: 10,
+    awarded_at: "2026-08-03T15:30:00Z",
+  };
+  const fetchStub = installFetchStub((index) =>
+    index === 0
+      ? initialRead.promise
+      : progressResponse(110, [checkinAward]),
+  );
+  const harness = await mountProvider({ athleteId: "athlete-1", accessToken: "token-1" });
+
+  try {
+    await waitFor(() => fetchStub.calls.length === 1, "initial XP read did not start");
+    await act(async () => requestXpRefresh());
+    assert.equal(fetchStub.calls.length, 1, "trailing read started before the active read settled");
+
+    await act(async () => {
+      initialRead.resolve(progressResponse(100));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => fetchStub.calls.length === 2, "queued XP refresh did not issue a second GET");
+    await waitFor(
+      () => harness.read().progress.state.totalXp === 110,
+      "queued XP refresh did not load the updated total",
+    );
+    assert.deepEqual(harness.read().feedback, {
+      kind: "routine",
+      amount: 10,
+      label: "Check-in complete",
+      awardIds: ["checkin-queued"],
+    });
   } finally {
     await harness.unmount();
     fetchStub.restore();
