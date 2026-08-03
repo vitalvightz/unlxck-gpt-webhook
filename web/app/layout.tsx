@@ -10,12 +10,14 @@ import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirec
 import { PrivateBetaNutritionGate } from "@/components/private-beta-nutrition-link";
 import { PwaRegister } from "@/components/pwa-register";
 import { ToastProvider } from "@/components/toast-provider";
+import { XpAwardFeedback } from "@/components/xp-award-feedback";
 import { XpProvider } from "@/components/xp-provider";
 import { getServerShellSurface } from "@/lib/app-surface";
 import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
 import "./globals.css";
 import "./brand-surface.css";
+import "./xp-interface.css";
 
 const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.stringify(
   APPEARANCE_STORAGE_KEY,
@@ -95,6 +97,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <PasswordRecoveryRedirect />
             <PrivateBetaNutritionGate />
             <ToastProvider>
+              <XpAwardFeedback />
               <PwaRegister buildVersion={pwaBuildVersion}>
                 <GenerationStatusShell>
                   <div className="app-shell">
