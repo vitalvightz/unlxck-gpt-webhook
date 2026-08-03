@@ -56,6 +56,26 @@ def test_profile_update_reconciles_against_the_persisted_updated_profile(monkeyp
     assert persisted_profile.technical_style == ["boxing"]
 
 
+def test_admin_profile_reads_never_reconcile_athlete_xp(monkeypatch):
+    captured = []
+
+    def capture(_store, **kwargs):
+        captured.append(kwargs)
+        return []
+
+    monkeypatch.setattr(profile_routes, "reconcile_activation_xp", capture)
+    client, _, _ = _build_client()
+
+    response = client.get(
+        "/api/me",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["profile"]["role"] == "admin"
+    assert captured == []
+
+
 def test_activation_xp_failure_never_breaks_profile_reads(monkeypatch):
     def fail(*_args, **_kwargs):
         raise RuntimeError("xp unavailable")
