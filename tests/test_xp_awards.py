@@ -3,7 +3,9 @@ from types import SimpleNamespace
 from api.services.xp_awards import (
     award_checkin_xp,
     award_feedback_xp,
+    award_injury_update_xp,
     plan_activation_ready,
+    plan_completion_xp_eligible,
     profile_activation_complete,
     reconcile_activation_xp,
 )
@@ -177,7 +179,7 @@ def test_activation_xp_failures_never_break_state_reconciliation():
     ) == []
 
 
-def test_checkin_awards_first_and_daily_xp():
+def test_checkin_awards_first_and_daily_xp_with_authoritative_date():
     store = FakeStore()
     results = award_checkin_xp(
         store,
@@ -187,8 +189,97 @@ def test_checkin_awards_first_and_daily_xp():
     assert len(results) == 2
     assert store.calls == [
         ("athlete-1", "first_checkin_completed", "first-checkin:athlete-1", None),
-        ("athlete-1", "readiness_checkin_completed", "checkin:athlete-1:2026-08-03", None),
+        (
+            "athlete-1",
+            "readiness_checkin_completed",
+            "checkin:athlete-1:2026-08-03",
+            "2026-08-03",
+        ),
     ]
+
+
+def test_injury_update_is_one_reward_per_declaration_batch_and_athlete_day():
+    store = FakeStore()
+    result = award_injury_update_xp(
+        store,
+        athlete_id="athlete-1",
+        training_day="2026-08-03",
+        updated_injuries=[{"id": "injury-1"}, {"id": "injury-2"}],
+    )
+
+    assert result is not None
+    assert store.calls == [
+        (
+            "athlete-1",
+            "injury_update_completed",
+            "injury-update:athlete-1:2026-08-03",
+            "2026-08-03",
+        )
+    ]
+
+
+def test_empty_injury_declaration_does_not_award():
+    store = FakeStore()
+    assert award_injury_update_xp(
+        store,
+        athlete_id="athlete-1",
+        training_day="2026-08-03",
+        updated_injuries=[],
+    ) is None
+    assert store.calls == []
+
+
+def test_plan_completion_xp_requires_the_server_resolved_active_plan():
+    class ActivePlanStore:
+        def __init__(self, active_plan_id="plan-active"):
+            self.active_plan_id = active_plan_id
+            self.plans = {
+                "plan-active": {
+                    "id": "plan-active",
+                    "status": "ready",
+                    "fight_date": "2026-09-01",
+                    "created_at": "2026-07-01T00:00:00Z",
+                },
+                "plan-inactive": {
+                    "id": "plan-inactive",
+                    "status": "ready",
+                    "fight_date": "2026-10-01",
+                    "created_at": "2026-07-02T00:00:00Z",
+                },
+            }
+
+        def get_active_plan_id(self, athlete_id):
+            return self.active_plan_id
+
+        def get_plan_for_athlete(self, plan_id, athlete_id):
+            return self.plans.get(plan_id)
+
+        def list_user_plans(self, athlete_id):
+            return list(self.plans.values())
+
+    store = ActivePlanStore()
+    assert plan_completion_xp_eligible(
+        store,
+        athlete_id="athlete-1",
+        completion={"plan_id": "plan-active", "training_day": "2026-08-03"},
+    ) is True
+    assert plan_completion_xp_eligible(
+        store,
+        athlete_id="athlete-1",
+        completion={"plan_id": "plan-inactive", "training_day": "2026-08-03"},
+    ) is False
+
+
+def test_plan_completion_xp_fails_closed_when_active_plan_resolution_breaks():
+    class BrokenStore:
+        def get_active_plan_id(self, athlete_id):
+            raise RuntimeError("database unavailable")
+
+    assert plan_completion_xp_eligible(
+        BrokenStore(),
+        athlete_id="athlete-1",
+        completion={"plan_id": "plan-1", "training_day": "2026-08-03"},
+    ) is False
 
 
 def test_feedback_without_meaningful_comment_gets_one_xp():
@@ -260,4 +351,10 @@ def test_missing_source_ids_do_not_award():
     store = FakeStore()
     assert award_checkin_xp(store, athlete_id="athlete-1", checkin={}) == []
     assert award_feedback_xp(store, athlete_id="athlete-1", feedback={}) is None
+    assert award_injury_update_xp(
+        store,
+        athlete_id="athlete-1",
+        training_day="",
+        updated_injuries=[{"id": "injury-1"}],
+    ) is None
     assert store.calls == []
