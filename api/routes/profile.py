@@ -12,7 +12,7 @@ from api.models import (
     UsernameChangeRequest,
 )
 from api.plan_mappers import _build_me_response, _map_profile_row
-from api.services.xp_awards import reconcile_activation_xp
+from api.services.xp_awards import plan_activation_ready, reconcile_activation_xp
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,26 @@ logger = logging.getLogger(__name__)
 
 def build_profile_router(*, require_profile, get_store) -> APIRouter:
     router = APIRouter()
+
+    def _activation_ready_plan(
+        response: MeResponse,
+        store: AppStore,
+        athlete_id: str,
+    ) -> object | None:
+        """Find any persisted athlete-visible plan, not only the newest row."""
+
+        if plan_activation_ready(response.latest_plan):
+            return response.latest_plan
+        try:
+            for plan in store.list_user_plans(athlete_id):
+                if plan_activation_ready(plan):
+                    return plan
+        except Exception:  # noqa: BLE001 - activation reconciliation fails closed
+            logger.exception(
+                "[xp] ready plan lookup failed athlete_id=%s",
+                athlete_id,
+            )
+        return None
 
     def _build_me_with_activation_xp(
         profile: ProfileRecord,
@@ -34,7 +54,11 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
                 athlete_id=profile.athlete_id,
                 profile=response.profile,
                 latest_intake=response.latest_intake,
-                latest_plan=response.latest_plan,
+                latest_plan=_activation_ready_plan(
+                    response,
+                    store,
+                    profile.athlete_id,
+                ),
             )
         except Exception:  # noqa: BLE001 - XP must never break profile reads
             logger.exception(
