@@ -27,6 +27,8 @@ XpAction = Literal[
     "feedback_submitted",
     "feedback_with_comment",
     "first_plan_completed",
+    "phase_completed",
+    "camp_completed",
 ]
 
 XP_REWARD_AMOUNTS: dict[XpAction, int] = {
@@ -45,6 +47,8 @@ XP_REWARD_AMOUNTS: dict[XpAction, int] = {
     "feedback_submitted": 1,
     "feedback_with_comment": 3,
     "first_plan_completed": 250,
+    "phase_completed": 200,
+    "camp_completed": 500,
 }
 
 
