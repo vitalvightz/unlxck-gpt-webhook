@@ -6,11 +6,25 @@ import json
 from pathlib import Path
 from typing import Any
 
-_CONTRACT_PATH = Path(__file__).resolve().parents[1] / "web" / "lib" / "xp-levels.json"
+_CONTRACT_PATH = Path(__file__).resolve().parents[1] / "shared" / "xp-levels.json"
 
 
 def _load_xp_levels() -> tuple[tuple[int, str, int], ...]:
-    raw: Any = json.loads(_CONTRACT_PATH.read_text(encoding="utf-8"))
+    try:
+        contract_text = _CONTRACT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "XP level contract is missing from the backend runtime at "
+            f"{_CONTRACT_PATH}. Ensure shared/xp-levels.json is packaged."
+        ) from exc
+
+    try:
+        raw: Any = json.loads(contract_text)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"XP level contract at {_CONTRACT_PATH} is not valid JSON"
+        ) from exc
+
     if not isinstance(raw, list) or not raw:
         raise RuntimeError("XP level contract must be a non-empty list")
 
