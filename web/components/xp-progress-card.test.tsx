@@ -165,6 +165,7 @@ test("restored Overview card CSS disables progress motion when requested", () =>
 test("Progress route keeps the compact card, athlete identity and latest-three history", () => {
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/progress/page.tsx", import.meta.url), "utf8");
+  const pageCss = readFileSync(new URL("../app/xp-progress-page.css", import.meta.url), "utf8");
   const card = readFileSync(new URL("./xp-progress-card.tsx", import.meta.url), "utf8");
 
   assert.match(layout, /<XpAwardFeedback \/>/);
@@ -179,11 +180,14 @@ test("Progress route keeps the compact card, athlete identity and latest-three h
   assert.match(page, /profile\.stance/);
   assert.match(page, /recentAwards\.slice\(0, 3\)/);
   assert.match(page, /Latest 3/);
-  assert.doesNotMatch(page, /Show all/);
-  assert.doesNotMatch(page, /showAllAwards/);
+  assert.doesNotMatch(page, /Show all|showAllAwards|hiddenAwardCount/);
+  assert.doesNotMatch(pageCss, /xp-award-toggle/);
   assert.match(page, /<details className="xp-page-panel xp-explanation xp-explanation-disclosure">/);
-  assert.match(page, /UNLXCK rank reflects your progress and completed work inside UNLXCK/);
-  assert.match(page, /There is no public leaderboard during private beta/);
+  assert.match(page, /UNLXCK XP tracks your progress inside the app\./);
+  assert.match(page, /Earn XP by completing training, check-ins and plan milestones\./);
+  assert.match(page, /Your rank reflects personal progress, not your official amateur or professional status\./);
+  assert.match(page, /In future, XP may also unlock discounts, rewards and opportunities through UNLXCK\./);
+  assert.match(page, /Public leaderboards are not available during private beta\./);
   assert.doesNotMatch(page, /Work banked\. Level earned\./);
   assert.doesNotMatch(page, /Available XP actions/);
   assert.doesNotMatch(page, /global leaderboard/i);
