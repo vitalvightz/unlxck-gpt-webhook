@@ -47,12 +47,13 @@ begin
   end if;
 
   -- This also covers first-time setup from an empty timezone after the athlete
-  -- has already trained or earned XP. Otherwise UTC activity could be followed
-  -- immediately by a far-ahead timezone and expose a second reward day.
+  -- has already trained, checked in, or earned calendar-scoped XP. One-time
+  -- onboarding awards do not block legitimate initial timezone setup.
   if exists (
     select 1
     from public.xp_awards as award
     where award.athlete_id = new.id
+      and award.calendar_date is not null
       and award.awarded_at > v_recent_activity_cutoff
   )
   or exists (
