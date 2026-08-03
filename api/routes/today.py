@@ -103,18 +103,21 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> TodayInjuryCheckinResponse:
-        now = datetime.now(timezone.utc)
+        # Pin the injury write and its calendar-scoped XP award to one instant so
+        # a request crossing the 03:00 training-day rollover cannot split them
+        # across two different athlete-local days.
+        request_now = datetime.now(timezone.utc)
         result = submit_today_injury_checkin(
             store,
             athlete_id=profile.athlete_id,
             athlete_timezone=profile.athlete_timezone,
             payload=request_body.model_dump(),
-            now=now,
+            now=request_now,
         )
         # The injury service owns the write but returns only the refreshed injury
-        # state. Resolve the same server-authoritative athlete-local day from the
-        # exact timestamp used for that write, including the 03:00 rollover.
-        training_day = resolve_training_day(profile.athlete_timezone, now=now)
+        # state. Resolve the same server-authoritative athlete-local day here
+        # rather than expecting an undocumented result field that is never set.
+        training_day = resolve_training_day(profile.athlete_timezone, now=request_now)
         # One successful declaration batch earns one daily reward. Returning all
         # open injury rows must never multiply XP, and an empty/no-op request
         # cannot farm the reward merely by re-reading existing injuries.
