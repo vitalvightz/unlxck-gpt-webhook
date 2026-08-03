@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date, datetime, timezone
 from typing import Any
 
+from api.services.open_plan_timeline import project_open_structured_plan
 from api.services.progress_notifications import dispatch_progress_award_notification
 from api.services.xp_awards import ensure_xp_abuse_hardening
 from api.store import AppStore
@@ -56,6 +57,32 @@ def _weeks(plan: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     if not isinstance(structured, Mapping):
         return []
     return _mapping_rows(structured.get("weeks"))
+
+
+def _plan_for_training_day(
+    plan: Mapping[str, Any],
+    training_day: str,
+) -> Mapping[str, Any]:
+    """Project renewable open-plan templates onto the requested calendar block.
+
+    Dated plans and non-open legacy plans pass through unchanged. Projection is
+    fail-closed: when the saved open template cannot be reconciled safely, the
+    original undated plan remains in place and no week can be awarded.
+    """
+
+    structured = plan.get("structured_plan")
+    if not isinstance(structured, Mapping):
+        return plan
+    projected, context = project_open_structured_plan(
+        plan,
+        structured,
+        current_training_day=training_day,
+    )
+    if str(context.get("projection_status") or "") != "projected":
+        return plan
+    normalized = dict(plan)
+    normalized["structured_plan"] = projected
+    return normalized
 
 
 def _planned_session_ids(week: Mapping[str, Any]) -> set[str]:
@@ -116,6 +143,18 @@ def _latest_statuses(
     return latest_by_session, ambiguous
 
 
+def _find_dated_week(
+    plan: Mapping[str, Any],
+    target: date,
+) -> Mapping[str, Any] | None:
+    for week in _weeks(plan):
+        start = _parse_date(week.get("start_date"))
+        end = _parse_date(week.get("end_date"))
+        if start is not None and end is not None and start <= target <= end:
+            return week
+    return None
+
+
 def find_week_for_training_day(
     plan: Mapping[str, Any],
     training_day: str,
@@ -123,12 +162,8 @@ def find_week_for_training_day(
     target = _parse_date(training_day)
     if target is None:
         return None
-    for week in _weeks(plan):
-        start = _parse_date(week.get("start_date"))
-        end = _parse_date(week.get("end_date"))
-        if start is not None and end is not None and start <= target <= end:
-            return week
-    return None
+    effective_plan = _plan_for_training_day(plan, training_day)
+    return _find_dated_week(effective_plan, target)
 
 
 def evaluate_week_completion(
@@ -220,10 +255,14 @@ def award_completed_week(
 ) -> dict[str, Any] | None:
     """Confirm a week, idempotently award XP, then reconcile lifecycle."""
 
-    week = find_week_for_training_day(plan, training_day)
+    target = _parse_date(training_day)
+    if target is None:
+        return None
+    effective_plan = _plan_for_training_day(plan, training_day)
+    week = _find_dated_week(effective_plan, target)
     if week is None:
         return None
-    plan_id = str(plan.get("id") or "").strip()
+    plan_id = str(effective_plan.get("id") or "").strip()
     week_id = str(week.get("week_id") or "").strip()
     start_date = str(week.get("start_date") or "").strip()
     end_date = str(week.get("end_date") or "").strip()
@@ -295,7 +334,7 @@ def award_completed_week(
         store,
         athlete_id=athlete_id,
         athlete_timezone=athlete_timezone,
-        plan=plan,
+        plan=effective_plan,
         week=week,
         completions=completions,
     )
