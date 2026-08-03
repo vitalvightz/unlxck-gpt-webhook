@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from api.routes import xp as xp_routes
 from api.services.xp_progress import _current_week, _opportunities
-from tests.support import _build_client
+from support import _build_client
 
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
