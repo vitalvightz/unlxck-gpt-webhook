@@ -1,7 +1,11 @@
 from types import SimpleNamespace
 
 from api.services.progress_notifications import award_session_progress
-from api.services.xp_awards import award_checkin_xp, award_feedback_xp
+from api.services.xp_awards import (
+    XP_ABUSE_HARDENING_VERSION,
+    award_checkin_xp,
+    award_feedback_xp,
+)
 
 
 class RpcBuilder:
@@ -13,12 +17,15 @@ class RpcBuilder:
         self.client.calls.append(self.name)
         if self.client.error:
             raise RuntimeError("missing hardening migration")
-        return SimpleNamespace(data={"ok": True, "version": "20260803181000"})
+        return SimpleNamespace(
+            data={"ok": True, "version": self.client.hardening_version}
+        )
 
 
 class Client:
-    def __init__(self, *, error=False):
+    def __init__(self, *, error=False, hardening_version=XP_ABUSE_HARDENING_VERSION):
         self.error = error
+        self.hardening_version = hardening_version
         self.calls = []
 
     def rpc(self, name, payload=None):
@@ -27,8 +34,16 @@ class Client:
 
 
 class Store:
-    def __init__(self, *, hardening_error=False):
-        self.client = Client(error=hardening_error)
+    def __init__(
+        self,
+        *,
+        hardening_error=False,
+        hardening_version=XP_ABUSE_HARDENING_VERSION,
+    ):
+        self.client = Client(
+            error=hardening_error,
+            hardening_version=hardening_version,
+        )
         self.awards = []
         self.feedback_calls = []
 
@@ -43,6 +58,21 @@ class Store:
 
 def test_activation_and_daily_awards_fail_closed_when_migration_is_missing():
     store = Store(hardening_error=True)
+
+    assert award_checkin_xp(
+        store,
+        athlete_id="athlete-1",
+        checkin={"id": "checkin-1", "training_day": "2026-08-03"},
+    ) == []
+    assert store.awards == []
+    assert store.client.calls == [
+        "validate_xp_abuse_hardening",
+        "validate_xp_abuse_hardening",
+    ]
+
+
+def test_partial_hardening_version_fails_closed_and_is_not_cached():
+    store = Store(hardening_version="20260803181000")
 
     assert award_checkin_xp(
         store,
