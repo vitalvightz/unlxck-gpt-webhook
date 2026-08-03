@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { Skeleton } from "@/components/skeleton";
@@ -89,7 +89,6 @@ function ProgressSkeleton() {
 export default function ProgressPage() {
   const { session, isReady, isMeHydrated, me } = useAppSession();
   const xp = useXp();
-  const [showAllAwards, setShowAllAwards] = useState(false);
 
   const fighterIdentity = useMemo(() => {
     if (!me) return [];
@@ -126,10 +125,7 @@ export default function ProgressPage() {
     profile.professional_status ? titleCase(profile.professional_status) : "",
     profile.record?.trim() || "",
   ].filter(Boolean);
-  const visibleAwards = showAllAwards
-    ? xp.progress.state.recentAwards
-    : xp.progress.state.recentAwards.slice(0, 5);
-  const hiddenAwardCount = Math.max(0, xp.progress.state.recentAwards.length - 5);
+  const visibleAwards = xp.progress.state.recentAwards.slice(0, 3);
 
   return (
     <div className="xp-page xp-page--refined">
@@ -255,32 +251,20 @@ export default function ProgressPage() {
             <p className="status-label">RECENT XP</p>
             <h2 id="xp-awards-title">Latest earned</h2>
           </div>
-          <span>{xp.progress.state.recentAwards.length} recorded</span>
+          <span>Latest 3</span>
         </div>
         {visibleAwards.length > 0 ? (
-          <>
-            <div className="xp-award-list">
-              {visibleAwards.map((award) => (
-                <div key={award.id} className="xp-award-row">
-                  <div>
-                    <strong>{XP_ACTIONS[award.action].label}</strong>
-                    <span>{dateTimeFormatter.format(new Date(award.awardedAt))}</span>
-                  </div>
-                  <span className="xp-award-amount">+{numberFormatter.format(award.amount)} XP</span>
+          <div className="xp-award-list">
+            {visibleAwards.map((award) => (
+              <div key={award.id} className="xp-award-row">
+                <div>
+                  <strong>{XP_ACTIONS[award.action].label}</strong>
+                  <span>{dateTimeFormatter.format(new Date(award.awardedAt))}</span>
                 </div>
-              ))}
-            </div>
-            {hiddenAwardCount > 0 ? (
-              <button
-                type="button"
-                className="xp-award-toggle"
-                onClick={() => setShowAllAwards((current) => !current)}
-                aria-expanded={showAllAwards}
-              >
-                {showAllAwards ? "Show latest 5" : `Show all ${xp.progress.state.recentAwards.length}`}
-              </button>
-            ) : null}
-          </>
+                <span className="xp-award-amount">+{numberFormatter.format(award.amount)} XP</span>
+              </div>
+            ))}
+          </div>
         ) : (
           <p className="xp-page-empty">Complete your first real action to begin the ledger.</p>
         )}
