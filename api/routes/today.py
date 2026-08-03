@@ -28,6 +28,7 @@ from api.models import (
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.services.progress_notifications import award_session_progress
+from api.services.today_service import resolve_training_day
 from api.services.week_progress import try_award_completed_week_for_completion
 from api.services.xp_awards import (
     award_checkin_xp,
@@ -107,7 +108,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             athlete_timezone=profile.athlete_timezone,
             payload=request_body.model_dump(),
         )
-        training_day = str(result.get("training_day") or "")
+        # The injury service owns the write but returns only the refreshed injury
+        # state. Resolve the same server-authoritative athlete-local day here
+        # rather than expecting an undocumented result field that is never set.
+        training_day = resolve_training_day(profile.athlete_timezone)
         # One successful declaration batch earns one daily reward. Returning all
         # open injury rows must never multiply XP, and an empty/no-op request
         # cannot farm the reward merely by re-reading existing injuries.
