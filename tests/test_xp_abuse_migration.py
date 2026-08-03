@@ -7,6 +7,7 @@ MIGRATIONS = (
     ROOT / "supabase" / "migrations" / "20260803175500_enforce_xp_source_integrity.sql",
     ROOT / "supabase" / "migrations" / "20260803180000_remove_xp_session_sample_cap.sql",
     ROOT / "supabase" / "migrations" / "20260803181000_lock_xp_to_one_plan_per_day.sql",
+    ROOT / "supabase" / "migrations" / "20260803182000_guard_timezone_day_rollover.sql",
 )
 TODAY_ROUTE = ROOT / "api" / "routes" / "today.py"
 
@@ -105,6 +106,16 @@ def test_regenerated_plans_share_stable_phase_and_camp_reward_scope():
     assert "plan is not eligible for new progress milestones" in sql
 
 
+def test_timezone_hopping_cannot_move_the_xp_training_day_repeatedly():
+    sql = _sql()
+    assert "athlete_timezone_updated_at" in sql
+    assert "athlete_timezone must be a valid iana timezone" in sql
+    assert "athlete_timezone cannot be cleared after it is set" in sql
+    assert "athlete_timezone can only be changed once every 24 hours" in sql
+    assert "athlete_timezone cannot change within 12 hours of training or xp activity" in sql
+    assert "profiles_validate_athlete_timezone_update" in sql
+
+
 def test_dormant_reward_types_are_rejected_until_live_hooks_exist():
     sql = _sql()
     assert "recommended_fighter_content_watched" in sql
@@ -112,13 +123,14 @@ def test_dormant_reward_types_are_rejected_until_live_hooks_exist():
     assert "xp action has no live authoritative earning hook" in sql
 
 
-def test_hardening_readiness_rpc_requires_indexes_and_both_source_triggers():
+def test_hardening_readiness_rpc_requires_indexes_and_all_source_guards():
     sql = _sql()
     assert "validate_xp_abuse_hardening" in sql
     assert "xp_awards_one_time_action_per_athlete" in sql
     assert "xp_awards_one_daily_action_per_athlete" in sql
     assert "xp_awards_source_integrity" in sql
     assert "xp_awards_plan_lock_and_week_completion" in sql
+    assert "profiles_validate_athlete_timezone_update" in sql
     assert "xp abuse hardening is incomplete" in sql
 
 
