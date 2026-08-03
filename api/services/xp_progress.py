@@ -173,17 +173,8 @@ def _award_exists(
     *,
     action: str | None = None,
     idempotency_key: str | None = None,
+    calendar_date: str | None = None,
 ) -> bool:
-    custom = getattr(store, "has_xp_award", None)
-    if callable(custom):
-        return bool(
-            custom(
-                athlete_id,
-                action=action,
-                idempotency_key=idempotency_key,
-            )
-        )
-
     awards_by_athlete = getattr(store, "xp_awards", None)
     if isinstance(awards_by_athlete, Mapping):
         for row in _rows(awards_by_athlete.get(athlete_id)):
@@ -192,6 +183,11 @@ def _award_exists(
             if (
                 idempotency_key is not None
                 and str(row.get("idempotency_key") or "") != idempotency_key
+            ):
+                continue
+            if (
+                calendar_date is not None
+                and str(row.get("calendar_date") or "") != calendar_date
             ):
                 continue
             return True
@@ -205,6 +201,8 @@ def _award_exists(
         query = query.eq("action", action)
     if idempotency_key is not None:
         query = query.eq("idempotency_key", idempotency_key)
+    if calendar_date is not None:
+        query = query.eq("calendar_date", calendar_date)
     return bool(_rows(_response_data(query.limit(1).execute())))
 
 
@@ -333,7 +331,8 @@ def _current_week(
     week_xp_earned = _award_exists(
         store,
         athlete_id,
-        idempotency_key=f"full-week:{plan_id}:{week_id}",
+        action="full_training_week_completed",
+        calendar_date=start_date,
     )
     return {
         "plan_id": plan_id,
@@ -462,29 +461,26 @@ def _opportunities(
         )
 
     open_injuries = getattr(command, "open_injuries", None)
-    if training_day and isinstance(open_injuries, Sequence):
-        needs_update = False
-        for injury in open_injuries:
-            if not isinstance(injury, Mapping):
-                continue
-            injury_id = str(injury.get("id") or "").strip()
-            if injury_id and not _award_exists(
-                store,
-                athlete_id,
-                idempotency_key=f"injury-update:{injury_id}:{training_day}",
-            ):
-                needs_update = True
-                break
-        if needs_update:
-            choices.append(
-                _opportunity(
-                    code="update_active_injury",
-                    label="Update today's active injury",
-                    xp=10,
-                    href="/today",
-                    priority=20,
-                )
+    if (
+        training_day
+        and isinstance(open_injuries, Sequence)
+        and any(isinstance(injury, Mapping) for injury in open_injuries)
+        and not _award_exists(
+            store,
+            athlete_id,
+            action="injury_update_completed",
+            calendar_date=training_day,
+        )
+    ):
+        choices.append(
+            _opportunity(
+                code="update_active_injury",
+                label="Update today's active injury",
+                xp=10,
+                href="/today",
+                priority=20,
             )
+        )
 
     session_scope = str(getattr(today, "session_scope", "") or "")
     next_session = getattr(today, "next_session", None)
