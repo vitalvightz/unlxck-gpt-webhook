@@ -274,22 +274,15 @@ export default function ProgressPage() {
         <summary>
           <span>
             <span className="status-label">HOW XP WORKS</span>
-            <strong>Progress, not competitive status</strong>
-            <small>UNLXCK rank reflects progress inside the app, not an official competitive rank.</small>
+            <strong>UNLXCK XP tracks your progress inside the app.</strong>
           </span>
           <span className="xp-details-chevron" aria-hidden="true">⌄</span>
         </summary>
         <div className="xp-explanation-content">
-          <p>
-            UNLXCK rank reflects your progress and completed work inside UNLXCK. It is not an official amateur,
-            professional or competitive ranking.
-          </p>
-          <ul>
-            <li>XP is earned through real actions such as training, check-ins and completed plan milestones.</li>
-            <li>Reopening the app does not generate XP.</li>
-            <li>Repeating an already-recorded action does not duplicate XP.</li>
-            <li>There is no public leaderboard during private beta.</li>
-          </ul>
+          <p>Earn XP by completing training, check-ins and plan milestones. As your XP grows, so does your UNLXCK rank.</p>
+          <p>Your rank reflects personal progress, not your official amateur or professional status.</p>
+          <p>In future, XP may also unlock discounts, rewards and opportunities through UNLXCK.</p>
+          <p>Public leaderboards are not available during private beta.</p>
         </div>
       </details>
     </div>
