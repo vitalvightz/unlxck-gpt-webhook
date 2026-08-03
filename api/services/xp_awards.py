@@ -19,22 +19,33 @@ ACTIVATION_READY_PLAN_STATUSES = frozenset({"ready", "publishable_with_flags"})
 # Disabled coming-soon options and arbitrary persisted strings do not complete
 # the activation profile milestone.
 ACTIVATION_COMBAT_SPORTS = frozenset({"boxing", "kickboxing", "mma"})
+XP_ABUSE_HARDENING_VERSION = "20260803182000"
 _XP_HARDENING_LOCK = Lock()
 _XP_HARDENING_VALIDATED_ATTR = "_unlxck_xp_abuse_hardening_validated"
 
 
+def _hardening_payload_is_current(value: object) -> bool:
+    if isinstance(value, list):
+        value = value[0] if value else None
+    return bool(
+        isinstance(value, Mapping)
+        and value.get("ok") is True
+        and str(value.get("version") or "") == XP_ABUSE_HARDENING_VERSION
+    )
+
+
 def ensure_xp_abuse_hardening(store: AppStore) -> None:
-    """Fail XP writes closed unless the matching database migration is live.
+    """Fail XP writes closed unless the exact database hardening is live.
 
     In-memory/test stores have no Supabase client and are allowed through. The
-    live AppStore must expose the validation RPC added by the hardening
-    migration. Successful validation is cached on that exact store instance.
+    live AppStore must expose the validation RPC added by the final hardening
+    migration. Successful validation is cached on that exact store instance only
+    after the returned version exactly matches the backend contract.
     """
 
     custom = getattr(store, "validate_xp_abuse_hardening", None)
     if callable(custom):
-        result = custom()
-        if result is False:
+        if not _hardening_payload_is_current(custom()):
             raise RuntimeError("XP abuse hardening validation failed")
         return
 
@@ -49,9 +60,7 @@ def ensure_xp_abuse_hardening(store: AppStore) -> None:
             return
         response = client.rpc("validate_xp_abuse_hardening").execute()
         payload = getattr(response, "data", None)
-        if isinstance(payload, list):
-            payload = payload[0] if payload else None
-        if not isinstance(payload, Mapping) or payload.get("ok") is not True:
+        if not _hardening_payload_is_current(payload):
             raise RuntimeError("XP abuse hardening validation failed")
         setattr(store, _XP_HARDENING_VALIDATED_ATTR, True)
 
