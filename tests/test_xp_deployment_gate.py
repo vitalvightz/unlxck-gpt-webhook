@@ -94,7 +94,9 @@ def test_missing_service_role_configuration_fails_closed(
 
 
 def test_api_health_requires_database_rollout_and_http_health() -> None:
+    assert "test -f /tmp/unlxck-xp-hardening-ready" in COMPOSE
     assert "python tools/check_xp_hardening_rollout.py" in COMPOSE
+    assert "touch /tmp/unlxck-xp-hardening-ready" in COMPOSE
     assert "curl --fail --silent http://127.0.0.1:8000/health" in COMPOSE
     assert COMPOSE.index("python tools/check_xp_hardening_rollout.py") < COMPOSE.index(
         "curl --fail --silent http://127.0.0.1:8000/health"
