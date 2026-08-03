@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from datetime import datetime, timezone
+from typing import Any
 
 from api.store import AppStore
 
@@ -73,6 +74,41 @@ def _normalized_comment(record: Mapping[str, object]) -> str:
     return " ".join(str(record.get("comment") or "").split())
 
 
+def _feedback_reconcile_result(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    feedback_id: str,
+    target_amount: int,
+) -> dict | None:
+    custom = getattr(store, "reconcile_feedback_xp", None)
+    if callable(custom):
+        result = custom(
+            athlete_id,
+            feedback_id=feedback_id,
+            target_amount=target_amount,
+        )
+        return result if isinstance(result, dict) else None
+
+    client: Any | None = getattr(store, "client", None)
+    if client is None:
+        logger.error("[xp] feedback reconciliation unavailable athlete_id=%s", athlete_id)
+        return None
+
+    response = client.rpc(
+        "reconcile_feedback_xp",
+        {
+            "p_athlete_id": athlete_id,
+            "p_feedback_id": feedback_id,
+            "p_target_amount": target_amount,
+        },
+    ).execute()
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if payload else None
+    return payload if isinstance(payload, dict) else None
+
+
 def award_feedback_xp(
     store: AppStore,
     *,
@@ -84,17 +120,13 @@ def award_feedback_xp(
         return None
     comment = _normalized_comment(feedback)
     target_amount = 3 if len(comment) >= MIN_FEEDBACK_COMMENT_CHARS else 1
-    reconcile = getattr(store, "reconcile_feedback_xp", None)
-    if not callable(reconcile):
-        logger.error("[xp] feedback reconciliation unavailable athlete_id=%s", athlete_id)
-        return None
     try:
-        result = reconcile(
-            athlete_id,
+        return _feedback_reconcile_result(
+            store,
+            athlete_id=athlete_id,
             feedback_id=feedback_id,
             target_amount=target_amount,
         )
-        return result if isinstance(result, dict) else None
     except Exception:  # noqa: BLE001 - XP must never break feedback persistence
         logger.exception(
             "[xp] feedback reconciliation failed athlete_id=%s feedback_id=%s target_amount=%s",
