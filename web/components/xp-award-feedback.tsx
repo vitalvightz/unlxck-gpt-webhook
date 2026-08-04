@@ -12,7 +12,7 @@ export function XpAwardFeedback() {
 
   useEffect(() => {
     if (!feedback || feedback.kind !== "routine") return;
-    showToast(`+${feedback.amount} XP — ${feedback.label}`, {
+    showToast(`+${feedback.amount} XP: ${feedback.label}`, {
       tone: "success",
       durationMs: 4_500,
     });
@@ -45,7 +45,7 @@ export function XpAwardFeedback() {
       </button>
       <p className="xp-level-up-kicker">LEVEL UP</p>
       <h2 id="xp-level-up-title">
-        LEVEL {feedback.level} — {feedback.title.toUpperCase()}
+        LEVEL {feedback.level}: {feedback.title.toUpperCase()}
       </h2>
       <p id="xp-level-up-message">{feedback.message}</p>
       <Link href="/progress" onClick={dismissFeedback}>
