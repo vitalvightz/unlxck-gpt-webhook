@@ -162,6 +162,14 @@ test("restored Overview card CSS disables progress motion when requested", () =>
   assert.doesNotMatch(css, /xp-progress-open/);
 });
 
+test("XP notifications use colons rather than em dashes", () => {
+  const feedback = readFileSync(new URL("./xp-award-feedback.tsx", import.meta.url), "utf8");
+
+  assert.match(feedback, /XP: \$\{feedback\.label\}/);
+  assert.match(feedback, /LEVEL \{feedback\.level\}: \{feedback\.title\.toUpperCase\(\)\}/);
+  assert.doesNotMatch(feedback, /—/);
+});
+
 test("Progress route keeps the compact card, athlete identity and latest-three history", () => {
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/progress/page.tsx", import.meta.url), "utf8");
