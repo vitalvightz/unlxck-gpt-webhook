@@ -10,6 +10,7 @@ from tests.support import FakeStore, _build_client, _build_request, finalized_re
 
 ATHLETE = "athlete-1"
 AUTH = {"Authorization": "Bearer athlete-token"}
+ANKLE_DESCRIPTION = "Left ankle: tendon ligament. sprain"
 
 
 def _active_ankle_intake() -> dict:
@@ -70,6 +71,28 @@ def _seed_generated_plan(
     return plan
 
 
+def _create_legacy_ankle_flag(
+    store: FakeStore,
+    *,
+    plan_id: str,
+    status: str,
+    resolved_at: str | None = None,
+) -> dict:
+    return store.create_injury_flag(
+        ATHLETE,
+        {
+            "plan_id": plan_id,
+            "source": "intake",
+            "source_key": None,
+            "body_area": "Left ankle",
+            "description": ANKLE_DESCRIPTION,
+            "severity": "moderate",
+            "status": status,
+            "resolved_at": resolved_at,
+        },
+    )
+
+
 def test_canonical_background_path_recognises_medically_cleared_active_injury() -> None:
     """XP and notification consumers call the canonical boundary directly."""
     store = FakeStore()
@@ -97,7 +120,12 @@ def test_today_and_plan_reads_create_one_intake_flag_under_concurrency() -> None
         return client.get(f"/api/plans/{plan['id']}", headers=AUTH).status_code
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        statuses = list(pool.map(lambda index: read_today() if index % 2 else read_plan(), range(16)))
+        statuses = list(
+            pool.map(
+                lambda index: read_today() if index % 2 else read_plan(),
+                range(16),
+            )
+        )
 
     assert statuses == [200] * 16
     intake_flags = [
@@ -119,7 +147,13 @@ def test_resolved_old_plan_injury_does_not_block_new_same_area_injury() -> None:
         athlete_id=ATHLETE,
         plan_row=old_plan,
     )
-    old_flags[0]["status"] = "resolved"
+    store.update_injury_flag(
+        old_flags[0]["id"],
+        {
+            "status": "resolved",
+            "resolved_at": "2026-08-01T12:00:00+00:00",
+        },
+    )
 
     new_plan = _seed_generated_plan(
         store,
@@ -156,9 +190,94 @@ def test_failed_injury_flag_read_causes_no_blind_insert() -> None:
     assert store.injury_flags.get(ATHLETE, []) == []
 
 
+def test_legacy_open_null_key_is_adopted_without_duplicate() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(store, intake_id="intake-current")
+    legacy = _create_legacy_ankle_flag(
+        store,
+        plan_id=plan["id"],
+        status="open",
+    )
+
+    active = sync_intake_injuries_for_plan(
+        store,
+        athlete_id=ATHLETE,
+        plan_row=plan,
+    )
+
+    rows = [
+        flag for flag in store.injury_flags[ATHLETE] if flag.get("source") == "intake"
+    ]
+    assert len(rows) == 1
+    assert rows[0]["id"] == legacy["id"]
+    assert rows[0]["status"] == "open"
+    assert rows[0]["source_key"]
+    assert [flag["id"] for flag in active] == [legacy["id"]]
+
+
+def test_legacy_resolved_null_key_stays_resolved_and_is_not_reopened() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(store, intake_id="intake-current")
+    resolved_at = "2026-08-02T09:15:00+00:00"
+    legacy = _create_legacy_ankle_flag(
+        store,
+        plan_id=plan["id"],
+        status="resolved",
+        resolved_at=resolved_at,
+    )
+
+    active = sync_intake_injuries_for_plan(
+        store,
+        athlete_id=ATHLETE,
+        plan_row=plan,
+    )
+
+    rows = [
+        flag for flag in store.injury_flags[ATHLETE] if flag.get("source") == "intake"
+    ]
+    assert active == []
+    assert len(rows) == 1
+    assert rows[0]["id"] == legacy["id"]
+    assert rows[0]["status"] == "resolved"
+    assert rows[0]["resolved_at"] == resolved_at
+    assert rows[0]["source_key"]
+
+
+def test_legacy_duplicates_are_collapsed_without_reopening_resolved_state() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(store, intake_id="intake-current")
+    _create_legacy_ankle_flag(
+        store,
+        plan_id=plan["id"],
+        status="open",
+    )
+    resolved = _create_legacy_ankle_flag(
+        store,
+        plan_id=plan["id"],
+        status="resolved",
+        resolved_at="2026-08-02T09:15:00+00:00",
+    )
+
+    active = sync_intake_injuries_for_plan(
+        store,
+        athlete_id=ATHLETE,
+        plan_row=plan,
+    )
+
+    rows = [
+        flag for flag in store.injury_flags[ATHLETE] if flag.get("source") == "intake"
+    ]
+    canonical = next(flag for flag in rows if flag["id"] == resolved["id"])
+    assert active == []
+    assert canonical["status"] == "resolved"
+    assert canonical["source_key"]
+    assert len({flag["source_key"] for flag in rows}) == 2
+    assert all(flag["status"] == "resolved" for flag in rows)
+
+
 def test_old_cleared_timeframe_remains_history_only() -> None:
     store = FakeStore()
-    plan = _seed_generated_plan(
+    _seed_generated_plan(
         store,
         intake_id="intake-history",
         intake={
