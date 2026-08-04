@@ -20,6 +20,7 @@ import pytest
 from fastapi import HTTPException
 
 from api.services import today_readiness_boundary as boundary
+from api.services import today_readiness_boundary_core as boundary_core
 from api.services import today_service
 from api.services.today_readiness_boundary import (
     build_today_command_view,
@@ -131,11 +132,13 @@ def test_check_in_delegates_to_canonical_service():
 
 def test_boundary_defines_no_competing_failsafe_decision():
     # There is one canonical decision mapping (apply_context_failsafe); the
-    # boundary imports it and does not define its own.
+    # boundary core imports it and does not define its own. The synchronization
+    # wrapper holds no decision logic at all.
     assert not hasattr(boundary, "_fail_safe_decision")
+    assert not hasattr(boundary_core, "_fail_safe_decision")
     from api.services import readiness_failsafe
 
-    assert boundary.apply_context_failsafe is readiness_failsafe.apply_context_failsafe
+    assert boundary_core.apply_context_failsafe is readiness_failsafe.apply_context_failsafe
 
 
 def test_legacy_failsafe_module_is_gone():
@@ -298,9 +301,9 @@ def test_command_view_holds_stored_green_when_injury_context_unavailable():
     # Structured reason code token present (no prose parsing required).
     assert f"reason_code:{INJURY_CONTEXT_UNAVAILABLE}" in view.today.warnings
     assert any(w.startswith("readiness_context_status=unavailable") for w in view.today.warnings)
-    assert any(risk.text == boundary._COMMAND_VIEW_REMINDER for risk in view.risk_watch)
+    assert any(risk.text == boundary_core._COMMAND_VIEW_REMINDER for risk in view.risk_watch)
     assert next(
-        risk for risk in view.risk_watch if risk.text == boundary._COMMAND_VIEW_REMINDER
+        risk for risk in view.risk_watch if risk.text == boundary_core._COMMAND_VIEW_REMINDER
     ).timeframe == "active"
 
 
