@@ -41,12 +41,22 @@ function savedFeedback(surface: "plan" | "global") {
     category: surface === "plan" ? "plan_usefulness" : "bug_report",
     response: surface === "plan" ? "yes" : null,
     reason: null,
-    comment: "",
+    comment: surface === "global" ? "Button clipped in Settings" : "",
     priority: "normal",
     has_screenshot: false,
     created_at: "2026-08-04T00:00:00Z",
     updated_at: "2026-08-04T00:00:00Z",
   };
+}
+
+function enterDescription(textarea: HTMLTextAreaElement, value: string) {
+  const valueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLTextAreaElement.prototype,
+    "value",
+  )?.set;
+  assert.ok(valueSetter);
+  valueSetter.call(textarea, value);
+  textarea.dispatchEvent(new window.Event("input", { bubbles: true }));
 }
 
 test("contextual feedback requests an immediate XP refresh after a successful save", async () => {
@@ -97,6 +107,10 @@ test("global feedback requests an immediate XP refresh after a successful save",
     await act(async () => {
       root.render(<GlobalFeedback token="test-token" />);
     });
+
+    const description = container.querySelector<HTMLTextAreaElement>("#global-feedback-description");
+    assert.ok(description);
+    act(() => enterDescription(description, "Button clipped in Settings"));
 
     const form = container.querySelector<HTMLFormElement>("form");
     assert.ok(form);

@@ -30,6 +30,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submissionLockRef = useRef(false);
+  const hasSubmission = Boolean(description.trim() || screenshot);
 
   useEffect(() => {
     return () => {
@@ -50,6 +51,11 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!hasSubmission) {
+      setMessage(null);
+      setError("Add a description or screenshot before sending feedback.");
+      return;
+    }
     if (submissionLockRef.current) return;
     submissionLockRef.current = true;
     const form = event.currentTarget;
@@ -96,7 +102,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         ))}
       </div>
       <div className="field">
-        <label htmlFor="global-feedback-description">Optional description</label>
+        <label htmlFor="global-feedback-description">Description</label>
         <textarea
           id="global-feedback-description"
           value={description}
@@ -107,7 +113,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         <span className="muted feedback-counter">{description.length}/500</span>
       </div>
       <div className="field">
-        <label htmlFor="global-feedback-screenshot">Optional screenshot</label>
+        <label htmlFor="global-feedback-screenshot">Screenshot</label>
         <input
           ref={fileInputRef}
           id="global-feedback-screenshot"
@@ -115,6 +121,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
           accept="image/png,image/jpeg,image/webp"
           onChange={(event) => selectScreenshot(event.target.files?.[0] ?? null)}
         />
+        <p className="feedback-privacy-copy">Add a description or screenshot before sending feedback.</p>
         <p className="feedback-privacy-copy">
           Avoid uploading screenshots containing private messages, contact details, payment information, or unrelated health information.
         </p>
@@ -154,7 +161,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         />
       </label>
       <div className="feedback-submit-row">
-        <button type="submit" className="cta" disabled={submitting}>
+        <button type="submit" className="cta" disabled={submitting || !hasSubmission}>
           {submitting ? "Sending…" : "Send feedback"}
         </button>
       </div>

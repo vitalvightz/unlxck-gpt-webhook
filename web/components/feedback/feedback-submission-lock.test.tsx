@@ -45,6 +45,16 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function enterDescription(textarea: HTMLTextAreaElement, value: string) {
+  const valueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLTextAreaElement.prototype,
+    "value",
+  )?.set;
+  assert.ok(valueSetter);
+  valueSetter.call(textarea, value);
+  textarea.dispatchEvent(new window.Event("input", { bubbles: true }));
+}
+
 test("global form accepts only one in-flight submission", async () => {
   const originalFetch = globalThis.fetch;
   const pendingPost = deferred<Response>();
@@ -62,6 +72,10 @@ test("global form accepts only one in-flight submission", async () => {
     await act(async () => {
       root.render(<GlobalFeedback token="test-token" />);
     });
+    const description = container.querySelector<HTMLTextAreaElement>("#global-feedback-description");
+    assert.ok(description);
+    act(() => enterDescription(description, "Button clipped in Settings"));
+
     const form = container.querySelector("form");
     assert.ok(form);
     act(() => {
@@ -76,7 +90,7 @@ test("global form accepts only one in-flight submission", async () => {
       category: "bug_report",
       response: null,
       reason: null,
-      comment: "",
+      comment: "Button clipped in Settings",
       priority: "normal",
       has_screenshot: false,
       created_at: "2026-07-12T00:00:00Z",
