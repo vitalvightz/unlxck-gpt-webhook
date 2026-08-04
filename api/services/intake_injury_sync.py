@@ -327,41 +327,33 @@ def sync_intake_injuries_for_plan(
     if not intake_payload:
         return open_flags
 
-    dedupe_readable, all_flags = _list_flags(store, athlete_id, statuses=_DEDUPE_STATUSES)
+    dedupe_readable, _all_flags = _list_flags(
+        store,
+        athlete_id,
+        statuses=_DEDUPE_STATUSES,
+    )
     if not dedupe_readable:
         return open_flags
-    existing_keys = {
-        str(flag.get("source_key") or "")
-        for flag in all_flags
-        if str(flag.get("source_key") or "")
-    }
 
-    seeded = list(open_flags)
     for raw_candidate in _intake_injury_candidates(intake_payload, plan_id=plan_id):
         candidate = {
             **raw_candidate,
             "source_key": _source_key(plan_id=plan_id, candidate=raw_candidate),
         }
-        source_key = str(candidate["source_key"])
-        if source_key in existing_keys:
-            continue
-
-        adopted_or_created = _atomic_adopt_or_create(
+        _atomic_adopt_or_create(
             store,
             athlete_id=athlete_id,
             candidate=candidate,
         )
-        if adopted_or_created is None:
-            continue
 
-        existing_keys.add(source_key)
-        row_id = str(adopted_or_created.get("id") or "")
-        if (
-            str(adopted_or_created.get("status") or "") in _ACTIVE_STATUSES
-            and not any(str(flag.get("id") or "") == row_id for flag in seeded)
-        ):
-            seeded.insert(0, adopted_or_created)
-    return seeded
+    # Adoption may preserve a resolved row or collapse formerly-open duplicates.
+    # Return a fresh authoritative snapshot instead of the pre-write list.
+    final_readable, final_flags = _list_flags(
+        store,
+        athlete_id,
+        statuses=_ACTIVE_STATUSES,
+    )
+    return final_flags if final_readable else []
 
 
 def sync_active_plan_intake_injuries(
