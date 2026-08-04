@@ -678,6 +678,7 @@ function CheckboxGroup({
   getOptionDisabledReason,
   invalid = false,
   describedBy,
+  hideLabel = false,
 }: {
   id?: string;
   label: string;
@@ -690,6 +691,7 @@ function CheckboxGroup({
   getOptionDisabledReason?: (option: IntakeOption, checked: boolean) => string | null;
   invalid?: boolean;
   describedBy?: string;
+  hideLabel?: boolean;
 }) {
   return (
     <div
@@ -700,7 +702,7 @@ function CheckboxGroup({
       aria-describedby={describedBy}
       tabIndex={invalid ? -1 : undefined}
     >
-      <span className="checkbox-group-label">{label}</span>
+      <span className={`checkbox-group-label${hideLabel ? " sr-only" : ""}`}>{label}</span>
       <div className="checkbox-grid">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
@@ -2025,17 +2027,11 @@ export function PlanIntakeForm() {
   const selectedEquipmentAccess = formatJoinedLabels(selectedEquipmentAccessLabels, "No equipment selected");
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
   const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No Light Combat days selected");
-  const remainingHardSparringDays = TRAINING_AVAILABILITY_OPTIONS
-    .filter((option) => option.value !== lockedFightWeekday && form.training_availability.includes(option.value) && !form.support_work_days.includes(option.value) && !form.hard_sparring_days.includes(option.value))
-    .map((option) => option.value);
-  const remainingSupportWorkDays = TRAINING_AVAILABILITY_OPTIONS
-    .map((option) => option.value)
-    .filter((day) => day !== lockedFightWeekday && form.training_availability.includes(day) && !form.hard_sparring_days.includes(day));
   const fightDayLockReason = `Fight day — ${formatFightDateValue(form.fight_date)}`;
   // Far-out camps keep every instance of the fight weekday available; say so
   // explicitly so the lock's absence does not read as a bug either.
   const fightWeekdayNote = fightDateWeekday && !lockedFightWeekday
-    ? `Your fight lands on a ${fightDateWeekday}. Earlier ${fightDateWeekday}s train as normal — fight week's ${fightDateWeekday} is replaced by the fight-day protocol automatically.`
+    ? `Your fight is on ${fightDateWeekday}. Other ${fightDateWeekday}s stay unchanged. Fight week will use the fight-day protocol automatically.`
     : null;
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
@@ -2762,7 +2758,7 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">Combat load tags</h2>
                 </div>
                 <p className="muted">
-                  These selections do not add extra sessions. They mark which available days carry hard contact versus lighter technical combat work inside the same weekly total.
+                  Mark which combat days are hard sparring and which are light or technical. These still count within your weekly session total.
                 </p>
                 {fightWeekdayNote ? <p className="muted">{fightWeekdayNote}</p> : null}
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
@@ -2772,7 +2768,7 @@ export function PlanIntakeForm() {
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Hard Sparring Days"
+                  label="Hard sparring days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.hard_sparring_days}
                   onToggle={(value) => toggleFieldValue("hard_sparring_days", value)}
@@ -2794,9 +2790,8 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "hard_sparring_days") ||
-                      "Pick the days that usually carry the hardest live rounds or highest collision load. These are part of the weekly session total above."}
+                      "Select your usual hard sparring days."}
                   </p>
-                  <p className="muted">Available hard sparring tags: {formatJoinedLabels(remainingHardSparringDays, "No days left")}</p>
                 </div>
                 {hardSparringWarning.message ? (
                   <div
@@ -2834,7 +2829,7 @@ export function PlanIntakeForm() {
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Light / technical combat days"
+                  label="Light or technical days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.support_work_days}
                   onToggle={(value) => toggleFieldValue("support_work_days", value)}
@@ -2854,10 +2849,9 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
-                      "Select days that can carry light technical combat: pads, drills, shadowboxing, movement, or non-hard contact. The app may still place low-noise support work here if it fits. Do not include hard sparring or fight day."
+                      "Select days used for pads, drills, movement or other light combat work."
                     }
                   </p>
-                  <p className="muted">Available light / technical tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
                 </div>
                 </>
                 )}
@@ -2878,10 +2872,11 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Resources</p>
-                  <h2 className="form-section-title">Equipment Access</h2>
+                  <h2 className="form-section-title">Equipment access</h2>
                 </div>
                 <CheckboxGroup
-                  label="Equipment Access"
+                  label="Equipment access"
+                  hideLabel
                   options={EQUIPMENT_ACCESS_OPTIONS}
                   selectedValues={form.equipment_access}
                   onToggle={(value) => toggleFieldValue("equipment_access", value)}
