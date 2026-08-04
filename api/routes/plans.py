@@ -27,6 +27,7 @@ from api.plan_mappers import (
     _map_weekly_schedule,
 )
 from api.rehab_labels import resolve_rehab_label_policy
+from api.services.intake_injury_sync import sync_intake_injuries_for_plan
 from api.services.plan_safety_copy import clarify_restricted_training_hold
 from api.store import AppStore, is_effective_admin_profile
 from api.services.active_plan import resolve_active_plan, set_active_plan
@@ -67,6 +68,46 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 
+    def _rehab_policy_for_plan(
+        plan_row: dict[str, Any],
+        *,
+        profile: ProfileRecord,
+        store: AppStore,
+        training_day: str,
+    ):
+        """Synchronize active-plan intake injuries before resolving labels.
+
+        This also repairs already-generated plans when Plan is opened directly,
+        without requiring the athlete to visit Today first. Archived and inactive
+        plans remain read-only and cannot re-seed historical injuries.
+        """
+        owner_id = str(plan_row.get("athlete_id") or profile.athlete_id)
+        try:
+            active_plan = resolve_active_plan(
+                store,
+                owner_id,
+                current_training_day=training_day,
+            ).plan
+            if active_plan and str(active_plan.get("id") or "") == str(
+                plan_row.get("id") or ""
+            ):
+                full_plan = plan_row
+                reader = getattr(store, "get_plan_for_athlete", None)
+                if callable(reader):
+                    loaded = reader(str(plan_row.get("id") or ""), owner_id)
+                    if loaded:
+                        full_plan = loaded
+                sync_intake_injuries_for_plan(
+                    store,
+                    athlete_id=owner_id,
+                    plan_row=full_plan,
+                )
+        except Exception:
+            # Rehab policy reads have always been best-effort. A synchronization
+            # failure must not make the saved plan unavailable.
+            pass
+        return resolve_rehab_label_policy(store, athlete_id=owner_id)
+
     @router.get("/api/plans/latest", response_model=PlanDetail)
     def get_latest_plan(
         profile: ProfileRecord = Depends(require_profile),
@@ -88,8 +129,11 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
             current_training_day=training_day,
-            rehab_label_policy=resolve_rehab_label_policy(
-                store, athlete_id=profile.athlete_id
+            rehab_label_policy=_rehab_policy_for_plan(
+                plan_row,
+                profile=profile,
+                store=store,
+                training_day=training_day,
             ),
         )
         return clarify_restricted_training_hold(detail)
@@ -158,8 +202,11 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
             current_training_day=training_day,
-            rehab_label_policy=resolve_rehab_label_policy(
-                store, athlete_id=profile.athlete_id
+            rehab_label_policy=_rehab_policy_for_plan(
+                plan_row,
+                profile=profile,
+                store=store,
+                training_day=training_day,
             ),
         )
         return clarify_restricted_training_hold(detail)
@@ -244,15 +291,19 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             if not plan_row or _is_archived_plan(plan_row):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
             updated = store.rename_plan_for_athlete(plan_id, profile.athlete_id, update.plan_name)
+        training_day = resolve_training_day_str(
+            datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
+        )
         detail = _map_plan_detail(
             updated,
             include_admin=is_admin,
             plan_source=_lookup_plan_source(store, plan_id),
-            current_training_day=resolve_training_day_str(
-                datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone
-            ),
-            rehab_label_policy=resolve_rehab_label_policy(
-                store, athlete_id=profile.athlete_id
+            current_training_day=training_day,
+            rehab_label_policy=_rehab_policy_for_plan(
+                updated,
+                profile=profile,
+                store=store,
+                training_day=training_day,
             ),
         )
         return clarify_restricted_training_hold(detail)
