@@ -1,19 +1,20 @@
 """Synchronize active intake injuries into the live daily injury tracker.
 
 Guided intake's ``cleared`` field answers "Have you been medically cleared?".
-It does not mean the injury has healed. Treating ``cleared=yes`` as resolution
-made structural injuries disappear from ``injury_flags`` immediately after plan
-generation, so their rehab blocks were labelled Prehab before the athlete had
-actually cleared the injury in Today.
+It does not mean the injury has healed. The explicit ``timeframe=old_cleared``
+choice is the history-only signal.
 
-The explicit ``timeframe=old_cleared`` option is the history-only signal. Every
-other guided injury is eligible for the live tracker, including an injury the
-athlete is medically cleared to train around.
+Each generated-plan injury receives a stable ``source_key``. Production writes
+use a database upsert protected by a unique constraint, so concurrent Today,
+Plan, notification and XP reads cannot create duplicate rows.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import threading
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
@@ -24,7 +25,6 @@ from .active_plan import resolve_active_plan
 from .today_service import (
     _guided_injury_has_content,
     _guided_intake_injury_candidate,
-    _injury_dedupe_keys,
     _intake_payload_from_row,
     _intake_row_for_plan,
     _legacy_intake_injury_candidate,
@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 _ACTIVE_STATUSES = ("open", "monitoring")
 _DEDUPE_STATUSES = ("open", "monitoring", "resolved")
 _HISTORICAL_CLEARED_TIMEFRAME = "old_cleared"
+_FALLBACK_LOCK = threading.RLock()
 
 
 def _normalized_token(value: object) -> str:
@@ -48,30 +49,29 @@ def _normalized_token(value: object) -> str:
     )
 
 
+def _source_key(*, plan_id: str, candidate: Mapping[str, Any]) -> str:
+    identity = {
+        "body_area": _normalized_token(candidate.get("body_area")),
+        "description": " ".join(str(candidate.get("description") or "").lower().split()),
+    }
+    digest = hashlib.sha256(
+        json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()[:24]
+    return f"intake:{plan_id}:{digest}"
+
+
 def _guided_candidate(
     injury: Mapping[str, Any],
     *,
     plan_id: str,
 ) -> dict[str, object] | None:
-    # The separate `cleared` answer is medical clearance to train and must not
-    # suppress an otherwise active injury from daily tracking. Blank it only for
-    # the existing mapper, which historically gave that field the wrong meaning.
-    bootstrap_injury = dict(injury)
-    bootstrap_injury["cleared"] = ""
-    candidate = _guided_intake_injury_candidate(bootstrap_injury, plan_id=plan_id)
-    if candidate is None:
+    if _normalized_token(injury.get("timeframe")) == _HISTORICAL_CLEARED_TIMEFRAME:
         return None
 
-    if _normalized_token(injury.get("timeframe")) == _HISTORICAL_CLEARED_TIMEFRAME:
-        # Persist old/cleared intake entries as resolved history. Besides keeping
-        # the audit trail honest, the resolved row blocks the legacy lazy
-        # bootstrap from recreating the same body area as an open injury.
-        return {
-            **candidate,
-            "status": "resolved",
-            "resolved_at": datetime.now(timezone.utc).isoformat(),
-        }
-    return candidate
+    # Medical clearance permits training around an injury; it is not resolution.
+    bootstrap_injury = dict(injury)
+    bootstrap_injury["cleared"] = ""
+    return _guided_intake_injury_candidate(bootstrap_injury, plan_id=plan_id)
 
 
 def _intake_injury_candidates(
@@ -110,12 +110,12 @@ def _list_flags(
     athlete_id: str,
     *,
     statuses: tuple[str, ...],
-) -> list[dict[str, Any]]:
+) -> tuple[bool, list[dict[str, Any]]]:
     lister = getattr(store, "list_injury_flags", None)
     if not callable(lister):
-        return []
+        return False, []
     try:
-        return [
+        return True, [
             dict(flag)
             for flag in (lister(athlete_id, statuses=statuses, limit=500) or [])
         ]
@@ -125,7 +125,76 @@ def _list_flags(
             athlete_id,
             statuses,
         )
-        return []
+        return False, []
+
+
+def _atomic_create_once(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    candidate: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Insert once by ``(athlete_id, source_key)``.
+
+    Supabase/PostgREST uses the database uniqueness constraint. In-memory and
+    minimal test stores use one process lock plus a second read inside the lock.
+    """
+    payload = {"athlete_id": athlete_id, **dict(candidate)}
+    client = getattr(store, "client", None)
+    if client is not None:
+        try:
+            response = (
+                client.table("injury_flags")
+                .upsert(
+                    payload,
+                    on_conflict="athlete_id,source_key",
+                    ignore_duplicates=True,
+                )
+                .execute()
+            )
+            rows = response.data or []
+            if rows:
+                return dict(rows[0])
+            lookup = (
+                client.table("injury_flags")
+                .select("*")
+                .eq("athlete_id", athlete_id)
+                .eq("source_key", str(candidate.get("source_key") or ""))
+                .limit(1)
+                .execute()
+            )
+            return dict(lookup.data[0]) if lookup.data else None
+        except Exception:
+            logger.exception(
+                "[intake_injury_sync] atomic upsert failed athlete_id=%s source_key=%s",
+                athlete_id,
+                candidate.get("source_key"),
+            )
+            return None
+
+    create_flag = getattr(store, "create_injury_flag", None)
+    if not callable(create_flag):
+        return None
+    with _FALLBACK_LOCK:
+        readable, flags = _list_flags(store, athlete_id, statuses=_DEDUPE_STATUSES)
+        if not readable:
+            return None
+        source_key = str(candidate.get("source_key") or "")
+        existing = next(
+            (flag for flag in flags if str(flag.get("source_key") or "") == source_key),
+            None,
+        )
+        if existing:
+            return existing
+        try:
+            return dict(create_flag(athlete_id, dict(candidate)))
+        except Exception:
+            logger.exception(
+                "[intake_injury_sync] injury flag create failed athlete_id=%s source_key=%s",
+                athlete_id,
+                source_key,
+            )
+            return None
 
 
 def sync_intake_injuries_for_plan(
@@ -136,22 +205,21 @@ def sync_intake_injuries_for_plan(
 ) -> list[dict[str, Any]]:
     """Seed active-plan intake injuries and return current open/monitoring flags.
 
-    Reads resolved rows for deduplication so an injury cleared through Today never
-    returns merely because the original intake remains unchanged. The write is
-    best-effort: a tracker failure must not make the plan or Today endpoint fail.
+    No insert is attempted unless the existing flag set was read successfully.
+    Resolved rows suppress recreation only through the same stable source key;
+    an old plan's resolved ankle cannot block a new plan's ankle injury.
     """
-    open_flags = _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
+    active_readable, open_flags = _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
+    if not active_readable:
+        return []
+
     plan_id = str(plan_row.get("id") or "").strip()
     if not plan_id:
         return open_flags
 
     try:
         intake_payload = _intake_payload_from_row(
-            _intake_row_for_plan(
-                store,
-                athlete_id=athlete_id,
-                plan_row=plan_row,
-            )
+            _intake_row_for_plan(store, athlete_id=athlete_id, plan_row=plan_row)
         )
     except Exception:
         logger.exception(
@@ -163,36 +231,34 @@ def sync_intake_injuries_for_plan(
     if not intake_payload:
         return open_flags
 
-    create_flag = getattr(store, "create_injury_flag", None)
-    if not callable(create_flag):
+    dedupe_readable, all_flags = _list_flags(store, athlete_id, statuses=_DEDUPE_STATUSES)
+    if not dedupe_readable:
         return open_flags
-
-    dedupe_flags = _list_flags(store, athlete_id, statuses=_DEDUPE_STATUSES)
-    if not dedupe_flags:
-        dedupe_flags = list(open_flags)
-    seen_keys = {
-        key
-        for flag in dedupe_flags
-        for key in _injury_dedupe_keys(flag)
+    existing_keys = {
+        str(flag.get("source_key") or "")
+        for flag in all_flags
+        if str(flag.get("source_key") or "")
     }
 
     seeded = list(open_flags)
-    for candidate in _intake_injury_candidates(intake_payload, plan_id=plan_id):
-        candidate_keys = _injury_dedupe_keys(candidate)
-        if not candidate_keys or candidate_keys & seen_keys:
+    for raw_candidate in _intake_injury_candidates(intake_payload, plan_id=plan_id):
+        candidate = {
+            **raw_candidate,
+            "source_key": _source_key(plan_id=plan_id, candidate=raw_candidate),
+        }
+        source_key = str(candidate["source_key"])
+        if source_key in existing_keys:
             continue
-        try:
-            created = dict(create_flag(athlete_id, candidate))
-        except Exception:
-            logger.exception(
-                "[intake_injury_sync] injury flag create failed athlete_id=%s plan_id=%s",
-                athlete_id,
-                plan_id,
-            )
+        created = _atomic_create_once(
+            store,
+            athlete_id=athlete_id,
+            candidate=candidate,
+        )
+        if created is None:
             continue
+        existing_keys.add(source_key)
         if str(created.get("status") or "") in _ACTIVE_STATUSES:
             seeded.insert(0, created)
-        seen_keys.update(candidate_keys)
     return seeded
 
 
@@ -219,9 +285,10 @@ def sync_active_plan_intake_injuries(
             "[intake_injury_sync] active plan resolution failed athlete_id=%s",
             athlete_id,
         )
-        return _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
+        return []
     if not plan_row:
-        return _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
+        readable, flags = _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
+        return flags if readable else []
 
     plan_id = str(plan_row.get("id") or "").strip()
     reader = getattr(store, "get_plan_for_athlete", None)
@@ -236,6 +303,7 @@ def sync_active_plan_intake_injuries(
                 athlete_id,
                 plan_id,
             )
+            return []
 
     return sync_intake_injuries_for_plan(
         store,
