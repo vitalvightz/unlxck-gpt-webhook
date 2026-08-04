@@ -187,7 +187,7 @@ def _atomic_adopt_or_create(
     if client is not None:
         try:
             response = client.rpc(
-                "adopt_or_create_intake_injury_flag",
+                "adopt_or_create_intake_injury_flag_with_wound_fields",
                 {
                     "p_athlete_id": athlete_id,
                     "p_plan_id": plan_id,
@@ -197,6 +197,11 @@ def _atomic_adopt_or_create(
                     "p_severity": str(candidate.get("severity") or "moderate"),
                     "p_status": str(candidate.get("status") or "open"),
                     "p_resolved_at": candidate.get("resolved_at"),
+                    "p_skin_integrity": candidate.get("skin_integrity"),
+                    "p_bleeding_status": candidate.get("bleeding_status"),
+                    "p_infection_signs": candidate.get("infection_signs") or [],
+                    "p_coverable": candidate.get("coverable"),
+                    "p_drainage": candidate.get("drainage"),
                 },
             ).execute()
             return _rpc_result_row(response.data)
