@@ -28,7 +28,6 @@ from api.models import (
 )
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
-from api.services.intake_injury_sync import sync_active_plan_intake_injuries
 from api.services.progress_notifications import award_session_progress
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import try_award_completed_week_for_completion
@@ -161,15 +160,6 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> CommandView:
-        # Plan generation stores injuries in the intake first. Synchronize those
-        # injuries into the live tracker before Today and the plan's Rehab/Prehab
-        # policy read injury_flags, including medically-cleared injuries that are
-        # still active and being trained around.
-        sync_active_plan_intake_injuries(
-            store,
-            athlete_id=profile.athlete_id,
-            athlete_timezone=profile.athlete_timezone,
-        )
         return build_today_command_view(
             store,
             athlete_id=profile.athlete_id,
