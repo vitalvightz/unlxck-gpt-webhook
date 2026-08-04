@@ -53,15 +53,25 @@ def _guided_candidate(
     *,
     plan_id: str,
 ) -> dict[str, object] | None:
-    # "Old / cleared" is the explicit resolved-history choice. The separate
-    # `cleared` answer is medical clearance to train and must not suppress an
-    # otherwise active injury from daily tracking.
-    if _normalized_token(injury.get("timeframe")) == _HISTORICAL_CLEARED_TIMEFRAME:
-        return None
-
+    # The separate `cleared` answer is medical clearance to train and must not
+    # suppress an otherwise active injury from daily tracking. Blank it only for
+    # the existing mapper, which historically gave that field the wrong meaning.
     bootstrap_injury = dict(injury)
     bootstrap_injury["cleared"] = ""
-    return _guided_intake_injury_candidate(bootstrap_injury, plan_id=plan_id)
+    candidate = _guided_intake_injury_candidate(bootstrap_injury, plan_id=plan_id)
+    if candidate is None:
+        return None
+
+    if _normalized_token(injury.get("timeframe")) == _HISTORICAL_CLEARED_TIMEFRAME:
+        # Persist old/cleared intake entries as resolved history. Besides keeping
+        # the audit trail honest, the resolved row blocks the legacy lazy
+        # bootstrap from recreating the same body area as an open injury.
+        return {
+            **candidate,
+            "status": "resolved",
+            "resolved_at": datetime.now(timezone.utc).isoformat(),
+        }
+    return candidate
 
 
 def _intake_injury_candidates(
@@ -180,7 +190,8 @@ def sync_intake_injuries_for_plan(
                 plan_id,
             )
             continue
-        seeded.insert(0, created)
+        if str(created.get("status") or "") in _ACTIVE_STATUSES:
+            seeded.insert(0, created)
         seen_keys.update(candidate_keys)
     return seeded
 
