@@ -125,16 +125,8 @@ export function PushNotificationSettings({ token }: { token: string }) {
   async function savePreference(key: BooleanPreferenceKey, checked: boolean) {
     if (!preferences || workingPreference) return;
     const previous = preferences;
-    // The master switch owns every category, so mirror it locally while the
-    // server confirms the same cascade instead of leaving stale rows on screen.
-    setPreferences(
-      key === MASTER_ROW.key
-        ? PREFERENCE_ROWS.reduce(
-            (draft, row) => ({ ...draft, [row.key]: checked }),
-            { ...previous, push_enabled: checked },
-          )
-        : { ...previous, [key]: checked },
-    );
+    // Flip on screen straight away; the row is what the athlete just touched.
+    setPreferences({ ...previous, [key]: checked });
     setWorkingPreference(key);
     setError(null);
     try {
@@ -193,6 +185,11 @@ export function PushNotificationSettings({ token }: { token: string }) {
 
   const canToggle = state === "subscribed" || state === "unsubscribed" || state === "working";
 
+  // The master switch gates delivery rather than rewriting the stored choices,
+  // so a paused account reads as every category off and resuming brings back
+  // exactly the rows the athlete had before.
+  const paused = preferences ? !preferences.push_enabled : false;
+
   return (
     <div className="settings-push-block">
       <div className="settings-toggle-row settings-push-row">
@@ -239,8 +236,8 @@ export function PushNotificationSettings({ token }: { token: string }) {
               </span>
               <input
                 type="checkbox"
-                checked={preferences[row.key]}
-                disabled={!preferences.push_enabled || workingPreference !== null}
+                checked={!paused && preferences[row.key]}
+                disabled={paused || workingPreference !== null}
                 onChange={(event) => void savePreference(row.key, event.target.checked)}
               />
             </label>
@@ -256,7 +253,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
                 <input
                   type="time"
                   value={trainingTime}
-                  disabled={!preferences.session_reminders || workingPreference !== null}
+                  disabled={paused || !preferences.session_reminders || workingPreference !== null}
                   onChange={(event) => setTrainingTime(event.target.value)}
                 />
                 <small>Optional. Without a time, UNLXCK will not guess when you train.</small>
@@ -267,6 +264,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
                 type="button"
                 className="secondary-button"
                 disabled={
+                  paused ||
                   !preferences.session_reminders ||
                   workingPreference !== null ||
                   trainingTime === (preferences.preferred_training_time ?? "")

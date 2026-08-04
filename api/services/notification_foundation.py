@@ -12,15 +12,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable, Literal, get_args
+from typing import Any, Iterable, Literal
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from api.notification_models import NotificationCategory, NotificationPreferences
 
 logger = logging.getLogger(__name__)
-
-NOTIFICATION_CATEGORY_KEYS: tuple[str, ...] = tuple(get_args(NotificationCategory))
 
 NOTIFICATION_TITLE_MAX_CHARS = 40
 NOTIFICATION_BODY_MAX_CHARS = 90
@@ -156,31 +154,22 @@ def get_notification_preferences(store: Any, profile_id: str) -> NotificationPre
         raise NotificationStoreError("notification preferences unavailable") from exc
 
 
-def cascade_master_switch(changes: dict[str, Any]) -> dict[str, Any]:
-    """Mirror the account-level switch onto every coaching category.
-
-    ``push_enabled`` is the master switch: with it off no category can deliver,
-    so the stored per-category flags must follow it instead of drifting into a
-    state the UI cannot explain. An explicit category in the same patch wins.
-    """
-
-    resolved = dict(changes)
-    master = resolved.get("push_enabled")
-    if master is None:
-        return resolved
-    for key in NOTIFICATION_CATEGORY_KEYS:
-        resolved.setdefault(key, bool(master))
-    return resolved
-
-
 def update_notification_preferences(
     store: Any,
     profile_id: str,
     changes: dict[str, Any],
 ) -> NotificationPreferences:
+    """Persist a preference patch.
+
+    ``push_enabled`` is a gate, not a bulk write: pausing the account suppresses
+    every category at delivery time (see ``candidate_is_allowed``) while leaving
+    the per-category choices stored, so resuming restores exactly what the
+    athlete had before rather than switching everything back on.
+    """
+
     current = get_notification_preferences(store, profile_id)
     merged = current.model_dump()
-    merged.update(cascade_master_switch(changes))
+    merged.update(changes)
     validated = NotificationPreferences.model_validate(merged)
 
     custom = getattr(store, "upsert_notification_preferences", None)

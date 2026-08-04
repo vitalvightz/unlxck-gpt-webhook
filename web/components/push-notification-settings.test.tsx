@@ -20,21 +20,16 @@ const CATEGORY_KEYS = [
 
 type Preferences = Record<string, unknown>;
 
-/** Stands in for the API, including the server-side master-switch cascade. */
-function installFetchStub(): { patches: Preferences[] } {
+/** Stands in for the API: a patch merges into the stored preferences, nothing else. */
+function installFetchStub(overrides: Preferences = {}): { patches: Preferences[] } {
   const patches: Preferences[] = [];
-  let stored: Preferences = { ...DEFAULT_NOTIFICATION_PREFERENCES };
+  let stored: Preferences = { ...DEFAULT_NOTIFICATION_PREFERENCES, ...overrides };
 
   globalThis.fetch = (async (input: unknown, init?: { method?: string; body?: string }) => {
     const url = String(input);
     if (url.includes("/api/push/preferences")) {
       const patch = JSON.parse(init?.body ?? "{}") as Preferences;
       patches.push({ ...patch });
-      if (patch.push_enabled !== undefined) {
-        for (const key of CATEGORY_KEYS) {
-          if (patch[key] === undefined) patch[key] = Boolean(patch.push_enabled);
-        }
-      }
       stored = { ...stored, ...patch };
       return new Response(JSON.stringify(stored), { status: 200 });
     }
@@ -77,7 +72,7 @@ async function click(input: HTMLInputElement): Promise<void> {
   });
 }
 
-test("pausing the master switch turns every coaching category off", async () => {
+test("pausing the master switch reads as every coaching category off", async () => {
   const { patches } = installFetchStub();
   const { container, root } = await mount();
 
@@ -89,38 +84,50 @@ test("pausing the master switch turns every coaching category off", async () => 
 
   assert.equal(master.checked, false);
   assert.ok(
-    categoryToggles(container).every((input) => !input.checked),
-    "every category row should follow the master switch off",
+    categoryToggles(container).every((input) => !input.checked && input.disabled),
+    "every category row should read as off and locked while the account is paused",
   );
-  // The UI only sends the master switch; the server owns the cascade.
+  // Only the master switch is written; the stored category choices are untouched.
   assert.deepEqual(patches, [{ push_enabled: false }]);
 
   await act(async () => root.unmount());
 });
 
-test("category rows are locked while the account switch is paused", async () => {
-  installFetchStub();
-  const { container, root } = await mount();
-
-  await click(toggles(container)[0]);
-  assert.ok(
-    categoryToggles(container).every((input) => input.disabled),
-    "a paused account cannot arm a single category on its own",
-  );
-
-  await act(async () => root.unmount());
-});
-
-test("resuming the master switch turns the categories back on", async () => {
-  installFetchStub();
+test("resuming restores the athlete's own rows, not an all-on default", async () => {
+  const { patches } = installFetchStub({ coach_messages: false });
   const { container, root } = await mount();
 
   const master = toggles(container)[0];
+  const coachMessages = categoryToggles(container)[CATEGORY_KEYS.indexOf("coach_messages")];
+  assert.equal(coachMessages.checked, false);
+
   await click(master);
   await click(master);
 
   assert.equal(master.checked, true);
-  assert.ok(categoryToggles(container).every((input) => input.checked && !input.disabled));
+  assert.equal(
+    coachMessages.checked,
+    false,
+    "a category turned off before pausing must stay off after resuming",
+  );
+  assert.ok(
+    categoryToggles(container)
+      .filter((input) => input !== coachMessages)
+      .every((input) => input.checked && !input.disabled),
+  );
+  assert.deepEqual(patches, [{ push_enabled: false }, { push_enabled: true }]);
+
+  await act(async () => root.unmount());
+});
+
+test("an individual category still saves on its own while the account is live", async () => {
+  const { patches } = installFetchStub();
+  const { container, root } = await mount();
+
+  await click(categoryToggles(container)[CATEGORY_KEYS.indexOf("injury_followups")]);
+
+  assert.deepEqual(patches, [{ injury_followups: false }]);
+  assert.equal(toggles(container)[0].checked, true);
 
   await act(async () => root.unmount());
 });
