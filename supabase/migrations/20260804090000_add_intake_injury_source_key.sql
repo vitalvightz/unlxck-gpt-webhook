@@ -1,8 +1,20 @@
 -- Stable identity for intake-seeded injury flags.
--- The unique constraint makes concurrent Today/Plan/background reads idempotent.
+-- NULL source keys remain unrestricted for manual/check-in rows, while intake
+-- rows are protected from concurrent duplicate creation.
 alter table public.injury_flags
   add column if not exists source_key text;
 
-create unique index if not exists injury_flags_athlete_source_key_uidx
-  on public.injury_flags (athlete_id, source_key)
-  where source_key is not null;
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'injury_flags_athlete_source_key_key'
+      and conrelid = 'public.injury_flags'::regclass
+  ) then
+    alter table public.injury_flags
+      add constraint injury_flags_athlete_source_key_key
+      unique (athlete_id, source_key);
+  end if;
+end
+$$;
