@@ -10,7 +10,11 @@ AUTH = {"Authorization": "Bearer athlete-token"}
 INTAKE_ID = "intake-ankle"
 
 
-def _active_ankle_intake(*, timeframe: str = "three_plus_months") -> dict:
+def _active_ankle_intake(
+    *,
+    timeframe: str = "three_plus_months",
+    medical_clearance: str = "yes",
+) -> dict:
     return {
         "guided_injuries": [
             {
@@ -23,7 +27,7 @@ def _active_ankle_intake(*, timeframe: str = "three_plus_months") -> dict:
                 "timeframe": timeframe,
                 # This answers "Have you been medically cleared?". It permits
                 # training around the injury; it does not mean the injury healed.
-                "cleared": "yes",
+                "cleared": medical_clearance,
             }
         ]
     }
@@ -75,11 +79,14 @@ def test_medically_cleared_intake_injury_stays_active_for_rehab_labels() -> None
     assert [region.region for region in policy.active_regions] == ["ankle"]
 
 
-def test_old_cleared_timeframe_remains_history_only() -> None:
+def test_old_cleared_timeframe_remains_resolved_history() -> None:
     store = FakeStore()
     plan = _seed_generated_plan(
         store,
-        intake=_active_ankle_intake(timeframe="old_cleared"),
+        intake=_active_ankle_intake(
+            timeframe="old_cleared",
+            medical_clearance="no",
+        ),
     )
 
     flags = sync_intake_injuries_for_plan(
@@ -92,6 +99,8 @@ def test_old_cleared_timeframe_remains_history_only() -> None:
     assert flags == []
     assert policy.default_mode == "prehab"
     assert policy.active_regions == []
+    assert len(store.injury_flags[ATHLETE]) == 1
+    assert store.injury_flags[ATHLETE][0]["status"] == "resolved"
 
 
 def test_today_read_synchronizes_generated_plan_injury_into_daily_tracker() -> None:
@@ -105,6 +114,24 @@ def test_today_read_synchronizes_generated_plan_injury_into_daily_tracker() -> N
     assert len(injuries) == 1
     assert injuries[0]["body_area"] == "Left ankle"
     assert injuries[0]["source"] == "intake"
+
+
+def test_today_does_not_reseed_old_cleared_history_as_live_injury() -> None:
+    client, store, _ = _build_client()
+    _seed_generated_plan(
+        store,
+        intake=_active_ankle_intake(
+            timeframe="old_cleared",
+            medical_clearance="no",
+        ),
+    )
+
+    response = client.get("/api/today", headers=AUTH)
+
+    assert response.status_code == 200
+    assert response.json()["open_injuries"] == []
+    assert len(store.injury_flags[ATHLETE]) == 1
+    assert store.injury_flags[ATHLETE][0]["status"] == "resolved"
 
 
 def test_plan_read_self_heals_rehab_policy_without_visiting_today_first() -> None:
