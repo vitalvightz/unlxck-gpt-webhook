@@ -126,6 +126,55 @@ def test_null_boolean_and_quiet_time_are_ignored_without_server_error():
     assert payload["preferred_training_time"] is None
 
 
+def test_master_switch_cascades_to_every_category():
+    client, _store, _ = _build_client()
+    categories = [
+        "session_reminders",
+        "checkin_reminders",
+        "injury_followups",
+        "plan_update_alerts",
+        "progress_milestones",
+        "coach_messages",
+    ]
+
+    paused = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"push_enabled": False},
+    )
+    assert paused.status_code == 200
+    payload = paused.json()
+    assert payload["push_enabled"] is False
+    assert all(payload[key] is False for key in categories)
+    # Quiet hours are a delivery window, not a coaching category.
+    assert payload["quiet_hours_enabled"] is True
+
+    resumed = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"push_enabled": True},
+    )
+    assert resumed.status_code == 200
+    assert all(resumed.json()[key] is True for key in categories)
+
+    stored = client.get("/api/push/settings", headers=ATHLETE_HEADERS)
+    assert stored.json()["preferences"] == resumed.json()
+
+
+def test_explicit_category_wins_over_master_cascade():
+    client, _store, _ = _build_client()
+    response = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"push_enabled": True, "coach_messages": False},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["push_enabled"] is True
+    assert payload["coach_messages"] is False
+    assert payload["session_reminders"] is True
+
+
 def test_notification_preferences_validate_quiet_hour_format():
     client, _store, _ = _build_client()
     response = client.put(

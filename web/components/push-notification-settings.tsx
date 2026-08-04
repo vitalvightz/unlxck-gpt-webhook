@@ -21,16 +21,17 @@ type BooleanPreferenceKey = Exclude<
   "quiet_hours_start" | "quiet_hours_end" | "preferred_training_time"
 >;
 
+const MASTER_ROW: { key: BooleanPreferenceKey; title: string; detail: string } = {
+  key: "push_enabled",
+  title: "Intelligent coaching notifications",
+  detail: "Pause or resume every account-level coaching notification.",
+};
+
 const PREFERENCE_ROWS: Array<{
   key: BooleanPreferenceKey;
   title: string;
   detail: string;
 }> = [
-  {
-    key: "push_enabled",
-    title: "Intelligent coaching notifications",
-    detail: "Pause or resume every account-level coaching notification.",
-  },
   {
     key: "session_reminders",
     title: "Session reminders",
@@ -123,11 +124,23 @@ export function PushNotificationSettings({ token }: { token: string }) {
 
   async function savePreference(key: BooleanPreferenceKey, checked: boolean) {
     if (!preferences || workingPreference) return;
+    const previous = preferences;
+    // The master switch owns every category, so mirror it locally while the
+    // server confirms the same cascade instead of leaving stale rows on screen.
+    setPreferences(
+      key === MASTER_ROW.key
+        ? PREFERENCE_ROWS.reduce(
+            (draft, row) => ({ ...draft, [row.key]: checked }),
+            { ...previous, push_enabled: checked },
+          )
+        : { ...previous, [key]: checked },
+    );
     setWorkingPreference(key);
     setError(null);
     try {
       syncPreferences(await updateNotificationPreferences(token, { [key]: checked }));
     } catch (caught) {
+      setPreferences(previous);
       setError(caught instanceof Error ? caught.message : "Unable to update preferences.");
     } finally {
       setWorkingPreference(null);
@@ -205,6 +218,19 @@ export function PushNotificationSettings({ token }: { token: string }) {
 
       {preferences ? (
         <div className="settings-toggle-list settings-server-notification-list">
+          <label className="settings-toggle-row">
+            <span>
+              <span className="settings-toggle-title">{MASTER_ROW.title}</span>
+              <span className="settings-toggle-detail">{MASTER_ROW.detail}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={preferences.push_enabled}
+              disabled={workingPreference !== null}
+              onChange={(event) => void savePreference(MASTER_ROW.key, event.target.checked)}
+            />
+          </label>
+
           {PREFERENCE_ROWS.map((row) => (
             <label key={row.key} className="settings-toggle-row">
               <span>
@@ -214,7 +240,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
               <input
                 type="checkbox"
                 checked={preferences[row.key]}
-                disabled={workingPreference !== null}
+                disabled={!preferences.push_enabled || workingPreference !== null}
                 onChange={(event) => void savePreference(row.key, event.target.checked)}
               />
             </label>
