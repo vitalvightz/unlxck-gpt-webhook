@@ -126,6 +126,44 @@ def test_null_boolean_and_quiet_time_are_ignored_without_server_error():
     assert payload["preferred_training_time"] is None
 
 
+def test_pausing_the_account_preserves_every_category_choice():
+    """Pause is a gate, not a reset: resuming restores the athlete's own rows."""
+
+    client, _store, _ = _build_client()
+
+    client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"coach_messages": False},
+    )
+
+    paused = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"push_enabled": False},
+    )
+    assert paused.status_code == 200
+    payload = paused.json()
+    assert payload["push_enabled"] is False
+    assert payload["coach_messages"] is False
+    assert payload["session_reminders"] is True
+
+    resumed = client.put(
+        "/api/push/preferences",
+        headers=ATHLETE_HEADERS,
+        json={"push_enabled": True},
+    )
+    assert resumed.status_code == 200
+    restored = resumed.json()
+    assert restored["push_enabled"] is True
+    # The category the athlete turned off stays off; it was never overwritten.
+    assert restored["coach_messages"] is False
+    assert restored["session_reminders"] is True
+
+    stored = client.get("/api/push/settings", headers=ATHLETE_HEADERS)
+    assert stored.json()["preferences"] == restored
+
+
 def test_notification_preferences_validate_quiet_hour_format():
     client, _store, _ = _build_client()
     response = client.put(

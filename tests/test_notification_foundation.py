@@ -96,6 +96,33 @@ def test_preferences_are_account_level_and_persist_in_adapter():
     assert get_notification_preferences(store, "athlete-1") == updated
 
 
+def test_paused_account_blocks_every_category_without_losing_choices():
+    now = datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc)
+    store = MemoryStore()
+    paused = update_notification_preferences(store, "athlete-1", {"push_enabled": False})
+
+    # The master switch suppresses categories that are still stored as on.
+    assert paused.checkin_reminders is True
+    for category in (
+        "session_reminders",
+        "checkin_reminders",
+        "injury_followups",
+        "plan_update_alerts",
+        "progress_milestones",
+        "coach_messages",
+    ):
+        candidate = _candidate(category=category, now=now)
+        assert candidate_is_allowed(candidate, paused, now_utc=now) is False
+
+    resumed = update_notification_preferences(store, "athlete-1", {"push_enabled": True})
+    assert (
+        candidate_is_allowed(
+            _candidate(now=now, respect_quiet_hours=False), resumed, now_utc=now
+        )
+        is True
+    )
+
+
 def test_priority_arbitration_returns_only_the_highest_allowed_candidate():
     now = datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc)
     preferences = NotificationPreferences(quiet_hours_enabled=False)

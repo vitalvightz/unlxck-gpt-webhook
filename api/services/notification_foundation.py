@@ -159,6 +159,14 @@ def update_notification_preferences(
     profile_id: str,
     changes: dict[str, Any],
 ) -> NotificationPreferences:
+    """Persist a preference patch.
+
+    ``push_enabled`` is a gate, not a bulk write: pausing the account suppresses
+    every category at delivery time (see ``candidate_is_allowed``) while leaving
+    the per-category choices stored, so resuming restores exactly what the
+    athlete had before rather than switching everything back on.
+    """
+
     current = get_notification_preferences(store, profile_id)
     merged = current.model_dump()
     merged.update(changes)
