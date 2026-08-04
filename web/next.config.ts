@@ -45,6 +45,18 @@ const SECURITY_HEADERS = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=()",
   },
+  // Sever the opener relationship with any cross-origin window. Safe here: the
+  // app opens no auth popups — Supabase email/password, magic links and recovery
+  // links are all top-level navigations — and COOP does not apply to iframes, so
+  // the Cloudflare Turnstile widget is unaffected.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // Stop other origins loading our responses as subresources. Nothing external
+  // embeds them (no Open Graph images, no third-party embeds) and framing is
+  // already denied by X-Frame-Options + frame-ancestors.
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+  // Cross-Origin-Embedder-Policy is deliberately NOT set: `require-corp` would
+  // demand CORP/CORS opt-in from challenges.cloudflare.com and fonts.gstatic.com,
+  // and nothing here needs cross-origin isolation.
 ];
 
 const SERVICE_WORKER_HEADERS = [
@@ -67,6 +79,9 @@ const SERVICE_WORKER_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Suppress `X-Powered-By: Next.js`. It advertises the framework to anyone
+  // scanning for version-specific exploits and buys nothing in return.
+  poweredByHeader: false,
   turbopack: {
     root: WORKSPACE_ROOT,
   },
