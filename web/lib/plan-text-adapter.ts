@@ -366,6 +366,13 @@ const BLOCK_GROUP_LABELS = [
   "Accessory",
 ] as const;
 const BLOCK_GROUP_LABEL_RE = new RegExp(`^(?:${BLOCK_GROUP_LABELS.join("|")})\\s*:?\\s*$`, "i");
+// The same labels used as an INLINE prefix on a bulleted exercise, e.g.
+// "Rehab - YTW Raise Sequence (light DBs) - 2 sets x 8 reps". Group 1 is the
+// label, group 2 the real exercise heading (name + dose) that follows it.
+const BLOCK_GROUP_PREFIX_RE = new RegExp(
+  `^(${BLOCK_GROUP_LABELS.join("|")})\\s*[-–—]\\s+(.+)$`,
+  "i",
+);
 
 /** A line that is *only* a block-group label → its canonical tag, else null. */
 function matchBlockGroupLabel(line: string): string | null {
@@ -436,31 +443,49 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
       // Unlabelled: an exercise heading (Name — dose), or a bulleted exercise,
       // otherwise loose detail attached to the current block / session. The
       // matched separator is always exactly " - " / " — " (3 chars).
-      const dashIndex = segment.text.search(/\s[-–—]\s/);
-      const colonBlock = segment.text.match(/^([^:]{2,80}):\s+(.+)$/);
+      //
+      // A block-group label can arrive INLINE as a prefix rather than on its own
+      // line ("- Rehab - YTW Raise Sequence (light DBs) - 2 sets x 8 reps"). It
+      // is the block's group, not its name, so strip it to the tag first —
+      // otherwise the exercise renders as "Rehab" with its real name buried at
+      // the head of the dose.
+      // Several of these labels ("Movement prep", "Mobility", "Reset") are also
+      // legitimate exercise names, so the prefix is only a GROUP when a name and
+      // a dose both remain after it — "Rehab - YTW Raise Sequence - 2 x 8" has
+      // three parts, while "Movement prep - 5 minutes total…" is just name+dose
+      // and must keep its name.
+      let blockText = segment.text;
+      let blockTag = currentBlockTag;
+      const inlineGroup = wasListItem ? blockText.match(BLOCK_GROUP_PREFIX_RE) : null;
+      if (inlineGroup && inlineGroup[2].search(/\s[-–—]\s/) > -1) {
+        blockTag = titleizeToken(inlineGroup[1]);
+        blockText = inlineGroup[2].trim();
+      }
+      const dashIndex = blockText.search(/\s[-–—]\s/);
+      const colonBlock = blockText.match(/^([^:]{2,80}):\s+(.+)$/);
       if (wasListItem && colonBlock) {
         session.blocks.push({
           name: colonBlock[1].trim(),
           dose: colonBlock[2].trim() || null,
           details: [],
-          tag: currentBlockTag,
+          tag: blockTag,
         });
       } else if (dashIndex > -1) {
         session.blocks.push({
-          name: segment.text.slice(0, dashIndex).trim(),
-          dose: segment.text.slice(dashIndex + 3).trim() || null,
+          name: blockText.slice(0, dashIndex).trim(),
+          dose: blockText.slice(dashIndex + 3).trim() || null,
           details: [],
-          tag: currentBlockTag,
+          tag: blockTag,
         });
       } else if (wasListItem) {
         // A bulleted line is its own exercise heading (e.g. a rehab drill whose
         // dose sits on the next line), so it always opens a new block rather than
         // folding into the previous one.
-        session.blocks.push({ name: segment.text, dose: null, details: [], tag: currentBlockTag });
+        session.blocks.push({ name: blockText, dose: null, details: [], tag: blockTag });
       } else if (block) {
-        block.details.push({ label: null, text: segment.text });
+        block.details.push({ label: null, text: blockText });
       } else {
-        session.notes.push(segment.text);
+        session.notes.push(blockText);
       }
     }
   };
@@ -632,7 +657,16 @@ function inferSessionType(session: PlanTextSession): string {
 }
 
 function toStructuredBlock(block: PlanTextBlock, index: number): StructuredBlock {
-  const purpose = detailText(block, ["Purpose", "Why"]).join(" ") || null;
+  // "Purpose" and "Why today" are two DIFFERENT claims — what the drill does,
+  // and why it earns a slot on this specific day. Joining them into one
+  // unlabelled `purpose` string dropped both labels and rendered them as a
+  // single run-on grey paragraph. A real structured card carries them as
+  // labelled coaching cues, so the fallback emits the same shape and the two
+  // paths render identically.
+  const labelledContext = [
+    ...detailText(block, ["Purpose"]).map((text) => `Purpose: ${text}`),
+    ...detailText(block, ["Why"]).map((text) => `Why today: ${text}`),
+  ];
   const progression = detailText(block, ["Progress"]).join(" ") || null;
   const regressions = detailText(block, ["Regress", "Regression", "Easier"]);
   const substitutions = detailText(block, ["Swap", "Swaps"]);
@@ -646,9 +680,12 @@ function toStructuredBlock(block: PlanTextBlock, index: number): StructuredBlock
     "swap",
     "swaps",
   ]);
-  const coachingCues = block.details
-    .filter((detail) => !detail.label || !mappedLabels.has(detail.label.toLowerCase()))
-    .map((detail) => (detail.label ? `${detail.label}: ${detail.text}` : detail.text));
+  const coachingCues = [
+    ...labelledContext,
+    ...block.details
+      .filter((detail) => !detail.label || !mappedLabels.has(detail.label.toLowerCase()))
+      .map((detail) => (detail.label ? `${detail.label}: ${detail.text}` : detail.text)),
+  ];
 
   return {
     block_id: `text-block-${index + 1}`,
@@ -656,7 +693,7 @@ function toStructuredBlock(block: PlanTextBlock, index: number): StructuredBlock
     display_name: block.name,
     order_index: index,
     load: block.dose ? { display: block.dose } : null,
-    purpose,
+    purpose: null,
     coaching_cues: coachingCues,
     regression_options: regressions,
     substitutions,

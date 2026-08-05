@@ -1028,9 +1028,57 @@ test("missing saved structure is adapted into the full structured renderer contr
   assert.equal(session?.session_type, "strength_power");
   assert.equal(session?.blocks?.[0]?.display_name, "Band-Resisted Jab-Cross Primer");
   assert.equal(session?.blocks?.[0]?.load?.display, "4 x 4 reps; RPE 7.");
-  assert.equal(session?.blocks?.[0]?.purpose, "transfer force into the jab-cross.");
   assert.equal(session?.blocks?.[0]?.progression_rule, "add one set.");
-  assert.deepEqual(session?.blocks?.[0]?.coaching_cues, ["Stop: stop if technique breaks."]);
+  // Purpose stays a labelled coaching cue rather than collapsing into an
+  // unlabelled `purpose` paragraph, so the fallback renders the same shape a
+  // real structured card does.
+  assert.equal(session?.blocks?.[0]?.purpose, null);
+  assert.deepEqual(session?.blocks?.[0]?.coaching_cues, [
+    "Purpose: transfer force into the jab-cross.",
+    "Stop: stop if technique breaks.",
+  ]);
+});
+
+test("a short-camp rehab line keeps its exercise name and both labelled rationales", () => {
+  // Real short-camp (D-3) output. Two defects used to land here together: the
+  // "Rehab -" group prefix was taken as the exercise NAME (burying the real
+  // drill at the head of the dose), and Purpose + Why today were joined into a
+  // single unlabelled paragraph.
+  const plan = buildStructuredPlanFromText(
+    [
+      "D-3 (Monday): Freshness Reset",
+      "Why: preserve mobility and timing without creating fatigue.",
+      "- Movement prep - 5 minutes total. Arm swings 60 sec. RPE 1-2.",
+      "  Purpose: re-establish shoulder-friendly movement.",
+      "  Why today: pre-session prep for coach-led technical work.",
+      "- Rehab - YTW Raise Sequence (light DBs) - 2 sets x 8 reps per letter, light DBs (2-4 kg).",
+      "  Purpose: reinforce scapular upward rotation.",
+      "  Why today: pre-activity activation.",
+    ].join("\n"),
+  );
+
+  const blocks = plan.weeks?.[0]?.days?.[0]?.sessions?.[0]?.blocks ?? [];
+
+  // "Movement prep" is also a group label, but here it is the exercise itself —
+  // only a label followed by BOTH a name and a dose is treated as a group.
+  assert.equal(blocks[0]?.display_name, "Movement prep");
+  assert.equal(blocks[0]?.load?.display, "5 minutes total. Arm swings 60 sec. RPE 1-2.");
+  assert.deepEqual(blocks[0]?.coaching_cues, [
+    "Purpose: re-establish shoulder-friendly movement.",
+    "Why today: pre-session prep for coach-led technical work.",
+  ]);
+
+  // The inline "Rehab -" prefix is the block's group, not its name.
+  assert.equal(blocks[1]?.display_name, "YTW Raise Sequence (light DBs)");
+  assert.equal(
+    blocks[1]?.load?.display,
+    "2 sets x 8 reps per letter, light DBs (2-4 kg).",
+  );
+  assert.equal(blocks[1]?.block_type, "rehab");
+  assert.deepEqual(blocks[1]?.coaching_cues, [
+    "Purpose: reinforce scapular upward rotation.",
+    "Why today: pre-activity activation.",
+  ]);
 });
 
 test("open-plan text uses its explicit weekday rhythm instead of an unavailable legacy card", () => {
