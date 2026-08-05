@@ -149,6 +149,49 @@ def test_five_day_gap_can_receive_two_inserts_max_one_per_day():
     assert len({insert["countdown_offset"] for insert in gap_inserts}) == 2
 
 
+def test_back_loaded_short_camp_fills_its_opening_days():
+    # A D-6 camp places both active sessions at D-3 and D-1, so the days the
+    # athlete actually opens the app on — D-6 to D-4 — sat before the first
+    # session. Only the gaps BETWEEN sessions and the trailing run to fight day
+    # were candidates, leaving that leading span structurally unreachable: no
+    # insert could land there however light, and the plan opened on blanks.
+    sequence = apply_gap_fill_inserts(
+        [_session(3, "fight_week_freshness_day"), _session(1, "neural_primer_day")],
+        _athlete(days_until_fight=6),
+    )
+
+    leading = [insert for insert in _insert_roles(sequence) if insert["countdown_offset"] > 3]
+    assert len(leading) == 1
+    # Zero/low cost only — the taper must not gain physical work near the fight.
+    assert leading[0]["role_key"] in ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS | PHYSICAL_INSERTS
+    assert leading[0]["role_key"] not in {"fight_week_freshness_day", "neural_primer_day"}
+
+
+def test_leading_span_fill_leaves_active_sessions_untouched():
+    active = [_session(3, "fight_week_freshness_day"), _session(1, "neural_primer_day")]
+    sequence = apply_gap_fill_inserts(active, _athlete(days_until_fight=6))
+
+    # The two programmed sessions survive at their original days: the leading
+    # fill adds support, it never moves or displaces physical work.
+    kept = [
+        (str(role.get("role_key")), int(role.get("countdown_offset")))
+        for role in sequence
+        if str(role.get("role_key")) in {"fight_week_freshness_day", "neural_primer_day"}
+    ]
+    assert kept == [("fight_week_freshness_day", 3), ("neural_primer_day", 1)]
+
+
+def test_long_camp_keeps_its_existing_leading_shape():
+    # The leading-span fill is scoped to the taper window; further out the
+    # sessions already reach the front of the plan on their own.
+    sequence = apply_gap_fill_inserts(
+        [_session(20), _session(10, "fight_week_freshness_day")],
+        _athlete(days_until_fight=30),
+    )
+
+    assert [insert for insert in _insert_roles(sequence) if insert["countdown_offset"] > 20] == []
+
+
 def test_exact_same_role_key_does_not_repeat_within_seven_days():
     sequence = apply_gap_fill_inserts(
         [_session(21), _session(16), _session(11), _session(6, "fight_week_freshness_day")],

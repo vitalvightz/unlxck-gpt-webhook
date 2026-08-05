@@ -863,7 +863,11 @@ class TestStage2PayloadBranching:
         assert spec["max_meaningful_stress_exposures"] == 2
         assert spec["max_active_roles"] == 3
         assert "standalone_glycolytic" in spec["forbidden_blocks"]
-        assert spec["max_support_roles"] == 1
+        # Support work is zero/low cost (mobility, breathing, tactical cues), so
+        # a second support role adds no taper stress — it exists to give the
+        # opening days of a back-loaded short camp something intentional to show.
+        # The active-session and stress-exposure caps above stay as they were.
+        assert spec["max_support_roles"] == 2
         assert "role_budget" in spec
         assert "allocator" in spec
         assert "permission_policy" in spec

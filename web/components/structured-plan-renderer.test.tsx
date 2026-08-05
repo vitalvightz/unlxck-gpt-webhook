@@ -1776,6 +1776,61 @@ test("renderer shows synthesized rest rows as inert rows, not accordions", () =>
   assert.equal(html.includes(">Rest</span>"), false);
 });
 
+test("an empty day inside fight week reads as deliberate taper rest, not a blank", () => {
+  // Inside fight week the session budget caps active work on purpose, so a day
+  // with nothing scheduled is planned rest. Showing "No planned session" there
+  // made a correct taper look like missing data — the athlete opening the app on
+  // that day sees a hole where the reason should be.
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-5",
+      day_type: "moderate",
+      sessions: [{ session_id: "s1", title: "Sharpen", blocks: [] }],
+    },
+    {
+      date: "2026-07-10",
+      countdown_label: "D-2",
+      day_type: "low",
+      sessions: [{ session_id: "s2", title: "Primer", blocks: [] }],
+    },
+  ]);
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 6, 7)} />);
+
+  // D-4 and D-3 are unprogrammed taper days: named, and given the reason.
+  assert.equal(countOccurrences(html, "cm-rest-day"), 2);
+  assert.equal(html.includes("D-4"), true);
+  assert.equal(html.includes("D-3"), true);
+  assert.equal(countOccurrences(html, "Taper rest"), 2);
+  assert.equal(html.includes("Planned rest — protecting freshness for fight day."), true);
+  assert.equal(html.includes("No planned session"), false);
+});
+
+test("an empty day outside fight week keeps the honest neutral label", () => {
+  // Further out a hole could be rest, coach-led work, or undocumented, so the
+  // renderer must still not assert a reason it cannot back.
+  const plan = gapFillPlan([
+    {
+      date: "2026-07-07",
+      countdown_label: "D-14",
+      day_type: "high",
+      sessions: [{ session_id: "s1", title: "Power", blocks: [] }],
+    },
+    {
+      date: "2026-07-09",
+      countdown_label: "D-12",
+      day_type: "moderate",
+      sessions: [{ session_id: "s2", title: "Skill", blocks: [] }],
+    },
+  ]);
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 6, 7)} />);
+
+  assert.equal(html.includes("No planned session"), true);
+  assert.equal(html.includes("Taper rest"), false);
+});
+
 test("a backend-classified rest day keeps the definite 'Rest' label", () => {
   const plan = gapFillPlan([
     {

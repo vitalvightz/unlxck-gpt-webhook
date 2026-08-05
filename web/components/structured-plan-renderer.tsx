@@ -883,25 +883,51 @@ function isPlainRestDay(day: StructuredDay): boolean {
   );
 }
 
+/** Widest countdown at which an unprogrammed day is deliberate taper rest.
+ * Inside fight week the session budget caps active work on purpose, so a day
+ * with nothing scheduled is a planned rest day rather than missing data. */
+const TAPER_REST_MAX_COUNTDOWN = 7;
+
+/** How a synthesized countdown-gap row should read.
+ *
+ * Further out, a hole in a sparse plan could be rest, coach-led work, or simply
+ * undocumented, so it keeps the honest "No planned session". Inside fight week
+ * the plan's own budgets deliberately leave days unprogrammed, so the day is
+ * named as the taper rest it is and given the reason — an athlete opening the
+ * app on D-2 should read intent, not a blank. */
+function gapDayLabel(countdown: string | null): { label: string; reason: string | null } {
+  const match = cleanText(countdown)?.match(COUNTDOWN_LABEL_RE);
+  const daysOut = match ? Number(match[1]) : null;
+  if (daysOut != null && daysOut > 0 && daysOut <= TAPER_REST_MAX_COUNTDOWN) {
+    return {
+      label: "Taper rest",
+      reason: "Planned rest — protecting freshness for fight day.",
+    };
+  }
+  return { label: "No planned session", reason: null };
+}
+
 /** Compact non-interactive rest row: same columns as a day summary (countdown,
  * weekday, optional current marker) with a right-aligned label where the session
  * count would sit. Deliberately a div, not a <details> — there is nothing to
  * expand, so it must not advertise an affordance.
  *
- * `label` distinguishes the two sources: a backend-classified rest day reads
- * "Rest", while a synthesized countdown-gap row (a date simply absent from the
- * sparse plan, which could be rest, coach-led, or undocumented) reads the
- * honest "No planned session" — it must not assert rest the data can't back. */
+ * `label` distinguishes the sources: a backend-classified rest day reads
+ * "Rest", while a synthesized countdown-gap row reads either "Taper rest" with
+ * a reason (inside fight week, where the empty day is deliberate) or the honest
+ * "No planned session" — it must not assert rest the data can't back. */
 function RestDayRow({
   countdown,
   weekday,
   label = "Rest",
+  reason = null,
   isCurrent,
   currentLabel = "Today",
 }: {
   countdown: string | null;
   weekday: string | null;
   label?: string;
+  reason?: string | null;
   isCurrent?: boolean;
   currentLabel?: string;
 }) {
@@ -915,6 +941,7 @@ function RestDayRow({
         ) : null}
         {weekday ? <span className="sp-week-title cm-day-title">{weekday}</span> : null}
         {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
+        {reason ? <span className="cm-rest-reason">{reason}</span> : null}
       </span>
       <span className="cm-rest-label">{label}</span>
     </div>
@@ -1967,12 +1994,14 @@ export function StructuredPlanRenderer({
             {dayList.length > 0 ? (
               dayTimeline.map((entry) => {
                 if (entry.kind === "gap") {
+                  const gapLabel = gapDayLabel(entry.countdown);
                   return (
                     <RestDayRow
                       key={`rest-${entry.dateIso}`}
                       countdown={entry.countdown}
                       weekday={entry.weekday}
-                      label="No planned session"
+                      label={gapLabel.label}
+                      reason={gapLabel.reason}
                       isCurrent={entry.dateIso === restCurrentIso}
                       currentLabel={currentDayLabel}
                     />

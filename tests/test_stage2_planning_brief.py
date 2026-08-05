@@ -1637,10 +1637,22 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
         "d0",
     ]
     roles_from_seq = [entry["role_key"] for entry in brief["late_fight_session_sequence"]]
+    # A D-5 camp places its two active sessions at D-3 and D-1, which used to
+    # leave D-4 — the athlete's first day — with nothing at all. A zero-cost
+    # support insert now fills it so the day reads as an intentional plan.
     assert roles_from_seq == [
+        "tactical_cue_card",
         "fight_week_freshness_day",
         "neural_primer_day",
     ]
+    support_entries = [
+        entry
+        for entry in brief["late_fight_session_sequence"]
+        if entry["role_key"] == "tactical_cue_card"
+    ]
+    assert [entry["category"] for entry in support_entries] == ["support_insert"]
+    # The active-session budget is untouched: the insert is support, not a
+    # session, so the visible session roles and cap are exactly as before.
     assert brief["late_fight_plan_spec"]["session_roles"] == [
         "fight_week_freshness_day",
         "neural_primer_day",
