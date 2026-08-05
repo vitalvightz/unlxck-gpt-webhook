@@ -30,6 +30,7 @@ from api.structured_plan_generation import (
 )
 from api.structured_plan_models import (
     SCHEMA_VERSION,
+    LoadPrescription,
     Nutrition,
     SessionBlock,
     validate_structured_plan,
@@ -1330,6 +1331,113 @@ def test_normalize_load_percent_without_ref_has_no_ref_key():
 def test_normalize_load_bodyweight_and_unparseable():
     assert _normalize_load("bodyweight")["method"] == "bodyweight"
     assert _normalize_load("as hard as possible") is None
+
+
+# --- _normalize_load: dict form must be coerced, never passed through --------
+#
+# A load dict used to be returned untouched, so one prose method or one missing
+# value on a single taper/rehab block failed the WHOLE card with
+# "load.method: Input should be 'percentage'..." / "load.value: Field required".
+
+
+def test_normalize_load_dict_with_prose_method_is_coerced():
+    load = _normalize_load(
+        {"method": "light DBs", "unit": "kg", "display": "light DBs (2-4 kg)"}
+    )
+    LoadPrescription.model_validate(load)
+    assert load["method"] == "absolute"
+    assert load["value"] == 4.0  # a range reads its working top end
+    assert load["unit"] == "kg"
+
+
+def test_normalize_load_dict_reads_number_from_display_when_value_missing():
+    load = _normalize_load({"method": "dumbbell", "display": "2-4 kg"})
+    LoadPrescription.model_validate(load)
+    assert load["method"] == "absolute"
+    assert load["value"] == 4.0
+
+
+def test_normalize_load_dict_infers_method_from_display_context():
+    load = _normalize_load({"display": "85% 1RM"})
+    LoadPrescription.model_validate(load)
+    assert load["method"] == "percentage"
+    assert load["value"] == 85.0
+    assert load["unit"] == "percent"
+
+
+def test_normalize_load_dict_coerces_string_range_value():
+    load = _normalize_load({"method": "percentage", "value": "75-85", "unit": "percent"})
+    LoadPrescription.model_validate(load)
+    assert load["value"] == 85.0
+
+
+def test_normalize_load_dict_bodyweight_needs_no_number():
+    load = _normalize_load({"method": "bodyweight"})
+    LoadPrescription.model_validate(load)
+    assert load["value"] == 0.0
+    assert load["unit"] == "bodyweight"
+
+
+def test_normalize_load_dict_already_valid_is_preserved():
+    load = _normalize_load({"method": "percentage", "value": 88, "unit": "percent"})
+    LoadPrescription.model_validate(load)
+    assert load["method"] == "percentage"
+    assert load["value"] == 88.0
+
+
+def test_normalize_load_dict_reads_unit_anchored_number_not_rep_counts():
+    # The real failing block: the dose names sets/reps BEFORE the load, so an
+    # unanchored read would call it "2 kg" off "2 sets". The unit anchors it.
+    load = _normalize_load(
+        {
+            "display": "YTW Raise Sequence (light DBs) - 2 sets x 8 reps per "
+            "letter, light DBs (2-4 kg), tempo controlled 2-0-2, rest 45 sec."
+        }
+    )
+    LoadPrescription.model_validate(load)
+    assert load["method"] == "absolute"
+    assert load["value"] == 4.0
+    assert load["unit"] == "kg"
+
+
+def test_normalize_load_dict_drops_when_no_load_can_be_read():
+    # Digits that are NOT a load (a tempo cue, a rep scheme) must never be
+    # scraped into a prescription — the optional field is dropped instead.
+    assert _normalize_load({"method": "tempo", "display": "controlled 2-0-2"}) is None
+    assert _normalize_load({"method": "other", "display": "2 sets x 8 reps"}) is None
+    assert _normalize_load({"method": "text", "display": "light effort"}) is None
+    assert _normalize_load({"method": "band", "display": "light band"}) is None
+    assert _normalize_load({}) is None
+
+
+def test_unreadable_load_no_longer_fails_the_whole_card():
+    # Regression: blocks[3] carrying an unreadable load must not sink the plan.
+    candidate = normalize_structured_plan_candidate(
+        {
+            "weeks": [
+                {
+                    "days": [
+                        {
+                            "sessions": [
+                                {
+                                    "blocks": [
+                                        {"display_name": "Trap bar deadlift",
+                                         "load": {"method": "percentage", "value": 80, "unit": "percent"}},
+                                        {"display_name": "YTW Raise Sequence",
+                                         "load": {"method": "light DBs (2-4 kg)"}},
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    )
+    blocks = candidate["weeks"][0]["days"][0]["sessions"][0]["blocks"]
+    assert blocks[0]["load"]["value"] == 80.0
+    # The unreadable one is dropped, not left to fail schema validation.
+    assert blocks[1]["load"] is None
 
 
 # --- weight_cut_warning as a plain string ------------------------------------
