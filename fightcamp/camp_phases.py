@@ -12,8 +12,15 @@ def _phase_ratios(gpp: float, spp: float, taper: float) -> dict[str, float]:
 
 
 def _effective_phase_block_count(total_days: int) -> int:
+    # A 7-to-13 day camp needs two phase blocks so the window can carry sharpening
+    # work AND a taper. At exactly 7 days ``round(7 / 7)`` gives a single block,
+    # and a lone block can only land on ONE phase — which left D-7 as 100% SPP
+    # with no taper at all, between an all-taper D-6 and the SPP+TAPER split at
+    # D-8. D-7 also falls through both existing taper guards: the ultra-short
+    # override only covers ``days < 7`` and the taper guarantee requires
+    # ``camp_length >= 2``.
     base = max(1, min(16, round(total_days / 7)))
-    if 8 <= total_days <= 13:
+    if 7 <= total_days <= 13:
         return 2
     return base
 
