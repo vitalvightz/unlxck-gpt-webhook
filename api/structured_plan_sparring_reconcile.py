@@ -43,6 +43,13 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 # contact work the athlete must see as its own card.
 _CONTACT_EFFECTIVE_LOADS = {"hard", "technical", "reduced"}
 
+# From D-17 onward hard sparring is banned — every declared hard day converts to
+# technical/rhythm (``sparring_dose_planner._apply_per_day_countdown_overrides``).
+# The calendar is the authority here too: a contact card at or inside this
+# countdown never carries a hard-sparring headline, whatever the role or schedule
+# entry it was built from claims.
+_HARD_SPARRING_BAN_D_DAY = 17
+
 # Canonical headlines chosen so the web classifier reliably tags the day:
 #   "spar"      -> SPARRING_RE  -> kind "sparring"  (athlete-owned contact note shows)
 #   "technical" -> TECHNICAL_RE -> kind "technical" (athlete-owned contact note shows)
@@ -153,6 +160,46 @@ def _is_allowed_same_day_filler(session: Any, contact: _ContactDay) -> bool:
     return bool(allowed_re.search(text))
 
 
+def _ban_clamped_load(load: str, d_day: int | None) -> str:
+    """Force technical on any contact day inside the D-17 hard-sparring ban."""
+    if load == "hard" and d_day is not None and 0 <= d_day <= _HARD_SPARRING_BAN_D_DAY:
+        return "technical"
+    return load
+
+
+def _role_contact_load(role: dict[str, Any], d_day: int | None) -> str:
+    """Effective contact load for a declared ``hard_sparring_day`` role.
+
+    ``role_key`` records only that the day was *declared* hard — never what the
+    sparring dose planner did with it. The late-fight planner marks a converted
+    day with ``downgraded`` / ``downgraded_to_role_key``, but the normal-camp role
+    map carries the planner's verdict in ``hard_sparring_status`` /
+    ``hard_sparring_reason_codes`` instead. Reading only the late-fight flags
+    labelled every normal-camp day inside the D-17 ban "Hard sparring", and since
+    roles are collected before the weekly schedule, that wrong headline won the
+    d-day dedupe over the schedule's correct technical entry.
+    """
+    if bool(role.get("downgraded")) or str(
+        role.get("downgraded_to_role_key") or ""
+    ).strip() == "technical_touch_day":
+        return "technical"
+
+    status = str(role.get("hard_sparring_status") or "").strip()
+    raw_codes = role.get("hard_sparring_reason_codes")
+    reason_codes = {
+        str(code).strip()
+        for code in (raw_codes if isinstance(raw_codes, (list, tuple)) else [])
+    }
+    if status == "convert_to_technical_suggested" or "d17_hard_sparring_ban" in reason_codes:
+        return "technical"
+    if (
+        status == "deload_suggested"
+        or str(role.get("hard_sparring_class") or "").strip() == "managed_hard"
+    ):
+        return "reduced"
+    return _ban_clamped_load("hard", d_day)
+
+
 def _resolve_fight_date(planning_brief: dict[str, Any]) -> Any:
     """Best-effort fight date for the calendar fallback in extract_weekly_schedule."""
     for source in (
@@ -250,10 +297,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             if d_day is None or d_day == 0:
                 continue
 
-            is_technical = bool(role.get("downgraded")) or str(
-                role.get("downgraded_to_role_key") or ""
-            ).strip() == "technical_touch_day"
-            load = "technical" if is_technical else "hard"
+            load = _role_contact_load(role, d_day)
             append_contact(
                 _ContactDay(
                     date=str(role.get("calendar_date") or role.get("date") or "").strip() or None,
@@ -298,6 +342,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             if cal is None and d_day is None:
                 continue
 
+            load = _ban_clamped_load(load, d_day)
             append_contact(
                 _ContactDay(
                     date=cal,
