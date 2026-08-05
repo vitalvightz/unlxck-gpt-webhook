@@ -53,6 +53,11 @@ _IMPACT_AEROBIC_INSERTS = {"aerobic_skip_flush", "aerobic_jog_flush"}
 
 GAP_FILL_MIN_DAYS = 3
 TWO_INSERT_GAP_MIN_DAYS = 5
+# Widest countdown at which the opening days of the window are eligible for a
+# gap-fill insert. Inside the taper the session budget is small enough that the
+# plan can start days after the athlete does; further out the sessions already
+# reach the front of the window on their own.
+LEADING_SPAN_MAX_DAYS_UNTIL_FIGHT = 7
 MAX_INSERTS_TOTAL_D21_TO_D0 = 6
 MAX_PHYSICAL_INSERTS_PER_7_DAY_SEGMENT = 1
 # Day-before-fight slots stay restricted to zero/recovery work regardless of goal.
@@ -1013,8 +1018,33 @@ def _gap_candidate_offsets(far_offset: int, near_offset: int) -> list[int]:
     return sorted(chosen, reverse=True)
 
 
-def _candidate_offsets_from_sequence(offsets: list[int]) -> list[tuple[int, int]]:
+def _candidate_offsets_from_sequence(
+    offsets: list[int], days_until_fight: int | None = None
+) -> list[tuple[int, int]]:
     candidate_offsets: list[tuple[int, int]] = []
+
+    # Leading span: the days between the start of the window and the FIRST
+    # session. Only the gaps *between* sessions and the trailing run down to
+    # fight day used to be candidates, so on a short camp whose sessions are
+    # back-loaded (D-6 placing both at D-3 and D-1) the opening days were
+    # structurally unreachable — no insert could land there however light, and
+    # the athlete opened the app to a run of blank days.
+    #
+    # Scoped to the late-fight taper window: that is where the session budget is
+    # tight enough to strand the front of the plan, and it keeps longer camps on
+    # their existing shape. _gap_candidate_offsets excludes its far endpoint, so
+    # passing days_until_fight + 1 makes the window's own first day eligible.
+    if (
+        days_until_fight is not None
+        and 0 < days_until_fight <= LEADING_SPAN_MAX_DAYS_UNTIL_FIGHT
+        and offsets
+    ):
+        first_offset = max(offsets)
+        if days_until_fight > first_offset:
+            leading_gap = days_until_fight - first_offset
+            for target_offset in _gap_candidate_offsets(days_until_fight + 1, first_offset):
+                candidate_offsets.append((target_offset, leading_gap))
+
     for far_offset, near_offset in zip(offsets, offsets[1:]):
         gap = far_offset - near_offset
         for target_offset in _gap_candidate_offsets(far_offset, near_offset):
@@ -1085,7 +1115,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         and not is_low_cost_coexistable_filler(role)
         and (offset := _role_offset(role)) is not None
     }
-    candidate_offsets = _candidate_offsets_from_sequence(offsets)
+    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
 
     inserts: list[dict[str, Any]] = []
     physical_segment_counts: dict[int, int] = {}

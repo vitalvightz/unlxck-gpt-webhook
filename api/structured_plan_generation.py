@@ -42,6 +42,7 @@ from .structured_plan_models import (
     PlanStatus,
     PlanType,
     EffortMethod,
+    LoadMethod,
     ReadinessStatus,
     RedFlagWhen,
     RiskLevel,
@@ -240,6 +241,7 @@ _SEVERITY_VALUES = frozenset(get_args(Severity))
 _RED_FLAG_WHEN_VALUES = frozenset(get_args(RedFlagWhen))
 _PHASE_VALUES = frozenset(get_args(PhaseLabel))
 _LOAD_FOCUS_VALUES = frozenset(get_args(LoadFocusValue))
+_LOAD_METHOD_VALUES = frozenset(get_args(LoadMethod))
 _WEEK_TYPE_VALUES = frozenset(get_args(WeekType))
 _DAY_TYPE_VALUES = frozenset(get_args(DayType))
 _READINESS_VALUES = frozenset(get_args(ReadinessStatus))
@@ -273,6 +275,68 @@ _EFFORT_METHOD_ALIASES = {
     "rir": "RIR",
     "hr_zone": "heart_rate_zone",
     "heart_rate": "heart_rate_zone",
+}
+# Loose ``load.method`` values the conversion model emits instead of the enum.
+# Taper/rehab work is the common source: those blocks are prescribed as "light
+# DBs (2-4 kg)" or "band" rather than a clean %1RM, so the model reaches for a
+# descriptive method far more often than it does on a strength anchor.
+_LOAD_METHOD_ALIASES = {
+    "percent": "percentage",
+    "pct": "percentage",
+    "%": "percentage",
+    "1rm": "percentage",
+    "percentage_1rm": "percentage",
+    "percent_1rm": "percentage",
+    "kg": "absolute",
+    "kgs": "absolute",
+    "lb": "absolute",
+    "lbs": "absolute",
+    "pound": "absolute",
+    "pounds": "absolute",
+    "weight": "absolute",
+    "external": "absolute",
+    "external_load": "absolute",
+    "dumbbell": "absolute",
+    "dumbbells": "absolute",
+    "bw": "bodyweight",
+    "body_weight": "bodyweight",
+    "body weight": "bodyweight",
+    "bodyweight_only": "bodyweight",
+    "bands": "band",
+    "banded": "band",
+    "resistance_band": "band",
+    "rpe_scale": "rpe",
+    "rir_scale": "rir",
+    "qualitative": "other",
+    "text": "other",
+}
+
+# Unit tokens that identify a load method when the method itself is unreadable.
+_LOAD_PERCENT_HINT_RE = re.compile(r"%|percent|1\s*rm", re.I)
+_LOAD_BODYWEIGHT_HINT_RE = re.compile(r"bodyweight|body weight|\bbw\b", re.I)
+_LOAD_BAND_HINT_RE = re.compile(r"\bbands?\b|banded", re.I)
+_LOAD_ABSOLUTE_HINT_RE = re.compile(r"\b(kgs?|lbs?|kilos?|kilograms?|pounds?|dbs?|dumbbells?)\b", re.I)
+
+# A number (or range) that is DIRECTLY attached to a load unit — "2-4 kg", "85%".
+# Anchoring on the unit is what stops a rep/set count being misread as a load:
+# "2 sets x 8 reps per letter, light DBs (2-4 kg)" must yield 4 kg, never 2.
+_LOAD_NUMBER_WITH_UNIT_RE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(?:[-–—]\s*(\d+(?:\.\d+)?))?\s*(?:%|kgs?|lbs?|kilos?|kilograms?|pounds?)",
+    re.I,
+)
+
+# Default unit per method, used only when the payload carries no usable unit.
+# ``absolute`` follows the convention already set by the bare-number branch below.
+_LOAD_DEFAULT_UNITS = {
+    "percentage": "percent",
+    "bodyweight": "bodyweight",
+    "band": "band",
+    "absolute": "kg",
+    "rpe": "rpe",
+    "rir": "rir",
+    "velocity": "m/s",
+    "relative": "relative",
+    "other": "other",
 }
 _BLOCK_TYPE_ALIASES = {
     "warmup": "preparation",
@@ -503,11 +567,96 @@ def _days_from_label(label: str) -> int:
     return -int(match.group(1))
 
 
+def _load_method_from_context(*parts: Any) -> str:
+    """Infer a load method from unit/display text, or ``""`` when unreadable."""
+    text = " ".join(_coerce_str(part) for part in parts).strip()
+    if not text:
+        return ""
+    if _LOAD_PERCENT_HINT_RE.search(text):
+        return "percentage"
+    if _LOAD_BODYWEIGHT_HINT_RE.search(text):
+        return "bodyweight"
+    if _LOAD_BAND_HINT_RE.search(text):
+        return "band"
+    if _LOAD_ABSOLUTE_HINT_RE.search(text):
+        return "absolute"
+    return ""
+
+
+def _normalize_load_dict(value: dict[str, Any]) -> dict[str, Any] | None:
+    """Coerce a model-emitted load object onto ``LoadPrescription``.
+
+    ``LoadPrescription`` requires a valid ``method`` enum, a float ``value`` and
+    a ``unit``. The conversion model routinely returns the right prescription in
+    a slightly-wrong shape — a prose method ("light dumbbells"), a range value
+    ("2-4"), the number present only in ``display`` ("light DBs (2-4 kg)"), or a
+    missing unit — and an untouched pass-through failed the WHOLE card on that
+    formatting slip. This is the same class of bug ``_normalize_measured`` below
+    was hardened against; ``load`` never got the same treatment, so a single
+    unreadable taper/rehab load sank every other day in the plan.
+
+    Only formatting is repaired: the method is aliased or inferred from the
+    unit/display text, a range reads its upper bound (matching the effort and
+    measured conventions), and a method that stays unreadable becomes ``other``
+    — which is precisely what that enum member is for. No load is invented: when
+    no number can be read the optional field is dropped so the block keeps its
+    prose prescription and the card still validates.
+    """
+
+    out = dict(value)
+    display = _coerce_str(out.get("display")).strip()
+    unit = _coerce_str(out.get("unit")).strip()
+
+    raw_method = _coerce_str(out.get("method")).strip().lower()
+    method = (
+        raw_method
+        if raw_method in _LOAD_METHOD_VALUES
+        else _LOAD_METHOD_ALIASES.get(raw_method, "")
+    )
+    if not method:
+        # An unreadable method is still recoverable from the numbers' context.
+        method = _load_method_from_context(raw_method, unit, display)
+
+    # The number may live on ``value`` or only inside the display text. A display
+    # is read ONLY through a unit-anchored match ("2-4 kg", "85%"), so a tempo cue
+    # ("controlled 2-0-2") or a rep scheme ("2 sets x 8 reps") can never be
+    # mistaken for a load — a range still reads its working top end.
+    number = _coerce_float(out.get("value"))
+    if number is None:
+        match = _LOAD_NUMBER_WITH_UNIT_RE.search(display)
+        if match:
+            number = float(match.group(2) or match.group(1))
+
+    if number is None:
+        # Bodyweight is the one method whose load is defined without a number,
+        # matching the string branch below; anything else is dropped unread.
+        if method != "bodyweight":
+            return None
+        number = 0.0
+
+    if not method:
+        method = "other"
+
+    out["method"] = method
+    out["value"] = number
+    out["unit"] = unit or _LOAD_DEFAULT_UNITS.get(method, "other")
+    if display:
+        out["display"] = display
+    else:
+        out.pop("display", None)
+    ref = _coerce_str(out.get("ref")).strip()
+    if ref:
+        out["ref"] = ref
+    else:
+        out.pop("ref", None)
+    return out
+
+
 def _normalize_load(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
     if isinstance(value, dict):
-        return value
+        return _normalize_load_dict(value)
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return {"method": "absolute", "value": float(value), "unit": "kg", "display": str(value)}
     if isinstance(value, str):

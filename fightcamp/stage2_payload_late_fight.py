@@ -700,8 +700,14 @@ def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
         return 2
     if 8 <= days <= 13:
         return 2
+    # Support work is zero/low cost — mobility, breathing, tactical cues,
+    # recovery guidance — so it carries no taper penalty. A single support role
+    # across the whole D-3..D-7 stretch left the opening days of a back-loaded
+    # short camp with nothing to show at all; two lets them read as an
+    # intentional plan without adding any training stress. The active-session
+    # and stress-exposure budgets are deliberately untouched.
     if 3 <= days <= 7:
-        return 1
+        return 2
     if 0 <= days <= 2:
         return 0
     return None

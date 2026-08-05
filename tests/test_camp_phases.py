@@ -83,6 +83,30 @@ def test_calculate_phase_weeks_under_7_days_forces_taper_phase():
     assert sum(phases["days"].values()) == 6
 
 
+def test_calculate_phase_weeks_keeps_a_taper_at_7_days():
+    # D-7 used to fall through BOTH taper guards — the ultra-short override only
+    # covers days < 7, and the taper guarantee requires camp_length >= 2, which a
+    # 7-day camp did not reach. The result was 100% SPP with no taper at all,
+    # sitting between an all-taper D-6 and the SPP+TAPER split at D-8.
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=7)
+
+    assert phases["GPP"] == 0
+    assert phases["SPP"] >= 1
+    assert phases["TAPER"] >= 1
+    assert not (phases["SPP"] == 1 and phases["TAPER"] == 0)
+    assert phases["days"]["TAPER"] >= 1
+    assert sum(phases["days"].values()) == 7
+
+
+def test_calculate_phase_weeks_never_drops_the_taper_inside_fight_week():
+    # Every countdown day that still has training time must carry taper days;
+    # only the fight day itself (D-0) has no phase days to allocate.
+    for days_until_fight in range(1, 22):
+        phases = calculate_phase_weeks(6, "boxing", days_until_fight=days_until_fight)
+        assert phases["days"]["TAPER"] >= 1, days_until_fight
+        assert sum(phases["days"].values()) == days_until_fight, days_until_fight
+
+
 def test_calculate_phase_weeks_uses_compressed_spp_and_taper_at_8_days():
     phases = calculate_phase_weeks(6, "boxing", days_until_fight=8)
 
