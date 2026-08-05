@@ -2028,11 +2028,6 @@ export function PlanIntakeForm() {
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
   const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No Light Combat days selected");
   const fightDayLockReason = `Fight day — ${formatFightDateValue(form.fight_date)}`;
-  // Far-out camps keep every instance of the fight weekday available; say so
-  // explicitly so the lock's absence does not read as a bug either.
-  const fightWeekdayNote = fightDateWeekday && !lockedFightWeekday
-    ? `Your fight is on ${fightDateWeekday}. Other ${fightDateWeekday}s stay unchanged. Fight week will use the fight-day protocol automatically.`
-    : null;
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
   const performanceFocusCapTitle = performanceFocusCapValue === null
@@ -2760,7 +2755,6 @@ export function PlanIntakeForm() {
                 <p className="muted">
                   Mark which combat days are hard sparring and which are light or technical. These still count within your weekly session total.
                 </p>
-                {fightWeekdayNote ? <p className="muted">{fightWeekdayNote}</p> : null}
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
                     <p className="muted" style={{ opacity: 0.5 }}>Hard sparring day selection is not used for planning at this stage.</p>
