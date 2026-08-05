@@ -6693,6 +6693,13 @@ button.mobile-step-rail-item {
   min-width: 0;
 }
 
+/* Empty state renders a single CTA ("Resume Advanced Intake" / "Quick Build
+   New Plan"). The 3-column grid otherwise squeezes it into one narrow column,
+   so its label overflows the pill on both sides. Let a lone CTA span the row. */
+.plans-dashboard-primary-card .plans-dashboard-actions > .cta:only-child {
+  grid-column: 1 / -1;
+}
+
 .plans-dashboard-primary-card .plans-dashboard-actions > .plan-action-menu > summary {
   min-height: 44px;
 }
