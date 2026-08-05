@@ -347,6 +347,116 @@ def test_declared_late_technical_context_days_remain_visible():
         )
 
 
+def _normal_camp_role_brief(
+    *,
+    d_day: int,
+    status: str = "hard_as_planned",
+    hard_day_class: str = "primary_hard",
+    reason_codes: list[str] | None = None,
+) -> dict:
+    """A normal-camp role map week, as ``stage2_role_map`` actually emits one.
+
+    Unlike the late-fight planner this path never sets ``downgraded`` /
+    ``downgraded_to_role_key`` — the sparring dose planner's verdict rides on
+    ``hard_sparring_status`` / ``hard_sparring_reason_codes`` instead, and the
+    role carries a ``scheduled_countdown_label`` rather than a ``countdown_offset``.
+    """
+    return {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "session_roles": [
+                        {
+                            "role_key": "hard_sparring_day",
+                            "scheduled_day_hint": "Tuesday",
+                            "scheduled_countdown_label": f"D-{d_day}",
+                            "countdown_label": f"D-{d_day}",
+                            "hard_sparring_status": status,
+                            "hard_sparring_class": hard_day_class,
+                            "hard_sparring_reason_codes": list(reason_codes or []),
+                        }
+                    ],
+                    "hard_sparring_plan": [],
+                }
+            ]
+        }
+    }
+
+
+def test_normal_camp_converted_day_inside_d17_ban_is_not_headlined_hard_sparring():
+    # The dose planner converts these to technical; the card must say so. The
+    # role only reports it via hard_sparring_status/reason codes, never the
+    # late-fight ``downgraded`` flag.
+    for d_day in (17, 15, 11, 8, 4, 1):
+        plan = _structured_plan([_day(f"D-{d_day}", headline="Recovery")])
+        reconcile_coach_led_sparring_days(
+            plan,
+            _normal_camp_role_brief(
+                d_day=d_day,
+                status="convert_to_technical_suggested",
+                hard_day_class="managed_hard",
+                reason_codes=["d17_hard_sparring_ban"],
+            ),
+        )
+        assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+
+
+def test_normal_camp_hard_sparring_ban_boundary_is_d18():
+    # D-18 is the last coach-owned hard day; D-17 is the first banned one.
+    hard_plan = _structured_plan([_day("D-18", headline="Recovery")])
+    reconcile_coach_led_sparring_days(hard_plan, _normal_camp_role_brief(d_day=18))
+    assert hard_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring"
+
+    banned_plan = _structured_plan([_day("D-17", headline="Recovery")])
+    reconcile_coach_led_sparring_days(banned_plan, _normal_camp_role_brief(d_day=17))
+    assert banned_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+
+
+def test_normal_camp_deloaded_hard_day_renders_reduced_dose():
+    plan = _structured_plan([_day("D-25", headline="Recovery")])
+    reconcile_coach_led_sparring_days(
+        plan,
+        _normal_camp_role_brief(
+            d_day=25,
+            status="deload_suggested",
+            hard_day_class="managed_hard",
+            reason_codes=["consecutive_hard_days"],
+        ),
+    )
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring — reduced dose"
+
+
+def test_countdown_ban_outranks_a_role_still_claiming_hard_inside_d17():
+    # Belt and braces: even a role carrying no dose verdict at all (legacy or
+    # degraded week) can never produce a hard-sparring card inside the ban.
+    plan = _structured_plan([_day("D-12", headline="Recovery")])
+    brief = _normal_camp_role_brief(d_day=12)
+    del brief["weekly_role_map"]["weeks"][0]["session_roles"][0]["hard_sparring_status"]
+    del brief["weekly_role_map"]["weeks"][0]["session_roles"][0]["hard_sparring_reason_codes"]
+    del brief["weekly_role_map"]["weeks"][0]["session_roles"][0]["hard_sparring_class"]
+
+    reconcile_coach_led_sparring_days(plan, brief)
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+
+
+def test_schedule_derived_hard_day_inside_ban_is_clamped_to_technical():
+    # Same clamp on the weekly-schedule path: a hard_sparring_plan entry that
+    # slipped through as hard at D-17 or closer must not headline as hard.
+    hard_plan = [
+        {
+            "day": "Thursday",
+            "effective_load": "hard",
+            "status": "hard_as_planned",
+            "hard_day_class": "primary_hard",
+        }
+    ]
+    # end_d=7, span=7 puts Thursday at D-10 — inside the ban.
+    plan = _structured_plan([_day("D-10", headline="Recovery")])
+    reconcile_coach_led_sparring_days(plan, _planning_brief(hard_plan, end_d=7))
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+
+
 def test_leaves_already_coach_led_headline_alone():
     plan = _structured_plan([_day("D-31", headline="Coach-led boxing session")])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
