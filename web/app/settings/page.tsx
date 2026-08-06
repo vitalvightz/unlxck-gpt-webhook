@@ -8,6 +8,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PushNotificationSettings } from "@/components/push-notification-settings";
+import { PrivateTrialGuide } from "@/components/private-trial-guide";
 import { GlobalFeedback } from "@/components/feedback/global-feedback";
 import { ApiError, changeUsername, updateMe } from "@/lib/api";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
@@ -119,6 +120,7 @@ const ATHLETE_SETTINGS_SECTIONS: SettingsSection[] = [
   { id: "notifications", label: "Notifications" },
   { id: "subscription", label: "Subscription" },
   { id: "privacy", label: "Privacy" },
+  { id: "private-trial", label: "Private Trial Guide" },
   { id: "send-feedback", label: "Send feedback" },
 ];
 
@@ -1094,6 +1096,19 @@ export default function SettingsPage() {
             </button>
           </div>
           <p className="settings-coming-soon">Data export and account deletion controls will be available from Privacy after launch.</p>
+        </article>
+
+        {/* The same briefing shown at sign-up, kept readable for the whole
+            trial: testers ask what they are supposed to be checking weeks after
+            the one-time screen. */}
+        <article id="private-trial" className="step-card settings-card">
+          <div className="form-section-header">
+            <p className="kicker">Private trial</p>
+            <h2 className="form-section-title" id="settings-private-trial-heading">
+              Private Trial Guide
+            </h2>
+          </div>
+          <PrivateTrialGuide headingId="settings-private-trial-heading" showTitle={false} />
         </article>
 
         <article id="send-feedback" className="step-card settings-card">

@@ -179,6 +179,7 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "athlete_locale",
     "active_plan_id",
     "appearance_mode",
+    "private_trial_ack_at",
 )
 
 REQUIRED_ADMIN_ROLE_AUDIT_COLUMNS: tuple[str, ...] = (
@@ -340,10 +341,12 @@ REQUIRED_BETA_FEEDBACK_COLUMNS: tuple[str, ...] = (
     "response",
     "reason",
     "comment",
+    "structured_response",
     "contact_allowed",
     "priority",
     "plan_id",
     "today_checkin_id",
+    "session_id",
     "camp_phase",
     "readiness_snapshot",
     "injury_snapshot",

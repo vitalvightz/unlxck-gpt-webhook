@@ -235,6 +235,8 @@ export type ProfileUpdateRequest = {
   onboarding_draft?: Record<string, unknown> | null;
   avatar_url?: string | null;
   nutrition_profile?: NutritionProfileInput | null;
+  /** Intent only: the server stamps `private_trial_ack_at` itself. */
+  private_trial_acknowledged?: boolean;
 };
 
 export type ProfileRecord = {
@@ -256,6 +258,8 @@ export type ProfileRecord = {
   onboarding_draft?: Record<string, unknown> | null;
   avatar_url?: string | null;
   nutrition_profile: NutritionProfileInput;
+  /** Null until the athlete confirms they read the private trial instructions. */
+  private_trial_ack_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1131,16 +1135,30 @@ export type TodayInjuryCheckinResponse = {
   open_injuries: InjuryFlagRecord[];
 };
 
-export type FeedbackSurface = "plan" | "daily_recommendation" | "global";
+export type FeedbackSurface = "plan" | "daily_recommendation" | "session" | "global";
 export type FeedbackCategory =
   | "plan_usefulness"
   | "recommendation_fit"
   | "recommendation_safety"
+  | "session_review"
   | "bug_report"
   | "feature_request"
   | "safety_issue"
   | "general_feedback";
 export type FeedbackResponseValue = "yes" | "no" | "unsafe";
+
+// The three quick questions asked after a completed session. Each is optional
+// on its own so the prompt stays short enough that testers keep completing
+// sessions; the submission just has to carry something.
+export type SessionFeedbackDifficulty = "too_easy" | "appropriate" | "too_hard";
+export type SessionFeedbackInstructions = "clear" | "unclear";
+export type SessionFeedbackPlanAccuracy = "felt_right" | "something_wrong";
+
+export type SessionFeedbackAnswers = {
+  difficulty?: SessionFeedbackDifficulty;
+  instructions?: SessionFeedbackInstructions;
+  plan_accuracy?: SessionFeedbackPlanAccuracy;
+};
 
 export type FeedbackRecord = {
   id: string;
@@ -1149,6 +1167,7 @@ export type FeedbackRecord = {
   response: FeedbackResponseValue | null;
   reason: string | null;
   comment: string;
+  structured_response: SessionFeedbackAnswers;
   priority: "normal" | "safety";
   has_screenshot: boolean;
   created_at: string;
@@ -1162,6 +1181,7 @@ export type AdminFeedbackRecord = FeedbackRecord & {
   contact_allowed: boolean;
   plan_id: string | null;
   today_checkin_id: string | null;
+  session_id: string | null;
   camp_phase: string | null;
   app_version: string;
   page_path: string;
@@ -1190,5 +1210,14 @@ export type GlobalFeedbackRequest = {
   category: Extract<FeedbackCategory, "bug_report" | "feature_request" | "safety_issue" | "general_feedback">;
   description?: string;
   contact_allowed?: boolean;
+  screenshot?: File | null;
+};
+
+export type SessionFeedbackRequest = SessionFeedbackAnswers & {
+  plan_id: string;
+  session_id: string;
+  /** Omitted for the session just finished; sent when reviewing a retro-log. */
+  training_day?: string;
+  comment?: string;
   screenshot?: File | null;
 };

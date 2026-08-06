@@ -11,6 +11,7 @@ const LABELS: Record<string, string> = {
   plan_usefulness: "Plan feedback",
   recommendation_fit: "Today feedback",
   recommendation_safety: "Safety feedback",
+  session_review: "Session review",
   bug_report: "Bug report",
   feature_request: "Feature request",
   safety_issue: "Safety report",
@@ -20,8 +21,25 @@ const LABELS: Record<string, string> = {
 const SURFACE_LABELS: Record<string, string> = {
   plan: "Plan",
   daily_recommendation: "Daily recommendation",
+  session: "Completed session",
   global: "Report",
 };
+
+// The three post-session questions, in the order the athlete answered them.
+const SESSION_ANSWER_LABELS: ReadonlyArray<readonly [key: string, label: string]> = [
+  ["difficulty", "Difficulty"],
+  ["instructions", "Instructions"],
+  ["plan_accuracy", "Plan accuracy"],
+];
+
+// Answers that mean "this session was wrong for me". They set the row's tone so
+// a problem session is as visible in the queue as a thumbs-down elsewhere.
+const SESSION_ANSWER_CONCERNS: ReadonlySet<string> = new Set([
+  "too_easy",
+  "too_hard",
+  "unclear",
+  "something_wrong",
+]);
 
 const SAFETY_FIELDS = [
   "sharp_pain",
@@ -86,11 +104,36 @@ function getFeedbackSignal(item: AdminFeedbackRecord): {
       title: item.category === "recommendation_fit" ? "Recommendation fit" : "Plan worked",
     };
   }
+  if (item.surface === "session") {
+    const answers = getSessionAnswers(item);
+    const concerns = answers.filter(([, value]) => SESSION_ANSWER_CONCERNS.has(value));
+    if (concerns.length) {
+      return {
+        tone: "caution",
+        label: "Session review",
+        title: concerns.map(([label, value]) => `${label}: ${readable(value)}`).join(" · "),
+      };
+    }
+    return {
+      tone: answers.length ? "positive" : "neutral",
+      label: "Session review",
+      title: answers.length ? "Session felt right" : "Session comment only",
+    };
+  }
   return {
     tone: "neutral",
     label: "Review report",
     title: readable(item.category),
   };
+}
+
+/** The answered questions as [label, value] pairs; unanswered ones are absent. */
+function getSessionAnswers(item: AdminFeedbackRecord): Array<[string, string]> {
+  const answers = item.structured_response as Record<string, string | undefined>;
+  return SESSION_ANSWER_LABELS.flatMap(([key, label]) => {
+    const value = answers?.[key];
+    return value ? [[label, value] as [string, string]] : [];
+  });
 }
 
 function getOpenInjuryFlags(item: AdminFeedbackRecord): Record<string, unknown>[] {
@@ -264,6 +307,7 @@ function FeedbackItem({
   const readinessChips = getReadinessChips(item);
   const readinessRows = getReadinessRows(item);
   const intakeRows = getIntakeRows(item);
+  const sessionAnswers = getSessionAnswers(item);
   const safetyFlags = getSafetyFlags(item);
   const injuryFlags = getOpenInjuryFlags(item);
   const technical = item.technical_context;
@@ -300,6 +344,14 @@ function FeedbackItem({
       <p className={`admin-feedback-comment${item.comment ? "" : " admin-feedback-comment-empty"}`}>
         {item.comment || "No written comment"}
       </p>
+
+      {sessionAnswers.length ? (
+        <div className="admin-feedback-context-strip" aria-label="Session review answers">
+          {sessionAnswers.map(([label, value]) => (
+            <span key={label}>{`${label}: ${readable(value)}`}</span>
+          ))}
+        </div>
+      ) : null}
 
       <div className="admin-feedback-context-strip" aria-label="Captured readiness context">
         {readinessChips.map((chip) => <span key={chip}>{chip}</span>)}

@@ -1151,6 +1151,10 @@ class ProfileUpdateRequest(BaseModel):
     onboarding_draft: dict[str, Any] | None = None
     avatar_url: str | None = Field(default=None, max_length=AVATAR_URL_MAX_CHARS)
     nutrition_profile: NutritionProfileInput | None = None
+    # Acknowledgement of the private trial instructions. The client sends the
+    # intent, never a timestamp: the server stamps `private_trial_ack_at` so it
+    # cannot be backdated. `false` clears the acknowledgement.
+    private_trial_acknowledged: bool | None = None
 
     @field_validator("full_name", "stance", "professional_status", "record", "athlete_timezone", "athlete_locale", "avatar_url", mode="before")
     @classmethod
@@ -1442,6 +1446,9 @@ class ProfileRecord(BaseModel):
     onboarding_draft: dict[str, Any] | None = None
     avatar_url: str | None = None
     nutrition_profile: NutritionProfileInput = Field(default_factory=NutritionProfileInput)
+    # Null until the athlete confirms they read the private trial instructions.
+    # The web app gates onboarding on this, so it is part of every /api/me read.
+    private_trial_ack_at: str | None = None
     created_at: str
     updated_at: str
 
@@ -2168,11 +2175,12 @@ class TodayInjuryCheckinResponse(BaseModel):
 # Secure beta feedback
 # ---------------------------------------------------------------------------
 
-FeedbackSurface = Literal["plan", "daily_recommendation", "global"]
+FeedbackSurface = Literal["plan", "daily_recommendation", "session", "global"]
 FeedbackCategory = Literal[
     "plan_usefulness",
     "recommendation_fit",
     "recommendation_safety",
+    "session_review",
     "bug_report",
     "feature_request",
     "safety_issue",
@@ -2180,6 +2188,12 @@ FeedbackCategory = Literal[
 ]
 FeedbackResponseValue = Literal["yes", "no", "unsafe"]
 FeedbackPriority = Literal["normal", "safety"]
+
+SessionFeedbackDifficulty = Literal["too_easy", "appropriate", "too_hard"]
+SessionFeedbackInstructions = Literal["clear", "unclear"]
+SessionFeedbackPlanAccuracy = Literal["felt_right", "something_wrong"]
+# Keep in step with beta_feedback_session_id_check in the schema.
+SESSION_FEEDBACK_SESSION_ID_MAX_CHARS = 120
 
 
 class ContextualFeedbackRequest(BaseModel):
@@ -2214,6 +2228,49 @@ class GlobalFeedbackRequest(BaseModel):
         return str(value or "").strip()
 
 
+class SessionFeedbackRequest(BaseModel):
+    """The quick review collected right after a completed session.
+
+    Every question is optional on its own — the prompt must stay short enough
+    that testers keep completing sessions — but a submission has to carry at
+    least one answer, a comment, or a screenshot to be worth persisting.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: str = Field(max_length=64)
+    # Bounded so the derived context key — "session:{plan_id}:{session_id}:
+    # {training_day}", 56 characters of frame around a UUID plan id and an ISO
+    # date — stays inside beta_feedback.context_key's 180-character check.
+    session_id: str = Field(max_length=SESSION_FEEDBACK_SESSION_ID_MAX_CHARS)
+    training_day: str = Field(default="", max_length=10)
+    difficulty: SessionFeedbackDifficulty | None = None
+    instructions: SessionFeedbackInstructions | None = None
+    plan_accuracy: SessionFeedbackPlanAccuracy | None = None
+    comment: str = Field(default="", max_length=500)
+
+    @field_validator("plan_id", "session_id", "training_day", "comment", mode="before")
+    @classmethod
+    def clean_session_feedback_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @field_validator("difficulty", "instructions", "plan_accuracy", mode="before")
+    @classmethod
+    def clean_session_feedback_choice(cls, value: Any) -> str | None:
+        text = str(value or "").strip()
+        return text or None
+
+    def structured_response(self) -> dict[str, str]:
+        """The answered questions only — an unanswered question stays absent."""
+
+        answers = {
+            "difficulty": self.difficulty,
+            "instructions": self.instructions,
+            "plan_accuracy": self.plan_accuracy,
+        }
+        return {key: value for key, value in answers.items() if value}
+
+
 class FeedbackRecord(BaseModel):
     id: str
     surface: FeedbackSurface
@@ -2221,6 +2278,7 @@ class FeedbackRecord(BaseModel):
     response: FeedbackResponseValue | None = None
     reason: str | None = None
     comment: str = ""
+    structured_response: dict[str, Any] = Field(default_factory=dict)
     priority: FeedbackPriority
     has_screenshot: bool = False
     created_at: str = ""
@@ -2234,6 +2292,7 @@ class AdminFeedbackRecord(FeedbackRecord):
     contact_allowed: bool = False
     plan_id: str | None = None
     today_checkin_id: str | None = None
+    session_id: str | None = None
     camp_phase: str | None = None
     app_version: str = ""
     page_path: str = ""

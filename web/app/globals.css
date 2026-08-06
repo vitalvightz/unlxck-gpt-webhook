@@ -20079,6 +20079,142 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   }
 }
 
+/* Post-session review. Reuses the feedback card shell; the additions here are
+   the stacked question rows and the disclosure that keeps the comment box and
+   screenshot out of the way until they are asked for. */
+.session-feedback-card {
+  margin-top: 20px;
+}
+
+.session-feedback-title {
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.session-feedback-intro {
+  margin: -8px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.session-feedback-question {
+  display: grid;
+  gap: 8px;
+}
+
+.session-feedback-legend {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.session-feedback-details {
+  display: grid;
+  gap: 12px;
+}
+
+.session-feedback-disclosure {
+  justify-self: start;
+}
+
+.session-feedback-submit-row {
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .session-feedback-submit-row .cta,
+  .session-feedback-submit-row .ghost-button {
+    width: 100%;
+  }
+}
+
+/* Private trial briefing — the one-time screen between sign-up and onboarding,
+   and the permanent copy of it in Settings. Bullets over prose on purpose: it
+   is read once, on a phone, by someone who wants to get to their plan. */
+.private-trial-panel {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.private-trial-guide {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.private-trial-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 4vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.private-trial-intro {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.private-trial-section {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.private-trial-section-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.private-trial-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.private-trial-closing {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--brand-red);
+  border-radius: var(--radius-support);
+  background: var(--bg-support);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.private-trial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.private-trial-settings-note {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .private-trial-actions .cta {
+    width: 100%;
+  }
+}
+
 /* Intake trust note — how Unlxck builds the camp and what the athlete controls.
    Sits above the first question, styled as supporting context rather than a
    warning, so it reads as an explanation and not as a disclaimer. */

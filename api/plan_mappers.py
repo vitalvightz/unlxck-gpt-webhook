@@ -120,6 +120,7 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         onboarding_draft=row.get("onboarding_draft"),
         avatar_url=row.get("avatar_url") or None,
         nutrition_profile=row.get("nutrition_profile") or {},
+        private_trial_ack_at=str(row.get("private_trial_ack_at") or "") or None,
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
     )

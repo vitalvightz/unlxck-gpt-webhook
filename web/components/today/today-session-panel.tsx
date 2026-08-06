@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
   SessionCompletionForm,
   type CompletionIntent,
@@ -25,6 +26,7 @@ import type { TodayPlanSchedule } from "@/components/today/use-today-command";
 import { openBlockWeekIntent, type OpenBlockWeekIntent } from "@/lib/open-block";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
+import { shouldPromptSessionFeedback } from "@/lib/session-feedback";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
   getCompletionLabel,
@@ -248,6 +250,12 @@ export function TodaySessionPanel({
   const { showToast } = useToast();
   const [intent, setIntent] = useState<CompletionIntent>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // The session the athlete just logged as trained, captured at write time.
+  // The refresh that follows can advance `next_session` to tomorrow's card, so
+  // reading the id live would attach the review to the wrong session.
+  const [reviewableSession, setReviewableSession] = useState<
+    { planId: string; sessionId: string } | null
+  >(null);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -362,6 +370,14 @@ export function TodaySessionPanel({
       });
       setIntent(null);
       showToast(getCompletionLabel(nextStatus), { tone: "success" });
+      // Order matters: the confirmation toast is already up and the refresh
+      // below is what surfaces the XP award, so the review prompt is queued
+      // here and only renders once both have landed.
+      setReviewableSession(
+        shouldPromptSessionFeedback(nextStatus)
+          ? { planId: state.active_plan.id, sessionId: session.session_id }
+          : null,
+      );
       await onRefresh();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Session update failed.", { tone: "error" });
@@ -551,6 +567,16 @@ export function TodaySessionPanel({
               notes: details.notes,
             })
           }
+        />
+      ) : null}
+
+      {reviewableSession ? (
+        <SessionFeedbackPrompt
+          key={reviewableSession.sessionId}
+          token={token}
+          planId={reviewableSession.planId}
+          sessionId={reviewableSession.sessionId}
+          onDismiss={() => setReviewableSession(null)}
         />
       ) : null}
     </section>

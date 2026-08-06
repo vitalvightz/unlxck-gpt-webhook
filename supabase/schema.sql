@@ -88,6 +88,10 @@ create table if not exists public.profiles (
   avatar_url text,
   onboarding_draft jsonb,
   nutrition_profile jsonb not null default '{}'::jsonb,
+  -- When the athlete confirmed they read the private trial instructions. The
+  -- gate lives on the profile, not in browser storage, so it survives a device
+  -- change, a reinstall, and a cleared cache.
+  private_trial_ack_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -1650,23 +1654,33 @@ create table if not exists public.beta_feedback (
   id uuid primary key default gen_random_uuid(),
   submitted_by_profile_id uuid not null references public.profiles(id) on delete cascade,
   context_key text not null check (char_length(context_key) between 1 and 180),
-  surface text not null check (surface in ('plan', 'daily_recommendation', 'global')),
-  category text not null check (category in (
-    'plan_usefulness',
-    'recommendation_fit',
-    'recommendation_safety',
-    'bug_report',
-    'feature_request',
-    'safety_issue',
-    'general_feedback'
-  )),
+  surface text not null
+    constraint beta_feedback_surface_check
+      check (surface in ('plan', 'daily_recommendation', 'session', 'global')),
+  category text not null
+    constraint beta_feedback_category_check
+      check (category in (
+        'plan_usefulness',
+        'recommendation_fit',
+        'recommendation_safety',
+        'session_review',
+        'bug_report',
+        'feature_request',
+        'safety_issue',
+        'general_feedback'
+      )),
   response text check (response is null or response in ('yes', 'no', 'unsafe')),
   reason text,
   comment text not null default '' check (char_length(comment) <= 500),
+  -- Session surface only: the quick structured answers collected after a
+  -- completed session (difficulty / instructions / plan accuracy).
+  structured_response jsonb not null default '{}'::jsonb,
   contact_allowed boolean not null default false,
   priority text not null default 'normal',
   plan_id uuid references public.plans(id) on delete set null,
   today_checkin_id uuid references public.today_checkins(id) on delete set null,
+  -- Session surface only: the reviewed plan session (session_completions.session_id).
+  session_id text,
   camp_phase text,
   readiness_snapshot jsonb not null default '{}'::jsonb,
   injury_snapshot jsonb not null default '{}'::jsonb,
@@ -1693,15 +1707,16 @@ create table if not exists public.beta_feedback (
   constraint beta_feedback_surface_category_check check (
     (surface = 'plan' and category = 'plan_usefulness')
     or (surface = 'daily_recommendation' and category in ('recommendation_fit', 'recommendation_safety'))
+    or (surface = 'session' and category = 'session_review')
     or (surface = 'global' and category in ('bug_report', 'feature_request', 'safety_issue', 'general_feedback'))
   ),
   constraint beta_feedback_response_shape_check check (
-    (surface = 'global' and response is null)
+    (surface in ('global', 'session') and response is null)
     or (surface = 'plan' and response in ('yes', 'no'))
     or (surface = 'daily_recommendation' and response in ('yes', 'no', 'unsafe'))
   ),
   constraint beta_feedback_reason_check check (
-    (surface = 'global' and reason is null)
+    (surface in ('global', 'session') and reason is null)
     or (response in ('yes', 'unsafe') and reason is null)
     or (surface = 'plan' and response = 'no' and (
       reason is null or reason in (
@@ -1719,6 +1734,30 @@ create table if not exists public.beta_feedback (
   constraint beta_feedback_priority_check check (
     (priority = 'safety' and category in ('recommendation_safety', 'safety_issue'))
     or (priority = 'normal' and category not in ('recommendation_safety', 'safety_issue'))
+  ),
+  -- Only the session surface stores structured answers, and every answer it
+  -- does store has to be one of the offered choices. Keys may be absent: each
+  -- question is optional as long as the submission carries something (enforced
+  -- by the API).
+  constraint beta_feedback_structured_response_check check (
+    case
+      when surface = 'session' then
+        jsonb_typeof(structured_response) = 'object'
+        and coalesce(structured_response ->> 'difficulty', 'appropriate')
+          in ('too_easy', 'appropriate', 'too_hard')
+        and coalesce(structured_response ->> 'instructions', 'clear')
+          in ('clear', 'unclear')
+        and coalesce(structured_response ->> 'plan_accuracy', 'felt_right')
+          in ('felt_right', 'something_wrong')
+      else structured_response = '{}'::jsonb
+    end
+  ),
+  -- The 120-character ceiling keeps the derived context key inside its own
+  -- 180-character check: "session:{plan_id}:{session_id}:{training_day}" is 56
+  -- characters of frame around a UUID plan id and an ISO date.
+  constraint beta_feedback_session_id_check check (
+    (surface = 'session' and session_id is not null and char_length(session_id) between 1 and 120)
+    or (surface <> 'session' and session_id is null)
   ),
   constraint beta_feedback_screenshot_shape_check check (
     (screenshot_path is null and screenshot_mime is null and screenshot_size_bytes is null
