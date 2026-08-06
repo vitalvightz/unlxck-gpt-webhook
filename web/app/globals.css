@@ -9578,17 +9578,17 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
 @media (max-width: 960px) {
   .brand-topbar {
     position: fixed;
-    top: calc(var(--safe-area-top) + 12px);
-    left: calc(var(--safe-area-left) + 12px);
-    right: calc(var(--safe-area-right) + 12px);
+    top: calc(var(--safe-area-top) + var(--space-2));
+    left: calc(var(--safe-area-left) + var(--space-2));
+    right: calc(var(--safe-area-right) + var(--space-2));
     z-index: 70;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 8px 10px 8px 14px;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
+    border-radius: var(--radius-stat);
     background: rgba(10, 11, 13, 0.9);
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
     backdrop-filter: blur(16px);
@@ -9596,17 +9596,17 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
 
   .brand-topbar-mark {
     display: inline-grid;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
   }
 
   .brand-topbar-mark .eyebrow {
-    font-size: 10px;
+    font-size: var(--type-label-xs);
   }
 
   .brand-topbar-mark span:last-child {
     color: var(--text-primary);
-    font-size: 16px;
+    font-size: var(--type-body-lg);
     line-height: 1;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -9615,16 +9615,18 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   .brand-topbar-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-1);
     flex-shrink: 0;
   }
 
+  /* Same 40px control height as the desktop bar; only the horizontal padding
+     and label size step down, and the label never wraps. */
   .brand-topbar-actions .cta,
   .brand-topbar-actions .ghost-button {
-    min-height: 38px;
-    padding-right: 14px;
-    padding-left: 14px;
-    font-size: 13px;
+    min-height: 40px;
+    padding-right: var(--space-2);
+    padding-left: var(--space-2);
+    font-size: var(--type-body-sm);
     white-space: nowrap;
   }
 }
@@ -16426,8 +16428,8 @@ html[data-theme="light"] .nutrition-log-row:first-child {
    visitor sees a live adaptation (not just a static pipeline) at a glance. */
 .public-today-preview {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: var(--space-2);
+  padding: 13px;
   border-radius: 12px;
   border: 1px solid rgba(181, 18, 43, 0.32);
   background:
@@ -16439,7 +16441,7 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .public-today-preview-eyebrow {
@@ -16452,8 +16454,8 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 }
 
 .public-today-preview-status {
-  padding: 4px 9px;
-  border-radius: 999px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
   border: 1px solid rgba(240, 180, 100, 0.3);
   background: rgba(240, 170, 90, 0.12);
   color: #f4c48a;
@@ -16466,7 +16468,7 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 
 .public-today-changes {
   display: grid;
-  gap: 7px;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -16475,9 +16477,9 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 .public-today-change {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--type-body);
   line-height: 1.3;
 }
 
@@ -16485,12 +16487,12 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  border-radius: 6px;
+  border-radius: var(--space-1);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--type-body-sm);
   font-weight: 700;
 }
 
@@ -16509,12 +16511,12 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 .public-today-reason {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-1);
   margin: 0;
-  padding-top: 8px;
+  padding-top: var(--space-1);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--type-meta);
   line-height: 1.35;
 }
 
@@ -16654,7 +16656,7 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 .public-proof-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .public-proof-card,
@@ -16663,8 +16665,8 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 }
 
 .public-proof-card {
-  gap: 10px;
-  padding: 18px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border-radius: 14px;
   border-color: rgba(255, 255, 255, 0.08);
   background:
@@ -16676,7 +16678,7 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   content: "";
   width: 42px;
   height: 1px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   background: var(--brand-red);
 }
 
@@ -16685,9 +16687,9 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: end;
-  gap: 16px;
-  margin: 4px 0 -2px;
-  padding: 22px 0 6px;
+  gap: var(--space-3);
+  margin: var(--space-1) 0 -2px;
+  padding: var(--space-4) 0 var(--space-1);
 }
 
 .public-section-break::before {
@@ -16732,12 +16734,12 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 
 .public-journey-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .public-journey-grid .support-panel {
-  gap: 8px;
-  padding: 16px;
+  gap: var(--space-1);
+  padding: var(--space-3);
   border-radius: 14px;
   border-color: rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, rgba(16, 18, 22, 0.88), rgba(10, 11, 13, 0.92));
@@ -17100,12 +17102,11 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
   .public-hero-lead {
     max-width: none;
-    font-size: 17px;
   }
 
   .public-hero-summary {
     max-width: 46ch;
-    font-size: 15px;
+    font-size: var(--type-body);
   }
 
   .public-proof-strip {
@@ -17143,47 +17144,47 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   }
 
   .public-hero-grid {
-    gap: 20px;
+    gap: var(--space-4);
   }
 
+  /* Takes over the padding, radius, border and shadow the stripped panel was
+     providing, so the hero reads as the same card it does elsewhere. The wash
+     is handed over in brand-surface.css. */
   .public-hero-copy {
-    gap: 12px;
-    padding: 22px 18px 24px;
+    gap: var(--space-2);
+    padding: 20px;
     border-radius: 22px;
     border: 1px solid var(--border-default);
-    background:
-      linear-gradient(135deg, rgba(181, 18, 43, 0.2), transparent 44%),
-      linear-gradient(180deg, rgba(22, 24, 29, 0.98), rgba(15, 17, 21, 0.98));
     box-shadow: var(--shadow-standard);
   }
 
   .public-hero-copy .hero-title {
     max-width: none;
-    font-size: clamp(27px, 7.4vw, 36px);
+    font-size: clamp(28px, 8vw, 36px);
     line-height: 0.95;
   }
 
   .public-hero-lead {
     max-width: none;
-    font-size: 15px;
+    font-size: var(--type-body);
     line-height: 1.45;
   }
 
   .public-hero-summary {
     max-width: 40ch;
-    font-size: 13px;
+    font-size: var(--type-body-sm);
     line-height: 1.45;
   }
 
   .public-hero-actions {
-    gap: 10px;
+    gap: var(--space-2);
   }
 
   /* Plain sans, no tracking: the mono treatment wrapped this to two lines and
      orphaned the last word. */
   .public-hero-cta-note {
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--type-meta);
     letter-spacing: normal;
     text-align: center;
   }
@@ -17194,37 +17195,9 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     display: none;
   }
 
-  /* Compact header: the brand block shrinks and the CTA never wraps, so the
-     bar stays a single tight row instead of growing to two lines. */
-  .brand-topbar {
-    gap: 10px;
-    padding: 7px 8px 7px 12px;
-    border-radius: 12px;
-  }
-
-  .brand-topbar-mark .eyebrow {
-    font-size: 9px;
-  }
-
-  .brand-topbar-mark span:last-child {
-    font-size: 15px;
-  }
-
-  .brand-topbar-actions {
-    gap: 6px;
-  }
-
-  .brand-topbar-actions .cta,
-  .brand-topbar-actions .ghost-button {
-    min-height: 36px;
-    padding-right: 12px;
-    padding-left: 12px;
-    font-size: 12.5px;
-  }
-
   .public-preview-panel {
-    gap: 12px;
-    padding: 16px;
+    gap: var(--space-2);
+    padding: var(--space-3);
   }
 
   .public-preview-window {
