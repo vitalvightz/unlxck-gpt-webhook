@@ -34,11 +34,6 @@ PHYSICAL_INSERTS = {
     "walk_flush",
 }
 
-# Genuinely low-risk aerobic-maintenance inserts (RPE 3-4, no soreness target).
-# These keep a selected conditioning / gas-tank goal *visible* late in camp when
-# the higher-cost physical inserts are correctly stripped for freshness. They are
-# bodyweight-only, so they do not depend on bike/rower style equipment, and they
-# are only offered when the athlete actually selected a conditioning signal.
 LOW_COST_AEROBIC_INSERTS = {
     "aerobic_shadow_flow",
     "aerobic_walk_flush",
@@ -46,21 +41,14 @@ LOW_COST_AEROBIC_INSERTS = {
     "aerobic_skip_flush",
     "aerobic_jog_flush",
 }
-# Zero/low-impact options that stay safe even with a lower-leg injury or high fatigue.
 _ZERO_IMPACT_AEROBIC_INSERTS = {"aerobic_shadow_flow", "aerobic_walk_flush"}
-# Higher-impact options gated behind healthy lower legs and low fatigue.
 _IMPACT_AEROBIC_INSERTS = {"aerobic_skip_flush", "aerobic_jog_flush"}
 
 GAP_FILL_MIN_DAYS = 3
 TWO_INSERT_GAP_MIN_DAYS = 5
-# Widest countdown at which the opening days of the window are eligible for a
-# gap-fill insert. Inside the taper the session budget is small enough that the
-# plan can start days after the athlete does; further out the sessions already
-# reach the front of the window on their own.
 LEADING_SPAN_MAX_DAYS_UNTIL_FIGHT = 7
 MAX_INSERTS_TOTAL_D21_TO_D0 = 6
 MAX_PHYSICAL_INSERTS_PER_7_DAY_SEGMENT = 1
-# Day-before-fight slots stay restricted to zero/recovery work regardless of goal.
 MIN_AEROBIC_MAINTENANCE_OFFSET = 2
 
 _ALL_INSERTS = (
@@ -113,7 +101,10 @@ _INSERT_META = {
         "rpe_max": 1,
         "insert_category": "tactical",
         "repeat_allowed": False,
-        "display_text": "Write one fight cue only: entry, exit, counter, foot position, or guard reaction. Keep it short enough to recall under pressure.",
+        "display_text": (
+            "Write one fight cue only: entry, exit, counter, foot position, or "
+            "guard reaction. Keep it short enough to recall under pressure."
+        ),
     },
     "self_review": {
         "label": "Self-Review Cues",
@@ -121,7 +112,10 @@ _INSERT_META = {
         "rpe_max": 1,
         "insert_category": "tactical",
         "repeat_allowed": False,
-        "display_text": "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.",
+        "display_text": (
+            "Review the last clean technical work. Write three cues only: one "
+            "entry, one defensive reset, one composure cue."
+        ),
     },
     "neural_visualization": {
         "label": "Neural Visualization",
@@ -129,7 +123,10 @@ _INSERT_META = {
         "rpe_max": 1,
         "insert_category": "mental",
         "repeat_allowed": False,
-        "display_text": "Quiet visualization only. Rehearse first exchange, best entry, exit/reset, and final-round composure.",
+        "display_text": (
+            "Quiet visualization only. Rehearse first exchange, best entry, "
+            "exit/reset, and final-round composure."
+        ),
     },
     "recovery_reset": {
         "label": "Recovery Reset",
@@ -137,7 +134,9 @@ _INSERT_META = {
         "rpe_max": 2,
         "insert_category": "recovery",
         "repeat_allowed": False,
-        "display_text": "Breathing reset, easy tissue work, and downshift mobility. Keep it restorative.",
+        "display_text": (
+            "Breathing reset, easy tissue work, and downshift mobility. Keep it restorative."
+        ),
     },
     "breathing_reset": {
         "label": "Breathing Reset",
@@ -145,7 +144,10 @@ _INSERT_META = {
         "rpe_max": 1,
         "insert_category": "recovery",
         "repeat_allowed": False,
-        "display_text": "Nasal breathing if comfortable. Use a 4-6 second inhale and 6-8 second exhale. Finish calmer than you started.",
+        "display_text": (
+            "Nasal breathing if comfortable. Use a 4-6 second inhale and 6-8 "
+            "second exhale. Finish calmer than you started."
+        ),
     },
     "sleep_downshift": {
         "label": "Sleep Downshift",
@@ -153,7 +155,10 @@ _INSERT_META = {
         "rpe_max": 1,
         "insert_category": "recovery",
         "repeat_allowed": False,
-        "display_text": "Lights down, phone away, easy breathing, then stretch two tight areas without chasing range.",
+        "display_text": (
+            "Lights down, phone away, easy breathing, then stretch two tight "
+            "areas without chasing range."
+        ),
     },
     "mobility_rehab": {
         "label": "Mobility/Rehab Reset",
@@ -161,7 +166,10 @@ _INSERT_META = {
         "rpe_max": 2,
         "insert_category": "mobility",
         "repeat_allowed": False,
-        "display_text": "Target the flagged restriction with easy range, activation, and pain-free control. Stop well before fatigue.",
+        "display_text": (
+            "Target the flagged restriction with easy range, activation, and "
+            "pain-free control. Stop well before fatigue."
+        ),
     },
     "movement_quality": {
         "label": "Movement Quality Check",
@@ -169,7 +177,10 @@ _INSERT_META = {
         "rpe_max": 2,
         "insert_category": "movement_quality",
         "repeat_allowed": False,
-        "display_text": "Low-amplitude stance, posture, breathing, and foot placement quality. No sweat target.",
+        "display_text": (
+            "Low-amplitude stance, posture, breathing, and foot placement quality. "
+            "No sweat target."
+        ),
     },
     "technical_shadow_rhythm": {
         "label": "Technical Shadow Rhythm",
@@ -177,7 +188,10 @@ _INSERT_META = {
         "rpe_max": 3,
         "insert_category": "technical",
         "repeat_allowed": False,
-        "display_text": "Light shadow rhythm only. Smooth entries, exits, and reset cues. No bag, bands, bursts, or conditioning intent.",
+        "display_text": (
+            "Light shadow rhythm only. Smooth entries, exits, and reset cues. "
+            "No bag, bands, bursts, or conditioning intent."
+        ),
     },
     "footwork_walkthrough": {
         "label": "Footwork Walkthrough",
@@ -185,7 +199,10 @@ _INSERT_META = {
         "rpe_max": 2,
         "insert_category": "footwork",
         "repeat_allowed": False,
-        "display_text": "Stance walk, step-slide, pivot out, and exit after jab/cross. Slow rounds only; no fatigue target.",
+        "display_text": (
+            "Stance walk, step-slide, pivot out, and exit after jab/cross. Slow "
+            "rounds only; no fatigue target."
+        ),
     },
     "joint_prep": {
         "label": "Joint Prep",
@@ -193,7 +210,10 @@ _INSERT_META = {
         "rpe_max": 1,
         "insert_category": "mobility",
         "repeat_allowed": False,
-        "display_text": "Neck CARs, shoulder CARs, wrist circles, hip circles, and ankle rocks. Stay smooth and pain-free.",
+        "display_text": (
+            "Neck CARs, shoulder CARs, wrist circles, hip circles, and ankle rocks. "
+            "Stay smooth and pain-free."
+        ),
     },
     "walk_flush": {
         "label": "Easy Walk Flush",
@@ -201,7 +221,10 @@ _INSERT_META = {
         "rpe_max": 2,
         "insert_category": "recovery_walk",
         "repeat_allowed": False,
-        "display_text": "Nose-breathing pace only. No sweat target. Finish feeling better than when you started.",
+        "display_text": (
+            "Nose-breathing pace only. No sweat target. Finish feeling better than "
+            "when you started."
+        ),
     },
     "aerobic_shadow_flow": {
         "label": "Shadowboxing Aerobic Flow",
@@ -209,7 +232,11 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "3-5 x 2 min easy shadowboxing rounds, 60 sec rest. Smooth boxing rhythm at RPE 3-4. No contact, no power, no impact - keep the gas tank ticking over without costing freshness.",
+        "display_text": (
+            "3-5 x 2 min easy shadowboxing rounds, 60 sec rest. Smooth boxing rhythm "
+            "at RPE 3-4. No contact, no power, no impact - keep the gas tank ticking "
+            "over without costing freshness."
+        ),
     },
     "aerobic_walk_flush": {
         "label": "Brisk Walk Flush",
@@ -217,7 +244,10 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "Brisk or incline walk at a nose-breathing pace, RPE 3-4. Low-impact aerobic maintenance and recovery support - finish fresher than you started.",
+        "display_text": (
+            "Brisk or incline walk at a nose-breathing pace, RPE 3-4. Low-impact "
+            "aerobic maintenance and recovery support - finish fresher than you started."
+        ),
     },
     "aerobic_footwork_rhythm": {
         "label": "Footwork Rhythm Flush",
@@ -225,7 +255,10 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "Light in-out steps, pivots, and stance resets, RPE 3-4. Movement-economy work so you waste less energy in exchanges. No sprinting or sharp cuts.",
+        "display_text": (
+            "Light in-out steps, pivots, and stance resets, RPE 3-4. Movement-economy "
+            "work so you waste less energy in exchanges. No sprinting or sharp cuts."
+        ),
     },
     "aerobic_skip_flush": {
         "label": "Light Skipping Flush",
@@ -233,7 +266,11 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "30-45 sec easy skip / 30-45 sec rest, RPE 3-4. Keeps rhythm, calf stiffness, and breathing control without hard conditioning stress. Skip only while calves and Achilles are healthy.",
+        "display_text": (
+            "30-45 sec easy skip / 30-45 sec rest, RPE 3-4. Keeps rhythm, calf "
+            "stiffness, and breathing control without hard conditioning stress. "
+            "Skip only while calves and Achilles are healthy."
+        ),
     },
     "aerobic_jog_flush": {
         "label": "Easy Jog Flush",
@@ -241,57 +278,66 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "Easy continuous jog or walk-jog, RPE 3-4. Maintains aerobic rhythm without fatigue. Keep it conversational.",
+        "display_text": (
+            "Easy continuous jog or walk-jog, RPE 3-4. Maintains aerobic rhythm "
+            "without fatigue. Keep it conversational."
+        ),
     },
 }
 
-
-# Mechanical load footprint per insert: the body regions each filler/primer
-# actually LOADS enough to aggravate an injury there. Canonical region keys match
-# fightcamp.injury_exclusion_rules.INJURY_REGION_KEYWORDS so a downstream safety
-# gate can intersect them with an active injury's region. Low load is not zero
-# load — even a brisk walk or a low-amplitude foot-placement drill still loads
-# the lower chain, so every insert with real bodily movement is mapped here,
-# not just the visibly ballistic ones.
-#
-# mobility_rehab and joint_prep are the deliberate exception, not an oversight:
-# both are gentle, pain-free, controlled-range work explicitly TARGETED at the
-# athlete's flagged restriction ("Target the flagged restriction with easy
-# range... stop well before fatigue" / "Stay smooth and pain-free"). They are
-# the designated safe option even at moderate_plus injury (see
-# _allowed_inserts), so their regional overlap with an active injury is the
-# whole point of prescribing them, not a hazard for the gate to catch. Pure
-# mental cue work and breathing/sleep resets are absent for the same
-# not-a-hazard reason: a neck strain cannot stop you writing a fight cue.
 _INSERT_MECH_LOAD_REGIONS: dict[str, tuple[str, ...]] = {
-    # Shadow / punch rhythm loads the striking chain (shoulder, elbow, wrist,
-    # chest) AND the entries/exits/stance work that comes with it (ankle, knee).
-    "technical_shadow_rhythm": ("shoulder", "elbow", "wrist", "chest", "ankle", "knee"),
-    "aerobic_shadow_flow": ("shoulder", "elbow", "wrist", "chest", "ankle", "knee"),
-    # Footwork / stance movement loads the lower chain.
+    "technical_shadow_rhythm": (
+        "shoulder",
+        "elbow",
+        "wrist",
+        "chest",
+        "ankle",
+        "knee",
+    ),
+    "aerobic_shadow_flow": (
+        "shoulder",
+        "elbow",
+        "wrist",
+        "chest",
+        "ankle",
+        "knee",
+    ),
     "footwork_walkthrough": ("ankle", "foot", "knee"),
     "aerobic_footwork_rhythm": ("ankle", "foot", "calf", "knee"),
-    # Low-amplitude foot-placement / stance-quality work still loads the same
-    # lower-leg contact points, just at a smaller range.
     "movement_quality": ("ankle", "foot"),
-    # Skipping and jogging add rebound / continuous impact on the lower legs.
-    "aerobic_skip_flush": ("calf", "achilles", "ankle", "foot", "shin", "knee"),
-    "aerobic_jog_flush": ("calf", "achilles", "ankle", "foot", "shin", "knee", "hamstring"),
-    # Walking is genuinely low load, but it is still repetitive weight-bearing
-    # gait: an ankle sprain, Achilles flare, foot stress reaction, or irritable
-    # knee can all be aggravated by a brisk walk, so it is not zero-cost.
+    "aerobic_skip_flush": (
+        "calf",
+        "achilles",
+        "ankle",
+        "foot",
+        "shin",
+        "knee",
+    ),
+    "aerobic_jog_flush": (
+        "calf",
+        "achilles",
+        "ankle",
+        "foot",
+        "shin",
+        "knee",
+        "hamstring",
+    ),
     "walk_flush": ("ankle", "foot", "achilles", "calf", "knee"),
     "aerobic_walk_flush": ("ankle", "foot", "achilles", "calf", "knee"),
 }
 
 
 def insert_mechanical_load_regions(role_key: str) -> tuple[str, ...]:
-    """Body regions a gap-fill insert mechanically loads (empty for non-loading work)."""
+    """Body regions a gap-fill insert mechanically loads."""
     return _INSERT_MECH_LOAD_REGIONS.get(role_key, ())
 
 
 def _normalised_set(values: Any) -> set[str]:
-    return {str(value).strip().lower().replace(" ", "_") for value in clean_list(values) if str(value).strip()}
+    return {
+        str(value).strip().lower().replace(" ", "_")
+        for value in clean_list(values)
+        if str(value).strip()
+    }
 
 
 def _flatten_text(value: Any) -> str:
@@ -310,7 +356,12 @@ def _readiness_flags(athlete_model: dict[str, Any]) -> set[str]:
 
 def _has_active_weight_cut(athlete_model: dict[str, Any]) -> bool:
     flags = _readiness_flags(athlete_model)
-    if flags & {"active_weight_cut", "weight_cut_active", "aggressive_weight_cut", "extreme_weight_cut"}:
+    if flags & {
+        "active_weight_cut",
+        "weight_cut_active",
+        "aggressive_weight_cut",
+        "extreme_weight_cut",
+    }:
         return True
     if bool(athlete_model.get("weight_cut_risk")):
         return True
@@ -321,7 +372,10 @@ def _has_active_weight_cut(athlete_model: dict[str, Any]) -> bool:
 
 
 def _has_high_fatigue(athlete_model: dict[str, Any]) -> bool:
-    return normalize_fatigue_level(athlete_model) == "high" or "high_fatigue" in _readiness_flags(athlete_model)
+    return (
+        normalize_fatigue_level(athlete_model) == "high"
+        or "high_fatigue" in _readiness_flags(athlete_model)
+    )
 
 
 def _has_mobility_need(athlete_model: dict[str, Any]) -> bool:
@@ -330,12 +384,20 @@ def _has_mobility_need(athlete_model: dict[str, Any]) -> bool:
         | _normalised_set(athlete_model.get("key_goals", []))
         | _normalised_set(athlete_model.get("readiness_flags", []))
     )
-    return any("mobil" in value or "rehab" in value or "range" in value for value in values)
+    return any(
+        "mobil" in value or "rehab" in value or "range" in value
+        for value in values
+    )
 
 
 def _has_power_speed_goal(athlete_model: dict[str, Any]) -> bool:
-    values = _normalised_set(athlete_model.get("key_goals", [])) | _normalised_set(athlete_model.get("weaknesses", []))
-    return any("power" in value or "speed" in value or "explosive" in value for value in values)
+    values = _normalised_set(athlete_model.get("key_goals", [])) | _normalised_set(
+        athlete_model.get("weaknesses", [])
+    )
+    return any(
+        "power" in value or "speed" in value or "explosive" in value
+        for value in values
+    )
 
 
 def _has_conditioning_goal(athlete_model: dict[str, Any]) -> bool:
@@ -344,7 +406,9 @@ def _has_conditioning_goal(athlete_model: dict[str, Any]) -> bool:
         | _normalised_set(athlete_model.get("weaknesses", []))
         | _normalised_set(athlete_model.get("readiness_flags", []))
     )
-    return any(marker in value for value in values for marker in _CONDITIONING_GOAL_MARKERS)
+    return any(
+        marker in value for value in values for marker in _CONDITIONING_GOAL_MARKERS
+    )
 
 
 def _has_lower_leg_load_risk(athlete_model: dict[str, Any]) -> bool:
@@ -372,28 +436,13 @@ def _safe_conditioning_maintenance_inserts(
     *,
     on_hard_sparring_day: bool,
 ) -> set[str]:
-    """Context-safe aerobic-maintenance options for a conditioning/gas-tank goal.
-
-    Returns an empty set unless the athlete selected a conditioning signal and the
-    slot is safe to use (not the day before the fight, not a hard-sparring day).
-    Higher-impact options (skip/jog) are withheld when lower legs are loaded,
-    fatigue is high, or a hard weight cut is active, so the slot stays low-risk.
-    """
-
     if insert_offset < MIN_AEROBIC_MAINTENANCE_OFFSET or on_hard_sparring_day:
         return set()
     if not _has_conditioning_goal(athlete_model):
         return set()
-
-    # Honour the injury guard: acute/concussion/fracture/medical-hold states
-    # (moderate_plus) get only the existing recovery + mobility support and must
-    # never be prescribed RPE 3-4 aerobic maintenance.
     if injury_state == "moderate_plus":
         return set()
 
-    # Zero/low-impact aerobic rhythm is always safe to keep the goal visible.
-    # Footwork rhythm is low-impact movement economy and stays safe for the
-    # remaining none / mild_stable states.
     safe = set(_ZERO_IMPACT_AEROBIC_INSERTS)
     safe.add("aerobic_footwork_rhythm")
 
@@ -402,14 +451,10 @@ def _safe_conditioning_maintenance_inserts(
     active_cut = _has_active_weight_cut(athlete_model)
     fatigue_low = normalize_fatigue_level(athlete_model) == "low"
 
-    # Impact work only when lower legs are healthy and fatigue is not high.
     if not lower_leg_risk and not high_fatigue:
         safe.add("aerobic_skip_flush")
-        # Continuous jogging is the highest-cost option: only with genuinely low
-        # fatigue and no active weight cut.
         if fatigue_low and not active_cut:
             safe.add("aerobic_jog_flush")
-
     return safe
 
 
@@ -422,7 +467,15 @@ def _has_footwork_weakness(athlete_model: dict[str, Any]) -> bool:
     return any(
         marker in value
         for value in values
-        for marker in {"footwork", "feet", "stance", "ringcraft", "ring_craft", "angle", "angles"}
+        for marker in {
+            "footwork",
+            "feet",
+            "stance",
+            "ringcraft",
+            "ring_craft",
+            "angle",
+            "angles",
+        }
     )
 
 
@@ -470,18 +523,26 @@ def _insert_category(role_key: str) -> str:
     return str(meta.get("insert_category") or _cost_category(role_key))
 
 
-def classify_injury_state(athlete_model: dict[str, Any]) -> Literal["none", "mild_stable", "moderate_plus"]:
+def classify_injury_state(
+    athlete_model: dict[str, Any],
+) -> Literal["none", "mild_stable", "moderate_plus"]:
     if _all_active_injuries_surface_only(athlete_model):
         return "none"
 
     parsed = athlete_model.get("parsed_injuries") or []
     guided = athlete_model.get("guided_injury")
     restrictions = athlete_model.get("injury_restrictions") or []
-    raw_injuries = athlete_model.get("injuries") or athlete_model.get("injury") or athlete_model.get("injury_notes")
+    raw_injuries = (
+        athlete_model.get("injuries")
+        or athlete_model.get("injury")
+        or athlete_model.get("injury_notes")
+    )
     active_injury = athlete_model.get("active_injury")
     has_active = bool(athlete_model.get("has_active_injury"))
 
-    injury_text = _flatten_text([parsed, guided, restrictions, raw_injuries, active_injury]).lower().replace("_", " ")
+    injury_text = _flatten_text(
+        [parsed, guided, restrictions, raw_injuries, active_injury]
+    ).lower().replace("_", " ")
     flags_text = " ".join(_readiness_flags(athlete_model)).replace("_", " ")
 
     empty_markers = {"", "none", "no", "false", "0", "n/a", "na"}
@@ -489,7 +550,13 @@ def classify_injury_state(athlete_model: dict[str, Any]) -> Literal["none", "mil
     has_raw_injury = bool(injury_text.strip()) and injury_text.strip() not in empty_markers
     if not parsed and not guided and not restrictions and not has_active and not has_raw_injury:
         return "none"
-    if active_injury_text in {"none", "no", "false", "0"} and not parsed and not guided and not restrictions and not raw_injuries:
+    if (
+        active_injury_text in {"none", "no", "false", "0"}
+        and not parsed
+        and not guided
+        and not restrictions
+        and not raw_injuries
+    ):
         return "none"
 
     combined = f"{injury_text} {flags_text}"
@@ -515,10 +582,11 @@ def classify_injury_state(athlete_model: dict[str, Any]) -> Literal["none", "mil
         return "moderate_plus"
 
     mild_marker = any(marker in combined for marker in {"mild", "low", "minor"})
-    stable_marker = any(marker in combined for marker in {"stable", "improving", "settled"})
+    stable_marker = any(
+        marker in combined for marker in {"stable", "improving", "settled"}
+    )
     if mild_marker and stable_marker:
         return "mild_stable"
-
     return "moderate_plus"
 
 
@@ -537,10 +605,18 @@ def _allowed_inserts(
     if _has_active_weight_cut(athlete_model):
         allowed -= {"walk_flush"}
         if injury_state in {"none", "mild_stable"}:
-            allowed -= {"technical_shadow_rhythm", "footwork_walkthrough", "movement_quality"}
+            allowed -= {
+                "technical_shadow_rhythm",
+                "footwork_walkthrough",
+                "movement_quality",
+            }
 
     if injury_state == "moderate_plus":
-        allowed &= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS | {"mobility_rehab", "joint_prep"}
+        allowed &= (
+            ZERO_COST_INSERTS
+            | LOW_COST_RECOVERY_INSERTS
+            | {"mobility_rehab", "joint_prep"}
+        )
     elif injury_state == "mild_stable":
         allowed |= {"mobility_rehab", "joint_prep"}
 
@@ -555,7 +631,8 @@ def _allowed_inserts(
         allowed -= {"mobility_rehab", "joint_prep"}
 
     if "mobility_rehab" in allowed and not (
-        _has_mobility_need(athlete_model) or injury_state in {"mild_stable", "moderate_plus"}
+        _has_mobility_need(athlete_model)
+        or injury_state in {"mild_stable", "moderate_plus"}
     ):
         allowed.remove("mobility_rehab")
 
@@ -566,11 +643,6 @@ def _allowed_inserts(
         allowed -= PHYSICAL_INSERTS
         allowed |= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS
 
-    # A selected conditioning / gas-tank goal keeps a low-risk aerobic-maintenance
-    # slot available even when the higher-cost physical inserts are stripped for
-    # freshness, so the goal stays visible instead of vanishing into unrelated
-    # tactical/breathing filler. The aerobic inserts never appear without a
-    # conditioning signal, so the no-goal contracts above are unchanged.
     allowed -= LOW_COST_AEROBIC_INSERTS
     allowed |= _safe_conditioning_maintenance_inserts(
         athlete_model,
@@ -578,7 +650,6 @@ def _allowed_inserts(
         injury_state,
         on_hard_sparring_day=on_hard_sparring_day,
     )
-
     return allowed
 
 
@@ -600,9 +671,17 @@ def build_tactical_watch_template(athlete_model: dict[str, Any] | None = None) -
         focus = "\nFocus: entries, clinch risk, angle exits."
     elif "boxer" in style_text or "boxing" in style_text:
         focus = "\nFocus: jab rhythm, lead-hand battle, exit side."
-    elif "kicker" in style_text or "kickboxing" in style_text or "muay" in style_text:
+    elif (
+        "kicker" in style_text
+        or "kickboxing" in style_text
+        or "muay" in style_text
+    ):
         focus = "\nFocus: range line, stance matchups, check/counter timing."
-    elif "grappler" in style_text or "mma" in style_text or "wrestling" in style_text:
+    elif (
+        "grappler" in style_text
+        or "mma" in style_text
+        or "wrestling" in style_text
+    ):
         focus = "\nFocus: level-change triggers, cage exits, underhook habits."
 
     return (
@@ -690,7 +769,9 @@ def _new_usage_ledger() -> dict[str, Any]:
     }
 
 
-def _record_insert_usage(ledger: dict[str, Any], role_key: str, offset: int | None) -> None:
+def _record_insert_usage(
+    ledger: dict[str, Any], role_key: str, offset: int | None
+) -> None:
     if role_key not in _ALL_INSERTS:
         return
     category = _insert_category(role_key)
@@ -702,7 +783,9 @@ def _record_insert_usage(ledger: dict[str, Any], role_key: str, offset: int | No
         ledger.setdefault("role_key_offsets", {}).setdefault(role_key, []).append(offset)
 
 
-def _usage_ledger_from_sequence(session_sequence: list[dict[str, Any]]) -> dict[str, Any]:
+def _usage_ledger_from_sequence(
+    session_sequence: list[dict[str, Any]],
+) -> dict[str, Any]:
     ledger = _new_usage_ledger()
     for role in session_sequence:
         role_key = str(role.get("role_key") or "")
@@ -710,7 +793,11 @@ def _usage_ledger_from_sequence(session_sequence: list[dict[str, Any]]) -> dict[
     return ledger
 
 
-def _role_repeat_blocked(role_key: str, insert_offset: int, usage_ledger: dict[str, Any] | None) -> bool:
+def _role_repeat_blocked(
+    role_key: str,
+    insert_offset: int,
+    usage_ledger: dict[str, Any] | None,
+) -> bool:
     if not usage_ledger:
         return False
     if bool((_INSERT_META.get(role_key) or {}).get("repeat_allowed")):
@@ -738,12 +825,20 @@ def _score_insert_role(
     high_fatigue = _has_high_fatigue(athlete_model)
     active_cut = _has_active_weight_cut(athlete_model)
     injury_state = classify_injury_state(athlete_model)
-    mobility_need = _has_mobility_need(athlete_model) or injury_state in {"mild_stable", "moderate_plus"}
+    mobility_need = _has_mobility_need(athlete_model) or injury_state in {
+        "mild_stable",
+        "moderate_plus",
+    }
     footwork_weakness = _has_footwork_weakness(athlete_model)
     power_speed_goal = _has_power_speed_goal(athlete_model)
 
     if active_cut:
-        if role_key in {"tactical_cue_card", "breathing_reset", "sleep_downshift", "recovery_reset"}:
+        if role_key in {
+            "tactical_cue_card",
+            "breathing_reset",
+            "sleep_downshift",
+            "recovery_reset",
+        }:
             score += 16
         if role_key == "tactical_watch":
             score += 14
@@ -751,7 +846,11 @@ def _score_insert_role(
             score -= 20
 
     if high_fatigue:
-        if role_key in {"breathing_reset", "sleep_downshift", "neural_visualization"}:
+        if role_key in {
+            "breathing_reset",
+            "sleep_downshift",
+            "neural_visualization",
+        }:
             score += 16
         elif role_key == "recovery_reset":
             score += 10
@@ -784,7 +883,6 @@ def _score_insert_role(
 
     if role_key in LOW_COST_AEROBIC_INSERTS:
         if _has_conditioning_goal(athlete_model):
-            # Preserve the conditioning slot over generic tactical/breathing filler.
             score += 22
             if high_fatigue or active_cut:
                 if role_key in _ZERO_IMPACT_AEROBIC_INSERTS:
@@ -794,7 +892,6 @@ def _score_insert_role(
             if role_key == "aerobic_shadow_flow" and _is_fight_sport(athlete_model):
                 score += 3
         else:
-            # Never surface aerobic maintenance without an explicit conditioning signal.
             score -= 100
 
     if gap_span is not None and gap_span >= TWO_INSERT_GAP_MIN_DAYS:
@@ -813,8 +910,10 @@ def _score_insert_role(
         category = _insert_category(role_key)
         score += 2 if role_key not in used_role_keys else -2
         score += 1 if category not in used_categories else -0.75
-        score -= min(int(usage_ledger.get("category_counts", {}).get(category, 0)), 3) * 0.25
-
+        score -= (
+            min(int(usage_ledger.get("category_counts", {}).get(category, 0)), 3)
+            * 0.25
+        )
     return score
 
 
@@ -835,8 +934,7 @@ def _select_role_key(
         aerobic = candidates & LOW_COST_AEROBIC_INSERTS
         if aerobic:
             candidates = aerobic
-        # else: no safe aerobic insert for this slot -> fall back to normal
-        # selection so the gap still gets a tactical/recovery filler.
+
     candidates = {
         role_key
         for role_key in candidates
@@ -849,7 +947,9 @@ def _select_role_key(
         role_key: index
         for index, role_key in enumerate(_time_band_preferences(insert_offset))
     }
-    all_inserts_index = {role_key: index for index, role_key in enumerate(sorted(_ALL_INSERTS))}
+    all_inserts_index = {
+        role_key: index for index, role_key in enumerate(sorted(_ALL_INSERTS))
+    }
     return max(
         sorted(candidates),
         key=lambda role_key: (
@@ -903,7 +1003,9 @@ def _build_insert_role(
     }
     if weekday:
         role["real_weekday"] = weekday
-        role["countdown_display_label"] = f"D-{insert_offset} ({weekday.title()})"
+        role["countdown_display_label"] = (
+            f"D-{insert_offset} ({weekday.title()})"
+        )
     return role
 
 
@@ -951,7 +1053,9 @@ def _role_offset(role: dict[str, Any]) -> int | None:
             return int(value)
         except ValueError:
             pass
-    label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+    label = str(
+        role.get("scheduled_countdown_label") or role.get("countdown_label") or ""
+    )
     return _countdown_offset(label)
 
 
@@ -986,7 +1090,9 @@ def _select_non_physical_insert(
     return _build_insert_role(role_key, athlete_model, insert_offset)
 
 
-def _nearest_available_offset(target: int, available: list[int], chosen: set[int]) -> int | None:
+def _nearest_available_offset(
+    target: int, available: list[int], chosen: set[int]
+) -> int | None:
     candidates = [offset for offset in available if offset not in chosen]
     if not candidates:
         return None
@@ -997,7 +1103,9 @@ def _gap_candidate_offsets(far_offset: int, near_offset: int) -> list[int]:
     gap = far_offset - near_offset
     if gap < GAP_FILL_MIN_DAYS:
         return []
-    available = [offset for offset in range(far_offset - 1, near_offset, -1) if offset > 0]
+    available = [
+        offset for offset in range(far_offset - 1, near_offset, -1) if offset > 0
+    ]
     if not available:
         return []
 
@@ -1023,17 +1131,6 @@ def _candidate_offsets_from_sequence(
 ) -> list[tuple[int, int]]:
     candidate_offsets: list[tuple[int, int]] = []
 
-    # Leading span: the days between the start of the window and the FIRST
-    # session. Only the gaps *between* sessions and the trailing run down to
-    # fight day used to be candidates, so on a short camp whose sessions are
-    # back-loaded (D-6 placing both at D-3 and D-1) the opening days were
-    # structurally unreachable — no insert could land there however light, and
-    # the athlete opened the app to a run of blank days.
-    #
-    # Scoped to the late-fight taper window: that is where the session budget is
-    # tight enough to strand the front of the plan, and it keeps longer camps on
-    # their existing shape. _gap_candidate_offsets excludes its far endpoint, so
-    # passing days_until_fight + 1 makes the window's own first day eligible.
     if (
         days_until_fight is not None
         and 0 < days_until_fight <= LEADING_SPAN_MAX_DAYS_UNTIL_FIGHT
@@ -1042,7 +1139,9 @@ def _candidate_offsets_from_sequence(
         first_offset = max(offsets)
         if days_until_fight > first_offset:
             leading_gap = days_until_fight - first_offset
-            for target_offset in _gap_candidate_offsets(days_until_fight + 1, first_offset):
+            for target_offset in _gap_candidate_offsets(
+                days_until_fight + 1, first_offset
+            ):
                 candidate_offsets.append((target_offset, leading_gap))
 
     for far_offset, near_offset in zip(offsets, offsets[1:]):
@@ -1053,7 +1152,6 @@ def _candidate_offsets_from_sequence(
     trailing_gap = min(offsets)
     for target_offset in _gap_candidate_offsets(trailing_gap, 0):
         candidate_offsets.append((target_offset, trailing_gap))
-
     return candidate_offsets
 
 
@@ -1074,10 +1172,144 @@ def _declared_hard_sparring_offsets(
 
 
 def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
-    return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
+    return any(
+        str(role.get("role_key") or "") in TACTICAL_INSERTS
+        for role in session_sequence
+    )
 
 
-def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
+def _has_future_fight(athlete_model: dict[str, Any], fallback: int) -> bool:
+    try:
+        return int(athlete_model.get("days_until_fight")) > 0
+    except (TypeError, ValueError):
+        return fallback > 0
+
+
+def _watch_segment_bounds(segment: int, days_until_fight: int) -> tuple[int, int]:
+    lower = segment * 7 + 1
+    upper = min((segment + 1) * 7, days_until_fight)
+    return lower, upper
+
+
+def _watch_target_offset(segment: int, days_until_fight: int) -> int:
+    lower, upper = _watch_segment_bounds(segment, days_until_fight)
+    # D-5, D-13, D-21... keeps adjacent weekly watches eight days apart
+    # whenever the available countdown window is long enough.
+    preferred = 5 + (segment * 8)
+    return min(upper, max(lower, preferred))
+
+
+def _offset_role_counts(sequence: list[dict[str, Any]]) -> dict[int, int]:
+    counts: dict[int, int] = {}
+    for role in sequence:
+        offset = _role_offset(role)
+        if offset is not None and offset > 0:
+            counts[offset] = counts.get(offset, 0) + 1
+    return counts
+
+
+def _segment_has_tactical_watch(
+    sequence: list[dict[str, Any]], segment: int
+) -> bool:
+    return any(
+        str(role.get("role_key") or "") == "tactical_watch"
+        and (offset := _role_offset(role)) is not None
+        and _segment_for_offset(offset) == segment
+        for role in sequence
+    )
+
+
+def _segment_watch_offset(
+    sequence: list[dict[str, Any]],
+    *,
+    segment: int,
+    days_until_fight: int,
+) -> int | None:
+    lower, upper = _watch_segment_bounds(segment, days_until_fight)
+    if lower > upper:
+        return None
+
+    target = _watch_target_offset(segment, days_until_fight)
+    role_counts = _offset_role_counts(sequence)
+    offsets = list(range(lower, upper + 1))
+    offsets.sort(
+        key=lambda offset: (
+            1 if role_counts.get(offset, 0) > 1 else 0,
+            abs(offset - target),
+            role_counts.get(offset, 0),
+            -offset,
+        )
+    )
+    return offsets[0] if offsets else None
+
+
+def _mandatory_watch_guidance(offset: int) -> str:
+    if offset <= 7:
+        return (
+            "Fight-week focus: review familiar opponent footage and confirmed cues "
+            "only. Do not add a new tactical theory this week."
+        )
+    return (
+        "Camp focus: study the confirmed opponent. If footage is limited, use the "
+        "closest style match and connect each cue to this week's technical work."
+    )
+
+
+def _build_mandatory_tactical_watch(
+    athlete_model: dict[str, Any],
+    offset: int,
+    weekday: str | None,
+) -> dict[str, Any]:
+    watch = _build_insert_role("tactical_watch", athlete_model, offset, weekday)
+    watch["display_text"] = (
+        f"{build_tactical_watch_template(athlete_model)}\n\n"
+        f"{_mandatory_watch_guidance(offset)}"
+    )
+    watch["mandatory_tactical_watch"] = True
+    watch["weekly_requirement"] = "fight_tactical_watch"
+    watch["tactical_watch_segment"] = _segment_for_offset(offset)
+    watch["governance"] = {
+        **dict(watch.get("governance") or {}),
+        "authority": "mandatory_weekly_tactical_watch",
+        "meaningful_stress": False,
+    }
+    return watch
+
+
+def _ensure_weekly_tactical_watches(
+    ordered: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    *,
+    days_until_fight: int,
+    countdown_map: dict[str, str],
+) -> list[dict[str, Any]]:
+    if not _has_future_fight(athlete_model, days_until_fight):
+        return []
+
+    required_segments = range(_segment_for_offset(days_until_fight) + 1)
+    inserts: list[dict[str, Any]] = []
+    combined = ordered + inserts
+    for segment in reversed(list(required_segments)):
+        if _segment_has_tactical_watch(combined, segment):
+            continue
+        offset = _segment_watch_offset(
+            combined,
+            segment=segment,
+            days_until_fight=days_until_fight,
+        )
+        if offset is None or offset <= 0:
+            continue
+        weekday = countdown_map.get(f"D-{offset}")
+        watch = _build_mandatory_tactical_watch(athlete_model, offset, weekday)
+        inserts.append(watch)
+        combined = ordered + inserts
+    return inserts
+
+
+def apply_gap_fill_inserts(
+    session_sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+) -> list[dict[str, Any]]:
     ordered = sorted(
         [dict(role) for role in session_sequence],
         key=lambda role: int(_role_offset(role) or 0),
@@ -1086,7 +1318,11 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     if not ordered:
         return ordered
 
-    offsets = [offset for role in ordered if (offset := _role_offset(role)) is not None and offset > 0]
+    offsets = [
+        offset
+        for role in ordered
+        if (offset := _role_offset(role)) is not None and offset > 0
+    ]
     if not offsets:
         return ordered
 
@@ -1098,11 +1334,9 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             days_until_fight = max(offsets)
     else:
         days_until_fight = max(offsets)
+
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
-    # Normalise casing: countdown-map weekdays are lowercase while declared
-    # days often arrive title-cased ("Tuesday"); without this the spar-day
-    # guard silently fails and inserts stack onto coach-owned combat days.
     hard_sparring_days = {
         day.strip().lower()
         for day in ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
@@ -1117,48 +1351,61 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     }
     candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
 
-    inserts: list[dict[str, Any]] = []
+    watch_horizon = min(days_until_fight, max(offsets), 21)
+    inserts = _ensure_weekly_tactical_watches(
+        ordered,
+        athlete_model,
+        days_until_fight=watch_horizon,
+        countdown_map=countdown_map,
+    )
+    mandatory_watch_offsets = {
+        int(offset)
+        for role in inserts
+        if str(role.get("role_key") or "") == "tactical_watch"
+        and role.get("mandatory_tactical_watch")
+        and (offset := _role_offset(role)) is not None
+    }
+
     physical_segment_counts: dict[int, int] = {}
     for role in ordered:
         role_key = str(role.get("role_key") or "")
         offset = _role_offset(role)
         if role_key in PHYSICAL_INSERTS and offset is not None:
             segment = _segment_for_offset(offset)
-            physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
+            physical_segment_counts[segment] = (
+                physical_segment_counts.get(segment, 0) + 1
+            )
 
-    usage_ledger = _usage_ledger_from_sequence(ordered)
-    tactical_present = _has_tactical_support(ordered)
-    tactical_required = _is_fight_sport(athlete_model) and not tactical_present
+    usage_ledger = _usage_ledger_from_sequence(ordered + inserts)
     conditioning_present = any(
-        str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS for role in ordered
+        str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS
+        for role in ordered + inserts
     )
     conditioning_required = _has_conditioning_goal(athlete_model)
     injury_state = classify_injury_state(athlete_model)
     coach_day_candidates = [
         (offset, 0)
-        for offset in _declared_hard_sparring_offsets(countdown_map, hard_sparring_days)
+        for offset in _declared_hard_sparring_offsets(
+            countdown_map, hard_sparring_days
+        )
         if offset not in existing_exclusive_offsets
+        and offset not in mandatory_watch_offsets
     ]
-    if tactical_required:
-        candidate_offsets = coach_day_candidates + candidate_offsets
-    else:
-        candidate_offsets = candidate_offsets + coach_day_candidates
+    candidate_offsets = candidate_offsets + coach_day_candidates
 
     for target_offset, gap_span in candidate_offsets:
-        if target_offset <= 0 or target_offset in existing_exclusive_offsets:
+        if (
+            target_offset <= 0
+            or target_offset in existing_exclusive_offsets
+            or target_offset in mandatory_watch_offsets
+        ):
             continue
         weekday = countdown_map.get(f"D-{target_offset}")
-        on_hard_sparring_day = bool(weekday and weekday.strip().lower() in hard_sparring_days)
-        force_tactical = tactical_required and not tactical_present
-        # Once tactical support is secured, guarantee at least one low-risk
-        # aerobic-maintenance slot when a conditioning / gas-tank goal is selected,
-        # so the goal stays visible instead of being dropped for pure filler. Only
-        # force it on a slot that can actually take a safe aerobic insert (offset,
-        # hard-sparring and injury safe); otherwise fall through to normal
-        # selection so the gap still gets a tactical/recovery filler.
+        on_hard_sparring_day = bool(
+            weekday and weekday.strip().lower() in hard_sparring_days
+        )
         force_conditioning = (
-            not force_tactical
-            and conditioning_required
+            conditioning_required
             and not conditioning_present
             and bool(
                 _safe_conditioning_maintenance_inserts(
@@ -1171,50 +1418,63 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         )
         if (
             len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0
-            and not force_tactical
             and not force_conditioning
         ):
             break
+
         insert = select_gap_fill_insert(
             athlete_model,
             target_offset,
             on_hard_sparring_day=on_hard_sparring_day,
             usage_ledger=usage_ledger,
             gap_span=gap_span,
-            force_tactical=force_tactical,
+            force_tactical=False,
             force_conditioning=force_conditioning,
         )
         if insert is None:
             continue
+
         if insert["role_key"] in PHYSICAL_INSERTS:
             segment = _segment_for_offset(target_offset)
-            if physical_segment_counts.get(segment, 0) >= MAX_PHYSICAL_INSERTS_PER_7_DAY_SEGMENT:
+            if (
+                physical_segment_counts.get(segment, 0)
+                >= MAX_PHYSICAL_INSERTS_PER_7_DAY_SEGMENT
+            ):
                 insert = _select_non_physical_insert(
                     athlete_model,
                     target_offset,
                     on_hard_sparring_day=on_hard_sparring_day,
                     usage_ledger=usage_ledger,
                     gap_span=gap_span,
-                    force_tactical=force_tactical,
+                    force_tactical=False,
                 )
                 if insert is None:
                     continue
             else:
-                physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
+                physical_segment_counts[segment] = (
+                    physical_segment_counts.get(segment, 0) + 1
+                )
+
         insert["scheduled_day_hint"] = weekday
         if weekday:
             insert["real_weekday"] = weekday
-            insert["countdown_display_label"] = f"D-{target_offset} ({weekday.title()})"
+            insert["countdown_display_label"] = (
+                f"D-{target_offset} ({weekday.title()})"
+            )
         inserts.append(insert)
-        _record_insert_usage(usage_ledger, str(insert.get("role_key") or ""), target_offset)
-        if insert.get("role_key") in TACTICAL_INSERTS:
-            tactical_present = True
+        _record_insert_usage(
+            usage_ledger, str(insert.get("role_key") or ""), target_offset
+        )
         if insert.get("role_key") in LOW_COST_AEROBIC_INSERTS:
             conditioning_present = True
         if not is_low_cost_coexistable_filler(insert):
             existing_exclusive_offsets.add(target_offset)
 
-    final_sequence = sorted(ordered + inserts, key=lambda role: int(_role_offset(role) or 0), reverse=True)
+    final_sequence = sorted(
+        ordered + inserts,
+        key=lambda role: int(_role_offset(role) or 0),
+        reverse=True,
+    )
     for index, role in enumerate(final_sequence, start=1):
         role["session_index"] = index
     return final_sequence
