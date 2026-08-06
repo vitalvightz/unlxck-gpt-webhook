@@ -62,14 +62,31 @@ jobs:
             tests/test_stage2_planning_brief.py
 
       - name: Run targeted regression tests
+        id: targeted
+        continue-on-error: true
         run: |
-          pytest -q \
+          set -o pipefail
+          pytest -vv --tb=long \
             tests/test_mandatory_weekly_tactical_watch.py \
             tests/test_camp_week_fillers.py \
             tests/test_gap_fill_inserts.py \
             tests/test_stage2_finalizer_packet.py \
             tests/test_stage2_payload_modes.py \
-            tests/test_stage2_planning_brief.py
+            tests/test_stage2_planning_brief.py \
+            2>&1 | tee targeted-failures.txt
+
+      - name: Upload targeted report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-2221-targeted-report
+          path: targeted-failures.txt
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Stop on targeted failures
+        if: steps.targeted.outcome != 'success'
+        run: exit 1
 
       - name: Run Ruff
         run: |
