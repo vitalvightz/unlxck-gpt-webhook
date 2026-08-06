@@ -148,8 +148,16 @@ def test_countdown_span_week_is_no_longer_blank():
     )
     assert schedule is not None
     labelled = [day for day in schedule["days"] if isinstance(day["d_day"], int)]
-    assert len(labelled) == 7, "every day in the rendered week must carry a D-day"
-    assert all(day["calendar_date"] for day in schedule["days"])
+    # D-13..D-8 is a six-day window, so it renders six dated days — not a padded
+    # seven-day Mon-Sun grid, which used to invent a seventh day the window
+    # never covered.
+    assert len(labelled) == 6, "the week must render exactly its countdown window"
+    assert sorted((day["d_day"] for day in labelled), reverse=True) == [13, 12, 11, 10, 9, 8]
+    assert all(day["calendar_date"] for day in labelled)
+    unlabelled = [day for day in schedule["days"] if not isinstance(day["d_day"], int)]
+    # D-13..D-8 off the Friday fight is Sat 13 Jun .. Thu 18 Jun, so Friday is
+    # the one weekday the window does not reach.
+    assert [day["weekday"] for day in unlabelled] == ["Fri"], "out-of-window slots stay blank"
 
 
 # ── End-to-end late-fight camps now render a real countdown incl. D-0 ─────────
@@ -191,6 +199,96 @@ def test_late_fight_21_day_camp_does_not_start_at_d13():
     assert max(d_days) >= 14, f"calendar should cover the early camp, got max D-{max(d_days)}"
 
 
+def _true_weekday_d_days(start: int, end: int, fight_date: str) -> dict[str, int]:
+    """Ground truth: the weekday each D-day in a window actually falls on."""
+    from datetime import date as _date, timedelta as _td
+
+    fight = _date.fromisoformat(fight_date)
+    return {(fight - _td(days=d)).strftime("%a"): d for d in range(start, end - 1, -1)}
+
+
+def _declared_windows_and_schedules(days_until_fight: int, *, fight_date: str):
+    """Pair each role-map week's *declared* countdown window with what it renders.
+
+    The declared window must come from the role map — a late-fight week ships
+    ``countdown_span``, so ``schedule["original_countdown_range"]`` is empty and
+    ``schedule["countdown_range"]`` is derived from the rendered days. Reading the
+    window off the schedule would compare the render against itself.
+    """
+    athlete = _athlete(days_until_fight, fight_date=fight_date)
+    role_map = _build_late_fight_weekly_role_map(days_until_fight, athlete, None, phase="TAPER")
+    role_map = apply_fight_day_override_to_weekly_role_map(role_map, athlete)
+    brief = {"weekly_role_map": role_map, "athlete_model": athlete, "fight_date": fight_date}
+    paired = []
+    for week_index, week in enumerate(role_map.get("weeks", [])):
+        span = week.get("countdown_span") or {}
+        start, end = span.get("start_day"), span.get("end_day")
+        if not isinstance(start, int) or not isinstance(end, int):
+            continue
+        schedule = extract_weekly_schedule(brief, week_index=week_index, fight_date=fight_date)
+        assert schedule is not None
+        paired.append(((start, end), schedule))
+    assert paired, "late-fight role map must declare countdown windows"
+    return paired
+
+
+@pytest.mark.parametrize("days_until_fight", [21, 20, 17, 14, 9, 7, 4, 3])
+def test_every_late_fight_week_renders_its_own_countdown_window(days_until_fight):
+    # The defect: a late-fight week is a countdown *segment* (D-20..D-14, D-7..D-7,
+    # D-4..D-2 …), but the calendar was rebuilt as the Mon-Sun week around the
+    # segment's end day. Every earlier weekday came out a week late — a declared
+    # hard-sparring day locked at D-18 rendered as D-11, inside the D-17 ban.
+    for (start, end), schedule in _declared_windows_and_schedules(
+        days_until_fight, fight_date=FIGHT_FRIDAY
+    ):
+        truth = _true_weekday_d_days(start, end, FIGHT_FRIDAY)
+        reported = {
+            day["weekday"]: day["d_day"]
+            for day in schedule["days"]
+            if isinstance(day["d_day"], int)
+        }
+        # Only the 8-day D-21..D-14 bridge overflows the seven weekday slots; it
+        # drops the plan-creation day rather than a day still to be trained.
+        for weekday, d_day in reported.items():
+            assert truth.get(weekday) == d_day, (
+                f"week D-{start}..D-{end} put {weekday} at D-{d_day}, truly D-{truth.get(weekday)}"
+            )
+        assert set(reported) <= set(truth), (
+            f"week D-{start}..D-{end} rendered days outside its window: "
+            f"{sorted(set(reported) - set(truth))}"
+        )
+
+
+@pytest.mark.parametrize("days_until_fight", [21, 20, 14, 7, 3])
+def test_late_fight_weeks_never_render_days_after_the_fight(days_until_fight):
+    # The Mon-Sun rebuild ran past D-0 for the final segments, emitting negative
+    # D-days (post-fight) and even stamping a sparring card on one.
+    schedules = _late_fight_schedules(days_until_fight, fight_date=FIGHT_FRIDAY)
+    for schedule in schedules:
+        for day in schedule["days"]:
+            if isinstance(day["d_day"], int):
+                assert day["d_day"] >= 0, f"rendered post-fight day {day['weekday']} D-{day['d_day']}"
+                assert day["is_after_fight_day"] is False
+
+
+def test_a_declared_sparring_day_is_not_duplicated_across_weeks():
+    # hard_sparring_plan is keyed by weekday name, so before the fix one declared
+    # Saturday was stamped into every week that had a Saturday slot — four weeks,
+    # each at a different (or missing) D-day.
+    schedules = _late_fight_schedules(21, fight_date=FIGHT_FRIDAY)
+    placements: list[tuple[str, int | None]] = [
+        (day["weekday"], day["d_day"])
+        for schedule in schedules
+        for day in schedule["days"]
+        if day["sparring_day_class"] not in ("", "none")
+    ]
+    assert placements, "declared sparring days must still render"
+    assert len(placements) == len(set(placements)), f"duplicate sparring placements: {placements}"
+    assert all(isinstance(d_day, int) for _, d_day in placements), (
+        f"a sparring day rendered without a D-day: {placements}"
+    )
+
+
 def test_late_fight_camp_never_renders_a_blank_week():
     schedules = _late_fight_schedules(21, fight_date=FIGHT_FRIDAY)
     for schedule in schedules:
@@ -220,10 +318,18 @@ def test_late_fight_calendar_is_timezone_safe_dates():
 )
 def test_sparse_availability_keeps_full_calendar(training_days):
     # The calendar is the source of truth: rest/no-session days are still shown.
+    # Availability must never shrink a week below the countdown window it covers
+    # (late-fight windows run 1-8 days, so "seven days" is not the contract —
+    # "exactly the declared window" is).
     schedules = _late_fight_schedules(21, fight_date=FIGHT_FRIDAY, training_days=training_days)
     for schedule in schedules:
         labelled = [day for day in schedule["days"] if isinstance(day["d_day"], int)]
-        assert len(labelled) == 7, "all seven weekdays render regardless of availability"
+        declared = schedule["original_countdown_range"] or schedule["countdown_range"]
+        expected = min(declared[0] - declared[1] + 1, 7)
+        assert len(labelled) == expected, (
+            f"week {schedule['week_index']} covers D-{declared[0]}..D-{declared[1]} "
+            f"but rendered {len(labelled)} days"
+        )
 
 
 # ── Timezone-safe days_until_fight (calendar-day difference) ──────────────────
@@ -386,3 +492,43 @@ def test_d22_and_d21_are_adjacent_but_route_differently():
     assert _compute_days_until_fight("2026-06-27", fight_27, now_utc=PLAN_TODAY) == 22
     assert _uses_late_fight_stage2_payload(21) is True
     assert _uses_late_fight_stage2_payload(22) is False
+
+
+
+def test_d21_shared_weekday_uses_rendered_d14_sparring_verdict():
+    # A Friday plan created at D-21 and a Friday fight make D-21 and D-14
+    # share the same weekday. The calendar drops D-21 because eight countdown
+    # days cannot fit seven weekday slots. The visible Friday must therefore
+    # carry D-14's technical verdict, never D-21's hard verdict.
+    athlete = _athlete(21, fight_date=FIGHT_FRIDAY)
+    athlete["hard_sparring_days"] = ["friday"]
+    athlete["training_days"] = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+
+    role_map = _build_late_fight_weekly_role_map(21, athlete, None, phase="TAPER")
+    role_map = apply_fight_day_override_to_weekly_role_map(role_map, athlete)
+    bridge = role_map["weeks"][0]
+    assert bridge["countdown_span"] == {"start_day": 21, "end_day": 14}
+
+    friday_entries = [
+        entry
+        for entry in bridge["hard_sparring_plan"]
+        if str(entry.get("day") or "").strip().lower() == "friday"
+    ]
+    assert len(friday_entries) == 1
+    assert friday_entries[0]["d_day"] == 14
+    assert friday_entries[0]["effective_load"] == "technical"
+    assert friday_entries[0]["status"] == "convert_to_technical_suggested"
+    assert "d17_hard_sparring_ban" in friday_entries[0]["reason_codes"]
+    assert not any(
+        entry.get("d_day") == 21 and entry.get("effective_load") == "hard"
+        for entry in bridge["hard_sparring_plan"]
+    )
+
+    brief = {"weekly_role_map": role_map, "athlete_model": athlete, "fight_date": FIGHT_FRIDAY}
+    schedule = extract_weekly_schedule(brief, week_index=0, fight_date=FIGHT_FRIDAY)
+    assert schedule is not None
+    friday = next(day for day in schedule["days"] if day["weekday"] == "Fri")
+    assert friday["d_day"] == 14
+    assert friday["effective_load"] == "technical"
+    assert friday["status"] == "convert_to_technical_suggested"
+    assert "d17_hard_sparring_ban" in friday["reason_codes"]

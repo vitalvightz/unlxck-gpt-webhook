@@ -1,10 +1,15 @@
 from __future__ import annotations
+import json
 import logging
+import threading
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
 from .performance_bias import bridge_low_risk_profile
 
+from collections import OrderedDict
+from copy import deepcopy
+from functools import lru_cache
 from itertools import combinations
 from typing import Any
 
@@ -305,6 +310,8 @@ def _late_fight_hard_sparring_plan(
     phase: str = "TAPER",
     stage_key: str = "late_fight_window",
     week_index: int = 1,
+    window_start_d_day: int | None = None,
+    window_end_d_day: int | None = None,
 ) -> list[dict[str, Any]]:
     """Return planner-owned sparring truth for a late-fight window.
 
@@ -344,10 +351,17 @@ def _late_fight_hard_sparring_plan(
             days_until_fight=days,
         )
         if fight_weekday:
-            end_d = max(0, days - 6)
+            start_d = window_start_d_day if isinstance(window_start_d_day, int) else days
+            end_d = (
+                window_end_d_day
+                if isinstance(window_end_d_day, int)
+                else max(0, days - 6)
+            )
+            if start_d < end_d:
+                start_d, end_d = end_d, start_d
             week["fight_weekday"] = fight_weekday
             week["projected_days_until_fight_end"] = end_d
-            week["span_days"] = days - end_d + 1
+            week["span_days"] = start_d - end_d + 1
     return compute_hard_sparring_plan(week=week, athlete_snapshot=athlete_snapshot)
 
 
@@ -479,14 +493,30 @@ def _nearest_available_day(
     return list(available_indices.values())[0]
 
 
-def _countdown_offset(label: str) -> int | None:
-    normalized = str(label or "").strip().upper()
+@lru_cache(maxsize=512)
+def _countdown_offset_from_label(label: str) -> int | None:
+    normalized = label.strip().upper()
     if not normalized.startswith("D-"):
         return None
     try:
         return int(normalized[2:])
     except ValueError:
         return None
+
+
+def _countdown_offset(label: str) -> int | None:
+    """Parse a ``D-N`` countdown label into N, or None when it is not one.
+
+    Hot path: the bridge assignment search calls this millions of times per build
+    over a label set of at most a couple of dozen values, so the parse itself is
+    cached. Non-string input is folded to the same answers it gave before —
+    ``lru_cache`` needs a hashable key, and callers do pass None.
+    """
+    if not isinstance(label, str):
+        if not label:
+            return None
+        label = str(label)
+    return _countdown_offset_from_label(label)
 
 
 def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
@@ -4116,13 +4146,66 @@ def _append_declared_hard_spar_context(
     return augmented
 
 
-def _late_fight_practical_allocation_plan(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+def _compute_late_fight_practical_allocation_plan(
+    days_until_fight: Any, athlete_model: dict[str, Any]
+) -> dict[str, Any]:
     if _is_countdown_continuation_start(days_until_fight):
         allocation = _bridge_countdown_practical_allocation_plan(days_until_fight, athlete_model)
     else:
         allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
     allocation = _ensure_compressed_freshness_role(allocation, days_until_fight, athlete_model)
     return _append_declared_hard_spar_context(allocation, days_until_fight, athlete_model)
+
+
+# The allocation runs an exhaustive assignment search (``_space_bridge_countdown_roles``)
+# that dominates late-fight build time — roughly a million recursive calls, ~13s, for a
+# single D-20 brief. ``build_planning_brief`` asks for the same allocation two to three
+# times over (weekly role map, plan spec, and the session-sequence fallback), each time
+# with identical inputs, so that whole search was repeated verbatim. Memoise it.
+#
+# The result is handed to callers that mutate it in place — ``session_index`` renumbering
+# in ``ensure_declared_coach_combat_spine``, ``_soften_late_strength_touches`` — so the
+# cached value is never handed out directly. Sharing it would let one caller's edits leak
+# into another's plan, which is a far worse bug than the one being fixed here.
+_ALLOCATION_CACHE_MAXSIZE = 8
+_allocation_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_allocation_cache_lock = threading.Lock()
+
+
+def _allocation_cache_key(days_until_fight: Any, athlete_model: dict[str, Any]) -> str | None:
+    """A collision-free cache key, or None when the inputs are not cleanly encodable.
+
+    Strict JSON on purpose. A ``default=str`` fallback would let two distinct athlete
+    models collapse onto the same key (anything without a stable repr stringifies alike)
+    and serve one athlete another's allocation. Unencodable input just skips the cache.
+    """
+    try:
+        return json.dumps([days_until_fight, athlete_model], sort_keys=True)
+    except (TypeError, ValueError):
+        return None
+
+
+def _late_fight_practical_allocation_plan(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+    cache_key = _allocation_cache_key(days_until_fight, athlete_model)
+    if cache_key is None:
+        return _compute_late_fight_practical_allocation_plan(days_until_fight, athlete_model)
+
+    with _allocation_cache_lock:
+        cached = _allocation_cache.get(cache_key)
+        if cached is not None:
+            _allocation_cache.move_to_end(cache_key)
+            return deepcopy(cached)
+
+    # Computed outside the lock: two concurrent builds duplicating the work is cheap
+    # next to serialising every late-fight generation behind a multi-second search.
+    allocation = _compute_late_fight_practical_allocation_plan(days_until_fight, athlete_model)
+
+    with _allocation_cache_lock:
+        _allocation_cache[cache_key] = deepcopy(allocation)
+        _allocation_cache.move_to_end(cache_key)
+        while len(_allocation_cache) > _ALLOCATION_CACHE_MAXSIZE:
+            _allocation_cache.popitem(last=False)
+    return allocation
 
 
 def _late_fight_stage_label(days_until_fight: Any) -> str:
@@ -4398,6 +4481,11 @@ def _build_late_fight_weekly_role_map(
                 for role in suppressed_roles
                 if str(role.get("composite_segment_stage_key") or "") == stage_key
             ]
+            # Keep sparring dose truth aligned to the exact countdown
+            # segment rendered by the seven weekday slots. The D-21..D-14
+            # bridge drops D-21 and displays D-20..D-14, so its shared Friday
+            # must be judged as D-14 rather than inheriting a D-21 hard verdict.
+            rendered_start_day = min(start_day, end_day + len(_WEEKDAY_NAMES) - 1)
             hard_sparring_plan = _late_fight_hard_sparring_plan(
                 days_until_fight=start_day,
                 athlete_model=segment_athlete,
@@ -4405,6 +4493,8 @@ def _build_late_fight_weekly_role_map(
                 phase=phase,
                 stage_key=stage_key,
                 week_index=week_index,
+                window_start_d_day=rendered_start_day,
+                window_end_d_day=end_day,
             )
             effective_days = effective_hard_days(hard_sparring_plan)
             weeks.append(

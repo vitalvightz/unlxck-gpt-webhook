@@ -592,6 +592,25 @@ def _per_day_d_days(
     return result
 
 
+def _week_window_reaches_ban(week: dict[str, Any]) -> bool:
+    """True when the week's own countdown window reaches into the D-17 ban.
+
+    ``_per_day_d_days`` needs a fight weekday to place each declared day on the
+    calendar. When it cannot — no fight date *and* no plan-creation weekday — the
+    per-day authority used to no-op entirely and every declared hard day stayed
+    hard, straight through the final week to D-0. The ban failed *open*: the one
+    direction a safety rule must never fail.
+
+    The week always knows the countdown window it spans (it is derived from phase
+    spans, not from the weekday calendar), so fall back to that. Without a weekday
+    calendar there is no way to tell which declared day sits on which side of
+    D-17, so a week straddling the boundary converts the days it could not place
+    rather than guessing in favour of hard contact.
+    """
+    end = week.get("projected_days_until_fight_end")
+    return isinstance(end, int) and 0 <= end <= 17
+
+
 def _apply_per_day_countdown_overrides(
     plan: list[dict[str, Any]],
     *,
@@ -610,11 +629,45 @@ def _apply_per_day_countdown_overrides(
     Acts on each declared hard sparring day individually using its own D-day
     inside the week — independent of phase/stage labels. This is the rule that
     makes normal-camp weeks countdown-aware.
+
+    A declared day whose own D-day will not resolve falls back to the week's
+    countdown window, so the ban fails closed rather than open — see
+    ``_week_window_reaches_ban``.
     """
     per_day = _per_day_d_days(week, hard_days)
-    if not per_day:
+    window_reaches_ban = _week_window_reaches_ban(week)
+    if not per_day and not window_reaches_ban:
         return plan
     plan_by_day = {e["day"]: dict(e) for e in plan}
+
+    # Days the calendar could not place, in a week that reaches into the ban.
+    if window_reaches_ban:
+        for day in hard_days:
+            if day in per_day:
+                continue
+            entry = plan_by_day.get(day)
+            if entry is None:
+                continue
+            codes = list(entry.get("reason_codes") or [])
+            for code in ("d17_hard_sparring_ban", "unresolved_countdown_day"):
+                if code not in codes:
+                    codes.append(code)
+            plan_by_day[day] = {
+                **entry,
+                "status": "convert_to_technical_suggested",
+                "effective_load": "technical",
+                "reason_codes": codes,
+                "reason": (
+                    "This week reaches D-17 or closer and the day could not be placed on the "
+                    "countdown calendar; the hard-sparring ban applies. Convert to "
+                    "technical/rhythm only. No effective hard sparring allowed."
+                ),
+                "coach_note": entry.get("coach_note")
+                or (
+                    "Inside the D-17 hard-sparring ban window. Keep this session technical "
+                    "and low-contact — no hard sparring."
+                ),
+            }
 
     # D-17 and closer: convert to technical/rhythm/reduced-contact.
     for day, d_day in per_day.items():

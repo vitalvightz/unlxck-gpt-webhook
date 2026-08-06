@@ -2272,8 +2272,17 @@ def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority(
     ]
 
     assert week["declared_hard_sparring_days"] == ["Tuesday", "Thursday"]
-    assert [entry["day"] for entry in week["hard_sparring_plan"] if entry["status"] != "hard_as_planned"] == ["Thursday"]
-    assert week["effective_hard_sparring_days"] == ["Tuesday"]
+    # This fixture's only phase is six days long, so the camp's single week runs
+    # D-5..D-0 — entirely inside the D-17 hard-sparring ban. Neither declared day
+    # can stay effective-hard there. Tuesday used to survive purely because it
+    # falls outside the six-day span and so had no D-day to test against, which
+    # let the ban fail open; both days now convert.
+    assert [
+        entry["day"] for entry in week["hard_sparring_plan"] if entry["status"] != "hard_as_planned"
+    ] == ["Tuesday", "Thursday"]
+    assert week["effective_hard_sparring_days"] == []
+    # The compression under test is unchanged: both declared days stay locked as
+    # roles on their declared weekdays rather than being moved or dropped.
     assert locked_spar_days == ["Tuesday", "Thursday"]
     assert week["coach_note_flags"] == ["deload hard sparring"]
     assert week["intentional_compression"]["active"] is False
@@ -2334,7 +2343,12 @@ def test_taper_final_week_cap_overrides_declared_hard_sparring_role_locks():
     ]
 
     assert [role["scheduled_day_hint"] for role in spar_roles] == ["Monday"]
-    assert week["effective_hard_sparring_days"] == ["Monday"]
+    # The cap keeps Monday as the one surviving *role*, but this taper week runs
+    # D-6..D-0, so the D-17 ban converts it and the week has no effective hard
+    # sparring. The cap and the ban overlap by definition — a final taper week is
+    # always inside D-17 — so "one effective hard day" is the cap's role-level
+    # outcome, never a hard session this close to the fight.
+    assert week["effective_hard_sparring_days"] == []
     assert week["final_week_sparring_cap"]["active"] is True
     assert week["final_week_sparring_cap"]["max_effective_hard_sparring_days"] == 1
     assert week["final_week_sparring_cap"]["capped_declared_hard_sparring_days"] == ["Wednesday", "Friday"]

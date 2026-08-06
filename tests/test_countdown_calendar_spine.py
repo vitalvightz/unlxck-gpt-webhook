@@ -10,7 +10,7 @@ Covers:
 """
 
 from fightcamp.fight_date_utils import build_calendar_days, d_day_for_weekday
-from fightcamp.sparring_dose_planner import compute_hard_sparring_plan
+from fightcamp.sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
 
 
 def _week_with_calendar(*, end_d, span, fight_weekday="friday", **overrides):
@@ -362,3 +362,90 @@ def test_recovery_day_can_become_low_aerobic_gas_tank_when_gas_tank_is_limiter()
     assert gas_tank_roles
     assert all(role.get("preferred_system") == "aerobic" for role in gas_tank_roles)
     assert all(role.get("gas_tank_recovery_touch") is True for role in gas_tank_roles)
+
+# ── The ban must fail closed when the calendar cannot place a day ─────────────
+#
+# ``_per_day_d_days`` needs a fight weekday to resolve each declared day. Without
+# one it returned an empty map and the whole per-day authority no-opped, so every
+# declared hard day stayed hard — right through the final week to D-0. A safety
+# rule that silently switches itself off is worse than one that is occasionally
+# over-conservative, so an unplaceable day now falls back to the week's own
+# countdown window.
+
+def test_ban_applies_when_fight_weekday_cannot_be_resolved():
+    # No fight weekday (no fight date and no plan-creation weekday), week window
+    # D-20..D-14. Nothing can be placed on the calendar, but the window reaches
+    # into the ban, so every declared day converts instead of staying hard.
+    week = _week_with_calendar(
+        end_d=14, span=7, fight_weekday=None,
+        hard_days=["Tuesday", "Saturday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(42, hard_days=["Tuesday", "Saturday"]),
+    )
+
+    assert [entry["effective_load"] for entry in plan] == ["technical", "technical"]
+    for entry in plan:
+        assert entry["status"] == "convert_to_technical_suggested"
+        assert "d17_hard_sparring_ban" in entry["reason_codes"]
+        # Flagged so the guess is visible rather than passing as calendar truth.
+        assert "unresolved_countdown_day" in entry["reason_codes"]
+
+
+def test_unplaceable_days_outside_the_ban_window_stay_hard():
+    # The fallback must not over-reach: a week that never approaches D-17 keeps
+    # its declared hard sparring even with no resolvable calendar.
+    week = _week_with_calendar(
+        end_d=35, span=7, fight_weekday=None,
+        hard_days=["Tuesday", "Saturday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(42, hard_days=["Tuesday", "Saturday"]),
+    )
+
+    assert [entry["effective_load"] for entry in plan] == ["hard", "hard"]
+    for entry in plan:
+        assert entry["reason_codes"] == []
+
+
+def test_resolvable_week_keeps_precise_per_day_verdicts():
+    # With a fight weekday the per-day calendar still decides each day on its own
+    # D-day — the fallback must not coarsen a week it can actually resolve.
+    week = _week_with_calendar(
+        end_d=14, span=7, fight_weekday="friday",
+        hard_days=["Tuesday", "Saturday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(20, hard_days=["Tuesday", "Saturday"]),
+    )
+    by_day = {entry["day"]: entry for entry in plan}
+
+    assert by_day["Saturday"]["d_day"] == 20
+    assert by_day["Saturday"]["effective_load"] == "hard"
+    assert by_day["Tuesday"]["d_day"] == 17
+    assert by_day["Tuesday"]["effective_load"] == "technical"
+    assert all("unresolved_countdown_day" not in e["reason_codes"] for e in plan)
+
+
+def test_declared_day_outside_a_short_span_converts_inside_the_ban():
+    # A two-day week (D-15..D-14, Thu-Fri off a Friday fight) contains neither
+    # declared day, so neither can be placed. They used to stay hard and count as
+    # the week's effective hard sparring; inside the ban window they must not.
+    #
+    # days_until_fight is the camp start (42), deliberately outside the 0..17
+    # camp-level override — otherwise that override would convert these days on
+    # its own and the per-day fallback under test would never be exercised.
+    week = _week_with_calendar(
+        end_d=14, span=2, fight_weekday="friday",
+        hard_days=["Tuesday", "Saturday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(42, hard_days=["Tuesday", "Saturday"]),
+    )
+
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+    assert effective_hard_days(plan) == []
