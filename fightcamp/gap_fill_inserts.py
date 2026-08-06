@@ -1386,9 +1386,32 @@ def _ensure_weekly_tactical_watches(
     for segment in reversed(list(required_segments)):
         existing_watches = _segment_watch_roles(combined, segment)
         if existing_watches:
-            _promote_mandatory_tactical_watch(
-                existing_watches[0], athlete_model, countdown_map
-            )
+            keeper = existing_watches[0]
+            _promote_mandatory_tactical_watch(keeper, athlete_model, countdown_map)
+            for duplicate in existing_watches[1:]:
+                duplicate["suppressed"] = True
+                duplicate["reasons"] = list(
+                    dict.fromkeys(
+                        [
+                            *clean_list(duplicate.get("reasons")),
+                            (
+                                "Only one Tactical Watch is allowed per seven-day "
+                                "fight segment."
+                            ),
+                        ]
+                    )
+                )
+                duplicate["reason_codes"] = list(
+                    dict.fromkeys(
+                        [
+                            *clean_list(duplicate.get("reason_codes")),
+                            "duplicate_weekly_tactical_watch",
+                        ]
+                    )
+                )
+                ordered[:] = [role for role in ordered if role is not duplicate]
+                inserts[:] = [role for role in inserts if role is not duplicate]
+            combined = ordered + inserts
             continue
 
         replaceable_tactical = next(

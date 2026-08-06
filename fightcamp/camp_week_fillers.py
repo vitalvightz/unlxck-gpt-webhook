@@ -666,7 +666,9 @@ def apply_camp_week_fillers(
             if not cap:
                 continue
             if not _has_renderable_countdown_day(week):
-                continue
+                raise RuntimeError(
+                    "Fight-dated GPP/SPP/TAPER week has no positive countdown calendar day"
+                )
             _ensure_weekly_tactical_watch(week, athlete_model, usage_ledger, cap)
             if _week_is_compressed(week):
                 continue

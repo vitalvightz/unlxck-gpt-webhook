@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from fightcamp.camp_week_fillers import apply_camp_week_fillers
 from fightcamp.gap_fill_inserts import apply_gap_fill_inserts
 
@@ -249,3 +251,44 @@ def test_late_fight_watch_shares_existing_day_when_no_spaced_day_exists():
         role.get("mandatory_tactical_watch") and role.get("countdown_offset") == 15
         for role in sequence
     )
+
+
+
+def test_duplicate_existing_late_fight_watches_are_suppressed_to_one():
+    first = {
+        **_session(6, "tactical_watch"),
+        "category": "support_insert",
+        "stress_class": "support",
+        "governance": {"meaningful_stress": False},
+    }
+    duplicate = {
+        **_session(4, "tactical_watch"),
+        "category": "support_insert",
+        "stress_class": "support",
+        "governance": {"meaningful_stress": False},
+    }
+
+    sequence = apply_gap_fill_inserts(
+        [first, duplicate],
+        _athlete(days_until_fight=7),
+    )
+
+    watches = _watches(sequence)
+    assert len(watches) == 1
+    assert watches[0]["mandatory_tactical_watch"] is True
+    assert watches[0]["weekly_requirement"] == "fight_tactical_watch"
+    assert watches[0]["governance"]["authority"] == "gap_fill_support_insert"
+
+
+def test_malformed_fight_dated_normal_week_raises_generation_error():
+    week = _week("SPP", 0)
+    week["calendar_days"] = [
+        {"weekday": "monday", "d_day": 0},
+        {"weekday": "wednesday", "d_day": -2},
+    ]
+
+    with pytest.raises(RuntimeError, match="no positive countdown calendar day"):
+        apply_camp_week_fillers(
+            {"weeks": [week]},
+            _athlete(days_until_fight=28),
+        )
