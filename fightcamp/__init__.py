@@ -4,9 +4,14 @@ from .footwork_conditioning_loader import install as _install_footwork_condition
 from .tactical_watch_progression_loader import (
     install as _install_tactical_watch_progression_loader,
 )
+from .tactical_watch_sequence_loader import (
+    install as _install_tactical_watch_sequence_loader,
+)
 
 _install_footwork_conditioning_loader()
 _install_tactical_watch_progression_loader()
+_install_tactical_watch_sequence_loader()
 
 del _install_footwork_conditioning_loader
 del _install_tactical_watch_progression_loader
+del _install_tactical_watch_sequence_loader
