@@ -60,49 +60,52 @@ jobs:
           end_marker = "    def test_bridge_d16_avoids_meaningful_app_owned_work_on_declared_hard_days(self):"
           start = text.index(start_marker)
           end = text.index(end_marker, start)
-          replacement = '''    def test_bridge_d16_practical_spacing_avoids_adjacent_app_owned_sessions(self):
-              brief = _build_brief_for(
-                  16,
-                  athlete_overrides={
-                      "plan_creation_weekday": "monday",
-                      "hard_sparring_days": [],
-                  },
-              )
-              visible_sequence = brief["late_fight_plan_spec"]["visible_session_sequence"]
-              non_watch_offsets = [
-                  entry["countdown_offset"]
-                  for entry in visible_sequence
-                  if isinstance(entry.get("countdown_offset"), int)
-                  and not entry.get("mandatory_tactical_watch")
+          replacement = "\n".join(
+              [
+                  "    def test_bridge_d16_practical_spacing_avoids_adjacent_app_owned_sessions(self):",
+                  "        brief = _build_brief_for(",
+                  "            16,",
+                  "            athlete_overrides={",
+                  '                "plan_creation_weekday": "monday",',
+                  '                "hard_sparring_days": [],',
+                  "            },",
+                  "        )",
+                  '        visible_sequence = brief["late_fight_plan_spec"]["visible_session_sequence"]',
+                  "        non_watch_offsets = [",
+                  '            entry["countdown_offset"]',
+                  "            for entry in visible_sequence",
+                  '            if isinstance(entry.get("countdown_offset"), int)',
+                  '            and not entry.get("mandatory_tactical_watch")',
+                  "        ]",
+                  "",
+                  "        assert all(",
+                  "            first - second > 1",
+                  "            for first, second in zip(non_watch_offsets, non_watch_offsets[1:])",
+                  "        )",
+                  "        all_visible_offsets = sorted(",
+                  "            {",
+                  '                entry["countdown_offset"]',
+                  "                for entry in visible_sequence",
+                  '                if isinstance(entry.get("countdown_offset"), int)',
+                  "            },",
+                  "            reverse=True,",
+                  "        )",
+                  "        assert all(",
+                  "            first - second > 1",
+                  "            for first, second in zip(all_visible_offsets, all_visible_offsets[1:])",
+                  "        )",
+                  "        outer_watch_offsets = [",
+                  '            entry["countdown_offset"]',
+                  "            for entry in visible_sequence",
+                  '            if entry.get("mandatory_tactical_watch")',
+                  '            and entry.get("tactical_watch_segment") == 2',
+                  "        ]",
+                  "        assert outer_watch_offsets == [16]",
+                  "        assert outer_watch_offsets[0] in non_watch_offsets",
+                  "",
+                  "",
               ]
-
-              assert all(
-                  first - second > 1
-                  for first, second in zip(non_watch_offsets, non_watch_offsets[1:])
-              )
-              all_visible_offsets = sorted(
-                  {
-                      entry["countdown_offset"]
-                      for entry in visible_sequence
-                      if isinstance(entry.get("countdown_offset"), int)
-                  },
-                  reverse=True,
-              )
-              assert all(
-                  first - second > 1
-                  for first, second in zip(all_visible_offsets, all_visible_offsets[1:])
-              )
-              outer_watch_offsets = [
-                  entry["countdown_offset"]
-                  for entry in visible_sequence
-                  if entry.get("mandatory_tactical_watch")
-                  and entry.get("tactical_watch_segment") == 2
-              ]
-              assert outer_watch_offsets == [16]
-              assert outer_watch_offsets[0] in non_watch_offsets
-
-
-          '''
+          )
           path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
           PY
 
