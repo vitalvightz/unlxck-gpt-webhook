@@ -15,10 +15,28 @@
 //   not "keeps you safe / injury-free".
 // - Don't repeat the same benefit across sections.
 
-// First-viewport value line under the hero title. Outcome-led, not a feature
-// list. This is the sentence that has to land the product in one read.
+// First-viewport lead under the hero title. Names the product category in one
+// read (what it is, who it's for), so a new visitor isn't left inferring it.
+export const PUBLIC_HERO_LEAD =
+  "Personalised fight camps that adapt to your readiness, recovery and injuries.";
+
+// Supporting value line beneath the lead. Outcome-led, not a feature list.
 export const PUBLIC_HERO_SUMMARY =
   "Know what to train today, and adjust before fatigue becomes failure.";
+
+// Featured "Today" state for the top of the workspace preview. A concrete, live
+// adaptation (not a static workflow list) so a visitor grasps what the product
+// actually does in a couple of seconds. Mock data — makes no medical claim.
+export const LANDING_TODAY_PREVIEW = {
+  eyebrow: "Today",
+  status: "Modified session",
+  changes: [
+    { direction: "down" as const, text: "Heavy bag rounds reduced" },
+    { direction: "up" as const, text: "Reaction drills increased" },
+  ],
+  reasonLabel: "Reason",
+  reason: "High fatigue reported",
+} as const;
 
 // Hero proof strip. Three short outcome pills (was four feature nouns).
 export const LANDING_OUTCOME_POINTS = [
@@ -60,28 +78,24 @@ export const LANDING_WORKSPACE_ROWS = [
   },
 ] as const;
 
-// Proof grid. Outcome-led headlines that each say something distinct, so no
-// section just re-lists the pipeline.
+// Proof grid. Three distinct benefit cards (was four, plus a separate
+// "Decisions" card that repeated the readiness/full-camp promise). Each headline
+// says something the others don't, so no section re-lists the pipeline.
 export const LANDING_PRODUCT_PROOF_POINTS = [
   {
     label: "Today",
-    title: "Know what to train today.",
-    body: "Open the app and see the session that fits your fight date, current load, and availability, not a generic block.",
+    title: "Know today's session.",
+    body: "See the work that fits your fight date, schedule, and current condition.",
   },
   {
     label: "Readiness",
-    title: "Adjust before fatigue becomes failure.",
-    body: "Check-ins keep load, recovery, and injury limits in view, so today's work bends to how you're actually recovering.",
-  },
-  {
-    label: "Decisions",
-    title: "Turn check-ins into clear training decisions.",
-    body: "Daily inputs resolve into a straight answer: train hard, modify, or pull back. It's a decision, not another dashboard to read.",
+    title: "Adapt before you break down.",
+    body: "Readiness and injury check-ins adjust the session when needed.",
   },
   {
     label: "Full camp",
-    title: "Keep the camp moving without guessing.",
-    body: "Every session stays tied to your fight date, so today's work can adapt while the rest of the camp stays aligned.",
+    title: "Keep the camp aligned.",
+    body: "Changes to today's work stay connected to the full camp.",
   },
 ] as const;
 
@@ -90,22 +104,22 @@ export const LANDING_PRODUCT_PROOF_POINTS = [
 export const LANDING_WORKFLOW_STEPS = [
   {
     label: "Step 1",
-    title: "Complete intake",
-    body: "Add your fight date, schedule, style, history, and restrictions.",
+    title: "Complete your intake",
+    body: "Add your fight date, weekly schedule, training history, and restrictions.",
   },
   {
     label: "Step 2",
-    title: "Check in on readiness",
-    body: "Log load, recovery, and any injury limits before each block.",
+    title: "Check in before training",
+    body: "Report your recovery, fatigue, soreness, and active injuries.",
   },
   {
     label: "Step 3",
-    title: "Generate the camp",
-    body: "Get phases, sessions, and targets built around your fight date.",
+    title: "Receive your camp",
+    body: "Get phases, weekly targets, and sessions built around your fight date.",
   },
   {
     label: "Step 4",
-    title: "Adapt as you go",
-    body: "Return between sessions and let today's work adjust to where you are.",
+    title: "Adapt session by session",
+    body: "Unlxck modifies today's work while keeping the wider camp aligned.",
   },
 ] as const;

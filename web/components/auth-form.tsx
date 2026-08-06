@@ -246,8 +246,8 @@ export function AuthForm({
       <div className="auth-card">
         <div className="auth-header">
           <div>
-            <p className="kicker">{mode === "signup" ? "Create account" : "Log in"}</p>
-            <h2>{mode === "signup" ? "Start the intake" : "Resume your camp"}</h2>
+            <p className="kicker">{mode === "signup" ? "Create account" : "Welcome back"}</p>
+            <h2>{mode === "signup" ? "Start the intake" : "Continue your camp"}</h2>
             {mode === "signup" && role ? (
               <p className="auth-selected-role muted">
                 Signing up as <strong>{SIGNUP_ROLE_LABELS[role] ?? role}</strong>
@@ -299,6 +299,9 @@ export function AuthForm({
               type="email"
               inputMode="email"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               ref={emailInputRef}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -362,7 +365,7 @@ export function AuthForm({
             </button>
             <div className="auth-secondary-links" aria-label="Account help">
               <Link href={mode === "signup" ? "/login" : "/signup"} className="auth-text-link">
-                {mode === "signup" ? "Already have an account?" : "Need an account?"}
+                {mode === "signup" ? "Already have an account?" : "New to UNLXCK? Join the beta"}
               </Link>
               {mode === "login" ? (
                 <Link href="/forgot-password" className="auth-text-link">
@@ -378,13 +381,11 @@ export function AuthForm({
 
       <div className="auth-rail">
         <div className="hero-panel-copy">
-          <p className="eyebrow">{mode === "signup" ? "Free beta" : "Athlete access"}</p>
-          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Enter the UNLXCK fight camp control room."}</h1>
-          <p>
-            {mode === "signup"
-              ? "Set up once, then get a fight camp that tells you what to train and adapts as you go."
-              : "Pick up your camp where you left off."}
-          </p>
+          <p className="eyebrow">{mode === "signup" ? "Private beta" : "Athlete access"}</p>
+          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Pick up where you left off."}</h1>
+          {mode === "signup" ? (
+            <p>Set up once, then get a fight camp that tells you what to train and adapts as you go.</p>
+          ) : null}
         </div>
         {mode === "signup" ? (
           <div className="auth-signup-proof">
@@ -394,6 +395,7 @@ export function AuthForm({
               <li>Adjust before fatigue becomes failure with daily check-ins.</li>
               <li>Your whole camp stays in one place, so you never start over.</li>
             </ul>
+            <p className="muted auth-signup-note">No payment required during the private beta.</p>
           </div>
         ) : null}
       </div>

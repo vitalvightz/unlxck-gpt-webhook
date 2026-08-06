@@ -33,8 +33,10 @@ import {
 import {
   LANDING_OUTCOME_POINTS,
   LANDING_PRODUCT_PROOF_POINTS,
+  LANDING_TODAY_PREVIEW,
   LANDING_WORKFLOW_STEPS,
   LANDING_WORKSPACE_ROWS,
+  PUBLIC_HERO_LEAD,
   PUBLIC_HERO_SUMMARY,
 } from "@/lib/public-landing-copy";
 import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView } from "@/lib/types";
@@ -412,6 +414,7 @@ export default function HomePage() {
                 View Demo Plan
               </Link>
             </div>
+            <InstallUnlxck variant="inline" />
           </div>
         </section>
       );
@@ -581,19 +584,21 @@ export default function HomePage() {
               <span>UNLXCK</span>
               <span>Your Potential</span>
             </p>
-            <h1 className="hero-title public-hero-title" aria-label="Your camp. Lxcked in.">
-              <span>Your camp.</span>
+            <h1 className="hero-title public-hero-title" aria-label="Your fight camp. Lxcked in.">
+              <span>Your fight camp.</span>
               <span>Lxcked in.</span>
             </h1>
+            <p className="public-hero-lead">{PUBLIC_HERO_LEAD}</p>
             <p className="public-hero-summary">{PUBLIC_HERO_SUMMARY}</p>
-            <div className="hero-actions">
+            <div className="hero-actions public-hero-actions">
               <Link href="/signup" className="cta">
-                Join the beta
+                Get started
               </Link>
               <Link href="/login" className="ghost-button">
                 Log in
               </Link>
             </div>
+            <p className="public-hero-cta-note">Private beta · About 2 minutes to set up</p>
             <div className="public-proof-strip" aria-label="Product outcomes">
               {LANDING_OUTCOME_POINTS.map((point) => (
                 <div key={point.label} className="public-proof-pill">
@@ -602,14 +607,13 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <InstallUnlxck variant="inline" />
           </div>
 
           <article className="support-panel public-preview-panel">
             <div className="public-preview-header">
               <div>
                 <p className="kicker">Workspace preview</p>
-                <h2 className="form-section-title">One app workflow.</h2>
+                <h2 className="form-section-title">See how today&apos;s session changes.</h2>
               </div>
               <span className="badge status-badge-neutral">Beta</span>
             </div>
@@ -627,6 +631,30 @@ export default function HomePage() {
                   <span>Intake</span>
                 </aside>
               <div className="public-workspace-list">
+                <article className="public-today-preview" aria-label="Today, modified session">
+                  <div className="public-today-preview-head">
+                    <span className="public-today-preview-eyebrow">{LANDING_TODAY_PREVIEW.eyebrow}</span>
+                    <span className="public-today-preview-status">{LANDING_TODAY_PREVIEW.status}</span>
+                  </div>
+                  <ul className="public-today-changes">
+                    {LANDING_TODAY_PREVIEW.changes.map((change) => (
+                      <li
+                        key={change.text}
+                        className="public-today-change"
+                        data-direction={change.direction}
+                      >
+                        <span className="public-today-change-glyph" aria-hidden="true">
+                          {change.direction === "up" ? "↑" : "↓"}
+                        </span>
+                        <span className="public-today-change-text">{change.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="public-today-reason">
+                    <span className="public-today-reason-label">{LANDING_TODAY_PREVIEW.reasonLabel}</span>
+                    <span>{LANDING_TODAY_PREVIEW.reason}</span>
+                  </p>
+                </article>
                 {LANDING_WORKSPACE_ROWS.map((row) => (
                   <article key={row.step} className="public-workspace-row">
                     <span className="public-workspace-step">{row.step}</span>
@@ -690,7 +718,7 @@ export default function HomePage() {
         </div>
         <div className="hero-actions">
           <Link href="/signup" className="cta">
-            Join the beta
+            Get started
           </Link>
           <Link href="/login" className="secondary-button">
             Log in
