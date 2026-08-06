@@ -304,7 +304,7 @@ export function AppNav() {
               </Link>
             ) : null}
             <Link href="/signup" className="cta">
-              Start free beta
+              Join the beta
             </Link>
           </nav>
         </header>
