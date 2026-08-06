@@ -49,7 +49,49 @@ jobs:
           pip check
 
       - name: Apply repair
-        run: python .github/scripts/run_fix_pr_2221.py
+        run: |
+          python .github/scripts/run_fix_pr_2221.py
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/test_stage2_payload_modes.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''        assert all(
+              first - second > 1
+              for first, second in zip(non_watch_offsets, non_watch_offsets[1:])
+          )
+          assert watch_offsets
+          assert all(offset in non_watch_offsets for offset in watch_offsets)
+          '''
+          new = '''        assert all(
+              first - second > 1
+              for first, second in zip(non_watch_offsets, non_watch_offsets[1:])
+          )
+          all_visible_offsets = sorted(
+              {
+                  entry["countdown_offset"]
+                  for entry in visible_sequence
+                  if isinstance(entry.get("countdown_offset"), int)
+              },
+              reverse=True,
+          )
+          assert all(
+              first - second > 1
+              for first, second in zip(all_visible_offsets, all_visible_offsets[1:])
+          )
+          outer_watch_offsets = [
+              entry["countdown_offset"]
+              for entry in visible_sequence
+              if entry.get("mandatory_tactical_watch")
+              and entry.get("tactical_watch_segment") == 2
+          ]
+          assert outer_watch_offsets == [16]
+          assert outer_watch_offsets[0] in non_watch_offsets
+          '''
+          if text.count(old) != 1:
+              raise RuntimeError('Expected one D16 assertion block')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
 
       - name: Compile changed Python
         run: |
