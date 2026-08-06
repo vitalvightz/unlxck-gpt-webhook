@@ -1,0 +1,81 @@
+name: Fix PR 2221 Duplicate Watch
+
+on:
+  push:
+    branches:
+      - agent/mandatory-weekly-tactical-watch
+    paths:
+      - .github/scripts/fix_pr_2221_duplicate_watch.py
+      - .github/workflows/fix-pr-2221-duplicate-watch.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-pr-2221-duplicate-watch
+  cancel-in-progress: true
+
+jobs:
+  repair-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mandatory-weekly-tactical-watch
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.14'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Apply duplicate-watch repair
+        run: python .github/scripts/fix_pr_2221_duplicate_watch.py
+
+      - name: Compile changed Python
+        run: |
+          python -m py_compile \
+            fightcamp/gap_fill_inserts.py \
+            fightcamp/camp_week_fillers.py \
+            tests/test_mandatory_weekly_tactical_watch.py
+
+      - name: Run focused regressions
+        run: |
+          pytest -q \
+            tests/test_mandatory_weekly_tactical_watch.py \
+            tests/test_gap_fill_inserts.py \
+            tests/test_camp_week_fillers.py
+
+      - name: Run Ruff
+        run: |
+          ruff check \
+            fightcamp/gap_fill_inserts.py \
+            fightcamp/camp_week_fillers.py \
+            tests/test_mandatory_weekly_tactical_watch.py
+
+      - name: Commit validated repair
+        run: |
+          rm -f \
+            .github/scripts/fix_pr_2221_duplicate_watch.py \
+            .github/workflows/fix-pr-2221-duplicate-watch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            fightcamp/gap_fill_inserts.py \
+            fightcamp/camp_week_fillers.py \
+            tests/test_mandatory_weekly_tactical_watch.py \
+            .github/scripts/fix_pr_2221_duplicate_watch.py \
+            .github/workflows/fix-pr-2221-duplicate-watch.yml
+          git commit -m "Suppress duplicate weekly Tactical Watches"
+          git push origin HEAD:agent/mandatory-weekly-tactical-watch
