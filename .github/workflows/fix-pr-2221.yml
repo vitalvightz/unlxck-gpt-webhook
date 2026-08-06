@@ -54,8 +54,8 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          path = Path("tests/test_stage2_payload_modes.py")
-          text = path.read_text(encoding="utf-8")
+          test_path = Path("tests/test_stage2_payload_modes.py")
+          text = test_path.read_text(encoding="utf-8")
           start_marker = "    def test_bridge_d16_practical_spacing_avoids_adjacent_app_owned_sessions(self):"
           end_marker = "    def test_bridge_d16_avoids_meaningful_app_owned_work_on_declared_hard_days(self):"
           start = text.index(start_marker)
@@ -115,7 +115,37 @@ jobs:
                   "",
               ]
           )
-          path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
+          test_path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
+
+          gap_path = Path("fightcamp/gap_fill_inserts.py")
+          gap_text = gap_path.read_text(encoding="utf-8")
+          old = "\n".join(
+              [
+                  "        if (",
+                  "            target_offset <= 0",
+                  "            or target_offset in existing_exclusive_offsets",
+                  "            or target_offset in mandatory_watch_offsets",
+                  "        ):",
+                  "            continue",
+              ]
+          )
+          new = "\n".join(
+              [
+                  "        if (",
+                  "            target_offset <= 0",
+                  "            or target_offset in existing_exclusive_offsets",
+                  "            or target_offset in mandatory_watch_offsets",
+                  "            or any(",
+                  "                abs(target_offset - watch_offset) <= 1",
+                  "                for watch_offset in mandatory_watch_offsets",
+                  "            )",
+                  "        ):",
+                  "            continue",
+              ]
+          )
+          if gap_text.count(old) != 1:
+              raise RuntimeError("Expected one late-fight candidate spacing guard")
+          gap_path.write_text(gap_text.replace(old, new, 1), encoding="utf-8")
           PY
 
       - name: Compile changed Python
