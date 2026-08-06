@@ -144,3 +144,22 @@ def test_late_fight_watch_progression_uses_spp_then_taper():
     assert "confirmed opponent" in watches_by_segment[1]["display_text"].lower()
     for watch in watches_by_segment.values():
         _assert_four_line_output(watch["display_text"])
+
+
+def test_existing_watch_promotion_preserves_unrelated_metadata():
+    week = _week("SPP", 28)
+    week["session_roles"].append(
+        {
+            "role_key": "tactical_watch",
+            "category": "support_insert",
+            "scheduled_day_hint": "Wednesday",
+            "display_text": "legacy repeated content",
+            "source_trace_id": "watch-existing-1",
+        }
+    )
+    apply_camp_week_fillers({"weeks": [week]}, _athlete(days_until_fight=28))
+
+    watch = _watches(week["session_roles"])[0]
+    assert watch["source_trace_id"] == "watch-existing-1"
+    assert watch["display_text"] != "legacy repeated content"
+    assert watch["tactical_watch_phase"] == "SPP"
