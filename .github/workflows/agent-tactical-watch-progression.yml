@@ -7,6 +7,16 @@ on:
     paths:
       - .github/scripts/apply_tactical_watch_progression.py
       - .github/workflows/agent-tactical-watch-progression.yml
+  pull_request:
+    branches:
+      - Main
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - .github/scripts/apply_tactical_watch_progression.py
+      - .github/workflows/agent-tactical-watch-progression.yml
 
 permissions:
   contents: write
