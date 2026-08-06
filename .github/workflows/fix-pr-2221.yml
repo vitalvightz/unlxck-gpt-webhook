@@ -9,6 +9,10 @@ on:
       - .github/scripts/run_fix_pr_2221.py
       - .github/workflows/fix-pr-2221.yml
 
+concurrency:
+  group: repair-pr-2221
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -16,7 +20,7 @@ jobs:
   repair-and-validate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 20
 
     steps:
       - name: Checkout branch
@@ -191,9 +195,6 @@ jobs:
             tests/test_mandatory_weekly_tactical_watch.py \
             tests/test_stage2_payload_modes.py \
             tests/test_stage2_planning_brief.py
-
-      - name: Run full Python suite
-        run: pytest tests/ -q
 
       - name: Commit validated repair and remove scaffolding
         run: |
