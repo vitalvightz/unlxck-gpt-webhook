@@ -17126,17 +17126,40 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 }
 
 @media (max-width: 720px) {
+  /* Mobile is recomposed, not just scaled down.
+   *
+   * On desktop the hero is one card holding the copy on the left and the
+   * workspace preview on the right. Stacked on a phone that reads as the
+   * preview being embedded inside — and cut off by — the hero. So here the
+   * outer panel drops its card chrome and each child becomes its own block:
+   * the hero ends after the CTA helper line, and the preview follows as a
+   * separate full-width card. */
   .public-hero-panel {
-    padding: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .public-hero-grid {
+    gap: 20px;
   }
 
   .public-hero-copy {
-    gap: 13px;
+    gap: 12px;
+    padding: 22px 18px 24px;
+    border-radius: 22px;
+    border: 1px solid var(--border-default);
+    background:
+      linear-gradient(135deg, rgba(181, 18, 43, 0.2), transparent 44%),
+      linear-gradient(180deg, rgba(22, 24, 29, 0.98), rgba(15, 17, 21, 0.98));
+    box-shadow: var(--shadow-standard);
   }
 
   .public-hero-copy .hero-title {
     max-width: none;
-    font-size: clamp(30px, 8vw, 40px);
+    font-size: clamp(27px, 7.4vw, 36px);
     line-height: 0.95;
   }
 
@@ -17152,24 +17175,56 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     line-height: 1.45;
   }
 
-  .public-proof-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 12px;
-    padding-top: 16px;
+  .public-hero-actions {
+    gap: 10px;
   }
 
-  .public-proof-pill {
-    gap: 5px;
-    padding-left: 9px;
-  }
-
-  .public-proof-value {
+  /* Plain sans, no tracking: the mono treatment wrapped this to two lines and
+     orphaned the last word. */
+  .public-hero-cta-note {
+    font-family: inherit;
     font-size: 12px;
-    line-height: 1.3;
+    letter-spacing: normal;
+    text-align: center;
+  }
+
+  /* These three micro-benefits restate the benefit cards further down the
+     page, and inside the hero they make it read like a dashboard. */
+  .public-proof-strip {
+    display: none;
+  }
+
+  /* Compact header: the brand block shrinks and the CTA never wraps, so the
+     bar stays a single tight row instead of growing to two lines. */
+  .brand-topbar {
+    gap: 10px;
+    padding: 7px 8px 7px 12px;
+    border-radius: 12px;
+  }
+
+  .brand-topbar-mark .eyebrow {
+    font-size: 9px;
+  }
+
+  .brand-topbar-mark span:last-child {
+    font-size: 15px;
+  }
+
+  .brand-topbar-actions {
+    gap: 6px;
+  }
+
+  .brand-topbar-actions .cta,
+  .brand-topbar-actions .ghost-button {
+    min-height: 36px;
+    padding-right: 12px;
+    padding-left: 12px;
+    font-size: 12.5px;
   }
 
   .public-preview-panel {
     gap: 12px;
+    padding: 16px;
   }
 
   .public-preview-window {

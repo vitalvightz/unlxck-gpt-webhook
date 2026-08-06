@@ -598,7 +598,7 @@ export default function HomePage() {
                 Log in
               </Link>
             </div>
-            <p className="public-hero-cta-note">Private beta · Takes about 2 minutes to set up</p>
+            <p className="public-hero-cta-note">Private beta · About 2 minutes to set up</p>
             <div className="public-proof-strip" aria-label="Product outcomes">
               {LANDING_OUTCOME_POINTS.map((point) => (
                 <div key={point.label} className="public-proof-pill">
@@ -613,7 +613,7 @@ export default function HomePage() {
             <div className="public-preview-header">
               <div>
                 <p className="kicker">Workspace preview</p>
-                <h2 className="form-section-title">One app workflow.</h2>
+                <h2 className="form-section-title">See how today&apos;s session changes.</h2>
               </div>
               <span className="badge status-badge-neutral">Beta</span>
             </div>
