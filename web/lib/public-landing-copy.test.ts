@@ -4,10 +4,26 @@ import assert from "node:assert/strict";
 import {
   LANDING_OUTCOME_POINTS,
   LANDING_PRODUCT_PROOF_POINTS,
+  LANDING_TODAY_PREVIEW,
   LANDING_WORKFLOW_STEPS,
   LANDING_WORKSPACE_ROWS,
+  PUBLIC_HERO_LEAD,
   PUBLIC_HERO_SUMMARY,
 } from "./public-landing-copy";
+
+test("the hero lead names the product category in one read", () => {
+  const lead = PUBLIC_HERO_LEAD.toLowerCase();
+  assert.ok(lead.includes("fight camp"), "hero lead should name fight camps");
+  assert.ok(lead.includes("adapt"), "hero lead should promise adaptation");
+});
+
+test("the today preview shows a concrete adapted session with a reason", () => {
+  assert.equal(LANDING_TODAY_PREVIEW.status, "Modified session");
+  assert.ok(LANDING_TODAY_PREVIEW.reason.length > 0, "preview should give a reason");
+  const directions = LANDING_TODAY_PREVIEW.changes.map((change) => change.direction);
+  assert.ok(directions.includes("down"), "preview should show a reduced element");
+  assert.ok(directions.includes("up"), "preview should show an increased element");
+});
 
 test("the hero summary leads with an athlete outcome, not a feature list", () => {
   const summary = PUBLIC_HERO_SUMMARY.toLowerCase();
@@ -33,13 +49,15 @@ test("the hero proof strip stays to three concise outcome points", () => {
   assert.ok(values.some((value) => value.includes("decisions, not guesses")));
 });
 
-test("the proof grid headlines are outcome-led and each distinct", () => {
+test("the proof grid trims to three distinct, outcome-led headlines", () => {
+  // Cut from four to three: the standalone "Decisions" card repeated the
+  // readiness/full-camp promise, so it was folded away.
+  assert.equal(LANDING_PRODUCT_PROOF_POINTS.length, 3, "proof grid should be three cards");
   const titles: string[] = LANDING_PRODUCT_PROOF_POINTS.map((point) => point.title);
   const outcomeSignals = [
-    "know what to train today",
-    "adjust before fatigue becomes failure",
-    "turn check-ins into clear training decisions",
-    "keep the camp moving without guessing",
+    "know today's session",
+    "adapt before you break down",
+    "keep the camp aligned",
   ];
   for (const signal of outcomeSignals) {
     assert.ok(

@@ -61,6 +61,13 @@ export function AppNav() {
   // signed-in visitors are redirected away by the auth pages themselves.
   const isAuthRoute = isAuthSurfaceRoute(pathname);
 
+  // On the public brand surface (logged-out landing) the slim brand top bar is
+  // the only navigation. Suppress the floating workspace Menu control and the
+  // sidebar drawer there so they can't overlap page content on scroll — those
+  // belong to the signed-in workspace shell. Auth routes suppress them too.
+  const isPublicBrandSurface = shellSurface === "brand" && !session;
+  const suppressWorkspaceNav = isAuthRoute || isPublicBrandSurface;
+
   const isMobileDrawerVisible = mobileNavState !== "closed";
 
   const clearCloseTimeout = useCallback(() => {
@@ -304,12 +311,12 @@ export function AppNav() {
               </Link>
             ) : null}
             <Link href="/signup" className="cta">
-              Join the beta
+              Get started
             </Link>
           </nav>
         </header>
       ) : null}
-      {isAuthRoute ? null : (
+      {suppressWorkspaceNav ? null : (
         <>
       {!isMobileDrawerVisible ? (
         <button
