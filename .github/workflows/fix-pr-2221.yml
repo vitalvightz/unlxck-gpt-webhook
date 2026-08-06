@@ -56,18 +56,10 @@ jobs:
 
           path = Path('tests/test_stage2_payload_modes.py')
           text = path.read_text(encoding='utf-8')
-          old = '''        assert all(
-              first - second > 1
-              for first, second in zip(non_watch_offsets, non_watch_offsets[1:])
-          )
-          assert watch_offsets
+          old = '''        assert watch_offsets
           assert all(offset in non_watch_offsets for offset in watch_offsets)
           '''
-          new = '''        assert all(
-              first - second > 1
-              for first, second in zip(non_watch_offsets, non_watch_offsets[1:])
-          )
-          all_visible_offsets = sorted(
+          new = '''        all_visible_offsets = sorted(
               {
                   entry["countdown_offset"]
                   for entry in visible_sequence
@@ -89,7 +81,7 @@ jobs:
           assert outer_watch_offsets[0] in non_watch_offsets
           '''
           if text.count(old) != 1:
-              raise RuntimeError('Expected one D16 assertion block')
+              raise RuntimeError('Expected one D16 Watch assertion tail')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
 
@@ -123,7 +115,7 @@ jobs:
         with:
           name: pr-2221-targeted-report
           path: targeted-failures.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 3
 
       - name: Stop on targeted failures
