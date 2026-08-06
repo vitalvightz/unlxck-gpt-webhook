@@ -48,7 +48,8 @@ jobs:
           python -m py_compile \
             fightcamp/gap_fill_inserts.py \
             fightcamp/camp_week_fillers.py \
-            tests/test_mandatory_weekly_tactical_watch.py
+            tests/test_mandatory_weekly_tactical_watch.py \
+            tests/test_gap_fill_inserts.py
 
       - name: Run focused regressions
         run: |
@@ -62,7 +63,8 @@ jobs:
           ruff check \
             fightcamp/gap_fill_inserts.py \
             fightcamp/camp_week_fillers.py \
-            tests/test_mandatory_weekly_tactical_watch.py
+            tests/test_mandatory_weekly_tactical_watch.py \
+            tests/test_gap_fill_inserts.py
 
       - name: Commit validated repair
         run: |
@@ -75,6 +77,7 @@ jobs:
             fightcamp/gap_fill_inserts.py \
             fightcamp/camp_week_fillers.py \
             tests/test_mandatory_weekly_tactical_watch.py \
+            tests/test_gap_fill_inserts.py \
             .github/scripts/fix_pr_2221_duplicate_watch.py \
             .github/workflows/fix-pr-2221-duplicate-watch.yml
           git commit -m "Suppress duplicate weekly Tactical Watches"
