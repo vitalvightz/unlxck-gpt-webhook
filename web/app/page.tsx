@@ -588,7 +588,7 @@ export default function HomePage() {
             <p className="public-hero-summary">{PUBLIC_HERO_SUMMARY}</p>
             <div className="hero-actions">
               <Link href="/signup" className="cta">
-                Start free beta
+                Join the beta
               </Link>
               <Link href="/login" className="ghost-button">
                 Log in
@@ -690,7 +690,7 @@ export default function HomePage() {
         </div>
         <div className="hero-actions">
           <Link href="/signup" className="cta">
-            Start free beta
+            Join the beta
           </Link>
           <Link href="/login" className="secondary-button">
             Log in
