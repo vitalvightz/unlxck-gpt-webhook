@@ -28,7 +28,10 @@ replace_once(
                     dict.fromkeys(
                         [
                             *clean_list(duplicate.get("reasons")),
-                            "Only one Tactical Watch is allowed per seven-day fight segment.",
+                            (
+                                "Only one Tactical Watch is allowed per seven-day "
+                                "fight segment."
+                            ),
                         ]
                     )
                 )
@@ -117,3 +120,74 @@ def test_malformed_fight_dated_normal_week_raises_generation_error():
 """
 
 test_path.write_text(test_text, encoding="utf-8")
+
+legacy_test_path = Path("tests/test_gap_fill_inserts.py")
+replace_once(
+    legacy_test_path,
+    """def test_exact_same_role_key_does_not_repeat_within_seven_days():
+    sequence = apply_gap_fill_inserts(
+        [_session(21), _session(16), _session(11), _session(6, "fight_week_freshness_day")],
+        _athlete(days_until_fight=21),
+    )
+
+    inserts = _insert_roles(sequence)
+    for index, insert in enumerate(inserts):
+        for other in inserts[index + 1 :]:
+            if abs(insert["countdown_offset"] - other["countdown_offset"]) <= 7:
+                assert insert["role_key"] != other["role_key"]
+""",
+    """def test_only_mandatory_watch_may_repeat_within_seven_days():
+    sequence = apply_gap_fill_inserts(
+        [_session(21), _session(16), _session(11), _session(6, "fight_week_freshness_day")],
+        _athlete(days_until_fight=21),
+    )
+
+    inserts = _insert_roles(sequence)
+    for index, insert in enumerate(inserts):
+        for other in inserts[index + 1 :]:
+            if (
+                abs(insert["countdown_offset"] - other["countdown_offset"]) <= 7
+                and insert["role_key"] == other["role_key"]
+            ):
+                assert insert["role_key"] == "tactical_watch"
+                assert insert.get("mandatory_tactical_watch") is True
+                assert other.get("mandatory_tactical_watch") is True
+""",
+    "exact-role repetition regression",
+)
+replace_once(
+    legacy_test_path,
+    """def test_gap_fill_existing_low_cost_insert_does_not_occupy_declared_day():
+    sequence = apply_gap_fill_inserts(
+        [_support_insert_session(1, "tactical_watch", "tuesday")],
+        _athlete(
+            days_until_fight=1,
+            plan_creation_weekday="tuesday",
+            hard_sparring_days=["tuesday"],
+        ),
+    )
+
+    d1_roles = [role for role in sequence if role.get("countdown_offset") == 1]
+    support_roles = [role for role in d1_roles if role.get("category") == "support_insert"]
+    assert len(support_roles) >= 2
+    assert all(role["role_key"] not in PHYSICAL_INSERTS for role in d1_roles)
+""",
+    """def test_existing_d1_tactical_watch_is_promoted_without_extra_support():
+    sequence = apply_gap_fill_inserts(
+        [_support_insert_session(1, "tactical_watch", "tuesday")],
+        _athlete(
+            days_until_fight=1,
+            plan_creation_weekday="tuesday",
+            hard_sparring_days=["tuesday"],
+        ),
+    )
+
+    d1_roles = [role for role in sequence if role.get("countdown_offset") == 1]
+    support_roles = [role for role in d1_roles if role.get("category") == "support_insert"]
+    assert len(support_roles) == 1
+    assert support_roles[0]["role_key"] == "tactical_watch"
+    assert support_roles[0]["mandatory_tactical_watch"] is True
+    assert all(role["role_key"] not in PHYSICAL_INSERTS for role in d1_roles)
+""",
+    "D-1 existing Watch regression",
+)
