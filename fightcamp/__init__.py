@@ -1,6 +1,12 @@
 from __future__ import annotations
 
 from .footwork_conditioning_loader import install as _install_footwork_conditioning_loader
+from .tactical_watch_progression_loader import (
+    install as _install_tactical_watch_progression_loader,
+)
 
 _install_footwork_conditioning_loader()
+_install_tactical_watch_progression_loader()
+
 del _install_footwork_conditioning_loader
+del _install_tactical_watch_progression_loader
