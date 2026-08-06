@@ -309,6 +309,7 @@ def install() -> None:
         insert_offset: int,
         weekday: str | None = None,
         tactical_watch_phase: str | None = None,
+        tactical_watch_variation_seed: int | None = None,
     ) -> dict[str, Any]:
         role = original_build_insert_role(
             role_key,
@@ -321,7 +322,11 @@ def install() -> None:
         profile = build_tactical_watch_progression(
             athlete_model,
             phase=tactical_watch_phase,
-            variation_seed=insert_offset,
+            variation_seed=(
+                insert_offset
+                if tactical_watch_variation_seed is None
+                else tactical_watch_variation_seed
+            ),
         )
         role["athlete_facing_label"] = profile["label"]
         role["display_text"] = profile["display_text"]
@@ -363,6 +368,19 @@ def install() -> None:
 
     from . import camp_week_fillers as camp_module
 
+    def week_variation_seed(week: dict[str, Any], fallback: int) -> int:
+        positive_days: list[int] = []
+        for entry in week.get("calendar_days") or []:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                d_day = int(entry.get("d_day"))
+            except (TypeError, ValueError):
+                continue
+            if d_day > 0:
+                positive_days.append(d_day)
+        return max(positive_days, default=fallback)
+
     def place_tactical_watch(
         week: dict[str, Any],
         session_roles: list[dict[str, Any]],
@@ -381,6 +399,7 @@ def install() -> None:
             d_day,
             weekday=str(day).strip().title(),
             tactical_watch_phase=phase,
+            tactical_watch_variation_seed=week_variation_seed(week, d_day),
         )
         insert["camp_phase"] = phase
         camp_module._decorate_insert(
@@ -417,9 +436,13 @@ def install() -> None:
             d_day,
             weekday=day.title(),
             tactical_watch_phase=phase,
+            tactical_watch_variation_seed=week_variation_seed(week, d_day),
         )
+        preserved = dict(role)
         role.clear()
         role.update(template)
+        for key, value in preserved.items():
+            role.setdefault(key, value)
         role["camp_phase"] = phase
         camp_module._decorate_insert(
             role,
