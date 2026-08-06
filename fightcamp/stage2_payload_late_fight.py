@@ -310,6 +310,8 @@ def _late_fight_hard_sparring_plan(
     phase: str = "TAPER",
     stage_key: str = "late_fight_window",
     week_index: int = 1,
+    window_start_d_day: int | None = None,
+    window_end_d_day: int | None = None,
 ) -> list[dict[str, Any]]:
     """Return planner-owned sparring truth for a late-fight window.
 
@@ -349,10 +351,17 @@ def _late_fight_hard_sparring_plan(
             days_until_fight=days,
         )
         if fight_weekday:
-            end_d = max(0, days - 6)
+            start_d = window_start_d_day if isinstance(window_start_d_day, int) else days
+            end_d = (
+                window_end_d_day
+                if isinstance(window_end_d_day, int)
+                else max(0, days - 6)
+            )
+            if start_d < end_d:
+                start_d, end_d = end_d, start_d
             week["fight_weekday"] = fight_weekday
             week["projected_days_until_fight_end"] = end_d
-            week["span_days"] = days - end_d + 1
+            week["span_days"] = start_d - end_d + 1
     return compute_hard_sparring_plan(week=week, athlete_snapshot=athlete_snapshot)
 
 
@@ -4472,6 +4481,11 @@ def _build_late_fight_weekly_role_map(
                 for role in suppressed_roles
                 if str(role.get("composite_segment_stage_key") or "") == stage_key
             ]
+            # Keep sparring dose truth aligned to the exact countdown
+            # segment rendered by the seven weekday slots. The D-21..D-14
+            # bridge drops D-21 and displays D-20..D-14, so its shared Friday
+            # must be judged as D-14 rather than inheriting a D-21 hard verdict.
+            rendered_start_day = min(start_day, end_day + len(_WEEKDAY_NAMES) - 1)
             hard_sparring_plan = _late_fight_hard_sparring_plan(
                 days_until_fight=start_day,
                 athlete_model=segment_athlete,
@@ -4479,6 +4493,8 @@ def _build_late_fight_weekly_role_map(
                 phase=phase,
                 stage_key=stage_key,
                 week_index=week_index,
+                window_start_d_day=rendered_start_day,
+                window_end_d_day=end_day,
             )
             effective_days = effective_hard_days(hard_sparring_plan)
             weeks.append(
