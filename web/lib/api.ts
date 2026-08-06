@@ -24,6 +24,7 @@ import type {
   PlanRequest,
   PlanSummary,
   ProfileUpdateRequest,
+  SessionFeedbackRequest,
   TodayCheckinHistoryRecord,
   TodayCheckinRequest,
   TodayCheckinResponse,
@@ -1168,6 +1169,30 @@ export function putTodayFeedback(
     method: "PUT",
     token,
     body: JSON.stringify(payload),
+  });
+}
+
+export function submitSessionFeedback(
+  token: string,
+  payload: SessionFeedbackRequest,
+): Promise<FeedbackRecord> {
+  const form = new FormData();
+  form.set("plan_id", payload.plan_id);
+  form.set("session_id", payload.session_id);
+  form.set("training_day", payload.training_day ?? "");
+  // Unanswered questions are sent empty; the backend drops them rather than
+  // recording a default the athlete never chose.
+  form.set("difficulty", payload.difficulty ?? "");
+  form.set("instructions", payload.instructions ?? "");
+  form.set("plan_accuracy", payload.plan_accuracy ?? "");
+  form.set("comment", payload.comment ?? "");
+  if (payload.screenshot) {
+    form.set("screenshot", payload.screenshot);
+  }
+  return readJson<FeedbackRecord>("/api/feedback/session", {
+    method: "POST",
+    token,
+    body: form,
   });
 }
 

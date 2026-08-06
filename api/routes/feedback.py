@@ -11,12 +11,14 @@ from starlette.concurrency import run_in_threadpool
 
 from api.feedback_images import MAX_SCREENSHOT_BYTES, ScreenshotValidationError
 from api.models import (
+    SESSION_FEEDBACK_SESSION_ID_MAX_CHARS,
     AdminFeedbackRecord,
     AdminFeedbackScreenshotAccess,
     ContextualFeedbackRequest,
     FeedbackRecord,
     GlobalFeedbackRequest,
     ProfileRecord,
+    SessionFeedbackRequest,
 )
 from api.services.feedback_service import (
     get_plan_feedback,
@@ -24,6 +26,7 @@ from api.services.feedback_service import (
     put_plan_feedback,
     put_today_feedback,
     submit_global_feedback,
+    submit_session_feedback,
 )
 from api.services.feedback_notifications import send_feedback_notification
 from api.services.xp_awards import award_feedback_xp
@@ -36,6 +39,9 @@ _ADMIN_READINESS_FIELDS = (
     "sleep", "body", "pain", "active_injury", "previous_session", "sharp_pain",
     "instability", "swelling", "neurological_symptoms", "illness_symptoms",
     "cannot_warm_into_movement", "worse_next_day_pain", "recommendation_state",
+    # Session-surface context: what the athlete logged when finishing the
+    # session they are reviewing.
+    "status", "session_rpe", "pain_after", "training_day",
 )
 _ADMIN_TECHNICAL_FIELDS = (
     "referer_path", "device_platform", "device_mobile", "browser_brands",
@@ -45,6 +51,7 @@ _ADMIN_INTAKE_FIELDS = (
     "fatigue_level", "training_restriction_level", "training_availability",
 )
 _ADMIN_INJURY_FLAG_FIELDS = ("id", "body_area", "severity", "status")
+_ADMIN_STRUCTURED_RESPONSE_FIELDS = ("difficulty", "instructions", "plan_accuracy")
 
 
 def _invoke_feedback_route(request: Request, *, surface: str, category: str, priority: str,
@@ -106,16 +113,23 @@ def _admin_feedback_record(row: dict) -> AdminFeedbackRecord:
     device_context = " · ".join(part for part in (device_kind, platform, browser) if part)
     readiness_context = [
         f"{key.replace('_', ' ').title()}: {str(safe_readiness[key])[:100]}"
-        for key in ("sleep", "body", "pain", "active_injury", "previous_session", "recommendation_state")
+        for key in (
+            "sleep", "body", "pain", "active_injury", "previous_session", "recommendation_state",
+            "status", "session_rpe", "pain_after",
+        )
         if safe_readiness.get(key) not in (None, "", [])
     ]
+    structured = row.get("structured_response") if isinstance(row.get("structured_response"), dict) else {}
+    safe_structured = _safe_dict(structured, _ADMIN_STRUCTURED_RESPONSE_FIELDS)
     return AdminFeedbackRecord(
         id=str(row.get("id") or ""), submitted_by_profile_id=str(row.get("submitted_by_profile_id") or ""),
         submitter_email=str(profile.get("email") or ""), submitter_name=str(profile.get("full_name") or ""),
         surface=str(row.get("surface") or "global"), category=str(row.get("category") or "general_feedback"),
         response=row.get("response"), reason=row.get("reason"), comment=str(row.get("comment") or ""),
+        structured_response=safe_structured,
         contact_allowed=bool(row.get("contact_allowed")), priority=str(row.get("priority") or "normal"),
-        plan_id=row.get("plan_id"), today_checkin_id=row.get("today_checkin_id"), camp_phase=row.get("camp_phase"),
+        plan_id=row.get("plan_id"), today_checkin_id=row.get("today_checkin_id"),
+        session_id=row.get("session_id"), camp_phase=row.get("camp_phase"),
         app_version=str(row.get("app_version") or ""), page_path=str(safe_technical.get("referer_path") or "").strip()[:512],
         device_context=device_context, language=str(safe_technical.get("language") or "").strip()[:80],
         readiness_context=readiness_context, injury_context=injury_context,
@@ -166,6 +180,43 @@ def build_feedback_router(*, require_profile, require_admin, get_store) -> APIRo
         award_feedback_xp(store, athlete_id=profile.athlete_id, feedback=record.model_dump())
         background_tasks.add_task(send_feedback_notification, record, profile)
         return record
+
+    @router.post("/api/feedback/session", response_model=FeedbackRecord, status_code=status.HTTP_201_CREATED)
+    async def create_session_feedback(
+        request: Request, background_tasks: BackgroundTasks,
+        plan_id: Annotated[str, Form(max_length=64)],
+        session_id: Annotated[str, Form(max_length=SESSION_FEEDBACK_SESSION_ID_MAX_CHARS)],
+        training_day: Annotated[str, Form(max_length=10)] = "",
+        difficulty: Annotated[str, Form(max_length=32)] = "",
+        instructions: Annotated[str, Form(max_length=32)] = "",
+        plan_accuracy: Annotated[str, Form(max_length=32)] = "",
+        comment: Annotated[str, Form(max_length=500)] = "",
+        screenshot: Annotated[UploadFile | None, File()] = None,
+        profile: ProfileRecord = Depends(require_profile), store: AppStore = Depends(get_store),
+    ) -> FeedbackRecord:
+        try:
+            payload = SessionFeedbackRequest(
+                plan_id=plan_id, session_id=session_id, training_day=training_day,
+                difficulty=difficulty, instructions=instructions, plan_accuracy=plan_accuracy,
+                comment=comment,
+            )
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail="invalid session feedback form") from exc
+        raw_screenshot: bytes | None = None
+        if screenshot is not None:
+            raw_screenshot = await screenshot.read(MAX_SCREENSHOT_BYTES + 1)
+            await screenshot.close()
+        try:
+            record = await run_in_threadpool(
+                _invoke_feedback_route, request, surface="session", category="session_review",
+                priority="normal", screenshot_present=raw_screenshot is not None,
+                operation=lambda: submit_session_feedback(store, profile, payload, request, raw_screenshot),
+            )
+            award_feedback_xp(store, athlete_id=profile.athlete_id, feedback=record.model_dump())
+            background_tasks.add_task(send_feedback_notification, record, profile)
+            return record
+        except ScreenshotValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
 
     @router.post("/api/feedback/global", response_model=FeedbackRecord, status_code=status.HTTP_201_CREATED)
     async def create_global_feedback(

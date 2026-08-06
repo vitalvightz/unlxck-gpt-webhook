@@ -1385,6 +1385,7 @@ class SupabaseAppStore:
             "appearance_mode": existing.get("appearance_mode") or "dark",
             "onboarding_draft": existing.get("onboarding_draft"),
             "avatar_url": existing.get("avatar_url"),
+            "private_trial_ack_at": existing.get("private_trial_ack_at"),
         }
 
     def _upsert_profile_with_retry(
@@ -1515,6 +1516,13 @@ class SupabaseAppStore:
             fields = update.model_dump(mode="json", exclude_none=True)
             if "record" in fields:
                 fields["record_summary"] = fields.pop("record")
+            if "private_trial_acknowledged" in fields:
+                # The client sends the intent; the server owns the timestamp so
+                # an acknowledgement can never be backdated from the browser.
+                acknowledged = bool(fields.pop("private_trial_acknowledged"))
+                fields["private_trial_ack_at"] = (
+                    datetime.now(timezone.utc).isoformat() if acknowledged else None
+                )
             for json_field in ("onboarding_draft", "nutrition_profile"):
                 if json_field in fields:
                     _guard_persisted_json(
@@ -4730,7 +4738,8 @@ class SupabaseAppStore:
                 self.client.table("beta_feedback")
                 .select(
                     "id,submitted_by_profile_id,surface,category,response,reason,comment,"
-                    "contact_allowed,priority,plan_id,today_checkin_id,camp_phase,app_version,"
+                    "structured_response,contact_allowed,priority,plan_id,today_checkin_id,"
+                    "session_id,camp_phase,app_version,"
                     "readiness_snapshot,injury_snapshot,technical_context,"
                     "screenshot_path,screenshot_expires_at,created_at,updated_at,"
                     "profiles!beta_feedback_submitted_by_profile_id_fkey(email,full_name)"

@@ -16,7 +16,13 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException, Request, status
 
 from api.feedback_images import SanitisedScreenshot, sanitise_screenshot
-from api.models import ContextualFeedbackRequest, FeedbackRecord, GlobalFeedbackRequest, ProfileRecord
+from api.models import (
+    ContextualFeedbackRequest,
+    FeedbackRecord,
+    GlobalFeedbackRequest,
+    ProfileRecord,
+    SessionFeedbackRequest,
+)
 from api.services.active_plan import resolve_active_plan
 from api.services.plan_schedule import resolve_current_week
 from api.services.today_service import resolve_training_day
@@ -88,6 +94,10 @@ _INTAKE_SNAPSHOT_FIELDS = (
     "days_available",
 )
 _GENERATED_RECOMMENDATION_STATES = frozenset({"train_as_planned", "modify", "pull_back"})
+# Only a session the athlete actually trained can be reviewed. A skipped session
+# was not experienced, and "started" is not finished, so neither is prompted for
+# feedback and neither is accepted here.
+_REVIEWABLE_COMPLETION_STATUSES = frozenset({"done", "modified"})
 
 
 def _configured_non_negative_int(name: str, default: int) -> int:
@@ -153,6 +163,7 @@ def technical_context(request: Request) -> dict[str, str]:
 
 
 def _feedback_record(row: Mapping[str, Any]) -> FeedbackRecord:
+    structured = row.get("structured_response")
     return FeedbackRecord(
         id=str(row.get("id") or ""),
         surface=str(row.get("surface") or "global"),
@@ -160,6 +171,7 @@ def _feedback_record(row: Mapping[str, Any]) -> FeedbackRecord:
         response=row.get("response"),
         reason=row.get("reason"),
         comment=str(row.get("comment") or ""),
+        structured_response=structured if isinstance(structured, dict) else {},
         priority=str(row.get("priority") or "normal"),
         has_screenshot=bool(row.get("screenshot_path")),
         created_at=str(row.get("created_at") or ""),
@@ -408,6 +420,154 @@ def put_today_feedback(
         }
     )
     return _feedback_record(row)
+
+
+def _session_context(
+    store: AppStore, profile: ProfileRecord, payload: SessionFeedbackRequest
+) -> tuple[dict[str, Any], dict[str, Any], str]:
+    """Resolve the completed session the review belongs to.
+
+    The completion record — not the client — is the authority on which session
+    was trained and on which training day. An athlete may only review a session
+    they logged as done or modified, on a day they logged it.
+    """
+
+    _require_contextual_submitter(profile)
+    plan = store.get_feedback_plan_for_owner(payload.plan_id, profile.profile_id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+    # An omitted training_day means "the session I just finished". A retro-log
+    # reviewed from history sends the day it was logged against.
+    training_day = payload.training_day or resolve_training_day(profile.athlete_timezone)
+    completion = store.get_session_completion(
+        profile.profile_id, payload.session_id, training_day
+    )
+    if not completion or str(completion.get("plan_id") or "") != str(plan["id"]):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="session completion not found"
+        )
+    if str(completion.get("status") or "") not in _REVIEWABLE_COMPLETION_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="session is not eligible for feedback",
+        )
+    phase = _optional_context(
+        "camp_phase",
+        "",
+        lambda: _camp_phase(plan, training_day),
+    )
+    return plan, completion, phase
+
+
+def _session_completion_snapshot(completion: Mapping[str, Any]) -> dict[str, Any]:
+    """What the athlete logged when finishing the session, for review context."""
+
+    return {
+        key: completion.get(key)
+        for key in ("status", "session_rpe", "pain_after", "modification_reason", "training_day")
+        if completion.get(key) not in (None, "")
+    }
+
+
+def submit_session_feedback(
+    store: AppStore,
+    profile: ProfileRecord,
+    payload: SessionFeedbackRequest,
+    request: Request,
+    raw_screenshot: bytes | None,
+) -> FeedbackRecord:
+    """Persist the quick review shown after a completed session.
+
+    Upserts on the session's context key so re-answering corrects the record
+    instead of stacking duplicates. A replacement screenshot is uploaded before
+    the row is written and the superseded image is purged afterwards, so a
+    failed write never leaves the row pointing at a deleted file.
+    """
+
+    plan, completion, phase = _session_context(store, profile, payload)
+    structured = payload.structured_response()
+    if not structured and not payload.comment and raw_screenshot is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="answer at least one question or add a comment",
+        )
+
+    context_key = f"session:{plan['id']}:{payload.session_id}:{completion['training_day']}"
+    existing = store.get_context_feedback(profile.profile_id, context_key) or {}
+    previous_screenshot_path = str(existing.get("screenshot_path") or "") or None
+
+    # Only screenshot uploads are rate limited here. The row itself is bounded
+    # by the athlete's own logged completions, so the report allowance is left
+    # for the free-form reporting surface; storage writes still need a ceiling.
+    screenshot: SanitisedScreenshot | None = None
+    screenshot_path: str | None = None
+    if raw_screenshot is not None:
+        _rate_limit_or_raise(store, profile.profile_id, has_screenshot=True)
+        screenshot = sanitise_screenshot(raw_screenshot)
+        screenshot_path = f"{profile.profile_id}/session-{uuid.uuid4()}.{screenshot.extension}"
+        store.upload_feedback_screenshot(screenshot_path, screenshot.data, screenshot.mime)
+
+    row_payload: dict[str, Any] = {
+        "submitted_by_profile_id": profile.profile_id,
+        "context_key": context_key,
+        "surface": "session",
+        "category": "session_review",
+        "response": None,
+        "reason": None,
+        "comment": payload.comment,
+        "structured_response": structured,
+        "contact_allowed": False,
+        "priority": "normal",
+        "plan_id": plan["id"],
+        "today_checkin_id": None,
+        "session_id": payload.session_id,
+        "camp_phase": phase or None,
+        "readiness_snapshot": _session_completion_snapshot(completion),
+        "injury_snapshot": _optional_context(
+            "injury_flags",
+            {"open_flags": []},
+            lambda: _injury_snapshot(store, profile.profile_id),
+        ),
+        "app_version": app_version(),
+        "technical_context": technical_context(request),
+    }
+    if screenshot is not None:
+        row_payload.update(
+            {
+                "screenshot_path": screenshot_path,
+                "screenshot_mime": screenshot.mime,
+                "screenshot_size_bytes": len(screenshot.data),
+                "screenshot_width": screenshot.width,
+                "screenshot_height": screenshot.height,
+                "screenshot_expires_at": (
+                    datetime.now(timezone.utc) + timedelta(days=screenshot_retention_days())
+                ).isoformat(),
+                "screenshot_deleted_at": None,
+            }
+        )
+
+    try:
+        row = store.upsert_context_feedback(row_payload)
+    except Exception:
+        if screenshot is not None and screenshot_path:
+            _purge_screenshot(store, screenshot_path, reason="rollback")
+        raise
+
+    # The row now points at the new image, so the superseded one is unreferenced.
+    if screenshot is not None and previous_screenshot_path:
+        _purge_screenshot(store, previous_screenshot_path, reason="replaced")
+    return _feedback_record(row)
+
+
+def _purge_screenshot(store: AppStore, path: str, *, reason: str) -> None:
+    try:
+        store.delete_feedback_screenshots([path])
+    except Exception as exc:
+        logger.error(
+            "[feedback] screenshot_cleanup_failed operation=%s error_class=%s",
+            reason,
+            type(exc).__name__,
+        )
 
 
 def _rate_limit_or_raise(store: AppStore, profile_id: str, *, has_screenshot: bool) -> None:

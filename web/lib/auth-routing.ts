@@ -1,4 +1,20 @@
+import { requiresPrivateTrialAcknowledgement } from "@/lib/private-trial";
 import type { MeResponse } from "@/lib/types";
+
+/**
+ * Where an athlete belongs once the private trial briefing is behind them:
+ * their latest plan if they have one, otherwise onboarding.
+ *
+ * Kept separate from `getAuthenticatedLandingHref` so the trial screen can send
+ * the tester onwards after they acknowledge without re-entering the gate.
+ */
+export function getAthleteWorkspaceHref(me: MeResponse | null): string {
+  if (me?.latest_plan?.plan_id) {
+    return `/plans/${me.latest_plan.plan_id}`;
+  }
+
+  return "/onboarding";
+}
 
 export function getAuthenticatedLandingHref(me: MeResponse | null): string {
   if (me?.profile.role === "admin") {
@@ -16,9 +32,12 @@ export function getAuthenticatedLandingHref(me: MeResponse | null): string {
     return "/gym-owner";
   }
 
-  if (me?.latest_plan?.plan_id) {
-    return `/plans/${me.latest_plan.plan_id}`;
+  // The trial briefing sits between account creation and onboarding: a tester
+  // has to know what the trial asks of them before they start answering intake
+  // questions. It is shown once — the acknowledgement lives on the profile.
+  if (requiresPrivateTrialAcknowledgement(me)) {
+    return "/private-trial";
   }
 
-  return "/onboarding";
+  return getAthleteWorkspaceHref(me);
 }

@@ -234,6 +234,11 @@ class FakeStore:
         data = update.model_dump(mode="json", exclude_none=True)
         if "record" in data:
             data["record_summary"] = data.pop("record")
+        if "private_trial_acknowledged" in data:
+            # Mirrors AppStore.update_profile: the client sends the intent and
+            # the server owns the timestamp.
+            acknowledged = bool(data.pop("private_trial_acknowledged"))
+            data["private_trial_ack_at"] = _now() if acknowledged else None
         profile.update(data)
         profile["updated_at"] = _now()
         return profile
