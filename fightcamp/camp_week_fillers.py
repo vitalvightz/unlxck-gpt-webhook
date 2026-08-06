@@ -143,12 +143,13 @@ def _week_filler_count(session_roles: list[Any]) -> int:
     )
 
 
-def _week_has_tactical_watch(session_roles: list[Any]) -> bool:
-    return any(
-        isinstance(role, dict)
-        and str(role.get("role_key") or "") == _TACTICAL_WATCH_ROLE_KEY
+def _tactical_watch_roles(session_roles: list[Any]) -> list[dict[str, Any]]:
+    return [
+        role
         for role in session_roles
-    )
+        if isinstance(role, dict)
+        and str(role.get("role_key") or "") == _TACTICAL_WATCH_ROLE_KEY
+    ]
 
 
 def _phase_watch_guidance(phase: str) -> str:
@@ -186,7 +187,8 @@ def _decorate_insert(
         insert["weekly_requirement"] = "fight_tactical_watch"
         insert["governance"] = {
             **dict(insert.get("governance") or {}),
-            "authority": "mandatory_weekly_tactical_watch",
+            "authority": "gap_fill_support_insert",
+            "mandatory": True,
             "meaningful_stress": False,
         }
     return insert
@@ -258,6 +260,43 @@ def _place_tactical_watch(
     return insert
 
 
+def _promote_existing_tactical_watch(
+    week: dict[str, Any],
+    role: dict[str, Any],
+    athlete_model: dict[str, Any],
+    *,
+    phase: str,
+    usage_ledger: dict[str, Any],
+) -> bool:
+    day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
+    d_day = _calendar_d_day(week, day)
+    if not day or d_day is None or d_day <= 0:
+        return False
+
+    template = _build_insert_role(
+        _TACTICAL_WATCH_ROLE_KEY,
+        athlete_model,
+        d_day,
+        weekday=day.title(),
+    )
+    for key, value in template.items():
+        if role.get(key) in (None, "", []):
+            role[key] = value
+    role["display_text"] = (
+        f"{build_tactical_watch_template(athlete_model)}\n\n"
+        f"{_phase_watch_guidance(phase)}"
+    )
+    role["camp_phase"] = phase
+    _decorate_insert(
+        role,
+        day=day,
+        d_day=d_day,
+        mandatory_tactical_watch=True,
+    )
+    _record_insert_usage(usage_ledger, _TACTICAL_WATCH_ROLE_KEY, d_day)
+    return True
+
+
 def _eligible_unused_entries(week: dict[str, Any]) -> list[tuple[int, dict[str, Any]]]:
     eligible: list[tuple[int, dict[str, Any]]] = []
     for entry in week.get("intentionally_unused_days") or []:
@@ -275,7 +314,6 @@ def _eligible_unused_entries(week: dict[str, Any]) -> list[tuple[int, dict[str, 
         ):
             continue
         eligible.append((d_day, entry))
-    # Prefer earlier camp days and keep D-1 as the final fallback.
     return sorted(eligible, key=lambda item: (item[0] == 1, -item[0]))
 
 
@@ -313,18 +351,190 @@ def _shared_day_candidates(
     return [day for _, _, day in sorted(candidates)]
 
 
+def _least_loaded_valid_day_candidates(
+    week: dict[str, Any], session_roles: list[dict[str, Any]]
+) -> list[str]:
+    grouped = _roles_by_day(session_roles)
+    candidates: list[tuple[int, int, int, int, int, str]] = []
+    for entry in week.get("calendar_days") or []:
+        if not isinstance(entry, dict):
+            continue
+        day = str(entry.get("weekday") or "").strip()
+        canonical = _canonical_day(day)
+        try:
+            d_day = int(entry.get("d_day"))
+        except (TypeError, ValueError):
+            continue
+        if not canonical or d_day <= 0:
+            continue
+        roles = grouped.get(canonical, [])
+        meaningful = sum(
+            1
+            for role in roles
+            if role.get("stress_class") == "meaningful_stress"
+            or str(role.get("category") or "").lower() in {"strength", "conditioning"}
+        )
+        hard_contact = sum(
+            1
+            for role in roles
+            if str(role.get("role_key") or "") == "hard_sparring_day"
+            or str(role.get("category") or "").lower() == "sparring"
+        )
+        candidates.append(
+            (len(roles), meaningful, hard_contact, 1 if d_day == 1 else 0, -d_day, day)
+        )
+    return [day for *_, day in sorted(candidates)]
+
+
+def _is_optional_support(role: dict[str, Any]) -> bool:
+    return bool(
+        not role.get("coach_owned")
+        and not role.get("mandatory_tactical_watch")
+        and str(role.get("role_key") or "") != _TACTICAL_WATCH_ROLE_KEY
+        and (
+            role.get("camp_week_filler")
+            or str(role.get("category") or "") == "support_insert"
+        )
+    )
+
+
+def _optional_removal_priority(role: dict[str, Any], index: int) -> tuple[int, int, int]:
+    cost = str(role.get("support_insert_cost_category") or "")
+    cost_priority = {
+        "physical": 0,
+        "low_cost_aerobic": 1,
+        "low_cost_recovery": 2,
+        "zero_cost": 3,
+    }.get(cost, 2)
+    return (0 if role.get("camp_week_filler") else 1, cost_priority, -index)
+
+
+def _suppress_role(
+    week: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+    role: dict[str, Any],
+    *,
+    reason: str,
+    reason_code: str,
+) -> None:
+    if role in session_roles:
+        session_roles.remove(role)
+    suppressed = dict(role)
+    reasons = clean_list(suppressed.get("reasons"))
+    reason_codes = clean_list(suppressed.get("reason_codes"))
+    suppressed["reasons"] = list(dict.fromkeys([*reasons, reason]))
+    suppressed["reason_codes"] = list(dict.fromkeys([*reason_codes, reason_code]))
+    week.setdefault("suppressed_roles", []).append(suppressed)
+
+
+def _remove_lowest_priority_optional_support(
+    week: dict[str, Any], session_roles: list[dict[str, Any]]
+) -> bool:
+    candidates = [
+        (index, role)
+        for index, role in enumerate(session_roles)
+        if isinstance(role, dict) and _is_optional_support(role)
+    ]
+    if not candidates:
+        return False
+    index, selected = min(
+        candidates,
+        key=lambda item: _optional_removal_priority(item[1], item[0]),
+    )
+    del index
+    _suppress_role(
+        week,
+        session_roles,
+        selected,
+        reason="Reserved this phase's support slot for the mandatory weekly Tactical Watch.",
+        reason_code="mandatory_tactical_watch_reserved_slot",
+    )
+    return True
+
+
+def _reserve_tactical_watch_slot(
+    week: dict[str, Any], session_roles: list[dict[str, Any]], cap: int
+) -> None:
+    while _week_filler_count(session_roles) >= cap:
+        if not _remove_lowest_priority_optional_support(week, session_roles):
+            raise RuntimeError(
+                "Unable to reserve the mandatory Tactical Watch slot without exceeding "
+                f"the {str(week.get('phase') or '').upper()} support cap of {cap}."
+            )
+
+
+def _enforce_phase_cap(
+    week: dict[str, Any], session_roles: list[dict[str, Any]], cap: int
+) -> None:
+    while _week_filler_count(session_roles) > cap:
+        if not _remove_lowest_priority_optional_support(week, session_roles):
+            raise RuntimeError(
+                "Mandatory Tactical Watch was placed, but the phase support cap cannot "
+                "be restored because no optional support role is replaceable."
+            )
+
+
+def _has_renderable_countdown_day(week: dict[str, Any]) -> bool:
+    for entry in week.get("calendar_days") or []:
+        if not isinstance(entry, dict):
+            continue
+        if not _canonical_day(entry.get("weekday")):
+            continue
+        try:
+            if int(entry.get("d_day")) > 0:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
 def _ensure_weekly_tactical_watch(
     week: dict[str, Any],
     athlete_model: dict[str, Any],
     usage_ledger: dict[str, Any],
+    cap: int,
 ) -> bool:
     session_roles = week.get("session_roles")
     if not isinstance(session_roles, list):
-        return False
-    if _week_has_tactical_watch(session_roles):
-        return True
+        raise RuntimeError("Fight-dated week has no mutable session_roles list.")
 
     phase = str(week.get("phase") or "").strip().upper()
+    promoted: list[dict[str, Any]] = []
+    invalid: list[dict[str, Any]] = []
+    for role in list(_tactical_watch_roles(session_roles)):
+        if _promote_existing_tactical_watch(
+            week,
+            role,
+            athlete_model,
+            phase=phase,
+            usage_ledger=usage_ledger,
+        ):
+            promoted.append(role)
+        else:
+            invalid.append(role)
+
+    for role in invalid:
+        _suppress_role(
+            week,
+            session_roles,
+            role,
+            reason="Tactical Watch cannot be scheduled on fight day or outside the week's calendar.",
+            reason_code="invalid_tactical_watch_day",
+        )
+
+    if promoted:
+        for duplicate in promoted[1:]:
+            _suppress_role(
+                week,
+                session_roles,
+                duplicate,
+                reason="Only one mandatory Tactical Watch is required in this fight week.",
+                reason_code="duplicate_tactical_watch",
+            )
+        _enforce_phase_cap(week, session_roles, cap)
+        return True
+
+    _reserve_tactical_watch_slot(week, session_roles, cap)
 
     for _, entry in _eligible_unused_entries(week):
         day = str(entry.get("day") or "").strip()
@@ -341,6 +551,7 @@ def _ensure_weekly_tactical_watch(
         insert["converted_from_unused_day"] = True
         insert["original_unused_day_role"] = str(entry.get("role") or "")
         _remove_unused_entry(week, entry)
+        _enforce_phase_cap(week, session_roles, cap)
         return True
 
     for day in _shared_day_candidates(week, session_roles):
@@ -352,9 +563,25 @@ def _ensure_weekly_tactical_watch(
             phase=phase,
             usage_ledger=usage_ledger,
         ) is not None:
+            _enforce_phase_cap(week, session_roles, cap)
             return True
 
-    return False
+    for day in _least_loaded_valid_day_candidates(week, session_roles):
+        if _place_tactical_watch(
+            week,
+            session_roles,
+            athlete_model,
+            day,
+            phase=phase,
+            usage_ledger=usage_ledger,
+        ) is not None:
+            _enforce_phase_cap(week, session_roles, cap)
+            return True
+
+    raise RuntimeError(
+        "Unable to place mandatory weekly Tactical Watch: no valid non-fight-day "
+        "calendar slot exists."
+    )
 
 
 def _fill_adaptive_slots(
@@ -438,15 +665,15 @@ def apply_camp_week_fillers(
             cap = _PHASE_FILLER_CAPS.get(phase)
             if not cap:
                 continue
-            _ensure_weekly_tactical_watch(week, athlete_model, usage_ledger)
-            # Compression protects the body, so the zero-cost Tactical Watch
-            # remains while every optional adaptive filler stays suppressed.
+            if not _has_renderable_countdown_day(week):
+                continue
+            _ensure_weekly_tactical_watch(week, athlete_model, usage_ledger, cap)
             if _week_is_compressed(week):
                 continue
             _fill_adaptive_slots(week, athlete_model, cap, usage_ledger)
+            _enforce_phase_cap(week, week.get("session_roles") or [], cap)
             continue
 
-        # Backwards-compatible behaviour for callers without a resolved fight.
         cap = _LEGACY_PHASE_FILLER_CAPS.get(phase)
         if not cap or _week_is_compressed(week):
             continue

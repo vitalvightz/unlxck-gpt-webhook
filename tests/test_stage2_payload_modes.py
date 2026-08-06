@@ -603,7 +603,7 @@ class TestPlanningBriefBranching:
         ]
         assert [entry["role_key"] for entry in app_sequence] == [
             "fight_week_freshness_day",
-            "tactical_cue_card",
+            "tactical_watch",
         ]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
@@ -623,7 +623,7 @@ class TestPlanningBriefBranching:
             for entry in brief["late_fight_session_sequence"]
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        assert [entry["role_key"] for entry in app_sequence] == ["tactical_cue_card"]
+        assert [entry["role_key"] for entry in app_sequence] == ["tactical_watch"]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
     def test_d7_planning_brief_uses_sharpness_week_labels(self):
@@ -736,16 +736,47 @@ class TestPlanningBriefBranching:
                 "hard_sparring_days": [],
             },
         )
-        visible_offsets = [
+        visible_sequence = brief["late_fight_plan_spec"]["visible_session_sequence"]
+        non_watch_offsets = [
             entry["countdown_offset"]
-            for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
+            for entry in visible_sequence
             if isinstance(entry.get("countdown_offset"), int)
+            and not entry.get("mandatory_tactical_watch")
         ]
 
         assert all(
             first - second > 1
-            for first, second in zip(visible_offsets, visible_offsets[1:])
+            for first, second in zip(non_watch_offsets, non_watch_offsets[1:])
         )
+        all_visible_offsets = sorted(
+            {
+                entry["countdown_offset"]
+                for entry in visible_sequence
+                if isinstance(entry.get("countdown_offset"), int)
+            },
+            reverse=True,
+        )
+        sequence_debug = [
+            (
+                entry.get("role_key"),
+                entry.get("countdown_offset"),
+                entry.get("mandatory_tactical_watch"),
+                entry.get("tactical_watch_segment"),
+            )
+            for entry in visible_sequence
+        ]
+        assert all(
+            first - second > 1
+            for first, second in zip(all_visible_offsets, all_visible_offsets[1:])
+        ), sequence_debug
+        outer_watch_offsets = [
+            entry["countdown_offset"]
+            for entry in visible_sequence
+            if entry.get("mandatory_tactical_watch")
+            and entry.get("tactical_watch_segment") == 2
+        ]
+        assert outer_watch_offsets == [16]
+        assert outer_watch_offsets[0] in non_watch_offsets
 
     def test_bridge_d16_avoids_meaningful_app_owned_work_on_declared_hard_days(self):
         brief = _build_brief_for(
@@ -844,6 +875,7 @@ class TestStage2PayloadBranching:
         assert payload["payload_mode"] == "late_fight_session_payload"
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
             "fight_week_freshness_day",
+            "tactical_watch",
             "neural_primer_day",
         ]
         assert _composite_stage_keys(payload["late_fight_session_sequence"]) == ["d4_to_d2", "d1"]
@@ -854,6 +886,7 @@ class TestStage2PayloadBranching:
         assert payload["payload_mode"] == "late_fight_session_payload"
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
             "neural_primer_day",
+            "tactical_watch",
         ]
 
     def test_d7_plan_spec_exposes_caps_and_forbidden_blocks(self):

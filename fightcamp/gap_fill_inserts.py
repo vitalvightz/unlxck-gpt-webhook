@@ -1208,15 +1208,16 @@ def _offset_role_counts(sequence: list[dict[str, Any]]) -> dict[int, int]:
     return counts
 
 
-def _segment_has_tactical_watch(
+def _segment_watch_roles(
     sequence: list[dict[str, Any]], segment: int
-) -> bool:
-    return any(
-        str(role.get("role_key") or "") == "tactical_watch"
+) -> list[dict[str, Any]]:
+    return [
+        role
+        for role in sequence
+        if str(role.get("role_key") or "") == "tactical_watch"
         and (offset := _role_offset(role)) is not None
         and _segment_for_offset(offset) == segment
-        for role in sequence
-    )
+    ]
 
 
 def _segment_watch_offset(
@@ -1230,18 +1231,55 @@ def _segment_watch_offset(
         return None
 
     target = _watch_target_offset(segment, days_until_fight)
-    role_counts = _offset_role_counts(sequence)
-    offsets = list(range(lower, upper + 1))
-    offsets.sort(
-        key=lambda offset: (
-            1 if role_counts.get(offset, 0) > 1 else 0,
-            abs(offset - target),
-            role_counts.get(offset, 0),
-            -offset,
-        )
-    )
-    return offsets[0] if offsets else None
+    roles_by_offset: dict[int, list[dict[str, Any]]] = {}
+    for role in sequence:
+        offset = _role_offset(role)
+        if offset is not None and offset > 0:
+            roles_by_offset.setdefault(offset, []).append(role)
 
+    offsets = list(range(lower, upper + 1))
+    fully_spaced = [
+        offset
+        for offset in offsets
+        if offset not in roles_by_offset
+        and all(abs(existing - offset) > 1 for existing in roles_by_offset)
+    ]
+    if fully_spaced:
+        return min(fully_spaced, key=lambda offset: (abs(offset - target), -offset))
+
+    occupied = [offset for offset in offsets if offset in roles_by_offset]
+    if occupied:
+        def shared_day_priority(offset: int) -> tuple[int, int, int, int]:
+            roles = roles_by_offset[offset]
+            categories = {
+                str(role.get("category") or "").strip().lower()
+                for role in roles
+            }
+            role_keys = {
+                str(role.get("role_key") or "").strip().lower()
+                for role in roles
+            }
+            if categories & {"support_insert", "recovery", "technical"}:
+                load_priority = 0
+            elif "hard_sparring_day" in role_keys or "sparring" in categories:
+                load_priority = 1
+            else:
+                load_priority = 2
+            return (load_priority, len(roles), abs(offset - target), -offset)
+
+        return min(occupied, key=shared_day_priority)
+
+    role_counts = {offset: len(roles) for offset, roles in roles_by_offset.items()}
+    return min(
+        offsets,
+        key=lambda offset: (
+            sum(count for existing, count in role_counts.items() if abs(existing - offset) == 1),
+            sum(count for existing, count in role_counts.items() if abs(existing - offset) == 2),
+            abs(offset - target),
+            -offset,
+        ),
+        default=None,
+    )
 
 def _mandatory_watch_guidance(offset: int) -> str:
     if offset <= 7:
@@ -1270,10 +1308,66 @@ def _build_mandatory_tactical_watch(
     watch["tactical_watch_segment"] = _segment_for_offset(offset)
     watch["governance"] = {
         **dict(watch.get("governance") or {}),
-        "authority": "mandatory_weekly_tactical_watch",
+        "authority": "gap_fill_support_insert",
+        "mandatory": True,
         "meaningful_stress": False,
     }
     return watch
+
+
+def _promote_mandatory_tactical_watch(
+    role: dict[str, Any],
+    athlete_model: dict[str, Any],
+    countdown_map: dict[str, str],
+) -> dict[str, Any]:
+    offset = _role_offset(role)
+    if offset is None or offset <= 0:
+        raise RuntimeError("Existing Tactical Watch is not on a valid countdown day.")
+    weekday = str(
+        role.get("scheduled_day_hint")
+        or role.get("real_weekday")
+        or countdown_map.get(f"D-{offset}")
+        or ""
+    ).strip() or None
+    template = _build_mandatory_tactical_watch(athlete_model, offset, weekday)
+    preserved = {
+        key: value
+        for key, value in role.items()
+        if key not in {
+            "display_text",
+            "mandatory_tactical_watch",
+            "weekly_requirement",
+            "tactical_watch_segment",
+            "governance",
+        }
+    }
+    role.clear()
+    role.update(template)
+    for key, value in preserved.items():
+        role.setdefault(key, value)
+    return role
+
+
+def _replace_with_mandatory_tactical_watch(
+    role: dict[str, Any],
+    athlete_model: dict[str, Any],
+    countdown_map: dict[str, str],
+) -> dict[str, Any]:
+    offset = _role_offset(role)
+    if offset is None or offset <= 0:
+        raise RuntimeError("Tactical support replacement has no valid countdown day.")
+    weekday = str(
+        role.get("scheduled_day_hint")
+        or role.get("real_weekday")
+        or countdown_map.get(f"D-{offset}")
+        or ""
+    ).strip() or None
+    replaced_role_key = str(role.get("role_key") or "")
+    replacement = _build_mandatory_tactical_watch(athlete_model, offset, weekday)
+    replacement["replaced_role_key"] = replaced_role_key
+    role.clear()
+    role.update(replacement)
+    return role
 
 
 def _ensure_weekly_tactical_watches(
@@ -1290,15 +1384,38 @@ def _ensure_weekly_tactical_watches(
     inserts: list[dict[str, Any]] = []
     combined = ordered + inserts
     for segment in reversed(list(required_segments)):
-        if _segment_has_tactical_watch(combined, segment):
+        existing_watches = _segment_watch_roles(combined, segment)
+        if existing_watches:
+            _promote_mandatory_tactical_watch(
+                existing_watches[0], athlete_model, countdown_map
+            )
             continue
+
+        replaceable_tactical = next(
+            (
+                role
+                for role in combined
+                if str(role.get("role_key") or "") in (TACTICAL_INSERTS - {"tactical_watch"})
+                and (offset := _role_offset(role)) is not None
+                and _segment_for_offset(offset) == segment
+            ),
+            None,
+        )
+        if replaceable_tactical is not None:
+            _replace_with_mandatory_tactical_watch(
+                replaceable_tactical, athlete_model, countdown_map
+            )
+            continue
+
         offset = _segment_watch_offset(
             combined,
             segment=segment,
             days_until_fight=days_until_fight,
         )
         if offset is None or offset <= 0:
-            continue
+            raise RuntimeError(
+                f"Unable to place mandatory Tactical Watch in countdown segment {segment}."
+            )
         weekday = countdown_map.get(f"D-{offset}")
         watch = _build_mandatory_tactical_watch(athlete_model, offset, weekday)
         inserts.append(watch)
@@ -1315,25 +1432,23 @@ def apply_gap_fill_inserts(
         key=lambda role: int(_role_offset(role) or 0),
         reverse=True,
     )
-    if not ordered:
-        return ordered
 
-    offsets = [
+    raw_days = athlete_model.get("days_until_fight")
+    positive_offsets = [
         offset
         for role in ordered
         if (offset := _role_offset(role)) is not None and offset > 0
     ]
-    if not offsets:
-        return ordered
-
-    raw_days = athlete_model.get("days_until_fight")
     if raw_days is not None and str(raw_days).strip() != "":
         try:
             days_until_fight = int(raw_days)
         except (TypeError, ValueError):
-            days_until_fight = max(offsets)
+            days_until_fight = max(positive_offsets, default=0)
     else:
-        days_until_fight = max(offsets)
+        days_until_fight = max(positive_offsets, default=0)
+
+    if days_until_fight <= 0:
+        return ordered
 
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
@@ -1349,9 +1464,13 @@ def apply_gap_fill_inserts(
         and not is_low_cost_coexistable_filler(role)
         and (offset := _role_offset(role)) is not None
     }
-    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
+    candidate_offsets = (
+        _candidate_offsets_from_sequence(positive_offsets, days_until_fight)
+        if positive_offsets
+        else []
+    )
 
-    watch_horizon = min(days_until_fight, max(offsets), 21)
+    watch_horizon = min(days_until_fight, 21)
     inserts = _ensure_weekly_tactical_watches(
         ordered,
         athlete_model,
@@ -1360,11 +1479,21 @@ def apply_gap_fill_inserts(
     )
     mandatory_watch_offsets = {
         int(offset)
-        for role in inserts
+        for role in ordered + inserts
         if str(role.get("role_key") or "") == "tactical_watch"
         and role.get("mandatory_tactical_watch")
         and (offset := _role_offset(role)) is not None
     }
+
+    if days_until_fight <= 7:
+        final_sequence = sorted(
+            ordered + inserts,
+            key=lambda role: int(_role_offset(role) or 0),
+            reverse=True,
+        )
+        for index, role in enumerate(final_sequence, start=1):
+            role["session_index"] = index
+        return final_sequence
 
     physical_segment_counts: dict[int, int] = {}
     for role in ordered:
@@ -1398,6 +1527,13 @@ def apply_gap_fill_inserts(
             target_offset <= 0
             or target_offset in existing_exclusive_offsets
             or target_offset in mandatory_watch_offsets
+            or (
+                days_until_fight > 13
+                and any(
+                    abs(target_offset - watch_offset) <= 1
+                    for watch_offset in mandatory_watch_offsets
+                )
+            )
         ):
             continue
         weekday = countdown_map.get(f"D-{target_offset}")
