@@ -90,10 +90,19 @@ jobs:
                   "            },",
                   "            reverse=True,",
                   "        )",
+                  "        sequence_debug = [",
+                  "            (",
+                  '                entry.get("role_key"),',
+                  '                entry.get("countdown_offset"),',
+                  '                entry.get("mandatory_tactical_watch"),',
+                  '                entry.get("tactical_watch_segment"),',
+                  "            )",
+                  "            for entry in visible_sequence",
+                  "        ]",
                   "        assert all(",
                   "            first - second > 1",
                   "            for first, second in zip(all_visible_offsets, all_visible_offsets[1:])",
-                  "        )",
+                  "        ), sequence_debug",
                   "        outer_watch_offsets = [",
                   '            entry["countdown_offset"]',
                   "            for entry in visible_sequence",
@@ -120,8 +129,6 @@ jobs:
             tests/test_stage2_planning_brief.py
 
       - name: Run targeted regression tests
-        id: targeted
-        continue-on-error: true
         run: |
           set -o pipefail
           pytest -vv --tb=long \
@@ -141,10 +148,6 @@ jobs:
           path: targeted-failures.txt
           if-no-files-found: warn
           retention-days: 3
-
-      - name: Stop on targeted failures
-        if: steps.targeted.outcome != 'success'
-        run: exit 1
 
       - name: Run Ruff
         run: |
