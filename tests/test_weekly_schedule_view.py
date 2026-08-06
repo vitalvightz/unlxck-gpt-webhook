@@ -496,18 +496,23 @@ def test_extract_weekly_schedule_countdown_fallback_does_not_create_cross_week_o
     )
 
     assert schedule is not None
-    assert [day["calendar_date"] for day in schedule["days"]] == [
-        "2026-05-04",
-        "2026-05-05",
-        "2026-05-06",
-        "2026-05-07",
-        "2026-05-08",
-        "2026-05-09",
-        "2026-05-10",
-    ]
-    assert [day["d_day"] for day in schedule["days"]] == [13, 12, 11, 10, 9, 8, 7]
-    assert schedule["countdown_range"] == [13, 7]
-    assert schedule["week_countdown_label"] == "D-13 → D-7"
+    # The declared window D-17..D-11 is 2026-04-30 .. 2026-05-06 off a Sunday
+    # fight. It must render as itself: anchoring a Mon-Sun week on the window's
+    # end day used to shift every day a week late (D-17 came out as D-13) and
+    # left the rendered countdown_range disagreeing with the declared one.
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    assert {wd: by_day[wd]["d_day"] for wd in ("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")} == {
+        "Thu": 17, "Fri": 16, "Sat": 15, "Sun": 14, "Mon": 13, "Tue": 12, "Wed": 11,
+    }
+    assert by_day["Thu"]["calendar_date"] == "2026-04-30"
+    assert by_day["Wed"]["calendar_date"] == "2026-05-06"
+    # Days stay in the Mon-Sun slot order the `days` contract guarantees, and
+    # reading them in countdown order walks the window without a gap.
+    assert [day["weekday"] for day in schedule["days"]] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    by_countdown = sorted(schedule["days"], key=lambda day: -day["d_day"])
+    assert [day["d_day"] for day in by_countdown] == [17, 16, 15, 14, 13, 12, 11]
+    assert schedule["countdown_range"] == [17, 11]
+    assert schedule["week_countdown_label"] == "D-17 → D-11"
     assert schedule["original_countdown_range"] == [17, 11]
 
 

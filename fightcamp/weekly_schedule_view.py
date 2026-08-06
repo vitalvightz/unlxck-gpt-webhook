@@ -184,49 +184,72 @@ def _is_d17_or_closer(day: dict[str, Any]) -> bool:
     return isinstance(d_day, int) and 0 <= d_day <= 17
 
 
-def _resolve_week_anchor_d_day(week: dict[str, Any]) -> int | None:
-    """Resolve the closest-to-fight D-day for a week from any countdown contract.
+def _resolve_week_countdown_span(week: dict[str, Any]) -> tuple[int, int] | None:
+    """Resolve a week's ``(start_d_day, end_d_day)`` from any countdown contract.
 
     The normal-camp pipeline ships a list ``countdown_range`` (``[start, end]``)
     while the late-fight pipeline ships a ``countdown_span`` dict
-    (``{"start_day": ..., "end_day": ...}``). Both describe the same thing — the
-    end (closest-to-fight) D-day is the calendar anchor. Recognising both keeps
-    the calendar the single source of truth regardless of which planner built
-    the plan, so ≤21-day (late-fight) camps render the same countdown spine as
-    longer camps instead of falling back to a blank day grid.
+    (``{"start_day": ..., "end_day": ...}``). Both describe the same thing: the
+    countdown window the week covers, from furthest-out to closest-to-fight.
+    Recognising both keeps the calendar the single source of truth regardless of
+    which planner built the plan, so ≤21-day (late-fight) camps render the same
+    countdown spine as longer camps instead of falling back to a blank day grid.
     """
     countdown_range = week.get("countdown_range")
     if isinstance(countdown_range, list) and len(countdown_range) == 2:
         try:
-            return int(countdown_range[1])
+            return int(countdown_range[0]), int(countdown_range[1])
         except (TypeError, ValueError):
             pass
     countdown_span = week.get("countdown_span")
     if isinstance(countdown_span, dict):
         try:
-            return int(countdown_span.get("end_day"))
+            return int(countdown_span.get("start_day")), int(countdown_span.get("end_day"))
         except (TypeError, ValueError):
             pass
     return None
 
 
-def _build_calendar_week_from_fight_date(
+def _resolve_week_anchor_d_day(week: dict[str, Any]) -> int | None:
+    """The closest-to-fight D-day of a week, from either countdown contract."""
+    span = _resolve_week_countdown_span(week)
+    return span[1] if span is not None else None
+
+
+def _build_calendar_week_from_countdown_span(
     *,
     fight_date: Any,
-    anchor_d_day: Any,
+    start_d_day: Any,
+    end_d_day: Any,
 ) -> list[dict[str, Any]]:
+    """Build exactly the days a countdown window covers, dated off the fight date.
+
+    Late-fight weeks are countdown *segments* (D-20..D-14, D-7..D-7, D-4..D-2, …),
+    not Mon-Sun weeks. Anchoring a seven-day calendar week on the segment's end
+    day pushed every earlier weekday a week late — a hard-sparring day locked at
+    D-18 rendered as D-11 — and invented days the segment never covered,
+    including days *after* the fight. Building straight from the span keeps the
+    weekday -> D-day mapping truthful and leaves out-of-window slots blank.
+
+    A rendered week has one slot per weekday, so a window longer than seven days
+    cannot fit. Only the D-21..D-14 bridge does (exactly eight days, at
+    ``days_until_fight == 21``), where the first and last day share a weekday.
+    Keep the seven closest to the fight: the dropped day is then the
+    plan-creation day itself, not one the athlete still has to train.
+    """
     try:
         parsed_fight_date = date.fromisoformat(str(fight_date))
-        anchor_d = int(anchor_d_day)
+        start_d = int(start_d_day)
+        end_d = int(end_d_day)
     except (TypeError, ValueError):
         return []
-    anchor_date = parsed_fight_date - timedelta(days=anchor_d)
-    week_monday = anchor_date - timedelta(days=anchor_date.weekday())
+    if start_d < end_d:
+        start_d, end_d = end_d, start_d
+    start_d = min(start_d, end_d + len(WEEKDAY_SHORT) - 1)
 
     days: list[dict[str, Any]] = []
-    for day_offset in range(7):
-        current_date = week_monday + timedelta(days=day_offset)
-        d_day = (parsed_fight_date - current_date).days
+    for d_day in range(start_d, end_d - 1, -1):
+        current_date = parsed_fight_date - timedelta(days=d_day)
         weekday = WEEKDAY_SHORT[current_date.weekday()]
         day_label = f"D-{d_day}" if d_day > 0 else ("D-0" if d_day == 0 else "")
         days.append(
@@ -364,13 +387,18 @@ def extract_weekly_schedule(
     calendar_entries = [
         entry for entry in calendar_days if isinstance(entry, dict)
     ] if isinstance(calendar_days, list) else []
+    # True when the entries describe one countdown window exactly, so every day
+    # the week covers is already present and nothing may be extrapolated around it.
+    window_scoped = False
     if not calendar_entries:
-        anchor_d_day = _resolve_week_anchor_d_day(week)
-        if anchor_d_day is not None:
-            calendar_entries = _build_calendar_week_from_fight_date(
+        span = _resolve_week_countdown_span(week)
+        if span is not None:
+            calendar_entries = _build_calendar_week_from_countdown_span(
                 fight_date=resolved_fight_date,
-                anchor_d_day=anchor_d_day,
+                start_d_day=span[0],
+                end_d_day=span[1],
             )
+            window_scoped = bool(calendar_entries)
 
     if calendar_entries:
         days_by_weekday: dict[str, dict[str, Any]] = {weekday: _empty_day(weekday) for weekday in WEEKDAY_SHORT}
@@ -416,7 +444,16 @@ def extract_weekly_schedule(
                     anchor_date = parsed_date
                     anchor_d_day = d_day
 
-        if anchor_weekday is not None and anchor_date is not None and isinstance(anchor_d_day, int):
+        # Extrapolating around the anchor fills the rest of the Mon-Sun grid. That
+        # is only meaningful when the entries are a partial view of a full week —
+        # for a window-scoped calendar it would re-invent the very out-of-window
+        # days (and post-fight days) this function exists to keep out.
+        if (
+            not window_scoped
+            and anchor_weekday is not None
+            and anchor_date is not None
+            and isinstance(anchor_d_day, int)
+        ):
             anchor_index = WEEKDAY_SHORT.index(anchor_weekday)
             for weekday, day in days_by_weekday.items():
                 weekday_index = WEEKDAY_SHORT.index(weekday)
@@ -436,19 +473,34 @@ def extract_weekly_schedule(
 
     days_by_weekday = {day["weekday"]: day for day in days}
 
+    # A declared sparring day belongs to the week only if the week's calendar
+    # actually covers that weekday. Without this a plan entry keyed by weekday
+    # name is stamped onto every week that has the slot — so one declared
+    # Saturday surfaced as a contact day in four different weeks, each time at a
+    # different (or missing) D-day. When the week rendered no calendar at all we
+    # cannot tell what it covers, so every declared day still renders as before.
+    rendered_weekdays = {
+        weekday for weekday, day in days_by_weekday.items() if isinstance(day.get("d_day"), int)
+    }
+
+    def _covers(weekday: str | None) -> bool:
+        if not weekday or weekday not in days_by_weekday:
+            return False
+        return not rendered_weekdays or weekday in rendered_weekdays
+
     hard_sparring_plan = week.get("hard_sparring_plan")
     hard_plan_is_list = isinstance(hard_sparring_plan, list)
     hard_entries = [entry for entry in hard_sparring_plan if isinstance(entry, dict)] if hard_plan_is_list else []
     if hard_entries:
         for entry in hard_entries:
             weekday = _normalize_weekday(entry.get("day") or entry.get("scheduled_day_hint"))
-            if weekday and weekday in days_by_weekday:
+            if _covers(weekday):
                 _fill_hard_day(days_by_weekday[weekday], entry)
     elif _is_protected_late_week(week):
         if not hard_plan_is_list:
             for day_name in _clean_list(week.get("declared_hard_sparring_days")):
                 weekday = _normalize_weekday(day_name)
-                if weekday and weekday in days_by_weekday:
+                if _covers(weekday):
                     _mark_missing_effective_sparring_plan(days_by_weekday[weekday])
         else:
             # Protected late/countdown weeks must not infer sparring dose from
@@ -459,7 +511,7 @@ def extract_weekly_schedule(
     else:
         for day_name in _clean_list(week.get("declared_hard_sparring_days")):
             weekday = _normalize_weekday(day_name)
-            if weekday and weekday in days_by_weekday:
+            if _covers(weekday):
                 _fill_legacy_hard_day(days_by_weekday[weekday])
 
     original_countdown_range = week.get("countdown_range")
