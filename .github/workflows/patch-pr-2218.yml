@@ -1,0 +1,174 @@
+name: Patch PR 2218 boundary
+
+on:
+  push:
+    branches:
+      - claude/hard-sparring-deload-timing-4ianz9
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/hard-sparring-deload-timing-4ianz9
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.14"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Patch exact countdown segment handling
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          planner_path = Path("fightcamp/stage2_payload_late_fight.py")
+          planner = planner_path.read_text()
+
+          old_signature = '''def _late_fight_hard_sparring_plan(
+              *,
+              days_until_fight: Any,
+              athlete_model: dict[str, Any],
+              declared_hard_days: list[str] | None = None,
+              phase: str = "TAPER",
+              stage_key: str = "late_fight_window",
+              week_index: int = 1,
+          ) -> list[dict[str, Any]]:'''
+          new_signature = '''def _late_fight_hard_sparring_plan(
+              *,
+              days_until_fight: Any,
+              athlete_model: dict[str, Any],
+              declared_hard_days: list[str] | None = None,
+              phase: str = "TAPER",
+              stage_key: str = "late_fight_window",
+              week_index: int = 1,
+              window_start_d_day: int | None = None,
+              window_end_d_day: int | None = None,
+          ) -> list[dict[str, Any]]:'''
+          assert planner.count(old_signature) == 1, "planner signature changed unexpectedly"
+          planner = planner.replace(old_signature, new_signature)
+
+          old_calendar = '''        if fight_weekday:
+                      end_d = max(0, days - 6)
+                      week["fight_weekday"] = fight_weekday
+                      week["projected_days_until_fight_end"] = end_d
+                      week["span_days"] = days - end_d + 1'''
+          new_calendar = '''        if fight_weekday:
+                      start_d = window_start_d_day if isinstance(window_start_d_day, int) else days
+                      end_d = (
+                          window_end_d_day
+                          if isinstance(window_end_d_day, int)
+                          else max(0, days - 6)
+                      )
+                      if start_d < end_d:
+                          start_d, end_d = end_d, start_d
+                      week["fight_weekday"] = fight_weekday
+                      week["projected_days_until_fight_end"] = end_d
+                      week["span_days"] = start_d - end_d + 1'''
+          assert planner.count(old_calendar) == 1, "planner calendar block changed unexpectedly"
+          planner = planner.replace(old_calendar, new_calendar)
+
+          old_call = '''            hard_sparring_plan = _late_fight_hard_sparring_plan(
+                          days_until_fight=start_day,
+                          athlete_model=segment_athlete,
+                          declared_hard_days=filtered_sparring,
+                          phase=phase,
+                          stage_key=stage_key,
+                          week_index=week_index,
+                      )'''
+          new_call = '''            # The weekly calendar has seven weekday slots. The only eight-day
+                      # segment, D-21..D-14, therefore renders D-20..D-14 and drops
+                      # the plan-creation day. Dose planning must use that same visible
+                      # span or a D-21 verdict can be attached to the shared D-14 weekday.
+                      rendered_start_day = min(start_day, end_day + len(_WEEKDAY_NAMES) - 1)
+                      hard_sparring_plan = _late_fight_hard_sparring_plan(
+                          days_until_fight=start_day,
+                          athlete_model=segment_athlete,
+                          declared_hard_days=filtered_sparring,
+                          phase=phase,
+                          stage_key=stage_key,
+                          week_index=week_index,
+                          window_start_d_day=rendered_start_day,
+                          window_end_d_day=end_day,
+                      )'''
+          assert planner.count(old_call) == 1, "segment sparring call changed unexpectedly"
+          planner = planner.replace(old_call, new_call)
+          planner_path.write_text(planner)
+
+          test_path = Path("tests/test_late_fight_calendar_regression.py")
+          tests = test_path.read_text()
+          marker = "def test_d21_shared_weekday_uses_rendered_d14_sparring_verdict():"
+          assert marker not in tests, "regression test already exists"
+          tests += '''
+
+
+def test_d21_shared_weekday_uses_rendered_d14_sparring_verdict():
+    # A Friday plan created at D-21 and a Friday fight make D-21 and D-14
+    # share the same weekday. The calendar deliberately drops D-21 because an
+    # eight-day segment cannot fit seven weekday slots. The sparring planner
+    # must therefore judge the visible Friday as D-14, not reuse D-21's hard verdict.
+    athlete = _athlete(21, fight_date=FIGHT_FRIDAY)
+    athlete["hard_sparring_days"] = ["friday"]
+    athlete["training_days"] = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+
+    role_map = _build_late_fight_weekly_role_map(21, athlete, None, phase="TAPER")
+    role_map = apply_fight_day_override_to_weekly_role_map(role_map, athlete)
+    bridge = role_map["weeks"][0]
+    assert bridge["countdown_span"] == {"start_day": 21, "end_day": 14}
+
+    friday_entries = [
+        entry
+        for entry in bridge["hard_sparring_plan"]
+        if str(entry.get("day") or "").strip().lower() == "friday"
+    ]
+    assert len(friday_entries) == 1
+    assert friday_entries[0]["d_day"] == 14
+    assert friday_entries[0]["effective_load"] == "technical"
+    assert friday_entries[0]["status"] == "convert_to_technical_suggested"
+    assert "d17_hard_sparring_ban" in friday_entries[0]["reason_codes"]
+    assert not any(
+        entry.get("d_day") == 21 and entry.get("effective_load") == "hard"
+        for entry in bridge["hard_sparring_plan"]
+    )
+
+    brief = {"weekly_role_map": role_map, "athlete_model": athlete, "fight_date": FIGHT_FRIDAY}
+    schedule = extract_weekly_schedule(brief, week_index=0, fight_date=FIGHT_FRIDAY)
+    assert schedule is not None
+    friday = next(day for day in schedule["days"] if day["weekday"] == "Fri")
+    assert friday["d_day"] == 14
+    assert friday["effective_load"] == "technical"
+    assert friday["status"] == "convert_to_technical_suggested"
+    assert "d17_hard_sparring_ban" in friday["reason_codes"]
+'''
+          test_path.write_text(tests)
+          PY
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run focused regression suite
+        run: |
+          pytest -q tests/test_late_fight_calendar_regression.py tests/test_countdown_calendar_spine.py
+
+      - name: Commit fix and remove one-use workflow
+        shell: bash
+        run: |
+          rm .github/workflows/patch-pr-2218.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fightcamp/stage2_payload_late_fight.py tests/test_late_fight_calendar_regression.py .github/workflows/patch-pr-2218.yml
+          git commit -m "Fix D-21 bridge sparring boundary"
+          git push origin HEAD:claude/hard-sparring-deload-timing-4ianz9
