@@ -27,8 +27,8 @@ from .gap_fill_inserts import (
     _build_insert_role,
     _new_usage_ledger,
     _record_insert_usage,
-    build_tactical_watch_template,
     select_gap_fill_insert,
+    stamp_tactical_watch_role,
 )
 from .normalization import WEEKDAY_ORDER, clean_list
 
@@ -244,9 +244,12 @@ def _place_tactical_watch(
         d_day,
         weekday=str(day).strip().title(),
     )
-    insert["display_text"] = (
-        f"{build_tactical_watch_template(athlete_model)}\n\n"
-        f"{_phase_watch_guidance(phase)}"
+    stamp_tactical_watch_role(
+        insert,
+        athlete_model,
+        phase=phase,
+        used_keys=usage_ledger.get("used_tactical_watch_keys"),
+        camp_focus=_phase_watch_guidance(phase),
     )
     insert["camp_phase"] = phase
     _decorate_insert(
@@ -282,9 +285,14 @@ def _promote_existing_tactical_watch(
     for key, value in template.items():
         if role.get(key) in (None, "", []):
             role[key] = value
-    role["display_text"] = (
-        f"{build_tactical_watch_template(athlete_model)}\n\n"
-        f"{_phase_watch_guidance(phase)}"
+    # Re-stamp the selected watch on the promoted role so the specific watch
+    # content + metadata always win over any stale placeholder carried in.
+    stamp_tactical_watch_role(
+        role,
+        athlete_model,
+        phase=phase,
+        used_keys=usage_ledger.get("used_tactical_watch_keys"),
+        camp_focus=_phase_watch_guidance(phase),
     )
     role["camp_phase"] = phase
     _decorate_insert(
