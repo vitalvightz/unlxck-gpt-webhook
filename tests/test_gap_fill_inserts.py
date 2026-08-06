@@ -192,7 +192,7 @@ def test_long_camp_keeps_its_existing_leading_shape():
     assert [insert for insert in _insert_roles(sequence) if insert["countdown_offset"] > 20] == []
 
 
-def test_exact_same_role_key_does_not_repeat_within_seven_days():
+def test_only_mandatory_watch_may_repeat_within_seven_days():
     sequence = apply_gap_fill_inserts(
         [_session(21), _session(16), _session(11), _session(6, "fight_week_freshness_day")],
         _athlete(days_until_fight=21),
@@ -201,8 +201,13 @@ def test_exact_same_role_key_does_not_repeat_within_seven_days():
     inserts = _insert_roles(sequence)
     for index, insert in enumerate(inserts):
         for other in inserts[index + 1 :]:
-            if abs(insert["countdown_offset"] - other["countdown_offset"]) <= 7:
-                assert insert["role_key"] != other["role_key"]
+            if (
+                abs(insert["countdown_offset"] - other["countdown_offset"]) <= 7
+                and insert["role_key"] == other["role_key"]
+            ):
+                assert insert["role_key"] == "tactical_watch"
+                assert insert.get("mandatory_tactical_watch") is True
+                assert other.get("mandatory_tactical_watch") is True
 
 
 def test_tactical_category_can_repeat_with_different_role_key():
@@ -449,7 +454,7 @@ def test_gap_fill_can_attach_tactical_watch_to_declared_coach_day():
     assert all(role["role_key"] not in PHYSICAL_INSERTS for role in d9_roles)
 
 
-def test_gap_fill_existing_low_cost_insert_does_not_occupy_declared_day():
+def test_existing_d1_tactical_watch_is_promoted_without_extra_support():
     sequence = apply_gap_fill_inserts(
         [_support_insert_session(1, "tactical_watch", "tuesday")],
         _athlete(
@@ -461,7 +466,9 @@ def test_gap_fill_existing_low_cost_insert_does_not_occupy_declared_day():
 
     d1_roles = [role for role in sequence if role.get("countdown_offset") == 1]
     support_roles = [role for role in d1_roles if role.get("category") == "support_insert"]
-    assert len(support_roles) >= 2
+    assert len(support_roles) == 1
+    assert support_roles[0]["role_key"] == "tactical_watch"
+    assert support_roles[0]["mandatory_tactical_watch"] is True
     assert all(role["role_key"] not in PHYSICAL_INSERTS for role in d1_roles)
 
 
