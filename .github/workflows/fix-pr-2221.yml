@@ -6,6 +6,7 @@ on:
       - agent/mandatory-weekly-tactical-watch
     paths:
       - .github/scripts/fix_pr_2221.py
+      - .github/scripts/run_fix_pr_2221.py
       - .github/workflows/fix-pr-2221.yml
 
 permissions:
@@ -48,100 +49,7 @@ jobs:
           pip check
 
       - name: Apply repair
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('.github/scripts/fix_pr_2221.py')
-          text = path.read_text(encoding='utf-8')
-          start = text.index('def patch_existing_contract_tests() -> None:')
-          end = text.index('def write_mandatory_tests() -> None:')
-          replacement = '''def patch_existing_contract_tests() -> None:
-              modes = "tests/test_stage2_payload_modes.py"
-              replace_once(
-                  modes,
-                  \'''        assert [entry["role_key"] for entry in app_sequence] == [
-                      "fight_week_freshness_day",
-                      "tactical_cue_card",
-                  ]\''',
-                  \'''        assert [entry["role_key"] for entry in app_sequence] == [
-                      "fight_week_freshness_day",
-                      "tactical_watch",
-                  ]\''',
-              )
-              replace_once(
-                  modes,
-                  '        assert [entry["role_key"] for entry in app_sequence] == ["tactical_cue_card"]',
-                  '        assert [entry["role_key"] for entry in app_sequence] == ["tactical_watch"]',
-              )
-              replace_once(
-                  modes,
-                  \'''        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-                      "fight_week_freshness_day",
-                      "neural_primer_day",
-                  ]\''',
-                  \'''        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-                      "fight_week_freshness_day",
-                      "tactical_watch",
-                      "neural_primer_day",
-                  ]\''',
-              )
-              replace_once(
-                  modes,
-                  \'''        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-                      "neural_primer_day",
-                  ]\''',
-                  \'''        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-                      "neural_primer_day",
-                      "tactical_watch",
-                  ]\''',
-              )
-
-              brief = "tests/test_stage2_planning_brief.py"
-              replace_once(
-                  brief,
-                  \'''    assert roles_from_seq == [
-                      "tactical_cue_card",
-                      "fight_week_freshness_day",
-                      "neural_primer_day",
-                  ]\''',
-                  \'''    assert roles_from_seq == [
-                      "tactical_watch",
-                      "fight_week_freshness_day",
-                      "neural_primer_day",
-                  ]\''',
-              )
-              replace_once(
-                  brief,
-                  \'''    support_entries = [
-                      entry
-                      for entry in brief["late_fight_session_sequence"]
-                      if entry["role_key"] == "tactical_cue_card"
-                  ]\''',
-                  \'''    support_entries = [
-                      entry
-                      for entry in brief["late_fight_session_sequence"]
-                      if entry["role_key"] == "tactical_watch"
-                  ]\''',
-              )
-              replace_once(
-                  brief,
-                  \'''    assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
-                      "fight_week_freshness_day",
-                      "neural_primer_day",
-                  ]\''',
-                  \'''    assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
-                      "fight_week_freshness_day",
-                      "tactical_watch",
-                      "neural_primer_day",
-                  ]\''',
-              )
-
-
-          '''
-          path.write_text(text[:start] + replacement + text[end:], encoding='utf-8')
-          PY
-          python .github/scripts/fix_pr_2221.py
+        run: python .github/scripts/run_fix_pr_2221.py
 
       - name: Compile changed Python
         run: |
@@ -178,7 +86,10 @@ jobs:
 
       - name: Commit validated repair and remove scaffolding
         run: |
-          rm -f .github/scripts/fix_pr_2221.py .github/workflows/fix-pr-2221.yml
+          rm -f \
+            .github/scripts/fix_pr_2221.py \
+            .github/scripts/run_fix_pr_2221.py \
+            .github/workflows/fix-pr-2221.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
@@ -189,6 +100,7 @@ jobs:
             tests/test_stage2_payload_modes.py \
             tests/test_stage2_planning_brief.py \
             .github/scripts/fix_pr_2221.py \
+            .github/scripts/run_fix_pr_2221.py \
             .github/workflows/fix-pr-2221.yml
           git commit -m "Harden mandatory weekly Tactical Watch"
           git push origin HEAD:agent/mandatory-weekly-tactical-watch
