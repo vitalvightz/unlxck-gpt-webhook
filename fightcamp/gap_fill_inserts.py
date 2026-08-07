@@ -65,8 +65,6 @@ TWO_INSERT_GAP_MIN_DAYS = 5
 # reach the front of the window on their own.
 LEADING_SPAN_MAX_DAYS_UNTIL_FIGHT = 7
 MAX_INSERTS_TOTAL_D21_TO_D0 = 6
-# The countdown payload is visible from D-21 inwards, i.e. three seven-day windows.
-MAX_VISIBLE_COUNTDOWN_DAYS = 21
 MAX_PHYSICAL_INSERTS_PER_7_DAY_SEGMENT = 1
 # Day-before-fight slots stay restricted to zero/recovery work regardless of goal.
 MIN_AEROBIC_MAINTENANCE_OFFSET = 2
@@ -832,14 +830,9 @@ def _select_role_key(
     gap_span: int | None = None,
     force_tactical: bool = False,
     force_conditioning: bool = False,
-    force_watch: bool = False,
 ) -> str | None:
     candidates = set(allowed)
-    if force_watch:
-        # The mandatory Fight Tactical Watch is the watch itself: a cue card or
-        # self-review is different work and does not satisfy it.
-        candidates &= {"tactical_watch"}
-    if force_tactical and not force_watch:
+    if force_tactical:
         candidates &= TACTICAL_INSERTS
     elif force_conditioning:
         aerobic = candidates & LOW_COST_AEROBIC_INSERTS
@@ -938,7 +931,6 @@ def select_gap_fill_insert(
     gap_span: int | None = None,
     force_tactical: bool = False,
     force_conditioning: bool = False,
-    force_watch: bool = False,
 ) -> dict[str, Any] | None:
     if insert_offset == 0:
         return None
@@ -959,7 +951,6 @@ def select_gap_fill_insert(
         gap_span=gap_span,
         force_tactical=force_tactical,
         force_conditioning=force_conditioning,
-        force_watch=force_watch,
     )
     if role_key is None:
         return None
@@ -1111,118 +1102,6 @@ def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
     return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
 
 
-def _mandatory_watch_segments(days_until_fight: int) -> set[int]:
-    """Seven-day countdown windows that must each carry a Fight Tactical Watch.
-
-    Only windows the plan fully covers count. A micro-taper plan (D-1 to D-6)
-    is not a week: it has no applicable window, so the countdown path keeps its
-    existing compressed behaviour and no standalone session is manufactured to
-    satisfy the requirement.
-    """
-    return {
-        segment
-        for segment in range(_segment_for_offset(MAX_VISIBLE_COUNTDOWN_DAYS) + 1)
-        if days_until_fight >= 7 * (segment + 1)
-    }
-
-
-def _watch_segments(roles: list[dict[str, Any]]) -> set[int]:
-    return {
-        _segment_for_offset(offset)
-        for role in roles
-        if str(role.get("role_key") or "") == "tactical_watch"
-        and (offset := _role_offset(role)) is not None
-        and offset > 0
-    }
-
-
-def _mandatory_watch_inserts(
-    athlete_model: dict[str, Any],
-    *,
-    required_segments: set[int],
-    days_until_fight: int,
-    horizon: int,
-    gap_candidate_offsets: list[int],
-    scheduled_offsets: set[int],
-    countdown_map: dict[str, str],
-    hard_sparring_days: set[str],
-    usage_ledger: dict[str, Any],
-) -> list[tuple[dict[str, Any], int]]:
-    """Place one Fight Tactical Watch in each required seven-day window.
-
-    Windows are served furthest-out first. Earlier windows claim a day the
-    filler loop would have used anyway; fight week rides along with a day that
-    is already scheduled. Either way the watch is zero physical load and
-    coexistable, so it adds a card, never a session, and never a countdown day.
-
-    Selection runs through :func:`select_gap_fill_insert`, so every allow-list,
-    safety gate and repeat rule still applies — an impossible window is left
-    unserved rather than forced.
-    """
-    placed: list[tuple[dict[str, Any], int]] = []
-    for segment in sorted(required_segments, reverse=True):
-        window = [
-            offset
-            for offset in range(segment * 7 + 1, segment * 7 + 8)
-            if 0 < offset <= min(days_until_fight, horizon)
-        ]
-        in_window = set(window)
-        gap_days = [offset for offset in gap_candidate_offsets if offset in in_window]
-        # Days already in the plan, so the watch rides along instead of adding a
-        # day. Nearest the fight first in fight week, furthest out first earlier.
-        share_days = sorted(
-            (offset for offset in window if offset in scheduled_offsets),
-            reverse=segment != 0,
-        )
-        # Everything else, worst last: a day next to a scheduled session closes a
-        # deliberate gap in the countdown.
-        spare_days = sorted(
-            (offset for offset in window if offset not in gap_days + share_days),
-            key=lambda offset: (
-                bool({offset - 1, offset + 1} & scheduled_offsets),
-                offset if segment == 0 else -offset,
-            ),
-        )
-        if segment == 0:
-            # Fight week never gains a standalone day for the watch: it shares an
-            # already scheduled one (a final cue belongs beside work the athlete
-            # is already doing), and only takes a gap slot if it cannot.
-            ordered_window = share_days + sorted(gap_days) + spare_days
-        else:
-            # Earlier windows claim the slot the filler loop would have used, so
-            # the window keeps the session count and spacing it already had.
-            ordered_window = gap_days + share_days + spare_days
-
-        # Consecutive watches must be at least eight days apart, so a day taken
-        # too close to the next window down leaves that window nothing. Prefer
-        # the days that keep it reachable; still try the rest if none work.
-        nearer = [other for other in required_segments if other < segment]
-        if nearer:
-            floor = (min(nearer) * 7 + 1) + 8
-            ordered_window = sorted(ordered_window, key=lambda offset: offset < floor)
-        for target_offset in ordered_window:
-            weekday = countdown_map.get(f"D-{target_offset}")
-            insert = select_gap_fill_insert(
-                athlete_model,
-                target_offset,
-                on_hard_sparring_day=bool(
-                    weekday and weekday.strip().lower() in hard_sparring_days
-                ),
-                usage_ledger=usage_ledger,
-                force_watch=True,
-            )
-            if insert is None or insert["role_key"] != "tactical_watch":
-                continue
-            insert["scheduled_day_hint"] = weekday
-            if weekday:
-                insert["real_weekday"] = weekday
-                insert["countdown_display_label"] = f"D-{target_offset} ({weekday.title()})"
-            placed.append((insert, target_offset))
-            _record_insert_usage(usage_ledger, "tactical_watch", target_offset)
-            break
-    return placed
-
-
 def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
     ordered = sorted(
         [dict(role) for role in session_sequence],
@@ -1275,13 +1154,6 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     usage_ledger = _usage_ledger_from_sequence(ordered)
     tactical_present = _has_tactical_support(ordered)
     tactical_required = _is_fight_sport(athlete_model) and not tactical_present
-    # A fight-dated countdown owes every fully visible seven-day window its own
-    # Fight Tactical Watch. Only the watch itself counts; other tactical support
-    # is different work.
-    required_watch_segments = (
-        _mandatory_watch_segments(days_until_fight) if _is_fight_sport(athlete_model) else set()
-    )
-    watch_segments = _watch_segments(ordered)
     conditioning_present = any(
         str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS for role in ordered
     )
@@ -1292,46 +1164,10 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         for offset in _declared_hard_sparring_offsets(countdown_map, hard_sparring_days)
         if offset not in existing_exclusive_offsets
     ]
-    # Genuine gaps only: a declared coach day is not a gap, and attaching support
-    # to one stays the filler loop's job.
-    gap_only_offsets = [
-        offset
-        for offset, _gap in candidate_offsets
-        if offset > 0 and offset not in existing_exclusive_offsets
-    ]
     if tactical_required:
         candidate_offsets = coach_day_candidates + candidate_offsets
     else:
         candidate_offsets = candidate_offsets + coach_day_candidates
-
-    # Serve the mandatory watches before the general fillers run. Watches must
-    # sit at least eight days apart (the same-role repeat rule) and a window is
-    # only seven days wide, so a watch placed opportunistically on score alone
-    # can starve the next window. Claiming the required windows first, furthest
-    # out to nearest, spends that spacing budget where it is owed.
-    for insert, target_offset in _mandatory_watch_inserts(
-        athlete_model,
-        required_segments=required_watch_segments - watch_segments,
-        days_until_fight=days_until_fight,
-        # Never reach past the plan's own first session: a long camp keeps its
-        # existing leading shape, exactly as the gap candidates do.
-        horizon=max(offsets),
-        gap_candidate_offsets=gap_only_offsets,
-        scheduled_offsets={
-            offset for role in ordered if (offset := _role_offset(role)) is not None
-        },
-        countdown_map=countdown_map,
-        hard_sparring_days=hard_sparring_days,
-        usage_ledger=usage_ledger,
-    ):
-        inserts.append(insert)
-        watch_segments.add(_segment_for_offset(target_offset))
-        tactical_present = True
-        # The watch claims that gap-fill slot rather than stacking on it, so the
-        # window keeps the session count and spacing it had before.
-        candidate_offsets = [
-            (offset, gap) for offset, gap in candidate_offsets if offset != target_offset
-        ]
 
     for target_offset, gap_span in candidate_offsets:
         if target_offset <= 0 or target_offset in existing_exclusive_offsets:
