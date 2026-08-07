@@ -678,6 +678,72 @@
     "progress": "Use the reset routine after every exchange in the next technical session."
   },
   {
+    "key": "generic.gpp.output_window_review",
+    "name": "Output Window Review",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Find out when you actually work in a round instead of assuming your output is evenly spread.",
+    "mindset": {
+      "intent": "Know when you are working and when you are only watching.",
+      "focus": "Track the moments output starts, stops and never restarts.",
+      "reset": "When a quiet stretch runs long, restart with the simplest thing you own.",
+      "anchor": "Silence is a decision too.",
+      "context": "Early-camp work-rate study from your own footage."
+    },
+    "instructions": [
+      "Mark the point in a round where your output is highest.",
+      "Mark the longest stretch where you throw nothing at all.",
+      "Name what usually ends that quiet stretch.",
+      "Write one restart action you can use before the quiet stretch gets long."
+    ],
+    "progress": "Use the restart action in the next rounds you do and note whether the quiet stretches shorten."
+  },
+  {
+    "key": "generic.gpp.stance_and_angle_audit",
+    "name": "Stance and Angle Audit",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Expose the movement direction you default to and the side of the ring or cage you keep giving away.",
+    "mindset": {
+      "intent": "Move on purpose rather than out of habit.",
+      "focus": "Track which way your feet take you after every exchange.",
+      "reset": "If you drift, square up and re-choose the direction before moving again.",
+      "anchor": "Pick the angle before it picks you.",
+      "context": "Early-camp movement-habit study from your own footage."
+    },
+    "instructions": [
+      "Identify the direction you circle in most often.",
+      "Identify the direction you almost never use.",
+      "Find the moment your stance stops being usable while you move.",
+      "Write one movement rule that forces you to use the neglected direction."
+    ],
+    "progress": "Apply the movement rule in shadow and footwork work; keep it only if your stance stays usable."
+  },
+  {
+    "key": "generic.gpp.fatigue_signature_review",
+    "name": "Fatigue Signature Review",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Know exactly which part of your technique fails first when you tire, so you can defend it under pressure.",
+    "mindset": {
+      "intent": "Protect the thing that breaks first.",
+      "focus": "Compare the same action early in a round and late in a round.",
+      "reset": "When the flagged fault appears, fix that one thing before anything else.",
+      "anchor": "Tired is a technique problem before it is a fitness problem.",
+      "context": "Early-camp fatigue study from your own late-round footage."
+    },
+    "instructions": [
+      "Pick one action you use constantly and compare it early and late in a round.",
+      "Name the first part of it that degrades when you tire.",
+      "Name what that degradation costs you defensively.",
+      "Write one cue that holds that part together late in a round."
+    ],
+    "progress": "Use the cue in the last round of your next hard session and note whether the fault still appears."
+  },
+  {
     "key": "generic.spp.trigger_response_builder",
     "name": "Trigger-Response Builder",
     "phases": ["SPP"],
@@ -940,5 +1006,49 @@
       "Condense them into one final sentence you can recall under pressure."
     ],
     "progress": "Read the final sentence before the last light rehearsal; add nothing new."
+  },
+  {
+    "key": "generic.taper.trained_response_confirmation",
+    "name": "Trained Response Confirmation",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 7,
+    "why": "Confirm the two responses you have the most repetitions in and drop everything you have not trained.",
+    "mindset": {
+      "intent": "Go in with the answers you already own.",
+      "focus": "Look only at work you have repeated successfully in camp.",
+      "reset": "If you start weighing options, go back to the response with the most repetitions.",
+      "anchor": "Trained beats clever.",
+      "context": "Fight-week confirmation of already-trained responses."
+    },
+    "instructions": [
+      "List the two responses you have repeated most often this camp.",
+      "Confirm the situation each one belongs to.",
+      "Remove any response you have not trained enough to trust.",
+      "Say both responses out loud in the situation they belong to."
+    ],
+    "progress": "Confirm both in light shadow work only; add no new response this week."
+  },
+  {
+    "key": "generic.taper.familiar_threat_rehearsal",
+    "name": "Familiar Threat Rehearsal",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 7,
+    "why": "Rehearse the answer you have already trained for the danger you already know about, without adding new theory.",
+    "mindset": {
+      "intent": "Meet the known danger with a known answer.",
+      "focus": "Watch only footage of the threat you have already prepared for.",
+      "reset": "If the answer feels unclear, use the simpler version you have trained more.",
+      "anchor": "Known danger, known answer.",
+      "context": "Fight-week rehearsal of an already-prepared threat."
+    },
+    "instructions": [
+      "Name the one danger you have prepared for most in this camp.",
+      "Name the trained answer that goes with it.",
+      "Confirm the position you want to be in immediately after using it.",
+      "Rehearse the answer slowly until it needs no thought."
+    ],
+    "progress": "Rehearse it once more at low intensity before fight day and leave the rest alone."
   }
 ]

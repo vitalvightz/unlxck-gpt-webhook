@@ -37,8 +37,16 @@ from .tactical_watch_library import (
     watch_metadata,
 )
 
+# Total per-week support budget. On a fight-dated plan the mandatory Tactical
+# Watch always owns one slot of it, so only SPP has room left for an adaptive
+# filler. Without a fight date the original SPP/TAPER caps apply unchanged (GPP
+# is intentionally absent there: early camp has enough real training volume that
+# low-cost filler adds noise, not value).
 _FIGHT_PHASE_FILLER_CAPS = {"GPP": 1, "SPP": 2, "TAPER": 1}
 _LEGACY_PHASE_FILLER_CAPS = {"SPP": 2, "TAPER": 1}
+
+# At most one adaptive filler may share a day with an existing session per week;
+# free (intentionally unused) days are always preferred.
 _MAX_SHARED_DAY_FILLERS = 1
 _TACTICAL_WATCH_ROLE_KEY = "tactical_watch"
 
@@ -54,12 +62,21 @@ _CANONICAL_WEEKDAYS = (
 
 
 def _canonical_day(value: Any) -> str:
-    """Normalise a weekday token to its full lowercase name (``Wed`` -> ``wednesday``)."""
+    """Normalise a weekday token to its full lowercase name (``Wed`` -> ``wednesday``).
+
+    The role map mixes short tokens (``Mon``) on roles/declared days with full
+    names on ``calendar_days``, so day comparisons must go through this.
+    """
     index = WEEKDAY_ORDER.get(str(value or "").strip().lower())
     return _CANONICAL_WEEKDAYS[index] if index is not None else ""
 
 
 def _calendar_d_day(week: dict[str, Any], weekday: str) -> int | None:
+    """Resolve the countdown day for a weekday from the week's calendar spine.
+
+    Returns ``None`` when the week has no calendar spine, which is the signal
+    that nothing — mandatory watch or adaptive filler — can be placed safely.
+    """
     canonical = _canonical_day(weekday)
     if not canonical:
         return None
@@ -176,6 +193,7 @@ def _place_filler(
     usage_ledger: dict[str, Any],
     allow_physical: bool,
 ) -> dict[str, Any] | None:
+    """Select and append one adaptive filler for ``day``. Returns the role or None."""
     d_day = _calendar_d_day(week, day)
     if d_day is None:
         return None
@@ -235,10 +253,20 @@ def _mandatory_watch_day(
             key=lambda day: (counts.get(_canonical_day(day), 0), scheduled_days.index(day)),
         )
 
+    # Fallback only: no session role in the week carries a usable day. Declared
+    # training days the planner deliberately left unused (off / recovery-only)
+    # stay off-limits — the mandatory watch shares a training day, it never
+    # converts a rest day just to satisfy itself.
+    unused_days = {
+        canonical
+        for entry in week.get("intentionally_unused_days") or []
+        if isinstance(entry, dict) and (canonical := _canonical_day(entry.get("day")))
+    }
     declared = [
         str(day).strip()
         for day in clean_list(week.get("declared_training_days"))
         if str(day).strip()
+        and _canonical_day(day) not in unused_days
         and (d_day := _calendar_d_day(week, str(day))) is not None
         and d_day > 0
     ]
@@ -323,6 +351,9 @@ def _fill_week(
     hard_days = _week_hard_sparring_days(week, athlete_model)
     added = 0
 
+    # Pass 1 — free days: intentionally unused off/recovery training days that no
+    # safety gate has annotated. A filled day stops being intentionally unused
+    # (same contract as the low-load support upgrade in stage2_role_map).
     kept_unused: list[Any] = []
     for day_entry in week.get("intentionally_unused_days") or []:
         if added >= cap or not isinstance(day_entry, dict):
@@ -355,6 +386,10 @@ def _fill_week(
         added += 1
     week["intentionally_unused_days"] = kept_unused
 
+    # Pass 2 — shared days: when the week still has filler budget, allow at most
+    # one filler alongside an existing single session. Hard-sparring days stay
+    # eligible because the selector then restricts to zero-cost/recovery work
+    # (a cue card next to sparring is fine; extra S&C is not).
     if added >= cap:
         return
     day_counts = _role_day_counts(session_roles)
@@ -404,15 +439,18 @@ def apply_camp_week_fillers(
             total_cap = _FIGHT_PHASE_FILLER_CAPS.get(phase)
             if not total_cap:
                 continue
-            placed = _ensure_mandatory_tactical_watch(
+            _ensure_mandatory_tactical_watch(
                 week,
                 athlete_model,
                 phase=phase,
                 usage_ledger=usage_ledger,
                 used_watch_keys=used_watch_keys,
             )
-            if not placed:
-                continue
+            # A deliberately compressed week left days empty to protect the
+            # athlete — the zero-load watch is still allowed, extra fillers are
+            # not. The watch always owns one slot of the phase cap, whether or
+            # not the week had a usable day for it, so adaptive fillers can
+            # never push a week past its support budget.
             if _week_is_compressed(week):
                 continue
             _fill_week(week, athlete_model, max(0, total_cap - 1), usage_ledger)

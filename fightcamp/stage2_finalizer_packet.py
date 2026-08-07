@@ -139,7 +139,6 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "mandatory_tactical_watch",
         "weekly_requirement",
         "camp_phase",
-        "tactical_watch_segment",
         "stress_class",
         "cost_class",
         "support_insert_category",

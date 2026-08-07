@@ -214,16 +214,6 @@ def select_tactical_watch(
     )
 
 
-def select_watch_by_occurrence(style: Any, phase: Any, occurrence: int) -> TacticalWatch:
-    bank = ordered_phase_bank(style, phase)
-    index = max(1, int(occurrence)) - 1
-    if index >= len(bank):
-        raise TacticalWatchBankExhausted(
-            f"occurrence {occurrence} exceeds the Tactical Watch bank for style={style!r} phase={phase!r}"
-        )
-    return bank[index]
-
-
 def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
     return {
         "tactical_watch_key": watch.key,
@@ -258,7 +248,13 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
     }
 
 
-def build_watch_display_text(watch: TacticalWatch, camp_focus: str = "") -> str:
+def build_watch_display_text(watch: TacticalWatch) -> str:
+    """Render the selected watch as the role's athlete-facing card.
+
+    The shell (``Fight Tactical Watch`` + Why + Mindset) stays outside; the
+    selected watch name, duration, instructions and progress are the inner
+    activity. Every string comes from the JSON bank — nothing is authored here.
+    """
     lines = [
         "Fight Tactical Watch",
         f"Why: {watch.why}",

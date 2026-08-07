@@ -589,6 +589,7 @@ def _allowed_inserts(
 
 
 def _late_watch_phase(insert_offset: int) -> str:
+    """Camp phase for a countdown insert: fight week is TAPER, before that SPP."""
     return "TAPER" if insert_offset <= 7 else "SPP"
 
 
@@ -599,6 +600,11 @@ def _apply_bank_watch(
     phase: str,
     used_watch_keys: set[str],
 ) -> None:
+    """Stamp the selected Tactical Watch from the JSON bank onto ``role``.
+
+    Every athlete-facing string comes from ``data/tactical_watch_bank.json``;
+    this only formats what the bank already holds.
+    """
     watch = select_tactical_watch(
         extract_tactical_style(athlete_model),
         phase,
@@ -614,21 +620,6 @@ def _apply_bank_watch(
     role["display_text"] = build_watch_display_text(watch)
     role["duration_min"] = [watch.duration_minutes, watch.duration_minutes]
     used_watch_keys.add(watch.key)
-
-
-def build_tactical_watch_template(
-    athlete_model: dict[str, Any] | None = None,
-    *,
-    phase: str = "GPP",
-    used_watch_keys: set[str] | None = None,
-) -> str:
-    athlete_model = athlete_model or {}
-    watch = select_tactical_watch(
-        extract_tactical_style(athlete_model),
-        phase,
-        used_watch_keys or set(),
-    )
-    return build_watch_display_text(watch)
 
 
 def _first_allowed(preferences: list[str], allowed: set[str]) -> str | None:
@@ -842,7 +833,7 @@ def _select_role_key(
 ) -> str | None:
     candidates = set(allowed)
     if force_tactical:
-        candidates &= {"tactical_watch"}
+        candidates &= TACTICAL_INSERTS
     elif force_conditioning:
         aerobic = candidates & LOW_COST_AEROBIC_INSERTS
         if aerobic:
@@ -888,6 +879,8 @@ def _build_insert_role(
 ) -> dict[str, Any]:
     meta = _INSERT_META[role_key]
     label = str(meta["label"])
+    # tactical_watch carries no static copy: its athlete-facing text is stamped
+    # from the JSON drill bank below.
     display_text = "" if role_key == "tactical_watch" else str(meta["display_text"])
     role: dict[str, Any] = {
         "session_index": None,
@@ -1109,98 +1102,6 @@ def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
     return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
 
 
-def _required_tactical_segments(days_until_fight: int) -> range:
-    visible_days = max(0, min(int(days_until_fight), 21))
-    if visible_days <= 0:
-        return range(0)
-    return range(((visible_days - 1) // 7) + 1)
-
-
-def _ensure_mandatory_tactical_watches(
-    roles: list[dict[str, Any]],
-    athlete_model: dict[str, Any],
-    *,
-    days_until_fight: int,
-    countdown_map: dict[str, str],
-    usage_ledger: dict[str, Any],
-) -> list[dict[str, Any]]:
-    if not _is_fight_sport(athlete_model):
-        return roles
-
-    used_watch_keys = usage_ledger.setdefault("used_tactical_watch_keys", set())
-    for role in roles:
-        watch_key = str(role.get("tactical_watch_key") or "").strip()
-        if watch_key:
-            used_watch_keys.add(watch_key)
-
-    for segment in _required_tactical_segments(days_until_fight):
-        segment_roles = [
-            role
-            for role in roles
-            if (offset := _role_offset(role)) is not None
-            and offset > 0
-            and _segment_for_offset(offset) == segment
-        ]
-        existing = next(
-            (
-                role
-                for role in segment_roles
-                if str(role.get("role_key") or "") == "tactical_watch"
-            ),
-            None,
-        )
-        phase = "TAPER" if segment == 0 else "SPP"
-        if existing is not None:
-            if not existing.get("tactical_watch_key"):
-                _apply_bank_watch(
-                    existing,
-                    athlete_model,
-                    phase=phase,
-                    used_watch_keys=used_watch_keys,
-                )
-            existing["mandatory_tactical_watch"] = True
-            existing["weekly_requirement"] = "fight_tactical_watch"
-            existing["tactical_watch_segment"] = segment
-            existing["governance"] = {
-                **dict(existing.get("governance") or {}),
-                "mandatory": True,
-                "meaningful_stress": False,
-            }
-            continue
-
-        candidate_offsets = sorted(
-            {
-                offset
-                for role in segment_roles
-                if (offset := _role_offset(role)) is not None and offset > 0
-            },
-            reverse=True,
-        )
-        if not candidate_offsets:
-            continue
-        target_offset = candidate_offsets[0]
-        weekday = countdown_map.get(f"D-{target_offset}")
-        watch_role = _build_insert_role(
-            "tactical_watch",
-            athlete_model,
-            target_offset,
-            weekday=weekday,
-            usage_ledger=usage_ledger,
-        )
-        watch_role["mandatory_tactical_watch"] = True
-        watch_role["weekly_requirement"] = "fight_tactical_watch"
-        watch_role["tactical_watch_segment"] = segment
-        watch_role["governance"] = {
-            **dict(watch_role.get("governance") or {}),
-            "mandatory": True,
-            "meaningful_stress": False,
-        }
-        roles.append(watch_role)
-        _record_insert_usage(usage_ledger, "tactical_watch", target_offset)
-
-    return roles
-
-
 def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
     ordered = sorted(
         [dict(role) for role in session_sequence],
@@ -1338,14 +1239,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         if not is_low_cost_coexistable_filler(insert):
             existing_exclusive_offsets.add(target_offset)
 
-    combined = _ensure_mandatory_tactical_watches(
-        ordered + inserts,
-        athlete_model,
-        days_until_fight=days_until_fight,
-        countdown_map=countdown_map,
-        usage_ledger=usage_ledger,
-    )
-    final_sequence = sorted(combined, key=lambda role: int(_role_offset(role) or 0), reverse=True)
+    final_sequence = sorted(ordered + inserts, key=lambda role: int(_role_offset(role) or 0), reverse=True)
     for index, role in enumerate(final_sequence, start=1):
         role["session_index"] = index
     return final_sequence
