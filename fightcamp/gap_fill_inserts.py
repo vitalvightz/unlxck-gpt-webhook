@@ -1157,6 +1157,23 @@ def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
     return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
 
 
+def _missing_mandatory_watch_count(session_sequence: list[dict[str, Any]]) -> int:
+    """Count represented D-21..D-1 segments that still need a Fight Tactical Watch."""
+    segments = {
+        _segment_for_offset(offset)
+        for role in session_sequence
+        if (offset := _role_offset(role)) is not None and 0 < offset <= 21
+    }
+    watch_segments = {
+        _segment_for_offset(offset)
+        for role in session_sequence
+        if str(role.get("role_key") or "") == "tactical_watch"
+        and (offset := _role_offset(role)) is not None
+        and 0 < offset <= 21
+    }
+    return len(segments - watch_segments)
+
+
 def _ensure_weekly_tactical_watches(
     session_sequence: list[dict[str, Any]],
     athlete_model: dict[str, Any],
@@ -1357,12 +1374,23 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
                 )
                 if insert is None:
                     continue
-            else:
-                physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
         insert["scheduled_day_hint"] = weekday
         if weekday:
             insert["real_weekday"] = weekday
             insert["countdown_display_label"] = f"D-{target_offset} ({weekday.title()})"
+
+        projected = ordered + inserts + [insert]
+        mandatory_watch_slots = (
+            _missing_mandatory_watch_count(projected)
+            if _is_fight_sport(athlete_model)
+            else 0
+        )
+        if len(inserts) + 1 + mandatory_watch_slots > MAX_INSERTS_TOTAL_D21_TO_D0:
+            continue
+
+        if insert["role_key"] in PHYSICAL_INSERTS:
+            segment = _segment_for_offset(target_offset)
+            physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
         inserts.append(insert)
         _record_insert_usage(usage_ledger, str(insert.get("role_key") or ""), target_offset)
         if insert.get("role_key") in TACTICAL_INSERTS:
