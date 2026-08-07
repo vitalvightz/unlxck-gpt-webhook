@@ -1,0 +1,431 @@
+name: PR2231 surgical patch v3
+
+on:
+  push:
+    branches:
+      - fix/late-fight-availability
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/late-fight-availability
+          fetch-depth: 0
+
+      - name: Apply focused production patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import py_compile
+          import re
+
+          def replace_function(text: str, name: str, replacement: str) -> str:
+              pattern = rf"^def {re.escape(name)}\(.*?(?=^def |\Z)"
+              updated, count = re.subn(
+                  pattern,
+                  replacement.rstrip() + "\n\n\n",
+                  text,
+                  count=1,
+                  flags=re.M | re.S,
+              )
+              if count != 1:
+                  raise RuntimeError(f"expected one function {name}, replaced {count}")
+              return updated
+
+          late_path = Path("fightcamp/stage2_payload_late_fight.py")
+          text = late_path.read_text()
+
+          text = replace_function(text, "can_render_late_taper_day", '''def can_render_late_taper_day(*, countdown_offset: int, weekday: str, training_days: list[str]) -> bool:
+              if countdown_offset == 0:
+                  return True
+              if countdown_offset < 0:
+                  return False
+              training_set = {
+                  str(day).strip().lower()
+                  for day in training_days
+                  if str(day).strip()
+              }
+              if not training_set:
+                  return True
+              return str(weekday or "").strip().lower() in training_set''')
+
+          text = replace_function(text, "_late_fight_countdown_context", '''def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+              plan_creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
+              available_days = clean_list(athlete_model.get("training_days", []))
+              countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
+              legal_countdown_labels = _late_fight_legal_countdown_labels(days_until_fight)
+              eligible_countdown_labels = [
+                  label
+                  for label in legal_countdown_labels
+                  if (offset := _countdown_offset(label)) is not None
+                  and can_render_late_taper_day(
+                      countdown_offset=offset,
+                      weekday=str(countdown_map.get(label) or ""),
+                      training_days=available_days,
+                  )
+              ]
+              resolved_map = {
+                  label: str(countdown_map[label]).strip().lower()
+                  for label in eligible_countdown_labels
+                  if str(countdown_map.get(label) or "").strip()
+              }
+              return {
+                  "countdown_weekday_map": resolved_map,
+                  "raw_countdown_weekday_map": countdown_map,
+                  "legal_countdown_labels": legal_countdown_labels,
+                  "eligible_countdown_labels": eligible_countdown_labels,
+                  "legal_weekdays": [resolved_map[label] for label in eligible_countdown_labels if label in resolved_map],
+                  "availability_adjustments": [],
+                  "available_days": available_days,
+              }''')
+
+          text = replace_function(text, "_visible_insert_session_sequence", '''def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+              """Filter post-placement sessions to app-owned roles only."""
+              return [
+                  session
+                  for session in session_sequence
+                  if _is_app_owned_visible_role(session.get("role_key"))
+                  and not session.get("coach_owned")
+              ]''')
+
+          text = replace_function(text, "_coach_owned_context_session_sequence", '''def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+              """Return declared combat context that must stay visible in the calendar."""
+              coach_owned: list[dict[str, Any]] = []
+              for session in session_sequence:
+                  role_key = str(session.get("role_key") or "").strip()
+                  downgraded_from = str(session.get("downgraded_from_role_key") or "").strip()
+                  is_hard_context = role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day"
+                  is_light_context = bool(session.get("coach_owned")) and role_key == "technical_touch_day"
+                  if not (is_hard_context or is_light_context):
+                      continue
+                  if not str(session.get("scheduled_day_hint") or "").strip():
+                      continue
+                  session_copy = dict(session)
+                  if is_light_context and not is_hard_context:
+                      session_copy["athlete_facing_label"] = "Light Combat / Technical"
+                      session_copy["display_text"] = "Your declared light-combat / technical session. Keep it as scheduled."
+                  elif role_key == "hard_sparring_day" and not session.get("downgraded"):
+                      session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
+                      session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
+                  else:
+                      session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
+                      session_copy["display_text"] = CANONICAL_TECHNICAL_ONLY_NOTE
+                  coach_owned.append(session_copy)
+              return coach_owned''')
+
+          text = replace_function(text, "ensure_declared_coach_combat_spine", '''def ensure_declared_coach_combat_spine(
+              session_sequence: list[dict[str, Any]],
+              athlete_model: dict[str, Any],
+              countdown_map: dict[str, str],
+          ) -> list[dict[str, Any]]:
+              hard_days = {
+                  str(day or "").strip().lower()
+                  for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
+                  if str(day or "").strip()
+              }
+              support_days = {
+                  str(day or "").strip().lower()
+                  for day in _ordered_weekdays(
+                      clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days", []))
+                  )
+                  if str(day or "").strip()
+              }
+              training_days = {
+                  str(day or "").strip().lower()
+                  for day in _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
+                  if str(day or "").strip()
+              }
+              if training_days:
+                  support_days &= training_days
+              if not countdown_map or not (hard_days or support_days):
+                  return session_sequence
+
+              hard_labels = {
+                  label: str(weekday or "").strip().lower()
+                  for label, weekday in countdown_map.items()
+                  if str(weekday or "").strip().lower() in hard_days
+                  and (_countdown_offset(label) or 0) > 0
+              }
+              support_labels = {
+                  label: str(weekday or "").strip().lower()
+                  for label, weekday in countdown_map.items()
+                  if str(weekday or "").strip().lower() in support_days
+                  and str(weekday or "").strip().lower() not in hard_days
+                  and (_countdown_offset(label) or 0) > 0
+              }
+
+              sequence: list[dict[str, Any]] = []
+              for role in session_sequence:
+                  role_copy = dict(role)
+                  label = str(role_copy.get("scheduled_countdown_label") or role_copy.get("countdown_label") or "")
+                  role_key = str(role_copy.get("role_key") or "").strip().lower()
+                  downgraded_from = str(role_copy.get("downgraded_from_role_key") or "").strip().lower()
+                  coach_context = role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day"
+                  allowed_filler = is_low_cost_coexistable_filler(role_copy) or role_key == "fight_week_freshness_day"
+                  if label in hard_labels and _is_app_owned_visible_role(role_key) and not coach_context and not allowed_filler:
+                      continue
+                  sequence.append(role_copy)
+
+              existing_hard = {
+                  str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+                  for role in sequence
+                  if str(role.get("role_key") or "").strip().lower() == "hard_sparring_day"
+                  or str(role.get("downgraded_from_role_key") or "").strip().lower() == "hard_sparring_day"
+              }
+              existing_support = {
+                  str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+                  for role in sequence
+                  if role.get("coach_owned") is True
+                  and str(role.get("role_key") or "").strip().lower() == "technical_touch_day"
+              }
+
+              for label, weekday in sorted(
+                  hard_labels.items(),
+                  key=lambda item: int(_countdown_offset(item[0]) or -1),
+                  reverse=True,
+              ):
+                  offset = _countdown_offset(label)
+                  if offset is None or offset <= 0 or label in existing_hard:
+                      continue
+                  downgraded = offset <= 17
+                  sequence.append({
+                      "session_index": len(sequence) + 1,
+                      "category": "sparring",
+                      "role_key": "hard_sparring_day",
+                      "preferred_pool": "declared_hard_sparring_days",
+                      "anchor": _role_anchor("hard_sparring_day"),
+                      "cost_class": "low" if downgraded else _late_fight_cost_class("hard_sparring_day"),
+                      "stress_class": "support" if downgraded else _late_fight_stress_class("hard_sparring_day"),
+                      "placement_source": "declared_coach_combat_spine",
+                      "legal_countdown_labels": [label],
+                      "governance": {"late_fight_payload": True, "coach_owned": True},
+                      "locked_day": weekday,
+                      "scheduled_day_hint": weekday,
+                      "real_weekday": weekday,
+                      "scheduled_countdown_label": label,
+                      "countdown_label": label,
+                      "countdown_display_label": _countdown_display_label(label, weekday),
+                      "countdown_weekday": weekday,
+                      "countdown_offset": offset,
+                      "declared_day_locked": True,
+                      "coach_owned": True,
+                      "downgraded": downgraded,
+                      "placement_basis": "locked",
+                      "day_assignment_reason": "Declared hard-sparring/contact day restored to the calendar spine before app-owned placement.",
+                  })
+                  if downgraded:
+                      sequence[-1]["downgraded_to_role_key"] = "technical_touch_day"
+                      sequence[-1]["downgrade_reason_code"] = "d17_hard_sparring_ban"
+                  existing_hard.add(label)
+
+              for label, weekday in sorted(
+                  support_labels.items(),
+                  key=lambda item: int(_countdown_offset(item[0]) or -1),
+                  reverse=True,
+              ):
+                  offset = _countdown_offset(label)
+                  if offset is None or offset <= 0 or label in existing_support:
+                      continue
+                  sequence.append({
+                      "session_index": len(sequence) + 1,
+                      "category": "technical",
+                      "role_key": "technical_touch_day",
+                      "preferred_pool": "declared_support_work_days",
+                      "anchor": "support_day",
+                      "cost_class": "low",
+                      "stress_class": "support",
+                      "placement_source": "declared_support_work_spine",
+                      "legal_countdown_labels": [label],
+                      "governance": {"late_fight_payload": True, "coach_owned": True},
+                      "locked_day": weekday,
+                      "scheduled_day_hint": weekday,
+                      "real_weekday": weekday,
+                      "scheduled_countdown_label": label,
+                      "countdown_label": label,
+                      "countdown_display_label": _countdown_display_label(label, weekday),
+                      "countdown_weekday": weekday,
+                      "countdown_offset": offset,
+                      "declared_day_locked": True,
+                      "coach_owned": True,
+                      "placement_basis": "locked",
+                      "day_assignment_reason": "Declared light-combat/technical day restored to the calendar spine.",
+                  })
+                  existing_support.add(label)
+
+              sorted_sequence = sorted(sequence, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
+              for idx, role in enumerate(sorted_sequence, start=1):
+                  role["session_index"] = idx
+              return sorted_sequence''')
+
+          text, count = re.subn(
+              r"^    label_to_resolved_training_weekday = \{\n(?:        .*\n){4}    \}\n",
+              "    label_to_resolved_training_weekday: dict[str, str] = {}\n",
+              text,
+              count=1,
+              flags=re.M,
+          )
+          if count != 1:
+              raise RuntimeError(f"expected one bridge nearest-day map, replaced {count}")
+          late_path.write_text(text)
+
+          gap_path = Path("fightcamp/gap_fill_inserts.py")
+          text = gap_path.read_text()
+
+          import_marker = "    _resolve_plan_creation_weekday,\n    is_low_cost_coexistable_filler,\n"
+          if import_marker not in text:
+              raise RuntimeError("gap-fill import marker not found")
+          text = text.replace(
+              import_marker,
+              "    _resolve_plan_creation_weekday,\n    can_render_late_taper_day,\n    is_low_cost_coexistable_filler,\n",
+              1,
+          )
+
+          text = replace_function(text, "_role_repeat_blocked", '''def _role_repeat_blocked(role_key: str, insert_offset: int, usage_ledger: dict[str, Any] | None) -> bool:
+              if not usage_ledger:
+                  return False
+              if role_key in TACTICAL_INSERTS and any(
+                  int(previous) == insert_offset
+                  for tactical_key in TACTICAL_INSERTS
+                  for previous in usage_ledger.get("role_key_offsets", {}).get(tactical_key, [])
+              ):
+                  return True
+              if bool((_INSERT_META.get(role_key) or {}).get("repeat_allowed")):
+                  return False
+              previous_offsets = usage_ledger.get("role_key_offsets", {}).get(role_key, [])
+              return any(abs(int(previous) - insert_offset) <= 7 for previous in previous_offsets)''')
+
+          text = replace_function(text, "_ensure_weekly_tactical_watches", '''def _ensure_weekly_tactical_watches(
+              session_sequence: list[dict[str, Any]],
+              athlete_model: dict[str, Any],
+              countdown_map: dict[str, str],
+              usage_ledger: dict[str, Any],
+          ) -> list[dict[str, Any]]:
+              """Keep one banked Tactical Watch in each represented D-21..D-1 segment."""
+              if not _is_fight_sport(athlete_model):
+                  return []
+
+              additions: list[dict[str, Any]] = []
+              segments = sorted({
+                  _segment_for_offset(offset)
+                  for role in session_sequence
+                  if (offset := _role_offset(role)) is not None and 0 < offset <= 21
+              })
+              used_watch_keys = usage_ledger.setdefault("used_tactical_watch_keys", set())
+
+              for segment in segments:
+                  segment_roles = [
+                      role
+                      for role in session_sequence
+                      if (offset := _role_offset(role)) is not None
+                      and offset > 0
+                      and _segment_for_offset(offset) == segment
+                  ]
+                  watch = next(
+                      (role for role in segment_roles if str(role.get("role_key") or "") == "tactical_watch"),
+                      None,
+                  )
+                  if watch is None:
+                      promotable = next(
+                          (
+                              role
+                              for role in segment_roles
+                              if str(role.get("role_key") or "") in {"tactical_cue_card", "self_review"}
+                          ),
+                          None,
+                      )
+                      anchor = promotable or max(segment_roles, key=lambda role: int(_role_offset(role) or 0))
+                      offset = int(_role_offset(anchor) or 0)
+                      weekday = str(
+                          anchor.get("scheduled_day_hint")
+                          or anchor.get("real_weekday")
+                          or countdown_map.get(f"D-{offset}")
+                          or ""
+                      ).strip() or None
+                      replacement = _build_insert_role(
+                          "tactical_watch",
+                          athlete_model,
+                          offset,
+                          weekday,
+                          usage_ledger=usage_ledger,
+                      )
+                      if promotable is not None:
+                          promotable.clear()
+                          promotable.update(replacement)
+                          watch = promotable
+                      else:
+                          watch = replacement
+                          additions.append(watch)
+                      _record_insert_usage(usage_ledger, "tactical_watch", offset)
+                  elif not watch.get("tactical_watch_key"):
+                      offset = int(_role_offset(watch) or 0)
+                      _apply_bank_watch(
+                          watch,
+                          athlete_model,
+                          phase=_watch_phase_for_offset(athlete_model, offset),
+                          used_watch_keys=used_watch_keys,
+                      )
+
+                  watch["mandatory_tactical_watch"] = True
+                  watch["weekly_requirement"] = "fight_tactical_watch"
+                  watch["governance"] = {
+                      **dict(watch.get("governance") or {}),
+                      "mandatory": True,
+                      "meaningful_stress": False,
+                  }
+
+              return additions''')
+
+          countdown_line = "    countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)\n"
+          if text.count(countdown_line) != 1:
+              raise RuntimeError(f"unexpected gap-fill countdown-line count: {text.count(countdown_line)}")
+          text = text.replace(
+              countdown_line,
+              countdown_line + "    training_days = clean_list(athlete_model.get(\"training_days\", []))\n",
+              1,
+          )
+
+          candidate_line = '        weekday = countdown_map.get(f"D-{target_offset}")\n'
+          if text.count(candidate_line) != 1:
+              raise RuntimeError(f"unexpected candidate-weekday line count: {text.count(candidate_line)}")
+          text = text.replace(
+              candidate_line,
+              candidate_line
+              + "        if not can_render_late_taper_day(\n"
+              + "            countdown_offset=target_offset,\n"
+              + "            weekday=str(weekday or \"\"),\n"
+              + "            training_days=training_days,\n"
+              + "        ):\n"
+              + "            continue\n",
+              1,
+          )
+          gap_path.write_text(text)
+
+          for filename in (
+              "fightcamp/stage2_payload_late_fight.py",
+              "fightcamp/gap_fill_inserts.py",
+              "tests/test_late_fight_availability_contract.py",
+          ):
+              py_compile.compile(filename, doraise=True)
+          PY
+
+          git diff --check
+          git status --short
+
+      - name: Commit focused production fix and remove temporary workflows
+        shell: bash
+        run: |
+          git config user.name "unlxck-pr-patcher"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/pr2231-surgical-patch.yml
+          git rm .github/workflows/pr2231-surgical-patch-v2.yml
+          git rm .github/workflows/pr2231-surgical-patch-v3.yml
+          git add fightcamp tests
+          git commit -m "Fix late-fight availability and combat-day ownership"
+          git push origin HEAD:fix/late-fight-availability
