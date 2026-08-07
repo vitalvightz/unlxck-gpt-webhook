@@ -1102,6 +1102,84 @@ def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
     return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
 
 
+def _ensure_weekly_tactical_watches(
+    session_sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    countdown_map: dict[str, str],
+    usage_ledger: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Add one banked Tactical Watch per visible seven-day countdown segment.
+
+    The watch always shares a day already present in the countdown sequence, so
+    this requirement adds a zero-load card, not a new training day.
+    """
+    if not _is_fight_sport(athlete_model):
+        return []
+
+    additions: list[dict[str, Any]] = []
+    segments = sorted(
+        {
+            _segment_for_offset(offset)
+            for role in session_sequence
+            if (offset := _role_offset(role)) is not None and 0 < offset <= 21
+        }
+    )
+    used_watch_keys = usage_ledger.setdefault("used_tactical_watch_keys", set())
+
+    for segment in segments:
+        segment_roles = [
+            role
+            for role in session_sequence
+            if (offset := _role_offset(role)) is not None
+            and offset > 0
+            and _segment_for_offset(offset) == segment
+        ]
+        watch = next(
+            (
+                role
+                for role in segment_roles
+                if str(role.get("role_key") or "") == "tactical_watch"
+            ),
+            None,
+        )
+        if watch is None:
+            anchor = max(segment_roles, key=lambda role: int(_role_offset(role) or 0))
+            offset = int(_role_offset(anchor) or 0)
+            weekday = str(
+                anchor.get("scheduled_day_hint")
+                or anchor.get("real_weekday")
+                or countdown_map.get(f"D-{offset}")
+                or ""
+            ).strip() or None
+            watch = _build_insert_role(
+                "tactical_watch",
+                athlete_model,
+                offset,
+                weekday,
+                usage_ledger=usage_ledger,
+            )
+            additions.append(watch)
+            _record_insert_usage(usage_ledger, "tactical_watch", offset)
+        elif not watch.get("tactical_watch_key"):
+            offset = int(_role_offset(watch) or 0)
+            _apply_bank_watch(
+                watch,
+                athlete_model,
+                phase=_late_watch_phase(offset),
+                used_watch_keys=used_watch_keys,
+            )
+
+        watch["mandatory_tactical_watch"] = True
+        watch["weekly_requirement"] = "fight_tactical_watch"
+        watch["governance"] = {
+            **dict(watch.get("governance") or {}),
+            "mandatory": True,
+            "meaningful_stress": False,
+        }
+
+    return additions
+
+
 def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
     ordered = sorted(
         [dict(role) for role in session_sequence],
@@ -1152,7 +1230,15 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
 
     usage_ledger = _usage_ledger_from_sequence(ordered)
-    tactical_present = _has_tactical_support(ordered)
+    inserts.extend(
+        _ensure_weekly_tactical_watches(
+            ordered,
+            athlete_model,
+            countdown_map,
+            usage_ledger,
+        )
+    )
+    tactical_present = _has_tactical_support(ordered + inserts)
     tactical_required = _is_fight_sport(athlete_model) and not tactical_present
     conditioning_present = any(
         str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS for role in ordered
