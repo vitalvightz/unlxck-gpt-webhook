@@ -135,6 +135,15 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "coach_owned",
         "display_text",
         "athlete_facing_label",
+        "camp_week_filler",
+        "mandatory_tactical_watch",
+        "weekly_requirement",
+        "camp_phase",
+        "stress_class",
+        "cost_class",
+        "support_insert_category",
+        "support_insert_cost_category",
+        "governance",
         "countdown_label",
         "scheduled_countdown_label",
         "countdown_display_label",
@@ -516,6 +525,13 @@ def build_stage2_finalizer_packet(
             "If selected_plan.session_sequence is present, render every entry in selected_plan.session_sequence as its own athlete-facing countdown card.",
             "Each selected_plan.session_sequence entry with scheduled_countdown_label/countdown_display_label must appear as a visible D-X header in the final output.",
             "Do not omit selected support, recovery, freshness, mobility, reset, or technical roles because they are low stress or short duration.",
+            # Generic locked-drill contract. Stage 1 sometimes selects a specific
+            # activity for a role rather than leaving the choice open. When it
+            # does, the selection is a decision, not a suggestion, and the
+            # finalizer must not re-open it.
+            "If a session role has governance.selected_drill_locked=true, Stage 1 has already chosen that role's activity: preferred_exercise_names[0] is the authoritative activity name. Render that exact name as the activity title.",
+            "For a governance.selected_drill_locked=true role, render the supplied display_text content as that activity's own prescription. Do not rename it, do not substitute a different activity, do not merge it into another session, and do not restate it as generic category language.",
+            "A governance.selected_drill_locked=true role is authoritative, must render, and must never be moved to suppressed_roles.",
             "Do not collapse a selected countdown session into Lead notes, another day, movement prep, mobility finisher, rationale, or a generic note. It must keep its own D-X card.",
             "If selected_plan.session_sequence contains D-3 fight_week_freshness_day, render a D-3 freshness/reset card even when it is support-class and low RPE.",
             "Render selected countdown cards in descending countdown order, then append D-0 last.",
