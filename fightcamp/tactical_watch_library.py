@@ -71,6 +71,7 @@ _PHASE_ALIASES = {
     "fight_week": "TAPER",
     "fightweek": "TAPER",
     "peak": "TAPER",
+    "peaking": "TAPER",
 }
 
 
@@ -213,6 +214,16 @@ def select_tactical_watch(
     )
 
 
+def select_watch_by_occurrence(style: Any, phase: Any, occurrence: int) -> TacticalWatch:
+    bank = ordered_phase_bank(style, phase)
+    index = max(1, int(occurrence)) - 1
+    if index >= len(bank):
+        raise TacticalWatchBankExhausted(
+            f"occurrence {occurrence} exceeds the Tactical Watch bank for style={style!r} phase={phase!r}"
+        )
+    return bank[index]
+
+
 def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
     return {
         "tactical_watch_key": watch.key,
@@ -238,6 +249,12 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
         },
         "preferred_exercise_names": [watch.name],
         "preferred_tags": ["tactical_watch", watch.style, watch.phase.lower()],
+        "governance": {
+            "selected_drill_locked": True,
+            "selected_drill_name": watch.name,
+            "render_selected_drill_exactly": True,
+            "do_not_reselect_or_generalize": True,
+        },
     }
 
 
