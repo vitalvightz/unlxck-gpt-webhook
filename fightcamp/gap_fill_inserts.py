@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays
+from .normalization import WEEKDAY_ORDER, clean_list, normalize_fatigue_level, ordered_weekdays
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_payload_late_fight import (
     _countdown_offset,
@@ -1239,13 +1239,12 @@ def _segment_watch_offset(
             roles_by_offset.setdefault(offset, []).append(role)
 
     offsets = list(range(lower, upper + 1))
-    # Restrict to declared training-availability days so the mandatory watch never
-    # lands on an unavailable weekday. Fall back to the full window only if this
-    # segment has no available day at all, so the per-segment guarantee still holds.
+    # Declared training availability is an absolute scheduling boundary: the
+    # mandatory watch may never land on an unavailable weekday. If this segment
+    # contains no available day, no candidate remains and the caller skips it
+    # rather than violating availability to satisfy the per-segment requirement.
     if available_offsets is not None:
-        restricted = [offset for offset in offsets if offset in available_offsets]
-        if restricted:
-            offsets = restricted
+        offsets = [offset for offset in offsets if offset in available_offsets]
     fully_spaced = [
         offset
         for offset in offsets
@@ -1446,6 +1445,11 @@ def _ensure_weekly_tactical_watches(
             available_offsets=available_offsets,
         )
         if offset is None or offset <= 0:
+            if available_offsets is not None:
+                # No declared available weekday exists in this (typically
+                # truncated) segment. Availability is absolute, so skip the
+                # segment instead of placing the watch on an unavailable day.
+                continue
             raise RuntimeError(
                 f"Unable to place mandatory Tactical Watch in countdown segment {segment}."
             )
@@ -1492,17 +1496,26 @@ def apply_gap_fill_inserts(
     # Declared training availability is the authority for which countdown offsets a
     # filler may occupy; the calendar can span weekdays the athlete never trains.
     # ``None`` means availability was not declared, so prior behaviour is preserved.
-    training_days = {
-        day.strip().lower()
-        for day in ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
+    # Weekdays are compared by canonical index so abbreviated ("Fri") and full
+    # ("friday") spellings match. An offset is excluded only when its weekday is
+    # known and falls outside availability; an offset whose weekday is unresolved
+    # (e.g. short-notice payloads with no plan-creation weekday) cannot be proven
+    # unavailable and is left eligible so the mandatory watch is not dropped.
+    training_day_indices = {
+        index
+        for day in clean_list(athlete_model.get("training_days", []))
+        if (index := WEEKDAY_ORDER.get(str(day).strip().lower())) is not None
     }
     available_offsets: set[int] | None = (
         {
             offset
             for offset in range(1, days_until_fight + 1)
-            if str(countdown_map.get(f"D-{offset}") or "").strip().lower() in training_days
+            if (index := WEEKDAY_ORDER.get(
+                str(countdown_map.get(f"D-{offset}") or "").strip().lower()
+            )) is None
+            or index in training_day_indices
         }
-        if training_days
+        if training_day_indices
         else None
     )
 

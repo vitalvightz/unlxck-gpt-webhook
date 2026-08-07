@@ -204,6 +204,33 @@ def test_normal_camp_mandatory_watch_once_per_phase_on_available_day():
         assert _day_of(watches[0]) in WEEKDAYS
 
 
+def test_truncated_segment_with_no_available_day_gets_no_watch():
+    """Availability is absolute: a truncated all-weekend segment gets no watch.
+
+    ``days_until_fight=16`` with a Saturday plan-creation weekday leaves the
+    outermost (truncated) countdown segment entirely on the weekend — D-16
+    Saturday, D-15 Sunday — so a Monday–Friday athlete has no available day
+    there. That segment must receive no mandatory Tactical Watch rather than one
+    on an unavailable day, while the two full seven-day segments still get theirs.
+    """
+    sequence = apply_gap_fill_inserts(
+        [_session(16), _session(11), _session(6)],
+        _athlete(days_until_fight=16, plan_creation_weekday="saturday"),
+    )
+    watches = [r for r in _watches(sequence) if r.get("mandatory_tactical_watch")]
+
+    # Both full seven-day segments keep their mandatory watch, on an available day.
+    assert {w["tactical_watch_segment"] for w in watches} == {0, 1}
+    for watch in watches:
+        assert _day_of(watch) in WEEKDAYS
+
+    # The truncated all-weekend segment (2) is skipped, not filled unavailably,
+    # and no filler of any kind is placed on the weekend.
+    assert all(w["tactical_watch_segment"] != 2 for w in watches)
+    for role in _late_fight_fillers(sequence):
+        assert _day_of(role) not in WEEKEND
+
+
 # ── 3. All available days full → share an available day, never an unavailable one
 
 
