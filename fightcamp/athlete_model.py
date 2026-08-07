@@ -176,6 +176,7 @@ def _build_athlete_model(
         "competitive_maturity": record_profile["competitive_maturity"],
         "rounds_format": rounds_format,
         "camp_length_weeks": camp_length_weeks,
+        "phase_weeks": dict(training_context.phase_weeks or {}),
         "days_until_fight": training_context.days_until_fight,
         "fight_date": getattr(training_context, "next_fight_date", "") or "",
         "next_fight_date": getattr(training_context, "next_fight_date", "") or "",
