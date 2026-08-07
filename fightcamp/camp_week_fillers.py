@@ -13,8 +13,9 @@ The existing adaptive filler behaviour is otherwise unchanged:
 * non-fight-dated plans keep the previous SPP/TAPER filler behaviour
 
 The mandatory watch adds no physical stress, so it remains present in compressed
-weeks. Adaptive fillers still respect the existing compression, injury, fatigue,
-weight-cut and hard-sparring rules from :mod:`fightcamp.gap_fill_inserts`.
+weeks. It shares an already scheduled camp day rather than converting an off or
+recovery-only day. Adaptive fillers keep their existing placement and safety
+rules from :mod:`fightcamp.gap_fill_inserts`.
 """
 
 from __future__ import annotations
@@ -59,7 +60,6 @@ def _canonical_day(value: Any) -> str:
 
 
 def _calendar_d_day(week: dict[str, Any], weekday: str) -> int | None:
-    """Resolve the countdown day for a weekday from the week's calendar spine."""
     canonical = _canonical_day(weekday)
     if not canonical:
         return None
@@ -176,7 +176,6 @@ def _place_filler(
     usage_ledger: dict[str, Any],
     allow_physical: bool,
 ) -> dict[str, Any] | None:
-    """Select and append one adaptive filler for ``day``. Returns the role or None."""
     d_day = _calendar_d_day(week, day)
     if d_day is None:
         return None
@@ -215,22 +214,27 @@ def _valid_existing_watch(
 def _mandatory_watch_day(
     week: dict[str, Any],
     session_roles: list[dict[str, Any]],
-) -> tuple[str, bool] | None:
-    """Choose a normal existing camp slot; never invent a weekday outside the role map."""
-    for entry in week.get("intentionally_unused_days") or []:
-        if not isinstance(entry, dict):
+) -> str | None:
+    """Attach the watch to an already scheduled camp day; do not create a new day."""
+    counts = _role_day_counts(session_roles)
+    scheduled_days: list[str] = []
+    for role in session_roles:
+        if not isinstance(role, dict) or role.get("camp_week_filler"):
             continue
-        day = str(entry.get("day") or "").strip()
+        day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
         if (
             day
-            and str(entry.get("role") or "").strip() in {"off_day", "recovery_only_day"}
-            and not entry.get("low_aerobic_cap_skipped")
+            and day not in scheduled_days
             and (d_day := _calendar_d_day(week, day)) is not None
             and d_day > 0
         ):
-            return day, True
+            scheduled_days.append(day)
+    if scheduled_days:
+        return min(
+            scheduled_days,
+            key=lambda day: (counts.get(_canonical_day(day), 0), scheduled_days.index(day)),
+        )
 
-    counts = _role_day_counts(session_roles)
     declared = [
         str(day).strip()
         for day in clean_list(week.get("declared_training_days"))
@@ -238,28 +242,7 @@ def _mandatory_watch_day(
         and (d_day := _calendar_d_day(week, str(day))) is not None
         and d_day > 0
     ]
-    if declared:
-        return min(declared, key=lambda day: (counts.get(_canonical_day(day), 0), declared.index(day))), False
-
-    for role in session_roles:
-        day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
-        d_day = _calendar_d_day(week, day)
-        if day and d_day is not None and d_day > 0:
-            return day, False
-    return None
-
-
-def _consume_unused_day(week: dict[str, Any], chosen_day: str) -> None:
-    chosen = _canonical_day(chosen_day)
-    week["intentionally_unused_days"] = [
-        entry
-        for entry in (week.get("intentionally_unused_days") or [])
-        if not (
-            isinstance(entry, dict)
-            and _canonical_day(entry.get("day")) == chosen
-            and str(entry.get("role") or "").strip() in {"off_day", "recovery_only_day"}
-        )
-    ]
+    return declared[0] if declared else None
 
 
 def _ensure_mandatory_tactical_watch(
@@ -296,10 +279,9 @@ def _ensure_mandatory_tactical_watch(
         _record_insert_usage(usage_ledger, _TACTICAL_WATCH_ROLE_KEY, d_day)
         return True
 
-    placement = _mandatory_watch_day(week, session_roles)
-    if placement is None:
+    day = _mandatory_watch_day(week, session_roles)
+    if day is None:
         return False
-    day, uses_unused_day = placement
     d_day = _calendar_d_day(week, day)
     if d_day is None or d_day <= 0:
         return False
@@ -325,9 +307,6 @@ def _ensure_mandatory_tactical_watch(
     )
     session_roles.append(watch_role)
     _record_insert_usage(usage_ledger, _TACTICAL_WATCH_ROLE_KEY, d_day)
-    if uses_unused_day:
-        watch_role["converted_from_unused_day"] = True
-        _consume_unused_day(week, day)
     return True
 
 
