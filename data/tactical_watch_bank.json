@@ -1,0 +1,944 @@
+[
+  {
+    "key": "distance_striker.gpp.range_map",
+    "name": "Range Map",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 10,
+    "why": "Establish the ranges where you can score without staying available for the return.",
+    "mindset": {
+      "intent": "Control the space before increasing output.",
+      "focus": "Notice where each fighter can land without overreaching.",
+      "reset": "Return to the last range where you could see and react clearly.",
+      "anchor": "Make them cross your range before they can attack.",
+      "context": "Early-camp range study for a distance striker."
+    },
+    "instructions": [
+      "Mark the range where you can score while remaining difficult to reach.",
+      "Mark the range where the opponent becomes most dangerous.",
+      "Choose the strike that best controls the space between you.",
+      "Write one distance rule to test in your next technical session."
+    ],
+    "progress": "Test the distance rule in technical work and keep it only if it holds up."
+  },
+  {
+    "key": "distance_striker.gpp.lead_hand_battle",
+    "name": "Lead-Hand Battle",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 10,
+    "why": "Learn how the lead hand controls entry, rhythm and distance before exchanges develop.",
+    "mindset": {
+      "intent": "Own the first touch of the exchange.",
+      "focus": "Watch what happens immediately after the jab or lead-hand feint.",
+      "reset": "Rebuild the lead-hand position before throwing again.",
+      "anchor": "Win the lead hand before chasing the rear hand.",
+      "context": "Early-camp lead-hand control for a distance striker."
+    },
+    "instructions": [
+      "Identify the most common reaction to a jab or lead-hand feint.",
+      "Choose your lead-hand answer to that reaction.",
+      "Choose the follow-up that keeps you at your preferred range.",
+      "Write one lead-hand action you should avoid because it gives away distance."
+    ],
+    "progress": "Use the chosen lead-hand answer during the next technical round."
+  },
+  {
+    "key": "distance_striker.gpp.exit_discipline",
+    "name": "Exit Discipline",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 9,
+    "why": "Stop clean scoring from turning into avoidable return-fire by leaving on time.",
+    "mindset": {
+      "intent": "Finish the exchange with position, not admiration.",
+      "focus": "Watch the half-second after your scoring action.",
+      "reset": "If you stay too long, leave first and rebuild range.",
+      "anchor": "Score, move, see again.",
+      "context": "Early-camp exit habit review for a distance striker."
+    },
+    "instructions": [
+      "Find your most common exit after landing cleanly.",
+      "Spot one moment where you remain in range too long.",
+      "Choose the safer exit side for that moment.",
+      "Write one exit rule you can apply without thinking."
+    ],
+    "progress": "Rehearse the exit rule after every clean score in shadow or technical work."
+  },
+  {
+    "key": "distance_striker.spp.intercept_the_entry",
+    "name": "Intercept the Entry",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 10,
+    "why": "Stop pressure before it reaches the pocket and takes away your preferred range.",
+    "mindset": {
+      "intent": "Meet the entry before it becomes an exchange.",
+      "focus": "Watch the first committed step, dip, load or feint before pressure arrives.",
+      "reset": "After the intercept, leave and rebuild the range immediately.",
+      "anchor": "Make the entry pay before it gets close.",
+      "context": "Opponent-specific entry control for a distance striker."
+    },
+    "instructions": [
+      "Identify the movement that most reliably starts the opponent's entry.",
+      "Choose one intercepting action for that trigger.",
+      "Choose the exit direction immediately after the intercept.",
+      "Define the position or distance you want to reset to."
+    ],
+    "progress": "Rehearse trigger, intercept, exit and reset as one sequence."
+  },
+  {
+    "key": "distance_striker.spp.exit_lane_audit",
+    "name": "Exit Lane Audit",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 10,
+    "why": "Choose exits that move away from the opponent's strongest pursuit and return fire.",
+    "mindset": {
+      "intent": "Leave through the lane that keeps the next exchange yours.",
+      "focus": "Track which direction the opponent follows fastest after you score.",
+      "reset": "If the lane closes, protect first and take the next clear exit.",
+      "anchor": "Do not exit into their best side.",
+      "context": "SPP exit planning against the expected opponent pattern."
+    },
+    "instructions": [
+      "Choose the best exit after your jab.",
+      "Choose the best exit after your rear-hand score.",
+      "Choose the safest escape when the opponent is already pressuring.",
+      "Name the direction you should avoid because it feeds their strongest attack."
+    ],
+    "progress": "Use the exit choices in technical rounds and note which lane stays open most often."
+  },
+  {
+    "key": "distance_striker.spp.rope_corner_escape",
+    "name": "Rope and Corner Escape",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 10,
+    "why": "Prepare a calm escape when pressure removes the open space you normally rely on.",
+    "mindset": {
+      "intent": "Escape before the position becomes a prolonged pocket exchange.",
+      "focus": "Watch which side gets blocked first when the opponent closes the ring.",
+      "reset": "Protect, create one lane, then restore long range.",
+      "anchor": "One clean exit is enough.",
+      "context": "SPP trapped-position planning for a distance striker."
+    },
+    "instructions": [
+      "Identify the moment the ropes or corner begin limiting your movement.",
+      "Choose the first defensive action that buys the escape.",
+      "Choose the route you will take out of the trapped position.",
+      "Define the range you want once you are clear."
+    ],
+    "progress": "Start one technical round near the ropes and rehearse the same escape route."
+  },
+  {
+    "key": "distance_striker.taper.first_round_range_script",
+    "name": "First-Round Range Script",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 8,
+    "why": "Confirm the opening range plan without adding new tactical information late in camp.",
+    "mindset": {
+      "intent": "Start simple and establish your distance early.",
+      "focus": "Keep only cues you have already trained.",
+      "reset": "If the opening gets messy, return to the jab and your preferred range.",
+      "anchor": "Simple first, sharp second.",
+      "context": "Fight-week confirmation for a distance striker."
+    },
+    "instructions": [
+      "Choose the familiar weapon you will show first.",
+      "Choose the first range test you will use to read the opponent.",
+      "Confirm your trained response if they rush the space.",
+      "Write one short first-round range cue."
+    ],
+    "progress": "Rehearse the cue once in shadow work, then leave it alone."
+  },
+  {
+    "key": "distance_striker.taper.final_range_cue",
+    "name": "Final Range Cue",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "distance_striker"],
+    "duration_min": 6,
+    "why": "Reduce your trained range plan to one cue you can recall under pressure.",
+    "mindset": {
+      "intent": "Carry one trusted range behaviour into fight day.",
+      "focus": "Use only what already worked in camp.",
+      "reset": "Return to the same cue after any messy exchange.",
+      "anchor": "Range first.",
+      "context": "Final taper compression for a distance striker."
+    },
+    "instructions": [
+      "Review one familiar clip or one successful technical round.",
+      "Choose the single range behaviour that mattered most.",
+      "Turn it into a cue of no more than six words."
+    ],
+    "progress": "Use the same cue in the final light rehearsal; do not add another."
+  },
+  {
+    "key": "brawler.gpp.pressure_route_scan",
+    "name": "Pressure Route Scan",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 10,
+    "why": "Learn where opponents naturally retreat so pressure can steer instead of chase.",
+    "mindset": {
+      "intent": "Guide the opponent toward the space you want.",
+      "focus": "Watch the first direction they choose when space disappears.",
+      "reset": "If you start following, pause and rebuild the angle.",
+      "anchor": "Cut the ring, do not chase it.",
+      "context": "Early-camp pressure route study for a brawler."
+    },
+    "instructions": [
+      "Identify the opponent's preferred retreat direction.",
+      "Choose the direction you should step to cut that route.",
+      "Identify the cue that tells you pressure should start.",
+      "Choose the area of the ring you want to trap them in."
+    ],
+    "progress": "Use one technical round to steer toward the chosen trap instead of following."
+  },
+  {
+    "key": "brawler.gpp.safe_entry_builder",
+    "name": "Safe Entry Builder",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 10,
+    "why": "Build a repeatable way into the pocket without walking onto clean shots.",
+    "mindset": {
+      "intent": "Arrive protected before trying to win the exchange.",
+      "focus": "Watch what the opponent throws as someone closes distance.",
+      "reset": "If the entry is naked, leave and rebuild the setup.",
+      "anchor": "Earn the pocket.",
+      "context": "Early-camp entry quality for a brawler."
+    },
+    "instructions": [
+      "Choose the setup that hides your forward step.",
+      "Choose the guard position you need while crossing range.",
+      "Choose the first punch that establishes the pocket.",
+      "Define where your head should finish after the entry."
+    ],
+    "progress": "Rehearse the same setup and head position before adding longer combinations."
+  },
+  {
+    "key": "brawler.gpp.pressure_reset",
+    "name": "Pressure Reset",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 9,
+    "why": "Keep pressure controlled so forward intent does not turn into reckless chasing.",
+    "mindset": {
+      "intent": "Stay dangerous without becoming hurried.",
+      "focus": "Spot the moment your feet begin following instead of cutting.",
+      "reset": "Pause the chase, square the stance and rebuild the entry.",
+      "anchor": "Pressure is position, not speed.",
+      "context": "Early-camp pressure discipline for a brawler."
+    },
+    "instructions": [
+      "Find one sign that your pressure has become rushed.",
+      "Choose the safe action that pauses the chase without giving up position.",
+      "Choose the setup that starts your next entry.",
+      "Write one pressure rule that keeps your feet organised."
+    ],
+    "progress": "Use the reset whenever you notice yourself following during technical work."
+  },
+  {
+    "key": "brawler.spp.pocket_exchange_map",
+    "name": "Pocket Exchange Map",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 10,
+    "why": "Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.",
+    "mindset": {
+      "intent": "Win the second decision inside the pocket.",
+      "focus": "Watch the opponent's response after the first two punches.",
+      "reset": "If the exchange loses shape, smother or leave instead of trading blindly.",
+      "anchor": "Know the next beat.",
+      "context": "SPP pocket planning for a brawler."
+    },
+    "instructions": [
+      "Identify the opponent's most common pocket sequence.",
+      "Choose your answer to that sequence.",
+      "Choose the finishing shot that best fits the opening.",
+      "Decide whether that exchange should end with an exit or a smother."
+    ],
+    "progress": "Rehearse the chosen exchange ending, not just the opening combination."
+  },
+  {
+    "key": "brawler.spp.body_attack_opportunity",
+    "name": "Body Attack Opportunity",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 10,
+    "why": "Find safe body attacks that reward pressure without making the entry predictable.",
+    "mindset": {
+      "intent": "Attack the body when the position earns it.",
+      "focus": "Watch for high guards, separated elbows and upright posture.",
+      "reset": "If the body line closes, go back upstairs rather than forcing it.",
+      "anchor": "Open it before you take it.",
+      "context": "SPP body-attack selection for a brawler."
+    },
+    "instructions": [
+      "Identify the clearest body opening the opponent gives away.",
+      "Choose the punch or feint that creates that opening.",
+      "Choose the body target you will attack.",
+      "Choose the head follow-up that punishes their reaction."
+    ],
+    "progress": "Use the body attack only after the chosen setup appears in technical work."
+  },
+  {
+    "key": "brawler.spp.smother_and_reset",
+    "name": "Smother and Reset",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 10,
+    "why": "Stop the opponent firing back immediately after your pressure combination lands.",
+    "mindset": {
+      "intent": "Own the space after your combination as well as during it.",
+      "focus": "Watch when the opponent begins their return fire.",
+      "reset": "Close the return, then rebuild before attacking again.",
+      "anchor": "Finish safe before restarting.",
+      "context": "SPP post-combination control for a brawler."
+    },
+    "instructions": [
+      "Choose where your body should finish after the combination.",
+      "Choose your response if the opponent fires back immediately.",
+      "Define the smother or control position you can reach safely.",
+      "Choose the action that resets you for the next pressure sequence."
+    ],
+    "progress": "Finish every rehearsed combination with the same smother-or-reset decision."
+  },
+  {
+    "key": "brawler.taper.first_round_pressure_script",
+    "name": "First-Round Pressure Script",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 8,
+    "why": "Confirm controlled opening pressure without turning fight-night energy into a reckless start.",
+    "mindset": {
+      "intent": "Take space calmly before increasing the exchange rate.",
+      "focus": "Use only the pressure actions already rehearsed in camp.",
+      "reset": "If you rush, rebuild the ring cut before throwing again.",
+      "anchor": "Close calmly.",
+      "context": "Fight-week opening script for a brawler."
+    },
+    "instructions": [
+      "Choose the opening pressure action you already trust.",
+      "Choose the first ring cut you want to establish.",
+      "Choose the first familiar combination you will show.",
+      "Write one reset cue that prevents chasing."
+    ],
+    "progress": "Rehearse the script once at low intensity and keep it unchanged."
+  },
+  {
+    "key": "brawler.taper.final_pressure_cue",
+    "name": "Final Pressure Cue",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "brawler"],
+    "duration_min": 6,
+    "why": "Reduce your pressure plan to one familiar instruction that keeps aggression organised.",
+    "mindset": {
+      "intent": "Carry controlled forward pressure into the fight.",
+      "focus": "Keep the cue tied to positioning, not emotion.",
+      "reset": "Return to the same cue whenever the pace becomes messy.",
+      "anchor": "Position before volume.",
+      "context": "Final taper compression for a brawler."
+    },
+    "instructions": [
+      "Review one successful pressure sequence from camp.",
+      "Choose the behaviour that made the pressure work.",
+      "Turn it into one cue of no more than six words."
+    ],
+    "progress": "Use the same cue in the final light rehearsal and do not add another."
+  },
+  {
+    "key": "counter_striker.gpp.trigger_library",
+    "name": "Trigger Library",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 10,
+    "why": "Build a clear library of movements that reliably predict an opponent's attack.",
+    "mindset": {
+      "intent": "Read what happens before the punch, not after it lands.",
+      "focus": "Watch shoulders, weight shifts, feet and repeated rhythm changes.",
+      "reset": "If the signal is unclear, observe again instead of guessing.",
+      "anchor": "Read the trigger first.",
+      "context": "Early-camp pattern recognition for a counter striker."
+    },
+    "instructions": [
+      "Identify the clearest signal before a jab.",
+      "Identify the clearest signal before a rear-hand attack.",
+      "Identify the clearest signal before a committed entry.",
+      "Choose the one trigger you trust most."
+    ],
+    "progress": "Look only for the most reliable trigger during the next technical round."
+  },
+  {
+    "key": "counter_striker.gpp.draw_the_lead",
+    "name": "Draw the Lead",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 10,
+    "why": "Create predictable attacks instead of waiting passively for a counter opportunity.",
+    "mindset": {
+      "intent": "Make the opponent give you the attack you want.",
+      "focus": "Watch what reliably makes them throw first.",
+      "reset": "If the bait gets no reaction, return to neutral and show something else.",
+      "anchor": "Invite, read, answer.",
+      "context": "Early-camp counter creation for a counter striker."
+    },
+    "instructions": [
+      "Choose one bait or feint that invites a clear attack.",
+      "Name the attack you expect that bait to draw.",
+      "Choose the counter you will use against it.",
+      "Choose the exit that ends the exchange safely."
+    ],
+    "progress": "Rehearse the bait and expected response before increasing speed."
+  },
+  {
+    "key": "counter_striker.gpp.counter_activity_check",
+    "name": "Counter Activity Check",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 9,
+    "why": "Keep counter striking active so patience does not become long periods of inactivity.",
+    "mindset": {
+      "intent": "Stay responsible for creating information.",
+      "focus": "Notice when waiting stops producing useful reads.",
+      "reset": "Use a safe probe when the exchange goes quiet.",
+      "anchor": "Patient does not mean passive.",
+      "context": "Early-camp activity control for a counter striker."
+    },
+    "instructions": [
+      "Choose one safe action that gathers information without overcommitting.",
+      "Find one moment where you waited too long to create a reaction.",
+      "Choose the action you can use to provoke a response.",
+      "Write one activity rule that keeps you engaged without forcing exchanges."
+    ],
+    "progress": "Use the activity rule during quiet moments in the next technical session."
+  },
+  {
+    "key": "counter_striker.spp.first_beat_second_beat",
+    "name": "First Beat or Second Beat",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 10,
+    "why": "Decide whether the opponent is safest to counter immediately or after they continue attacking.",
+    "mindset": {
+      "intent": "Counter at the beat that leaves the clearest opening.",
+      "focus": "Watch whether balance and guard worsen after the first attack.",
+      "reset": "If the timing is unclear, defend first and wait for the next clean read.",
+      "anchor": "Choose the beat, do not rush it.",
+      "context": "SPP timing selection for a counter striker."
+    },
+    "instructions": [
+      "Define when you should counter on the opponent's first attack.",
+      "Define when you should wait for their second action instead.",
+      "Choose the counter that best fits the clearer beat.",
+      "Write the safety rule that tells you when not to fire."
+    ],
+    "progress": "Rehearse both beats, then keep the one that gives the cleaner exit."
+  },
+  {
+    "key": "counter_striker.spp.counter_and_exit",
+    "name": "Counter and Exit",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 10,
+    "why": "Stop a successful counter from becoming a second exchange you did not choose.",
+    "mindset": {
+      "intent": "Treat the exit as part of the counter.",
+      "focus": "Watch the opponent's first reaction after they are countered.",
+      "reset": "Leave before judging how clean the counter landed.",
+      "anchor": "Counter, leave, see again.",
+      "context": "SPP post-counter positioning for a counter striker."
+    },
+    "instructions": [
+      "Choose the counter you expect to use most often.",
+      "Choose the exit direction that avoids the likely return.",
+      "Choose the guard position you need while leaving.",
+      "Define the distance you want before looking to counter again."
+    ],
+    "progress": "Attach the same exit to the counter every time you rehearse it."
+  },
+  {
+    "key": "counter_striker.spp.counter_the_counter",
+    "name": "Counter the Counter",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 10,
+    "why": "Prepare for the opponent changing their attack after your first counter starts working.",
+    "mindset": {
+      "intent": "Expect adaptation instead of assuming the first answer stays open.",
+      "focus": "Watch what changes after the opponent has been countered once or twice.",
+      "reset": "Abort if the expected adjustment does not appear.",
+      "anchor": "Have an answer to their answer.",
+      "context": "SPP second-order adjustment for a counter striker."
+    },
+    "instructions": [
+      "Choose the first counter you expect to establish.",
+      "Predict the most likely adjustment the opponent makes to avoid it.",
+      "Choose your second answer to that adjustment.",
+      "Define the cue that tells you to abort rather than force the sequence."
+    ],
+    "progress": "Rehearse the first counter, the likely adjustment and the second answer as one decision chain."
+  },
+  {
+    "key": "counter_striker.taper.first_round_patience_script",
+    "name": "First-Round Patience Script",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 8,
+    "why": "Confirm active patience so the opening round gathers information without becoming passive.",
+    "mindset": {
+      "intent": "Create reads early without forcing the counter.",
+      "focus": "Use only the baits and counters already proven in camp.",
+      "reset": "If nothing appears, probe again instead of waiting empty-handed.",
+      "anchor": "Active patience.",
+      "context": "Fight-week opening script for a counter striker."
+    },
+    "instructions": [
+      "Choose the first safe action you will use to gather information.",
+      "Choose one familiar bait that can draw a reaction.",
+      "Confirm the counter you already trust most.",
+      "Write one activity cue that prevents passive waiting."
+    ],
+    "progress": "Run the opening script once in light rehearsal and keep it unchanged."
+  },
+  {
+    "key": "counter_striker.taper.final_counter_cue",
+    "name": "Final Counter Cue",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "counter_striker"],
+    "duration_min": 6,
+    "why": "Reduce your counter plan to one familiar read-and-response cue for fight day.",
+    "mindset": {
+      "intent": "Trust the read you have already trained.",
+      "focus": "Keep one trigger and one response in mind.",
+      "reset": "Return to observation if the trigger is not there.",
+      "anchor": "See it, answer it.",
+      "context": "Final taper compression for a counter striker."
+    },
+    "instructions": [
+      "Review one successful counter sequence from camp.",
+      "Choose the trigger you recognised most reliably.",
+      "Turn the trigger and response into one cue of no more than six words."
+    ],
+    "progress": "Use the same cue in the final light rehearsal; do not add another counter idea."
+  },
+  {
+    "key": "generic.gpp.opponent_pattern_scan",
+    "name": "Opponent Pattern Scan",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 10,
+    "why": "Build basic tactical awareness by separating repeated patterns from one-off moments.",
+    "mindset": {
+      "intent": "Look for repetition before making a conclusion.",
+      "focus": "Track the same behaviour across several exchanges.",
+      "reset": "If the pattern appears once, keep watching before acting on it.",
+      "anchor": "Repeated beats random.",
+      "context": "General early-camp pattern study."
+    },
+    "instructions": [
+      "Identify the most repeated movement or exchange pattern.",
+      "Choose the clearest opportunity that pattern creates.",
+      "Choose the main danger linked to that pattern.",
+      "Write one observation to test in training rather than treating it as fact."
+    ],
+    "progress": "Test the observation in technical work and keep it only if it repeats."
+  },
+  {
+    "key": "generic.gpp.threat_priority",
+    "name": "Threat Priority",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Separate the biggest tactical problem from smaller threats so training attention stays clear.",
+    "mindset": {
+      "intent": "Solve the highest-value problem first.",
+      "focus": "Rank threats by how often and how badly they change exchanges.",
+      "reset": "If everything looks dangerous, return to frequency and consequence.",
+      "anchor": "One priority first.",
+      "context": "General early-camp threat ranking."
+    },
+    "instructions": [
+      "List the three threats that affect exchanges most often.",
+      "Rank them from highest to lowest priority.",
+      "Choose the first answer you will train for the top threat."
+    ],
+    "progress": "Build the next tactical rehearsal around the top-ranked threat only."
+  },
+  {
+    "key": "generic.gpp.defensive_habit_review",
+    "name": "Defensive Habit Review",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Identify the defensive habit that restores control and the one that keeps you under pressure.",
+    "mindset": {
+      "intent": "See what your defence leads to, not just whether it avoids one shot.",
+      "focus": "Watch the position immediately after each defensive action.",
+      "reset": "Return to the defensive action that gives you sight and balance.",
+      "anchor": "Defend into control.",
+      "context": "General early-camp defensive habit study."
+    },
+    "instructions": [
+      "Identify your first defensive reaction under pressure.",
+      "Find the defensive habit that repeatedly leaves you in a worse position.",
+      "Choose the defensive position that restores control best.",
+      "Write one defensive rule to carry into technical work."
+    ],
+    "progress": "Use the defensive rule during the next controlled pressure round."
+  },
+  {
+    "key": "generic.gpp.rhythm_map",
+    "name": "Rhythm Map",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Recognise when exchanges speed up, slow down or become predictable before adding tactics.",
+    "mindset": {
+      "intent": "See the tempo changes that organise the fight.",
+      "focus": "Notice what happens just before the pace changes.",
+      "reset": "If the rhythm becomes unclear, watch one full minute without making notes.",
+      "anchor": "Tempo tells you what is next.",
+      "context": "General early-camp rhythm study."
+    },
+    "instructions": [
+      "Mark one period where the pace is slow and controlled.",
+      "Mark one period where the pace suddenly rises.",
+      "Identify what usually causes the change in tempo.",
+      "Choose one rhythm you want to impose in training."
+    ],
+    "progress": "Use one technical round to deliberately create the chosen rhythm."
+  },
+  {
+    "key": "generic.gpp.first_exchange_audit",
+    "name": "First-Exchange Audit",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Understand what repeatedly decides the first meaningful exchange before longer sequences develop.",
+    "mindset": {
+      "intent": "Learn what gives one fighter early control.",
+      "focus": "Watch the first committed exchange after each reset.",
+      "reset": "Ignore the result and look again at how the exchange started.",
+      "anchor": "The start shapes the rest.",
+      "context": "General early-camp opening-exchange study."
+    },
+    "instructions": [
+      "Find three first exchanges after clean resets.",
+      "Identify what action gave one fighter the advantage most often.",
+      "Identify the position that usually followed that advantage.",
+      "Choose one opening behaviour to test in training."
+    ],
+    "progress": "Start three technical rounds by testing the chosen opening behaviour."
+  },
+  {
+    "key": "generic.gpp.position_map",
+    "name": "Position Map",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Identify the positions where you make good decisions and the positions that create rushed choices.",
+    "mindset": {
+      "intent": "Know where the fight becomes easiest to read.",
+      "focus": "Compare decision quality across different ring or cage positions.",
+      "reset": "If a position is unclear, track what happens for the next two exchanges.",
+      "anchor": "Good position buys good decisions.",
+      "context": "General early-camp position study."
+    },
+    "instructions": [
+      "Choose one position where you consistently make clear decisions.",
+      "Choose one position where decisions become rushed or limited.",
+      "Identify what movement usually takes you from the bad position to the good one.",
+      "Write one positional rule to test."
+    ],
+    "progress": "Use the positional rule in one controlled round and review whether it improves decision quality."
+  },
+  {
+    "key": "generic.gpp.reset_habit_review",
+    "name": "Reset Habit Review",
+    "phases": ["GPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 8,
+    "why": "Make the reset between exchanges deliberate instead of letting the next exchange start from disorder.",
+    "mindset": {
+      "intent": "Finish each exchange ready for the next one.",
+      "focus": "Watch feet, guard and eyes during the reset.",
+      "reset": "If one piece is missing, rebuild it before re-engaging.",
+      "anchor": "Reset before restart.",
+      "context": "General early-camp reset quality."
+    },
+    "instructions": [
+      "Identify the first thing you normally do after an exchange ends.",
+      "Find the part of your stance, guard or vision that is slowest to recover.",
+      "Choose the order you want your reset to happen in.",
+      "Write one short reset routine."
+    ],
+    "progress": "Use the reset routine after every exchange in the next technical session."
+  },
+  {
+    "key": "generic.spp.trigger_response_builder",
+    "name": "Trigger-Response Builder",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 10,
+    "why": "Turn one reliable opponent signal into a trained action instead of a vague tactical idea.",
+    "mindset": {
+      "intent": "Make one read immediately actionable.",
+      "focus": "Choose a trigger you can genuinely see in real time.",
+      "reset": "If the trigger is absent, stay neutral rather than forcing the response.",
+      "anchor": "See it, do it.",
+      "context": "General SPP trigger-response work."
+    },
+    "instructions": [
+      "Choose one reliable visual or positional trigger.",
+      "Choose the action you will take when it appears.",
+      "Choose how you leave after the action.",
+      "Choose what you use to reset before the next exchange."
+    ],
+    "progress": "Rehearse the full trigger-response-exit-reset chain in technical work."
+  },
+  {
+    "key": "generic.spp.round_flow_map",
+    "name": "Round Flow Map",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 10,
+    "why": "Understand how the opponent's behaviour changes through the round instead of treating every minute the same.",
+    "mindset": {
+      "intent": "Match your tactical decisions to the part of the round you are in.",
+      "focus": "Compare the first, middle and final minute.",
+      "reset": "If the pattern changes, update the map rather than forcing the first read.",
+      "anchor": "The round has phases too.",
+      "context": "General SPP round-management study."
+    },
+    "instructions": [
+      "Describe the opponent's behaviour in the first minute.",
+      "Describe what changes in the middle of the round.",
+      "Describe what changes in the final minute.",
+      "Choose the part of the round where you should take the most control."
+    ],
+    "progress": "Plan one technical round around the chosen control window."
+  },
+  {
+    "key": "generic.spp.scoring_map",
+    "name": "Scoring Map",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 10,
+    "why": "Separate clean, repeatable scoring actions from busy work that looks active but gives little return.",
+    "mindset": {
+      "intent": "Build around actions that score clearly and leave you organised.",
+      "focus": "Watch which actions land cleanly without costing position.",
+      "reset": "If an action creates noise but no clean score, move on from it.",
+      "anchor": "Repeat what scores cleanly.",
+      "context": "General SPP scoring efficiency."
+    },
+    "instructions": [
+      "Choose the cleanest scoring action you can repeat.",
+      "Choose the position you want to control while scoring.",
+      "Choose one combination worth repeating.",
+      "Identify one busy but low-value action to reduce."
+    ],
+    "progress": "Track how often the selected scoring action lands cleanly in technical work."
+  },
+  {
+    "key": "generic.spp.momentum_shift_review",
+    "name": "Momentum Shift Review",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 10,
+    "why": "Recognise the moment control changes so you can respond before a bad spell becomes a lost round.",
+    "mindset": {
+      "intent": "Notice momentum early enough to act on it.",
+      "focus": "Find the exchange or positional change that altered the round.",
+      "reset": "Return to the last action that gave you control.",
+      "anchor": "Catch the shift early.",
+      "context": "General SPP momentum management."
+    },
+    "instructions": [
+      "Find the moment the round clearly changed direction.",
+      "Identify what caused the change.",
+      "Identify what the fighter gaining control noticed or exploited.",
+      "Choose the response you would use to stop the same shift."
+    ],
+    "progress": "Rehearse the chosen response immediately after a deliberately difficult exchange."
+  },
+  {
+    "key": "generic.spp.adversity_reset",
+    "name": "Adversity Reset",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Prepare a simple route back to control after being hit, trapped, tired or frustrated.",
+    "mindset": {
+      "intent": "Make the first action after adversity predictable and safe.",
+      "focus": "Watch what successful fighters do in the first few seconds after trouble.",
+      "reset": "Use the same short reset instead of solving everything at once.",
+      "anchor": "First get safe, then regain control.",
+      "context": "General SPP adversity planning."
+    },
+    "instructions": [
+      "Choose the immediate defensive action you use first after trouble.",
+      "Choose one short reset phrase.",
+      "Choose the next safe action that restarts your offence or position.",
+      "Choose the route that brings you back to control."
+    ],
+    "progress": "Start one technical drill from a disadvantaged position and use the same reset sequence."
+  },
+  {
+    "key": "generic.spp.adjustment_tree",
+    "name": "Adjustment Tree",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 10,
+    "why": "Prepare one clear adjustment when the first tactical plan stops working.",
+    "mindset": {
+      "intent": "Change one variable instead of abandoning the whole plan.",
+      "focus": "Identify exactly what is failing before choosing the adjustment.",
+      "reset": "Keep the parts of the plan that are still working.",
+      "anchor": "Adjust, do not panic-rewrite.",
+      "context": "General SPP plan-B preparation."
+    },
+    "instructions": [
+      "Name the part of your first plan most likely to fail.",
+      "Choose the part that should stay unchanged.",
+      "Choose one tactical change that addresses the failure.",
+      "Define the sign that tells you the adjustment is working."
+    ],
+    "progress": "Run one technical round where the first option is deliberately removed and use the adjustment."
+  },
+  {
+    "key": "generic.spp.opening_exchange_test",
+    "name": "Opening Exchange Test",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Use the first exchanges to gather specific information instead of trying to prove the whole game plan immediately.",
+    "mindset": {
+      "intent": "Make the opening exchange answer one question.",
+      "focus": "Choose what you need to learn first about the opponent.",
+      "reset": "After the test, return to your base position before changing anything.",
+      "anchor": "Test, read, then decide.",
+      "context": "General SPP opening-information plan."
+    },
+    "instructions": [
+      "Choose the first tactical question you need answered.",
+      "Choose the safe action that tests that question.",
+      "Define the response that confirms your read.",
+      "Choose what you will do next if the read is confirmed."
+    ],
+    "progress": "Start a technical round with the same test and act only on the observed response."
+  },
+  {
+    "key": "generic.spp.route_to_control",
+    "name": "Route to Control",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Link one difficult position to the position where your decisions and scoring are strongest.",
+    "mindset": {
+      "intent": "Know the route back to your best fighting position.",
+      "focus": "Watch the movement that changes a bad position into a useful one.",
+      "reset": "If the first route is blocked, protect position before trying again.",
+      "anchor": "Move toward control.",
+      "context": "General SPP positional transition planning."
+    },
+    "instructions": [
+      "Choose the position you most want to avoid staying in.",
+      "Choose the position where you perform best.",
+      "Identify the movement or action that links the two.",
+      "Choose one cue that starts that transition."
+    ],
+    "progress": "Begin one technical drill in the difficult position and earn the route back to control."
+  },
+  {
+    "key": "generic.spp.last_minute_control",
+    "name": "Last-Minute Control",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 9,
+    "why": "Plan how to close a round clearly when fatigue and urgency make decision-making noisier.",
+    "mindset": {
+      "intent": "Finish the round with clear control rather than random volume.",
+      "focus": "Watch what changes in the final minute when both fighters know time is short.",
+      "reset": "If the finish becomes reckless, return to the safest scoring action.",
+      "anchor": "Close clearly.",
+      "context": "General SPP final-minute management."
+    },
+    "instructions": [
+      "Identify the safest scoring action late in the round.",
+      "Choose the position you want before the final exchange.",
+      "Choose the mistake you must avoid when urgency rises.",
+      "Write one final-minute instruction."
+    ],
+    "progress": "Finish one technical round using the same final-minute instruction."
+  },
+  {
+    "key": "generic.spp.corner_instruction_translation",
+    "name": "Corner Instruction Translation",
+    "phases": ["SPP"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 8,
+    "why": "Turn a complicated tactical instruction into one action you can execute under fatigue.",
+    "mindset": {
+      "intent": "Make the instruction observable and executable.",
+      "focus": "Separate what you need to notice from what you need to do.",
+      "reset": "If the instruction feels crowded, reduce it to the first action only.",
+      "anchor": "One instruction, one action.",
+      "context": "General SPP corner-message rehearsal."
+    },
+    "instructions": [
+      "Write the full tactical instruction you want to remember.",
+      "Identify the thing you must notice before acting.",
+      "Choose the single action that follows that read.",
+      "Compress the instruction to three words."
+    ],
+    "progress": "Use only the three-word version during the next hard technical round."
+  },
+  {
+    "key": "generic.taper.familiar_round_one_rehearsal",
+    "name": "Familiar Round-One Rehearsal",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 7,
+    "why": "Confirm a familiar opening sequence without adding new decisions during taper.",
+    "mindset": {
+      "intent": "Start with what has already worked in camp.",
+      "focus": "Use only confirmed actions and responses.",
+      "reset": "If the opening changes, return to the safest familiar action.",
+      "anchor": "Familiar first.",
+      "context": "General fight-week opening rehearsal."
+    },
+    "instructions": [
+      "Choose the first familiar action you will show.",
+      "Choose the response you already trust if the opponent disrupts it.",
+      "Choose the position you want after the opening exchange.",
+      "Say the sequence once in plain language."
+    ],
+    "progress": "Rehearse the sequence once at low intensity, then stop analysing it."
+  },
+  {
+    "key": "generic.taper.final_tactical_cue_card",
+    "name": "Final Tactical Cue Card",
+    "phases": ["TAPER"],
+    "tags": ["tactical_watch", "generic"],
+    "duration_min": 6,
+    "why": "Reduce the trained game plan to a few familiar cues that remain usable under pressure.",
+    "mindset": {
+      "intent": "Carry only the most useful information into fight day.",
+      "focus": "Use cues already rehearsed successfully.",
+      "reset": "If thoughts multiply, return to the single final sentence.",
+      "anchor": "Simple survives pressure.",
+      "context": "Final fight-week tactical compression."
+    },
+    "instructions": [
+      "Choose one familiar entry cue.",
+      "Choose one familiar scoring cue.",
+      "Choose one danger cue and one reset phrase.",
+      "Condense them into one final sentence you can recall under pressure."
+    ],
+    "progress": "Read the final sentence before the last light rehearsal; add nothing new."
+  }
+]
