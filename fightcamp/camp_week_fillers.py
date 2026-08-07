@@ -1,26 +1,20 @@
-"""Low-cost filler sessions for normal-camp SPP/TAPER weeks.
+"""Low-cost support sessions for normal fight-camp weeks.
 
-The late-fight payload already gap-fills its session sequence with low/zero-cost
-support inserts (tactical cue cards, breathing resets, mobility touches, ...) via
-:mod:`fightcamp.gap_fill_inserts`. The normal camp path never did: SPP and TAPER
-weeks ship only their main session roles, so declared training days the planner
-left unused render as plain off/recovery days and the athlete gets no low-cost
-support work at all.
+For fight-dated plans, one zero-load ``tactical_watch`` is mandatory in every
+GPP, SPP and TAPER week. The watch is selected from the Tactical Watch drill bank
+using only the athlete's declared tactical style, the current camp phase and the
+set of watch keys already used in the camp.
 
-This module is a thin overlay that reuses the *same* insert selection policy for
-normal-camp weeks. It only places fillers:
+The existing adaptive filler behaviour is otherwise unchanged:
 
-* in SPP and TAPER weeks (capped at 2 and 1 fillers per week respectively);
-* on intentionally-unused training days first (the "space"), falling back to at
-  most one filler alongside an existing session when a week has no free day;
-* never on a week compressed on purpose (fatigue / safety compression), never on
-  an unused day a safety gate already annotated, and never more than one
-  physical insert per week.
+* GPP: Tactical Watch only (total support cap 1)
+* SPP: Tactical Watch plus at most one adaptive filler (total support cap 2)
+* TAPER: Tactical Watch only (total support cap 1)
+* non-fight-dated plans keep the previous SPP/TAPER filler behaviour
 
-All athlete-state safety rules (active weight cut, high fatigue, injury state,
-hard-sparring days, D-1/D-0 restrictions) come from
-:func:`fightcamp.gap_fill_inserts.select_gap_fill_insert` unchanged, so camp
-fillers can never be more aggressive than the late-fight ones.
+The mandatory watch adds no physical stress, so it remains present in compressed
+weeks. Adaptive fillers still respect the existing compression, injury, fatigue,
+weight-cut and hard-sparring rules from :mod:`fightcamp.gap_fill_inserts`.
 """
 
 from __future__ import annotations
@@ -29,31 +23,37 @@ from typing import Any
 
 from .gap_fill_inserts import (
     PHYSICAL_INSERTS,
+    _build_insert_role,
     _new_usage_ledger,
     _record_insert_usage,
     select_gap_fill_insert,
 )
 from .normalization import WEEKDAY_ORDER, clean_list
+from .tactical_watch_library import (
+    build_watch_display_text,
+    extract_tactical_style,
+    select_tactical_watch,
+    watch_metadata,
+)
 
-# Per-week filler caps. GPP is intentionally absent: early camp has enough real
-# training volume that low-cost filler adds noise, not value.
-_PHASE_FILLER_CAPS = {"SPP": 2, "TAPER": 1}
-
-# At most one filler may share a day with an existing session per week; free
-# (intentionally unused) days are always preferred.
+_FIGHT_PHASE_FILLER_CAPS = {"GPP": 1, "SPP": 2, "TAPER": 1}
+_LEGACY_PHASE_FILLER_CAPS = {"SPP": 2, "TAPER": 1}
 _MAX_SHARED_DAY_FILLERS = 1
+_TACTICAL_WATCH_ROLE_KEY = "tactical_watch"
 
 _CANONICAL_WEEKDAYS = (
-    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
 )
 
 
 def _canonical_day(value: Any) -> str:
-    """Normalise a weekday token to its full lowercase name (``Wed`` -> ``wednesday``).
-
-    The role map mixes short tokens (``Mon``) on roles/declared days with full
-    names on ``calendar_days``, so day comparisons must go through this.
-    """
+    """Normalise a weekday token to its full lowercase name (``Wed`` -> ``wednesday``)."""
     index = WEEKDAY_ORDER.get(str(value or "").strip().lower())
     return _CANONICAL_WEEKDAYS[index] if index is not None else ""
 
@@ -79,6 +79,13 @@ def _week_is_compressed(week: dict[str, Any]) -> bool:
     if isinstance(compression, dict):
         return bool(compression.get("active"))
     return bool(compression)
+
+
+def _has_future_fight(athlete_model: dict[str, Any]) -> bool:
+    try:
+        return int(athlete_model.get("days_until_fight")) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 def _week_hard_sparring_days(week: dict[str, Any], athlete_model: dict[str, Any]) -> set[str]:
@@ -111,6 +118,54 @@ def _week_physical_filler_count(session_roles: list[Any]) -> int:
     )
 
 
+def _decorate_insert(
+    insert: dict[str, Any],
+    *,
+    day: str,
+    d_day: int,
+    mandatory_tactical_watch: bool = False,
+) -> None:
+    day_title = str(day).strip().title()
+    insert["session_index"] = 0
+    insert["scheduled_day_hint"] = day_title
+    insert["real_weekday"] = day_title
+    insert["countdown_display_label"] = f"D-{d_day} ({day_title})"
+    insert["camp_week_filler"] = True
+    if mandatory_tactical_watch:
+        insert["mandatory_tactical_watch"] = True
+        insert["weekly_requirement"] = "fight_tactical_watch"
+        insert["stress_class"] = "support"
+        insert["cost_class"] = "low"
+        insert["governance"] = {
+            **dict(insert.get("governance") or {}),
+            "mandatory": True,
+            "meaningful_stress": False,
+        }
+
+
+def _stamp_tactical_watch(
+    role: dict[str, Any],
+    athlete_model: dict[str, Any],
+    *,
+    phase: str,
+    used_watch_keys: set[str],
+) -> None:
+    watch = select_tactical_watch(
+        extract_tactical_style(athlete_model),
+        phase,
+        used_watch_keys,
+    )
+    metadata = watch_metadata(watch)
+    watch_governance = dict(metadata.pop("governance", {}) or {})
+    role.update(metadata)
+    role["governance"] = {
+        **dict(role.get("governance") or {}),
+        **watch_governance,
+    }
+    role["display_text"] = build_watch_display_text(watch)
+    used_watch_keys.add(watch.key)
+
+
 def _place_filler(
     week: dict[str, Any],
     session_roles: list[dict[str, Any]],
@@ -121,7 +176,7 @@ def _place_filler(
     usage_ledger: dict[str, Any],
     allow_physical: bool,
 ) -> dict[str, Any] | None:
-    """Select and append one filler for ``day``. Returns the role or None."""
+    """Select and append one adaptive filler for ``day``. Returns the role or None."""
     d_day = _calendar_d_day(week, day)
     if d_day is None:
         return None
@@ -137,15 +192,143 @@ def _place_filler(
     if not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS:
         return None
 
-    day_title = str(day).strip().title()
-    insert["session_index"] = 0
-    insert["scheduled_day_hint"] = day_title
-    insert["real_weekday"] = day_title
-    insert["countdown_display_label"] = f"D-{d_day} ({day_title})"
-    insert["camp_week_filler"] = True
+    _decorate_insert(insert, day=day, d_day=d_day)
     session_roles.append(insert)
     _record_insert_usage(usage_ledger, str(insert.get("role_key") or ""), d_day)
     return insert
+
+
+def _valid_existing_watch(
+    week: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    for role in session_roles:
+        if str(role.get("role_key") or "") != _TACTICAL_WATCH_ROLE_KEY:
+            continue
+        day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
+        d_day = _calendar_d_day(week, day)
+        if day and d_day is not None and d_day > 0:
+            return role
+    return None
+
+
+def _mandatory_watch_day(
+    week: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+) -> tuple[str, bool] | None:
+    """Choose a normal existing camp slot; never invent a weekday outside the role map."""
+    for entry in week.get("intentionally_unused_days") or []:
+        if not isinstance(entry, dict):
+            continue
+        day = str(entry.get("day") or "").strip()
+        if (
+            day
+            and str(entry.get("role") or "").strip() in {"off_day", "recovery_only_day"}
+            and not entry.get("low_aerobic_cap_skipped")
+            and (d_day := _calendar_d_day(week, day)) is not None
+            and d_day > 0
+        ):
+            return day, True
+
+    counts = _role_day_counts(session_roles)
+    declared = [
+        str(day).strip()
+        for day in clean_list(week.get("declared_training_days"))
+        if str(day).strip()
+        and (d_day := _calendar_d_day(week, str(day))) is not None
+        and d_day > 0
+    ]
+    if declared:
+        return min(declared, key=lambda day: (counts.get(_canonical_day(day), 0), declared.index(day))), False
+
+    for role in session_roles:
+        day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
+        d_day = _calendar_d_day(week, day)
+        if day and d_day is not None and d_day > 0:
+            return day, False
+    return None
+
+
+def _consume_unused_day(week: dict[str, Any], chosen_day: str) -> None:
+    chosen = _canonical_day(chosen_day)
+    week["intentionally_unused_days"] = [
+        entry
+        for entry in (week.get("intentionally_unused_days") or [])
+        if not (
+            isinstance(entry, dict)
+            and _canonical_day(entry.get("day")) == chosen
+            and str(entry.get("role") or "").strip() in {"off_day", "recovery_only_day"}
+        )
+    ]
+
+
+def _ensure_mandatory_tactical_watch(
+    week: dict[str, Any],
+    athlete_model: dict[str, Any],
+    *,
+    phase: str,
+    usage_ledger: dict[str, Any],
+    used_watch_keys: set[str],
+) -> bool:
+    session_roles = week.get("session_roles")
+    if not isinstance(session_roles, list):
+        return False
+
+    existing = _valid_existing_watch(week, session_roles)
+    if existing is not None:
+        day = str(existing.get("scheduled_day_hint") or existing.get("real_weekday") or "").strip()
+        d_day = _calendar_d_day(week, day)
+        if d_day is None or d_day <= 0:
+            return False
+        _stamp_tactical_watch(
+            existing,
+            athlete_model,
+            phase=phase,
+            used_watch_keys=used_watch_keys,
+        )
+        existing["camp_phase"] = phase
+        _decorate_insert(
+            existing,
+            day=day,
+            d_day=d_day,
+            mandatory_tactical_watch=True,
+        )
+        _record_insert_usage(usage_ledger, _TACTICAL_WATCH_ROLE_KEY, d_day)
+        return True
+
+    placement = _mandatory_watch_day(week, session_roles)
+    if placement is None:
+        return False
+    day, uses_unused_day = placement
+    d_day = _calendar_d_day(week, day)
+    if d_day is None or d_day <= 0:
+        return False
+
+    watch_role = _build_insert_role(
+        _TACTICAL_WATCH_ROLE_KEY,
+        athlete_model,
+        d_day,
+        weekday=str(day).strip().title(),
+    )
+    _stamp_tactical_watch(
+        watch_role,
+        athlete_model,
+        phase=phase,
+        used_watch_keys=used_watch_keys,
+    )
+    watch_role["camp_phase"] = phase
+    _decorate_insert(
+        watch_role,
+        day=day,
+        d_day=d_day,
+        mandatory_tactical_watch=True,
+    )
+    session_roles.append(watch_role)
+    _record_insert_usage(usage_ledger, _TACTICAL_WATCH_ROLE_KEY, d_day)
+    if uses_unused_day:
+        watch_role["converted_from_unused_day"] = True
+        _consume_unused_day(week, day)
+    return True
 
 
 def _fill_week(
@@ -155,15 +338,12 @@ def _fill_week(
     usage_ledger: dict[str, Any],
 ) -> None:
     session_roles = week.get("session_roles")
-    if not isinstance(session_roles, list):
+    if not isinstance(session_roles, list) or cap <= 0:
         return
 
     hard_days = _week_hard_sparring_days(week, athlete_model)
     added = 0
 
-    # Pass 1 — free days: intentionally unused off/recovery training days that no
-    # safety gate has annotated. A filled day stops being intentionally unused
-    # (same contract as the low-load support upgrade in stage2_role_map).
     kept_unused: list[Any] = []
     for day_entry in week.get("intentionally_unused_days") or []:
         if added >= cap or not isinstance(day_entry, dict):
@@ -196,10 +376,6 @@ def _fill_week(
         added += 1
     week["intentionally_unused_days"] = kept_unused
 
-    # Pass 2 — shared days: when the week still has filler budget, allow at most
-    # one filler alongside an existing single session. Hard-sparring days stay
-    # eligible because the selector then restricts to zero-cost/recovery work
-    # (a cue card next to sparring is fine; extra S&C is not).
     if added >= cap:
         return
     day_counts = _role_day_counts(session_roles)
@@ -231,25 +407,41 @@ def apply_camp_week_fillers(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Add low-cost filler sessions to SPP/TAPER camp weeks. Mutates and returns.
-
-    Weeks outside SPP/TAPER, compressed weeks, and weeks without a usable
-    calendar spine are left untouched, so the overlay is a no-op wherever it
-    cannot place a filler safely.
-    """
+    """Add mandatory fight Tactical Watch plus the existing adaptive fillers."""
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
+
     athlete_model = athlete_model or {}
+    fight_dated = _has_future_fight(athlete_model)
     usage_ledger = _new_usage_ledger()
+    used_watch_keys: set[str] = set()
+
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
-        cap = _PHASE_FILLER_CAPS.get(str(week.get("phase") or "").strip().upper())
-        if not cap:
+        phase = str(week.get("phase") or "").strip().upper()
+
+        if fight_dated:
+            total_cap = _FIGHT_PHASE_FILLER_CAPS.get(phase)
+            if not total_cap:
+                continue
+            placed = _ensure_mandatory_tactical_watch(
+                week,
+                athlete_model,
+                phase=phase,
+                usage_ledger=usage_ledger,
+                used_watch_keys=used_watch_keys,
+            )
+            if not placed:
+                continue
+            if _week_is_compressed(week):
+                continue
+            _fill_week(week, athlete_model, max(0, total_cap - 1), usage_ledger)
             continue
-        # A deliberately compressed week left days empty to protect the athlete
-        # (fatigue, cut, injury, sparring load) — never refill it.
-        if _week_is_compressed(week):
+
+        cap = _LEGACY_PHASE_FILLER_CAPS.get(phase)
+        if not cap or _week_is_compressed(week):
             continue
         _fill_week(week, athlete_model, cap, usage_ledger)
+
     return weekly_role_map
