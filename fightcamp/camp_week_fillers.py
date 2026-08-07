@@ -680,7 +680,16 @@ def apply_camp_week_fillers(
             continue
 
         phase = str(week.get("phase") or "").strip().upper()
-        if has_future_fight:
+        # The mandatory weekly Tactical Watch is only reserved when a fight-dated
+        # week resolves a real countdown calendar spine. A fight-dated model that
+        # cannot resolve a fight weekday (no fight_date and no
+        # plan_creation_weekday) yields no calendar_days, so there is nothing to
+        # anchor the watch against; fall through to the legacy adaptive-filler
+        # behaviour rather than aborting plan generation. The canonical athlete
+        # model always stamps plan_creation_weekday, so production keeps the
+        # mandatory watch. A spine that IS present but exposes no positive
+        # countdown day is genuinely malformed and still fails closed below.
+        if has_future_fight and week.get("calendar_days"):
             cap = _PHASE_FILLER_CAPS.get(phase)
             if not cap:
                 continue
