@@ -10,6 +10,12 @@ from .stage2_payload_late_fight import (
     _resolve_plan_creation_weekday,
     is_low_cost_coexistable_filler,
 )
+from .tactical_watch_library import (
+    build_watch_display_text,
+    extract_tactical_style,
+    select_tactical_watch,
+    watch_metadata,
+)
 
 
 ZERO_COST_INSERTS = {
@@ -653,53 +659,53 @@ def _allowed_inserts(
     return allowed
 
 
-def build_tactical_watch_template(athlete_model: dict[str, Any] | None = None) -> str:
-    athlete_model = athlete_model or {}
-    style_values = (
-        _normalised_set(athlete_model.get("tactical_styles", []))
-        | _normalised_set(athlete_model.get("style_tactical", []))
-        | _normalised_set(athlete_model.get("technical_styles", []))
-        | _normalised_set(athlete_model.get("style_technical", []))
-        | _normalised_set(athlete_model.get("style", []))
-        | _normalised_set(athlete_model.get("sport", []))
-    )
-    style_text = " ".join(style_values)
-    focus = ""
-    if "counter" in style_text:
-        focus = "\nFocus: bait reactions, exits, first counter after feint."
-    elif "pressure" in style_text:
-        focus = "\nFocus: entries, clinch risk, angle exits."
-    elif "boxer" in style_text or "boxing" in style_text:
-        focus = "\nFocus: jab rhythm, lead-hand battle, exit side."
-    elif (
-        "kicker" in style_text
-        or "kickboxing" in style_text
-        or "muay" in style_text
-    ):
-        focus = "\nFocus: range line, stance matchups, check/counter timing."
-    elif (
-        "grappler" in style_text
-        or "mma" in style_text
-        or "wrestling" in style_text
-    ):
-        focus = "\nFocus: level-change triggers, cage exits, underhook habits."
+def build_tactical_watch_template(
+    athlete_model: dict[str, Any] | None = None,
+    *,
+    phase: str | None = None,
+    used_keys: set[str] | None = None,
+    camp_focus: str = "",
+) -> str:
+    """Render the display text for a style/phase-aware Tactical Watch.
 
-    return (
-        "Fight Tactical Watch - 8-12 min\n\n"
-        "Watch 1-2 rounds or 10-20 clips.\n"
-        f"{focus}\n\n"
-        "Identify:\n"
-        "1. Opponent/style rhythm\n"
-        "2. First-exchange tendency\n"
-        "3. Best entry\n"
-        "4. Danger to avoid\n"
-        "5. Reset cue\n\n"
-        "Output (write exactly these 4 lines):\n"
-        "Entry cue: 1 way I get in.\n"
-        "Danger cue: 1 thing that gets me hurt.\n"
-        "Reset cue: 1 phrase to recover when it goes bad.\n"
-        "Round 1: 1 instruction I follow from the first bell."
-    )
+    Selection is deterministic (see ``tactical_watch_library``): the style is
+    read from the athlete's declared style (never the sport), the phase defaults
+    to GPP when unknown, and ``used_keys`` prevents repeats within a camp. The
+    old shared four-line ``entry/danger/reset/round 1`` output is gone — each
+    watch carries its own required output.
+    """
+    athlete_model = athlete_model or {}
+    style = extract_tactical_style(athlete_model)
+    watch = select_tactical_watch(style, phase, used_keys)
+    return build_watch_display_text(watch, camp_focus)
+
+
+def stamp_tactical_watch_role(
+    role: dict[str, Any],
+    athlete_model: dict[str, Any] | None,
+    *,
+    phase: str | None,
+    used_keys: set[str] | None = None,
+    camp_focus: str = "",
+) -> dict[str, Any]:
+    """Select a Tactical Watch and write its content into the filler fields.
+
+    Puts the selected watch's full content into ``display_text`` (which the
+    normal structured-plan conversion turns into the card, exactly like every
+    other filler) and records the selection metadata (``tactical_watch_key`` /
+    ``_name`` / ``_style`` / ``_phase``). Adds the selected key to ``used_keys``
+    so the camp never repeats a watch. Returns the selected watch. Propagates
+    :class:`TacticalWatchBankExhausted` if the bank is under-sized — the generic
+    banks are sized so this can never happen for a real camp.
+    """
+    athlete_model = athlete_model or {}
+    style = extract_tactical_style(athlete_model)
+    watch = select_tactical_watch(style, phase, used_keys)
+    if used_keys is not None:
+        used_keys.add(watch.key)
+    role["display_text"] = build_watch_display_text(watch, camp_focus)
+    role.update(watch_metadata(watch))
+    return watch
 
 
 def _first_allowed(preferences: list[str], allowed: set[str]) -> str | None:
@@ -766,6 +772,10 @@ def _new_usage_ledger() -> dict[str, Any]:
         "used_categories": set(),
         "role_key_offsets": {},
         "category_counts": {},
+        # Tactical Watch keys already selected in this camp. Shared across every
+        # week so no style/phase watch repeats and each phase occurrence advances
+        # to the next authored watch (see tactical_watch_library).
+        "used_tactical_watch_keys": set(),
     }
 
 
@@ -1007,6 +1017,24 @@ def _build_insert_role(
             f"D-{insert_offset} ({weekday.title()})"
         )
     return role
+
+
+def _phase_for_offset(offset: int | None) -> str:
+    """Infer the camp phase for a countdown offset used by late-camp placement.
+
+    The late-fight path has no explicit phase field; the countdown distance is
+    the only signal. Fight week (<= 7 days) is TAPER; the compressed pre-fight
+    window is opponent-specific (SPP).
+    """
+    try:
+        value = int(offset)
+    except (TypeError, ValueError):
+        return "GPP"
+    if value <= 0:
+        return "TAPER"
+    if value <= 7:
+        return "TAPER"
+    return "SPP"
 
 
 def select_gap_fill_insert(
@@ -1297,11 +1325,15 @@ def _build_mandatory_tactical_watch(
     athlete_model: dict[str, Any],
     offset: int,
     weekday: str | None,
+    used_keys: set[str] | None = None,
 ) -> dict[str, Any]:
     watch = _build_insert_role("tactical_watch", athlete_model, offset, weekday)
-    watch["display_text"] = (
-        f"{build_tactical_watch_template(athlete_model)}\n\n"
-        f"{_mandatory_watch_guidance(offset)}"
+    stamp_tactical_watch_role(
+        watch,
+        athlete_model,
+        phase=_phase_for_offset(offset),
+        used_keys=used_keys,
+        camp_focus=_mandatory_watch_guidance(offset),
     )
     watch["mandatory_tactical_watch"] = True
     watch["weekly_requirement"] = "fight_tactical_watch"
@@ -1319,6 +1351,7 @@ def _promote_mandatory_tactical_watch(
     role: dict[str, Any],
     athlete_model: dict[str, Any],
     countdown_map: dict[str, str],
+    used_keys: set[str] | None = None,
 ) -> dict[str, Any]:
     offset = _role_offset(role)
     if offset is None or offset <= 0:
@@ -1329,7 +1362,9 @@ def _promote_mandatory_tactical_watch(
         or countdown_map.get(f"D-{offset}")
         or ""
     ).strip() or None
-    template = _build_mandatory_tactical_watch(athlete_model, offset, weekday)
+    template = _build_mandatory_tactical_watch(
+        athlete_model, offset, weekday, used_keys
+    )
     preserved = {
         key: value
         for key, value in role.items()
@@ -1339,6 +1374,10 @@ def _promote_mandatory_tactical_watch(
             "weekly_requirement",
             "tactical_watch_segment",
             "governance",
+            "tactical_watch_key",
+            "tactical_watch_name",
+            "tactical_watch_style",
+            "tactical_watch_phase",
         }
     }
     role.clear()
@@ -1352,6 +1391,7 @@ def _replace_with_mandatory_tactical_watch(
     role: dict[str, Any],
     athlete_model: dict[str, Any],
     countdown_map: dict[str, str],
+    used_keys: set[str] | None = None,
 ) -> dict[str, Any]:
     offset = _role_offset(role)
     if offset is None or offset <= 0:
@@ -1363,7 +1403,9 @@ def _replace_with_mandatory_tactical_watch(
         or ""
     ).strip() or None
     replaced_role_key = str(role.get("role_key") or "")
-    replacement = _build_mandatory_tactical_watch(athlete_model, offset, weekday)
+    replacement = _build_mandatory_tactical_watch(
+        athlete_model, offset, weekday, used_keys
+    )
     replacement["replaced_role_key"] = replaced_role_key
     role.clear()
     role.update(replacement)
@@ -1383,11 +1425,17 @@ def _ensure_weekly_tactical_watches(
     required_segments = range(_segment_for_offset(days_until_fight) + 1)
     inserts: list[dict[str, Any]] = []
     combined = ordered + inserts
+    # One shared ledger for this late-fight sequence: segments are walked from
+    # the earliest date (largest segment) toward fight week, so each watch
+    # advances to the next authored watch for its phase without repeating.
+    used_watch_keys: set[str] = set()
     for segment in reversed(list(required_segments)):
         existing_watches = _segment_watch_roles(combined, segment)
         if existing_watches:
             keeper = existing_watches[0]
-            _promote_mandatory_tactical_watch(keeper, athlete_model, countdown_map)
+            _promote_mandatory_tactical_watch(
+                keeper, athlete_model, countdown_map, used_watch_keys
+            )
             for duplicate in existing_watches[1:]:
                 duplicate["suppressed"] = True
                 duplicate["reasons"] = list(
@@ -1426,7 +1474,7 @@ def _ensure_weekly_tactical_watches(
         )
         if replaceable_tactical is not None:
             _replace_with_mandatory_tactical_watch(
-                replaceable_tactical, athlete_model, countdown_map
+                replaceable_tactical, athlete_model, countdown_map, used_watch_keys
             )
             continue
 
@@ -1440,7 +1488,9 @@ def _ensure_weekly_tactical_watches(
                 f"Unable to place mandatory Tactical Watch in countdown segment {segment}."
             )
         weekday = countdown_map.get(f"D-{offset}")
-        watch = _build_mandatory_tactical_watch(athlete_model, offset, weekday)
+        watch = _build_mandatory_tactical_watch(
+            athlete_model, offset, weekday, used_watch_keys
+        )
         inserts.append(watch)
         combined = ordered + inserts
     return inserts
