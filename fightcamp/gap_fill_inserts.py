@@ -1225,6 +1225,7 @@ def _segment_watch_offset(
     *,
     segment: int,
     days_until_fight: int,
+    available_offsets: set[int] | None = None,
 ) -> int | None:
     lower, upper = _watch_segment_bounds(segment, days_until_fight)
     if lower > upper:
@@ -1238,6 +1239,13 @@ def _segment_watch_offset(
             roles_by_offset.setdefault(offset, []).append(role)
 
     offsets = list(range(lower, upper + 1))
+    # Restrict to declared training-availability days so the mandatory watch never
+    # lands on an unavailable weekday. Fall back to the full window only if this
+    # segment has no available day at all, so the per-segment guarantee still holds.
+    if available_offsets is not None:
+        restricted = [offset for offset in offsets if offset in available_offsets]
+        if restricted:
+            offsets = restricted
     fully_spaced = [
         offset
         for offset in offsets
@@ -1376,6 +1384,7 @@ def _ensure_weekly_tactical_watches(
     *,
     days_until_fight: int,
     countdown_map: dict[str, str],
+    available_offsets: set[int] | None = None,
 ) -> list[dict[str, Any]]:
     if not _has_future_fight(athlete_model, days_until_fight):
         return []
@@ -1434,6 +1443,7 @@ def _ensure_weekly_tactical_watches(
             combined,
             segment=segment,
             days_until_fight=days_until_fight,
+            available_offsets=available_offsets,
         )
         if offset is None or offset <= 0:
             raise RuntimeError(
@@ -1479,6 +1489,22 @@ def apply_gap_fill_inserts(
         day.strip().lower()
         for day in ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
     }
+    # Declared training availability is the authority for which countdown offsets a
+    # filler may occupy; the calendar can span weekdays the athlete never trains.
+    # ``None`` means availability was not declared, so prior behaviour is preserved.
+    training_days = {
+        day.strip().lower()
+        for day in ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
+    }
+    available_offsets: set[int] | None = (
+        {
+            offset
+            for offset in range(1, days_until_fight + 1)
+            if str(countdown_map.get(f"D-{offset}") or "").strip().lower() in training_days
+        }
+        if training_days
+        else None
+    )
 
     existing_exclusive_offsets = {
         offset
@@ -1499,6 +1525,7 @@ def apply_gap_fill_inserts(
         athlete_model,
         days_until_fight=watch_horizon,
         countdown_map=countdown_map,
+        available_offsets=available_offsets,
     )
     mandatory_watch_offsets = {
         int(offset)
@@ -1550,6 +1577,8 @@ def apply_gap_fill_inserts(
             target_offset <= 0
             or target_offset in existing_exclusive_offsets
             or target_offset in mandatory_watch_offsets
+            # Never fill a countdown day outside declared training availability.
+            or (available_offsets is not None and target_offset not in available_offsets)
             or (
                 days_until_fight > 13
                 and any(

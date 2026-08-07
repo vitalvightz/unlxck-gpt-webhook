@@ -351,10 +351,25 @@ def _shared_day_candidates(
     return [day for _, _, day in sorted(candidates)]
 
 
+def _declared_availability(week: dict[str, Any]) -> set[str]:
+    """Canonical weekdays the athlete declared available for training.
+
+    Training availability, not the calendar spine, is the authority for whether a
+    filler may be placed on a weekday. An empty set means availability was not
+    declared for this week, in which case callers keep the prior behaviour.
+    """
+    return {
+        canonical
+        for day in clean_list(week.get("declared_training_days"))
+        if (canonical := _canonical_day(day))
+    }
+
+
 def _least_loaded_valid_day_candidates(
     week: dict[str, Any], session_roles: list[dict[str, Any]]
 ) -> list[str]:
     grouped = _roles_by_day(session_roles)
+    available = _declared_availability(week)
     candidates: list[tuple[int, int, int, int, int, str]] = []
     for entry in week.get("calendar_days") or []:
         if not isinstance(entry, dict):
@@ -366,6 +381,10 @@ def _least_loaded_valid_day_candidates(
         except (TypeError, ValueError):
             continue
         if not canonical or d_day <= 0:
+            continue
+        # A filler may only land on a declared training-availability weekday; the
+        # calendar spine can list days (e.g. weekends) the athlete never trains.
+        if available and canonical not in available:
             continue
         roles = grouped.get(canonical, [])
         meaningful = sum(
