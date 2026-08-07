@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from .camp_phases import calculate_phase_weeks
 from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_payload_late_fight import (
@@ -588,9 +589,62 @@ def _allowed_inserts(
     return allowed
 
 
-def _late_watch_phase(insert_offset: int) -> str:
-    """Camp phase for a countdown insert: fight week is TAPER, before that SPP."""
-    return "TAPER" if insert_offset <= 7 else "SPP"
+def _phase_allocation_for_watch(athlete_model: dict[str, Any]) -> dict[str, Any]:
+    """Return the planner's phase allocation; recompute only for legacy direct callers."""
+    phase_weeks = athlete_model.get("phase_weeks")
+    if isinstance(phase_weeks, dict) and isinstance(phase_weeks.get("days"), dict):
+        return phase_weeks
+
+    raw_days = athlete_model.get("days_until_fight")
+    try:
+        days_until_fight = int(raw_days) if raw_days is not None else None
+    except (TypeError, ValueError):
+        days_until_fight = None
+    if days_until_fight is None:
+        days_until_fight = 7
+
+    try:
+        camp_length = int(athlete_model.get("camp_length_weeks") or 0)
+    except (TypeError, ValueError):
+        camp_length = 0
+    if camp_length <= 0:
+        camp_length = max(1, round(days_until_fight / 7))
+
+    sport = str(athlete_model.get("sport") or "mma").strip().lower().replace("-", "_").replace(" ", "_")
+    if sport not in {"boxing", "mma", "muay_thai", "kickboxing"}:
+        sport = "mma"
+
+    return calculate_phase_weeks(
+        camp_length,
+        sport,
+        athlete_model.get("tactical_styles") or athlete_model.get("tactical_style"),
+        athlete_model.get("status"),
+        athlete_model.get("fatigue"),
+        bool(athlete_model.get("weight_cut_risk")),
+        athlete_model.get("mental_blocks") or athlete_model.get("mental_block"),
+        athlete_model.get("weight_cut_pct"),
+        days_until_fight,
+    )
+
+
+def _watch_phase_for_offset(athlete_model: dict[str, Any], insert_offset: int) -> str:
+    """Map D-day to the authoritative dynamic GPP/SPP/TAPER allocation."""
+    phase_days = (_phase_allocation_for_watch(athlete_model).get("days") or {})
+    remaining = max(1, int(insert_offset))
+    for phase in ("TAPER", "SPP", "GPP"):
+        try:
+            days = max(0, int(phase_days.get(phase, 0) or 0))
+        except (TypeError, ValueError):
+            days = 0
+        if days <= 0:
+            continue
+        if remaining <= days:
+            return phase
+        remaining -= days
+    return next(
+        (phase for phase in ("GPP", "SPP", "TAPER") if int(phase_days.get(phase, 0) or 0) > 0),
+        "TAPER",
+    )
 
 
 def _apply_bank_watch(
@@ -613,6 +667,7 @@ def _apply_bank_watch(
     metadata = watch_metadata(watch)
     watch_governance = dict(metadata.pop("governance", {}) or {})
     role.update(metadata)
+    role["camp_phase"] = phase
     role["governance"] = {
         **dict(role.get("governance") or {}),
         **watch_governance,
@@ -913,7 +968,7 @@ def _build_insert_role(
         _apply_bank_watch(
             role,
             athlete_model,
-            phase=_late_watch_phase(insert_offset),
+            phase=_watch_phase_for_offset(athlete_model, insert_offset),
             used_watch_keys=used_watch_keys,
         )
     if weekday:
@@ -1165,7 +1220,7 @@ def _ensure_weekly_tactical_watches(
             _apply_bank_watch(
                 watch,
                 athlete_model,
-                phase=_late_watch_phase(offset),
+                phase=_watch_phase_for_offset(athlete_model, offset),
                 used_watch_keys=used_watch_keys,
             )
 
@@ -1230,15 +1285,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
 
     usage_ledger = _usage_ledger_from_sequence(ordered)
-    inserts.extend(
-        _ensure_weekly_tactical_watches(
-            ordered,
-            athlete_model,
-            countdown_map,
-            usage_ledger,
-        )
-    )
-    tactical_present = _has_tactical_support(ordered + inserts)
+    tactical_present = _has_tactical_support(ordered)
     tactical_required = _is_fight_sport(athlete_model) and not tactical_present
     conditioning_present = any(
         str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS for role in ordered
@@ -1325,6 +1372,14 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         if not is_low_cost_coexistable_filler(insert):
             existing_exclusive_offsets.add(target_offset)
 
+    inserts.extend(
+        _ensure_weekly_tactical_watches(
+            ordered + inserts,
+            athlete_model,
+            countdown_map,
+            usage_ledger,
+        )
+    )
     final_sequence = sorted(ordered + inserts, key=lambda role: int(_role_offset(role) or 0), reverse=True)
     for index, role in enumerate(final_sequence, start=1):
         role["session_index"] = index
