@@ -204,6 +204,21 @@ def _existing_training_day(week: dict[str, Any], session_roles: list[dict[str, A
     return None
 
 
+def _declared_training_day(week: dict[str, Any]) -> tuple[str, int] | None:
+    """First declared, usable D>0 day that is not intentionally off/recovery-only."""
+    intentionally_unused = {
+        _canonical_day(entry.get("day"))
+        for entry in week.get("intentionally_unused_days") or []
+        if isinstance(entry, dict) and _canonical_day(entry.get("day"))
+    }
+    for day in clean_list(week.get("declared_training_days")):
+        canonical = _canonical_day(day)
+        d_day = _calendar_d_day(week, str(day))
+        if canonical and canonical not in intentionally_unused and d_day is not None and d_day > 0:
+            return str(day).strip(), d_day
+    return None
+
+
 def _ensure_tactical_watch(
     week: dict[str, Any],
     athlete_model: dict[str, Any],
@@ -215,21 +230,25 @@ def _ensure_tactical_watch(
     if not isinstance(session_roles, list):
         return False
 
-    existing = next(
-        (
-            role
-            for role in session_roles
-            if isinstance(role, dict) and str(role.get("role_key") or "") == "tactical_watch"
-        ),
-        None,
-    )
+    existing = None
+    for candidate in list(session_roles):
+        if not isinstance(candidate, dict) or str(candidate.get("role_key") or "") != "tactical_watch":
+            continue
+        day = str(candidate.get("scheduled_day_hint") or candidate.get("real_weekday") or "").strip()
+        d_day = _calendar_d_day(week, day)
+        if existing is None and day and d_day is not None and d_day > 0:
+            existing = candidate
+            continue
+        # Invalid or duplicate watch roles must not survive beside the one
+        # authoritative mandatory watch for this week.
+        session_roles.remove(candidate)
+
     if existing is not None:
         day = str(existing.get("scheduled_day_hint") or existing.get("real_weekday") or "").strip()
         d_day = _calendar_d_day(week, day)
-        if not day or d_day is None or d_day <= 0:
-            existing = None
-
-    slot = (day, d_day) if existing is not None else _existing_training_day(week, session_roles)
+        slot = (day, d_day) if d_day is not None else None
+    else:
+        slot = _existing_training_day(week, session_roles) or _declared_training_day(week)
     if slot is None:
         return False
     day, d_day = slot
