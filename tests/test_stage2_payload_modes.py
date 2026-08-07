@@ -736,11 +736,18 @@ class TestPlanningBriefBranching:
                 "hard_sparring_days": [],
             },
         )
-        visible_offsets = [
-            entry["countdown_offset"]
-            for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
-            if isinstance(entry.get("countdown_offset"), int)
-        ]
+        # Distinct days: a zero-load coexistable filler (mandatory Fight Tactical
+        # Watch, cue card, ...) may share a countdown day with the session it sits
+        # beside, which is not two sessions on adjacent days. Consecutive days are
+        # still forbidden — the assertion below fails on any D-n/D-(n-1) pair.
+        visible_offsets = sorted(
+            {
+                entry["countdown_offset"]
+                for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
+                if isinstance(entry.get("countdown_offset"), int)
+            },
+            reverse=True,
+        )
 
         assert all(
             first - second > 1

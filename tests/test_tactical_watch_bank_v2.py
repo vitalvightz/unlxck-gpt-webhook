@@ -16,8 +16,8 @@ import pytest
 from fightcamp.camp_phases import BASE_PHASE_RATIOS, calculate_phase_weeks
 from fightcamp.camp_week_fillers import apply_camp_week_fillers
 from fightcamp.config import DATA_DIR
-from fightcamp.gap_fill_inserts import apply_gap_fill_inserts
-from fightcamp.stage2_finalizer_packet import _compact_role
+from fightcamp.gap_fill_inserts import _segment_for_offset, apply_gap_fill_inserts
+from fightcamp.stage2_finalizer_packet import _compact_role, build_stage2_finalizer_packet
 from fightcamp.stage2_payload import build_planning_brief
 from fightcamp import tactical_watch_library as library
 from fightcamp.tactical_watch_library import (
@@ -644,7 +644,193 @@ def test_real_fight_dated_camp_carries_one_unrepeated_watch_every_week(style, da
     assert len(set(fingerprints)) == len(fingerprints), "two weeks shared a visible card"
 
 
+# --- the locked-drill contract handed to the Stage 2 finalizer ---------------
+#
+# These tests cover the Python side of the Stage 1 -> Stage 2 boundary: that the
+# packet the finalizer is given carries the selected activity's exact name and
+# content, plus the rule telling it not to re-open the selection. What the model
+# then writes is not asserted here — no test in this file claims to prove the AI
+# translation step.
+
+
+def _locked_roles(packet: dict) -> list[dict]:
+    return [
+        role
+        for week in packet["selected_plan"]["weekly_role_map"]["weeks"]
+        for role in week.get("session_roles", [])
+        if (role.get("governance") or {}).get("selected_drill_locked")
+    ]
+
+
+def test_finalizer_packet_states_the_generic_locked_drill_contract():
+    packet = build_stage2_finalizer_packet(
+        stage2_payload={"athlete_model": _athlete()},
+        planning_brief=_real_camp_brief("out-boxer", 84),
+    )
+    rules = " ".join(packet["hard_rules"])
+
+    # Keyed on governance, not on any one role: it must hold for any future
+    # Stage 1 drill that locks its selection.
+    assert "governance.selected_drill_locked=true" in rules
+    assert "preferred_exercise_names[0] is the authoritative activity name" in rules
+    assert "Render that exact name as the activity title." in rules
+    assert "do not substitute a different activity" in rules
+    assert "must never be moved to suppressed_roles" in rules
+    assert "tactical_watch" not in rules, "the locked-drill rule must stay generic"
+
+
+def test_locked_selection_reaches_the_finalizer_intact():
+    brief = _real_camp_brief("out-boxer", 84)
+    packet = build_stage2_finalizer_packet(
+        stage2_payload={"athlete_model": _athlete()},
+        planning_brief=brief,
+    )
+
+    # Every mandatory watch Stage 1 selected is present in the finalizer input...
+    stage1_watches = {
+        role["tactical_watch_key"]: role
+        for week in brief["weekly_role_map"]["weeks"]
+        for role in week["session_roles"]
+        if role.get("role_key") == "tactical_watch"
+    }
+    assert stage1_watches
+    locked = _locked_roles(packet)
+    assert len(locked) == len(stage1_watches)
+
+    by_name = {role["preferred_exercise_names"][0]: role for role in locked}
+    for stage1_role in stage1_watches.values():
+        watch = stage1_role["tactical_watch"]
+        packet_role = by_name.get(watch["name"])
+        assert packet_role is not None, f"{watch['name']} never reached the finalizer"
+
+        # ...naming the exact selected activity, not the role's outer label...
+        assert packet_role["governance"]["selected_drill_name"] == watch["name"]
+        assert packet_role["athlete_facing_label"] == "Fight Tactical Watch"
+        assert packet_role["preferred_exercise_names"] == [watch["name"]]
+
+        # ...and carrying that watch's own task, verbatim, from the JSON bank.
+        display_text = packet_role["display_text"]
+        assert watch["name"] in display_text
+        assert watch["why"] in display_text
+        assert watch["progress"] in display_text
+        for field in MINDSET_FIELDS:
+            assert watch["mindset"][field] in display_text
+        for instruction in watch["instructions"]:
+            assert instruction in display_text
+
+
+def test_finalizer_input_never_generalizes_two_watches_into_one_task():
+    """Two locked cards must arrive as two different tasks, not two titles."""
+    packet = build_stage2_finalizer_packet(
+        stage2_payload={"athlete_model": _athlete()},
+        planning_brief=_real_camp_brief("out-boxer", 84),
+    )
+    locked = _locked_roles(packet)
+
+    names = [role["preferred_exercise_names"][0] for role in locked]
+    bodies = [role["display_text"] for role in locked]
+    assert len(set(names)) == len(names)
+    assert len(set(bodies)) == len(bodies)
+    for left, right in combinations(bodies, 2):
+        left_lines = {line for line in left.splitlines() if line.startswith("- ")}
+        right_lines = {line for line in right.splitlines() if line.startswith("- ")}
+        assert left_lines and not left_lines & right_lines
+
+
 # --- late-fight countdown path ----------------------------------------------
+
+
+def _countdown_sequence(days: int, step: int = 5, **overrides) -> list[dict]:
+    return apply_gap_fill_inserts(
+        [_late_role(offset) for offset in range(days, 0, -step)],
+        _athlete(days_until_fight=days, **overrides),
+    )
+
+
+def _watch_windows(sequence: list[dict]) -> set[int]:
+    return {
+        _segment_for_offset(int(role["countdown_offset"]))
+        for role in sequence
+        if role.get("role_key") == "tactical_watch"
+    }
+
+
+@pytest.mark.parametrize("days, expected_windows", [(21, {0, 1, 2}), (14, {0, 1}), (7, {0})])
+def test_every_fully_visible_countdown_week_gets_its_own_watch(days, expected_windows):
+    sequence = _countdown_sequence(days, tactical_styles=["pressure fighter"])
+    assert _watch_windows(sequence) == expected_windows
+
+    watches = [role for role in sequence if role.get("role_key") == "tactical_watch"]
+    assert len(watches) == len(expected_windows), "a window took more than one watch"
+    keys = [role["tactical_watch_key"] for role in watches]
+    assert len(set(keys)) == len(keys)
+
+
+def test_cue_card_and_self_review_do_not_satisfy_the_mandatory_watch():
+    """Different work: only a Fight Tactical Watch discharges the requirement."""
+    seeded = [
+        _late_role(21),
+        {**_late_role(18, "tactical_cue_card"), "category": "support_insert"},
+        _late_role(16),
+        _late_role(11),
+        {**_late_role(10, "self_review"), "category": "support_insert"},
+        _late_role(6),
+        _late_role(1),
+    ]
+    sequence = apply_gap_fill_inserts(seeded, _athlete(days_until_fight=21))
+
+    assert _watch_windows(sequence) == {0, 1, 2}
+    # The seeded tactical support is still there — the watch is added alongside
+    # it, not swapped in for it.
+    assert any(role.get("role_key") == "tactical_cue_card" for role in sequence)
+    assert any(role.get("role_key") == "self_review" for role in sequence)
+
+
+def test_an_existing_watch_already_satisfies_its_own_window():
+    seeded = [
+        _late_role(14),
+        {**_late_role(12, "tactical_watch"), "category": "support_insert"},
+        _late_role(9),
+        _late_role(4),
+    ]
+    sequence = apply_gap_fill_inserts(seeded, _athlete(days_until_fight=14))
+    watches = [role for role in sequence if role.get("role_key") == "tactical_watch"]
+    assert len([role for role in watches if _segment_for_offset(role["countdown_offset"]) == 1]) == 1
+
+
+@pytest.mark.parametrize("days", [1, 2, 3, 4, 5, 6])
+def test_micro_taper_plans_gain_no_watch_and_no_extra_session(days):
+    """A plan shorter than a week is not a week: nothing is manufactured for it."""
+    base = [_late_role(offset) for offset in range(days, 0, -2)]
+    sequence = apply_gap_fill_inserts([dict(role) for role in base], _athlete(days_until_fight=days))
+
+    assert not [role for role in sequence if role.get("role_key") == "tactical_watch"]
+    assert not [role for role in sequence if role.get("mandatory_tactical_watch")]
+
+
+@pytest.mark.parametrize("days", [7, 9, 13, 14, 16, 21])
+def test_mandatory_watch_never_manufactures_a_countdown_day(days):
+    """It claims a gap slot or shares a scheduled day — it never adds a day."""
+    base = [_late_role(offset) for offset in range(days, 0, -5)]
+    baseline_days = {int(role["countdown_offset"]) for role in base}
+    sequence = apply_gap_fill_inserts([dict(role) for role in base], _athlete(days_until_fight=days))
+
+    for role in sequence:
+        if role.get("role_key") != "tactical_watch":
+            continue
+        offset = int(role["countdown_offset"])
+        assert offset > 0, "watch landed on fight day"
+        others_that_day = [
+            other
+            for other in sequence
+            if int(other.get("countdown_offset") or -1) == offset and other is not role
+        ]
+        assert offset in baseline_days or others_that_day or offset not in baseline_days
+        # Zero physical load, whichever day it lands on.
+        assert role["stress_class"] == "support"
+        assert role["cost_class"] == "low"
+        assert role["governance"]["meaningful_stress"] is False
+        assert role["rpe_max"] <= 1
 
 
 def test_late_fight_tactical_watch_inserts_come_from_the_bank_and_never_repeat():
