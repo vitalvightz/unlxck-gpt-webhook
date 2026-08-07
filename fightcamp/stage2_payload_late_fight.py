@@ -540,11 +540,18 @@ def _late_fight_legal_countdown_labels(days_until_fight: Any) -> list[str]:
 
 
 def can_render_late_taper_day(*, countdown_offset: int, weekday: str, training_days: list[str]) -> bool:
-    if 0 <= countdown_offset <= 6:
+    if countdown_offset == 0:
         return True
-    weekday_norm = str(weekday or "").strip().lower()
-    training_set = {str(day).strip().lower() for day in training_days if str(day).strip()}
-    return weekday_norm in training_set
+    if countdown_offset < 0:
+        return False
+    training_set = {
+        str(day).strip().lower()
+        for day in training_days
+        if str(day).strip()
+    }
+    if not training_set:
+        return True
+    return str(weekday or "").strip().lower() in training_set
 
 
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
@@ -1264,33 +1271,7 @@ def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str
     plan_creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     available_days = clean_list(athlete_model.get("training_days", []))
     countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
-    resolved_map: dict[str, str] = {}
     legal_countdown_labels = _late_fight_legal_countdown_labels(days_until_fight)
-    for label, weekday in countdown_map.items():
-        weekday_name = str(weekday or "").strip().lower()
-        if not weekday_name:
-            continue
-        resolved_day = _nearest_available_day(weekday_name, available_days)
-        if resolved_day:
-            resolved_map[label] = resolved_day
-    legal_weekdays = [
-        str(resolved_map.get(label) or "").strip().lower()
-        for label in legal_countdown_labels
-        if str(resolved_map.get(label) or "").strip()
-    ]
-    availability_adjustments: list[dict[str, Any]] = []
-    for label in legal_countdown_labels:
-        raw_weekday = str(countdown_map.get(label) or "").strip().lower()
-        resolved_weekday = str(resolved_map.get(label) or "").strip().lower()
-        if raw_weekday and resolved_weekday and raw_weekday != resolved_weekday:
-            availability_adjustments.append(
-                {
-                    "countdown_label": label,
-                    "raw_weekday": raw_weekday,
-                    "resolved_weekday": resolved_weekday,
-                    "reason": "nearest_available_day",
-                }
-            )
     eligible_countdown_labels = [
         label
         for label in legal_countdown_labels
@@ -1301,13 +1282,18 @@ def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str
             training_days=available_days,
         )
     ]
+    resolved_map = {
+        label: str(countdown_map[label]).strip().lower()
+        for label in eligible_countdown_labels
+        if str(countdown_map.get(label) or "").strip()
+    }
     return {
         "countdown_weekday_map": resolved_map,
         "raw_countdown_weekday_map": countdown_map,
         "legal_countdown_labels": legal_countdown_labels,
         "eligible_countdown_labels": eligible_countdown_labels,
-        "legal_weekdays": legal_weekdays,
-        "availability_adjustments": availability_adjustments,
+        "legal_weekdays": [resolved_map[label] for label in eligible_countdown_labels if label in resolved_map],
+        "availability_adjustments": [],
         "available_days": available_days,
     }
 
@@ -2384,38 +2370,38 @@ def _role_consumes_day_slot(role: dict[str, Any]) -> bool:
 
 
 def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Filter post-placement sessions to the app-owned roles only."""
+    """Filter post-placement sessions to app-owned roles only."""
     return [
         session
         for session in session_sequence
         if _is_app_owned_visible_role(session.get("role_key"))
+        and not session.get("coach_owned")
     ]
 
 
 def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Return coach-owned boxing context sessions that must stay visible in the calendar."""
+    """Return declared combat context that must stay visible in the calendar."""
     coach_owned: list[dict[str, Any]] = []
     for session in session_sequence:
         role_key = str(session.get("role_key") or "").strip()
         downgraded_from = str(session.get("downgraded_from_role_key") or "").strip()
-        is_declared_boxing_context = (
-            role_key == "hard_sparring_day"
-            or downgraded_from == "hard_sparring_day"
-        )
-        if not is_declared_boxing_context:
+        is_hard_context = role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day"
+        is_light_context = bool(session.get("coach_owned")) and role_key == "technical_touch_day"
+        if not (is_hard_context or is_light_context):
             continue
-        if str(session.get("scheduled_day_hint") or "").strip():
-            session_copy = dict(session)
-            if role_key == "hard_sparring_day" and not session.get("downgraded"):
-                session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
-                session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
-            elif role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day":
-                # Downgraded context entries (D-17 ban) and downgraded roles both
-                # render as technical-only combat — the note must say "no hard
-                # sparring", never the hard-sparring note.
-                session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
-                session_copy["display_text"] = CANONICAL_TECHNICAL_ONLY_NOTE
-            coach_owned.append(session_copy)
+        if not str(session.get("scheduled_day_hint") or "").strip():
+            continue
+        session_copy = dict(session)
+        if is_light_context and not is_hard_context:
+            session_copy["athlete_facing_label"] = "Light Combat / Technical"
+            session_copy["display_text"] = "Your declared light-combat / technical session. Keep it as scheduled."
+        elif role_key == "hard_sparring_day" and not session.get("downgraded"):
+            session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
+            session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
+        else:
+            session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
+            session_copy["display_text"] = CANONICAL_TECHNICAL_ONLY_NOTE
+        coach_owned.append(session_copy)
     return coach_owned
 
 
@@ -2447,113 +2433,135 @@ def ensure_declared_coach_combat_spine(
         for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
         if str(day or "").strip()
     }
-    if not hard_days or not countdown_map:
+    support_days = {
+        str(day or "").strip().lower()
+        for day in _ordered_weekdays(
+            clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days", []))
+        )
+        if str(day or "").strip()
+    }
+    training_days = {
+        str(day or "").strip().lower()
+        for day in _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
+        if str(day or "").strip()
+    }
+    if training_days:
+        support_days &= training_days
+    if not countdown_map or not (hard_days or support_days):
         return session_sequence
 
-    coach_labels = {
+    hard_labels = {
         label: str(weekday or "").strip().lower()
         for label, weekday in countdown_map.items()
         if str(weekday or "").strip().lower() in hard_days
         and (_countdown_offset(label) or 0) > 0
     }
-    if not coach_labels:
-        return session_sequence
+    support_labels = {
+        label: str(weekday or "").strip().lower()
+        for label, weekday in countdown_map.items()
+        if str(weekday or "").strip().lower() in support_days
+        and str(weekday or "").strip().lower() not in hard_days
+        and (_countdown_offset(label) or 0) > 0
+    }
 
-    sequence = []
+    sequence: list[dict[str, Any]] = []
     for role in session_sequence:
         role_copy = dict(role)
-        label = str(
-            role_copy.get("scheduled_countdown_label")
-            or role_copy.get("countdown_label")
-            or ""
-        )
+        label = str(role_copy.get("scheduled_countdown_label") or role_copy.get("countdown_label") or "")
         role_key = str(role_copy.get("role_key") or "").strip().lower()
-        downgraded_from = str(
-            role_copy.get("downgraded_from_role_key") or ""
-        ).strip().lower()
-
-        on_coach_label = label in coach_labels
-        coach_context = (
-            role_key == "hard_sparring_day"
-            or downgraded_from == "hard_sparring_day"
-        )
-        app_owned = _is_app_owned_visible_role(role_key)
-        allowed_filler = (
-            is_low_cost_coexistable_filler(role_copy)
-            or role_key == "fight_week_freshness_day"
-        )
-
-        if on_coach_label and app_owned and not coach_context and not allowed_filler:
+        downgraded_from = str(role_copy.get("downgraded_from_role_key") or "").strip().lower()
+        coach_context = role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day"
+        allowed_filler = is_low_cost_coexistable_filler(role_copy) or role_key == "fight_week_freshness_day"
+        if label in hard_labels and _is_app_owned_visible_role(role_key) and not coach_context and not allowed_filler:
             continue
-
         sequence.append(role_copy)
 
-    existing: set[str] = set()
-    for role in sequence:
-        role_key = str(role.get("role_key") or "").strip().lower()
-        downgraded_from = str(role.get("downgraded_from_role_key") or "").strip().lower()
+    existing_hard = {
+        str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+        for role in sequence
+        if str(role.get("role_key") or "").strip().lower() == "hard_sparring_day"
+        or str(role.get("downgraded_from_role_key") or "").strip().lower() == "hard_sparring_day"
+    }
+    existing_support = {
+        str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+        for role in sequence
+        if role.get("coach_owned") is True
+        and str(role.get("role_key") or "").strip().lower() == "technical_touch_day"
+    }
 
-        if role_key != "hard_sparring_day" and downgraded_from != "hard_sparring_day":
-            continue
-
-        label = str(
-            role.get("scheduled_countdown_label")
-            or role.get("countdown_label")
-            or ""
-        )
-        if label:
-            existing.add(label)
-
-    for label in sorted(
-        coach_labels,
-        key=lambda item: int(_countdown_offset(item) or -1),
+    for label, weekday in sorted(
+        hard_labels.items(),
+        key=lambda item: int(_countdown_offset(item[0]) or -1),
         reverse=True,
     ):
         offset = _countdown_offset(label)
-        if offset is None or offset <= 0:
+        if offset is None or offset <= 0 or label in existing_hard:
             continue
-
-        weekday = coach_labels[label]
-        if label in existing:
-            continue
-
         downgraded = offset <= 17
-        cost_class = "low" if downgraded else _late_fight_cost_class("hard_sparring_day")
-        stress_class = "support" if downgraded else _late_fight_stress_class("hard_sparring_day")
-
-        sequence.append(
-            {
-                "session_index": len(sequence) + 1,
-                "category": "sparring",
-                "role_key": "hard_sparring_day",
-                "preferred_pool": "declared_hard_sparring_days",
-                "anchor": _role_anchor("hard_sparring_day"),
-                "cost_class": cost_class,
-                "stress_class": stress_class,
-                "placement_source": "declared_coach_combat_spine",
-                "legal_countdown_labels": [label],
-                "governance": {"late_fight_payload": True, "coach_owned": True},
-                "locked_day": weekday,
-                "scheduled_day_hint": weekday,
-                "real_weekday": weekday,
-                "scheduled_countdown_label": label,
-                "countdown_label": label,
-                "countdown_display_label": _countdown_display_label(label, weekday),
-                "countdown_weekday": weekday,
-                "countdown_offset": offset,
-                "declared_day_locked": True,
-                "coach_owned": True,
-                "downgraded": downgraded,
-                "placement_basis": "locked",
-                "day_assignment_reason": (
-                    "Declared hard-sparring/contact day restored to the calendar spine before app-owned placement."
-                ),
-            }
-        )
+        sequence.append({
+            "session_index": len(sequence) + 1,
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "anchor": _role_anchor("hard_sparring_day"),
+            "cost_class": "low" if downgraded else _late_fight_cost_class("hard_sparring_day"),
+            "stress_class": "support" if downgraded else _late_fight_stress_class("hard_sparring_day"),
+            "placement_source": "declared_coach_combat_spine",
+            "legal_countdown_labels": [label],
+            "governance": {"late_fight_payload": True, "coach_owned": True},
+            "locked_day": weekday,
+            "scheduled_day_hint": weekday,
+            "real_weekday": weekday,
+            "scheduled_countdown_label": label,
+            "countdown_label": label,
+            "countdown_display_label": _countdown_display_label(label, weekday),
+            "countdown_weekday": weekday,
+            "countdown_offset": offset,
+            "declared_day_locked": True,
+            "coach_owned": True,
+            "downgraded": downgraded,
+            "placement_basis": "locked",
+            "day_assignment_reason": "Declared hard-sparring/contact day restored to the calendar spine before app-owned placement.",
+        })
         if downgraded:
             sequence[-1]["downgraded_to_role_key"] = "technical_touch_day"
             sequence[-1]["downgrade_reason_code"] = "d17_hard_sparring_ban"
-        existing.add(label)
+        existing_hard.add(label)
+
+    for label, weekday in sorted(
+        support_labels.items(),
+        key=lambda item: int(_countdown_offset(item[0]) or -1),
+        reverse=True,
+    ):
+        offset = _countdown_offset(label)
+        if offset is None or offset <= 0 or label in existing_support:
+            continue
+        sequence.append({
+            "session_index": len(sequence) + 1,
+            "category": "technical",
+            "role_key": "technical_touch_day",
+            "preferred_pool": "declared_support_work_days",
+            "anchor": "support_day",
+            "cost_class": "low",
+            "stress_class": "support",
+            "placement_source": "declared_support_work_spine",
+            "legal_countdown_labels": [label],
+            "governance": {"late_fight_payload": True, "coach_owned": True},
+            "locked_day": weekday,
+            "scheduled_day_hint": weekday,
+            "real_weekday": weekday,
+            "scheduled_countdown_label": label,
+            "countdown_label": label,
+            "countdown_display_label": _countdown_display_label(label, weekday),
+            "countdown_weekday": weekday,
+            "countdown_offset": offset,
+            "declared_day_locked": True,
+            "coach_owned": True,
+            "placement_basis": "locked",
+            "day_assignment_reason": "Declared light-combat/technical day restored to the calendar spine.",
+        })
+        existing_support.add(label)
+
     sorted_sequence = sorted(sequence, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
     for idx, role in enumerate(sorted_sequence, start=1):
         role["session_index"] = idx
@@ -3304,11 +3312,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         if str(permission_policy.get("countdown_weekday_map", {}).get(label) or "").strip()
     }
     label_to_display_weekday = dict(label_to_weekday)
-    label_to_resolved_training_weekday = {
-        str(item.get("countdown_label") or ""): str(item.get("resolved_weekday") or "").strip().lower()
-        for item in permission_policy.get("availability_adjustments", [])
-        if str(item.get("countdown_label") or "").strip() and str(item.get("resolved_weekday") or "").strip()
-    }
+    label_to_resolved_training_weekday: dict[str, str] = {}
 
     invalid_locked_roles: list[dict[str, Any]] = []
     eligible_candidates: list[dict[str, Any]] = []
