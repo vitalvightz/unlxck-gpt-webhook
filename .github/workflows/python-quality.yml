@@ -40,7 +40,7 @@ jobs:
           tests = tests.replace(old_import, new_import, 1)
           addition = '''\n\ndef test_declared_light_combat_context_does_not_consume_an_app_day_slot():\n    athlete = _athlete()\n    countdown_map = _countdown_weekday_map("friday", 14)\n    spine = ensure_declared_coach_combat_spine([], athlete, countdown_map)\n\n    light_combat = next(\n        role\n        for role in spine\n        if role.get("coach_owned") is True\n        and role.get("role_key") == "light_combat_day"\n        and int(role.get("countdown_offset") or 0) == 9\n    )\n\n    assert light_combat["scheduled_day_hint"] == "wednesday"\n    assert is_low_cost_coexistable_filler(light_combat) is True\n    assert _role_consumes_day_slot(light_combat) is False\n'''
           if "test_declared_light_combat_context_does_not_consume_an_app_day_slot" not in tests:
-              tests = tests.rstrip() + addition + "\n"
+              tests = tests.rstrip() + addition.rstrip() + "\n"
           tests_path.write_text(tests)
           PY
 
