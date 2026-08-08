@@ -103,19 +103,19 @@ def test_declared_light_combat_days_survive_as_coach_owned_calendar_context():
     assert all(role["scheduled_day_hint"] == "wednesday" for role in light_combat)
     assert all(role["athlete_facing_label"] == "Light Combat / Technical" for role in light_combat)
 
-def test_declared_light_combat_context_does_not_consume_an_app_day_slot():
+
+def test_declared_light_combat_context_is_s_and_c_compatible_not_day_exclusive():
     athlete = _athlete()
     countdown_map = _countdown_weekday_map("friday", 14)
-    spine = ensure_declared_coach_combat_spine([], athlete, countdown_map)
+    app_role = _late_role(9)
+    app_role["scheduled_day_hint"] = "wednesday"
+    app_role["real_weekday"] = "wednesday"
 
-    light_combat = next(
-        role
-        for role in spine
-        if role.get("coach_owned") is True
-        and role.get("role_key") == "light_combat_day"
-        and int(role.get("countdown_offset") or 0) == 9
-    )
+    spine = ensure_declared_coach_combat_spine([app_role], athlete, countdown_map)
+    d9_roles = [role for role in spine if int(role.get("countdown_offset") or 0) == 9]
+    light_combat = next(role for role in d9_roles if role.get("role_key") == "light_combat_day")
 
-    assert light_combat["scheduled_day_hint"] == "wednesday"
+    assert any(role.get("role_key") == "strength_touch_day" for role in d9_roles)
+    assert light_combat.get("coach_owned") is True
     assert is_low_cost_coexistable_filler(light_combat) is True
     assert _role_consumes_day_slot(light_combat) is False
