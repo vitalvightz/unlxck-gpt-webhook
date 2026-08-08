@@ -111,6 +111,39 @@ def test_locked_tactical_watch_missing_one_step_is_rejected():
     assert any("LOCKED_CONTENT" in item and "Step 3" in item for item in violations)
 
 
+def test_locked_tactical_watch_step_moved_to_another_day_is_rejected():
+    source = LOCKED_WATCH_SOURCE + """
+D-10 (Wednesday): Recovery
+- Easy mobility: 10 minutes.
+"""
+    plan = _locked_watch_card()
+    watch_cues = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0][
+        "coaching_cues"
+    ]
+    moved_step = watch_cues.pop(2)
+    plan["weeks"][0]["days"].append(
+        {
+            "countdown_label": "D-10",
+            "sessions": [
+                {
+                    "objective": "Recover well.",
+                    "blocks": [
+                        {
+                            "block_type": "mobility",
+                            "display_name": "Easy mobility",
+                            "coaching_cues": [moved_step],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    violations = check_structured_faithfulness(plan, source, LOCKED_WATCH_BRIEF)
+
+    assert any("LOCKED_CONTENT" in item and "Step 3" in item for item in violations)
+
+
 def test_locked_tactical_watch_missing_all_steps_and_progress_is_rejected():
     block = _locked_watch_card()["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
     block["coaching_cues"] = []

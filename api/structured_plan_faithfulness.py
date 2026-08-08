@@ -244,28 +244,90 @@ def _locked_roles(value: Any) -> list[dict[str, Any]]:
     return found
 
 
-def _card_strings(value: Any, *, key: str = "") -> list[str]:
-    """Collect rendered card strings, excluding the verbatim fallback escape hatch."""
-    if key in {"raw_markdown_fallback", "deterministic_support"}:
-        return []
+def _card_strings(value: Any) -> list[str]:
+    """Collect strings from a deliberately scoped piece of the card."""
     if isinstance(value, str):
         return [value]
     if isinstance(value, dict):
         return [
             text
-            for child_key, child in value.items()
-            for text in _card_strings(child, key=child_key)
+            for child in value.values()
+            for text in _card_strings(child)
         ]
     if isinstance(value, list):
         return [text for child in value for text in _card_strings(child)]
     return []
 
 
+def _locked_source_day(source: str, role: dict[str, Any], drill_name: str) -> int | None:
+    """Resolve the authoritative source day for one locked drill role."""
+    sections = _source_day_sections(source)
+    role_day = next(
+        (
+            _dday_num(role.get(key))
+            for key in (
+                "scheduled_countdown_label",
+                "countdown_label",
+                "countdown_display_label",
+            )
+            if _dday_num(role.get(key)) is not None
+        ),
+        None,
+    )
+    normalised_name = _normalise_locked_text(drill_name)
+    if role_day is not None and normalised_name in _normalise_locked_text(
+        sections.get(role_day, "")
+    ):
+        return role_day
+    matching_days = [
+        day
+        for day, section in sections.items()
+        if normalised_name in _normalise_locked_text(section)
+    ]
+    return matching_days[0] if len(matching_days) == 1 else None
+
+
+def _locked_drill_card_strings(
+    plan: dict[str, Any], source: str, role: dict[str, Any], drill_name: str
+) -> list[str]:
+    """Collect only the matching block and its owning session's mapped fields."""
+    source_day = _locked_source_day(source, role, drill_name)
+    if source_day is None:
+        return []
+    normalised_name = _normalise_locked_text(drill_name)
+    scoped: list[str] = []
+    for week in plan.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for day in week.get("days") or []:
+            if (
+                not isinstance(day, dict)
+                or _dday_num(day.get("countdown_label")) != source_day
+            ):
+                continue
+            for session in day.get("sessions") or []:
+                if not isinstance(session, dict):
+                    continue
+                matching_blocks = [
+                    block
+                    for block in session.get("blocks") or []
+                    if isinstance(block, dict)
+                    and _normalise_locked_text(block.get("display_name"))
+                    == normalised_name
+                ]
+                for block in matching_blocks:
+                    scoped.extend(_card_strings(block))
+                    # These are the legitimate homes for Why and the session-level
+                    # locked mindset. Other blocks and day/plan notes stay excluded.
+                    scoped.extend(_card_strings(session.get("objective")))
+                    scoped.extend(_card_strings(session.get("mindset_anchor")))
+    return scoped
+
+
 def _locked_content_violations(
     plan: dict[str, Any], source: str, planning_brief: Any
 ) -> list[str]:
     """Require every authoritative locked-drill line to survive in card fields."""
-    card_texts = [_normalise_locked_text(text) for text in _card_strings(plan)]
     source_text = _normalise_locked_text(source)
     violations: list[str] = []
     for role in _locked_roles(planning_brief):
@@ -275,6 +337,10 @@ def _locked_content_violations(
             or (role.get("preferred_exercise_names") or [""])[0]
             or "locked drill"
         )
+        card_texts = [
+            _normalise_locked_text(text)
+            for text in _locked_drill_card_strings(plan, source, role, drill_name)
+        ]
         required: list[tuple[str, str]] = [("selected drill name", drill_name)]
         for raw_line in str(role["display_text"]).splitlines():
             line = raw_line.strip().lstrip("- ").strip()
