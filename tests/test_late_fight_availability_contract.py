@@ -1,6 +1,7 @@
 from fightcamp.gap_fill_inserts import apply_gap_fill_inserts
 from fightcamp.stage2_payload_late_fight import (
     _countdown_weekday_map,
+    _late_fight_allocation_plan,
     _late_fight_countdown_context,
     _role_consumes_day_slot,
     _visible_calendar_session_sequence,
@@ -119,3 +120,20 @@ def test_declared_light_combat_context_is_s_and_c_compatible_not_day_exclusive()
     assert light_combat.get("coach_owned") is True
     assert is_low_cost_coexistable_filler(light_combat) is True
     assert _role_consumes_day_slot(light_combat) is False
+
+
+def test_no_available_day_suppresses_required_work_instead_of_inventing_a_session():
+    athlete = _athlete()
+    athlete["days_until_fight"] = 1
+    athlete["plan_creation_weekday"] = "monday"
+    athlete["training_days"] = ["Tuesday"]
+
+    allocation = _late_fight_allocation_plan(1, athlete)
+
+    assert allocation["allocator"]["eligible_countdown_labels"] == []
+    assert allocation["session_roles"] == []
+    assert allocation["suppressed_roles"]
+    assert any(
+        "No declared training availability in this countdown window." in role.get("reasons", [])
+        for role in allocation["suppressed_roles"]
+    )
