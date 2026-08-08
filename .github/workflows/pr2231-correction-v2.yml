@@ -1,0 +1,35 @@
+name: PR2231 correction v2
+
+on:
+  push:
+    branches:
+      - fix/late-fight-availability
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/late-fight-availability
+          fetch-depth: 0
+
+      - name: Apply focused correction
+        run: python .github/scripts/pr2231_correction.py
+
+      - name: Commit correction and remove temporary files
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name "unlxck-pr-patcher"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/scripts/pr2231_correction.py
+          git rm .github/workflows/pr2231-correction.yml
+          git rm .github/workflows/pr2231-correction-v2.yml
+          git add fightcamp tests
+          git commit -m "Fix PR2231 scope regressions"
+          git push origin HEAD:fix/late-fight-availability
