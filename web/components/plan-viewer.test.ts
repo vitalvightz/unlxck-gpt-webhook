@@ -1081,6 +1081,59 @@ test("a short-camp rehab line keeps its exercise name and both labelled rational
   ]);
 });
 
+test("late-fight raw output becomes clear notes, contact cards, and exercise cards", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "- Injury: Left shoulder skin irritation, moderate and stable. Keep the area clean and covered.",
+      "- Missing target weight: no target weight set. Add your fight weight for cut guidance.",
+      "- Sparring note: Tuesday and Friday convert to technical-only combat in this window.",
+      "- Week shape: this is a bridge compression week. Fewer sessions preserve sharpness.",
+      "",
+      "D-12 (Monday) — Neural speed touch",
+      "Why: preserve force and rate of force development without creating fatigue.",
+      "- Movement Prep: 6 min. Shoulder-safe mobility.",
+      "- Trap bar deadlift, neural touch: 2-3 sets x 3 reps, RPE 6-7, full recovery 3-4 min.",
+      "- Easier: 2 sets x 3 with lighter load.",
+      "- Stop: any sharp shoulder pain or new wound bleeding.",
+      "",
+      "D-11 (Tuesday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+      "",
+      "D-11 (Tuesday) — Fight Tactical Watch",
+      "Why: keep pocket exchanges planned rather than chaotic.",
+      "- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.",
+      "  Step 1: Identify the opponent's most common pocket sequence.",
+      "  Intent: Win the second decision inside the pocket.",
+    ].join("\n"),
+    "2026-08-22",
+  );
+
+  assert.deepEqual(
+    plan.plan_notes?.map((note) => note.label),
+    ["Injury", "Missing target weight", "Week shape"],
+  );
+  assert.equal(
+    plan.plan_notes?.some((note) => note.text?.includes("technical-only combat")),
+    false,
+  );
+
+  const days = plan.weeks?.[0]?.days ?? [];
+  assert.equal(days.length, 2);
+  assert.equal(days[1]?.today_card?.coach_led_contact, "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.");
+  assert.equal(days[1]?.sessions?.[0]?.title, "Fight Tactical Watch");
+  assert.equal(days[1]?.sessions?.[0]?.blocks?.[0]?.display_name, "Pocket Exchange Map");
+  assert.deepEqual(days[1]?.sessions?.[0]?.blocks?.[0]?.coaching_cues, [
+    "Step 1: Identify the opponent's most common pocket sequence.",
+    "Intent: Win the second decision inside the pocket.",
+  ]);
+
+  const neuralBlocks = days[0]?.sessions?.[0]?.blocks ?? [];
+  assert.equal(neuralBlocks[0]?.display_name, "Movement Prep");
+  assert.equal(neuralBlocks[1]?.display_name, "Trap bar deadlift, neural touch");
+  assert.deepEqual(neuralBlocks[1]?.regression_options, ["2 sets x 3 with lighter load."]);
+  assert.equal(neuralBlocks[1]?.coaching_cues?.[0], "Stop: any sharp shoulder pain or new wound bleeding.");
+});
+
 test("a Fight Tactical Watch day renders as one drill block, not one block per step", () => {
   // Regression for the shredded Tactical Watch card. The watch used to ship its
   // own layout — a bare drill-name line, `Duration:` / `Prescription:` headers,

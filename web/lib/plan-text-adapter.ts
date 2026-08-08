@@ -223,6 +223,12 @@ const SESSION_WEEKDAY_ONLY_RE = new RegExp(
 // mistaken for a new section.
 const NOTE_SECTION_RE =
   /^(Lead notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
+// Late-fight output can begin with a compact bulleted summary rather than an
+// explicit "Lead notes" heading. These labels are part of the saved text
+// contract, so preserve each one as a separate note card instead of flattening
+// the whole summary into one anonymous "Plan" paragraph.
+const LEAD_NOTE_BULLET_RE =
+  /^[-*•‣▪◦·]\s+(Injury|Missing target weight|Sparring note|Week shape)\s*:\s*(.+)$/i;
 // Renewable open-plan system sections (the section contract in
 // fightcamp/stage2_payload_open_ongoing.py). Each opens its own titled context
 // group so buildStructuredPlanFromText can route it — red-flag triggers become
@@ -422,7 +428,11 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     if (!content) {
       return;
     }
-    if (COACH_LED_RE.test(content) && !content.includes(" — ")) {
+    // Canonical contact notes themselves can contain an em dash (for example
+    // "Technical-only contact today — no hard sparring and no extra S&C").
+    // The ownership phrase is the contract; a dash must not turn the note into
+    // an exercise block and lose the dated contact card.
+    if (COACH_LED_RE.test(content)) {
       session.coachNote = content;
       return;
     }
@@ -497,6 +507,16 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     }
 
     const cleanLine = stripPlanMarkup(line);
+    const leadNote = line.match(LEAD_NOTE_BULLET_RE);
+    if (!currentSession && !currentWeek && leadNote) {
+      currentNotes = {
+        kind: "notes",
+        title: titleizeToken(leadNote[1]),
+        lines: [leadNote[2].trim()],
+      };
+      groups.push(currentNotes);
+      continue;
+    }
     if (/^(?:Weekly Rhythm|Session Cards):?$/i.test(cleanLine)) {
       allowWeekdayOnlySessions = true;
       currentSession = null;
@@ -972,6 +992,15 @@ export function buildStructuredPlanFromText(
     : undefined;
   const notes = noteGroups
     .filter((group) => !isOpenTextPlan || !OPEN_PLAN_SYSTEM_NOTE_RE.test(group.title))
+    // Declared-contact truth is already carried by the dated coach-contact
+    // card. Do not repeat its prose summary in Active notes as well.
+    .filter(
+      (group) =>
+        !/^sparring note$/i.test(group.title) ||
+        ![...explicitWeeks.flatMap((week) => week.sessions), ...looseSessions].some(
+          (session) => Boolean(session.coachNote),
+        ),
+    )
     .map((group) => ({
       category: noteCategory(group.title),
       label: group.title,
