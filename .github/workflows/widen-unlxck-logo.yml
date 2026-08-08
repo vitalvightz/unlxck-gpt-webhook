@@ -1,0 +1,119 @@
+name: Widen UNLXCK logo proportions
+
+on:
+  push:
+    branches:
+      - codex/shorten-widen-unlxck-logo
+
+permissions:
+  contents: write
+
+jobs:
+  widen-logo:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/shorten-widen-unlxck-logo
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Widen logo artwork by 10 percent
+        run: |
+          python -m pip install --quiet pillow
+          python <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          FACTOR = 1.10
+          root = Path('.')
+
+          png_patterns = [
+              'web/public/brand/unlxck-one-angle-*.png',
+              'web/public/icons/*.png',
+              'web/public/brand/unlxck-codex-icon-upgrade/assets/app/*.png',
+              'web/public/brand/unlxck-codex-icon-upgrade/assets/brand/*.png',
+              'web/public/brand/unlxck-codex-icon-upgrade/assets/maskable/*.png',
+          ]
+
+          pngs = []
+          for pattern in png_patterns:
+              pngs.extend(root.glob(pattern))
+          pngs = sorted(set(pngs))
+
+          def widen_center_crop(image: Image.Image) -> Image.Image:
+              w, h = image.size
+              stretched_w = max(w + 1, round(w * FACTOR))
+              stretched = image.resize((stretched_w, h), Image.Resampling.LANCZOS)
+              left = (stretched_w - w) // 2
+              return stretched.crop((left, 0, left + w, h))
+
+          changed = []
+          for path in pngs:
+              with Image.open(path) as src:
+                  original_size = src.size
+                  original_mode = src.mode
+                  out = widen_center_crop(src)
+                  if out.size != original_size:
+                      raise RuntimeError(f'dimension changed: {path}: {original_size} -> {out.size}')
+                  # Keep alpha/transparency and original pixel mode where possible.
+                  if out.mode != original_mode:
+                      out = out.convert(original_mode)
+                  out.save(path, format='PNG', optimize=True)
+              with Image.open(path) as check:
+                  if check.size != original_size:
+                      raise RuntimeError(f'validation failed: {path}')
+              changed.append(str(path))
+
+          # Preserve the browser favicon container and its advertised sizes.
+          ico_paths = [
+              Path('web/public/favicon.ico'),
+              Path('web/public/brand/unlxck-codex-icon-upgrade/assets/app/favicon.ico'),
+          ]
+          for path in ico_paths:
+              if not path.exists():
+                  continue
+              with Image.open(path) as src:
+                  sizes = sorted(src.ico.sizes()) if hasattr(src, 'ico') else [src.size]
+                  largest_size = max(sizes, key=lambda s: s[0] * s[1])
+                  frame = src.ico.getimage(largest_size).convert('RGBA') if hasattr(src, 'ico') else src.convert('RGBA')
+                  out = widen_center_crop(frame)
+                  out.save(path, format='ICO', sizes=sizes)
+              changed.append(str(path))
+
+          if not changed:
+              raise RuntimeError('No logo assets matched')
+
+          print(f'Updated {len(changed)} logo/icon assets')
+          for path in changed:
+              print(path)
+          PY
+
+      - name: Verify only logo assets changed
+        run: |
+          changed="$(git diff --name-only)"
+          test -n "$changed"
+          echo "$changed"
+          while IFS= read -r path; do
+            case "$path" in
+              web/public/brand/unlxck-one-angle-*.png|web/public/icons/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/app/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/brand/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/maskable/*.png|web/public/favicon.ico)
+                ;;
+              *)
+                echo "Unexpected changed file: $path"
+                exit 1
+                ;;
+            esac
+          done <<< "$changed"
+
+      - name: Commit proportion fix and remove one-off workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add web/public/brand web/public/icons web/public/favicon.ico
+          git rm .github/workflows/widen-unlxck-logo.yml
+          git commit -m 'Widen UNLXCK logo proportions'
+          git push origin HEAD:codex/shorten-widen-unlxck-logo
