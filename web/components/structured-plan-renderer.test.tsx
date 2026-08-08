@@ -1505,6 +1505,7 @@ test("week overview separates training days, app sessions, and coach-led session
           {
             date: "2026-06-19",
             day_type: "moderate",
+            today_card: { coach_led_contact: "Coach-led boxing — technical only" },
             sessions: [{ session_id: "s2", title: "Conditioning", blocks: [] }],
           },
           {
@@ -1532,11 +1533,10 @@ test("week overview separates training days, app sessions, and coach-led session
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />);
 
   assert.equal(html.includes("Training days"), true);
-  // The week-overview stats no longer say "app" — the athlete just sees their work.
-  assert.equal(html.includes("Sessions</span>"), true);
-  assert.equal(html.includes("Sparring/contact</span>"), true);
+  assert.equal(html.includes("Plan sessions</span>"), true);
+  assert.equal(html.includes("App-prescribed"), false);
+  assert.equal(html.includes("Coach/gym combat sessions</span>"), true);
   assert.equal(html.includes("Completion</span>"), true);
-  assert.equal(html.includes("App sessions"), false);
   assert.equal(html.includes("App completion"), false);
   assert.equal(html.includes("Days</span>"), false);
   assert.equal(html.includes("Completed</span>"), false);

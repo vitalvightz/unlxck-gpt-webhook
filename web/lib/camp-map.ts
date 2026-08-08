@@ -665,7 +665,7 @@ export function resolveNextPlanFocusDay(
 export type WeekSessionSummary = {
   /** Days with athlete work in the app or a coach-led/contact session. */
   trainingDays: number;
-  /** App-prescribed sessions with blocks/details owned by Unlxck. */
+  /** Plan sessions with blocks/details owned by Unlxck. */
   appSessions: number;
   /** Session-less contact days owned by the athlete's coach. */
   coachLedSessions: number;
@@ -681,24 +681,15 @@ export function weekSessionSummary(
   return getDays(week).reduce<WeekSessionSummary>(
     (acc, day) => {
       const appSessions = getSessions(day).length;
-      if (appSessions > 0) {
-        return {
-          trainingDays: acc.trainingDays + 1,
-          appSessions: acc.appSessions + appSessions,
-          coachLedSessions: acc.coachLedSessions,
-        };
-      }
-
-      const sessionless = classifySessionlessDay(day);
-      if (sessionless.coachLed) {
-        return {
-          trainingDays: acc.trainingDays + 1,
-          appSessions: acc.appSessions,
-          coachLedSessions: acc.coachLedSessions + 1,
-        };
-      }
-
-      return acc;
+      // Coach-led contact can sit alongside a plan insert. Count each
+      // source independently, while counting the calendar day only once.
+      const coachLed = Boolean(getCoachLedContactView(day)) || classifySessionlessDay(day).coachLed;
+      const activeDay = appSessions > 0 || coachLed;
+      return {
+        trainingDays: acc.trainingDays + (activeDay ? 1 : 0),
+        appSessions: acc.appSessions + appSessions,
+        coachLedSessions: acc.coachLedSessions + (coachLed ? 1 : 0),
+      };
     },
     { trainingDays: 0, appSessions: 0, coachLedSessions: 0 },
   );

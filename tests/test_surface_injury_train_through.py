@@ -203,9 +203,10 @@ def test_stable_lower_back_abrasion_surface_guidance_only():
 
     lowered = block.lower()
     assert SURFACE_MINOR_TRAIN_THROUGH_NOTE in block
-    assert "covered" in lowered
-    assert "clean" in lowered
     assert "friction" in lowered
+    assert "train normally" not in lowered
+    assert "closed, stable and non-infected" in lowered
+    assert "stop if it worsens" in lowered
     for banned in (
         "cat-cow",
         "cat cow",
