@@ -219,21 +219,35 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
 
 
 def build_watch_display_text(watch: TacticalWatch) -> str:
+    """Render the selected watch in the shared athlete-facing session-body shape.
+
+    Every other session in the plan reads the same way: an unbulleted ``Why:``
+    objective, one bulleted activity heading (``- Name: dose``), then indented
+    labelled lines that belong to that activity. The watch used to emit a layout
+    of its own — a bare title line, a ``Mindset:`` / ``Prescription:`` header
+    stack, and one bullet per instruction — and both renderers read those
+    peer-level lines as *separate exercises*: the drill name, duration and the
+    bare ``Prescription:`` header landed in the session objective, every
+    instruction became its own load-less block, and the mindset lines piled onto
+    whichever block happened to be last. Emitting the shared contract keeps the
+    whole watch as one card with its own name, dose and coaching detail.
+
+    The bank's wording is passed through untouched; only the line shape and the
+    labels that introduce each line are chosen here.
+    """
     lines = [
-        "Fight Tactical Watch",
         f"Why: {watch.why}",
-        "Mindset:",
-        f"Intent: {watch.intent}",
-        f"Focus: {watch.focus}",
-        f"Reset: {watch.reset}",
-        f"Anchor: {watch.anchor}",
-        f"Context: {watch.context}",
-        "",
-        watch.name,
-        f"Duration: {watch.duration_minutes} minutes",
-        "Prescription:",
-        *(f"- {instruction}" for instruction in watch.instructions),
-        f"Progress: {watch.progress}",
+        f"- {watch.name}: {watch.duration_minutes} minutes, tactical review only. No physical load.",
+        *(
+            f"  Step {index}: {instruction}"
+            for index, instruction in enumerate(watch.instructions, start=1)
+        ),
+        f"  Intent: {watch.intent}",
+        f"  Focus: {watch.focus}",
+        f"  Reset: {watch.reset}",
+        f"  Anchor: {watch.anchor}",
+        f"  Purpose: {watch.context}",
+        f"  Progress: {watch.progress}",
     ]
     return "\n".join(lines)
 

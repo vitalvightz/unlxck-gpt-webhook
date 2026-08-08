@@ -616,7 +616,13 @@ function detailText(block: PlanTextBlock, labels: string[]): string[] {
     .map((detail) => detail.text);
 }
 
-function inferBlockType(block: PlanTextBlock): string {
+// Session types a block may inherit when its own name says nothing about what it
+// is. Deliberately excludes "rehab" and "conditioning": those drive extra
+// renderer behaviour (isRehabOrMobilityBlock's always-visible summary), so a
+// whole session's worth of blocks must never acquire them by inheritance.
+const INHERITABLE_SESSION_BLOCK_TYPES = new Set(["skill", "sparring"]);
+
+function inferBlockType(block: PlanTextBlock, sessionType: string | null = null): string {
   const value = `${block.tag || ""} ${block.name}`.toLowerCase();
   if (/rehab|prehab|mobility|activation|warm-?up|cool-?down|reset|recovery/.test(value)) {
     return "rehab";
@@ -630,7 +636,13 @@ function inferBlockType(block: PlanTextBlock): string {
   if (/skill|technical|tactical|shadowbox|footwork|cue card|film|watch/.test(value)) {
     return "skill";
   }
-  return block.tag?.toLowerCase().replace(/\s+/g, "_") || "training";
+  // A drill named only for itself ("Pocket Exchange Map", "First-Round Pressure
+  // Script") carries no keyword, so it used to fall through to "training" and a
+  // 10-minute tactical review rendered with the same chip as a lift. The session
+  // it sits in already knows what kind of work it is — inherit that before
+  // giving up.
+  const inherited = sessionType && INHERITABLE_SESSION_BLOCK_TYPES.has(sessionType) ? sessionType : null;
+  return block.tag?.toLowerCase().replace(/\s+/g, "_") || inherited || "training";
 }
 
 function inferSessionType(session: PlanTextSession): string {
@@ -656,7 +668,11 @@ function inferSessionType(session: PlanTextSession): string {
   return "mixed";
 }
 
-function toStructuredBlock(block: PlanTextBlock, index: number): StructuredBlock {
+function toStructuredBlock(
+  block: PlanTextBlock,
+  index: number,
+  sessionType: string | null = null,
+): StructuredBlock {
   // "Purpose" and "Why today" are two DIFFERENT claims — what the drill does,
   // and why it earns a slot on this specific day. Joining them into one
   // unlabelled `purpose` string dropped both labels and rendered them as a
@@ -689,7 +705,7 @@ function toStructuredBlock(block: PlanTextBlock, index: number): StructuredBlock
 
   return {
     block_id: `text-block-${index + 1}`,
-    block_type: inferBlockType(block),
+    block_type: inferBlockType(block, sessionType),
     display_name: block.name,
     order_index: index,
     load: block.dose ? { display: block.dose } : null,
@@ -704,12 +720,15 @@ function toStructuredBlock(block: PlanTextBlock, index: number): StructuredBlock
 function toStructuredSession(session: PlanTextSession, index: number): StructuredSession {
   const notes = session.notes.join(" ").trim();
   const objective = [session.objective, notes].filter(Boolean).join(" ") || null;
+  const sessionType = inferSessionType(session);
   return {
     session_id: `text-session-${index + 1}`,
-    session_type: inferSessionType(session),
+    session_type: sessionType,
     title: session.title,
     objective,
-    blocks: session.blocks.map(toStructuredBlock),
+    blocks: session.blocks.map((block, blockIndex) =>
+      toStructuredBlock(block, blockIndex, sessionType),
+    ),
   };
 }
 

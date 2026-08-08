@@ -535,14 +535,15 @@ def test_selected_drill_identity_survives_finalizer_compaction():
     assert compact["role_key"] == "tactical_watch"
     assert compact["athlete_facing_label"] == "Fight Tactical Watch"
     assert compact["preferred_exercise_names"] == ["Intercept the Entry"]
-    # Outer shell first, then the selected watch as the inner activity card.
+    # Session objective first, then the selected watch as the one activity bullet
+    # with its own indented detail lines.
     lines = compact["display_text"].splitlines()
-    assert lines[0] == "Fight Tactical Watch"
-    assert lines[1].startswith("Why: ")
-    assert "Intercept the Entry" in lines
-    assert lines.index("Intercept the Entry") > lines.index("Mindset:")
-    assert any(line.startswith("Duration: ") for line in lines)
-    assert any(line.startswith("Progress: ") for line in lines)
+    assert lines[0].startswith("Why: ")
+    assert lines[1].startswith("- Intercept the Entry: ")
+    assert [line for line in lines if line.startswith("- ")] == [lines[1]]
+    assert all(line.startswith("  ") for line in lines[2:])
+    assert any(line.startswith("  Purpose: ") for line in lines)
+    assert any(line.startswith("  Progress: ") for line in lines)
     assert compact["mandatory_tactical_watch"] is True
     assert compact["governance"]["selected_drill_locked"] is True
     assert compact["governance"]["selected_drill_name"] == "Intercept the Entry"
@@ -550,6 +551,58 @@ def test_selected_drill_identity_survives_finalizer_compaction():
     assert compact["governance"]["do_not_reselect_or_generalize"] is True
     for instruction in role["tactical_watch"]["instructions"]:
         assert instruction in compact["display_text"]
+
+
+# --- athlete-facing card shape ------------------------------------------------
+#
+# The watch used to emit a layout of its own (a bare title line, a `Mindset:` /
+# `Prescription:` header stack, one bullet per instruction). Both renderers read
+# peer-level lines as separate exercises, so that card shipped as: the drill name
+# + duration + a bare "Prescription:" glued into the session objective, one
+# load-less block per instruction, and every mindset line hanging off whichever
+# block came last. These lock the shared session-body shape that fixed it.
+
+
+@pytest.mark.parametrize("watch", all_watches(), ids=lambda watch: watch.key)
+def test_every_watch_renders_as_one_activity_bullet(watch):
+    lines = library.build_watch_display_text(watch).splitlines()
+
+    assert lines[0] == f"Why: {watch.why}"
+    # Exactly one bullet: the drill itself. Anything else at bullet level would
+    # parse as a second exercise on the card.
+    bullets = [line for line in lines if line.lstrip().startswith("- ")]
+    assert bullets == [lines[1]]
+    assert lines[1].startswith(f"- {watch.name}: ")
+    assert f"{watch.duration_minutes} minutes" in lines[1]
+    # Everything after the bullet is an indented detail line of that same block.
+    assert lines[2:]
+    assert all(line.startswith("  ") and line.strip() for line in lines[2:])
+
+
+@pytest.mark.parametrize("watch", all_watches(), ids=lambda watch: watch.key)
+def test_watch_card_keeps_every_bank_string_verbatim(watch):
+    """Shape is chosen here; wording stays exactly as the bank wrote it."""
+    text = library.build_watch_display_text(watch)
+    for value in (watch.why, watch.progress, *watch.instructions, *canonical_mindset(watch)):
+        assert value in text
+
+
+def canonical_mindset(watch):
+    return (watch.intent, watch.focus, watch.reset, watch.anchor, watch.context)
+
+
+def test_watch_card_labels_the_lines_the_renderers_understand():
+    """`Purpose` and `Progress` are the labels the card renderers key off."""
+    watch = next(iter(all_watches()))
+    lines = library.build_watch_display_text(watch).splitlines()
+
+    assert f"  Purpose: {watch.context}" in lines
+    assert f"  Progress: {watch.progress}" in lines
+    for index, instruction in enumerate(watch.instructions, start=1):
+        assert f"  Step {index}: {instruction}" in lines
+    # No bare section headers: a label with no body became a stray session note.
+    assert "Mindset:" not in lines
+    assert "Prescription:" not in lines
 
 
 # --- end to end through the real Stage 1 planning brief ----------------------

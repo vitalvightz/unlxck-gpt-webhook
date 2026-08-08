@@ -531,6 +531,11 @@ def build_stage2_finalizer_packet(
             # finalizer must not re-open it.
             "If a session role has governance.selected_drill_locked=true, Stage 1 has already chosen that role's activity: preferred_exercise_names[0] is the authoritative activity name. Render that exact name as the activity title.",
             "For a governance.selected_drill_locked=true role, render the supplied display_text content as that activity's own prescription. Do not rename it, do not substitute a different activity, do not merge it into another session, and do not restate it as generic category language.",
+            # display_text for a locked drill is already written in the session-body
+            # contract. Reshuffling it (promoting a detail line to its own bullet, or
+            # letting the activity name and duration drift above the first bullet)
+            # makes the card parse as several load-less exercises instead of one.
+            "A governance.selected_drill_locked=true display_text is already in final session-body shape: keep its line order exactly. Its leading `Why:` line is that session's objective, its single bulleted line is the activity heading, and every indented line below that bullet is a detail line of that same activity. Do not re-order those lines, do not promote an indented line to its own bullet, and never let the activity name, its duration, or a bare section header render as a session-level note above the bullet.",
             "A governance.selected_drill_locked=true role is authoritative, must render, and must never be moved to suppressed_roles.",
             "Do not collapse a selected countdown session into Lead notes, another day, movement prep, mobility finisher, rationale, or a generic note. It must keep its own D-X card.",
             "If selected_plan.session_sequence contains D-3 fight_week_freshness_day, render a D-3 freshness/reset card even when it is support-class and low RPE.",
