@@ -838,18 +838,32 @@ function QuickBuildFormInner() {
           />
         </div>
         <FieldError message={visibleError("technical_style")} />
-        <div className="field">
-          <label htmlFor="qb-tactical-style">Tactical style (optional)</label>
-          <CustomSelect
-            id="qb-tactical-style"
-            value={input.tactical_style[0] ?? ""}
-            options={TACTICAL_STYLE_OPTIONS}
-            placeholder="Select tactical style"
-            includeEmptyOption
-            onChange={(value) => patch("tactical_style", value ? [value] : [])}
-          />
-        </div>
-        <FieldError message={visibleError("tactical_style")} />
+        <details className="overview-disclosure quick-build-optional-disclosure">
+          <summary className="overview-disclosure-summary">
+            <div className="overview-disclosure-copy">
+              <p className="kicker">Optional</p>
+              <p className="overview-disclosure-title">Add your fighting style</p>
+              <p className="muted">How you usually fight within your combat sport.</p>
+            </div>
+            <span className="overview-disclosure-meta">
+              <span className="overview-disclosure-chevron" aria-hidden="true" />
+            </span>
+          </summary>
+          <div className="overview-disclosure-body">
+            <div className="field">
+              <label htmlFor="qb-tactical-style">Tactical style</label>
+              <CustomSelect
+                id="qb-tactical-style"
+                value={input.tactical_style[0] ?? ""}
+                options={TACTICAL_STYLE_OPTIONS}
+                placeholder="Select tactical style"
+                includeEmptyOption
+                onChange={(value) => patch("tactical_style", value ? [value] : [])}
+              />
+            </div>
+            <FieldError message={visibleError("tactical_style")} />
+          </div>
+        </details>
       </article>
 
       <article className="step-card">
