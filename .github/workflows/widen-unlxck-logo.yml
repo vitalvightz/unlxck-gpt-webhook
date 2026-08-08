@@ -60,7 +60,6 @@ jobs:
                   out = widen_center_crop(src)
                   if out.size != original_size:
                       raise RuntimeError(f'dimension changed: {path}: {original_size} -> {out.size}')
-                  # Keep alpha/transparency and original pixel mode where possible.
                   if out.mode != original_mode:
                       out = out.convert(original_mode)
                   out.save(path, format='PNG', optimize=True)
@@ -69,7 +68,6 @@ jobs:
                       raise RuntimeError(f'validation failed: {path}')
               changed.append(str(path))
 
-          # Preserve the browser favicon container and its advertised sizes.
           ico_paths = [
               Path('web/public/favicon.ico'),
               Path('web/public/brand/unlxck-codex-icon-upgrade/assets/app/favicon.ico'),
@@ -100,7 +98,7 @@ jobs:
           echo "$changed"
           while IFS= read -r path; do
             case "$path" in
-              web/public/brand/unlxck-one-angle-*.png|web/public/icons/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/app/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/brand/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/maskable/*.png|web/public/favicon.ico)
+              web/public/brand/unlxck-one-angle-*.png|web/public/icons/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/app/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/app/favicon.ico|web/public/brand/unlxck-codex-icon-upgrade/assets/brand/*.png|web/public/brand/unlxck-codex-icon-upgrade/assets/maskable/*.png|web/public/favicon.ico)
                 ;;
               *)
                 echo "Unexpected changed file: $path"
