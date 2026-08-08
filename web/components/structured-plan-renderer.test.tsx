@@ -942,6 +942,7 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(html.includes("Technical Session"), true);
   assert.equal(html.includes("Hard sparring is reduced close to competition"), false);
   assert.equal(html.includes('aria-label="Why this changed: Technical Session"'), true);
+  assert.equal(html.includes('aria-label="Why this changed: Technical Session">?</button>'), true);
   assert.equal(html.includes("Technical-only contact today"), true);
   assert.equal(html.includes("no hard sparring"), true);
   assert.equal(html.includes("this is your declared hard-sparring/contact work"), false);

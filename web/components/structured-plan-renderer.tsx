@@ -503,7 +503,7 @@ export function SessionCard({
           <h3 className="sp-session-title">
             {isTechnicalSession ? "Technical Session" : title}
             {isTechnicalSession ? (
-              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} />
+              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
             ) : null}
           </h3>
           {/* The objective is the plan's "Why:" line, not a description of the
@@ -664,7 +664,7 @@ export function SessionlessDayCard({
           <h3 className="sp-session-title">
             {kind === "technical" ? "Technical Session" : title}
             {kind === "technical" ? (
-              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} />
+              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
             ) : null}
           </h3>
         </div>
@@ -727,7 +727,7 @@ function CoachLedDayContext({
         <p className="sp-today-headline">
           {kind === "technical" ? "Technical Session" : title}
           {kind === "technical" ? (
-            <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} />
+            <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
           ) : null}
         </p>
       </div>
