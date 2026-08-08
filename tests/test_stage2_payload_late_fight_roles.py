@@ -1124,8 +1124,8 @@ def test_late_fight_calendar_truth_and_availability_filter_regression():
     assert "D-12" not in role_by_label
     assert "D-11" in role_by_label
     assert role_by_label["D-11"]["real_weekday"] == "wednesday"
-    assert "D-6" in role_by_label
-    assert "D-1" in role_by_label
+    assert "D-6" not in role_by_label
+    assert "D-1" not in role_by_label
     assert "D-0" not in role_by_label
     for role in sequence:
         label = role.get("scheduled_countdown_label")
@@ -1150,7 +1150,7 @@ def test_permission_policy_exposes_eligible_countdown_labels():
     assert "D-14" not in policy["eligible_countdown_labels"]
     assert "D-12" in policy["eligible_countdown_labels"]
     assert "D-7" not in policy["eligible_countdown_labels"]
-    assert "D-6" in policy["eligible_countdown_labels"]
+    assert "D-6" not in policy["eligible_countdown_labels"]
 
 
 def test_composite_late_fight_d14_blocks_unavailable_app_owned_days():
@@ -1169,7 +1169,7 @@ def test_composite_late_fight_d14_blocks_unavailable_app_owned_days():
     assert "D-11" in labels
     assert "D-10" in labels or "D-9" in labels
     assert "D-9" in labels
-    assert "D-6" in labels
+    assert "D-6" not in labels
 
     countdown_map = _countdown_weekday_map("saturday", 14)
     for role in sequence:
@@ -1180,7 +1180,7 @@ def test_composite_late_fight_d14_blocks_unavailable_app_owned_days():
             offset = _countdown_offset(label)
             assert offset is not None
             weekday = str(countdown_map.get(label) or "")
-            assert offset <= 6 or weekday in {"tuesday", "wednesday", "thursday"}
+            assert weekday in {"tuesday", "wednesday", "thursday"}
 
 
 def test_bridge_mode_continuity_through_d1_does_not_place_on_d0_or_outside_label_set():

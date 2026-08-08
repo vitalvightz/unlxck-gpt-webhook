@@ -603,7 +603,7 @@ class TestPlanningBriefBranching:
         ]
         assert [entry["role_key"] for entry in app_sequence] == [
             "fight_week_freshness_day",
-            "tactical_cue_card",
+            "tactical_watch",
         ]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
@@ -623,7 +623,7 @@ class TestPlanningBriefBranching:
             for entry in brief["late_fight_session_sequence"]
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        assert [entry["role_key"] for entry in app_sequence] == ["tactical_cue_card"]
+        assert [entry["role_key"] for entry in app_sequence] == ["tactical_watch"]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
     def test_d7_planning_brief_uses_sharpness_week_labels(self):

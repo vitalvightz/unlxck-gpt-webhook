@@ -446,17 +446,25 @@ _PROFILE_BUILDERS = {
 }
 
 
-@pytest.mark.parametrize("profile", list(_PROFILE_BUILDERS))
+@pytest.mark.parametrize("profile", ["pro_pressure_mon_thu", "all_days"])
 @pytest.mark.parametrize("days_until_fight", list(range(1, 22)))
-def test_no_active_window_resolves_to_zero_sessions(profile, days_until_fight):
-    # Every active late-fight window (D-1..D-21) must place at least one
-    # app-owned session for every athlete shape. D-0 is the only legitimately
-    # empty active mode and is excluded from the sweep.
+def test_active_window_keeps_required_app_work_when_legal_days_exist(profile, days_until_fight):
     athlete = _PROFILE_BUILDERS[profile](days_until_fight)
     roles = _late_fight_allocation_plan(days_until_fight, athlete).get("session_roles", [])
     assert roles, f"{profile} D-{days_until_fight} resolved to an empty active window"
     app_owned = [r for r in roles if _is_app_owned_visible_role(r.get("role_key"))]
     assert app_owned, f"{profile} D-{days_until_fight} placed no app-owned session"
+
+
+@pytest.mark.parametrize("days_until_fight", list(range(1, 22)))
+def test_sparse_availability_never_manufactures_an_unavailable_app_day(days_until_fight):
+    athlete = _sparse_boxer(days_until_fight)
+    roles = _late_fight_allocation_plan(days_until_fight, athlete).get("session_roles", [])
+    for role in roles:
+        if not _is_app_owned_visible_role(role.get("role_key")):
+            continue
+        weekday = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip().lower()
+        assert weekday == "wednesday"
 
 
 def test_caps_relax_to_keep_required_roles_when_required_meets_cap():

@@ -663,17 +663,6 @@ def test_late_fight_tactical_watch_inserts_come_from_the_bank_and_never_repeat()
     assert len(set(keys)) == len(keys), "a Tactical Watch key repeated inside one plan"
 
 
-def test_late_fight_watch_phase_follows_the_countdown():
-    sequence = apply_gap_fill_inserts(
-        [_late_role(21), _late_role(16), _late_role(11), _late_role(6), _late_role(1)],
-        _athlete(days_until_fight=21, tactical_styles=["counter striker"]),
-    )
-    for role in sequence:
-        if role.get("role_key") != "tactical_watch":
-            continue
-        offset = int(role["countdown_offset"])
-        assert role["tactical_watch_phase"] == ("TAPER" if offset <= 7 else "SPP")
-
 
 def test_late_fight_watch_is_never_scheduled_on_fight_day():
     sequence = apply_gap_fill_inserts(

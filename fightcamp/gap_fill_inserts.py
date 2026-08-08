@@ -9,6 +9,7 @@ from .stage2_payload_late_fight import (
     _countdown_offset,
     _countdown_weekday_map,
     _resolve_plan_creation_weekday,
+    can_render_late_taper_day,
     is_low_cost_coexistable_filler,
 )
 from .tactical_watch_library import (
@@ -1275,6 +1276,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         days_until_fight = max(offsets)
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
+    training_days = clean_list(athlete_model.get("training_days", []))
     # Normalise casing: countdown-map weekdays are lowercase while declared
     # days often arrive title-cased ("Tuesday"); without this the spar-day
     # guard silently fails and inserts stack onto coach-owned combat days.
@@ -1323,6 +1325,12 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         if target_offset <= 0 or target_offset in existing_exclusive_offsets:
             continue
         weekday = countdown_map.get(f"D-{target_offset}")
+        if not can_render_late_taper_day(
+            countdown_offset=target_offset,
+            weekday=str(weekday or ""),
+            training_days=training_days,
+        ):
+            continue
         on_hard_sparring_day = bool(weekday and weekday.strip().lower() in hard_sparring_days)
         force_tactical = tactical_required and not tactical_present
         # Once tactical support is secured, guarantee at least one low-risk

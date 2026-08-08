@@ -205,9 +205,9 @@ class TestNearestAvailableDay:
 # ---------------------------------------------------------------------------
 
 class TestCanRenderLateTaperDay:
-    def test_d6_to_d0_ignore_declared_availability(self):
-        assert can_render_late_taper_day(countdown_offset=6, weekday="monday", training_days=["tuesday"])
-        assert can_render_late_taper_day(countdown_offset=1, weekday="saturday", training_days=["tuesday"])
+    def test_d1_to_d6_respect_declared_availability_but_d0_is_always_legal(self):
+        assert can_render_late_taper_day(countdown_offset=6, weekday="monday", training_days=["tuesday"]) is False
+        assert can_render_late_taper_day(countdown_offset=1, weekday="saturday", training_days=["tuesday"]) is False
         assert can_render_late_taper_day(countdown_offset=0, weekday="sunday", training_days=[])
 
     def test_d7_and_earlier_requires_training_day_match(self):
@@ -255,41 +255,41 @@ class TestSessionSequenceWeekdayAnnotation:
         role_keys = [entry["role_key"] for entry in sequence]
         assert role_keys == ["fight_week_freshness_day", "neural_primer_day"]
 
-    def test_sequence_entries_lack_real_weekday_when_plan_creation_weekday_missing(self):
+    def test_sequence_does_not_invent_days_when_calendar_anchor_is_missing(self):
         athlete = _athlete(5)
         del athlete["plan_creation_weekday"]
         sequence = _build_late_fight_session_sequence(5, athlete)
-        assert len(sequence) >= 1
-        for entry in sequence:
-            assert "real_weekday" not in entry
+        assert sequence == []
 
-    def test_session_keeps_calendar_true_weekday_when_countdown_day_unavailable(self):
-        # Plan creation = friday, fight = wednesday (5 days later)
-        # D-5 lands on friday which IS available → stays friday
+    def test_unavailable_countdown_day_is_skipped_not_remapped(self):
+        # Friday creation + five days means D-3 is Sunday. Sunday is not an
+        # available training day, so no app-owned role may be moved from D-3
+        # onto Monday while retaining the D-3 label.
         athlete = _athlete(
             5,
             plan_creation_weekday="friday",
             training_days=["monday", "tuesday", "wednesday", "thursday", "friday"],
         )
         sequence = _build_late_fight_session_sequence(5, athlete)
-        assert sequence[0]["real_weekday"] == "sunday"
-        assert sequence[0]["resolved_training_weekday"] == "monday"
+        assert sequence
+        assert all(entry.get("scheduled_countdown_label") != "D-3" for entry in sequence)
+        assert all("resolved_training_weekday" not in entry for entry in sequence)
 
-    def test_display_label_keeps_raw_calendar_weekday(self):
-        # Friday creation + 5 days = Wednesday fight, so D-3 is Sunday on the
-        # raw calendar. Sunday is unavailable and must not leak into output.
+    def test_display_labels_only_use_real_available_countdown_weekdays(self):
         athlete = _athlete(
             5,
             plan_creation_weekday="friday",
             training_days=["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
         )
         sequence = _build_late_fight_session_sequence(5, athlete)
-        freshness = next(entry for entry in sequence if entry["role_key"] == "fight_week_freshness_day")
-
-        assert freshness["scheduled_countdown_label"] == "D-3"
-        assert freshness["real_weekday"] == "sunday"
-        assert freshness["resolved_training_weekday"] == "saturday"
-        assert freshness["countdown_display_label"] == "D-3 (Sunday)"
+        assert all(entry.get("scheduled_countdown_label") != "D-3" for entry in sequence)
+        assert all("resolved_training_weekday" not in entry for entry in sequence)
+        assert all(
+            entry.get("countdown_display_label")
+            == f'{entry["scheduled_countdown_label"]} ({entry["real_weekday"].title()})'
+            for entry in sequence
+            if entry.get("scheduled_countdown_label") and entry.get("real_weekday")
+        )
 
     def test_countdown_label_absent_when_days_none(self):
         athlete = _athlete(5, plan_creation_weekday="monday")
