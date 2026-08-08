@@ -346,6 +346,8 @@ function classifyPlanTextHeading(
 
 const COACH_LED_RE =
   /no (?:extra|app) s\s?&?\s?c|coach owns this session|coach-owned (?:combat )?session|train with your coach/i;
+const TECHNICAL_ONLY_CONTACT_NOTE_RE =
+  /^Technical-only contact today\s*[—–-]\s*no hard sparring and no extra S\s?&?\s?C\.\s*Keep freshness priority\.?$/i;
 
 // Standalone session sub-headings the rehab/accessory renderer emits before a
 // group of bulleted items (RULE 12 and its suppressed-heading alternatives in
@@ -428,11 +430,12 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     if (!content) {
       return;
     }
-    // Canonical contact notes themselves can contain an em dash (for example
-    // "Technical-only contact today — no hard sparring and no extra S&C").
-    // The ownership phrase is the contract; a dash must not turn the note into
-    // an exercise block and lose the dated contact card.
-    if (COACH_LED_RE.test(content)) {
+    // Keep the established dash guard for general prose. Only the canonical
+    // technical-contact sentence may contain a dash and still be a coach note.
+    if (
+      (COACH_LED_RE.test(content) && !content.includes(" — ")) ||
+      TECHNICAL_ONLY_CONTACT_NOTE_RE.test(content)
+    ) {
       session.coachNote = content;
       return;
     }
@@ -992,15 +995,6 @@ export function buildStructuredPlanFromText(
     : undefined;
   const notes = noteGroups
     .filter((group) => !isOpenTextPlan || !OPEN_PLAN_SYSTEM_NOTE_RE.test(group.title))
-    // Declared-contact truth is already carried by the dated coach-contact
-    // card. Do not repeat its prose summary in Active notes as well.
-    .filter(
-      (group) =>
-        !/^sparring note$/i.test(group.title) ||
-        ![...explicitWeeks.flatMap((week) => week.sessions), ...looseSessions].some(
-          (session) => Boolean(session.coachNote),
-        ),
-    )
     .map((group) => ({
       category: noteCategory(group.title),
       label: group.title,
