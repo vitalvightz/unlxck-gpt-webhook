@@ -127,12 +127,24 @@ def _prescription(dose: str) -> dict[str, str | None]:
         "reps": _first(r"(?:\bx\s*|\b)(\d+(?:\s*[-–]\s*\d+)?)\s*reps?\b", dose),
         "rounds": _first(r"\b(\d+(?:\s*[-–]\s*\d+)?)\s*rounds?\b", dose),
         "duration": _first(r"\b(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*(?:min(?:ute)?s?|sec(?:ond)?s?|hours?|hrs?))\b", dose),
-        "work": _first(r"\b(\d+(?:\.\d+)?\s*(?:s|sec(?:ond)?s?|min(?:ute)?s?))\s*(?:work|on)\b", dose),
-        "rest": _first(r"\brest\s+(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*(?:s|sec(?:ond)?s?|min(?:ute)?s?))\b", dose),
+        "work": _first(
+            r"\b(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*"
+            r"(?:s|sec(?:ond)?s?|min(?:ute)?s?))\s*(?:work|on|fast\b[^;,.]*bursts?)",
+            dose,
+        ),
+        "rest": _first(
+            r"\b(?:rest|full\s+recovery)\s+"
+            r"(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*"
+            r"(?:s|sec(?:ond)?s?|min(?:ute)?s?))\b",
+            dose,
+        ),
         "effort": _first(r"\b(RPE\s*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?)\b", dose),
         "load": _first(r"\b(\d+(?:\.\d+)?\s*(?:kg|lb|lbs|%)(?:\s*\w+)?)\b", dose),
     }
-    if values["duration"] and _equivalent(values["duration"], values["rest"]):
+    if values["duration"] and (
+        _equivalent(values["duration"], values["rest"])
+        or _equivalent(values["duration"], values["work"])
+    ):
         values["duration"] = None
     return values
 
@@ -159,9 +171,13 @@ def _apply_detail(block: TrainingTruthBlock, label: str, text: str) -> TrainingT
     label = label.lower()
     if label == "step":
         return replace(block, steps=(*block.steps, text))
+    if label == "why":
+        # Why is session objective text, not the block's Purpose. Session
+        # objectives are not compared by this first shadow contract.
+        return block
     field = {
         "progression": "progress", "regression": "easier", "regress": "easier",
-        "stop rule": "stop", "why": "purpose",
+        "stop rule": "stop",
     }.get(label, label)
     if field == "rest":
         return replace(block, rest=text)
@@ -198,7 +214,7 @@ def _locked_block(block: TrainingTruthBlock, role: Mapping[str, Any]) -> Trainin
         focus=_clean(mindset.get("focus")) or None,
         reset=_clean(mindset.get("reset")) or None,
         anchor=_clean(mindset.get("anchor")) or None,
-        purpose=_clean(watch.get("why")) or block.purpose,
+        purpose=_clean(mindset.get("context")) or block.purpose,
         progress=_clean(watch.get("progress")) or block.progress,
     )
 
@@ -266,11 +282,51 @@ def _measured(value: Any) -> str | None:
     return _clean(value) or None
 
 
+def _load(value: Any) -> str | None:
+    if not isinstance(value, Mapping):
+        return _clean(value) or None
+    if _clean(value.get("display")):
+        return _clean(value.get("display"))
+    amount = value.get("value")
+    if amount is None:
+        return None
+    unit = _clean(value.get("unit"))
+    if unit.lower() in {"percent", "percentage", "%"}:
+        amount_text = f"{amount}%"
+        unit = ""
+    else:
+        amount_text = str(amount)
+    return _clean(" ".join(part for part in (amount_text, unit, value.get("ref")) if part))
+
+
+def _effort(value: Any) -> str | None:
+    if not isinstance(value, Mapping):
+        return _clean(value) or None
+    if value.get("value") is None:
+        return None
+    return _clean(f"{value.get('method', '')} {value.get('value')}")
+
+
 def _equivalent(expected: Any, actual: Any) -> bool:
-    def canonical(value: Any) -> str:
-        text = _key(value).replace("minutes", "min").replace("minute", "min")
-        return re.sub(r"(?<=\d) 0(?=\s|$)", "", text)
-    return canonical(expected) == canonical(actual)
+    return _comparison_text(expected) == _comparison_text(actual)
+
+
+def _comparison_text(value: Any) -> str:
+    text = (
+        _clean(value)
+        .lower()
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("percentage", "%")
+        .replace("percent", "%")
+        .replace("seconds", "sec")
+        .replace("second", "sec")
+        .replace("minutes", "min")
+        .replace("minute", "min")
+    )
+    text = re.sub(r"(?<=\d)\s*%", "%", text)
+    text = re.sub(r"[^a-z0-9%+-]+", " ", text).strip()
+    return re.sub(r"(?<=\d) 0(?=\s|$)", "", text)
 
 
 def compare_structured_plan_to_truth(
@@ -279,54 +335,136 @@ def compare_structured_plan_to_truth(
     """Return deterministic differences without mutating or judging the candidate."""
     if not isinstance(structured_plan, Mapping):
         return []
-    card_blocks: list[tuple[str, Mapping[str, Any], Mapping[str, Any]]] = []
+    card_days: list[Mapping[str, Any]] = []
     for week in structured_plan.get("weeks", ()):
         if not isinstance(week, Mapping):
             continue
         for day in week.get("days", ()):
             if not isinstance(day, Mapping):
                 continue
-            for session in day.get("sessions", ()):
-                if isinstance(session, Mapping):
-                    for block in session.get("blocks", ()):
-                        if isinstance(block, Mapping):
-                            card_blocks.append((_clean(day.get("countdown_label")), session, block))
+            card_days.append(day)
 
     differences: list[StructuredTruthDifference] = []
     for day in truth.days:
+        matching_days = [
+            candidate
+            for candidate in card_days
+            if _clean(candidate.get("countdown_label")) == day.countdown_label
+        ]
         for session in day.sessions:
+            context = dict(
+                countdown_label=day.countdown_label,
+                session_title=session.title,
+            )
+            matching_sessions = [
+                candidate
+                for candidate_day in matching_days
+                for candidate in candidate_day.get("sessions", ())
+                if isinstance(candidate, Mapping)
+                and _key(candidate.get("title")) == _key(session.title)
+            ]
+            if not matching_sessions:
+                sessions_elsewhere = [
+                    (candidate_day, candidate)
+                    for candidate_day in card_days
+                    for candidate in candidate_day.get("sessions", ())
+                    if isinstance(candidate, Mapping)
+                    and _key(candidate.get("title")) == _key(session.title)
+                ]
+                if not matching_days and sessions_elsewhere:
+                    actual_day = _clean(sessions_elsewhere[0][0].get("countdown_label"))
+                    for expected in session.blocks:
+                        differences.append(
+                            StructuredTruthDifference(
+                                "DAY_MISMATCH",
+                                countdown_label=day.countdown_label,
+                                session_title=session.title,
+                                block_name=expected.display_name,
+                                field="countdown_label",
+                                expected=day.countdown_label,
+                                actual=actual_day,
+                            )
+                        )
+                    if session.blocks:
+                        continue
+                # Session identity is part of truth, including an explicit session
+                # with no blocks. Do not let a same-named block elsewhere satisfy it.
+                differences.append(StructuredTruthDifference("SESSION_MISSING", **context))
+                continue
+            card_session = matching_sessions[0]
+            card_blocks = [
+                block
+                for block in card_session.get("blocks", ())
+                if isinstance(block, Mapping)
+            ]
             for expected_index, expected in enumerate(session.blocks):
-                matches = [item for item in card_blocks if _key(item[2].get("display_name")) == _key(expected.display_name)]
-                on_day = [item for item in matches if item[0] == day.countdown_label]
-                context = dict(countdown_label=day.countdown_label, session_title=session.title, block_name=expected.display_name)
+                block_context = {
+                    **context,
+                    "block_name": expected.display_name,
+                }
+                matches = [
+                    block
+                    for block in card_blocks
+                    if _key(block.get("display_name")) == _key(expected.display_name)
+                ]
                 if not matches:
-                    differences.append(StructuredTruthDifference("BLOCK_MISSING", **context))
+                    elsewhere = [
+                        candidate_day
+                        for candidate_day in card_days
+                        for candidate_session in candidate_day.get("sessions", ())
+                        if isinstance(candidate_session, Mapping)
+                        and _key(candidate_session.get("title")) == _key(session.title)
+                        for candidate_block in candidate_session.get("blocks", ())
+                        if isinstance(candidate_block, Mapping)
+                        and _key(candidate_block.get("display_name"))
+                        == _key(expected.display_name)
+                    ]
+                    if elsewhere:
+                        actual_day = _clean(elsewhere[0].get("countdown_label"))
+                        differences.append(
+                            StructuredTruthDifference(
+                                "DAY_MISMATCH",
+                                field="countdown_label",
+                                expected=day.countdown_label,
+                                actual=actual_day,
+                                **block_context,
+                            )
+                        )
+                    else:
+                        differences.append(
+                            StructuredTruthDifference("BLOCK_MISSING", **block_context)
+                        )
                     continue
-                if not on_day:
-                    differences.append(StructuredTruthDifference("DAY_MISMATCH", field="countdown_label", expected=day.countdown_label, actual=matches[0][0], **context))
-                    continue
-                _, card_session, actual = on_day[0]
-                actual_order = list(card_session.get("blocks", ())).index(actual)
+                actual = matches[0]
+                actual_order = card_blocks.index(actual)
                 if actual_order != expected_index:
-                    differences.append(StructuredTruthDifference("BLOCK_ORDER_MISMATCH", field="order_index", expected=expected_index, actual=actual_order, **context))
+                    differences.append(StructuredTruthDifference("BLOCK_ORDER_MISMATCH", field="order_index", expected=expected_index, actual=actual_order, **block_context))
                 for field, actual_value in (
                     ("sets", actual.get("sets")), ("reps", actual.get("reps")),
                     ("rounds", actual.get("rounds")), ("duration", _measured(actual.get("duration"))),
                     ("work", _measured(actual.get("work"))), ("rest", _measured(actual.get("rest"))),
+                    ("load", _load(actual.get("load"))), ("effort", _effort(actual.get("effort"))),
                     ("intensity", actual.get("intensity")), ("purpose", actual.get("purpose")),
                     ("progress", actual.get("progression_rule")),
                 ):
                     wanted = getattr(expected, field)
-                    if wanted is not None and not _equivalent(wanted, actual_value):
+                    matches_value = _equivalent(wanted, actual_value)
+                    if field == "progress" and wanted is not None:
+                        matches_value = _comparison_text(wanted) in _comparison_text(actual_value)
+                    if wanted is not None and not matches_value:
                         code = "PROGRESS_MISSING" if field == "progress" and not actual_value else ("DURATION_MISMATCH" if field in {"duration", "work", "rest"} else "PRESCRIPTION_MISMATCH")
-                        differences.append(StructuredTruthDifference(code, field=field, expected=wanted, actual=actual_value, **context))
-                if expected.stop and not any(_key(expected.stop) in _key(text) for text in _strings(actual.get("red_flags"))):
-                    differences.append(StructuredTruthDifference("STOP_RULE_MISSING", field="stop", expected=expected.stop, **context))
+                        differences.append(StructuredTruthDifference(code, field=field, expected=wanted, actual=actual_value, **block_context))
+                stop_locations = [actual.get("progression_rule"), actual.get("red_flags")]
+                if expected.stop and not any(
+                    _key(expected.stop) in _key(text)
+                    for text in _strings(stop_locations)
+                ):
+                    differences.append(StructuredTruthDifference("STOP_RULE_MISSING", field="stop", expected=expected.stop, **block_context))
                 if expected.locked:
                     strings = [_clean(item) for item in _strings(card_session)]
                     for label, wanted in [("step", item) for item in expected.steps] + [(name, getattr(expected, name)) for name in ("intent", "focus", "reset", "anchor")]:
                         if wanted and not any(_equivalent(wanted, item) for item in strings):
-                            differences.append(StructuredTruthDifference("LOCKED_TEXT_MISMATCH", field=label, expected=wanted, **context))
+                            differences.append(StructuredTruthDifference("LOCKED_TEXT_MISMATCH", field=label, expected=wanted, **block_context))
     return differences
 
 

@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import logging
 
-import api.structured_plan_generation as generation
+import pytest
+
 from api.structured_plan_truth import (
     compare_structured_plan_to_truth,
     extract_structured_plan_truth,
@@ -31,7 +32,13 @@ Why: Know what happens after the first punches.
 """
 
 
-def _card(day: str = "D-11", *, progress: bool = True, steps: int = 4) -> dict:
+def _card(
+    day: str = "D-11",
+    *,
+    progress: bool = True,
+    steps: int = 4,
+    session_title: str = "Fight Tactical Watch",
+) -> dict:
     instructions = [
         "Identify the opponent's most common pocket sequence.",
         "Choose your answer to that sequence.",
@@ -39,7 +46,7 @@ def _card(day: str = "D-11", *, progress: bool = True, steps: int = 4) -> dict:
         "Decide whether that exchange should end with an exit or a smother.",
     ]
     return {"weeks": [{"days": [{"countdown_label": day, "sessions": [{
-        "title": "Fight Tactical Watch",
+        "title": session_title,
         "mindset_anchor": {
             "intent": "Win the second decision inside the pocket.",
             "focus_cue": "Watch the opponent's response after the first two punches.",
@@ -99,9 +106,13 @@ def test_locked_planning_brief_metadata_is_authoritative():
         "preferred_exercise_names": ["Pocket Exchange Map"],
         "governance": {"selected_drill_locked": True, "selected_drill_name": "Pocket Exchange Map"},
         "tactical_watch": {
-            "name": "Pocket Exchange Map", "why": "Exact bank purpose.", "duration_min": 12,
+            "name": "Pocket Exchange Map", "why": "Exact session why.", "duration_min": 12,
             "instructions": ["Exact step one.", "Exact step two."],
-            "mindset": {"intent": "Exact intent.", "focus": "Exact focus.", "reset": "Exact reset.", "anchor": "Exact anchor."},
+            "mindset": {
+                "intent": "Exact intent.", "focus": "Exact focus.",
+                "reset": "Exact reset.", "anchor": "Exact anchor.",
+                "context": "Exact bank purpose.",
+            },
             "progress": "Exact progress.",
         },
     }]}]}
@@ -126,6 +137,75 @@ def test_misplaced_block_reports_day_mismatch():
     assert {item.code for item in compare_structured_plan_to_truth(truth, _card(day="D-8"))} >= {"DAY_MISMATCH"}
 
 
+def test_block_in_wrong_same_day_session_does_not_satisfy_truth():
+    truth = extract_structured_plan_truth(WATCH)
+    codes = {
+        item.code
+        for item in compare_structured_plan_to_truth(
+            truth, _card(session_title="Technical-only combat")
+        )
+    }
+    assert "SESSION_MISSING" in codes
+
+
+def test_empty_truth_session_still_requires_matching_session():
+    truth = extract_structured_plan_truth("D-9 - Recovery check-in\n")
+    assert [
+        item.code
+        for item in compare_structured_plan_to_truth(truth, {"weeks": [{"days": []}]})
+    ] == ["SESSION_MISSING"]
+
+
+def test_load_and_effort_mismatches_are_compared():
+    truth = extract_structured_plan_truth(
+        "D-10 - Strength touch\n- Trap-bar deadlift — 2 sets x 3 reps; 85% 1RM; RPE 6-7.\n"
+    )
+    card = {
+        "weeks": [{"days": [{"countdown_label": "D-10", "sessions": [{
+            "title": "Strength touch",
+            "blocks": [{
+                "display_name": "Trap-bar deadlift", "sets": 2, "reps": 3,
+                "load": {"method": "percentage", "value": 70, "unit": "percent", "ref": "1RM"},
+                "effort": {"method": "RPE", "value": "9"},
+            }],
+        }]}]}],
+    }
+    mismatched_fields = {
+        item.field for item in compare_structured_plan_to_truth(truth, card)
+    }
+    assert {"load", "effort"} <= mismatched_fields
+    block = card["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block["load"].update(value=85)
+    block["effort"]["value"] = "6-7"
+    assert compare_structured_plan_to_truth(truth, card) == []
+
+
+def test_stop_rule_in_progression_rule_or_red_flag_is_accepted():
+    source = "D-10 - Shoulder support\n- Cable row — 2 sets x 8 reps\n  Stop: sharp shoulder pain.\n"
+    truth = extract_structured_plan_truth(source)
+    base = {
+        "weeks": [{"days": [{"countdown_label": "D-10", "sessions": [{
+            "title": "Shoulder support",
+            "blocks": [{"display_name": "Cable row", "sets": 2, "reps": 8}],
+        }]}]}],
+    }
+    block = base["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block["progression_rule"] = "Stop: sharp shoulder pain."
+    assert compare_structured_plan_to_truth(truth, base) == []
+    block.pop("progression_rule")
+    block["red_flags"] = [{"display_text": "Sharp shoulder pain.", "action": "Stop."}]
+    assert compare_structured_plan_to_truth(truth, base) == []
+
+
+def test_fast_burst_interval_is_work_not_total_duration():
+    block = extract_structured_plan_truth(
+        "D-10 - Speed\n- Sprint — 3 x 5-6 sec fast relaxed bursts; full recovery 90-120 sec.\n"
+    ).days[0].sessions[0].blocks[0]
+    assert block.work == "5-6 sec"
+    assert block.rest == "90-120 sec"
+    assert block.duration is None
+
+
 def test_missing_locked_step_and_progress_are_machine_readable():
     role = {"governance": {"selected_drill_locked": True, "selected_drill_name": "Pocket Exchange Map"}, "preferred_exercise_names": ["Pocket Exchange Map"]}
     truth = extract_structured_plan_truth(WATCH, {"session_roles": [role]})
@@ -135,6 +215,9 @@ def test_missing_locked_step_and_progress_are_machine_readable():
 
 
 def test_shadow_exception_is_logged_and_cannot_change_valid_outcome(monkeypatch, caplog):
+    pytest.importorskip("pydantic")
+    import api.structured_plan_generation as generation
+
     from test_structured_plan_models import _valid_plan
 
     candidate = _valid_plan()
