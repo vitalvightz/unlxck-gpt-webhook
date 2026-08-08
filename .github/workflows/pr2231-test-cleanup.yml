@@ -1,0 +1,35 @@
+name: PR2231 stale contract cleanup
+
+on:
+  push:
+    branches:
+      - fix/late-fight-availability
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/late-fight-availability
+          fetch-depth: 0
+
+      - name: Update stale tests only
+        run: python .github/scripts/pr2231_test_cleanup.py
+
+      - name: Commit test cleanup and remove temporary files
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name "unlxck-pr-patcher"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/scripts/pr2231_test_cleanup.py
+          git rm .github/workflows/pr2231-test-cleanup.yml
+          git rm -f .github/pr2231-ci-trigger
+          git add tests
+          git commit -m "Update late-fight tests to current calendar contracts"
+          git push origin HEAD:fix/late-fight-availability
