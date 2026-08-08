@@ -3374,7 +3374,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
                 best_score = score
                 best_roles = assigned_roles
 
-    if required_roles and not best_roles:
+    if required_roles and not best_roles and eligible_countdown_labels:
         # Invariant breach: an active window has required roles but none could be
         # placed (every subset failed _late_fight_best_assignment — e.g. a locked
         # declared-hard-spar weekday with no legal countdown label). We never
@@ -3404,7 +3404,9 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         candidate_id = int(role.get("_candidate_id") or 0)
         if candidate_id in selected_ids:
             continue
-        if role.get("stress_class") == "meaningful_stress" and isinstance(max_meaningful_stress_exposures, int):
+        if not eligible_countdown_labels:
+            reason = "No declared training availability in this countdown window."
+        elif role.get("stress_class") == "meaningful_stress" and isinstance(max_meaningful_stress_exposures, int):
             reason = f"Meaningful stress is capped at {max_meaningful_stress_exposures} in this window, so higher-priority stress roles kept the slot."
         elif role.get("role_key") == "technical_touch_day":
             reason = "Allocator kept higher-priority late-fight roles and taper spacing inside the active-role cap; this downgraded hard day remains advisory only in this window."
