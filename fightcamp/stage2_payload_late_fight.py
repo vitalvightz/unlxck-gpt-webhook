@@ -151,7 +151,6 @@ _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = {
 }
 _DAY_SLOT_SESSION_ROLE_KEYS = _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS | {
     "hard_sparring_day",
-    "light_combat_day",
     "technical_touch_day",
     "fight_week_freshness_day",
 }

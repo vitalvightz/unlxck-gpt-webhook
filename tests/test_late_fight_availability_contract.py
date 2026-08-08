@@ -2,9 +2,11 @@ from fightcamp.gap_fill_inserts import apply_gap_fill_inserts
 from fightcamp.stage2_payload_late_fight import (
     _countdown_weekday_map,
     _late_fight_countdown_context,
+    _role_consumes_day_slot,
     _visible_calendar_session_sequence,
     can_render_late_taper_day,
     ensure_declared_coach_combat_spine,
+    is_low_cost_coexistable_filler,
 )
 
 
@@ -100,3 +102,20 @@ def test_declared_light_combat_days_survive_as_coach_owned_calendar_context():
     assert {int(role["countdown_offset"]) for role in light_combat} == {9, 2}
     assert all(role["scheduled_day_hint"] == "wednesday" for role in light_combat)
     assert all(role["athlete_facing_label"] == "Light Combat / Technical" for role in light_combat)
+
+def test_declared_light_combat_context_does_not_consume_an_app_day_slot():
+    athlete = _athlete()
+    countdown_map = _countdown_weekday_map("friday", 14)
+    spine = ensure_declared_coach_combat_spine([], athlete, countdown_map)
+
+    light_combat = next(
+        role
+        for role in spine
+        if role.get("coach_owned") is True
+        and role.get("role_key") == "light_combat_day"
+        and int(role.get("countdown_offset") or 0) == 9
+    )
+
+    assert light_combat["scheduled_day_hint"] == "wednesday"
+    assert is_low_cost_coexistable_filler(light_combat) is True
+    assert _role_consumes_day_slot(light_combat) is False
