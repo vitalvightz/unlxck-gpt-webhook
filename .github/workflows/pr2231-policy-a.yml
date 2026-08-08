@@ -1,13 +1,16 @@
 name: PR2231 Policy A Patch
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - "fix/late-fight-availability"
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,24 +38,12 @@ jobs:
               raise SystemExit(f'expected one suppression block, found {text.count(old)}')
           text = text.replace(old, new, 1)
           stage2.write_text(text)
-
-          tests_path = Path('tests/test_late_fight_availability_contract.py')
-          tests = tests_path.read_text()
-          old_import = '    _countdown_weekday_map,\n    _late_fight_countdown_context,\n'
-          new_import = '    _countdown_weekday_map,\n    _late_fight_allocation_plan,\n    _late_fight_countdown_context,\n'
-          if tests.count(old_import) != 1:
-              raise SystemExit(f'expected one test import location, found {tests.count(old_import)}')
-          tests = tests.replace(old_import, new_import, 1)
-
-          addition = '''\n\ndef test_no_available_day_suppresses_required_work_instead_of_inventing_a_session():\n    athlete = _athlete()\n    athlete["days_until_fight"] = 1\n    athlete["plan_creation_weekday"] = "monday"\n    athlete["training_days"] = ["Tuesday"]\n\n    allocation = _late_fight_allocation_plan(1, athlete)\n\n    assert allocation["allocator"]["eligible_countdown_labels"] == []\n    assert allocation["session_roles"] == []\n    assert allocation["suppressed_roles"]\n    assert any(\n        "No declared training availability in this countdown window." in role.get("reasons", [])\n        for role in allocation["suppressed_roles"]\n    )\n'''
-          if 'test_no_available_day_suppresses_required_work_instead_of_inventing_a_session' not in tests:
-              tests = tests.rstrip() + addition + '\n'
-          tests_path.write_text(tests)
           PY
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add fightcamp/stage2_payload_late_fight.py tests/test_late_fight_availability_contract.py
+          git rm .github/workflows/pr2231-policy-a.yml
+          git add fightcamp/stage2_payload_late_fight.py
           git diff --cached --check
           git commit -m "Let availability win empty late-fight windows"
           git push origin HEAD:fix/late-fight-availability
