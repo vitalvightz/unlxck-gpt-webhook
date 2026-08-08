@@ -27,6 +27,159 @@ SOURCE = """# FIGHT CAMP PLAN
 - Pallof Press 3x10 each side anti-rotation.
 """
 
+LOCKED_WATCH_SOURCE = """D-11 (Tuesday): Fight Tactical Watch
+Why: Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.
+- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
+  Step 1: Identify the opponent's most common pocket sequence.
+  Step 2: Choose your answer to that sequence.
+  Step 3: Choose the finishing shot that best fits the opening.
+  Step 4: Decide whether that exchange should end with an exit or a smother.
+  Intent: Win the second decision inside the pocket.
+  Focus: Watch the opponent's response after the first two punches.
+  Reset: If the exchange loses shape, smother or leave instead of trading blindly.
+  Anchor: Know the next beat.
+  Purpose: SPP pocket planning for a brawler.
+  Progress: Rehearse the chosen exchange ending, not just the opening combination.
+"""
+
+LOCKED_WATCH_BRIEF = {
+    "weeks": [{
+        "session_roles": [{
+            "display_text": "\n".join(LOCKED_WATCH_SOURCE.splitlines()[1:]),
+            "preferred_exercise_names": ["Pocket Exchange Map"],
+            "governance": {
+                "selected_drill_locked": True,
+                "selected_drill_name": "Pocket Exchange Map",
+            },
+        }]
+    }]
+}
+
+
+def _locked_watch_card() -> dict:
+    return {
+        "weeks": [{
+            "countdown_start": "D-11",
+            "countdown_end": "D-11",
+            "days": [{
+                "countdown_label": "D-11",
+                "sessions": [{
+                    "objective": (
+                        "Know what happens after the first punches so pocket exchanges "
+                        "stay planned rather than chaotic."
+                    ),
+                    "mindset_anchor": {
+                        "intent": "Win the second decision inside the pocket.",
+                        "focus_cue": "Watch the opponent's response after the first two punches.",
+                        "reset_cue": (
+                            "If the exchange loses shape, smother or leave instead of "
+                            "trading blindly."
+                        ),
+                        "confidence_anchor": "Know the next beat.",
+                    },
+                    "blocks": [{
+                        "block_type": "mindset",
+                        "display_name": "Pocket Exchange Map",
+                        "purpose": "SPP pocket planning for a brawler.",
+                        "coaching_cues": [
+                            "Identify the opponent's most common pocket sequence.",
+                            "Choose your answer to that sequence.",
+                            "Choose the finishing shot that best fits the opening.",
+                            "Decide whether that exchange should end with an exit or a smother.",
+                        ],
+                        "progression_rule": (
+                            "Rehearse the chosen exchange ending, not just the opening "
+                            "combination."
+                        ),
+                    }],
+                }],
+            }],
+        }],
+    }
+
+
+def test_locked_tactical_watch_exact_content_passes_across_structured_fields():
+    assert check_structured_faithfulness(
+        _locked_watch_card(), LOCKED_WATCH_SOURCE, LOCKED_WATCH_BRIEF
+    ) == []
+
+
+def test_locked_tactical_watch_missing_one_step_is_rejected():
+    plan = _locked_watch_card()
+    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["coaching_cues"].pop(2)
+    violations = check_structured_faithfulness(plan, LOCKED_WATCH_SOURCE, LOCKED_WATCH_BRIEF)
+    assert any("LOCKED_CONTENT" in item and "Step 3" in item for item in violations)
+
+
+def test_locked_tactical_watch_missing_all_steps_and_progress_is_rejected():
+    block = _locked_watch_card()["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block["coaching_cues"] = []
+    block["progression_rule"] = None
+    violations = check_structured_faithfulness(
+        {
+            "weeks": [{
+                "countdown_start": "D-11",
+                "countdown_end": "D-11",
+                "days": [{"countdown_label": "D-11", "sessions": [{"blocks": [block]}]}],
+            }]
+        },
+        LOCKED_WATCH_SOURCE,
+        LOCKED_WATCH_BRIEF,
+    )
+    labels = ("Step 1", "Step 2", "Step 3", "Step 4", "Progress")
+    assert all(any(label in item for item in violations) for label in labels)
+
+
+def test_locked_tactical_watch_rewritten_mindset_is_rejected():
+    plan = _locked_watch_card()
+    plan["weeks"][0]["days"][0]["sessions"][0]["mindset_anchor"]["intent"] = (
+        "Clarify pocket decisions."
+    )
+    violations = check_structured_faithfulness(plan, LOCKED_WATCH_SOURCE, LOCKED_WATCH_BRIEF)
+    assert any("Intent" in item for item in violations)
+
+
+def test_locked_tactical_watch_missing_progress_is_rejected():
+    plan = _locked_watch_card()
+    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["progression_rule"] = None
+    violations = check_structured_faithfulness(plan, LOCKED_WATCH_SOURCE, LOCKED_WATCH_BRIEF)
+    assert any("Progress" in item for item in violations)
+
+
+def test_unlocked_role_does_not_enable_locked_content_invariant():
+    role = {
+        **LOCKED_WATCH_BRIEF["weeks"][0]["session_roles"][0],
+        "governance": {"selected_drill_locked": False},
+    }
+    brief = {"session_roles": [role]}
+    assert check_structured_faithfulness(_locked_watch_card(), LOCKED_WATCH_SOURCE, brief) == []
+
+
+def test_locked_content_rejection_uses_existing_text_fallback_path():
+    from test_structured_plan_models import _valid_plan
+
+    plan = _valid_plan()
+    week = plan["weeks"][0]
+    week["countdown_start"] = week["countdown_end"] = "D-11"
+    day = week["days"][0]
+    day["countdown_label"] = "D-11"
+    session = day["sessions"][0]
+    faithful = _locked_watch_card()["weeks"][0]["days"][0]["sessions"][0]
+    session["objective"] = faithful["objective"]
+    session["mindset_anchor"] = faithful["mindset_anchor"]
+    session["blocks"] = [faithful["blocks"][0]]
+    session["blocks"][0].update({"block_id": "watch-1", "coaching_cues": []})
+
+    outcome = build_structured_plan_outcome(
+        plan,
+        raw_markdown=LOCKED_WATCH_SOURCE,
+        planning_brief=LOCKED_WATCH_BRIEF,
+    )
+
+    assert outcome.status == "invalid_fallback_used"
+    assert outcome.structured_plan is None
+    assert any("LOCKED_CONTENT" in error and "Step 1" in error for error in outcome.errors)
+
 
 def _plan(days: list[tuple[str, list[tuple[str, str]]]]) -> dict:
     """Minimal structured-plan dict: ``[(countdown_label, [(block_type, name)])]``."""
