@@ -95,7 +95,7 @@ def test_declared_light_combat_days_survive_as_coach_owned_calendar_context():
         role
         for role in visible
         if role.get("coach_owned") is True
-        and role.get("role_key") == "technical_touch_day"
+        and role.get("role_key") == "light_combat_day"
     ]
     assert {int(role["countdown_offset"]) for role in light_combat} == {9, 2}
     assert all(role["scheduled_day_hint"] == "wednesday" for role in light_combat)

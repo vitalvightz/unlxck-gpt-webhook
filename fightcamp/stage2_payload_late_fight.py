@@ -151,6 +151,7 @@ _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = {
 }
 _DAY_SLOT_SESSION_ROLE_KEYS = _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS | {
     "hard_sparring_day",
+    "light_combat_day",
     "technical_touch_day",
     "fight_week_freshness_day",
 }
@@ -2326,7 +2327,7 @@ def _is_app_owned_visible_role(role_key: Any) -> bool:
     placement map as context, but should not be rendered as coach-prescribed
     S&C session ownership in insert-style countdown outputs.
     """
-    return str(role_key or "").strip().lower() not in {"hard_sparring_day"}
+    return str(role_key or "").strip().lower() not in {"hard_sparring_day", "light_combat_day"}
 
 
 def is_low_cost_coexistable_filler(role: dict[str, Any]) -> bool:
@@ -2386,7 +2387,7 @@ def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]
         role_key = str(session.get("role_key") or "").strip()
         downgraded_from = str(session.get("downgraded_from_role_key") or "").strip()
         is_hard_context = role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day"
-        is_light_context = bool(session.get("coach_owned")) and role_key == "technical_touch_day"
+        is_light_context = bool(session.get("coach_owned")) and role_key == "light_combat_day"
         if not (is_hard_context or is_light_context):
             continue
         if not str(session.get("scheduled_day_hint") or "").strip():
@@ -2486,7 +2487,7 @@ def ensure_declared_coach_combat_spine(
         str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
         for role in sequence
         if role.get("coach_owned") is True
-        and str(role.get("role_key") or "").strip().lower() == "technical_touch_day"
+        and str(role.get("role_key") or "").strip().lower() == "light_combat_day"
     }
 
     for label, weekday in sorted(
@@ -2539,7 +2540,7 @@ def ensure_declared_coach_combat_spine(
         sequence.append({
             "session_index": len(sequence) + 1,
             "category": "technical",
-            "role_key": "technical_touch_day",
+            "role_key": "light_combat_day",
             "preferred_pool": "declared_support_work_days",
             "anchor": "support_day",
             "cost_class": "low",

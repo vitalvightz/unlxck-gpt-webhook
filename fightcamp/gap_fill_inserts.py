@@ -772,12 +772,6 @@ def _usage_ledger_from_sequence(session_sequence: list[dict[str, Any]]) -> dict[
 def _role_repeat_blocked(role_key: str, insert_offset: int, usage_ledger: dict[str, Any] | None) -> bool:
     if not usage_ledger:
         return False
-    if role_key in TACTICAL_INSERTS and any(
-        int(previous) == insert_offset
-        for tactical_key in TACTICAL_INSERTS
-        for previous in usage_ledger.get("role_key_offsets", {}).get(tactical_key, [])
-    ):
-        return True
     if bool((_INSERT_META.get(role_key) or {}).get("repeat_allowed")):
         return False
     previous_offsets = usage_ledger.get("role_key_offsets", {}).get(role_key, [])
@@ -1187,16 +1181,22 @@ def _ensure_weekly_tactical_watches(
     countdown_map: dict[str, str],
     usage_ledger: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Keep one banked Tactical Watch in each represented D-21..D-1 segment."""
+    """Add one banked Tactical Watch per visible seven-day countdown segment.
+
+    The watch always shares a day already present in the countdown sequence, so
+    this requirement adds a zero-load card, not a new training day.
+    """
     if not _is_fight_sport(athlete_model):
         return []
 
     additions: list[dict[str, Any]] = []
-    segments = sorted({
-        _segment_for_offset(offset)
-        for role in session_sequence
-        if (offset := _role_offset(role)) is not None and 0 < offset <= 21
-    })
+    segments = sorted(
+        {
+            _segment_for_offset(offset)
+            for role in session_sequence
+            if (offset := _role_offset(role)) is not None and 0 < offset <= 21
+        }
+    )
     used_watch_keys = usage_ledger.setdefault("used_tactical_watch_keys", set())
 
     for segment in segments:
@@ -1208,19 +1208,15 @@ def _ensure_weekly_tactical_watches(
             and _segment_for_offset(offset) == segment
         ]
         watch = next(
-            (role for role in segment_roles if str(role.get("role_key") or "") == "tactical_watch"),
+            (
+                role
+                for role in segment_roles
+                if str(role.get("role_key") or "") == "tactical_watch"
+            ),
             None,
         )
         if watch is None:
-            promotable = next(
-                (
-                    role
-                    for role in segment_roles
-                    if str(role.get("role_key") or "") in {"tactical_cue_card", "self_review"}
-                ),
-                None,
-            )
-            anchor = promotable or max(segment_roles, key=lambda role: int(_role_offset(role) or 0))
+            anchor = max(segment_roles, key=lambda role: int(_role_offset(role) or 0))
             offset = int(_role_offset(anchor) or 0)
             weekday = str(
                 anchor.get("scheduled_day_hint")
@@ -1228,20 +1224,14 @@ def _ensure_weekly_tactical_watches(
                 or countdown_map.get(f"D-{offset}")
                 or ""
             ).strip() or None
-            replacement = _build_insert_role(
+            watch = _build_insert_role(
                 "tactical_watch",
                 athlete_model,
                 offset,
                 weekday,
                 usage_ledger=usage_ledger,
             )
-            if promotable is not None:
-                promotable.clear()
-                promotable.update(replacement)
-                watch = promotable
-            else:
-                watch = replacement
-                additions.append(watch)
+            additions.append(watch)
             _record_insert_usage(usage_ledger, "tactical_watch", offset)
         elif not watch.get("tactical_watch_key"):
             offset = int(_role_offset(watch) or 0)
