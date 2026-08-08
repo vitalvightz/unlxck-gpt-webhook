@@ -223,6 +223,12 @@ const SESSION_WEEKDAY_ONLY_RE = new RegExp(
 // mistaken for a new section.
 const NOTE_SECTION_RE =
   /^(Lead notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
+// Late-fight output can begin with a compact bulleted summary rather than an
+// explicit "Lead notes" heading. These labels are part of the saved text
+// contract, so preserve each one as a separate note card instead of flattening
+// the whole summary into one anonymous "Plan" paragraph.
+const LEAD_NOTE_BULLET_RE =
+  /^[-*•‣▪◦·]\s+(Injury|Missing target weight|Sparring note|Week shape)\s*:\s*(.+)$/i;
 // Renewable open-plan system sections (the section contract in
 // fightcamp/stage2_payload_open_ongoing.py). Each opens its own titled context
 // group so buildStructuredPlanFromText can route it — red-flag triggers become
@@ -340,6 +346,8 @@ function classifyPlanTextHeading(
 
 const COACH_LED_RE =
   /no (?:extra|app) s\s?&?\s?c|coach owns this session|coach-owned (?:combat )?session|train with your coach/i;
+const TECHNICAL_ONLY_CONTACT_NOTE_RE =
+  /^Technical-only contact today\s*[—–-]\s*no hard sparring and no extra S\s?&?\s?C\.\s*Keep freshness priority\.?$/i;
 
 // Standalone session sub-headings the rehab/accessory renderer emits before a
 // group of bulleted items (RULE 12 and its suppressed-heading alternatives in
@@ -422,7 +430,12 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     if (!content) {
       return;
     }
-    if (COACH_LED_RE.test(content) && !content.includes(" — ")) {
+    // Keep the established dash guard for general prose. Only the canonical
+    // technical-contact sentence may contain a dash and still be a coach note.
+    if (
+      (COACH_LED_RE.test(content) && !content.includes(" — ")) ||
+      TECHNICAL_ONLY_CONTACT_NOTE_RE.test(content)
+    ) {
       session.coachNote = content;
       return;
     }
@@ -497,6 +510,16 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     }
 
     const cleanLine = stripPlanMarkup(line);
+    const leadNote = line.match(LEAD_NOTE_BULLET_RE);
+    if (!currentSession && !currentWeek && leadNote) {
+      currentNotes = {
+        kind: "notes",
+        title: titleizeToken(leadNote[1]),
+        lines: [leadNote[2].trim()],
+      };
+      groups.push(currentNotes);
+      continue;
+    }
     if (/^(?:Weekly Rhythm|Session Cards):?$/i.test(cleanLine)) {
       allowWeekdayOnlySessions = true;
       currentSession = null;

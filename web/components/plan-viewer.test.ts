@@ -1081,6 +1081,165 @@ test("a short-camp rehab line keeps its exercise name and both labelled rational
   ]);
 });
 
+test("late-fight raw output becomes clear notes, contact cards, and exercise cards", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "- Injury: Left shoulder skin irritation, moderate and stable. One hygiene note only: keep the area clean and covered during sessions and contact, report any increased redness or bleeding. Train normally around this; no program-level session cuts.",
+      "- Missing target weight: no target weight set. Add your fight weight to receive specific cut guidance.",
+      "- Sparring note: declared hard-sparring days (Tuesday and Friday) convert to technical-only combat in this window. No hard sparring allowed, keep freshness priority.",
+      "- Week shape: this is a bridge compression week. Rendered fewer sessions to preserve sharpness while applying the D-17+ technical-only rule and keeping declared contact work as your responsibility.",
+      "",
+      "D-12 (Monday) — Neural speed touch",
+      "Why: preserve force and rate of force development without creating fatigue.",
+      "- Movement Prep: 6 min. Shoulder-safe mobility, band pull-aparts 2 x 10.",
+      "- Trap bar deadlift, neural touch: 2-3 sets x 3 reps, RPE 6-7, full recovery 3-4 min.",
+      "- Easier: 2 sets x 3 with lighter load.",
+      "- Stop: any sharp shoulder pain or new wound bleeding.",
+      "",
+      "D-11 (Tuesday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+      "",
+      "D-11 (Tuesday) — Fight Tactical Watch",
+      "Why: keep pocket exchanges planned rather than chaotic.",
+      "- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.",
+      "  Step 1: Identify the opponent's most common pocket sequence.",
+      "  Intent: Win the second decision inside the pocket.",
+      "  Focus: Watch the opponent's response after the first two punches.",
+      "  Reset: Smother or leave instead of trading blindly.",
+      "  Anchor: Know the next beat.",
+      "  Purpose: SPP pocket planning for a brawler.",
+      "  Progress: Rehearse the chosen exchange ending.",
+      "",
+      "D-10 (Wednesday) — Light Combat / Technical",
+      "Why: keep technical rhythm and timing without adding fatigue.",
+      "- Movement Prep: 6 min. Light mobility and gentle shoulder circles.",
+      "- Technical shadowboxing: 5 x 2 min rounds, RPE 4-5, 60-90 sec rest.",
+      "- Easier: reduce shadowboxing to 3 x 2 min.",
+      "- Stop: increase in shoulder irritation or bleeding.",
+      "",
+      "D-8 (Friday) — Fight-week freshness",
+      "Why: preserve readiness and upper-back posture, low noise load.",
+      "- Movement Prep: 5 min easy shoulder and thoracic mobility.",
+      "- Band face pull, light: 2 sets x 12 reps, RPE 3-4.",
+      "- Easier: skip the band and do mobility only.",
+      "- Stop: increase in shoulder skin irritation.",
+      "",
+      "D-5 (Monday) — Fight-Speed Primer",
+      "Why: sharpen punch speed and timing without creating soreness.",
+      "- Movement Prep: 5 min light shoulder swings and easy shadowboxing.",
+      "- Explosive Boxing Burst Intervals: 2-3 x 5-6 sec fast relaxed bursts, RPE 6, full recovery 90-120 sec.",
+      "- Easier: 1-2 x 5 sec bursts with full recovery.",
+      "- Stop: when technique or speed collapses.",
+      "",
+      "D-5 (Monday) — Fight Tactical Watch",
+      "Why: confirm controlled opening pressure without a reckless start.",
+      "- First-Round Pressure Script: 8 minutes, tactical review only. No physical load.",
+      "  Step 1: Choose the opening pressure action you trust.",
+      "  Intent: Take space calmly.",
+      "  Focus: Use only rehearsed pressure actions.",
+      "  Reset: Rebuild the ring cut before throwing again.",
+      "  Anchor: Close calmly.",
+      "  Purpose: Fight-week opening script for a brawler.",
+      "  Progress: Rehearse the script once at low intensity.",
+      "",
+      "D-4 (Tuesday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+      "",
+      "D-4 (Tuesday) — Neural Visualization",
+      "Quiet visualization only. Rehearse first exchange, best entry, exit/reset, and final-round composure.",
+      "- Duration: 5-8 min, RPE 1. Purpose: mental rehearsal of execution and calm under pressure.",
+      "- Easier: 3 min focused breathing.",
+      "- Stop: switch to breathing-only if visualization increases anxiety.",
+      "",
+      "D-3 (Wednesday) — Fight-week freshness",
+      "Why: low-noise reset and posture work before the final window.",
+      "- Movement Prep: 5 min gentle mobility and breathing reset.",
+      "- Band pull-apart, low volume: 1-2 sets x 12-15 reps, RPE 2-3.",
+      "- Easier: breathing and walking only.",
+      "- Stop: any increase in shoulder skin irritation.",
+      "",
+      "D-3 (Wednesday) — Light Combat / Technical",
+      "Why: maintain timing and confidence with minimal physical cost.",
+      "- Movement Prep: 4 min light mobility and shadow rhythm.",
+      "- Technical shadowboxing tempo: 4 x 2 min, RPE 3-4, 60 sec rest.",
+      "- Easier: 2 x 2 min solo shadowboxing.",
+      "- Stop: shoulder irritation increases or technique degrades.",
+      "",
+      "D-1 (Friday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+      "",
+      "D-1 (Friday) — Tactical Cue Card",
+      "Write one fight cue only: entry, exit, counter, foot position, or guard reaction. Keep it short enough to recall under pressure.",
+      "",
+      "D-0 (Saturday) — Fight day protocol",
+      "Fight day protocol — follow coach warm-up and fight protocol; no additional S&C.",
+    ].join("\n"),
+    "2026-08-22",
+  );
+
+  assert.deepEqual(
+    plan.plan_notes?.map((note) => note.label),
+    ["Injury", "Missing target weight", "Sparring note", "Week shape"],
+  );
+
+  const days = plan.weeks?.[0]?.days ?? [];
+  assert.deepEqual(days.map((day) => day.countdown_label), [
+    "D-12", "D-11", "D-10", "D-8", "D-5", "D-4", "D-3", "D-1", "D-0",
+  ]);
+  assert.equal(days[1]?.today_card?.coach_led_contact, "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.");
+  assert.equal(days[1]?.sessions?.[0]?.title, "Fight Tactical Watch");
+  assert.equal(days[1]?.sessions?.[0]?.blocks?.[0]?.display_name, "Pocket Exchange Map");
+  assert.deepEqual(days[1]?.sessions?.[0]?.blocks?.[0]?.coaching_cues, [
+    "Purpose: SPP pocket planning for a brawler.",
+    "Step 1: Identify the opponent's most common pocket sequence.",
+    "Intent: Win the second decision inside the pocket.",
+    "Focus: Watch the opponent's response after the first two punches.",
+    "Reset: Smother or leave instead of trading blindly.",
+    "Anchor: Know the next beat.",
+  ]);
+  assert.equal(days[1]?.sessions?.[0]?.blocks?.[0]?.progression_rule, "Rehearse the chosen exchange ending.");
+
+  const neuralBlocks = days[0]?.sessions?.[0]?.blocks ?? [];
+  assert.equal(neuralBlocks[0]?.display_name, "Movement Prep");
+  assert.equal(neuralBlocks[1]?.display_name, "Trap bar deadlift, neural touch");
+  assert.equal(neuralBlocks[1]?.load?.display, "2-3 sets x 3 reps, RPE 6-7, full recovery 3-4 min.");
+  assert.deepEqual(neuralBlocks[1]?.regression_options, ["2 sets x 3 with lighter load."]);
+  assert.equal(neuralBlocks[1]?.coaching_cues?.[0], "Stop: any sharp shoulder pain or new wound bleeding.");
+
+  assert.deepEqual(days[4]?.sessions?.map((session) => session.title), ["Fight-Speed Primer", "Fight Tactical Watch"]);
+  assert.deepEqual(days[6]?.sessions?.map((session) => session.title), ["Fight-week freshness", "Light Combat / Technical"]);
+  assert.equal(days[7]?.today_card?.coach_led_contact?.startsWith("Technical-only contact today"), true);
+  assert.equal(days[7]?.sessions?.[0]?.title, "Tactical Cue Card");
+  assert.equal(days[8]?.sessions?.[0]?.title, "Fight day protocol");
+  assert.equal(days[8]?.sessions?.[0]?.blocks?.[0]?.display_name, "Fight day protocol");
+});
+
+test("keeps a two-day sparring note when only Tuesday has a dated contact card", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "- Sparring note: declared hard-sparring days (Tuesday and Friday) convert to technical-only combat.",
+      "D-11 (Tuesday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+    ].join("\n"),
+  );
+
+  assert.equal(plan.plan_notes?.[0]?.label, "Sparring note");
+  assert.equal(plan.plan_notes?.[0]?.text?.includes("Tuesday and Friday"), true);
+});
+
+test("does not swallow dashed exercise prose that mentions no extra S&C", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "D-10 (Wednesday) — Recovery reset",
+      "Recovery reset — no extra S&C after this drill.",
+    ].join("\n"),
+  );
+
+  const day = plan.weeks?.[0]?.days?.[0];
+  assert.equal(day?.today_card, null);
+  assert.equal(day?.sessions?.[0]?.blocks?.[0]?.display_name, "Recovery reset");
+});
+
 test("a Fight Tactical Watch day renders as one drill block, not one block per step", () => {
   // Regression for the shredded Tactical Watch card. The watch used to ship its
   // own layout — a bare drill-name line, `Duration:` / `Prescription:` headers,
