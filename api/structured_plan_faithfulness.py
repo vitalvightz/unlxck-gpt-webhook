@@ -18,6 +18,8 @@ Design rules (mirrors ``structured_plan_safety`` conventions):
     from the source.
   - MISPLACED: an exercise the source assigns to exactly one D-day, placed by the
     card under a *different* D-day (e.g. Pallof moved out of its session).
+  - LOCKED_CONTENT: wording from a governed ``selected_drill_locked`` role that
+    appears in the approved source has been removed or rewritten in the card.
   A reworded exercise that keeps any meaningful token (``Back Squat`` ->
   ``Barbell Back Squat``) passes. Generic/contextual blocks (mindset, nutrition,
   recovery, mobility, preparation, cooldown) are wording the conversion owns, not
@@ -42,6 +44,7 @@ COUNTDOWN = "COUNTDOWN"
 # Raised internally by the checker -> treated as a violation so a crash rejects
 # the card (fail-closed) rather than letting an unverified card through.
 INTERNAL = "INTERNAL"
+LOCKED_CONTENT = "LOCKED_CONTENT"
 
 # ``block_type`` values that name a specific, app-owned exercise we can hold to
 # the source text. Generic/contextual block types are deliberately excluded.
@@ -191,7 +194,11 @@ def _source_token_days(sections: dict[int, str]) -> dict[str, set[int]]:
     return index
 
 
-def check_structured_faithfulness(structured_plan: Any, source_markdown: str) -> list[str]:
+def check_structured_faithfulness(
+    structured_plan: Any,
+    source_markdown: str,
+    planning_brief: Any = None,
+) -> list[str]:
     """Return violation strings proving the card drifted from the source text.
 
     Empty list means the card is a faithful projection (or there is no basis to
@@ -200,16 +207,176 @@ def check_structured_faithfulness(structured_plan: Any, source_markdown: str) ->
     violation so the card is rejected rather than shipped unverified.
     """
     try:
-        return _check(structured_plan, source_markdown)
+        return _check(structured_plan, source_markdown, planning_brief)
     except Exception:  # fail-closed: an unverifiable card must not ship
         return [f"{INTERNAL}: faithfulness check raised; rejecting card"]
 
 
-def _check(structured_plan: Any, source_markdown: str) -> list[str]:
+def _normalise_locked_text(value: Any) -> str:
+    """Normalise presentation-only differences without permitting a rewrite."""
+    return " ".join(
+        str(value or "")
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+        .lower()
+        .split()
+    )
+
+
+def _locked_roles(value: Any) -> list[dict[str, Any]]:
+    """Find governed roles without depending on a particular brief nesting."""
+    found: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        governance = value.get("governance")
+        if (
+            isinstance(governance, dict)
+            and governance.get("selected_drill_locked") is True
+            and isinstance(value.get("display_text"), str)
+        ):
+            found.append(value)
+        for child in value.values():
+            found.extend(_locked_roles(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(_locked_roles(child))
+    return found
+
+
+def _card_strings(value: Any) -> list[str]:
+    """Collect strings from a deliberately scoped piece of the card."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [
+            text
+            for child in value.values()
+            for text in _card_strings(child)
+        ]
+    if isinstance(value, list):
+        return [text for child in value for text in _card_strings(child)]
+    return []
+
+
+def _locked_source_day(source: str, role: dict[str, Any], drill_name: str) -> int | None:
+    """Resolve the authoritative source day for one locked drill role."""
+    sections = _source_day_sections(source)
+    role_day = next(
+        (
+            _dday_num(role.get(key))
+            for key in (
+                "scheduled_countdown_label",
+                "countdown_label",
+                "countdown_display_label",
+            )
+            if _dday_num(role.get(key)) is not None
+        ),
+        None,
+    )
+    normalised_name = _normalise_locked_text(drill_name)
+    if role_day is not None and normalised_name in _normalise_locked_text(
+        sections.get(role_day, "")
+    ):
+        return role_day
+    matching_days = [
+        day
+        for day, section in sections.items()
+        if normalised_name in _normalise_locked_text(section)
+    ]
+    return matching_days[0] if len(matching_days) == 1 else None
+
+
+def _locked_drill_card_strings(
+    plan: dict[str, Any], source: str, role: dict[str, Any], drill_name: str
+) -> list[str]:
+    """Collect only the matching block and its owning session's mapped fields."""
+    source_day = _locked_source_day(source, role, drill_name)
+    if source_day is None:
+        return []
+    normalised_name = _normalise_locked_text(drill_name)
+    scoped: list[str] = []
+    for week in plan.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for day in week.get("days") or []:
+            if (
+                not isinstance(day, dict)
+                or _dday_num(day.get("countdown_label")) != source_day
+            ):
+                continue
+            for session in day.get("sessions") or []:
+                if not isinstance(session, dict):
+                    continue
+                matching_blocks = [
+                    block
+                    for block in session.get("blocks") or []
+                    if isinstance(block, dict)
+                    and _normalise_locked_text(block.get("display_name"))
+                    == normalised_name
+                ]
+                for block in matching_blocks:
+                    scoped.extend(_card_strings(block))
+                    # These are the legitimate homes for Why and the session-level
+                    # locked mindset. Other blocks and day/plan notes stay excluded.
+                    scoped.extend(_card_strings(session.get("objective")))
+                    scoped.extend(_card_strings(session.get("mindset_anchor")))
+    return scoped
+
+
+def _locked_content_violations(
+    plan: dict[str, Any], source: str, planning_brief: Any
+) -> list[str]:
+    """Require every authoritative locked-drill line to survive in card fields."""
+    source_text = _normalise_locked_text(source)
+    violations: list[str] = []
+    for role in _locked_roles(planning_brief):
+        governance = role.get("governance") or {}
+        drill_name = str(
+            governance.get("selected_drill_name")
+            or (role.get("preferred_exercise_names") or [""])[0]
+            or "locked drill"
+        )
+        card_texts = [
+            _normalise_locked_text(text)
+            for text in _locked_drill_card_strings(plan, source, role, drill_name)
+        ]
+        required: list[tuple[str, str]] = [("selected drill name", drill_name)]
+        for raw_line in str(role["display_text"]).splitlines():
+            line = raw_line.strip().lstrip("- ").strip()
+            if not line:
+                continue
+            match = re.match(
+                r"((?:Step\s+\d+)|Why|Intent|Focus|Reset|Anchor|Purpose|Progress):\s*(.+)",
+                line,
+                re.I,
+            )
+            if match:
+                required.append((match.group(1), match.group(2)))
+
+        missing: list[str] = []
+        for label, expected in required:
+            normalised = _normalise_locked_text(expected)
+            # The approved plan text is the authority. A stale brief line that
+            # did not reach it must not create a new requirement here.
+            if not normalised or normalised not in source_text:
+                continue
+            if not any(normalised in card_text for card_text in card_texts):
+                missing.append(label)
+        if missing:
+            violations.append(
+                f'{LOCKED_CONTENT}: {drill_name!r} lost required source content: '
+                + ", ".join(missing)
+            )
+    return violations
+
+
+def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = None) -> list[str]:
     plan = structured_plan if isinstance(structured_plan, dict) else {}
     source = str(source_markdown or "")
     if not plan:
         return []
+    locked_violations = _locked_content_violations(plan, source, planning_brief)
     if not _ANY_DDAY_RE.search(source):
         # Card-first hard gate: a card that claims a countdown structure cannot be
         # proven faithful against source text carrying no D-day marker at all, so
@@ -217,11 +384,11 @@ def _check(structured_plan: Any, source_markdown: str) -> list[str]:
         # (the raw plan_text fallback / review hold takes over). A card that makes
         # no countdown claim has nothing to project, so the schema gate stands.
         if _card_claims_countdown(plan):
-            return [
+            return locked_violations + [
                 f"{COUNTDOWN}: source text carries no D-day marker; "
                 "card countdown is unverifiable"
             ]
-        return []
+        return locked_violations
 
     source_tokens = _meaningful(_tokens(source))
     if not source_tokens:
@@ -237,7 +404,7 @@ def _check(structured_plan: Any, source_markdown: str) -> list[str]:
         if num is not None:
             source_ddays.add(num)
 
-    violations: list[str] = []
+    violations: list[str] = list(locked_violations)
 
     weeks = plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
     for week in weeks:

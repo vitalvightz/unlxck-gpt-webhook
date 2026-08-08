@@ -1997,7 +1997,7 @@ def build_structured_plan_outcome(
     first_errors = list(first.errors)
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
-        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         first_errors = [f"faithfulness: {issue}" for issue in unfaithful]
         first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if not first_errors:
@@ -2035,7 +2035,7 @@ def build_structured_plan_outcome(
         )
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
-        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         repaired_errors = [f"faithfulness: {issue}" for issue in unfaithful]
         repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if repaired_errors:
