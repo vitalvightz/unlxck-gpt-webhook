@@ -309,6 +309,24 @@ def _technical_session_lines() -> list[str]:
     return ["- Technical rhythm and shadow work. Stay sharp at low fatigue; no hard contact."]
 
 
+def _support_insert_lines(display_text: str) -> list[str]:
+    """Render a support insert's athlete-facing copy without flattening it.
+
+    Most gap-fill inserts carry a single bare prescription sentence, which needs
+    the leading bullet the session-body contract expects. The Tactical Watch bank
+    instead ships a full multi-line card (``Why:`` objective, one bulleted
+    activity heading, indented labelled detail lines). Bulleting every line of
+    that turned each detail into its own exercise, so multi-line copy is passed
+    through with its own shape intact.
+    """
+    lines = [line.rstrip() for line in display_text.splitlines() if line.strip()]
+    if not lines:
+        return []
+    if len(lines) == 1:
+        return [lines[0] if lines[0].startswith("-") else f"- {lines[0]}"]
+    return lines
+
+
 def _session_body(
     role: dict[str, Any],
     phase: str,
@@ -321,11 +339,7 @@ def _session_body(
     if category == "support_insert":
         # Gap-fill/camp filler roles carry their exact athlete-facing content;
         # render it verbatim instead of guessing a body from a category template.
-        display_lines = [
-            stripped if stripped.startswith("-") else f"- {stripped}"
-            for line in str(role.get("display_text") or "").splitlines()
-            if (stripped := line.strip())
-        ]
+        display_lines = _support_insert_lines(str(role.get("display_text") or ""))
         if display_lines:
             return display_lines
     if category == "sparring":

@@ -1081,6 +1081,65 @@ test("a short-camp rehab line keeps its exercise name and both labelled rational
   ]);
 });
 
+test("a Fight Tactical Watch day renders as one drill block, not one block per step", () => {
+  // Regression for the shredded Tactical Watch card. The watch used to ship its
+  // own layout — a bare drill-name line, `Duration:` / `Prescription:` headers,
+  // then one bullet per instruction — and every one of those peer-level lines
+  // parsed as a separate exercise: the name, duration and the bare
+  // "Prescription:" header were glued into the session objective, each
+  // instruction became its own load-less block, and the whole mindset stack hung
+  // off the last one. fightcamp/tactical_watch_library.build_watch_display_text
+  // now emits the shared session-body contract this asserts.
+  const plan = buildStructuredPlanFromText(
+    [
+      "D-11 (Tuesday) — Fight Tactical Watch",
+      "Why: Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.",
+      "- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.",
+      "  Step 1: Identify the opponent's most common pocket sequence.",
+      "  Step 2: Choose your answer to that sequence.",
+      "  Step 3: Choose the finishing shot that best fits the opening.",
+      "  Step 4: Decide whether that exchange should end with an exit or a smother.",
+      "  Intent: Win the second decision inside the pocket.",
+      "  Focus: Watch the opponent's response after the first two punches.",
+      "  Reset: If the exchange loses shape, smother or leave instead of trading blindly.",
+      "  Anchor: Know the next beat.",
+      "  Purpose: SPP pocket planning for a brawler.",
+      "  Progress: Rehearse the chosen exchange ending, not just the opening combination.",
+    ].join("\n"),
+  );
+
+  const session = plan.weeks?.[0]?.days?.[0]?.sessions?.[0];
+  assert.equal(session?.title, "Fight Tactical Watch");
+  // The objective is the day's own Why — never the drill name or its duration.
+  assert.equal(
+    session?.objective,
+    "Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.",
+  );
+
+  const blocks = session?.blocks ?? [];
+  assert.equal(blocks.length, 1);
+  assert.equal(blocks[0]?.display_name, "Pocket Exchange Map");
+  assert.equal(blocks[0]?.load?.display, "10 minutes, tactical review only. No physical load.");
+  // A 10-minute tactical review is skill work, not the generic "training" chip.
+  assert.equal(blocks[0]?.block_type, "skill");
+  assert.equal(session?.session_type, "skill");
+  assert.equal(
+    blocks[0]?.progression_rule,
+    "Rehearse the chosen exchange ending, not just the opening combination.",
+  );
+  assert.deepEqual(blocks[0]?.coaching_cues, [
+    "Purpose: SPP pocket planning for a brawler.",
+    "Step 1: Identify the opponent's most common pocket sequence.",
+    "Step 2: Choose your answer to that sequence.",
+    "Step 3: Choose the finishing shot that best fits the opening.",
+    "Step 4: Decide whether that exchange should end with an exit or a smother.",
+    "Intent: Win the second decision inside the pocket.",
+    "Focus: Watch the opponent's response after the first two punches.",
+    "Reset: If the exchange loses shape, smother or leave instead of trading blindly.",
+    "Anchor: Know the next beat.",
+  ]);
+});
+
 test("open-plan text uses its explicit weekday rhythm instead of an unavailable legacy card", () => {
   const plan = buildStructuredPlanFromText(
     [
