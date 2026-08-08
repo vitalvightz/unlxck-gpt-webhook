@@ -30,12 +30,15 @@ jobs:
           npm run typecheck
           npm run lint
           npm run test:unit
-      - name: Commit dependency fix and remove one-shot workflow
+      - name: Commit dependency fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/fix-nanoid-audit.yml
           git add web/package.json web/package-lock.json
           git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No dependency changes to commit."
+            exit 0
+          fi
           git commit -m "Fix high-severity nanoid audit finding"
           git push origin HEAD:Main
