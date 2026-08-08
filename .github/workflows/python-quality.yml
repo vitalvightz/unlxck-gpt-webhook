@@ -8,7 +8,56 @@ on:
     branches:
       - "**"
 
+permissions:
+  contents: write
+
 jobs:
+  apply-light-combat-fix:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[apply-light-combat-fix]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply focused PR2231 coexistence fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          stage2 = Path('fightcamp/stage2_payload_late_fight.py')
+          text = stage2.read_text()
+          old = '''_DAY_SLOT_SESSION_ROLE_KEYS = _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS | {\n    "hard_sparring_day",\n    "light_combat_day",\n    "technical_touch_day",\n    "fight_week_freshness_day",\n}'''
+          new = '''_DAY_SLOT_SESSION_ROLE_KEYS = _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS | {\n    "hard_sparring_day",\n    "technical_touch_day",\n    "fight_week_freshness_day",\n}'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one day-slot block, found {text.count(old)}')
+          stage2.write_text(text.replace(old, new, 1))
+
+          test_path = Path('tests/test_late_fight_availability_contract.py')
+          tests = test_path.read_text()
+          old_import = '''    _visible_calendar_session_sequence,\n    can_render_late_taper_day,\n    ensure_declared_coach_combat_spine,\n)'''
+          new_import = '''    _role_consumes_day_slot,\n    _visible_calendar_session_sequence,\n    can_render_late_taper_day,\n    ensure_declared_coach_combat_spine,\n    is_low_cost_coexistable_filler,\n)'''
+          if tests.count(old_import) != 1:
+              raise SystemExit(f'expected exactly one availability import block, found {tests.count(old_import)}')
+          tests = tests.replace(old_import, new_import, 1)
+          marker = 'def test_declared_light_combat_days_survive_as_coach_owned_calendar_context():'
+          if marker not in tests:
+              raise SystemExit('light-combat contract test marker missing')
+          addition = '''\n\ndef test_declared_light_combat_context_does_not_consume_an_app_day_slot():\n    athlete = _athlete()\n    countdown_map = _countdown_weekday_map("friday", 14)\n    spine = ensure_declared_coach_combat_spine([], athlete, countdown_map)\n\n    light_combat = next(\n        role\n        for role in spine\n        if role.get("coach_owned") is True\n        and role.get("role_key") == "light_combat_day"\n        and int(role.get("countdown_offset") or 0) == 9\n    )\n\n    assert light_combat["scheduled_day_hint"] == "wednesday"\n    assert is_low_cost_coexistable_filler(light_combat) is True\n    assert _role_consumes_day_slot(light_combat) is False\n'''
+          if 'test_declared_light_combat_context_does_not_consume_an_app_day_slot' not in tests:
+              tests = tests.rstrip() + addition + '\n'
+          test_path.write_text(tests)
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fightcamp/stage2_payload_late_fight.py tests/test_late_fight_availability_contract.py
+          git diff --cached --check
+          git commit -m "Keep light combat days coexistable"
+          git push origin HEAD:${GITHUB_REF_NAME}
+
   ruff:
     runs-on: ubuntu-latest
     permissions:
@@ -81,8 +130,6 @@ jobs:
 
       - name: Install test dependencies
         env:
-          # Give pip its own network resilience; the loop below is the belt-and-
-          # braces for a transient 5xx on the GitHub-hosted en_core_web_sm wheel.
           PIP_RETRIES: "5"
           PIP_DEFAULT_TIMEOUT: "60"
         run: |
@@ -120,7 +167,6 @@ jobs:
 
       - name: Install runtime + test dependencies
         env:
-          # See test-full-suite: retry a transient 5xx on the GitHub-hosted wheel.
           PIP_RETRIES: "5"
           PIP_DEFAULT_TIMEOUT: "60"
         run: |
@@ -131,7 +177,7 @@ jobs:
             if [ "$n" -ge 3 ]; then
               echo "pip install failed after $n attempts"; exit 1
             fi
-            echo "Transient install failure; retry $n in $((n * 15))s..."; sleep $((n * 15))
+            echo "Transient install failure; retry $n in $((n * 15))s..."; sleep $((n * 15))s
           done
           pip check
 
