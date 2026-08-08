@@ -72,6 +72,7 @@ import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/da
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import type {
@@ -115,6 +116,8 @@ const HARD_SPARRING_CONTACT_NOTE =
   "Your declared hard-sparring/contact work today, alongside the app work below. Keep freshness the priority.";
 const TECHNICAL_ONLY_CONTACT_NOTE =
   "Technical-only contact today (no hard sparring), alongside the app work below. Keep freshness the priority.";
+const TECHNICAL_SESSION_HELP =
+  "Hard sparring is reduced close to competition to lower fatigue and injury risk while keeping timing and skills sharp.";
 
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
@@ -468,6 +471,7 @@ export function SessionCard({
     cleanText(session.title) ||
     cleanText(card?.headline) ||
     titleize(cleanText(session.session_type) || "Session");
+  const isTechnicalSession = title === "Technical-only combat";
   const sessionType = cleanText(session.session_type);
   const objective = formatSessionObjective(session.objective);
   const duration = formatMeasured(session.planned_duration);
@@ -496,7 +500,12 @@ export function SessionCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          <h3 className="sp-session-title">{title}</h3>
+          <h3 className="sp-session-title">
+            {isTechnicalSession ? "Technical Session" : title}
+            {isTechnicalSession ? (
+              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} />
+            ) : null}
+          </h3>
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
               outright, so the reason for the session is impossible to miss. */}
@@ -652,7 +661,12 @@ export function SessionlessDayCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          <h3 className="sp-session-title">{title}</h3>
+          <h3 className="sp-session-title">
+            {kind === "technical" ? "Technical Session" : title}
+            {kind === "technical" ? (
+              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} />
+            ) : null}
+          </h3>
         </div>
         <div className="sp-session-meta">
           {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
@@ -710,7 +724,12 @@ function CoachLedDayContext({
     <div className="cm-light-technical cm-coach-led-contact">
       <div className="cm-light-technical-head">
         {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
-        <p className="sp-today-headline">{title}</p>
+        <p className="sp-today-headline">
+          {kind === "technical" ? "Technical Session" : title}
+          {kind === "technical" ? (
+            <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} />
+          ) : null}
+        </p>
       </div>
       <p className="sp-today-note">
         {kind === "technical" ? TECHNICAL_ONLY_CONTACT_NOTE : HARD_SPARRING_CONTACT_NOTE}

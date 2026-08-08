@@ -939,7 +939,9 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   // The contact day surfaces its headline and the coach-neutral note instead of
   // collapsing into a rest day. A technical-only day must carry the technical note
   // ("no hard sparring"), never the hard-sparring note.
-  assert.equal(html.includes("Coach-led boxing — technical only"), true);
+  assert.equal(html.includes("Technical Session"), true);
+  assert.equal(html.includes("Hard sparring is reduced close to competition"), false);
+  assert.equal(html.includes('aria-label="Why this changed: Technical Session"'), true);
   assert.equal(html.includes("Technical-only contact today"), true);
   assert.equal(html.includes("no hard sparring"), true);
   assert.equal(html.includes("this is your declared hard-sparring/contact work"), false);
@@ -1135,12 +1137,12 @@ test("surfaces coach-led contact alongside app sessions in the same day card", (
   // Both the coach-owned contact and the app session render in the one day card,
   // with the contact surfaced above the app work. A technical-only contact must
   // read "no hard sparring", never the hard-sparring wording.
-  assert.equal(html.includes("Coach-led boxing — technical only"), true);
+  assert.equal(html.includes("Technical Session"), true);
   assert.equal(html.includes("Tactical Cue Card"), true);
   assert.equal(html.includes("Technical-only contact today (no hard sparring)"), true);
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
   assert.ok(
-    html.indexOf("Coach-led boxing — technical only") < html.indexOf(">Tactical Cue Card<"),
+    html.indexOf("Technical Session") < html.indexOf(">Tactical Cue Card<"),
   );
 });
 
