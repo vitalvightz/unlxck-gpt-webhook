@@ -40,11 +40,11 @@ MINOR_SURFACE_TRAIN_THROUGH_TYPES = frozenset(
 
 # Calm, coach-facing note for a minor surface (skin) injury that trains through.
 # This is deliberately NOT medical-panic language: it treats the athlete as fit
-# to train and only asks for basic wound hygiene. Surfaced once by the rehab
+# to train and only asks for basic site protection. Surfaced once by the rehab
 # formatter in place of a wound-care drill list, not repeated per drill.
 SURFACE_MINOR_TRAIN_THROUGH_NOTE = (
-    "Minor surface injury: keep it covered and clean, avoid direct friction on the "
-    "area, and stop if it opens, bleeds, or becomes infected. Train normally otherwise."
+    "Training may continue while the area remains closed, stable and non-infected. "
+    "Avoid friction or contact over the site, and stop if it worsens."
 )
 
 # Flag markers that pull a surface injury back onto the existing danger gates

@@ -1696,11 +1696,11 @@ function WeekOverview({
       value: sessionSummary.trainingDays > 0 ? `${sessionSummary.trainingDays}` : null,
     },
     {
-      label: "Sessions",
+      label: "Plan sessions",
       value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
     },
     {
-      label: "Sparring/contact",
+      label: "Coach/gym combat sessions",
       value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
     },
     {

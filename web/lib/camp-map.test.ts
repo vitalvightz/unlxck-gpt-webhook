@@ -133,6 +133,7 @@ test("weekSessionSummary separates app sessions from coach-led days", () => {
       },
       {
         date: "2026-06-19",
+        today_card: { coach_led_contact: "Coach-led boxing — technical only" },
         sessions: [{ session_id: "s2", title: "Conditioning", blocks: [] }],
       },
       {
@@ -156,7 +157,7 @@ test("weekSessionSummary separates app sessions from coach-led days", () => {
   assert.deepEqual(weekSessionSummary(week), {
     trainingDays: 4,
     appSessions: 2,
-    coachLedSessions: 2,
+    coachLedSessions: 3,
   });
 });
 
