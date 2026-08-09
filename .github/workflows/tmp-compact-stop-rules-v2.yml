@@ -1,0 +1,217 @@
+name: Temp compact stop rules v2
+
+on:
+  push:
+    branches:
+      - fix/compact-athlete-stop-rules
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/compact-athlete-stop-rules
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Patch stop-rule prompt and athlete-facing guardrail
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              assert count == 1, f"{path}: expected one replacement, found {count}"
+              p.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              "api/structured_plan_generation.py",
+              '''  "progression_rule" (exercise-level advancement only), and "stop_rules"
+            (stop/safety criteria). Preserve purpose/why_today as structured backend context,
+          ''',
+              '''  "progression_rule" (exercise-level advancement only), and "stop_rules"
+            (stop/safety criteria). Each stop_rules item MUST be athlete-facing, contain one
+            trigger only, and use no more than 10 words. Preserve the source meaning and never
+            invent a new safety criterion. Preserve purpose/why_today as structured backend context,
+          ''',
+          )
+
+          guard_path = "web/lib/block-display-guardrails.ts"
+          guard = Path(guard_path).read_text()
+          anchor = '''function splitStopClauses(value: string): string[] {
+            return value
+              .split(/\\s*;\\s*|,\\s*(?:or\\s+)?|\\s+or\\s+/i)
+              .map((part) => part.replace(/^\\s*(?:or\\s+)?(?:if\\s+)?/i, "").trim())
+              .filter(Boolean);
+          }
+          '''
+          helper = anchor + '''
+          const MAX_ATHLETE_STOP_RULE_WORDS = 10;
+          const STOP_RULE_EXPLANATION_TAIL_RE =
+            /\\s*(?:[;—–]|,\\s*)(?:then\\s+|and\\s+then\\s+)?(?:stop|switch|clean|cover|seek|report|modify|omit|rest|reduce|end|reassess)\\b.*$/i;
+          const DANGLING_STOP_RULE_WORD_RE = /\\b(?:and|or|if|when|with|for|to|the|a|an)\\s*$/i;
+
+          function stopRuleWordCount(value: string): number {
+            return value.trim().split(/\\s+/).filter(Boolean).length;
+          }
+
+          /**
+           * Athlete-facing stop copy is deliberately tiny. Stored stop rules remain
+           * untouched; this display-only pass removes an action/explanation tail,
+           * prefers a complete semantic segment, then applies a bounded legacy
+           * fallback so older saved plans can never spill long safety prose into a card.
+           */
+          function compactAthleteStopRule(value: string): string {
+            let compact = stripStopLabel(value).replace(/\\s+/g, " ").trim();
+            if (!compact) return "";
+
+            compact = compact.replace(STOP_RULE_EXPLANATION_TAIL_RE, "").trim();
+            if (stopRuleWordCount(compact) <= MAX_ATHLETE_STOP_RULE_WORDS) return compact;
+
+            const semanticCandidates = [
+              compact.split(/(?<=[.!?])\\s+/)[0]?.trim() || "",
+              compact.split(/\\s*(?:;|—|–)\\s*/)[0]?.trim() || "",
+            ];
+            for (const candidate of semanticCandidates) {
+              if (candidate && stopRuleWordCount(candidate) <= MAX_ATHLETE_STOP_RULE_WORDS) {
+                return candidate;
+              }
+            }
+
+            const words = compact.split(/\\s+/).slice(0, MAX_ATHLETE_STOP_RULE_WORDS);
+            while (words.length > 1 && DANGLING_STOP_RULE_WORD_RE.test(words.join(" "))) {
+              words.pop();
+            }
+            return words.join(" ").replace(/[,:;—–-]+$/, "").trim();
+          }
+          '''
+          assert guard.count(anchor) == 1, "guard helper anchor drifted"
+          guard = guard.replace(anchor, helper, 1)
+
+          old_select = '''export function selectCompactStopRule(
+            stopRules: readonly string[],
+            planSafetyTexts: readonly string[] = [],
+          ): string | null {
+            const rules = stopRules.map(stripStopLabel).filter(Boolean);
+            if (rules.length === 0) return null;
+            if (planSafetyTexts.length === 0) return rules[0];
+
+            for (const rule of rules) {
+              if (!isOwnedSafetyClause(rule, planSafetyTexts)) return rule;
+              for (const clause of splitStopClauses(rule)) {
+                if (!isOwnedSafetyClause(clause, planSafetyTexts, rule)) return clause;
+              }
+            }
+            return null;
+          }
+          '''
+          new_select = '''export function selectCompactStopRule(
+            stopRules: readonly string[],
+            planSafetyTexts: readonly string[] = [],
+          ): string | null {
+            const rules = stopRules.map(stripStopLabel).filter(Boolean);
+            if (rules.length === 0) return null;
+            if (planSafetyTexts.length === 0) return compactAthleteStopRule(rules[0]) || null;
+
+            for (const rule of rules) {
+              if (!isOwnedSafetyClause(rule, planSafetyTexts)) {
+                return compactAthleteStopRule(rule) || null;
+              }
+              for (const clause of splitStopClauses(rule)) {
+                if (!isOwnedSafetyClause(clause, planSafetyTexts, rule)) {
+                  return compactAthleteStopRule(clause) || null;
+                }
+              }
+            }
+            return null;
+          }
+          '''
+          assert guard.count(old_select) == 1, "selectCompactStopRule anchor drifted"
+          Path(guard_path).write_text(guard.replace(old_select, new_select, 1))
+
+          test_path = "web/lib/block-display-guardrails.test.ts"
+          test_text = Path(test_path).read_text()
+          test_anchor = '''test("renders only the first stop rule when there is no higher-level safety owner", () => {
+            assert.equal(
+              selectCompactStopRule(["Stop if speed drops", "Stop if technique breaks"]),
+              "Stop if speed drops",
+            );
+          });
+          '''
+          test_add = test_anchor + '''
+          test("caps athlete-facing stop rules at ten words and removes action tails", () => {
+            const selected = selectCompactStopRule([
+              "Stop if punch speed drops markedly across sets, then end the exercise and reassess readiness.",
+            ]);
+            assert.equal(selected, "Stop if punch speed drops markedly across sets");
+            assert.ok((selected || "").split(/\\s+/).length <= 10);
+          });
+
+          test("legacy long stop rules still obey the ten-word display ceiling", () => {
+            const selected = selectCompactStopRule([
+              "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
+            ]);
+            assert.equal(
+              selected,
+              "Stop if technique deteriorates significantly and stance control becomes unstable",
+            );
+            assert.ok((selected || "").split(/\\s+/).length <= 10);
+          });
+
+          test("keeps a unique exercise trigger when Safety Priority owns the injury clause", () => {
+            const selected = selectCompactStopRule(
+              ["speed collapses or any sharp left shoulder pain"],
+              ["Stop if sharp left shoulder pain increases or the wound opens."],
+            );
+            assert.equal(selected, "speed collapses");
+          });
+          '''
+          assert test_text.count(test_anchor) == 1, "guardrail test anchor drifted"
+          Path(test_path).write_text(test_text.replace(test_anchor, test_add, 1))
+
+          py_test_path = "tests/test_structured_plan_stop_rules.py"
+          py_test = Path(py_test_path).read_text()
+          py_anchor = '''    assert '\"Stop:\" / \"Stop rule:\" ->' in prompt
+          '''
+          py_insert = py_anchor + '''    assert "contain one" in prompt and "trigger only" in prompt
+            assert "no more than 10 words" in prompt
+            assert "never invent a new safety criterion" in prompt
+          '''
+          assert py_test.count(py_anchor) == 1, "python prompt-test anchor drifted"
+          Path(py_test_path).write_text(py_test.replace(py_anchor, py_insert, 1))
+          PY
+      - name: Validate diff
+        run: git diff --check
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+      - name: Run focused web stop-rule tests
+        working-directory: web
+        run: node --import tsx --test lib/block-display-guardrails.test.ts lib/structured-plan-stop-rules.test.ts
+      - name: Install Python test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run focused Python stop-rule tests and Ruff
+        run: |
+          pytest -q tests/test_structured_plan_stop_rules.py
+          ruff check api/structured_plan_generation.py tests/test_structured_plan_stop_rules.py
+      - name: Commit validated patch and remove temporary workflow
+        run: |
+          rm .github/workflows/tmp-compact-stop-rules-v2.yml
+          git config user.name "vitalvightz"
+          git config user.email "thevital1@protonmail.com"
+          git add -A
+          git commit -m "fix: compact athlete-facing stop rules"
+          git push origin HEAD:fix/compact-athlete-stop-rules
