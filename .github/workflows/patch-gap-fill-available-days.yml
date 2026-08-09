@@ -1,0 +1,163 @@
+name: Apply gap-fill availability fix
+
+on:
+  push:
+    branches:
+      - fix/gap-fill-available-days
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/gap-fill-available-days
+          fetch-depth: 0
+
+      - name: Patch availability-aware gap fill
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('fightcamp/gap_fill_inserts.py')
+          source = source_path.read_text()
+
+          old = '''def _gap_candidate_offsets(far_offset: int, near_offset: int) -> list[int]:
+              gap = far_offset - near_offset
+              if gap < GAP_FILL_MIN_DAYS:
+                  return []
+              available = [offset for offset in range(far_offset - 1, near_offset, -1) if offset > 0]
+              if not available:
+                  return []
+          '''
+          new = '''def _gap_candidate_offsets(
+              far_offset: int,
+              near_offset: int,
+              *,
+              eligible_offsets: set[int] | None = None,
+          ) -> list[int]:
+              gap = far_offset - near_offset
+              if gap < GAP_FILL_MIN_DAYS:
+                  return []
+              available = [
+                  offset
+                  for offset in range(far_offset - 1, near_offset, -1)
+                  if offset > 0 and (eligible_offsets is None or offset in eligible_offsets)
+              ]
+              if not available:
+                  return []
+          '''
+          if old not in source:
+              raise SystemExit('gap candidate definition anchor not found')
+          source = source.replace(old, new, 1)
+
+          old = '''def _candidate_offsets_from_sequence(
+              offsets: list[int], days_until_fight: int | None = None
+          ) -> list[tuple[int, int]]:
+          '''
+          new = '''def _candidate_offsets_from_sequence(
+              offsets: list[int],
+              days_until_fight: int | None = None,
+              *,
+              eligible_offsets: set[int] | None = None,
+          ) -> list[tuple[int, int]]:
+          '''
+          if old not in source:
+              raise SystemExit('candidate sequence signature anchor not found')
+          source = source.replace(old, new, 1)
+
+          source = source.replace(
+              '''            for target_offset in _gap_candidate_offsets(days_until_fight + 1, first_offset):\n''',
+              '''            for target_offset in _gap_candidate_offsets(\n                days_until_fight + 1,\n                first_offset,\n                eligible_offsets=eligible_offsets,\n            ):\n''',
+              1,
+          )
+          source = source.replace(
+              '''        for target_offset in _gap_candidate_offsets(far_offset, near_offset):\n''',
+              '''        for target_offset in _gap_candidate_offsets(\n            far_offset,\n            near_offset,\n            eligible_offsets=eligible_offsets,\n        ):\n''',
+              1,
+          )
+          source = source.replace(
+              '''    for target_offset in _gap_candidate_offsets(trailing_gap, 0):\n''',
+              '''    for target_offset in _gap_candidate_offsets(\n        trailing_gap,\n        0,\n        eligible_offsets=eligible_offsets,\n    ):\n''',
+              1,
+          )
+
+          old = '''    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
+          '''
+          new = '''    # Choose gap-fill targets from days the athlete can actually use. Previously
+              # the geometric target was selected first (for example D-12/D-10 in a
+              # D-14 -> D-8 gap) and availability was checked only afterwards. An
+              # unavailable target was simply dropped even when another declared
+              # training day existed inside the same gap. That could leave five blank
+              # Rest / Recovery days despite valid availability.
+              eligible_gap_offsets = {
+                  offset
+                  for offset in range(1, max(days_until_fight, max(offsets)) + 1)
+                  if offset not in existing_exclusive_offsets
+                  and can_render_late_taper_day(
+                      countdown_offset=offset,
+                      weekday=str(countdown_map.get(f"D-{offset}") or ""),
+                      training_days=training_days,
+                  )
+              }
+              candidate_offsets = _candidate_offsets_from_sequence(
+                  offsets,
+                  days_until_fight,
+                  eligible_offsets=eligible_gap_offsets,
+              )
+          '''
+          if old not in source:
+              raise SystemExit('candidate offset call anchor not found')
+          source = source.replace(old, new, 1)
+          source_path.write_text(source)
+
+          test_path = Path('tests/test_late_fight_availability_contract.py')
+          tests = test_path.read_text()
+          addition = '''\n\ndef test_gap_fill_rehomes_two_targets_onto_declared_available_days():
+              # Regression: D-14 Fri -> D-8 Thu is a six-day session gap, so the
+              # scheduler owes two support inserts. The geometric targets are D-12
+              # (Sun) and D-10 (Tue). With only Mon/Wed available inside the gap,
+              # the old code discarded both unavailable targets instead of moving
+              # them to D-11 and D-9.
+              athlete = _athlete()
+              athlete["training_days"] = ["Monday", "Wednesday", "Thursday", "Friday"]
+
+              sequence = apply_gap_fill_inserts([_late_role(14), _late_role(8)], athlete)
+              gap_support = [
+                  role
+                  for role in sequence
+                  if role.get("category") == "support_insert"
+                  and 8 < int(role.get("countdown_offset") or 0) < 14
+              ]
+
+              assert len(gap_support) == 2
+              assert {int(role["countdown_offset"]) for role in gap_support} == {11, 9}
+              assert all(
+                  role.get("governance", {}).get("authority") == "gap_fill_support_insert"
+                  for role in gap_support
+              )
+          '''
+          marker = 'def test_gap_fill_rehomes_two_targets_onto_declared_available_days():'
+          if marker not in tests:
+              tests += addition
+          test_path.write_text(tests)
+          PY
+
+      - name: Run targeted regressions
+        run: |
+          pytest -q tests/test_gap_fill_inserts.py tests/test_late_fight_availability_contract.py tests/test_stage2_pipeline.py
+
+      - name: Remove temporary patch workflow
+        run: rm .github/workflows/patch-gap-fill-available-days.yml
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fightcamp/gap_fill_inserts.py tests/test_late_fight_availability_contract.py .github/workflows/patch-gap-fill-available-days.yml
+          git commit -m "Fix gap fill placement on available days"
+          git push origin HEAD:fix/gap-fill-available-days
