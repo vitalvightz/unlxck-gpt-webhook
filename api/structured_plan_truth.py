@@ -5,6 +5,7 @@ only facts stated in the approved plan text, then lets governed Stage 1 locked
 role metadata replace the corresponding block where that metadata is stronger.
 The resulting frozen objects are diagnostics, not an athlete-facing schema.
 """
+
 from __future__ import annotations
 
 import re
@@ -109,7 +110,7 @@ def _split_inline(text: str) -> tuple[str, dict[str, str]]:
 def _name_and_dose(line: str) -> tuple[str, str]:
     # Mirrors the frontend contract: the first dash/colon separates an activity
     # heading from its dose, while labelled detail segments remain details.
-    for separator in (" — ", " – ", ": "):
+    for separator in (" — ", " – ", " - ", ": "):
         if separator in line:
             name, dose = line.split(separator, 1)
             return _clean(name), _clean(dose)
@@ -126,7 +127,10 @@ def _prescription(dose: str) -> dict[str, str | None]:
         "sets": _first(r"\b(\d+(?:\s*[-–]\s*\d+)?)\s*sets?\b", dose),
         "reps": _first(r"(?:\bx\s*|\b)(\d+(?:\s*[-–]\s*\d+)?)\s*reps?\b", dose),
         "rounds": _first(r"\b(\d+(?:\s*[-–]\s*\d+)?)\s*rounds?\b", dose),
-        "duration": _first(r"\b(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*(?:min(?:ute)?s?|sec(?:ond)?s?|hours?|hrs?))\b", dose),
+        "duration": _first(
+            r"\b(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*(?:min(?:ute)?s?|sec(?:ond)?s?|hours?|hrs?))\b",
+            dose,
+        ),
         "work": _first(
             r"\b(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*"
             r"(?:s|sec(?:ond)?s?|min(?:ute)?s?))\s*(?:work|on|fast\b[^;,.]*bursts?)",
@@ -138,8 +142,14 @@ def _prescription(dose: str) -> dict[str, str | None]:
             r"(?:s|sec(?:ond)?s?|min(?:ute)?s?))\b",
             dose,
         ),
-        "effort": _first(r"\b(RPE\s*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?)\b", dose),
-        "load": _first(r"\b(\d+(?:\.\d+)?\s*(?:kg|lb|lbs|%)(?:\s*\w+)?)\b", dose),
+        "effort": _first(
+            r"\b(RPE\s*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?)\b", dose
+        ),
+        "load": _first(
+            r"\b(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*"
+            r"(?:kg|lb|lbs|%)(?:\s*\w+)?)\b",
+            dose,
+        ),
     }
     if values["duration"] and (
         _equivalent(values["duration"], values["rest"])
@@ -160,14 +170,18 @@ def _make_block(line: str, order: int) -> TrainingTruthBlock:
         **values,
         purpose=details.get("purpose"),
         progress=details.get("progress") or details.get("progression"),
-        easier=details.get("easier") or details.get("regression") or details.get("regress"),
+        easier=details.get("easier")
+        or details.get("regression")
+        or details.get("regress"),
         stop=details.get("stop") or details.get("stop rule"),
         intensity=details.get("intensity"),
         rest=details.get("rest") or parsed_rest,
     )
 
 
-def _apply_detail(block: TrainingTruthBlock, label: str, text: str) -> TrainingTruthBlock:
+def _apply_detail(
+    block: TrainingTruthBlock, label: str, text: str
+) -> TrainingTruthBlock:
     label = label.lower()
     if label == "step":
         return replace(block, steps=(*block.steps, text))
@@ -176,7 +190,9 @@ def _apply_detail(block: TrainingTruthBlock, label: str, text: str) -> TrainingT
         # objectives are not compared by this first shadow contract.
         return block
     field = {
-        "progression": "progress", "regression": "easier", "regress": "easier",
+        "progression": "progress",
+        "regression": "easier",
+        "regress": "easier",
         "stop rule": "stop",
     }.get(label, label)
     if field == "rest":
@@ -189,7 +205,10 @@ def _apply_detail(block: TrainingTruthBlock, label: str, text: str) -> TrainingT
 def _iter_locked_roles(value: Any) -> Iterable[Mapping[str, Any]]:
     if isinstance(value, Mapping):
         governance = value.get("governance")
-        if isinstance(governance, Mapping) and governance.get("selected_drill_locked") is True:
+        if (
+            isinstance(governance, Mapping)
+            and governance.get("selected_drill_locked") is True
+        ):
             yield value
         for child in value.values():
             yield from _iter_locked_roles(child)
@@ -198,7 +217,9 @@ def _iter_locked_roles(value: Any) -> Iterable[Mapping[str, Any]]:
             yield from _iter_locked_roles(child)
 
 
-def _locked_block(block: TrainingTruthBlock, role: Mapping[str, Any]) -> TrainingTruthBlock:
+def _locked_block(
+    block: TrainingTruthBlock, role: Mapping[str, Any]
+) -> TrainingTruthBlock:
     watch = role.get("tactical_watch")
     if not isinstance(watch, Mapping):
         return replace(block, locked=True)
@@ -209,7 +230,9 @@ def _locked_block(block: TrainingTruthBlock, role: Mapping[str, Any]) -> Trainin
         display_name=_clean(watch.get("name")) or block.display_name,
         duration=f"{duration} min" if duration is not None else block.duration,
         locked=True,
-        steps=tuple(_clean(item) for item in watch.get("instructions", ()) if _clean(item)),
+        steps=tuple(
+            _clean(item) for item in watch.get("instructions", ()) if _clean(item)
+        ),
         intent=_clean(mindset.get("intent")) or None,
         focus=_clean(mindset.get("focus")) or None,
         reset=_clean(mindset.get("reset")) or None,
@@ -247,19 +270,31 @@ def extract_structured_plan_truth(
         detail = _DETAIL_RE.match(line)
         if detail and current[3]:
             label = "step" if detail.group("step") else str(detail.group("label"))
-            current[3][-1] = _apply_detail(current[3][-1], label, _clean(detail.group("text")))
+            current[3][-1] = _apply_detail(
+                current[3][-1], label, _clean(detail.group("text"))
+            )
 
     # Stage 1 role/bank metadata is stronger only for the corresponding locked block.
     for role in _iter_locked_roles(planning_brief):
-        governance = role.get("governance") if isinstance(role.get("governance"), Mapping) else {}
+        governance = (
+            role.get("governance")
+            if isinstance(role.get("governance"), Mapping)
+            else {}
+        )
         name = _clean(governance.get("selected_drill_name"))
         if not name:
             names = role.get("preferred_exercise_names")
             name = _clean(names[0]) if isinstance(names, list) and names else ""
-        role_day = _clean(role.get("countdown_label") or role.get("scheduled_countdown_label"))
+        role_day = _clean(
+            role.get("countdown_label") or role.get("scheduled_countdown_label")
+        )
         for session in sessions:
             for index, block in enumerate(session[3]):
-                if name and _key(block.display_name) == _key(name) and (not role_day or session[0] == role_day):
+                if (
+                    name
+                    and _key(block.display_name) == _key(name)
+                    and (not role_day or session[0] == role_day)
+                ):
                     session[3][index] = _locked_block(block, role)
 
     days: list[TrainingTruthDay] = []
@@ -296,7 +331,9 @@ def _load(value: Any) -> str | None:
         unit = ""
     else:
         amount_text = str(amount)
-    return _clean(" ".join(part for part in (amount_text, unit, value.get("ref")) if part))
+    return _clean(
+        " ".join(part for part in (amount_text, unit, value.get("ref")) if part)
+    )
 
 
 def _effort(value: Any) -> str | None:
@@ -364,6 +401,23 @@ def compare_structured_plan_to_truth(
                 and _key(candidate.get("title")) == _key(session.title)
             ]
             if not matching_sessions:
+                same_day_blocks = {
+                    _key(block.get("display_name"))
+                    for candidate_day in matching_days
+                    for candidate in candidate_day.get("sessions", ())
+                    if isinstance(candidate, Mapping)
+                    for block in candidate.get("blocks", ())
+                    if isinstance(block, Mapping)
+                }
+                for expected in session.blocks:
+                    if _key(expected.display_name) in same_day_blocks:
+                        differences.append(
+                            StructuredTruthDifference(
+                                "SESSION_MISMATCH",
+                                block_name=expected.display_name,
+                                **context,
+                            )
+                        )
                 sessions_elsewhere = [
                     (candidate_day, candidate)
                     for candidate_day in card_days
@@ -389,7 +443,9 @@ def compare_structured_plan_to_truth(
                         continue
                 # Session identity is part of truth, including an explicit session
                 # with no blocks. Do not let a same-named block elsewhere satisfy it.
-                differences.append(StructuredTruthDifference("SESSION_MISSING", **context))
+                differences.append(
+                    StructuredTruthDifference("SESSION_MISSING", **context)
+                )
                 continue
             card_session = matching_sessions[0]
             card_blocks = [
@@ -438,33 +494,96 @@ def compare_structured_plan_to_truth(
                 actual = matches[0]
                 actual_order = card_blocks.index(actual)
                 if actual_order != expected_index:
-                    differences.append(StructuredTruthDifference("BLOCK_ORDER_MISMATCH", field="order_index", expected=expected_index, actual=actual_order, **block_context))
+                    differences.append(
+                        StructuredTruthDifference(
+                            "BLOCK_ORDER_MISMATCH",
+                            field="order_index",
+                            expected=expected_index,
+                            actual=actual_order,
+                            **block_context,
+                        )
+                    )
                 for field, actual_value in (
-                    ("sets", actual.get("sets")), ("reps", actual.get("reps")),
-                    ("rounds", actual.get("rounds")), ("duration", _measured(actual.get("duration"))),
-                    ("work", _measured(actual.get("work"))), ("rest", _measured(actual.get("rest"))),
-                    ("load", _load(actual.get("load"))), ("effort", _effort(actual.get("effort"))),
-                    ("intensity", actual.get("intensity")), ("purpose", actual.get("purpose")),
+                    ("sets", actual.get("sets")),
+                    ("reps", actual.get("reps")),
+                    ("rounds", actual.get("rounds")),
+                    ("duration", _measured(actual.get("duration"))),
+                    ("work", _measured(actual.get("work"))),
+                    ("rest", _measured(actual.get("rest"))),
+                    ("load", _load(actual.get("load"))),
+                    ("effort", _effort(actual.get("effort"))),
+                    ("intensity", actual.get("intensity")),
+                    ("purpose", actual.get("purpose")),
                     ("progress", actual.get("progression_rule")),
+                    ("easier", actual.get("regression_options")),
                 ):
                     wanted = getattr(expected, field)
                     matches_value = _equivalent(wanted, actual_value)
+                    if field in {"progress", "easier"} and wanted is not None:
+                        candidates = _strings(actual_value)
+                        matches_value = any(
+                            _equivalent(wanted, candidate) for candidate in candidates
+                        )
                     if field == "progress" and wanted is not None:
-                        matches_value = _comparison_text(wanted) in _comparison_text(actual_value)
+                        matches_value = _comparison_text(wanted) in _comparison_text(
+                            actual_value
+                        )
                     if wanted is not None and not matches_value:
-                        code = "PROGRESS_MISSING" if field == "progress" and not actual_value else ("DURATION_MISMATCH" if field in {"duration", "work", "rest"} else "PRESCRIPTION_MISMATCH")
-                        differences.append(StructuredTruthDifference(code, field=field, expected=wanted, actual=actual_value, **block_context))
-                stop_locations = [actual.get("progression_rule"), actual.get("red_flags")]
+                        code = (
+                            "REGRESSION_MISMATCH"
+                            if field == "easier"
+                            else (
+                                "PROGRESS_MISSING"
+                                if field == "progress" and not actual_value
+                                else (
+                                    "DURATION_MISMATCH"
+                                    if field in {"duration", "work", "rest"}
+                                    else "PRESCRIPTION_MISMATCH"
+                                )
+                            )
+                        )
+                        differences.append(
+                            StructuredTruthDifference(
+                                code,
+                                field=field,
+                                expected=wanted,
+                                actual=actual_value,
+                                **block_context,
+                            )
+                        )
+                stop_locations = [
+                    actual.get("progression_rule"),
+                    actual.get("red_flags"),
+                ]
                 if expected.stop and not any(
                     _key(expected.stop) in _key(text)
                     for text in _strings(stop_locations)
                 ):
-                    differences.append(StructuredTruthDifference("STOP_RULE_MISSING", field="stop", expected=expected.stop, **block_context))
+                    differences.append(
+                        StructuredTruthDifference(
+                            "STOP_RULE_MISSING",
+                            field="stop",
+                            expected=expected.stop,
+                            **block_context,
+                        )
+                    )
                 if expected.locked:
                     strings = [_clean(item) for item in _strings(card_session)]
-                    for label, wanted in [("step", item) for item in expected.steps] + [(name, getattr(expected, name)) for name in ("intent", "focus", "reset", "anchor")]:
-                        if wanted and not any(_equivalent(wanted, item) for item in strings):
-                            differences.append(StructuredTruthDifference("LOCKED_TEXT_MISMATCH", field=label, expected=wanted, **block_context))
+                    for label, wanted in [("step", item) for item in expected.steps] + [
+                        (name, getattr(expected, name))
+                        for name in ("intent", "focus", "reset", "anchor")
+                    ]:
+                        if wanted and not any(
+                            _equivalent(wanted, item) for item in strings
+                        ):
+                            differences.append(
+                                StructuredTruthDifference(
+                                    "LOCKED_TEXT_MISMATCH",
+                                    field=label,
+                                    expected=wanted,
+                                    **block_context,
+                                )
+                            )
     return differences
 
 

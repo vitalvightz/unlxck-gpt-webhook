@@ -1,4 +1,5 @@
 """Focused coverage for deterministic structured-truth shadow validation."""
+
 from __future__ import annotations
 
 import logging
@@ -9,7 +10,6 @@ from api.structured_plan_truth import (
     compare_structured_plan_to_truth,
     extract_structured_plan_truth,
 )
-
 
 BASIC = """D-12 (Monday) - Neural speed touch
 Why: maintain explosive hip-drive.
@@ -82,7 +82,8 @@ def test_multiple_sessions_on_one_dday_are_not_collapsed():
     )
     assert len(truth.days) == 1
     assert [session.title for session in truth.days[0].sessions] == [
-        "Technical-only combat", "Fight Tactical Watch"
+        "Technical-only combat",
+        "Fight Tactical Watch",
     ]
 
 

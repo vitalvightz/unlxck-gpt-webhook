@@ -16,6 +16,7 @@ Two concerns live here:
   model what a schema-compatible ``StructuredTrainingPlan`` JSON object must look
   like. The actual model call lives in ``api/stage2_automation.py``.
 """
+
 from __future__ import annotations
 
 import copy
@@ -30,11 +31,16 @@ from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekd
 from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_faithfulness import check_structured_faithfulness
 from .structured_plan_locked_merge import merge_locked_structured_content
+from .structured_plan_prescription_merge import merge_authoritative_prescription
 from .structured_plan_truth import (
     compare_structured_plan_to_truth,
     extract_structured_plan_truth,
 )
-from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
+from .structured_plan_safety import (
+    athlete_safe_support,
+    audit_structured_plan,
+    split_findings,
+)
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -58,6 +64,7 @@ from .structured_plan_models import (
     WeekType,
     repair_structured_plan_once,
     safe_parse_structured_plan,
+    validate_structured_plan,
 )
 
 # Admin/debug status describing what happened to the structured-plan attempt.
@@ -157,6 +164,53 @@ def _run_structured_truth_shadow(
             )
     except Exception:  # noqa: BLE001 - shadow diagnostics must remain fail-open
         logger.exception("[structured_truth_shadow] comparison_failed")
+
+
+def _merge_prescription_truth(
+    plan_dict: dict[str, Any], raw_markdown: str, planning_brief: Any
+) -> tuple[dict[str, Any], list[str]]:
+    """Apply general authority, log compact diagnostics, then validate locally."""
+    truth = extract_structured_plan_truth(raw_markdown, planning_brief)
+    result = merge_authoritative_prescription(plan_dict, truth)
+    truth_blocks = sum(
+        1
+        for day in truth.days
+        for session in day.sessions
+        for block in session.blocks
+        if not block.locked
+    )
+    logger.info(
+        "[structured_prescription_merge] truth_blocks=%d applied=%d unresolved=%d",
+        truth_blocks,
+        len(result.applied),
+        len(result.unresolved),
+    )
+    for application in result.applied:
+        logger.info(
+            "[structured_prescription_merge_detail] day=%s session=%s block=%s fields=%s status=applied",
+            application.countdown_label,
+            application.session_title,
+            application.block_name,
+            ",".join(application.fields),
+        )
+    for issue in result.unresolved:
+        logger.warning(
+            "[structured_prescription_merge_detail] day=%s session=%s block=%s fields=%s status=unresolved reason=%s",
+            issue.countdown_label,
+            issue.session_title,
+            issue.block_name or "",
+            ",".join(issue.fields),
+            issue.reason,
+        )
+    # The deterministic layer is the last writer. Never ask the model to repair it.
+    validate_structured_plan(result.plan)
+    structural = compare_structured_plan_to_truth(truth, result.plan)
+    errors = [
+        f"faithfulness: MISPLACED_SESSION: {item.block_name} is not in source session {item.session_title}"
+        for item in structural
+        if item.code == "SESSION_MISMATCH"
+    ]
+    return result.plan, errors
 
 
 @dataclass
@@ -273,7 +327,10 @@ def strip_biometric_fields(data: Any) -> tuple[Any, list[str]]:
             cleaned: dict[Any, Any] = {}
             for key, value in node.items():
                 child_path = f"{path}.{key}" if path else str(key)
-                if isinstance(key, str) and key.strip().lower() in BANNED_BIOMETRIC_KEYS:
+                if (
+                    isinstance(key, str)
+                    and key.strip().lower() in BANNED_BIOMETRIC_KEYS
+                ):
                     removed.append(child_path)
                     continue
                 cleaned[key] = _walk(value, child_path)
@@ -383,7 +440,9 @@ _LOAD_METHOD_ALIASES = {
 _LOAD_PERCENT_HINT_RE = re.compile(r"%|percent|1\s*rm", re.I)
 _LOAD_BODYWEIGHT_HINT_RE = re.compile(r"bodyweight|body weight|\bbw\b", re.I)
 _LOAD_BAND_HINT_RE = re.compile(r"\bbands?\b|banded", re.I)
-_LOAD_ABSOLUTE_HINT_RE = re.compile(r"\b(kgs?|lbs?|kilos?|kilograms?|pounds?|dbs?|dumbbells?)\b", re.I)
+_LOAD_ABSOLUTE_HINT_RE = re.compile(
+    r"\b(kgs?|lbs?|kilos?|kilograms?|pounds?|dbs?|dumbbells?)\b", re.I
+)
 
 # A number (or range) that is DIRECTLY attached to a load unit — "2-4 kg", "85%".
 # Anchoring on the unit is what stops a rep/set count being misread as a load:
@@ -440,9 +499,7 @@ _BLOCK_TYPE_ALIASES = {
 # "explosive" is deliberately excluded: taper/primer work is often "explosive"
 # but low-volume, high-intent and light, so it must not auto-flag a hard day —
 # the block's RPE/load decides.
-_HIGH_INTENSITY_WORDS = frozenset(
-    {"max", "maximal", "near_max", "very_high", "high"}
-)
+_HIGH_INTENSITY_WORDS = frozenset({"max", "maximal", "near_max", "very_high", "high"})
 _LOW_INTENSITY_WORDS = frozenset(
     {"none", "very_low", "low", "easy", "light", "primer", "recovery"}
 )
@@ -585,7 +642,12 @@ def _coerce_float(value: Any) -> float | None:
     return None
 
 
-def _enum(value: Any, allowed: frozenset[str], default: str, aliases: dict[str, str] | None = None) -> str:
+def _enum(
+    value: Any,
+    allowed: frozenset[str],
+    default: str,
+    aliases: dict[str, str] | None = None,
+) -> str:
     if isinstance(value, str):
         candidate = value.strip()
         if candidate in allowed:
@@ -613,7 +675,9 @@ def _normalize_countdown_label(item: Any) -> dict[str, Any] | None:
         out["label"] = label
         out["date"] = _coerce_str(out.get("date"))
         out["anchor"] = _coerce_nonempty_str(out.get("anchor"), "event_countdown")
-        if not isinstance(out.get("days_to_event"), int) or isinstance(out.get("days_to_event"), bool):
+        if not isinstance(out.get("days_to_event"), int) or isinstance(
+            out.get("days_to_event"), bool
+        ):
             out["days_to_event"] = _days_from_label(label)
         return out
     if isinstance(item, str):
@@ -726,7 +790,12 @@ def _normalize_load(value: Any) -> dict[str, Any] | None:
     if isinstance(value, dict):
         return _normalize_load_dict(value)
     if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return {"method": "absolute", "value": float(value), "unit": "kg", "display": str(value)}
+        return {
+            "method": "absolute",
+            "value": float(value),
+            "unit": "kg",
+            "display": str(value),
+        }
     if isinstance(value, str):
         text = value.strip()
         if not text:
@@ -746,7 +815,12 @@ def _normalize_load(value: Any) -> dict[str, Any] | None:
                 load["ref"] = ref
             return load
         if text.lower() in {"bodyweight", "bw", "body weight", "bodyweight only"}:
-            return {"method": "bodyweight", "value": 0, "unit": "bodyweight", "display": "bodyweight"}
+            return {
+                "method": "bodyweight",
+                "value": 0,
+                "unit": "bodyweight",
+                "display": "bodyweight",
+            }
     return None
 
 
@@ -762,7 +836,9 @@ def _alias_measured_unit(raw_unit: Any, default_unit: str) -> str:
     return text
 
 
-def _normalize_measured(value: Any, default_unit: str = "seconds") -> dict[str, Any] | None:
+def _normalize_measured(
+    value: Any, default_unit: str = "seconds"
+) -> dict[str, Any] | None:
     """Coerce a measured value into ``{"value", "unit"}``.
 
     ``default_unit`` is used for bare numbers and plain numeric strings so a
@@ -836,7 +912,9 @@ def _normalize_phase(value: Any) -> str:
 def _coerce_str_list(value: Any) -> list[str]:
     """Clean list of non-empty strings; a lone string is wrapped into a list."""
     if isinstance(value, list):
-        return [text for text in (_coerce_str(entry).strip() for entry in value) if text]
+        return [
+            text for text in (_coerce_str(entry).strip() for entry in value) if text
+        ]
     text = _coerce_str(value).strip()
     return [text] if text else []
 
@@ -863,8 +941,12 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
     """
     if isinstance(value, dict):
         out = dict(value)
-        out["method"] = _enum(out.get("method"), _EFFORT_METHOD_VALUES, "RPE", _EFFORT_METHOD_ALIASES)
-        if not isinstance(out.get("value"), (int, float, str)) or isinstance(out.get("value"), bool):
+        out["method"] = _enum(
+            out.get("method"), _EFFORT_METHOD_VALUES, "RPE", _EFFORT_METHOD_ALIASES
+        )
+        if not isinstance(out.get("value"), (int, float, str)) or isinstance(
+            out.get("value"), bool
+        ):
             number = _coerce_float(out.get("value"))
             if number is None:
                 return None
@@ -881,14 +963,20 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
         if number is None:
             return None
         method = "RIR" if re.search(r"\brir\b", value, re.I) else "RPE"
-        return {"method": method, "value": number, "scale": "1-10" if method == "RPE" else None}
+        return {
+            "method": method,
+            "value": number,
+            "scale": "1-10" if method == "RPE" else None,
+        }
     return None
 
 
 def _normalize_block(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["block_id"] = _coerce_nonempty_str(out.get("block_id"), "block")
-    out["block_type"] = _enum(out.get("block_type"), _BLOCK_TYPE_VALUES, "accessory", _BLOCK_TYPE_ALIASES)
+    out["block_type"] = _enum(
+        out.get("block_type"), _BLOCK_TYPE_VALUES, "accessory", _BLOCK_TYPE_ALIASES
+    )
     out["display_name"] = _coerce_str(out.get("display_name"))
     if "load" in out:
         out["load"] = _normalize_load(out.get("load"))
@@ -929,7 +1017,9 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     if "coaching_cues" in out or cleaned_cues != cues:
         out["coaching_cues"] = cleaned_cues
     if "red_flags" in out:
-        out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]
+        out["red_flags"] = [
+            _normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))
+        ]
     if "effort" in out:
         out["effort"] = _normalize_effort(out.get("effort"))
     progression_rule = _coerce_str(out.get("progression_rule")).strip()
@@ -947,22 +1037,32 @@ def _normalize_block(value: Any) -> dict[str, Any]:
 def _normalize_session(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["session_id"] = _coerce_nonempty_str(out.get("session_id"), "session")
-    out["session_type"] = _enum(out.get("session_type"), _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES)
+    out["session_type"] = _enum(
+        out.get("session_type"), _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES
+    )
     out["title"] = _coerce_str(out.get("title"))
     out["objective"] = _coerce_str(out.get("objective"))
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
     if "completion_status" in out:
-        out["completion_status"] = _enum(out.get("completion_status"), _COMPLETION_VALUES, "not_started")
+        out["completion_status"] = _enum(
+            out.get("completion_status"), _COMPLETION_VALUES, "not_started"
+        )
     if out.get("planned_duration") is not None:
-        out["planned_duration"] = _normalize_measured(out.get("planned_duration"), "minutes")
-    out["blocks"] = [_normalize_block(block) for block in _as_dict_list(out.get("blocks"))]
+        out["planned_duration"] = _normalize_measured(
+            out.get("planned_duration"), "minutes"
+        )
+    out["blocks"] = [
+        _normalize_block(block) for block in _as_dict_list(out.get("blocks"))
+    ]
     return out
 
 
 def _normalize_today_card(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["headline"] = _coerce_str(out.get("headline"))
-    out["readiness_status"] = _enum(out.get("readiness_status"), _READINESS_VALUES, "train_as_planned")
+    out["readiness_status"] = _enum(
+        out.get("readiness_status"), _READINESS_VALUES, "train_as_planned"
+    )
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
     # Coach-owned contact that coexists with the day's app sessions — keep only a
     # non-empty string so the renderer never shows a blank contact block.
@@ -995,12 +1095,20 @@ def _coach_led_contact_label(session: dict[str, Any]) -> str | None:
     )
     if not text or not _COACH_LED_CONTACT_RE.search(text):
         return None
-    return _coerce_str(session.get("title")).strip() or _coerce_str(session.get("objective")).strip() or text
+    return (
+        _coerce_str(session.get("title")).strip()
+        or _coerce_str(session.get("objective")).strip()
+        or text
+    )
 
 
 def _fold_coach_led_sessions_into_today_card(day: dict[str, Any]) -> None:
     """Normalize same-day contact + app work into the renderer's canonical shape."""
-    sessions = [session for session in _as_list(day.get("sessions")) if isinstance(session, dict)]
+    sessions = [
+        session
+        for session in _as_list(day.get("sessions"))
+        if isinstance(session, dict)
+    ]
     if len(sessions) < 2:
         return
     app_sessions: list[dict[str, Any]] = []
@@ -1089,7 +1197,11 @@ def _session_intensity(session: Any) -> str | None:
     """Rate a session by its hardest block, falling back to the session type."""
     if not isinstance(session, dict):
         return None
-    levels = [lvl for lvl in (_block_intensity(b) for b in _as_list(session.get("blocks"))) if lvl]
+    levels = [
+        lvl
+        for lvl in (_block_intensity(b) for b in _as_list(session.get("blocks")))
+        if lvl
+    ]
     if levels:
         return max(levels, key=_INTENSITY_RANK.__getitem__)
     stype = str(session.get("session_type") or "")
@@ -1112,7 +1224,10 @@ def _classify_day_type(day: dict[str, Any], fallback: str) -> str:
 
     # Competition / fight day is categorical, anchored on the countdown or a
     # fight session — never an intensity bucket.
-    if _countdown_distance(day.get("countdown_label")) == 0 or "fight_or_match" in session_types:
+    if (
+        _countdown_distance(day.get("countdown_label")) == 0
+        or "fight_or_match" in session_types
+    ):
         return "competition"
     # travel / reintegration are model-only states content cannot contradict.
     if fallback in {"travel", "reintegration"}:
@@ -1160,11 +1275,15 @@ def _normalize_day(value: Any) -> dict[str, Any]:
     out["countdown_label"] = _coerce_str(out.get("countdown_label"))
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
     out["today_card"] = _normalize_today_card(out.get("today_card"))
-    out["sessions"] = [_normalize_session(session) for session in _as_dict_list(out.get("sessions"))]
+    out["sessions"] = [
+        _normalize_session(session) for session in _as_dict_list(out.get("sessions"))
+    ]
     _fold_coach_led_sessions_into_today_card(out)
     # Derive the intensity badge from the now-normalized content; the model's own
     # value is only a last-resort fallback (see _classify_day_type).
-    out["day_type"] = _classify_day_type(out, _enum(out.get("day_type"), _DAY_TYPE_VALUES, ""))
+    out["day_type"] = _classify_day_type(
+        out, _enum(out.get("day_type"), _DAY_TYPE_VALUES, "")
+    )
     return out
 
 
@@ -1178,7 +1297,9 @@ def _normalize_load_focus(value: Any) -> dict[str, Any]:
 def _normalize_progression(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["week_type"] = _enum(out.get("week_type"), _WEEK_TYPE_VALUES, "build")
-    out["planned_change_from_previous"] = _coerce_str(out.get("planned_change_from_previous"))
+    out["planned_change_from_previous"] = _coerce_str(
+        out.get("planned_change_from_previous")
+    )
     return out
 
 
@@ -1212,7 +1333,12 @@ def _normalize_plan_note(value: Any) -> dict[str, Any] | None:
     if not text:
         return None
     out: dict[str, Any] = {
-        "category": _enum(value.get("category"), _PLAN_NOTE_CATEGORY_VALUES, "general", {"weight cut": "weight_cut", "weight-cut": "weight_cut"}),
+        "category": _enum(
+            value.get("category"),
+            _PLAN_NOTE_CATEGORY_VALUES,
+            "general",
+            {"weight cut": "weight_cut", "weight-cut": "weight_cut"},
+        ),
         "text": text,
     }
     label = _coerce_str(value.get("label")).strip()
@@ -1249,7 +1375,10 @@ def _normalize_red_flag(value: Any) -> dict[str, Any]:
         out["applies_to"] = _coerce_str_list(out.get("applies_to"))
     if out.get("replacement_session_type") is not None:
         replacement = _enum(
-            out.get("replacement_session_type"), _SESSION_TYPE_VALUES, "", _SESSION_TYPE_ALIASES
+            out.get("replacement_session_type"),
+            _SESSION_TYPE_VALUES,
+            "",
+            _SESSION_TYPE_ALIASES,
         )
         out["replacement_session_type"] = replacement or None
     return out
@@ -1259,7 +1388,9 @@ def _normalize_plan_metadata(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["title"] = _coerce_nonempty_str(out.get("title"), "Training Plan")
     out["sport"] = _coerce_str(out.get("sport"))
-    out["plan_type"] = _enum(out.get("plan_type"), _PLAN_TYPE_VALUES, "general_performance")
+    out["plan_type"] = _enum(
+        out.get("plan_type"), _PLAN_TYPE_VALUES, "general_performance"
+    )
     out["timezone"] = _coerce_nonempty_str(out.get("timezone"), "UTC")
     out["status"] = _enum(out.get("status"), _PLAN_STATUS_VALUES, "active")
     out["units"] = _enum(out.get("units"), _UNITS_VALUES, "metric")
@@ -1286,12 +1417,19 @@ def _normalize_event_context(value: Any) -> Any:
 
 def _normalize_nutrition(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
-    for key in ("summary", "daily_focus", "training_day_guidance", "fight_week_guidance"):
+    for key in (
+        "summary",
+        "daily_focus",
+        "training_day_guidance",
+        "fight_week_guidance",
+    ):
         out[key] = _coerce_str(out.get(key))
     warning = out.get("weight_cut_warning")
     if isinstance(warning, dict):
         warning = dict(warning)
-        warning["risk_level"] = _enum(warning.get("risk_level"), _RISK_LEVEL_VALUES, "none")
+        warning["risk_level"] = _enum(
+            warning.get("risk_level"), _RISK_LEVEL_VALUES, "none"
+        )
         warning["display_text"] = _coerce_str(warning.get("display_text"))
         out["weight_cut_warning"] = warning
     elif isinstance(warning, str):
@@ -1299,7 +1437,11 @@ def _normalize_nutrition(value: Any) -> dict[str, Any]:
         # schema object with a neutral risk level; the text is preserved verbatim.
         text = warning.strip()
         out["weight_cut_warning"] = (
-            {"risk_level": "none", "display_text": text, "requires_professional_support": False}
+            {
+                "risk_level": "none",
+                "display_text": text,
+                "requires_professional_support": False,
+            }
             if text
             else None
         )
@@ -1369,7 +1511,9 @@ def _normalize_checkin_morning(value: Any) -> dict[str, Any] | None:
     return out
 
 
-def _normalize_checkin_date(item: dict[str, Any], weeks: list[dict[str, Any]]) -> str | None:
+def _normalize_checkin_date(
+    item: dict[str, Any], weeks: list[dict[str, Any]]
+) -> str | None:
     """Resolve a check-in's date, inferring from indices only when unambiguous.
 
     A present non-empty ``date`` string is used as-is. Otherwise, when the
@@ -1559,7 +1703,9 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
 
     plan = copy.deepcopy(data)
 
-    if not isinstance(plan.get("schema_version"), str) or not plan.get("schema_version"):
+    if not isinstance(plan.get("schema_version"), str) or not plan.get(
+        "schema_version"
+    ):
         plan["schema_version"] = SCHEMA_VERSION
     plan["plan_metadata"] = _normalize_plan_metadata(plan.get("plan_metadata"))
     plan["athlete_context"] = _normalize_athlete_context(plan.get("athlete_context"))
@@ -1567,10 +1713,15 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
         plan["event_context"] = _normalize_event_context(plan.get("event_context"))
     plan["countdown_labels"] = [
         label
-        for label in (_normalize_countdown_label(item) for item in _as_list(plan.get("countdown_labels")))
+        for label in (
+            _normalize_countdown_label(item)
+            for item in _as_list(plan.get("countdown_labels"))
+        )
         if label is not None
     ]
-    plan["red_flag_rules"] = [_normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))]
+    plan["red_flag_rules"] = [
+        _normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))
+    ]
     plan["plan_notes"] = _normalize_plan_notes(plan.get("plan_notes"))
     plan["weeks"] = [_normalize_week(week) for week in _as_dict_list(plan.get("weeks"))]
     # daily_check_ins must be a list of fully-valid entries; a non-list, or a
@@ -1676,7 +1827,9 @@ def reconcile_late_fight_week_context(
     progression = planning_brief.get("week_by_week_progression")
     progression_weeks = [
         entry
-        for entry in _as_list(progression.get("weeks") if isinstance(progression, dict) else None)
+        for entry in _as_list(
+            progression.get("weeks") if isinstance(progression, dict) else None
+        )
         if isinstance(entry, dict)
     ]
     late_fight_spec = planning_brief.get("late_fight_plan_spec")
@@ -1689,12 +1842,8 @@ def reconcile_late_fight_week_context(
         _coerce_str(entry.get("stage_label")).strip() for entry in progression_weeks
     )
     plan_weeks = structured_plan.get("weeks")
-    if (
-        not isinstance(plan_weeks, list)
-        or (
-            not has_late_fight_progression
-            and payload_mode in {"", "camp_payload"}
-        )
+    if not isinstance(plan_weeks, list) or (
+        not has_late_fight_progression and payload_mode in {"", "camp_payload"}
     ):
         return structured_plan
 
@@ -1736,9 +1885,7 @@ def reconcile_late_fight_week_context(
 
         goal_missing = not _coerce_str(week.get("week_goal")).strip()
         stage_label = (
-            _coerce_str(source.get("stage_label")).strip()
-            if source is not None
-            else ""
+            _coerce_str(source.get("stage_label")).strip() if source is not None else ""
         ) or _late_fight_stage_label_for_countdown(countdown_start)
         if goal_missing and stage_label:
             week["week_goal"] = stage_label
@@ -1754,7 +1901,8 @@ def reconcile_late_fight_week_context(
         # that case a normalized GPP fallback is not authoritative, so replace it
         # with Stage 2's phase. Otherwise preserve every valid saved value.
         if phase in _PHASE_VALUES and (
-            current_phase not in _PHASE_VALUES or (goal_missing and current_phase == "GPP")
+            current_phase not in _PHASE_VALUES
+            or (goal_missing and current_phase == "GPP")
         ):
             week["phase_label"] = phase
             changed = True
@@ -1785,7 +1933,9 @@ def reconcile_late_fight_week_context(
 #     ``system`` (energy system), ``equipment`` (list).
 # ---------------------------------------------------------------------------
 
-_PRESCRIPTION_SETS_REPS_RE = re.compile(r"([0-9]+)\s*[xX×]\s*([0-9]+(?:\s*[-–]\s*[0-9]+)?)")
+_PRESCRIPTION_SETS_REPS_RE = re.compile(
+    r"([0-9]+)\s*[xX×]\s*([0-9]+(?:\s*[-–]\s*[0-9]+)?)"
+)
 
 
 def parse_bank_prescription(prescription: Any) -> dict[str, Any]:
@@ -1825,7 +1975,9 @@ def bank_strength_to_block(entry: dict[str, Any]) -> dict[str, Any]:
     name = _coerce_str(entry.get("name"))
     block: dict[str, Any] = {
         "block_id": _slug(name, "block"),
-        "block_type": _enum(entry.get("method"), _BLOCK_TYPE_VALUES, "strength", _BLOCK_TYPE_ALIASES),
+        "block_type": _enum(
+            entry.get("method"), _BLOCK_TYPE_VALUES, "strength", _BLOCK_TYPE_ALIASES
+        ),
         "display_name": name,
     }
     category = _coerce_str(entry.get("category"))
@@ -1862,7 +2014,9 @@ def bank_conditioning_to_block(entry: dict[str, Any]) -> dict[str, Any]:
         block["rest"] = entry.get("rest_sec")
     if entry.get("total_minutes") is not None:
         block["duration"] = entry.get("total_minutes")
-    if isinstance(entry.get("rounds"), int) and not isinstance(entry.get("rounds"), bool):
+    if isinstance(entry.get("rounds"), int) and not isinstance(
+        entry.get("rounds"), bool
+    ):
         block["rounds"] = entry.get("rounds")
     rpe = entry.get("rpe")
     if isinstance(rpe, (int, float)) and not isinstance(rpe, bool):
@@ -1913,11 +2067,7 @@ def _open_plan_training_weekdays(spec: dict[str, Any]) -> list[str]:
     raw_days = template.get("training_days")
     if not isinstance(raw_days, (list, tuple, set)):
         return []
-    normalized = {
-        day
-        for value in raw_days
-        if (day := _normalize_weekday(value))
-    }
+    normalized = {day for value in raw_days if (day := _normalize_weekday(value))}
     return [day for day in _OPEN_PLAN_WEEKDAYS if day in normalized]
 
 
@@ -1963,7 +2113,9 @@ def _open_plan_contract_errors(
 
     weeks = plan_dict.get("weeks")
     if not isinstance(weeks, list) or len(weeks) not in {1, 4}:
-        errors.append("open_plan_contract: weeks must contain one reusable template or four weeks")
+        errors.append(
+            "open_plan_contract: weeks must contain one reusable template or four weeks"
+        )
         return errors
 
     for position, week in enumerate(weeks, start=1):
@@ -1971,7 +2123,9 @@ def _open_plan_contract_errors(
             errors.append(f"open_plan_contract: week {position} must be an object")
             continue
         if int(week.get("week_index") or 0) != position:
-            errors.append(f"open_plan_contract: week {position} has the wrong week_index")
+            errors.append(
+                f"open_plan_contract: week {position} has the wrong week_index"
+            )
         if any(
             str(week.get(key) or "").strip()
             for key in ("start_date", "end_date", "countdown_start", "countdown_end")
@@ -1987,9 +2141,7 @@ def _open_plan_contract_errors(
             continue
 
         actual_weekdays = [
-            _normalize_weekday(day.get("weekday"))
-            if isinstance(day, dict)
-            else None
+            _normalize_weekday(day.get("weekday")) if isinstance(day, dict) else None
             for day in days
         ]
         if actual_weekdays != expected_weekdays:
@@ -2000,7 +2152,10 @@ def _open_plan_contract_errors(
         for day_position, day in enumerate(days, start=1):
             if not isinstance(day, dict):
                 continue
-            if str(day.get("date") or "").strip() or str(day.get("countdown_label") or "").strip():
+            if (
+                str(day.get("date") or "").strip()
+                or str(day.get("countdown_label") or "").strip()
+            ):
                 errors.append(
                     f"open_plan_contract: week {position} day {day_position} must remain undated"
                 )
@@ -2038,9 +2193,13 @@ def build_structured_plan_outcome(
     """
 
     def _audited_outcome(
-        status: StructuredPlanStatus, plan_dict: dict[str, Any], schema_version: str | None
+        status: StructuredPlanStatus,
+        plan_dict: dict[str, Any],
+        schema_version: str | None,
     ) -> StructuredPlanOutcome:
-        blocking, advisory = split_findings(audit_structured_plan(plan_dict, computed_support))
+        blocking, advisory = split_findings(
+            audit_structured_plan(plan_dict, computed_support)
+        )
         if blocking:
             return StructuredPlanOutcome(
                 status="blocked_by_safety_audit",
@@ -2064,11 +2223,16 @@ def build_structured_plan_outcome(
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     first_errors = list(first.errors)
     if first.ok and first.plan is not None:
-        plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
-        plan_dict = _merge_locked_content(plan_dict, planning_brief)
+        try:
+            plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
+            plan_dict = _merge_locked_content(plan_dict, planning_brief)
+            plan_dict, merge_errors = _merge_prescription_truth(plan_dict, raw_markdown, planning_brief)
+        except Exception as exc:  # deterministic authority must fail closed
+            logger.exception("[structured_prescription_merge] merge_failed")
+            return StructuredPlanOutcome(status="invalid_fallback_used", errors=[f"deterministic prescription merge failed: {type(exc).__name__}"])
         _run_structured_truth_shadow(plan_dict, raw_markdown, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
-        first_errors = [f"faithfulness: {issue}" for issue in unfaithful]
+        first_errors = merge_errors + [f"faithfulness: {issue}" for issue in unfaithful]
         first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if not first_errors:
             return _audited_outcome("valid", plan_dict, first.plan.schema_version)
@@ -2104,11 +2268,16 @@ def build_structured_plan_outcome(
             cleaned, repair_fn=_clean_repair, raw_markdown=raw_markdown or None
         )
     if repaired.ok and repaired.plan is not None:
-        plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
-        plan_dict = _merge_locked_content(plan_dict, planning_brief)
+        try:
+            plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
+            plan_dict = _merge_locked_content(plan_dict, planning_brief)
+            plan_dict, merge_errors = _merge_prescription_truth(plan_dict, raw_markdown, planning_brief)
+        except Exception as exc:  # deterministic authority must fail closed
+            logger.exception("[structured_prescription_merge] merge_failed")
+            return StructuredPlanOutcome(status="invalid_fallback_used", errors=[f"deterministic prescription merge failed: {type(exc).__name__}"])
         _run_structured_truth_shadow(plan_dict, raw_markdown, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
-        repaired_errors = [f"faithfulness: {issue}" for issue in unfaithful]
+        repaired_errors = merge_errors + [f"faithfulness: {issue}" for issue in unfaithful]
         repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if repaired_errors:
             return StructuredPlanOutcome(
@@ -2597,7 +2766,9 @@ def build_structured_plan_prompt(
         # deterministic and drops the internal pools entirely.
         brief_context = _select_brief_context(planning_brief)
         try:
-            brief_json = json.dumps(brief_context, ensure_ascii=False)[:_BRIEF_CONTEXT_CHAR_CAP]
+            brief_json = json.dumps(brief_context, ensure_ascii=False)[
+                :_BRIEF_CONTEXT_CHAR_CAP
+            ]
         except (TypeError, ValueError):
             brief_json = ""
         if not brief_json:
@@ -2625,8 +2796,7 @@ def build_structured_plan_prompt(
 
     sections.append(
         "ORIGINAL PLAN (this is the source to convert; do NOT copy it into "
-        "raw_markdown_fallback — leave that field \"\"):\n"
-        + plan_markdown
+        'raw_markdown_fallback — leave that field ""):\n' + plan_markdown
     )
 
     if repair_errors:
