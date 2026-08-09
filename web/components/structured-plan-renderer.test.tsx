@@ -1342,11 +1342,11 @@ test("keeps engine rationale out of athlete-facing mindset and block copy", () =
 
   assert.equal(html.includes("SPP pocket planning for a brawler."), false);
   assert.equal(html.includes("D-17 onward"), false);
-  // Generic plan rationale is not Context; it stays only where the block itself
-  // needs its athlete-facing purpose.
-  assert.equal(countOccurrences(html, "Pocket planning."), 1);
+  // Block purpose is retained as structured planning context, not rendered on
+  // the athlete execution card. Genuine mindset/execution cues remain visible.
+  assert.equal(html.includes("Pocket planning."), false);
   assert.equal(html.includes("Choose a clean exit"), true);
-  assert.equal(html.includes("Stay calm as you exit the exchange."), true);
+  assert.equal(html.includes("Stay calm as you exit the exchange."), false);
 });
 
 test("marks the current day and surfaces the camp status + week focus", () => {
