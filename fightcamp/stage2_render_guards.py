@@ -16,6 +16,7 @@ from .injury_registry import all_stable_train_through_surface
 from .normalization import clean_list, dedupe_preserve_order, normalize_text
 from .stage2_payload_late_fight import _coerce_days, _uses_late_fight_stage2_payload
 from .stage2_payload_open_ongoing import _uses_open_ongoing_payload
+from .tactical_watch_library import declared_tactical_style_labels
 from .training_context import TrainingContext
 
 
@@ -132,13 +133,7 @@ def _render_guard_flags(
     # stays true (so the hygiene note is preserved and the athlete isn't told the
     # injury does not exist).
     surface_injury_only = _all_active_injuries_surface_only(athlete_model)
-    declared_tactical_styles = dedupe_preserve_order(
-        [
-            str(style).strip()
-            for style in clean_list(athlete_model.get("tactical_styles"))
-            if str(style).strip()
-        ]
-    )
+    declared_tactical_styles = declared_tactical_style_labels(athlete_model)
     render_mode = "open_ongoing_system" if open_ongoing_mode else ("late_fight_countdown_only" if late_fight_countdown else "camp_plan")
     return {
         "has_active_injury": has_active_injury,
@@ -169,8 +164,8 @@ def _append_render_guard_writing_rules(
         declared_labels = ", ".join(declared_tactical_styles)
         rules.extend(
             [
-                f"ATHLETE IDENTITY CONTRACT: athlete_model.tactical_styles is authoritative for athlete-facing tactical style identity. The athlete declared: {declared_labels}. Whenever the athlete's fighting/tactical style is named or used as an identity label, use only the declared label(s) exactly as supplied.",
-                "Internal archetypes, candidate-pool tags, exercise tags, scorer tags, programming aliases, and inferred style families may guide programming only. Never substitute them for, relabel, broaden, narrow, or 'correct' the athlete's declared tactical style in athlete-facing copy.",
+                f"ATHLETE IDENTITY CONTRACT: render_guards.declared_tactical_styles contains the athlete-facing tactical style label(s) derived from the athlete's selected intake value(s): {declared_labels}. Whenever the athlete's fighting/tactical style is named or used as an identity label, use only these athlete-facing labels.",
+                "Internal archetypes, candidate-pool tags, exercise tags, scorer tags, programming aliases, normalized tactical tokens, and stance-derived programming signals may guide programming only. Never substitute them for, relabel, broaden, narrow, or 'correct' the athlete-facing tactical style identity.",
             ]
         )
     if guards["suppress_rehab_headings"]:
