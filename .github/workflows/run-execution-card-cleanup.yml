@@ -19,7 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply execution-first block cleanup
-        run: python .github/scripts/apply_execution_card_cleanup.py
+        run: |
+          python .github/scripts/apply_execution_card_cleanup.py
+          python .github/scripts/fix_execution_cleanup_test.py
 
       - name: Run focused backend tests
         run: |
@@ -37,7 +39,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/apply-execution-card-cleanup.yml .github/workflows/run-execution-card-cleanup.yml .github/scripts/apply_execution_card_cleanup.py
+          git rm .github/workflows/apply-execution-card-cleanup.yml .github/workflows/run-execution-card-cleanup.yml .github/scripts/apply_execution_card_cleanup.py .github/scripts/fix_execution_cleanup_test.py
           git add api/structured_plan_generation.py api/structured_plan_models.py tests/test_structured_plan_stop_rules.py web/lib/types.ts web/lib/structured-plan.ts web/lib/structured-plan-stop-rules.test.ts web/components/structured-plan-renderer.tsx web/components/structured-plan-stop-rules.test.tsx
           git commit -m "Make exercise cards execution-first"
           git push origin HEAD:fix/restore-block-stop-rules
