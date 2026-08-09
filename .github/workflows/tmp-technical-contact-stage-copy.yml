@@ -1,0 +1,54 @@
+name: Patch technical contact stage copy
+
+on:
+  push:
+    branches:
+      - fix/technical-contact-stage-copy
+    paths:
+      - .github/workflows/tmp-technical-contact-stage-copy.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/technical-contact-stage-copy
+          fetch-depth: 0
+      - name: Update stage-specific technical contact copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('web/components/structured-plan-renderer.tsx')
+          text = path.read_text()
+
+          old_const = '''const TECHNICAL_COMBAT_RATIONALE =\n  "Technical only — no hard sparring. Stay sharp and leave fresh.";'''
+          new_const = '''const TECHNICAL_COMBAT_RATIONALE =\n  "Technical only — no hard sparring. Stay sharp and leave fresh.";\nconst TECHNICAL_COMBAT_STAGE_RATIONALES: Record<string, string> = {\n  "Fight-intensity technical rounds":\n    "Realistic exchanges at speed, controlled contact, low total volume.",\n  "Technical rhythm only":\n    "Light technical rounds. Prioritise timing, flow and clean execution.",\n  "Technical touch — pads / shadow":\n    "Pads or shadow only. Stay sharp without contact fatigue.",\n  "Technical activation — no contact":\n    "Brief movement and reactions. Finish feeling fresher than you started.",\n};'''
+          if text.count(old_const) != 1:
+              raise SystemExit(f'Expected one rationale constant, found {text.count(old_const)}')
+          text = text.replace(old_const, new_const)
+
+          old_fn = '''function TechnicalCombatRationale() {\n  return <p className="sp-today-note">{TECHNICAL_COMBAT_RATIONALE}</p>;\n}'''
+          new_fn = '''function TechnicalCombatRationale({ title }: { title: string }) {\n  const rationale = TECHNICAL_COMBAT_STAGE_RATIONALES[title] || TECHNICAL_COMBAT_RATIONALE;\n  return <p className="sp-today-note">{rationale}</p>;\n}'''
+          if text.count(old_fn) != 1:
+              raise SystemExit(f'Expected one rationale component, found {text.count(old_fn)}')
+          text = text.replace(old_fn, new_fn)
+
+          old_usage = '<TechnicalCombatRationale />'
+          if text.count(old_usage) != 2:
+              raise SystemExit(f'Expected two rationale usages, found {text.count(old_usage)}')
+          text = text.replace(old_usage, '<TechnicalCombatRationale title={displayTitle} />')
+
+          path.write_text(text)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/components/structured-plan-renderer.tsx
+          git commit -m "Use stage-specific technical contact summaries"
+          git push origin HEAD:fix/technical-contact-stage-copy
