@@ -6,7 +6,9 @@ from copy import deepcopy
 import pytest
 
 from api.structured_plan_faithfulness import check_structured_faithfulness
+from api.structured_plan_generation import build_structured_plan_outcome
 from api.structured_plan_locked_merge import merge_locked_structured_content
+from api.structured_plan_models import safe_parse_structured_plan
 
 WHY = "Know what happens after the first punches so pocket exchanges stay planned rather than chaotic."
 STEPS = [
@@ -129,28 +131,109 @@ def test_wrong_day_is_unresolved_and_not_moved_then_faithfulness_rejects():
     assert any("LOCKED_CONTENT" in issue for issue in check_structured_faithfulness(result.plan, SOURCE, _brief()))
 
 
-def test_missing_block_is_unresolved_and_not_fabricated():
+def test_missing_block_is_restored_from_authoritative_role():
     plan = _plan(include=False)
     result = _merged(plan)
-    assert result.plan == plan and len(result.unresolved) == 1
-    assert result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"] == []
-    assert any("LOCKED_CONTENT" in issue for issue in check_structured_faithfulness(result.plan, SOURCE, _brief()))
+    block = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert block["display_name"] == "Pocket Exchange Map"
+    assert block["coaching_cues"] == STEPS
+    assert result.unresolved == []
+    assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
 
 
-def test_locked_block_in_wrong_same_day_session_is_unresolved():
+def test_locked_block_in_wrong_same_day_session_moves_without_overwriting_combat():
     plan = _plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["title"] = "Technical-only combat"
 
     result = _merged(plan)
 
-    assert result.plan == plan
-    assert result.applied == []
-    assert len(result.unresolved) == 1
-    assert result.unresolved[0].reason == "locked block not in Tactical Watch session"
-    assert any(
-        "LOCKED_CONTENT" in issue
-        for issue in check_structured_faithfulness(result.plan, SOURCE, _brief())
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == [
+        "Technical-only combat",
+        "Fight Tactical Watch",
+    ]
+    assert sessions[0]["blocks"] == []
+    assert sessions[1]["blocks"][0]["display_name"] == "Pocket Exchange Map"
+    assert result.unresolved == []
+    assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
+def test_omitted_tactical_watch_session_is_created_without_another_model_call():
+    plan = {"weeks": [{"days": [{"countdown_label": "D-11", "sessions": []}]}]}
+
+    result = _merged(plan)
+
+    session = result.plan["weeks"][0]["days"][0]["sessions"][0]
+    assert session["session_type"] == "skill"
+    assert session["title"] == "Fight Tactical Watch"
+    assert session["blocks"][0]["display_name"] == "Pocket Exchange Map"
+    assert result.unresolved == []
+    assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
+def test_ambiguous_renamed_mindset_block_is_preserved():
+    plan = _plan()
+    session = plan["weeks"][0]["days"][0]["sessions"][0]
+    session["blocks"][0]["display_name"] = "Pocket review"
+
+    result = _merged(plan)
+
+    blocks = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
+    assert [block["display_name"] for block in blocks] == [
+        "Pocket review",
+        "Pocket Exchange Map",
+    ]
+    assert blocks[0]["coaching_cues"] == ["AI step."]
+    assert blocks[1]["coaching_cues"] == STEPS
+    assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
+def test_unrelated_mindset_block_is_preserved_when_locked_block_is_missing():
+    plan = _plan()
+    session = plan["weeks"][0]["days"][0]["sessions"][0]
+    unrelated = session["blocks"][0]
+    unrelated.update(
+        {
+            "display_name": "Fight-night breathing reset",
+            "coaching_cues": ["Use a slow exhale."],
+            "purpose": "Settle pre-fight tension.",
+        }
     )
+    original = deepcopy(unrelated)
+
+    result = _merged(plan)
+
+    blocks = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
+    assert blocks[0] == original
+    assert blocks[1]["display_name"] == "Pocket Exchange Map"
+    assert blocks[1]["coaching_cues"] == STEPS
+    assert result.unresolved == []
+
+
+def test_schema_valid_card_with_omitted_watch_is_repaired_and_persistable():
+    from test_structured_plan_models import _valid_plan
+
+    plan = _valid_plan()
+    week = plan["weeks"][0]
+    week["countdown_start"] = week["countdown_end"] = "D-11"
+    day = week["days"][0]
+    day["countdown_label"] = "D-11"
+    day["sessions"] = []
+
+    outcome = build_structured_plan_outcome(
+        plan,
+        raw_markdown=SOURCE,
+        planning_brief=_brief(),
+    )
+
+    assert outcome.status == "valid"
+    assert outcome.structured_plan is not None
+    sessions = outcome.structured_plan["weeks"][0]["days"][0]["sessions"]
+    assert sessions[0]["title"] == "Fight Tactical Watch"
+    assert sessions[0]["blocks"][0]["coaching_cues"] == STEPS
+    assert safe_parse_structured_plan(
+        outcome.structured_plan, raw_markdown=SOURCE
+    ).ok
 
 
 def test_previous_pocket_exchange_failure_is_repaired_before_faithfulness():

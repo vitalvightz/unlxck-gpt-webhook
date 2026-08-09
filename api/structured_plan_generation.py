@@ -30,10 +30,6 @@ from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekd
 from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_faithfulness import check_structured_faithfulness
 from .structured_plan_locked_merge import merge_locked_structured_content
-from .structured_plan_truth import (
-    compare_structured_plan_to_truth,
-    extract_structured_plan_truth,
-)
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
 from .structured_plan_models import (
     SCHEMA_VERSION,
@@ -126,37 +122,6 @@ def _merge_locked_content(
                 issue.reason,
             )
     return result.plan
-
-
-def _run_structured_truth_shadow(
-    plan_dict: dict[str, Any], raw_markdown: str, planning_brief: Any
-) -> None:
-    """Observe deterministic/card parity; never affect the generation outcome."""
-    try:
-        truth = extract_structured_plan_truth(raw_markdown, planning_brief)
-        differences = compare_structured_plan_to_truth(truth, plan_dict)
-        if not differences:
-            return
-        codes = sorted({item.code for item in differences})
-        plan_id = (plan_dict.get("plan_metadata") or {}).get("plan_id") or "unknown"
-        logger.warning(
-            "[structured_truth_shadow] plan_id=%s difference_count=%d codes=%s",
-            plan_id,
-            len(differences),
-            ",".join(codes),
-        )
-        for item in differences:
-            logger.warning(
-                "[structured_truth_shadow_detail] plan_id=%s code=%s day=%s session=%s block=%s field=%s",
-                plan_id,
-                item.code,
-                item.countdown_label or "",
-                item.session_title or "",
-                item.block_name or "",
-                item.field or "",
-            )
-    except Exception:  # noqa: BLE001 - shadow diagnostics must remain fail-open
-        logger.exception("[structured_truth_shadow] comparison_failed")
 
 
 @dataclass
@@ -2066,7 +2031,6 @@ def build_structured_plan_outcome(
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
-        _run_structured_truth_shadow(plan_dict, raw_markdown, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         first_errors = [f"faithfulness: {issue}" for issue in unfaithful]
         first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
@@ -2106,7 +2070,6 @@ def build_structured_plan_outcome(
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
-        _run_structured_truth_shadow(plan_dict, raw_markdown, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         repaired_errors = [f"faithfulness: {issue}" for issue in unfaithful]
         repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
