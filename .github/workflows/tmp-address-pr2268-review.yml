@@ -25,9 +25,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # The three unrelated renderer failures are already fixed by the
-          # test-only #2267 branch. Bring only that assertion file across so
-          # #2268 can validate against the current renderer contract.
+          # These three renderer assertions are already corrected in the
+          # test-only #2267 branch and fail on the exact Main base of #2268.
           git fetch origin agent/fix-week-overview-renderer-tests
           git checkout origin/agent/fix-week-overview-renderer-tests -- web/components/structured-plan-renderer.test.tsx
 
@@ -36,41 +35,39 @@ jobs:
 
           structured = Path("web/lib/structured-plan.ts")
           text = structured.read_text()
-          old = '''  if (dDay === 1) {
-            return "Technical activation — no contact";
-          }'''
-          new = '''  if (dDay >= 0 && dDay <= 1) {
-            return "Technical activation — no contact";
-          }'''
-          assert old in text, "D-1 activation branch not found"
+          old = "if (dDay === 1) {"
+          new = "if (dDay >= 0 && dDay <= 1) {"
+          assert text.count(old) == 1, "expected one D-1 activation branch"
           structured.write_text(text.replace(old, new, 1))
 
           countdown_test = Path("web/lib/structured-plan-sparring-countdown.test.ts")
           text = countdown_test.read_text()
-          old_case = '    [1, "Technical activation — no contact"],\n'
-          new_case = old_case + '    [0, "Technical activation — no contact"],\n'
-          assert old_case in text, "D-1 countdown case not found"
-          text = text.replace(old_case, new_case, 1)
-          old_test = '''test("D-0 and explicit countdown-specific titles are not rewritten", () => {
-            assert.equal(classifySessionlessDay(technicalDay(0)).title, "Technical-only combat");'''
-          new_test = '''test("D-0 follows activation band while explicit countdown-specific titles are preserved", () => {
-            assert.equal(
-              classifySessionlessDay(technicalDay(0)).title,
-              "Technical activation — no contact",
-            );'''
-          assert old_test in text, "obsolete D-0 assertion not found"
-          countdown_test.write_text(text.replace(old_test, new_test, 1))
+          old_case = '[1, "Technical activation — no contact"],'
+          assert text.count(old_case) == 1, "expected one D-1 countdown case"
+          text = text.replace(
+              old_case,
+              old_case + '\n    [0, "Technical activation — no contact"],',
+              1,
+          )
+          old_name = 'test("D-0 and explicit countdown-specific titles are not rewritten", () => {'
+          new_name = 'test("D-0 follows activation band while explicit countdown-specific titles are preserved", () => {'
+          assert text.count(old_name) == 1, "obsolete D-0 test name not found"
+          text = text.replace(old_name, new_name, 1)
+          old_assert = 'assert.equal(classifySessionlessDay(technicalDay(0)).title, "Technical-only combat");'
+          new_assert = 'assert.equal(classifySessionlessDay(technicalDay(0)).title, "Technical activation — no contact");'
+          assert text.count(old_assert) == 1, "obsolete D-0 expectation not found"
+          countdown_test.write_text(text.replace(old_assert, new_assert, 1))
 
-          renderer_test = Path("web/components/structured-plan-sparring-card.test.tsx")
-          text = renderer_test.read_text()
+          card_test = Path("web/components/structured-plan-sparring-card.test.tsx")
+          text = card_test.read_text()
           old_name = 'test("generic technical-only cards keep the existing Technical Combat title", () => {'
           new_name = 'test("generic D-17 technical-only cards use the fight-intensity title", () => {'
-          assert old_name in text, "obsolete generic-card test name not found"
+          assert text.count(old_name) == 1, "obsolete generic-card test name not found"
           text = text.replace(old_name, new_name, 1)
-          old_expect = '  assert.equal(html.includes(\'<h3 class="sp-session-title">Technical Combat\'), true);'
-          new_expect = '  assert.equal(html.includes(\'<h3 class="sp-session-title">Fight-intensity technical rounds\'), true);'
-          assert old_expect in text, "obsolete Technical Combat expectation not found"
-          renderer_test.write_text(text.replace(old_expect, new_expect, 1))
+          old_title = '<h3 class="sp-session-title">Technical Combat'
+          new_title = '<h3 class="sp-session-title">Fight-intensity technical rounds'
+          assert text.count(old_title) == 1, "obsolete Technical Combat expectation not found"
+          card_test.write_text(text.replace(old_title, new_title, 1))
           PY
 
           rm .github/workflows/tmp-address-pr2268-review.yml
