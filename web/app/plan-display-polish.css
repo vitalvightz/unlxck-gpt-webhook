@@ -19,3 +19,39 @@
   font-size: var(--type-label-xs);
   line-height: 1.2;
 }
+
+/* Keep the selected fight-camp overview title factual: Week X only.
+   The week-strip phase labels remain unchanged. */
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(1)[aria-pressed="true"]) { --selected-camp-week-title: "Week 1"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(2)[aria-pressed="true"]) { --selected-camp-week-title: "Week 2"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(3)[aria-pressed="true"]) { --selected-camp-week-title: "Week 3"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(4)[aria-pressed="true"]) { --selected-camp-week-title: "Week 4"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(5)[aria-pressed="true"]) { --selected-camp-week-title: "Week 5"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(6)[aria-pressed="true"]) { --selected-camp-week-title: "Week 6"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(7)[aria-pressed="true"]) { --selected-camp-week-title: "Week 7"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(8)[aria-pressed="true"]) { --selected-camp-week-title: "Week 8"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(9)[aria-pressed="true"]) { --selected-camp-week-title: "Week 9"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(10)[aria-pressed="true"]) { --selected-camp-week-title: "Week 10"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(11)[aria-pressed="true"]) { --selected-camp-week-title: "Week 11"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(12)[aria-pressed="true"]) { --selected-camp-week-title: "Week 12"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(13)[aria-pressed="true"]) { --selected-camp-week-title: "Week 13"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(14)[aria-pressed="true"]) { --selected-camp-week-title: "Week 14"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(15)[aria-pressed="true"]) { --selected-camp-week-title: "Week 15"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(16)[aria-pressed="true"]) { --selected-camp-week-title: "Week 16"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(17)[aria-pressed="true"]) { --selected-camp-week-title: "Week 17"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(18)[aria-pressed="true"]) { --selected-camp-week-title: "Week 18"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(19)[aria-pressed="true"]) { --selected-camp-week-title: "Week 19"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(20)[aria-pressed="true"]) { --selected-camp-week-title: "Week 20"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(21)[aria-pressed="true"]) { --selected-camp-week-title: "Week 21"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(22)[aria-pressed="true"]) { --selected-camp-week-title: "Week 22"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(23)[aria-pressed="true"]) { --selected-camp-week-title: "Week 23"; }
+body:has(.cm-week-strip[aria-label="Camp weeks"] .cm-week-pill:nth-child(24)[aria-pressed="true"]) { --selected-camp-week-title: "Week 24"; }
+
+.cm-week-strip[aria-label="Camp weeks"] ~ .cm-week-overview .sp-redflags-title {
+  font-size: 0;
+}
+
+.cm-week-strip[aria-label="Camp weeks"] ~ .cm-week-overview .sp-redflags-title::after {
+  content: var(--selected-camp-week-title);
+  font-size: 1rem;
+}
