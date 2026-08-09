@@ -1,0 +1,61 @@
+name: Temporary sparring card countdown patch
+
+on:
+  push:
+    branches:
+      - fix/render-countdown-specific-sparring-cards
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/render-countdown-specific-sparring-cards
+          fetch-depth: 0
+
+      - name: Apply render-time countdown projection
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('web/lib/structured-plan.ts')
+          text = path.read_text()
+
+          anchor = '''const COACH_LED_RE = /\\bcoach/i;\n\nexport type SessionlessDayKind ='''
+          helper = '''const COACH_LED_RE = /\\bcoach/i;\n\n// Existing saved plans can still carry the old generic technical-contact title.\n// Project that legacy title from the day's D-day at render time so the taper\n// ladder applies immediately without requiring plan regeneration. Explicit\n// countdown-specific titles from newer plans are preserved verbatim.\nconst GENERIC_TECHNICAL_CONTACT_TITLES = new Set([\n  "technical-only combat",\n  "technical combat",\n]);\n\nfunction technicalContactTitleForCountdown(headline: string, countdownLabel: unknown): string {\n  if (!GENERIC_TECHNICAL_CONTACT_TITLES.has(headline.toLowerCase())) {\n    return headline;\n  }\n  const countdown = formatCountdownLabel(countdownLabel);\n  const match = countdown?.match(/^D-(\\d+)$/i);\n  const dDay = match ? Number(match[1]) : null;\n  if (dDay == null || !Number.isFinite(dDay)) {\n    return headline;\n  }\n  if (dDay >= 8 && dDay <= 17) {\n    return "Fight-intensity technical rounds";\n  }\n  if (dDay >= 5 && dDay <= 7) {\n    return "Technical rhythm only";\n  }\n  if (dDay >= 2 && dDay <= 4) {\n    return "Technical touch — pads / shadow";\n  }\n  if (dDay === 1) {\n    return "Technical activation — no contact";\n  }\n  return headline;\n}\n\nexport type SessionlessDayKind ='''
+          if anchor not in text:
+              raise SystemExit('helper insertion anchor not found')
+          text = text.replace(anchor, helper, 1)
+
+          old = '''    return {\n      kind,\n      title: headline,\n      tag: SESSIONLESS_DAY_TAGS[kind],'''
+          new = '''    return {\n      kind,\n      title:\n        kind === "technical"\n          ? technicalContactTitleForCountdown(headline, day?.countdown_label)\n          : headline,\n      tag: SESSIONLESS_DAY_TAGS[kind],'''
+          if old not in text:
+              raise SystemExit('sessionless return anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = '''  const kind = coachLedKindFromHeadline(headline);\n  return { kind, title: headline, tag: SESSIONLESS_DAY_TAGS[kind] };'''
+          new = '''  const kind = coachLedKindFromHeadline(headline);\n  const title =\n    kind === "technical"\n      ? technicalContactTitleForCountdown(headline, day?.countdown_label)\n      : headline;\n  return { kind, title, tag: SESSIONLESS_DAY_TAGS[kind] };'''
+          if old not in text:
+              raise SystemExit('coach-led return anchor not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+
+          test = Path('web/lib/structured-plan-sparring-countdown.test.ts')
+          test.write_text('''import test from "node:test";\nimport assert from "node:assert/strict";\n\nimport { classifySessionlessDay, getCoachLedContactView } from "./structured-plan";\nimport type { StructuredDay } from "@/lib/types";\n\nfunction technicalDay(dDay: number, headline = "Technical-only combat"): StructuredDay {\n  return {\n    date: "",\n    countdown_label: `D-${dDay}`,\n    day_type: "moderate",\n    today_card: { headline, readiness_status: "train_as_planned" },\n    sessions: [],\n  } as StructuredDay;\n}\n\ntest("legacy technical cards project the converted-sparring title from D-day", () => {\n  const cases = [\n    [17, "Fight-intensity technical rounds"],\n    [8, "Fight-intensity technical rounds"],\n    [7, "Technical rhythm only"],\n    [5, "Technical rhythm only"],\n    [4, "Technical touch — pads / shadow"],\n    [2, "Technical touch — pads / shadow"],\n    [1, "Technical activation — no contact"],\n  ] as const;\n\n  for (const [dDay, expected] of cases) {\n    const view = classifySessionlessDay(technicalDay(dDay));\n    assert.equal(view.kind, "technical");\n    assert.equal(view.title, expected);\n  }\n});\n\ntest("D-0 and explicit countdown-specific titles are not rewritten", () => {\n  assert.equal(classifySessionlessDay(technicalDay(0)).title, "Technical-only combat");\n  assert.equal(\n    classifySessionlessDay(technicalDay(5, "Technical rhythm only")).title,\n    "Technical rhythm only",\n  );\n});\n\ntest("legacy coach-led contact above app work uses the same D-day projection", () => {\n  const day = {\n    date: "",\n    countdown_label: "D-5",\n    day_type: "moderate",\n    today_card: {\n      headline: "Neural Visualization",\n      readiness_status: "train_as_planned",\n      coach_led_contact: "Technical-only combat",\n    },\n    sessions: [{ session_id: "viz", title: "Neural Visualization", blocks: [] }],\n  } as StructuredDay;\n\n  const view = getCoachLedContactView(day);\n  assert.equal(view?.kind, "technical");\n  assert.equal(view?.title, "Technical rhythm only");\n});\n''')
+          PY
+
+      - name: Remove temporary workflow and commit patch
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-fix-sparring-card-countdown.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/lib/structured-plan.ts web/lib/structured-plan-sparring-countdown.test.ts .github/workflows/tmp-fix-sparring-card-countdown.yml
+          git commit -m "Project converted sparring titles from countdown at render time"
+          git push origin HEAD:fix/render-countdown-specific-sparring-cards
