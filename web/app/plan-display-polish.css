@@ -15,7 +15,7 @@
 }
 
 .cm-rest-label::after {
-  content: "Rest / Recovery";
+  content: "No Planned Session";
   font-size: var(--type-label-xs);
   line-height: 1.2;
 }
