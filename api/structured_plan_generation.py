@@ -1006,11 +1006,20 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
         )
         effort_value = out.get("value")
         normalized = _normalize_numeric_or_range(effort_value)
+        numeric_looking = (
+            isinstance(effort_value, str)
+            and re.fullmatch(
+                r"(?:(?:RPE|RIR)\s*)?[\d.\s–-]+",
+                effort_value.strip(),
+                re.I,
+            )
+            is not None
+        )
         if normalized is not None:
             out["value"] = normalized
         elif not isinstance(effort_value, str) or not effort_value.strip():
             return None
-        elif re.search(r"\d|[-–]", effort_value):
+        elif numeric_looking:
             # Do not let malformed or reversed numeric prescriptions survive.
             return None
         else:
@@ -1023,6 +1032,9 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
     if isinstance(value, (int, float)):
         return {"method": "RPE", "value": float(value), "scale": "1-10"}
     if isinstance(value, str):
+        normalized = _normalize_numeric_or_range(value)
+        if normalized is not None:
+            return {"method": "RPE", "value": normalized, "scale": "1-10"}
         match = re.fullmatch(r"\s*(RPE|RIR)\s+(.+?)\s*", value, re.I)
         if match is None:
             return None

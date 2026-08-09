@@ -848,6 +848,12 @@ def test_normalize_effort_scalars_ranges_and_text_cues():
     assert _normalize_effort("RIR 2-3") == {
         "method": "RIR", "value": "2-3", "scale": None
     }
+    assert _normalize_effort("6") == {
+        "method": "RPE", "value": 6.0, "scale": "1-10"
+    }
+    assert _normalize_effort("6-7") == {
+        "method": "RPE", "value": "6-7", "scale": "1-10"
+    }
 
     for malformed in ("RPE 8-6", "RIR 4-2", "RPE 7--8", "RPE 7-", "RPE -8"):
         assert _normalize_effort(malformed) is None
@@ -862,8 +868,17 @@ def test_normalize_effort_scalars_ranges_and_text_cues():
         {"method": "RPE", "value": "8-6", "scale": "1-10"}
     ) is None
     assert _normalize_effort(
+        {"method": "RPE", "value": "RPE 8-6", "scale": "1-10"}
+    ) is None
+    assert _normalize_effort(
         {"method": "intent", "value": "fast but relaxed"}
     ) == {"method": "intent", "value": "fast but relaxed"}
+    assert _normalize_effort(
+        {"method": "heart_rate_zone", "value": "Zone 2"}
+    ) == {"method": "heart_rate_zone", "value": "Zone 2"}
+    assert _normalize_effort(
+        {"method": "pace", "value": "3:30/km"}
+    ) == {"method": "pace", "value": "3:30/km"}
 
 
 def test_normalize_recovers_invalid_fallback_card_shape():
