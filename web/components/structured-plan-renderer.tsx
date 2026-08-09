@@ -122,6 +122,16 @@ const TECHNICAL_COMBAT_HELP =
 const TECHNICAL_COMBAT_TAG = "Low load";
 const TECHNICAL_COMBAT_RATIONALE =
   "Technical only — no hard sparring. Stay sharp and leave fresh.";
+const TECHNICAL_COMBAT_STAGE_RATIONALES: Record<string, string> = {
+  "Fight-intensity technical rounds":
+    "Realistic exchanges at speed, controlled contact, low total volume.",
+  "Technical rhythm only":
+    "Light technical rounds. Prioritise timing, flow and clean execution.",
+  "Technical touch — pads / shadow":
+    "Pads or shadow only. Stay sharp without contact fatigue.",
+  "Technical activation — no contact":
+    "Brief movement and reactions. Finish feeling fresher than you started.",
+};
 
 // Coach-owned contact that coexists with app work on the same day, keyed the same
 // way so a technical-only contact block never reads as hard sparring.
@@ -217,8 +227,10 @@ function athleteFacingRationale(value: string | null | undefined): string | null
   return simplified ? simplified.charAt(0).toUpperCase() + simplified.slice(1) : null;
 }
 
-function TechnicalCombatRationale() {
-  return <p className="sp-today-note">{TECHNICAL_COMBAT_RATIONALE}</p>;
+function TechnicalCombatRationale({ title }: { title?: string }) {
+  const rationale =
+    (title ? TECHNICAL_COMBAT_STAGE_RATIONALES[title] : undefined) || TECHNICAL_COMBAT_RATIONALE;
+  return <p className="sp-today-note">{rationale}</p>;
 }
 
 function TechnicalCombatWhyTooltip() {
@@ -755,7 +767,7 @@ export function SessionlessDayCard({
       {kind === "light_combat" ? (
         <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
       ) : kind === "technical" ? (
-        <TechnicalCombatRationale />
+        <TechnicalCombatRationale title={displayTitle} />
       ) : coachLed ? (
         <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
       ) : null}
@@ -822,7 +834,11 @@ function CoachLedDayContext({
           {isTechnical ? <TechnicalCombatWhyTooltip /> : null}
         </p>
       </div>
-      {isTechnical ? <TechnicalCombatRationale /> : <p className="sp-today-note">{description}</p>}
+      {isTechnical ? (
+        <TechnicalCombatRationale title={displayTitle} />
+      ) : (
+        <p className="sp-today-note">{description}</p>
+      )}
     </div>
   );
 }
