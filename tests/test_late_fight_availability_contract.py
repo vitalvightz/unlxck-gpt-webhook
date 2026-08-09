@@ -137,3 +137,27 @@ def test_no_available_day_suppresses_required_work_instead_of_inventing_a_sessio
         "No declared training availability in this countdown window." in role.get("reasons", [])
         for role in allocation["suppressed_roles"]
     )
+
+
+def test_gap_fill_rehomes_two_targets_onto_declared_available_days():
+    # Regression: D-14 Fri -> D-8 Thu is a six-day session gap and owes
+    # two support inserts. If Sun/Tue are unavailable but Mon/Wed are
+    # declared available, the inserts must move to D-11/D-9 rather than
+    # disappear and leave five Rest / Recovery days.
+    athlete = _athlete()
+    athlete["training_days"] = ["Monday", "Wednesday", "Thursday", "Friday"]
+
+    sequence = apply_gap_fill_inserts([_late_role(14), _late_role(8)], athlete)
+    gap_support = [
+        role
+        for role in sequence
+        if role.get("category") == "support_insert"
+        and 8 < int(role.get("countdown_offset") or 0) < 14
+    ]
+
+    assert len(gap_support) == 2
+    assert {int(role["countdown_offset"]) for role in gap_support} == {11, 9}
+    assert all(
+        role.get("governance", {}).get("authority") == "gap_fill_support_insert"
+        for role in gap_support
+    )

@@ -1074,11 +1074,20 @@ def _nearest_available_offset(target: int, available: list[int], chosen: set[int
     return min(candidates, key=lambda offset: (abs(offset - target), -offset))
 
 
-def _gap_candidate_offsets(far_offset: int, near_offset: int) -> list[int]:
+def _gap_candidate_offsets(
+    far_offset: int,
+    near_offset: int,
+    *,
+    eligible_offsets: set[int] | None = None,
+) -> list[int]:
     gap = far_offset - near_offset
     if gap < GAP_FILL_MIN_DAYS:
         return []
-    available = [offset for offset in range(far_offset - 1, near_offset, -1) if offset > 0]
+    available = [
+        offset
+        for offset in range(far_offset - 1, near_offset, -1)
+        if offset > 0 and (eligible_offsets is None or offset in eligible_offsets)
+    ]
     if not available:
         return []
 
@@ -1100,7 +1109,10 @@ def _gap_candidate_offsets(far_offset: int, near_offset: int) -> list[int]:
 
 
 def _candidate_offsets_from_sequence(
-    offsets: list[int], days_until_fight: int | None = None
+    offsets: list[int],
+    days_until_fight: int | None = None,
+    *,
+    eligible_offsets: set[int] | None = None,
 ) -> list[tuple[int, int]]:
     candidate_offsets: list[tuple[int, int]] = []
 
@@ -1128,7 +1140,13 @@ def _candidate_offsets_from_sequence(
 
     for far_offset, near_offset in zip(offsets, offsets[1:]):
         gap = far_offset - near_offset
-        for target_offset in _gap_candidate_offsets(far_offset, near_offset):
+        # Between two authoritative sessions, choose targets from days the
+        # athlete can actually train. Leading/trailing behaviour is unchanged.
+        for target_offset in _gap_candidate_offsets(
+            far_offset,
+            near_offset,
+            eligible_offsets=eligible_offsets,
+        ):
             candidate_offsets.append((target_offset, gap))
 
     trailing_gap = min(offsets)
@@ -1292,7 +1310,24 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
         and not is_low_cost_coexistable_filler(role)
         and (offset := _role_offset(role)) is not None
     }
-    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
+    # Choose between-session gap targets from legal declared training days
+    # before nearest-target placement. This prevents an unavailable geometric
+    # target from being discarded when another valid day exists in the gap.
+    eligible_gap_offsets = {
+        offset
+        for offset in range(1, max(days_until_fight, max(offsets)) + 1)
+        if offset not in existing_exclusive_offsets
+        and can_render_late_taper_day(
+            countdown_offset=offset,
+            weekday=str(countdown_map.get(f"D-{offset}") or ""),
+            training_days=training_days,
+        )
+    }
+    candidate_offsets = _candidate_offsets_from_sequence(
+        offsets,
+        days_until_fight,
+        eligible_offsets=eligible_gap_offsets,
+    )
 
     inserts: list[dict[str, Any]] = []
     physical_segment_counts: dict[int, int] = {}
