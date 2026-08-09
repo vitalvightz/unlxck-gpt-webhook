@@ -100,8 +100,13 @@ export type SessionCompletionInfo = {
 
 const titleize = formatPlanLabel;
 
-const LIGHT_TECHNICAL_NOTE =
-  "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
+const DECLARED_LIGHT_COMBAT_TITLE = "Technical Combat";
+const DECLARED_LIGHT_COMBAT_DESCRIPTION =
+  "Pads, drills, movement or other lower-intensity combat work.";
+
+function isDeclaredLightCombatTitle(title: string): boolean {
+  return /\blight\s+(?:technical\s+)?combat\b/i.test(title);
+}
 
 // A sessionless contact day carries no app S&C. The note must match the day kind:
 // a technical-only day (D-17+ ban) must never tell the athlete to spar hard.
@@ -471,6 +476,7 @@ export function SessionCard({
     cleanText(session.title) ||
     cleanText(card?.headline) ||
     titleize(cleanText(session.session_type) || "Session");
+  const isDeclaredLightCombat = isDeclaredLightCombatTitle(title);
   const isTechnicalSession = title === "Technical-only combat";
   const sessionType = cleanText(session.session_type);
   const objective = formatSessionObjective(session.objective);
@@ -501,7 +507,11 @@ export function SessionCard({
             </div>
           ) : null}
           <h3 className="sp-session-title">
-            {isTechnicalSession ? "Technical Session" : title}
+            {isDeclaredLightCombat
+              ? DECLARED_LIGHT_COMBAT_TITLE
+              : isTechnicalSession
+                ? "Technical Session"
+                : title}
             {isTechnicalSession ? (
               <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
             ) : null}
@@ -509,7 +519,9 @@ export function SessionCard({
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
               outright, so the reason for the session is impossible to miss. */}
-          {objective ? (
+          {isDeclaredLightCombat ? (
+            <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
+          ) : objective ? (
             <p className="sp-session-objective">
               <span className="sp-session-why-label">Why</span>
               {objective}
@@ -517,7 +529,11 @@ export function SessionCard({
           ) : null}
         </div>
         <div className="sp-session-meta">
-          {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}
+          {isDeclaredLightCombat ? (
+            <span className="sp-tag sp-accent">Light combat</span>
+          ) : sessionType ? (
+            <span className="sp-tag">{titleize(sessionType)}</span>
+          ) : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
           {completionInfo?.display.label ? (
             <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
@@ -555,7 +571,10 @@ export function SessionCard({
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
 
-      <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
+      <MindsetAnchorCard
+        anchor={sessionMindset}
+        dedupeContext={isDeclaredLightCombat ? DECLARED_LIGHT_COMBAT_DESCRIPTION : objective}
+      />
       {/* The rehab/mobility summary is a compact PREVIEW of the inserts shown
           only while the full blocks are collapsed. Once expanded, every rehab
           block renders in full below, so keeping the summary too would print the
@@ -649,6 +668,7 @@ export function SessionlessDayCard({
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
   const { kind, title, tag, coachLed } = classifySessionlessDay(day);
+  const displayTitle = kind === "light_combat" ? DECLARED_LIGHT_COMBAT_TITLE : title;
   const isRest = kind === "rest";
 
   return (
@@ -662,7 +682,11 @@ export function SessionlessDayCard({
             </div>
           ) : null}
           <h3 className="sp-session-title">
-            {kind === "technical" ? "Technical Session" : title}
+            {kind === "light_combat"
+              ? displayTitle
+              : kind === "technical"
+                ? "Technical Session"
+                : title}
             {kind === "technical" ? (
               <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
             ) : null}
@@ -673,7 +697,7 @@ export function SessionlessDayCard({
         </div>
       </header>
       {kind === "light_combat" ? (
-        <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
+        <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
       ) : coachLed ? (
         <p className="sp-today-note">
           {kind === "technical" ? TECHNICAL_ONLY_SESSIONLESS_NOTE : HARD_SPARRING_SESSIONLESS_NOTE}
@@ -682,26 +706,27 @@ export function SessionlessDayCard({
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      <MindsetAnchorCard anchor={card?.mindset_anchor} dedupeContext={[cleanText(card?.headline), title]} />
+      <MindsetAnchorCard
+        anchor={card?.mindset_anchor}
+        dedupeContext={[cleanText(card?.headline), displayTitle]}
+      />
       {isRest ? <p className="sp-muted">Rest day.</p> : null}
     </article>
   );
 }
 
 function LightTechnicalDayContext({
-  title,
   tag,
 }: {
-  title: string;
   tag: string | null;
 }) {
   return (
     <div className="cm-light-technical">
       <div className="cm-light-technical-head">
         {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
-        <p className="sp-today-headline">{title}</p>
+        <p className="sp-today-headline">{DECLARED_LIGHT_COMBAT_TITLE}</p>
       </div>
-      <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
+      <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
     </div>
   );
 }
@@ -720,20 +745,30 @@ function CoachLedDayContext({
   tag: string | null;
   kind: SessionlessDayKind;
 }) {
+  const isLightCombat = kind === "light_combat";
+  const displayTitle = isLightCombat
+    ? DECLARED_LIGHT_COMBAT_TITLE
+    : kind === "technical"
+      ? "Technical Session"
+      : title;
+  const description = isLightCombat
+    ? DECLARED_LIGHT_COMBAT_DESCRIPTION
+    : kind === "technical"
+      ? TECHNICAL_ONLY_CONTACT_NOTE
+      : HARD_SPARRING_CONTACT_NOTE;
+
   return (
     <div className="cm-light-technical cm-coach-led-contact">
       <div className="cm-light-technical-head">
         {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
         <p className="sp-today-headline">
-          {kind === "technical" ? "Technical Session" : title}
+          {displayTitle}
           {kind === "technical" ? (
             <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
           ) : null}
         </p>
       </div>
-      <p className="sp-today-note">
-        {kind === "technical" ? TECHNICAL_ONLY_CONTACT_NOTE : HARD_SPARRING_CONTACT_NOTE}
-      </p>
+      <p className="sp-today-note">{description}</p>
     </div>
   );
 }
@@ -746,6 +781,8 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
   const coachLedContact = getCoachLedContactView(day);
+  const coachLedLightCombat = coachLedContact?.kind === "light_combat";
+  const showLightTechnicalContext = lightTechnicalContext && !coachLedLightCombat;
   // Session-level anchors are the most specific coaching cue in this schema, so
   // keep them and suppress the broader day anchor whenever any session owns one.
   // The red-accent day anchor remains the fallback when none of the sessions has
@@ -759,7 +796,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   // below it (same sentence, twice on screen); drop it against those.
   const dayObjectives = getSessions(day).map((session) => cleanText(session.objective));
   const hasDayContext = Boolean(
-    warning || nutrition || weightCut || lightTechnicalContext || coachLedContact || hasDayMindset,
+    warning || nutrition || weightCut || showLightTechnicalContext || coachLedContact || hasDayMindset,
   );
   if (!hasDayContext) {
     return null;
@@ -767,8 +804,8 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
 
   return (
     <div className="cm-day-context">
-      {lightTechnicalContext ? (
-        <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
+      {showLightTechnicalContext ? (
+        <LightTechnicalDayContext tag={sessionlessDay.tag} />
       ) : null}
       {coachLedContact ? (
         <CoachLedDayContext
