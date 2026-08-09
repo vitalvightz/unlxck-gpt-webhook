@@ -18,6 +18,30 @@ jobs:
           ref: fix/gap-fill-available-days
           fetch-depth: 0
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install test dependencies
+        env:
+          PIP_RETRIES: "5"
+          PIP_DEFAULT_TIMEOUT: "60"
+        run: |
+          python -m pip install --upgrade pip
+          n=0
+          until pip install -r requirements-dev.txt; do
+            n=$((n + 1))
+            if [ "$n" -ge 3 ]; then
+              echo "pip install failed after $n attempts"; exit 1
+            fi
+            sleep $((n * 15))
+          done
+          pip check
+
       - name: Patch availability-aware gap fill
         run: |
           python - <<'PY'
