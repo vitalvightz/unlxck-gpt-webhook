@@ -70,6 +70,8 @@ D-8 (Thursday) — Neural power
 
 
 def test_same_day_header_does_not_hide_a_missing_required_role():
+    # The D-9 header and Tactical Watch both survive; Recovery Reset does not.
+    # A header-only guard would miss this exact same-day collision.
     planning_brief = {
         "late_fight_session_sequence": [
             _role(9, "tactical_watch", "support_insert"),
