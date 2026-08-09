@@ -708,7 +708,7 @@ export function SessionlessDayCard({
     kind === "light_combat"
       ? DECLARED_LIGHT_COMBAT_TITLE
       : kind === "technical"
-        ? TECHNICAL_COMBAT_TITLE
+        ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
         : title;
   const displayTag = kind === "technical" ? TECHNICAL_COMBAT_TAG : tag;
   const isRest = kind === "rest";
@@ -786,7 +786,7 @@ function CoachLedDayContext({
   const displayTitle = isLightCombat
     ? DECLARED_LIGHT_COMBAT_TITLE
     : isTechnical
-      ? TECHNICAL_COMBAT_TITLE
+      ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
       : title;
   const displayTag = isTechnical ? TECHNICAL_COMBAT_TAG : tag;
   const description = isLightCombat
