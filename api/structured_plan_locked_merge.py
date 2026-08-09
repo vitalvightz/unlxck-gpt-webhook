@@ -1,9 +1,10 @@
-"""Deterministically restore governed Tactical Watch fields in structured cards.
+"""Deterministically render governed Tactical Watch roles in structured cards.
 
 Stage 1 owns a banked Tactical Watch once its role governance marks the selected
-drill as locked.  Structured conversion may enrich the surrounding card, but it
-must not paraphrase those bank-owned fields.  This module only patches an exact
-block on its authoritative countdown day; it never creates or moves structure.
+drill as locked. Structured conversion may enrich the surrounding card, but it
+must not omit, rename, or paraphrase those bank-owned fields. The authoritative
+countdown day must already exist; within that day this module repairs, moves, or
+creates the Tactical Watch session and block without another model call.
 """
 from __future__ import annotations
 
@@ -80,14 +81,62 @@ def _days(plan: Mapping[str, Any]) -> Iterable[dict[str, Any]]:
                 yield day
 
 
+def _stable_id(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "watch"
+
+
+def _mindset_anchor(watch: Mapping[str, Any]) -> dict[str, Any]:
+    mindset = watch.get("mindset")
+    mindset = mindset if isinstance(mindset, Mapping) else {}
+    return {
+        "intent": str(mindset.get("intent") or "Review the tactical plan."),
+        "focus_cue": str(mindset.get("focus") or "Stay with the planned sequence."),
+        "reset_cue": str(mindset.get("reset") or "Reset and return to the plan."),
+        "confidence_anchor": mindset.get("anchor"),
+    }
+
+
+def _new_watch_block(
+    *, day_label: str, name: str, watch: Mapping[str, Any]
+) -> dict[str, Any]:
+    return {
+        "block_id": f"locked-{_stable_id(day_label)}-{_stable_id(name)}",
+        "block_type": "mindset",
+        "display_name": name,
+        "duration": {"value": watch.get("duration_min") or 1, "unit": "minutes"},
+        "coaching_cues": [],
+        "regression_options": [],
+        "substitutions": [],
+    }
+
+
+def _new_watch_session(
+    *,
+    day_label: str,
+    title: str,
+    name: str,
+    watch: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "session_id": f"locked-{_stable_id(day_label)}-tactical-watch",
+        "session_type": "skill",
+        "title": title,
+        "objective": str(watch.get("why") or "Review the tactical plan."),
+        "completion_status": "not_started",
+        "mindset_anchor": _mindset_anchor(watch),
+        "blocks": [_new_watch_block(day_label=day_label, name=name, watch=watch)],
+    }
+
+
 def merge_locked_structured_content(
     structured_plan: dict[str, Any], planning_brief: Any
 ) -> LockedMergeResult:
-    """Overwrite exact locked fields while preserving all AI-owned metadata.
+    """Apply locked fields on their authoritative day.
 
-    Resolution is deliberately narrow.  The authoritative day and an exact
-    normalised block name must identify one existing target.  Missing, moved or
-    renamed structure is reported and left untouched for faithfulness to reject.
+    Day placement stays fail-closed: a missing or ambiguous countdown day is
+    unresolved. Inside that verified day, Stage 1 is authoritative, so harmless
+    converter drift (renamed/moved/missing Tactical Watch structure) is repaired
+    deterministically instead of rejecting the entire athlete card.
     """
     plan = copy.deepcopy(structured_plan)
     result = LockedMergeResult(plan=plan)
@@ -126,29 +175,14 @@ def merge_locked_structured_content(
             for session in matching_days[0].get("sessions") or []
             if isinstance(session, dict)
         ]
-        session_title = _normalise(role.get("athlete_facing_label") or "Fight Tactical Watch")
+        display_title = str(role.get("athlete_facing_label") or "Fight Tactical Watch")
+        session_title = _normalise(display_title)
         watch_sessions = [
             session
             for session in sessions
             if _normalise(session.get("title")) == session_title
         ]
-        blocks_elsewhere = any(
-            isinstance(block, dict)
-            and _normalise(block.get("display_name")) in authoritative_names
-            for session in sessions
-            if _normalise(session.get("title")) != session_title
-            for block in session.get("blocks") or []
-        )
-        if blocks_elsewhere:
-            result.unresolved.append(
-                LockedMergeIssue(
-                    day_label,
-                    name,
-                    "locked block not in Tactical Watch session",
-                )
-            )
-            continue
-        if len(watch_sessions) != 1:
+        if len(watch_sessions) > 1:
             result.unresolved.append(
                 LockedMergeIssue(
                     day_label,
@@ -158,32 +192,63 @@ def merge_locked_structured_content(
             )
             continue
 
-        session = watch_sessions[0]
         targets = [
-            block
+            (session, block)
+            for session in sessions
             for block in session.get("blocks") or []
             if isinstance(block, dict)
             and _normalise(block.get("display_name")) in authoritative_names
         ]
-        if len(targets) != 1:
+        if len(targets) > 1:
             result.unresolved.append(
                 LockedMergeIssue(day_label, name, "locked block not uniquely resolved")
             )
             continue
 
-        block = targets[0]
+        if watch_sessions:
+            session = watch_sessions[0]
+        elif targets:
+            # Keep unrelated same-day work intact. Create the governed session,
+            # then move only the authoritative block into it below.
+            session = _new_watch_session(
+                day_label=day_label,
+                title=display_title,
+                name=name,
+                watch=watch,
+            )
+            session["blocks"] = []
+            matching_days[0].setdefault("sessions", []).append(session)
+            sessions.append(session)
+        else:
+            session = _new_watch_session(
+                day_label=day_label,
+                title=display_title,
+                name=name,
+                watch=watch,
+            )
+            matching_days[0].setdefault("sessions", []).append(session)
+            sessions.append(session)
+
+        if targets:
+            owner, block = targets[0]
+            if owner is not session:
+                owner["blocks"] = [item for item in owner.get("blocks") or [] if item is not block]
+                session.setdefault("blocks", []).append(block)
+        else:
+            candidates = [
+                block
+                for block in session.get("blocks") or []
+                if isinstance(block, dict) and block.get("block_type") == "mindset"
+            ]
+            if len(candidates) == 1:
+                block = candidates[0]
+            else:
+                block = _new_watch_block(day_label=day_label, name=name, watch=watch)
+                session.setdefault("blocks", []).append(block)
+
         mindset = watch.get("mindset")
         mindset = mindset if isinstance(mindset, Mapping) else {}
-        anchor = session.get("mindset_anchor")
-        anchor = dict(anchor) if isinstance(anchor, Mapping) else {}
-        anchor.update(
-            {
-                "intent": mindset.get("intent"),
-                "focus_cue": mindset.get("focus"),
-                "reset_cue": mindset.get("reset"),
-                "confidence_anchor": mindset.get("anchor"),
-            }
-        )
+        anchor = _mindset_anchor(watch)
         session["objective"] = watch.get("why")
         session["mindset_anchor"] = anchor
         block.update(
