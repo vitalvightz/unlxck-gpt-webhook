@@ -1,0 +1,135 @@
+name: temp-core-balance-rehab-cost
+
+on:
+  push:
+    branches:
+      - fix/core-balance-rehab-cost
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/core-balance-rehab-cost
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install focused test dependencies
+        run: python -m pip install -r requirements-dev-fast.txt
+      - name: Apply minimal low-cost support patch
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}: {old[:80]!r}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          # 1) Make rehab/prehab zero-cost against the support cap, and expose a
+          # dedicated low-cost core/balance classification without treating every
+          # compound mech_trunk_stability tag as core work.
+          replace_once(
+              "fightcamp/strength_session_quality.py",
+              '_REHAB_HINTS = {"rehab", "therapy", "prehab"}\n_ISOMETRIC_HINTS = {"isometric", "iso hold", "iso", "hold"}\n',
+              '_REHAB_HINTS = {"rehab", "therapy", "prehab"}\n_CORE_BALANCE_SUPPORT_TAGS = {\n    "core",\n    "core_stability",\n    "core_strength",\n    "trunk",\n    "trunk_strength",\n    "anti_rotation",\n    "balance",\n    "stability",\n    "proprioception",\n}\n_ISOMETRIC_HINTS = {"isometric", "iso hold", "iso", "hold"}\n',
+          )
+          replace_once(
+              "fightcamp/strength_session_quality.py",
+              '    support_only = bool(tags & _SUPPORT_HINTS) or _has_any_hint(text, _SUPPORT_HINTS)\n    force_isometric = is_isometric and (\n',
+              '    support_only = bool(tags & _SUPPORT_HINTS) or _has_any_hint(text, _SUPPORT_HINTS)\n    core_balance_signal = bool(tags & _CORE_BALANCE_SUPPORT_TAGS)\n    force_isometric = is_isometric and (\n',
+          )
+          replace_once(
+              "fightcamp/strength_session_quality.py",
+              '    base_categories: set[str] = set()\n',
+              '    core_balance_support = (\n        quality_class in SUPPORT_ONLY_CLASSES\n        and quality_class != "rehab_support"\n        and core_balance_signal\n    )\n\n    base_categories: set[str] = set()\n',
+          )
+          replace_once(
+              "fightcamp/strength_session_quality.py",
+              '        "rehab_support": quality_class == "rehab_support",\n        "base_categories": sorted(base_categories),\n',
+              '        "rehab_support": quality_class == "rehab_support",\n        "core_balance_support": core_balance_support,\n        "base_categories": sorted(base_categories),\n',
+          )
+          replace_once(
+              "fightcamp/strength_session_quality.py",
+              'def count_support_only(exercises: list[dict[str, Any]]) -> int:\n    return sum(1 for exercise in exercises if classify_strength_item(exercise)["support_only"])\n\n\ndef missing_base_categories',
+              'def count_support_only(exercises: list[dict[str, Any]]) -> int:\n    return sum(1 for exercise in exercises if classify_strength_item(exercise)["support_only"])\n\n\ndef support_budget_cost(\n    exercises: list[dict[str, Any]],\n    *,\n    core_balance_bonus: int = 0,\n) -> int:\n    """Return support-cap cost while preserving low-cost support work.\n\n    Rehab/prehab never consumes the support cap. When an explicit core/balance\n    priority is active, one dedicated core/balance support exercise is also\n    free. Anchor-capable compound lifts do not qualify merely because they carry\n    trunk-stability mechanism tags.\n    """\n    remaining_core_balance_bonus = max(0, int(core_balance_bonus or 0))\n    cost = 0\n    for exercise in exercises:\n        profile = classify_strength_item(exercise)\n        if profile["rehab_support"]:\n            continue\n        if not profile["support_only"]:\n            continue\n        if remaining_core_balance_bonus and profile.get("core_balance_support"):\n            remaining_core_balance_bonus -= 1\n            continue\n        cost += 1\n    return cost\n\n\ndef missing_base_categories',
+          )
+
+          # 2) Use the existing selector. No session-count or late-fight budget
+          # changes. One extra dedicated core/balance support exercise may be
+          # appended only when core/balance is an explicit goal/weakness.
+          replace_once(
+              "fightcamp/strength.py",
+              '    score_band_margin,\n    session_starts_with_support_only,\n',
+              '    score_band_margin,\n    support_budget_cost,\n    session_starts_with_support_only,\n',
+          )
+          replace_once(
+              "fightcamp/strength.py",
+              'STYLE_INSERT_SCORE_MARGIN = {"GPP": 0.2, "SPP": 0.35, "TAPER": 0.15}\nSESSION_SUPPORT_CAP_MULTIPLIER = 2\n\nFATIGUE_COST_BY_QUALITY_CLASS = {\n',
+              'STYLE_INSERT_SCORE_MARGIN = {"GPP": 0.2, "SPP": 0.35, "TAPER": 0.15}\nSESSION_SUPPORT_CAP_MULTIPLIER = 2\nCORE_BALANCE_PRIORITY_TOKENS = {\n    "core",\n    "core_stability",\n    "core_strength",\n    "trunk",\n    "trunk_strength",\n    "anti_rotation",\n    "balance",\n    "stability",\n}\n\n\ndef _has_core_balance_priority(flags: dict, weaknesses) -> bool:\n    raw_values: list[str] = []\n\n    def add_values(value) -> None:\n        if isinstance(value, (list, tuple, set)):\n            raw_values.extend(str(item) for item in value if str(item).strip())\n        elif value is not None and str(value).strip():\n            raw_values.append(str(value))\n\n    add_values(weaknesses)\n    for key in ("weaknesses", "key_goals", "primary_goal", "primary_weak_area"):\n        add_values(flags.get(key))\n\n    normalized = {normalize_tag(value) for value in raw_values}\n    normalized.discard(None)\n    return bool(normalized & CORE_BALANCE_PRIORITY_TOKENS)\n\n\nFATIGUE_COST_BY_QUALITY_CLASS = {\n',
+          )
+          replace_once(
+              "fightcamp/strength.py",
+              '    goals = flags.get("key_goals", [])\n    priority_profile = build_priority_profile(\n',
+              '    goals = flags.get("key_goals", [])\n    core_balance_bonus = 1 if _has_core_balance_priority(flags, weaknesses) else 0\n    priority_profile = build_priority_profile(\n',
+          )
+          replace_once(
+              "fightcamp/strength.py",
+              '    def _enforce_session_quality(exercises: list[dict]) -> list[dict]:\n        updated = list(exercises)\n        support_cap = max(num_strength_sessions * SESSION_SUPPORT_CAP_MULTIPLIER, 2)\n        guard = 0\n        while count_support_only(updated) > support_cap:\n',
+              '    def _enforce_session_quality(exercises: list[dict]) -> list[dict]:\n        updated = list(exercises)\n        support_cap = max(num_strength_sessions * SESSION_SUPPORT_CAP_MULTIPLIER, 2)\n\n        def current_support_cost() -> int:\n            return support_budget_cost(\n                updated,\n                core_balance_bonus=core_balance_bonus,\n            )\n\n        guard = 0\n        while current_support_cost() > support_cap:\n',
+          )
+          replace_once(
+              "fightcamp/strength.py",
+              '                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_guard", target=support_cap, actual=count_support_only(updated))\n',
+              '                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_guard", target=support_cap, actual=current_support_cost())\n',
+          )
+          replace_once(
+              "fightcamp/strength.py",
+              '                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_no_replacement", target=support_cap, actual=count_support_only(updated))\n',
+              '                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_no_replacement", target=support_cap, actual=current_support_cost())\n',
+          )
+          replace_once(
+              "fightcamp/strength.py",
+              '    candidate_metadata: dict[str, dict[str, object]] = {}\n',
+              '    def _append_core_balance_bonus(exercises: list[dict]) -> list[dict]:\n        if core_balance_bonus <= 0 or target_exercises <= 0 or num_strength_sessions <= 0:\n            return exercises\n\n        # Keep this deliberately small: at most two dedicated core/balance\n        # support exercises can survive, and only one can be added beyond the\n        # ordinary selector budget.\n        current_core_balance = sum(\n            1\n            for exercise in exercises\n            if _cached_classify(exercise).get("core_balance_support")\n        )\n        if current_core_balance >= 2 or len(exercises) >= target_exercises + 1:\n            return exercises\n\n        selected_names = _selected_names(exercises)\n        bonus_entry = _best_candidate(\n            lambda cand, _score, _reasons, profile: (\n                bool(profile.get("core_balance_support"))\n                and _cached_guarded_decision(cand).action != "exclude"\n                and (\n                    not injuries\n                    or not _cached_injury_match(cand, ("name", "movement", "method"), ("exclude",))\n                )\n            ),\n            exclude_names=selected_names,\n        )\n        if not bonus_entry:\n            return exercises\n\n        bonus, bonus_score, bonus_reasons, _profile, _late_safe_profile = bonus_entry\n        bonus_name = bonus.get("name")\n        if not bonus_name:\n            return exercises\n        bonus_reasons.setdefault("reason_codes", [])\n        bonus_reasons["reason_codes"] = list(\n            dict.fromkeys(\n                list(bonus_reasons.get("reason_codes", []))\n                + ["core_balance_low_cost_bonus"]\n            )\n        )\n        score_lookup[bonus_name] = bonus_score\n        reason_lookup[bonus_name] = bonus_reasons\n        return [*exercises, bonus]\n\n    candidate_metadata: dict[str, dict[str, object]] = {}\n',
+          )
+          replace_once(
+              "fightcamp/strength.py",
+              '    base_exercises = _run_real_poststep(\n        "early_taper_strength_maintenance_final",\n        lambda: _ensure_early_taper_strength_maintenance_touch(base_exercises),\n    )\n\n    _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])\n',
+              '    base_exercises = _run_real_poststep(\n        "early_taper_strength_maintenance_final",\n        lambda: _ensure_early_taper_strength_maintenance_touch(base_exercises),\n    )\n    base_exercises = _run_real_poststep(\n        "core_balance_low_cost_bonus",\n        lambda: _append_core_balance_bonus(base_exercises),\n    )\n\n    _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])\n',
+          )
+
+          Path("tests/test_strength_low_cost_support.py").write_text(
+              '''from __future__ import annotations\n\nfrom fightcamp import strength\nfrom fightcamp.strength_session_quality import (\n    classify_strength_item,\n    count_support_only,\n    support_budget_cost,\n)\n\n\ndef _support(name: str, *, movement: str, tags: list[str], method: str = "strength", equipment="bodyweight") -> dict:\n    return {\n        "name": name,\n        "phases": ["SPP"],\n        "method": method,\n        "movement": movement,\n        "type": "bilateral",\n        "tags": tags,\n        "equipment": equipment,\n    }\n\n\ndef test_rehab_and_prehab_are_zero_cost_but_remain_support_classified():\n    normal = _support("Mobility Reset", movement="mobility", tags=["mobility"])\n    rehab = _support("Ankle Rehab Control", movement="ankle_control", tags=["rehab"], method="rehab")\n    prehab = _support("Shoulder Prehab Reset", movement="shoulder_control", tags=["stability"], method="prehab")\n\n    assert count_support_only([normal, rehab, prehab]) == 3\n    assert classify_strength_item(rehab)["rehab_support"] is True\n    assert classify_strength_item(prehab)["rehab_support"] is True\n    assert support_budget_cost([normal, rehab, prehab]) == 1\n\n\ndef test_one_core_or_balance_support_item_gets_the_low_cost_bonus():\n    normal = _support("Mobility Reset", movement="mobility", tags=["mobility"])\n    core = _support("Pallof Hold", movement="core", tags=["core", "anti_rotation"], equipment="bands")\n    balance = _support("Balance Hold", movement="balance", tags=["balance", "stability"])\n\n    assert support_budget_cost([normal, core, balance], core_balance_bonus=0) == 3\n    assert support_budget_cost([normal, core, balance], core_balance_bonus=1) == 2\n    assert classify_strength_item(core)["core_balance_support"] is True\n    assert classify_strength_item(balance)["core_balance_support"] is True\n\n\ndef test_mech_trunk_stability_on_compound_does_not_fake_core_bonus():\n    compound = _support(\n        "Barbell Back Squat",\n        movement="squat",\n        tags=["compound", "mech_lower_squat", "mech_trunk_stability"],\n        equipment="barbell",\n    )\n\n    profile = classify_strength_item(compound)\n    assert profile["anchor_capable"] is True\n    assert profile["core_balance_support"] is False\n    assert support_budget_cost([compound], core_balance_bonus=1) == 0\n\n\ndef _patch_minimal_strength_runtime(monkeypatch, exercise_bank: list[dict], score_map: dict[str, float]) -> None:\n    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)\n    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])\n    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())\n    monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})\n    monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})\n    monkeypatch.setattr(\n        strength,\n        "strength_quality_adjustment",\n        lambda exercise, phase=None: (0.0, strength.classify_strength_item(exercise)),\n    )\n    monkeypatch.setattr(\n        strength,\n        "score_exercise",\n        lambda **kwargs: (\n            score_map[kwargs["exercise_tags"][0]],\n            {"final_score": score_map[kwargs["exercise_tags"][0]], "reason_codes": []},\n        ),\n    )\n\n\ndef _flags(**overrides) -> dict:\n    base = {\n        "phase": "SPP",\n        "fatigue": "low",\n        "fight_format": "boxing",\n        "sport": "boxing",\n        "style_tactical": [],\n        "style_technical": ["boxing"],\n        "equipment": ["bodyweight", "bands"],\n        "training_days": ["Mon"],\n        "training_frequency": 1,\n        "days_available": 1,\n        "key_goals": ["power"],\n        "weaknesses": [],\n        "injuries": [],\n        "days_until_fight": 30,\n    }\n    return {**base, **overrides}\n\n\ndef test_explicit_core_priority_adds_only_one_dedicated_support_exercise(monkeypatch):\n    anchor = _support(\n        "Anchor Row",\n        movement="horizontal_pull",\n        tags=["anchor_score", "upper_body", "pull", "compound"],\n    )\n    core = _support(\n        "Pallof Hold",\n        movement="core",\n        tags=["core_score", "core", "anti_rotation"],\n        equipment="bands",\n    )\n    _patch_minimal_strength_runtime(monkeypatch, [anchor, core], {"anchor_score": 10.0, "core_score": 9.0})\n\n    baseline = strength.generate_strength_block(flags=_flags(), weaknesses=[])\n    prioritized = strength.generate_strength_block(\n        flags=_flags(weaknesses=["core stability"]),\n        weaknesses=["core stability"],\n    )\n\n    assert [exercise["name"] for exercise in baseline["exercises"]] == ["Anchor Row"]\n    assert [exercise["name"] for exercise in prioritized["exercises"]] == ["Anchor Row", "Pallof Hold"]\n    assert "core_balance_low_cost_bonus" in prioritized["why_log"][1]["reasons"]["reason_codes"]\n''',
+              encoding="utf-8",
+          )
+          PY
+      - name: Verify patch scope
+        run: |
+          git diff --check
+          git diff -- fightcamp/strength.py fightcamp/strength_session_quality.py tests/test_strength_low_cost_support.py
+      - name: Run focused regressions
+        run: |
+          pytest -q \
+            tests/test_strength_low_cost_support.py \
+            tests/test_strength_metadata_selection.py \
+            tests/test_strength_performance_caching.py \
+            tests/test_selection_metadata_payload.py \
+            -m "not spacy"
+      - name: Commit production patch and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-core-balance-rehab-cost.yml
+          git add fightcamp/strength.py fightcamp/strength_session_quality.py tests/test_strength_low_cost_support.py
+          git commit -m "Allow low-cost core balance and rehab support"
+          git push origin HEAD:fix/core-balance-rehab-cost
