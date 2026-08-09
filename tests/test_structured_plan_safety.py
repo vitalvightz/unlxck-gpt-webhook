@@ -399,3 +399,10 @@ def test_outcome_without_computed_support_has_no_deterministic_support():
     outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     assert outcome.structured_plan.get("deterministic_support") is None
+
+
+def test_athlete_facing_strings_includes_stop_rules():
+    from api.structured_plan_safety import athlete_facing_strings
+
+    plan = {"weeks": [{"days": [{"sessions": [{"blocks": [{"stop_rules": ["Stop if punch speed collapses"]}]}]}]}]}
+    assert "Stop if punch speed collapses" in athlete_facing_strings(plan)

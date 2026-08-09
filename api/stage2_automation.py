@@ -27,6 +27,10 @@ from .structured_plan_generation import (
 )
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
+from .structured_plan_semantic_qa import (
+    build_structured_card_semantic_qa_prompt,
+    parse_structured_card_semantic_qa,
+)
 
 # Plan statuses this module writes. Both are athlete-displayable: Stage 2
 # validator findings never hold a plan. `publishable_with_flags` is also in
@@ -351,6 +355,14 @@ def _structured_repair_enabled() -> bool:
     raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_REPAIR")
     if raw is None:
         return True  # unset → default on
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _structured_semantic_qa_enabled() -> bool:
+    """Whether the final LLM critic must approve the athlete-facing card."""
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_SEMANTIC_QA")
+    if raw is None:
+        return True
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -1058,6 +1070,50 @@ class OpenAIStage2Automator:
             ]
         return outcome
 
+    async def _semantic_qa_structured_outcome(
+        self,
+        outcome: StructuredPlanOutcome,
+        *,
+        source: str,
+        log_context: dict[str, str] | None,
+        costs: list[dict[str, Any]],
+    ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:
+        """Reject semantically broken cards without rewriting training content."""
+        if (
+            not _structured_semantic_qa_enabled()
+            or outcome.status not in {"valid", "repair_attempted_valid"}
+            or outcome.structured_plan is None
+        ):
+            return outcome, costs
+
+        prompt = build_structured_card_semantic_qa_prompt(outcome.structured_plan)
+        qa_text, qa_cost = await self._generate_text(
+            prompt,
+            attempt_label="structured_semantic_qa",
+            source=source,
+            log_context=log_context,
+            timeout=_stage2_structured_timeout_seconds(),
+            response_format=_STRUCTURED_JSON_FORMAT,
+        )
+        costs.append(qa_cost)
+        qa = parse_structured_card_semantic_qa(qa_text)
+        if qa.passed:
+            logger.info("[stage2] structured_semantic_qa pass")
+            return outcome, costs
+
+        logger.warning(
+            "[stage2] structured_semantic_qa fail issues=%s; using raw plan_text fallback",
+            len(qa.issues),
+        )
+        return (
+            StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"semantic_qa: {issue}" for issue in qa.issues],
+                warnings=list(outcome.warnings),
+            ),
+            costs,
+        )
+
     async def _generate_structured_outcome(
         self,
         *,
@@ -1114,8 +1170,13 @@ class OpenAIStage2Automator:
         # A safety-blocked card is terminal: it was schema-valid, so the repair
         # path would re-validate the same JSON and hit the same blocking
         # findings — never spend the repair call on it.
-        if first_outcome.status in ("valid", "blocked_by_safety_audit"):
+        if first_outcome.status == "blocked_by_safety_audit":
             return self._reconcile_coach_led(first_outcome, planning_brief), costs
+        if first_outcome.status == "valid":
+            candidate = self._reconcile_coach_led(first_outcome, planning_brief)
+            return await self._semantic_qa_structured_outcome(
+                candidate, source=source, log_context=log_context, costs=costs
+            )
 
         # The repair retry is the second sequential model call (the dominant cost
         # on worst-case latency). It is gated so it can be dropped via env once
@@ -1162,7 +1223,10 @@ class OpenAIStage2Automator:
             repaired_outcome.status,
             repaired_outcome.status in {"valid", "repair_attempted_valid"},
         )
-        return self._reconcile_coach_led(repaired_outcome, planning_brief), costs
+        candidate = self._reconcile_coach_led(repaired_outcome, planning_brief)
+        return await self._semantic_qa_structured_outcome(
+            candidate, source=source, log_context=log_context, costs=costs
+        )
 
 
 def build_default_stage2_automator() -> Stage2Automator:

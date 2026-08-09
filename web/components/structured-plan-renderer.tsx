@@ -77,7 +77,6 @@ import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import {
   applySourceSetRange,
   getSourcePrescriptionRangeOverrides,
-  selectCompactStopRule,
   stripSafetyOwnedClause,
 } from "@/lib/block-display-guardrails";
 import type {
@@ -350,7 +349,7 @@ export function BlockCard({
   // A week directive owns progression/deload programming for open plans, while
   // block stop criteria are safety instructions and must always remain visible.
   const showProgressionAside = Boolean(progression && !weekDirective);
-  const compactStopRule = selectCompactStopRule(stopRules, planSafetyTexts);
+  const compactStopRule = stopRules.map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim()).find(Boolean) || null;
   const adjustmentRules = [
     ...(showProgressionAside && progression
       ? [{ label: "Progress" as const, text: progression }]

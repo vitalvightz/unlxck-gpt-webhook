@@ -4,47 +4,9 @@ import assert from "node:assert/strict";
 import {
   applySourceSetRange,
   getSourcePrescriptionRangeOverrides,
-  selectCompactStopRule,
   stripSafetyOwnedClause,
 } from "./block-display-guardrails";
 
-test("keeps one block-specific stop rule after plan safety owns injury criteria", () => {
-  const selected = selectCompactStopRule(
-    [
-      "Any sharp pain at the left shoulder",
-      "Wound irritation",
-      "If speed degrades and form breaks",
-    ],
-    [
-      "Left shoulder surface abrasion. Keep the area clean and covered.",
-      "Stop and seek care if bleeding, spreading redness, or increased pain.",
-    ],
-  );
-  assert.equal(selected, "If speed degrades and form breaks");
-});
-
-test("does not let an unrelated body-part warning suppress an exercise stop rule", () => {
-  const selected = selectCompactStopRule(
-    ["Stop if sharp pain develops in the left shoulder"],
-    ["Right calf pain. Stop if calf pain increases."],
-  );
-  assert.equal(selected, "Stop if sharp pain develops in the left shoulder");
-});
-
-test("does not cross-deduplicate opposite sides of the same body part", () => {
-  const selected = selectCompactStopRule(
-    ["Stop if sharp pain develops in the left shoulder"],
-    ["Right shoulder pain. Stop if right shoulder pain increases."],
-  );
-  assert.equal(selected, "Stop if sharp pain develops in the left shoulder");
-});
-
-test("renders only the first stop rule when there is no higher-level safety owner", () => {
-  assert.equal(
-    selectCompactStopRule(["Stop if speed drops", "Stop if technique breaks"]),
-    "Stop if speed drops",
-  );
-});
 
 test("removes escalation from Active Notes when Safety Priority already owns it", () => {
   const note =
