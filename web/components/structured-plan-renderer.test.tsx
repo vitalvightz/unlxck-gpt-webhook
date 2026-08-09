@@ -1073,7 +1073,7 @@ test("ambiguous open plans fail closed instead of using category names as dates"
   assert.equal(html.includes('<span class="sp-week-title cm-day-title">Support Strength</span>'), false);
 });
 
-test("renders light technical context alongside app sessions in the same day card", () => {
+test("renders declared light-combat context alongside app sessions in the same day card", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1099,11 +1099,95 @@ test("renders light technical context alongside app sessions in the same day car
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  assert.equal(html.includes("Light technical combat"), true);
+  assert.equal(html.includes("Light technical combat"), false);
+  assert.equal(html.includes("Technical Combat"), true);
+  assert.equal(html.includes("Pads, drills, movement or other lower-intensity combat work."), true);
+  assert.equal(html.includes(">Light combat<"), true);
   assert.equal(html.includes("Lower strength"), true);
-  assert.equal(html.includes("Low-noise app work can stay on this day if prescribed."), true);
   assert.equal(html.includes("sp-day-card-light_combat"), false);
-  assert.ok(html.indexOf("Light technical combat") < html.indexOf("Lower strength"));
+  assert.ok(html.indexOf("Technical Combat") < html.indexOf("Lower strength"));
+});
+
+test("renders declared light-combat contact above app work without hard-sparring copy", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "TAPER",
+        days: [
+          {
+            date: "2026-06-16",
+            countdown_label: "D-4",
+            day_type: "moderate",
+            today_card: {
+              headline: "Light technical combat",
+              coach_led_contact: "Light Combat / Technical",
+            },
+            sessions: [
+              { session_id: "s1", session_type: "strength", title: "Explosive sharpness primer", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Light Combat / Technical"), false);
+  assert.equal(html.match(/Technical Combat/g)?.length, 1);
+  assert.equal(html.includes("Pads, drills, movement or other lower-intensity combat work."), true);
+  assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
+  assert.equal(html.includes(">Light combat<"), true);
+  assert.ok(html.indexOf("Technical Combat") < html.indexOf("Explosive sharpness primer"));
+});
+
+test("normalizes standalone declared light-combat day and session titles", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-18",
+            countdown_label: "D-11",
+            day_type: "moderate",
+            today_card: { headline: "Light Combat / Technical" },
+            sessions: [],
+          },
+          {
+            date: "2026-06-25",
+            countdown_label: "D-4",
+            day_type: "moderate",
+            sessions: [
+              {
+                session_id: "s1",
+                session_type: "skill",
+                title: "Light Combat / Technical",
+                objective: "Keep technical rhythm and timing without adding fatigue.",
+                blocks: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Light Combat / Technical"), false);
+  assert.equal(html.match(/Technical Combat/g)?.length, 2);
+  assert.equal(html.match(/Pads, drills, movement or other lower-intensity combat work\./g)?.length, 2);
+  assert.equal(html.match(/>Light combat</g)?.length, 2);
+  assert.equal(html.includes("Keep technical rhythm and timing without adding fatigue."), false);
 });
 
 test("surfaces coach-led contact alongside app sessions in the same day card", () => {

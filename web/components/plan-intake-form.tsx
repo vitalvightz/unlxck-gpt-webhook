@@ -2843,7 +2843,7 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
-                      "Select days used for pads, drills, movement or other light combat work."
+                      "Pads, drills, movement or other lower-intensity combat work."
                     }
                   </p>
                 </div>
