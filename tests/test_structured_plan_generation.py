@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 from pathlib import Path
 
 from api.structured_plan_generation import (
@@ -108,21 +109,36 @@ def test_valid_plan_outcome_is_valid_and_carries_schema_version():
     assert outcome.errors == []
 
 
-def test_unrepresentable_set_range_fails_closed_to_raw_plan():
+def test_unrepresentable_ranges_are_advisory_and_preserve_valid_card(caplog):
     plan = _valid_plan()
-    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["sets"] = 4
+    block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block["sets"] = 4
+    block["rest"] = {"value": 60, "unit": "seconds"}
+    block["load"] = {
+        "method": "absolute",
+        "value": 5,
+        "unit": "kg",
+        "ref": None,
+    }
 
-    outcome = build_structured_plan_outcome(
-        plan,
-        raw_markdown=(
-            "D-15 - Power Transfer Touch\n"
-            "- Barbell Back Squat - 2-3 sets x 4-6 reps\n"
-        ),
-    )
+    with caplog.at_level(logging.WARNING, logger="api.structured_plan_generation"):
+        outcome = build_structured_plan_outcome(
+            plan,
+            raw_markdown=(
+                "D-15 - Power Transfer Touch\n"
+                "- Barbell Back Squat - 2-3 sets x 4-6 reps; "
+                "Rest 90-120 sec; 2-4 kg\n"
+            ),
+        )
 
-    assert outcome.status == "invalid_fallback_used"
-    assert outcome.structured_plan is None
-    assert any("UNREPRESENTABLE_RANGE" in error for error in outcome.errors)
+    assert outcome.status == "valid"
+    assert outcome.structured_plan is not None
+    diagnostics = [
+        record
+        for record in caplog.records
+        if "reason=UNREPRESENTABLE_RANGE" in record.getMessage()
+    ]
+    assert len(diagnostics) == 3
 
 
 def test_block_moved_between_existing_same_day_sessions_fails_closed():

@@ -211,6 +211,7 @@ def _merge_prescription_truth(
         f"on {issue.countdown_label}"
         + (f" fields={','.join(issue.fields)}" if issue.fields else "")
         for issue in result.unresolved
+        if issue.reason != "UNREPRESENTABLE_RANGE"
     ]
     errors.extend(
         [
