@@ -2466,7 +2466,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   "coaching_cues" (execution-only how-to instructions),
   "regression_options"/"substitutions" (safer or alternative exercises),
   "progression_rule" (exercise-level advancement only), and "stop_rules"
-  (stop/safety criteria). Preserve purpose/why_today as structured backend context,
+  (stop/safety criteria). Each stop_rules item MUST be athlete-facing, contain one
+  trigger only, and use no more than 10 words. Preserve the source meaning and never
+  invent a new safety criterion. Preserve purpose/why_today as structured backend context,
   but NEVER copy those explanations into coaching_cues.
 - coaching_cues MUST tell the athlete how to execute the exercise: position,
   movement, intent, brace, rhythm, guard, stance, reset, or other actionable form
