@@ -70,3 +70,25 @@ test("exercise card hides planning transcript and deduplicates Easier guidance",
   assert.equal(html.includes("Reset guard immediately"), true);
   assert.equal(html.split("Reduce band tension").length - 1, 1);
 });
+
+
+test("exercise card renders at most one stop-rule row", () => {
+  const html = renderToStaticMarkup(
+    <BlockCard
+      block={{
+        block_id: "band-jab-cross",
+        block_type: "skill",
+        display_name: "Band-Resisted Jab-Cross Primer",
+        stop_rules: [
+          "Any sharp pain at the left shoulder",
+          "Wound irritation",
+          "If speed degrades and form breaks",
+        ],
+      }}
+    />,
+  );
+  assert.equal(html.split(">Stop rule</span>").length - 1, 1);
+  assert.equal(html.includes("Any sharp pain at the left shoulder"), true);
+  assert.equal(html.includes("Wound irritation"), false);
+  assert.equal(html.includes("If speed degrades and form breaks"), false);
+});
