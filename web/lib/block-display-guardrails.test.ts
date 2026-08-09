@@ -82,6 +82,16 @@ test("action-tail cleanup accepts whitespace after semicolon separators", () => 
   );
 });
 
+test("does not strip a second stop-if safety trigger as an action tail", () => {
+  const selected = selectCompactStopRule([
+    "Stop if speed drops across sets; stop if shoulder pain becomes sharp",
+  ]);
+  assert.equal(
+    selected,
+    "Stop if speed drops across sets; stop if shoulder pain becomes sharp",
+  );
+});
+
 test("keeps a unique exercise trigger when Safety Priority owns the injury clause", () => {
   const selected = selectCompactStopRule(
     ["speed collapses or any sharp left shoulder pain"],
