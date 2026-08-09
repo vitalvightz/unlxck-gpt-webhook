@@ -16,6 +16,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Remove redundant prompt patch from temporary script
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('scripts/tmp_patch_structured_semantic_qa.py')
+          s = p.read_text()
+          s, n = re.subn(
+              r'\np = Path\("api/structured_plan_generation\.py"\).*?\np = Path\("web/lib/block-display-guardrails\.ts"\)',
+              '\np = Path("web/lib/block-display-guardrails.ts")',
+              s,
+              count=1,
+              flags=re.S,
+          )
+          assert n == 1
+          p.write_text(s)
+          PY
       - name: Apply patch
         run: python scripts/tmp_patch_structured_semantic_qa.py
       - name: Install Python dependencies
@@ -25,7 +42,7 @@ jobs:
           python -m pip install ruff pytest
       - name: Python validation
         run: |
-          python -m ruff check api/structured_plan_semantic_qa.py api/stage2_automation.py api/structured_plan_generation.py api/structured_plan_safety.py tests/test_structured_plan_semantic_qa.py tests/test_structured_plan_safety.py
+          python -m ruff check api/structured_plan_semantic_qa.py api/stage2_automation.py api/structured_plan_safety.py tests/test_structured_plan_semantic_qa.py tests/test_structured_plan_safety.py
           python -m pytest -q tests/test_structured_plan_semantic_qa.py tests/test_structured_plan_stop_rules.py tests/test_structured_plan_safety.py
       - uses: actions/setup-node@v4
         with:
