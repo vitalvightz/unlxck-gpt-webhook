@@ -193,7 +193,7 @@ def athlete_facing_strings(structured_plan: dict) -> list[str]:
                     block = _as_dict(block)
                     if block.get("purpose"):
                         strings.append(str(block["purpose"]))
-                    for key in ("coaching_cues", "regression_options", "substitutions"):
+                    for key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
                         strings.extend(str(x) for x in _as_list(block.get(key)) if x)
                     if block.get("progression_rule"):
                         strings.append(str(block["progression_rule"]))

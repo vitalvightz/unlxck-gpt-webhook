@@ -8,9 +8,6 @@ function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim();
 }
 
-function stripStopLabel(value: string): string {
-  return clean(value).replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim();
-}
 
 function safetyConcepts(value: string): Set<string> {
   const text = normalize(value);
@@ -169,35 +166,6 @@ function isOwnedSafetyClause(
   return [...concepts].every((concept) => owned.has(concept));
 }
 
-function splitStopClauses(value: string): string[] {
-  return value
-    .split(/\s*;\s*|,\s*(?:or\s+)?|\s+or\s+/i)
-    .map((part) => part.replace(/^\s*(?:or\s+)?(?:if\s+)?/i, "").trim())
-    .filter(Boolean);
-}
-
-/**
- * One exercise owns at most one athlete-facing stop rule. Plan-level injury and
- * red-flag copy owns global safety only when it matches the same injury subject;
- * the exercise keeps the first remaining block-specific quality/form criterion.
- * Already-saved plans are handled here at display time without mutating stored rows.
- */
-export function selectCompactStopRule(
-  stopRules: readonly string[],
-  planSafetyTexts: readonly string[] = [],
-): string | null {
-  const rules = stopRules.map(stripStopLabel).filter(Boolean);
-  if (rules.length === 0) return null;
-  if (planSafetyTexts.length === 0) return rules[0];
-
-  for (const rule of rules) {
-    if (!isOwnedSafetyClause(rule, planSafetyTexts)) return rule;
-    for (const clause of splitStopClauses(rule)) {
-      if (!isOwnedSafetyClause(clause, planSafetyTexts, rule)) return clause;
-    }
-  }
-  return null;
-}
 
 const ESCALATION_ACTION_RE =
   /\b(?:stop|seek\s+(?:medical\s+)?care|report|medical\s+review|urgent|do\s+not\s+train|no\s+contact)\b/i;
