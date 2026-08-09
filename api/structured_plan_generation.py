@@ -29,6 +29,7 @@ from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekd
 
 from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_faithfulness import check_structured_faithfulness
+from .structured_plan_locked_merge import merge_locked_structured_content
 from .structured_plan_truth import (
     compare_structured_plan_to_truth,
     extract_structured_plan_truth,
@@ -96,6 +97,35 @@ BANNED_BIOMETRIC_KEYS: frozenset[str] = frozenset(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _merge_locked_content(
+    plan_dict: dict[str, Any], planning_brief: Any
+) -> dict[str, Any]:
+    """Apply Stage 1 locked truth and emit compact, profile-free diagnostics."""
+    result = merge_locked_structured_content(plan_dict, planning_brief)
+    locked_roles = len(result.applied) + len(result.unresolved)
+    if locked_roles:
+        logger.info(
+            "[structured_locked_merge] locked_roles=%d applied=%d unresolved=%d",
+            locked_roles,
+            len(result.applied),
+            len(result.unresolved),
+        )
+        for application in result.applied:
+            logger.info(
+                "[structured_locked_merge_detail] day=%s block=%s status=applied",
+                application.countdown_label,
+                application.block_name,
+            )
+        for issue in result.unresolved:
+            logger.warning(
+                "[structured_locked_merge_detail] day=%s block=%s status=unresolved reason=%s",
+                issue.countdown_label or "",
+                issue.block_name,
+                issue.reason,
+            )
+    return result.plan
 
 
 def _run_structured_truth_shadow(
@@ -2035,6 +2065,7 @@ def build_structured_plan_outcome(
     first_errors = list(first.errors)
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
+        plan_dict = _merge_locked_content(plan_dict, planning_brief)
         _run_structured_truth_shadow(plan_dict, raw_markdown, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         first_errors = [f"faithfulness: {issue}" for issue in unfaithful]
@@ -2074,6 +2105,7 @@ def build_structured_plan_outcome(
         )
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
+        plan_dict = _merge_locked_content(plan_dict, planning_brief)
         _run_structured_truth_shadow(plan_dict, raw_markdown, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         repaired_errors = [f"faithfulness: {issue}" for issue in unfaithful]
