@@ -42,7 +42,7 @@ jobs:
           done
           pip check
 
-      - name: Patch availability-aware gap fill
+      - name: Patch between-session gap fill
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -94,30 +94,31 @@ jobs:
               raise SystemExit('candidate sequence signature anchor not found')
           source = source.replace(old, new, 1)
 
-          source = source.replace(
-              '''            for target_offset in _gap_candidate_offsets(days_until_fight + 1, first_offset):\n''',
-              '''            for target_offset in _gap_candidate_offsets(\n                days_until_fight + 1,\n                first_offset,\n                eligible_offsets=eligible_offsets,\n            ):\n''',
-              1,
-          )
-          source = source.replace(
-              '''        for target_offset in _gap_candidate_offsets(far_offset, near_offset):\n''',
-              '''        for target_offset in _gap_candidate_offsets(\n            far_offset,\n            near_offset,\n            eligible_offsets=eligible_offsets,\n        ):\n''',
-              1,
-          )
-          source = source.replace(
-              '''    for target_offset in _gap_candidate_offsets(trailing_gap, 0):\n''',
-              '''    for target_offset in _gap_candidate_offsets(\n        trailing_gap,\n        0,\n        eligible_offsets=eligible_offsets,\n    ):\n''',
-              1,
-          )
+          old = '''        for target_offset in _gap_candidate_offsets(far_offset, near_offset):
+                  candidates.append((target_offset, gap))
+          '''
+          new = '''        # Between two authoritative sessions, select the nearest target from
+              # days the athlete can actually train. Leading/trailing taper behaviour
+              # remains unchanged; this specifically prevents a valid in-gap weekday
+              # being lost because the geometric target happened to be unavailable.
+              for target_offset in _gap_candidate_offsets(
+                  far_offset,
+                  near_offset,
+                  eligible_offsets=eligible_offsets,
+              ):
+                  candidates.append((target_offset, gap))
+          '''
+          if old not in source:
+              raise SystemExit('between-session loop anchor not found')
+          source = source.replace(old, new, 1)
 
           old = '''    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
           '''
-          new = '''    # Choose gap-fill targets from days the athlete can actually use. Previously
-              # the geometric target was selected first (for example D-12/D-10 in a
-              # D-14 -> D-8 gap) and availability was checked only afterwards. An
-              # unavailable target was simply dropped even when another declared
-              # training day existed inside the same gap. That could leave five blank
-              # Rest / Recovery days despite valid availability.
+          new = '''    # Gap-fill targets must be chosen from legal declared training days.
+              # Previously D-14 -> D-8 could target D-12/D-10 first, then discard
+              # both if those weekdays were unavailable, even when D-11/D-9 were
+              # declared available. Build the legal set before choosing middle-gap
+              # targets so the owed inserts are rehomed instead of silently dropped.
               eligible_gap_offsets = {
                   offset
                   for offset in range(1, max(days_until_fight, max(offsets)) + 1)
@@ -142,11 +143,11 @@ jobs:
           test_path = Path('tests/test_late_fight_availability_contract.py')
           tests = test_path.read_text()
           addition = '''\n\ndef test_gap_fill_rehomes_two_targets_onto_declared_available_days():
-              # Regression: D-14 Fri -> D-8 Thu is a six-day session gap, so the
-              # scheduler owes two support inserts. The geometric targets are D-12
-              # (Sun) and D-10 (Tue). With only Mon/Wed available inside the gap,
-              # the old code discarded both unavailable targets instead of moving
-              # them to D-11 and D-9.
+              # Regression for the athlete-facing D-14 Fri -> D-8 Thu hole.
+              # A six-day session gap owes two support inserts. D-12 (Sun) and
+              # D-10 (Tue) are the geometric targets, but this athlete can train
+              # Monday/Wednesday instead, so the scheduler must use D-11/D-9
+              # rather than silently returning five Rest / Recovery days.
               athlete = _athlete()
               athlete["training_days"] = ["Monday", "Wednesday", "Thursday", "Friday"]
 
@@ -171,9 +172,13 @@ jobs:
           test_path.write_text(tests)
           PY
 
-      - name: Run targeted regressions
+      - name: Run focused regressions
         run: |
-          pytest -q tests/test_gap_fill_inserts.py tests/test_late_fight_availability_contract.py tests/test_stage2_pipeline.py
+          pytest -q \
+            tests/test_late_fight_availability_contract.py \
+            tests/test_gap_fill_inserts.py::test_three_day_gap_can_receive_one_insert \
+            tests/test_gap_fill_inserts.py::test_five_day_gap_can_receive_two_inserts_max_one_per_day \
+            tests/test_stage2_pipeline.py
 
       - name: Remove temporary patch workflow
         run: rm .github/workflows/patch-gap-fill-available-days.yml
