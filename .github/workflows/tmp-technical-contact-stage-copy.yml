@@ -33,15 +33,22 @@ jobs:
           text = text.replace(old_const, new_const)
 
           old_fn = '''function TechnicalCombatRationale() {\n  return <p className="sp-today-note">{TECHNICAL_COMBAT_RATIONALE}</p>;\n}'''
-          new_fn = '''function TechnicalCombatRationale({ title }: { title: string }) {\n  const rationale = TECHNICAL_COMBAT_STAGE_RATIONALES[title] || TECHNICAL_COMBAT_RATIONALE;\n  return <p className="sp-today-note">{rationale}</p>;\n}'''
+          new_fn = '''function TechnicalCombatRationale({ title }: { title?: string }) {\n  const rationale =\n    (title ? TECHNICAL_COMBAT_STAGE_RATIONALES[title] : undefined) || TECHNICAL_COMBAT_RATIONALE;\n  return <p className="sp-today-note">{rationale}</p>;\n}'''
           if text.count(old_fn) != 1:
               raise SystemExit(f'Expected one rationale component, found {text.count(old_fn)}')
           text = text.replace(old_fn, new_fn)
 
-          old_usage = '<TechnicalCombatRationale />'
-          if text.count(old_usage) != 2:
-              raise SystemExit(f'Expected two rationale usages, found {text.count(old_usage)}')
-          text = text.replace(old_usage, '<TechnicalCombatRationale title={displayTitle} />')
+          sessionless_old = ''') : kind === "technical" ? (\n        <TechnicalCombatRationale />\n      ) : coachLed ? ('''
+          sessionless_new = ''') : kind === "technical" ? (\n        <TechnicalCombatRationale title={displayTitle} />\n      ) : coachLed ? ('''
+          if text.count(sessionless_old) != 1:
+              raise SystemExit(f'Expected one sessionless technical rationale, found {text.count(sessionless_old)}')
+          text = text.replace(sessionless_old, sessionless_new)
+
+          coach_old = '''{isTechnical ? <TechnicalCombatRationale /> : <p className="sp-today-note">{description}</p>}'''
+          coach_new = '''{isTechnical ? (\n        <TechnicalCombatRationale title={displayTitle} />\n      ) : (\n        <p className="sp-today-note">{description}</p>\n      )}'''
+          if text.count(coach_old) != 1:
+              raise SystemExit(f'Expected one coach-led technical rationale, found {text.count(coach_old)}')
+          text = text.replace(coach_old, coach_new)
 
           path.write_text(text)
           PY
