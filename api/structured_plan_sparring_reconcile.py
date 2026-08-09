@@ -60,6 +60,33 @@ _HEADLINE_BY_LOAD = {
     "reduced": "Hard sparring — reduced dose",
     "technical": "Technical-only combat",
 }
+
+# Converted hard-sparring cards become progressively lighter as fight day
+# approaches. This is presentation-only: the sparring dose planner remains the
+# authority for whether the declared hard day was converted to technical work.
+_TECHNICAL_CARD_HEADLINES = {
+    "fight_intensity": "Fight-intensity technical rounds",
+    "rhythm": "Technical rhythm only",
+    "touch": "Technical touch — pads / shadow",
+    "activation": "Technical activation — no contact",
+}
+
+
+def _headline_for_load(load: str, d_day: int | None) -> str:
+    """Return the athlete-facing contact-card headline for ``load`` and D-day."""
+    if load != "technical" or d_day is None:
+        return _HEADLINE_BY_LOAD.get(load, _HEADLINE_BY_LOAD["technical"])
+    if 8 <= d_day <= 17:
+        return _TECHNICAL_CARD_HEADLINES["fight_intensity"]
+    if 5 <= d_day <= 7:
+        return _TECHNICAL_CARD_HEADLINES["rhythm"]
+    if 2 <= d_day <= 4:
+        return _TECHNICAL_CARD_HEADLINES["touch"]
+    if 0 <= d_day <= 1:
+        return _TECHNICAL_CARD_HEADLINES["activation"]
+    return _HEADLINE_BY_LOAD["technical"]
+
+
 # day_type carries no sparring value (high/moderate/low/...), so pick the closest
 # intensity bucket purely for the day's intensity tag. It does NOT drive the
 # coach-led classification — the headline does.
@@ -213,6 +240,7 @@ class _ContactDay:
     __slots__ = (
         "date",
         "d_day",
+        "load",
         "headline",
         "day_type",
         "phase",
@@ -224,6 +252,7 @@ class _ContactDay:
         *,
         date: str | None,
         d_day: int | None,
+        load: str,
         headline: str,
         day_type: str,
         phase: str,
@@ -231,6 +260,7 @@ class _ContactDay:
     ):
         self.date = date
         self.d_day = d_day
+        self.load = load
         self.headline = headline
         self.day_type = day_type
         self.phase = phase
@@ -293,7 +323,8 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                 _ContactDay(
                     date=str(role.get("calendar_date") or role.get("date") or "").strip() or None,
                     d_day=d_day,
-                    headline=_HEADLINE_BY_LOAD[load],
+                    load=load,
+                    headline=_headline_for_load(load, d_day),
                     day_type=_DAY_TYPE_BY_LOAD[load],
                     phase=role_phase,
                     week_index=week_index + 1,
@@ -338,7 +369,8 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                 _ContactDay(
                     date=cal,
                     d_day=d_day,
-                    headline=_HEADLINE_BY_LOAD.get(load, _HEADLINE_BY_LOAD["technical"]),
+                    load=load,
+                    headline=_headline_for_load(load, d_day),
                     day_type=_DAY_TYPE_BY_LOAD.get(load, "moderate"),
                     phase=phase,
                     week_index=week_index + 1,
@@ -513,10 +545,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             # coach-led — or the coexisting contact stays hidden.
             if day.get("sessions"):
                 sessions = day.get("sessions")
-                if (
-                    contact.headline != _HEADLINE_BY_LOAD["technical"]
-                    and isinstance(sessions, list)
-                ):
+                if contact.load != "technical" and isinstance(sessions, list):
                     compatible_sessions = [
                         session
                         for session in sessions
