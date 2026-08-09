@@ -994,23 +994,36 @@ def _normalize_mindset(value: Any) -> dict[str, Any]:
 def _normalize_effort(value: Any) -> dict[str, Any] | None:
     """Effort as an ``EffortPrescription`` dict; tolerate a bare "RPE 7-8" string.
 
-    A dict keeps its value (the schema allows float or str) and only has its
-    method aliased onto the enum. A bare string or number becomes an RPE/RIR
-    prescription when a number can be read from it; anything unreadable becomes
-    None (the field is optional) instead of failing the card.
+    Numeric values and ranges are normalized without changing their meaning.
+    Malformed or reversed numeric-looking values are dropped because effort is
+    optional. Text remains available for non-numeric effort modes such as an
+    intent cue.
     """
     if isinstance(value, dict):
         out = dict(value)
         out["method"] = _enum(
             out.get("method"), _EFFORT_METHOD_VALUES, "RPE", _EFFORT_METHOD_ALIASES
         )
-        if not isinstance(out.get("value"), (int, float, str)) or isinstance(
-            out.get("value"), bool
-        ):
-            number = _coerce_float(out.get("value"))
-            if number is None:
-                return None
-            out["value"] = number
+        effort_value = out.get("value")
+        normalized = _normalize_numeric_or_range(effort_value)
+        numeric_looking = (
+            isinstance(effort_value, str)
+            and re.fullmatch(
+                r"(?:(?:RPE|RIR)\s*)?[\d.\s–-]+",
+                effort_value.strip(),
+                re.I,
+            )
+            is not None
+        )
+        if normalized is not None:
+            out["value"] = normalized
+        elif not isinstance(effort_value, str) or not effort_value.strip():
+            return None
+        elif numeric_looking:
+            # Do not let malformed or reversed numeric prescriptions survive.
+            return None
+        else:
+            out["value"] = effort_value.strip()
         if out.get("scale") is not None:
             out["scale"] = _coerce_str(out.get("scale")).strip() or None
         return out
@@ -1019,17 +1032,19 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
     if isinstance(value, (int, float)):
         return {"method": "RPE", "value": float(value), "scale": "1-10"}
     if isinstance(value, str):
-        match = _NUMBER_RANGE_RE.search(value)
+        normalized = _normalize_numeric_or_range(value)
+        if normalized is not None:
+            return {"method": "RPE", "value": normalized, "scale": "1-10"}
+        match = re.fullmatch(r"\s*(RPE|RIR)\s+(.+?)\s*", value, re.I)
         if match is None:
             return None
-        method = "RIR" if re.search(r"\brir\b", value, re.I) else "RPE"
+        method = match.group(1).upper()
+        normalized = _normalize_numeric_or_range(match.group(2))
+        if normalized is None:
+            return None
         return {
             "method": method,
-            "value": (
-                f"{match.group(1)}-{match.group(2)}"
-                if match.group(2)
-                else float(match.group(1))
-            ),
+            "value": normalized,
             "scale": "1-10" if method == "RPE" else None,
         }
     return None
