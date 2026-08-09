@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { getBlockAdjustmentDisplay } from "./structured-plan.ts";
+import { getBlockAdjustmentDisplay, getBlockExecutionDisplay } from "./structured-plan.ts";
 
 test("pure exercise progression stays under Progress", () => {
   assert.deepEqual(
@@ -49,5 +49,28 @@ test("explicit and legacy stop rules are preserved and deduplicated", () => {
       coaching_cues: ["Fast hands", "Stop: sharp ankle pain."],
     }),
     { progression: null, stopRules: ["sharp ankle pain."] },
+  );
+});
+
+test("legacy labelled planning prose is hidden from execution cues", () => {
+  assert.deepEqual(
+    getBlockExecutionDisplay({
+      coaching_cues: [
+        "Purpose: transfer horizontal punching force under slight resistance",
+        "Why today: single neural touch without disrupting taper",
+        "Explosive intent; accelerate through full range",
+        "Easier: reduce band tension",
+        "Reset guard immediately",
+        "Stop: sharp ankle pain",
+      ],
+      regression_options: ["Reduce band tension"],
+    }),
+    {
+      cues: ["Explosive intent; accelerate through full range", "Reset guard immediately"],
+      stopRules: ["sharp ankle pain"],
+      regressions: ["Reduce band tension"],
+      substitutions: [],
+      progressions: [],
+    },
   );
 });

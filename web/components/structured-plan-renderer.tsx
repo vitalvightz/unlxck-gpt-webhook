@@ -10,7 +10,7 @@ import {
   formatEffort,
   formatMeasured,
   getBlocks,
-  getBlockCoachingDisplay,
+  getBlockExecutionDisplay,
   getBlockAdjustmentDisplay,
   getActiveNotesExcludingRedFlags,
   getCoachLedContactView,
@@ -319,10 +319,7 @@ export function BlockCard({
   // as a 1-10 perceived-exertion score. An unrecognised or missing method falls
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
-  const purpose = athleteFacingRationale(block.purpose);
-  const { cues } = getBlockCoachingDisplay(block);
-  const substitutions = getStringList(block.substitutions);
-  const regressions = getStringList(block.regression_options);
+  const { cues, regressions, substitutions } = getBlockExecutionDisplay(block);
   const { progression, stopRules } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -403,7 +400,6 @@ export function BlockCard({
           {weekDirective.text}
         </p>
       ) : null}
-      {purpose ? <p className="sp-block-purpose">{purpose}</p> : null}
       {cues.length > 0 ? (
         <ul className="sp-cues">
           {cues.map((cue, index) => (

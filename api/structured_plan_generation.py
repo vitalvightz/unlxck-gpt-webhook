@@ -875,6 +875,26 @@ def _dedupe_stop_rules(values: list[str]) -> list[str]:
     return result
 
 
+_BLOCK_DETAIL_LABEL_RE = re.compile(
+    r"^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|"
+    r"stop(?:\s+rule)?|swaps?|substitutions?)\s*:\s*(.*)$",
+    re.IGNORECASE,
+)
+
+
+def _dedupe_text_values(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = _coerce_str(value).strip()
+        key = re.sub(r"\s+", " ", text).casefold().rstrip(" .")
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
 def _normalize_mindset(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["intent"] = _coerce_str(out.get("intent"))
@@ -942,12 +962,23 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     for list_key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
         if list_key in out:
             out[list_key] = _coerce_str_list(out.get(list_key))
-    # Late-fight prose occasionally arrives as fake adjustment bullets. Keep
-    # stop/safety criteria separate from exercise progression so the athlete
-    # never sees a stop condition labelled as Progress.
+    for text_key in ("purpose", "why_today"):
+        if text_key in out:
+            text_value = _coerce_str(out.get(text_key)).strip()
+            if text_value:
+                out[text_key] = text_value
+            else:
+                out.pop(text_key, None)
+
+    # Converter/source prose can leak labelled rationale and adjustment lines into
+    # coaching_cues. Route each label to its semantic field so the red cue bullets
+    # remain strictly about how to execute the exercise.
     cues = _coerce_str_list(out.get("coaching_cues"))
     cleaned_cues: list[str] = []
     stop_cues: list[str] = []
+    regression_cues: list[str] = []
+    substitution_cues: list[str] = []
+    progression_cues: list[str] = []
     for cue in cues:
         if re.fullmatch(
             r"\s*(?:progress(?:ion)?\s*/\s*)?regress(?:ion)?\s*(?:/\s*)?\s*",
@@ -955,18 +986,55 @@ def _normalize_block(value: Any) -> dict[str, Any]:
             re.IGNORECASE,
         ):
             continue
-        if re.match(r"^\s*stop(?:\s+rule)?\s*:|^\s*stop(?!-)", cue, re.IGNORECASE):
+        labelled = _BLOCK_DETAIL_LABEL_RE.match(cue)
+        if labelled:
+            label = re.sub(r"\s+", " ", labelled.group(1).strip().casefold())
+            detail = labelled.group(2).strip()
+            if not detail:
+                continue
+            if label == "purpose":
+                out.setdefault("purpose", detail)
+            elif label == "why today":
+                out.setdefault("why_today", detail)
+            elif label in {"easier", "regress", "regression"}:
+                regression_cues.append(detail)
+            elif label in {"progress", "progression"}:
+                progression_cues.append(detail)
+            elif label.startswith("stop"):
+                stop_cues.append(detail)
+            else:
+                substitution_cues.append(detail)
+            continue
+        if re.match(r"^\s*stop(?!-)", cue, re.IGNORECASE):
             stop_cues.append(cue.strip())
             continue
         cleaned_cues.append(cue)
-    if "coaching_cues" in out or cleaned_cues != cues:
-        out["coaching_cues"] = cleaned_cues
+
+    out["coaching_cues"] = _dedupe_text_values(cleaned_cues)
+    out["regression_options"] = _dedupe_text_values(
+        _coerce_str_list(out.get("regression_options")) + regression_cues
+    )
+    out["substitutions"] = _dedupe_text_values(
+        _coerce_str_list(out.get("substitutions")) + substitution_cues
+    )
     if "red_flags" in out:
         out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]
     if "effort" in out:
         out["effort"] = _normalize_effort(out.get("effort"))
 
-    progression_rule, embedded_stops = _split_progression_and_stop_rules(out.get("progression_rule"))
+    progression_rule = ""
+    embedded_stops: list[str] = []
+    progression_candidates = [
+        _coerce_str(out.get("progression_rule")).strip(),
+        *progression_cues,
+    ]
+    for candidate in progression_candidates:
+        if not candidate:
+            continue
+        candidate_progression, candidate_stops = _split_progression_and_stop_rules(candidate)
+        embedded_stops.extend(candidate_stops)
+        if candidate_progression and not progression_rule:
+            progression_rule = candidate_progression
     stop_rules = _dedupe_stop_rules(
         _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops
     )
@@ -2393,18 +2461,26 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   weight_cut_warning whose risk_level matches the computed band per the gate
   above. Weight-cut guidance is NEVER direct acute-cut instructions (no sauna,
   dehydration, water-loading, or sodium-manipulation directives).
-- When the plan states them, carry per-block detail into each block:
-  "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or
-  alternative exercises), "progression_rule" (exercise-level advancement only),
-  and "stop_rules" (list of stop/safety criteria). progression_rule may be omitted
-  when the source gives no genuine exercise progression. Do NOT put taper/week
-  dose restrictions, injury restrictions, session-programming constraints, or
-  stop criteria into progression_rule unless the text actually says how that
-  specific exercise advances.
-- Treat "Easier:" / "Regression:" content as regression_options and "Stop:" /
-  "Stop rule:" content as stop_rules. Never place those labelled lines in
-  coaching_cues or progression_rule. Ignore a bare separator label such as
-  "Regression /" rather than rendering it as athlete guidance.
+- When the plan states them, carry per-block detail into separate semantic fields:
+  "purpose" (what the exercise develops), "why_today" (why it is placed today),
+  "coaching_cues" (execution-only how-to instructions),
+  "regression_options"/"substitutions" (safer or alternative exercises),
+  "progression_rule" (exercise-level advancement only), and "stop_rules"
+  (stop/safety criteria). Preserve purpose/why_today as structured backend context,
+  but NEVER copy those explanations into coaching_cues.
+- coaching_cues MUST tell the athlete how to execute the exercise: position,
+  movement, intent, brace, rhythm, guard, stance, reset, or other actionable form
+  cues. Do NOT put Purpose, Why today, Easier/Regression, Progress/Progression,
+  Stop/Stop rule, Swap/Substitution, taper rationale, phase rationale, or selection
+  reasoning in coaching_cues.
+- Route labelled source lines deterministically: "Purpose:" -> purpose;
+  "Why today:" -> why_today; "Easier:" / "Regression:" -> regression_options;
+  "Progress:" / "Progression:" -> progression_rule; "Stop:" / "Stop rule:" ->
+  stop_rules; "Swap:" / "Swaps:" / "Substitution:" -> substitutions. Ignore a
+  bare separator label such as "Regression /" rather than rendering it as athlete
+  guidance. progression_rule may be omitted when the source gives no genuine
+  exercise progression. Do NOT put taper/week dose restrictions, injury
+  restrictions, session-programming constraints, or stop criteria into it.
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
   the day level (today_card.mindset_anchor), including "confidence_anchor" and
   "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a
@@ -2503,7 +2579,8 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
                   "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": "4-6",
                   "load": {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM", "display": "85% 1RM"}},
                   "rest": {{"value": 180, "unit": "seconds"}}, "duration": {{"value": 45, "unit": "minutes"}},
-                  "coaching_cues": ["..."], "regression_options": ["..."], "substitutions": ["..."],
+                  "purpose": "...", "why_today": "...", "coaching_cues": ["..."],
+                  "regression_options": ["..."], "substitutions": ["..."],
                   "progression_rule": "...", "stop_rules": ["..."]
                 }}
               ]
