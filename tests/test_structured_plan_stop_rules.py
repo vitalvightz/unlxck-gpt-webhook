@@ -1,6 +1,8 @@
 from api.structured_plan_generation import _normalize_block, build_structured_plan_prompt
 from api.structured_plan_models import SessionBlock
 
+# These regressions protect the execution-first exercise block contract.
+
 
 def test_session_block_has_first_class_stop_rules():
     block = SessionBlock(
@@ -57,6 +59,7 @@ def test_converter_prompt_keeps_stop_rules_separate_from_progression():
     assert '"stop_rules"' in prompt
     assert '"Stop:" / "Stop rule:" ->' in prompt
     assert '"Stop rule:" content as progression_rule' not in prompt
+
 
 def test_normalizer_routes_planning_prose_away_from_execution_cues():
     block = _normalize_block(
