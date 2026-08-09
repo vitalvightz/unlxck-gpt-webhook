@@ -1,0 +1,21 @@
+/* Small Plan-only display fixes. Keep training/scheduling data untouched. */
+
+/* Give expanded day content breathing room below the D-day summary strip. */
+.cm-day .sp-week-body {
+  padding-top: var(--space-2);
+}
+
+/* Free slots use one athlete-facing label regardless of phase/source. */
+.cm-rest-reason {
+  display: none;
+}
+
+.cm-rest-label {
+  font-size: 0;
+}
+
+.cm-rest-label::after {
+  content: "Rest / Recovery";
+  font-size: var(--type-label-xs);
+  line-height: 1.2;
+}
