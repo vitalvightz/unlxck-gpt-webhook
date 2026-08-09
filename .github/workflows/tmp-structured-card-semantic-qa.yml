@@ -69,6 +69,6 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add api tests web
           git commit -m 'fix: add semantic QA for athlete-facing cards'
-          git rm .github/workflows/tmp-structured-card-semantic-qa.yml scripts/tmp_patch_structured_semantic_qa.py
+          git rm -f .github/workflows/tmp-structured-card-semantic-qa.yml scripts/tmp_patch_structured_semantic_qa.py
           git commit -m 'chore: remove temporary semantic QA patch files'
           git push origin HEAD:fix/structured-card-semantic-qa
