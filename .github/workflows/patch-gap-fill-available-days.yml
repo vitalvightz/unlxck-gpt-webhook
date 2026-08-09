@@ -95,12 +95,11 @@ jobs:
           source = source.replace(old, new, 1)
 
           old = '''        for target_offset in _gap_candidate_offsets(far_offset, near_offset):
-                  candidates.append((target_offset, gap))
+              candidates.append((target_offset, gap))
           '''
-          new = '''        # Between two authoritative sessions, select the nearest target from
-              # days the athlete can actually train. Leading/trailing taper behaviour
-              # remains unchanged; this specifically prevents a valid in-gap weekday
-              # being lost because the geometric target happened to be unavailable.
+          new = '''        # Between two authoritative sessions, select targets from days the
+              # athlete can actually train. Leading/trailing taper behaviour stays
+              # unchanged; this only prevents legal in-gap weekdays being lost.
               for target_offset in _gap_candidate_offsets(
                   far_offset,
                   near_offset,
@@ -114,11 +113,10 @@ jobs:
 
           old = '''    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
           '''
-          new = '''    # Gap-fill targets must be chosen from legal declared training days.
-              # Previously D-14 -> D-8 could target D-12/D-10 first, then discard
-              # both if those weekdays were unavailable, even when D-11/D-9 were
-              # declared available. Build the legal set before choosing middle-gap
-              # targets so the owed inserts are rehomed instead of silently dropped.
+          new = '''    # Choose ordinary between-session gap targets from legal declared
+              # training days before geometric placement. Previously D-14 -> D-8
+              # could target D-12/D-10 first and then discard both if unavailable,
+              # even when D-11/D-9 were declared available.
               eligible_gap_offsets = {
                   offset
                   for offset in range(1, max(days_until_fight, max(offsets)) + 1)
@@ -146,8 +144,7 @@ jobs:
               # Regression for the athlete-facing D-14 Fri -> D-8 Thu hole.
               # A six-day session gap owes two support inserts. D-12 (Sun) and
               # D-10 (Tue) are the geometric targets, but this athlete can train
-              # Monday/Wednesday instead, so the scheduler must use D-11/D-9
-              # rather than silently returning five Rest / Recovery days.
+              # Monday/Wednesday instead, so the scheduler must use D-11/D-9.
               athlete = _athlete()
               athlete["training_days"] = ["Monday", "Wednesday", "Thursday", "Friday"]
 
