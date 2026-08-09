@@ -88,17 +88,22 @@ def _day_header_dday(line: str) -> int | None:
     (``D-32 (Wednesday) — Aerobic support``) and markdown headings carrying a
     parenthetical marker (``### Mon (D-30) — Strength``). A line with two or more
     D-day numbers is a week/range header (``GPP — Week 1 (D-33 to D-27)``) and is
-    never a day section; lines naming "week" are excluded for the same reason.
+    never a day section. Lines naming "week" are excluded unless their countdown
+    marker leads the line: athlete-facing day titles such as ``D-9 — Fight-week
+    freshness`` are valid day sections, not week/range headers.
     """
     nums = _DDAY_RE.findall(line)
-    if len(nums) != 1 or "week" in line.lower():
+    if len(nums) != 1:
+        return None
+    leading_countdown = bool(_LEADING_DDAY_RE.match(line))
+    if "week" in line.lower() and not leading_countdown:
         return None
     is_header = (
         line.lstrip().startswith("#")
         or "—" in line
         or "–" in line
         or bool(_PAREN_DDAY_RE.search(line))
-        or bool(_LEADING_DDAY_RE.match(line))
+        or leading_countdown
     )
     return int(nums[0]) if is_header else None
 
