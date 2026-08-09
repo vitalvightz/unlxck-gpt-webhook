@@ -66,33 +66,24 @@ def test_scalar_prescription_and_labelled_truth_are_restored_without_losing_meta
     assert block["energy_system"] == "alactic"
 
 
-def test_ranges_are_preserved_across_all_prescription_fields():
+def test_ranges_are_preserved_only_where_schema_supports_them():
     result = _merge(
         "D-10 - Strength\n"
         "- Trap-bar deadlift - 2-3 sets x 8-10 reps; Rest 90-120 sec; 2-4 kg; RPE 6-7.\n"
     )
     block = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    assert block["sets"] == "2-3"
+    assert block["sets"] == 4
     assert block["reps"] == "8-10"
-    assert block["rest"] == {"value": "90-120", "unit": "seconds"}
-    assert block["load"]["value"] == "2-4"
-    assert block["load"]["display"] == "2-4 kg"
+    assert block["rest"] == {"value": 60, "unit": "seconds"}
+    assert block["load"]["value"] == 70
     assert block["effort"]["value"] == "6-7"
-    assert result.unresolved == []
-
-
-def test_round_and_work_scalars_and_ranges_are_preserved():
-    scalar = _merge(
-        "D-10 - Strength\n- Trap-bar deadlift - 3 rounds; 5 sec work\n"
-    ).plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    ranged = _merge(
-        "D-10 - Strength\n- Trap-bar deadlift - 3-5 rounds; 5-6 sec work\n"
-    ).plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-
-    assert scalar["rounds"] == 3
-    assert scalar["work"] == {"value": 5, "unit": "seconds"}
-    assert ranged["rounds"] == "3-5"
-    assert ranged["work"] == {"value": "5-6", "unit": "seconds"}
+    assert {
+        (issue.reason, issue.fields, issue.expected) for issue in result.unresolved
+    } == {
+        ("UNREPRESENTABLE_RANGE", ("sets",), "2-3"),
+        ("UNREPRESENTABLE_RANGE", ("rest",), "90-120 sec"),
+        ("UNREPRESENTABLE_RANGE", ("load",), "2-4 kg"),
+    }
 
 
 def test_wrong_structure_is_not_repaired_and_ambiguous_block_is_not_patched():

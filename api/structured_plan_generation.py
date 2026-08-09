@@ -551,10 +551,6 @@ _NUMBER_RANGE_RE = re.compile(r"(\d+(?:\.\d+)?)(?:\s*[-–—]\s*(\d+(?:\.\d+)?)
 # such as "1RM" or "of 1RM" (bank prescriptions read like "3x5 @ 75-85% 1RM").
 # group(2) is optional and may be ``None`` — callers must guard it.
 _LOAD_PERCENT_RE = re.compile(r"([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:of\s+)?([A-Za-z0-9]+)?")
-_LOAD_PERCENT_RANGE_RE = re.compile(
-    r"([0-9]+(?:\.[0-9]+)?)\s*[-–]\s*([0-9]+(?:\.[0-9]+)?)"
-    r"\s*%\s*(?:of\s+)?([A-Za-z0-9]+)?"
-)
 
 # Distance units are mapped separately from duration units because a bare "m"
 # means metres for a distance field but minutes for a duration field; the field's
@@ -655,27 +651,6 @@ def _coerce_float(value: Any) -> float | None:
     return None
 
 
-def _normalize_numeric_or_range(value: Any) -> float | str | None:
-    """Preserve an exact numeric scalar or range; reject all other prose."""
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        number = float(value)
-        return number if 0 <= number < float("inf") else None
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    if re.fullmatch(r"\d+(?:\.\d+)?", text):
-        return float(text)
-    if re.fullmatch(
-        r"\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?", text
-    ):
-        canonical = re.sub(r"\s*[-–]\s*", "-", text)
-        lower, upper = (float(part) for part in canonical.split("-"))
-        return canonical if lower <= upper else None
-    return None
-
-
 def _enum(
     value: Any,
     allowed: frozenset[str],
@@ -752,8 +727,7 @@ def _load_method_from_context(*parts: Any) -> str:
 def _normalize_load_dict(value: dict[str, Any]) -> dict[str, Any] | None:
     """Coerce a model-emitted load object onto ``LoadPrescription``.
 
-    ``LoadPrescription`` requires a valid ``method`` enum, a numeric scalar or
-    range ``value`` and
+    ``LoadPrescription`` requires a valid ``method`` enum, a float ``value`` and
     a ``unit``. The conversion model routinely returns the right prescription in
     a slightly-wrong shape — a prose method ("light dumbbells"), a range value
     ("2-4"), the number present only in ``display`` ("light DBs (2-4 kg)"), or a
@@ -763,8 +737,8 @@ def _normalize_load_dict(value: dict[str, Any]) -> dict[str, Any] | None:
     unreadable taper/rehab load sank every other day in the plan.
 
     Only formatting is repaired: the method is aliased or inferred from the
-    unit/display text, an exact range is preserved, and a method that stays
-    unreadable becomes ``other``
+    unit/display text, a range reads its upper bound (matching the effort and
+    measured conventions), and a method that stays unreadable becomes ``other``
     — which is precisely what that enum member is for. No load is invented: when
     no number can be read the optional field is dropped so the block keeps its
     prose prescription and the card still validates.
@@ -787,29 +761,25 @@ def _normalize_load_dict(value: dict[str, Any]) -> dict[str, Any] | None:
     # The number may live on ``value`` or only inside the display text. A display
     # is read ONLY through a unit-anchored match ("2-4 kg", "85%"), so a tempo cue
     # ("controlled 2-0-2") or a rep scheme ("2 sets x 8 reps") can never be
-    # mistaken for a load. Numeric ranges retain both authoritative bounds.
-    amount = _normalize_numeric_or_range(out.get("value"))
-    if amount is None:
+    # mistaken for a load — a range still reads its working top end.
+    number = _coerce_float(out.get("value"))
+    if number is None:
         match = _LOAD_NUMBER_WITH_UNIT_RE.search(display)
         if match:
-            amount = (
-                f"{match.group(1)}-{match.group(2)}"
-                if match.group(2)
-                else float(match.group(1))
-            )
+            number = float(match.group(2) or match.group(1))
 
-    if amount is None:
+    if number is None:
         # Bodyweight is the one method whose load is defined without a number,
         # matching the string branch below; anything else is dropped unread.
         if method != "bodyweight":
             return None
-        amount = 0.0
+        number = 0.0
 
     if not method:
         method = "other"
 
     out["method"] = method
-    out["value"] = amount
+    out["value"] = number
     out["unit"] = unit or _LOAD_DEFAULT_UNITS.get(method, "other")
     if display:
         out["display"] = display
@@ -839,18 +809,6 @@ def _normalize_load(value: Any) -> dict[str, Any] | None:
         text = value.strip()
         if not text:
             return None
-        percent_range = _LOAD_PERCENT_RANGE_RE.search(text)
-        if percent_range:
-            load = {
-                "method": "percentage",
-                "value": f"{percent_range.group(1)}-{percent_range.group(2)}",
-                "unit": "percent",
-                "display": text,
-            }
-            ref = (percent_range.group(3) or "").strip()
-            if ref:
-                load["ref"] = ref
-            return load
         percent = _LOAD_PERCENT_RE.search(text)
         if percent:
             load = {
@@ -888,7 +846,7 @@ def _alias_measured_unit(raw_unit: Any, default_unit: str) -> str:
 
 
 def _normalize_measured(
-    value: Any, default_unit: str = "seconds", *, allow_range: bool = True
+    value: Any, default_unit: str = "seconds"
 ) -> dict[str, Any] | None:
     """Coerce a measured value into ``{"value", "unit"}``.
 
@@ -904,31 +862,25 @@ def _normalize_measured(
     if isinstance(value, dict):
         # The model frequently writes plan ranges into the dict form —
         # {"value": "90-120", "unit": "sec"} or {"unit": "seconds"} with no
-        # value at all. Preserve valid ranges while still repairing unit aliases
-        # and dropping malformed optional values.
-        # Preserve the exact scalar or range, alias the unit, and drop the optional
+        # value at all — and MeasuredValue requires a float ``value``, so an
+        # untouched pass-through failed the WHOLE card on a formatting slip
+        # (every rest/duration range in the plan text became "Field required").
+        # Coerce the number (a range reads its upper bound, matching the effort
+        # convention — more rest is safer, and the top of a written range is
+        # still what the plan says), alias the unit, and drop the optional
         # field entirely when no number can be read rather than rejecting the card.
-        amount = _normalize_numeric_or_range(value.get("value"))
-        if isinstance(amount, str) and not allow_range:
-            amount = float(amount.split("-")[1])
-        if amount is None:
-            display_match = _MEASURED_RANGE_RE.match(
-                _coerce_str(value.get("display")).strip()
-            )
-            if display_match and float(display_match.group(1)) <= float(
-                display_match.group(2)
-            ):
-                amount = (
-                    f"{display_match.group(1)}-{display_match.group(2)}"
-                    if allow_range
-                    else float(display_match.group(2))
-                )
-        if amount is None:
-            amount = _coerce_float(value.get("display"))
-        if amount is None:
+        raw_value = value.get("value")
+        if isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool):
+            number = float(raw_value)
+        else:
+            number = _coerce_float(raw_value)
+            if number is None:
+                # Some outputs carry the quantity only as display text.
+                number = _coerce_float(value.get("display"))
+        if number is None:
             return None
         return {
-            "value": amount,
+            "value": number,
             "unit": _alias_measured_unit(value.get("unit"), default_unit),
         }
     if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -947,15 +899,12 @@ def _normalize_measured(
                 "value": float(match.group(1)),
                 "unit": _alias_measured_unit(match.group(2), default_unit),
             }
-        # Preserve a pure range string ("90-120 sec", "5–6") exactly.
+        # A pure range string ("90-120 sec", "5–6") reads its upper bound, the
+        # same convention the dict branch and effort coercion use.
         range_match = _MEASURED_RANGE_RE.match(text)
-        if range_match and float(range_match.group(1)) <= float(range_match.group(2)):
+        if range_match:
             return {
-                "value": (
-                    f"{range_match.group(1)}-{range_match.group(2)}"
-                    if allow_range
-                    else float(range_match.group(2))
-                ),
+                "value": float(range_match.group(2)),
                 "unit": _alias_measured_unit(range_match.group(3), default_unit),
             }
     return None
@@ -1019,17 +968,13 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
     if isinstance(value, (int, float)):
         return {"method": "RPE", "value": float(value), "scale": "1-10"}
     if isinstance(value, str):
-        match = _NUMBER_RANGE_RE.search(value)
-        if match is None:
+        number = _coerce_float(value)
+        if number is None:
             return None
         method = "RIR" if re.search(r"\brir\b", value, re.I) else "RPE"
         return {
             "method": method,
-            "value": (
-                f"{match.group(1)}-{match.group(2)}"
-                if match.group(2)
-                else float(match.group(1))
-            ),
+            "value": number,
             "scale": "1-10" if method == "RPE" else None,
         }
     return None
@@ -1042,14 +987,6 @@ def _normalize_block(value: Any) -> dict[str, Any]:
         out.get("block_type"), _BLOCK_TYPE_VALUES, "accessory", _BLOCK_TYPE_ALIASES
     )
     out["display_name"] = _coerce_str(out.get("display_name"))
-    for count_key in ("sets", "rounds"):
-        if count_key in out:
-            normalized_count = _normalize_numeric_or_range(out.get(count_key))
-            out[count_key] = (
-                int(normalized_count)
-                if isinstance(normalized_count, float) and normalized_count.is_integer()
-                else normalized_count
-            )
     if "load" in out:
         out["load"] = _normalize_load(out.get("load"))
     # Per-field default units follow the bank conventions: work/rest in seconds
@@ -1121,7 +1058,7 @@ def _normalize_session(value: Any) -> dict[str, Any]:
         )
     if out.get("planned_duration") is not None:
         out["planned_duration"] = _normalize_measured(
-            out.get("planned_duration"), "minutes", allow_range=False
+            out.get("planned_duration"), "minutes"
         )
     out["blocks"] = [
         _normalize_block(block) for block in _as_dict_list(out.get("blocks"))

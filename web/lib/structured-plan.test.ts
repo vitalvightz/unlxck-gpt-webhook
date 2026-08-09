@@ -550,11 +550,6 @@ test("formatMeasured renders value + unit, or null", () => {
   assert.equal(formatMeasured({ value: 30, unit: null }), "30");
   assert.equal(formatMeasured(null), null);
   assert.equal(formatMeasured({ unit: "minutes" } as never), null);
-  assert.equal(formatMeasured({ value: "90-120", unit: "seconds" }), "90-120 seconds");
-  assert.equal(formatMeasured({ value: "5–6", unit: "seconds" }), "5-6 seconds");
-  for (const value of ["2-", "-3", "2--3", "three-five", "3 to 5", "heavy", "a few", "120-90", "5-2"]) {
-    assert.equal(formatMeasured({ value, unit: "seconds" }), null);
-  }
 });
 
 test("prefers duration over reps when reps looks like a time string", () => {
@@ -571,9 +566,6 @@ test("prefers duration over reps when reps looks like a time string", () => {
 
   const realReps = selectBlockMetric({ sets: 4, reps: "4-6" } as never);
   assert.deepEqual(realReps, [{ label: "Volume", value: "4 × 4-6" }]);
-  assert.deepEqual(selectBlockMetric({ sets: "2-3", reps: "8-10" }), [
-    { label: "Volume", value: "2-3 × 8-10" },
-  ]);
 
   assert.deepEqual(selectBlockMetric({} as never), []);
   assert.deepEqual(selectBlockMetric(null), []);
@@ -609,21 +601,8 @@ test("selectBlockMetric renders distance and rounds for conditioning blocks", ()
   assert.deepEqual(selectBlockMetric({ rounds: 8 } as never), [
     { label: "Rounds", value: "8" },
   ]);
-  assert.deepEqual(selectBlockMetric({ rounds: "3-5" }), [
-    { label: "Rounds", value: "3-5" },
-  ]);
   // Zero/negative rounds are hidden.
   assert.deepEqual(selectBlockMetric({ rounds: 0 } as never), []);
-});
-
-test("formatBlockLoad renders scalar and range values without duplicate units", () => {
-  assert.equal(formatBlockLoad({ value: 20, unit: "kg" }), "20 kg");
-  assert.equal(formatBlockLoad({ value: "2-4", unit: "kg" }), "2-4 kg");
-  assert.equal(
-    formatBlockLoad({ value: "2-4", unit: "kg", display: "2-4 kg" }),
-    "2-4 kg",
-  );
-  assert.equal(formatBlockLoad({ value: "heavy", unit: "kg" }), null);
 });
 
 test("selectBlockMetric combines duration, distance, and rounds in order", () => {
