@@ -56,6 +56,15 @@ def _number(value: str) -> int | float:
     return int(number) if number.is_integer() else number
 
 
+def _numeric_or_range(value: str) -> int | float | str:
+    if _range(value):
+        match = re.search(
+            r"\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?", value
+        )
+        return re.sub(r"\s*[-–]\s*", "-", match.group())  # type: ignore[union-attr]
+    return _number(value)
+
+
 def _measured(value: str) -> dict[str, Any]:
     unit_text = re.search(r"[A-Za-z]+", value).group().lower()  # type: ignore[union-attr]
     unit = {
@@ -72,20 +81,22 @@ def _measured(value: str) -> dict[str, Any]:
         "hour": "hours",
         "hours": "hours",
     }.get(unit_text, unit_text)
-    return {"value": _number(value), "unit": unit}
+    return {"value": _numeric_or_range(value), "unit": unit}
 
 
 def _load(value: str) -> dict[str, Any] | None:
-    if _range(value):
-        return None
-    match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(%|kg|lb|lbs)(?:\s*(.*?))?\s*", value)
+    match = re.fullmatch(
+        r"\s*(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?)\s*"
+        r"(%|kg|lb|lbs)(?:\s*(.*?))?\s*",
+        value,
+    )
     if not match:
         return None
     amount, raw_unit, ref = match.groups()
     unit = "percent" if raw_unit == "%" else ("lb" if raw_unit == "lbs" else raw_unit)
     return {
         "method": "percentage" if raw_unit == "%" else "absolute",
-        "value": float(amount) if "." in amount else int(amount),
+        "value": _numeric_or_range(amount),
         "unit": unit,
         "ref": ref or None,
         "display": value,
@@ -103,11 +114,8 @@ def _apply_fields(
         value = getattr(truth, name)
         if value is None:
             continue
-        if _range(value):
-            unresolved.append((name, value))
-        else:
-            block[name] = int(_number(value))
-            applied.append(name)
+        block[name] = _numeric_or_range(value)
+        applied.append(name)
     if truth.reps is not None:
         block["reps"] = (
             truth.reps.replace("–", "-")
@@ -119,11 +127,8 @@ def _apply_fields(
         value = getattr(truth, name)
         if value is None:
             continue
-        if _range(value):
-            unresolved.append((name, value))
-        else:
-            block[name] = _measured(value)
-            applied.append(name)
+        block[name] = _measured(value)
+        applied.append(name)
     if truth.load is not None:
         load = _load(truth.load)
         if load is None:
