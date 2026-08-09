@@ -307,9 +307,14 @@ export type MeasuredValue = {
   unit?: string | null;
 };
 
+export type PrescriptionMeasuredValue = {
+  value?: number | string | null;
+  unit?: string | null;
+};
+
 export type LoadPrescription = {
   method?: string | null;
-  value?: number | null;
+  value?: number | string | null;
   unit?: string | null;
   ref?: string | null;
   display?: string | null;
@@ -335,15 +340,15 @@ export type StructuredBlock = {
   display_name?: string | null;
   category?: string | null;
   order_index?: number | null;
-  duration?: MeasuredValue | null;
-  sets?: number | null;
+  duration?: PrescriptionMeasuredValue | null;
+  sets?: number | string | null;
   reps?: number | string | null;
   load?: LoadPrescription | null;
   effort?: EffortPrescription | null;
-  rest?: MeasuredValue | null;
-  work?: MeasuredValue | null;
-  distance?: MeasuredValue | null;
-  rounds?: number | null;
+  rest?: PrescriptionMeasuredValue | null;
+  work?: PrescriptionMeasuredValue | null;
+  distance?: PrescriptionMeasuredValue | null;
+  rounds?: number | string | null;
   intensity?: string | null;
   energy_system?: string | null;
   impact_level?: string | null;
