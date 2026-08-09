@@ -24,7 +24,7 @@ import {
   formatWeightCutBand,
   getDeterministicNutritionPhases,
   getDeterministicRecoveryPhases,
-  getMindsetLines,
+  getSessionCoachingLines,
   getSessions,
   getStringList,
   getWeeks,
@@ -235,7 +235,7 @@ export function MindsetAnchorCard({
    * sentence never prints twice on one card. */
   dedupeContext?: string | (string | null | undefined)[] | null;
 }) {
-  const lines = getMindsetLines(anchor).flatMap((line) => {
+  const lines = getSessionCoachingLines(anchor).flatMap((line) => {
     const value = line.label === "Context" ? athleteFacingRationale(line.value) : line.value;
     return value ? [{ ...line, value }] : [];
   });
@@ -255,14 +255,13 @@ export function MindsetAnchorCard({
   }
   const renderLine = (line: { label: string; value: string }) => (
     <li key={line.label}>
-      <span className="sp-mindset-label">{line.label}</span>
+      <span className="sp-coaching-label">{line.label}</span>
       <span>{line.value}</span>
     </li>
   );
   return (
-    <div className="sp-mindset">
-      <p className="sp-eyebrow">Mindset</p>
-      <ul className="sp-mindset-list">{shown.map(renderLine)}</ul>
+    <div className="sp-coaching">
+      <ul className="sp-coaching-list">{shown.map(renderLine)}</ul>
     </div>
   );
 }
@@ -531,7 +530,7 @@ export function SessionCard({
   const rehabBlocks = getRehabOrMobilityBlocks(session);
   const blocksLabel = blockCountLabel(blocks.length);
   const sessionMindset =
-    getMindsetLines(session.mindset_anchor).length > 0
+    getSessionCoachingLines(session.mindset_anchor).length > 0
       ? session.mindset_anchor
       : showDayContext
         ? card?.mindset_anchor
@@ -670,7 +669,7 @@ export function TodayCard({ day }: { day: StructuredDay }) {
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
-  const mindsetLines = getMindsetLines(card?.mindset_anchor);
+  const mindsetLines = getSessionCoachingLines(card?.mindset_anchor);
   if (
     !headline &&
     !readiness &&
@@ -832,13 +831,13 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   const showLightTechnicalContext = lightTechnicalContext && !coachLedLightCombat;
   // Session-level anchors are the most specific coaching cue in this schema, so
   // keep them and suppress the broader day anchor whenever any session owns one.
-  // The red-accent day anchor remains the fallback when none of the sessions has
-  // a usable mindset.
+  // The day anchor remains the fallback when none of the sessions has a usable
+  // coaching cue.
   const dayMindset = card?.mindset_anchor;
   const hasSessionMindset = getSessions(day).some(
-    (session) => getMindsetLines(session.mindset_anchor).length > 0,
+    (session) => getSessionCoachingLines(session.mindset_anchor).length > 0,
   );
-  const hasDayMindset = !hasSessionMindset && getMindsetLines(dayMindset).length > 0;
+  const hasDayMindset = !hasSessionMindset && getSessionCoachingLines(dayMindset).length > 0;
   // The day mindset's Context often restates a session's objective shown just
   // below it (same sentence, twice on screen); drop it against those.
   const dayObjectives = getSessions(day).map((session) => cleanText(session.objective));
@@ -982,7 +981,7 @@ function isPlainRestDay(day: StructuredDay): boolean {
     cleanText(card?.primary_warning) ||
     cleanText(card?.nutrition_summary) ||
     cleanText(card?.weight_cut_warning) ||
-    getMindsetLines(card?.mindset_anchor).length > 0
+    getSessionCoachingLines(card?.mindset_anchor).length > 0
   );
 }
 

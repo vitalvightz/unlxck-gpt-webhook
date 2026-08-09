@@ -25,6 +25,7 @@ import {
   getDisplayableRedFlags,
   getFallbackSafetyNotes,
   getMindsetLines,
+  getSessionCoachingLines,
   getPlanNotes,
   planNoteLabel,
   getSessions,
@@ -696,6 +697,47 @@ test("getMindsetLines capitalises the first letter of each cue for display", () 
       "Short band work and mobility",
     ],
   );
+});
+
+test("getSessionCoachingLines condenses mental framing into one Coach cue", () => {
+  const lines = getSessionCoachingLines({
+    intent: "stay loose",
+    focus_cue: "clean rhythm",
+    reset_cue: "breathe and reset",
+    confidence_anchor: "rounds are banked",
+    context: "Taper freshness day",
+  });
+
+  assert.deepEqual(
+    lines.map((line) => line.label),
+    ["Focus", "Reset", "Coach cue", "Context"],
+  );
+  assert.deepEqual(
+    lines.map((line) => line.value),
+    ["Clean rhythm", "Breathe and reset", "Stay loose · Rounds are banked", "Taper freshness day"],
+  );
+});
+
+test("getSessionCoachingLines hides generic context but keeps coach dependencies", () => {
+  const generic = getSessionCoachingLines({
+    intent: "stay sharp",
+    context: "SPP pocket planning for a brawler",
+  });
+  assert.deepEqual(generic.map((line) => line.label), ["Coach cue"]);
+
+  const dependency = getSessionCoachingLines({
+    context: "Pairs with coach-led technical session",
+  });
+  assert.deepEqual(dependency, [
+    { label: "Context", value: "Pairs with coach-led technical session" },
+  ]);
+
+  const injuryConstraint = getSessionCoachingLines({
+    context: "Modified for shoulder irritation",
+  });
+  assert.deepEqual(injuryConstraint, [
+    { label: "Context", value: "Modified for shoulder irritation" },
+  ]);
 });
 
 test("formatSessionObjective capitalises the subtitle without touching the rest", () => {
