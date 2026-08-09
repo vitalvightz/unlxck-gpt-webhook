@@ -5,7 +5,7 @@
   padding-top: var(--space-2);
 }
 
-/* Free slots use one athlete-facing label regardless of phase/source. */
+/* Free slots keep the recovery label except deliberate fight-week gaps. */
 .cm-rest-reason {
   display: none;
 }
@@ -15,7 +15,9 @@
 }
 
 .cm-rest-label::after {
-  content: "No Planned Session";
+  content: "Rest / Recovery";
   font-size: var(--type-label-xs);
   line-height: 1.2;
 }
+
+.cm-rest-day:has(.cm-rest-reason) .cm-rest-label::after { content: "No Planned Session"; }
