@@ -44,7 +44,7 @@ jobs:
           tests = test_path.read_text()
           addition = '''\n\ndef test_core_balance_bonus_cannot_bypass_existing_movement_cap(monkeypatch):\n    anchor_core = _support(\n        "Core Pattern Anchor",\n        movement="core",\n        tags=["anchor_core_score", "upper_body", "pull", "compound"],\n    )\n    core_one = _support(\n        "Pallof Hold One",\n        movement="core",\n        tags=["core_one_score", "core", "anti_rotation"],\n        equipment="bands",\n    )\n    core_two = _support(\n        "Pallof Hold Two",\n        movement="core",\n        tags=["core_two_score", "core", "stability"],\n        equipment="bands",\n    )\n    _patch_minimal_strength_runtime(\n        monkeypatch,\n        [anchor_core, core_one, core_two],\n        {"anchor_core_score": 10.0, "core_one_score": 9.0, "core_two_score": 8.0},\n    )\n    monkeypatch.setattr(\n        strength,\n        "calculate_exercise_numbers",\n        lambda *_args, **_kwargs: {"strength": 2},\n    )\n\n    prioritized = strength.generate_strength_block(\n        flags=_flags(weaknesses=["core stability"]),\n        weaknesses=["core stability"],\n    )\n\n    names = [exercise["name"] for exercise in prioritized["exercises"]]\n    movements = [exercise.get("movement") for exercise in prioritized["exercises"]]\n    assert len(names) == 2\n    assert movements.count("core") == 2\n    assert "Pallof Hold Two" not in names\n'''
           assert 'test_core_balance_bonus_cannot_bypass_existing_movement_cap' not in tests
-          test_path.write_text(tests.rstrip() + addition + '\n')
+          test_path.write_text(tests.rstrip() + addition.rstrip() + '\n')
           PY
       - name: Install focused test dependencies
         run: |
