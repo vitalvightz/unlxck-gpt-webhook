@@ -18,12 +18,12 @@ function sessionlessTechnicalDay(headline: string): StructuredDay {
   } as StructuredDay;
 }
 
-test("generic technical-only cards keep the existing Technical Combat title", () => {
+test("generic D-17 technical-only cards use the fight-intensity title", () => {
   const html = renderToStaticMarkup(
     <SessionlessDayCard day={sessionlessTechnicalDay("Technical-only combat")} />,
   );
 
-  assert.equal(html.includes('<h3 class="sp-session-title">Technical Combat'), true);
+  assert.equal(html.includes('<h3 class="sp-session-title">Fight-intensity technical rounds'), true);
 });
 
 test("countdown-specific converted sparring titles survive the technical renderer", () => {

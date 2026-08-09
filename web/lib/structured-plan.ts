@@ -1268,6 +1268,40 @@ const TECHNICAL_RE = /\b(technical|skill|drill|pad\s?work|pads|mitts?|footwork|s
 const SPARRING_RE = /\bspar(?:r(?:ing|ed)|s)?\b/i;
 const COACH_LED_RE = /\bcoach/i;
 
+// Existing saved plans can still carry the old generic technical-contact title.
+// Project that legacy title from the day's D-day at render time so the taper
+// ladder applies immediately without requiring plan regeneration. Explicit
+// countdown-specific titles from newer plans are preserved verbatim.
+const GENERIC_TECHNICAL_CONTACT_TITLES = new Set([
+  "technical-only combat",
+  "technical combat",
+]);
+
+function technicalContactTitleForCountdown(headline: string, countdownLabel: unknown): string {
+  if (!GENERIC_TECHNICAL_CONTACT_TITLES.has(headline.toLowerCase())) {
+    return headline;
+  }
+  const countdown = formatCountdownLabel(countdownLabel);
+  const match = countdown?.match(/^D-(\d+)$/i);
+  const dDay = match ? Number(match[1]) : null;
+  if (dDay == null || !Number.isFinite(dDay)) {
+    return headline;
+  }
+  if (dDay >= 8 && dDay <= 17) {
+    return "Fight-intensity technical rounds";
+  }
+  if (dDay >= 5 && dDay <= 7) {
+    return "Technical rhythm only";
+  }
+  if (dDay >= 2 && dDay <= 4) {
+    return "Technical touch — pads / shadow";
+  }
+  if (dDay >= 0 && dDay <= 1) {
+    return "Technical activation — no contact";
+  }
+  return headline;
+}
+
 export type SessionlessDayKind =
   | "coach_led"
   | "light_combat"
@@ -1337,7 +1371,10 @@ export function classifySessionlessDay(
     }
     return {
       kind,
-      title: headline,
+      title:
+        kind === "technical"
+          ? technicalContactTitleForCountdown(headline, day?.countdown_label)
+          : headline,
       tag: SESSIONLESS_DAY_TAGS[kind],
       coachLed:
         kind === "coach_led" ||
@@ -1374,5 +1411,9 @@ export function getCoachLedContactView(
     return null;
   }
   const kind = coachLedKindFromHeadline(headline);
-  return { kind, title: headline, tag: SESSIONLESS_DAY_TAGS[kind] };
+  const title =
+    kind === "technical"
+      ? technicalContactTitleForCountdown(headline, day?.countdown_label)
+      : headline;
+  return { kind, title, tag: SESSIONLESS_DAY_TAGS[kind] };
 }
