@@ -206,10 +206,19 @@ def _merge_prescription_truth(
     validate_structured_plan(result.plan)
     structural = compare_structured_plan_to_truth(truth, result.plan)
     errors = [
+        "prescription_truth: "
+        f"{issue.reason}: {issue.block_name or issue.session_title} "
+        f"on {issue.countdown_label}"
+        + (f" fields={','.join(issue.fields)}" if issue.fields else "")
+        for issue in result.unresolved
+    ]
+    errors.extend(
+        [
         f"faithfulness: MISPLACED_SESSION: {item.block_name} is not in source session {item.session_title}"
         for item in structural
         if item.code == "SESSION_MISMATCH"
-    ]
+        ]
+    )
     return result.plan, errors
 
 
@@ -2231,8 +2240,12 @@ def build_structured_plan_outcome(
             logger.exception("[structured_prescription_merge] merge_failed")
             return StructuredPlanOutcome(status="invalid_fallback_used", errors=[f"deterministic prescription merge failed: {type(exc).__name__}"])
         _run_structured_truth_shadow(plan_dict, raw_markdown, planning_brief)
+        if merge_errors:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used", errors=merge_errors
+            )
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
-        first_errors = merge_errors + [f"faithfulness: {issue}" for issue in unfaithful]
+        first_errors = [f"faithfulness: {issue}" for issue in unfaithful]
         first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if not first_errors:
             return _audited_outcome("valid", plan_dict, first.plan.schema_version)

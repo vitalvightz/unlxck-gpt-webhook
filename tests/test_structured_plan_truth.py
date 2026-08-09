@@ -149,6 +149,21 @@ def test_block_in_wrong_same_day_session_does_not_satisfy_truth():
     assert "SESSION_MISSING" in codes
 
 
+def test_block_moved_from_existing_session_reports_session_mismatch():
+    truth = extract_structured_plan_truth(
+        "D-10 - Strength\n- Trap-bar deadlift - 3 sets x 3 reps\n"
+        "D-10 - Recovery\n"
+    )
+    card = {
+        "weeks": [{"days": [{"countdown_label": "D-10", "sessions": [
+            {"title": "Strength", "blocks": []},
+            {"title": "Recovery", "blocks": [{"display_name": "Trap-bar deadlift"}]},
+        ]}]}],
+    }
+    codes = {item.code for item in compare_structured_plan_to_truth(truth, card)}
+    assert "SESSION_MISMATCH" in codes
+
+
 def test_empty_truth_session_still_requires_matching_session():
     truth = extract_structured_plan_truth("D-9 - Recovery check-in\n")
     assert [

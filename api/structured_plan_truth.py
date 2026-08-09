@@ -464,6 +464,24 @@ def compare_structured_plan_to_truth(
                     if _key(block.get("display_name")) == _key(expected.display_name)
                 ]
                 if not matches:
+                    same_day_elsewhere = [
+                        candidate_block
+                        for candidate_day in matching_days
+                        for candidate_session in candidate_day.get("sessions", ())
+                        if isinstance(candidate_session, Mapping)
+                        and candidate_session is not card_session
+                        for candidate_block in candidate_session.get("blocks", ())
+                        if isinstance(candidate_block, Mapping)
+                        and _key(candidate_block.get("display_name"))
+                        == _key(expected.display_name)
+                    ]
+                    if same_day_elsewhere:
+                        differences.append(
+                            StructuredTruthDifference(
+                                "SESSION_MISMATCH", **block_context
+                            )
+                        )
+                        continue
                     elsewhere = [
                         candidate_day
                         for candidate_day in card_days
