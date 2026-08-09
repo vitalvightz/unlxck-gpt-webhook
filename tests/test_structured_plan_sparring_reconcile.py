@@ -282,16 +282,24 @@ def test_d9_declared_technical_day_keeps_tactical_watch_as_attached_filler():
     assert any("surfaced coach-led contact" in note for note in notes)
 
 
-def test_declared_technical_day_rejects_strength_as_same_day_filler():
-    strength = [{"title": "Strength", "blocks": [{"title": "Trap bar power transfer", "dose": "RPE 7"}]}]
-    plan = _structured_plan([_day("D-13", headline="Strength", sessions=strength)])
-    notes = reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=13, downgraded=True))
+def test_declared_technical_day_preserves_app_work_alongside_contact():
+    freshness = [{
+        "title": "Fight-week freshness",
+        "blocks": [{
+            "display_name": "Band face pull, light",
+            "sets": 2,
+            "reps": "12-15",
+            "effort": {"method": "RPE", "value": 3},
+        }],
+    }]
+    plan = _structured_plan([_day("D-9", headline="Fight-week freshness", sessions=freshness)])
+    notes = reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=9, downgraded=True))
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Technical-only combat"
-    assert day["sessions"] == []
-    assert "coach_led_contact" not in day["today_card"]
-    assert any("removed incompatible same-day app work" in note for note in notes)
+    assert day["today_card"]["headline"] == "Fight-week freshness"
+    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert day["sessions"] == freshness
+    assert not any("removed incompatible same-day app work" in note for note in notes)
 
 
 def test_allowed_filler_ignores_blocked_words_in_free_text_notes():
@@ -310,14 +318,15 @@ def test_allowed_filler_ignores_blocked_words_in_free_text_notes():
     assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
 
 
-def test_numeric_rpe_blocks_otherwise_allowed_technical_filler():
+def test_declared_technical_day_preserves_high_rpe_app_work():
     mobility = [{"title": "Mobility Reset", "rpe": 7}]
     plan = _structured_plan([_day("D-9", headline="Mobility Reset", sessions=mobility)])
     reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=9, downgraded=True))
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Technical-only combat"
-    assert day["sessions"] == []
+    assert day["today_card"]["headline"] == "Mobility Reset"
+    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert day["sessions"] == mobility
 
 
 def test_malformed_session_roles_is_ignored_without_error():

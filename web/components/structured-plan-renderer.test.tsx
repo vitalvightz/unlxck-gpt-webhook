@@ -1190,7 +1190,7 @@ test("normalizes standalone declared light-combat day and session titles", () =>
   assert.equal(html.includes("Keep technical rhythm and timing without adding fatigue."), false);
 });
 
-test("surfaces coach-led contact alongside app sessions in the same day card", () => {
+test("surfaces technical contact alongside prescribed app work in the same day card", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1205,11 +1205,20 @@ test("surfaces coach-led contact alongside app sessions in the same day card", (
             countdown_label: "D-12",
             day_type: "moderate",
             today_card: {
-              headline: "Tactical Cue Card",
+              headline: "Fight-week freshness",
               coach_led_contact: "Coach-led boxing — technical only",
             },
             sessions: [
-              { session_id: "s1", session_type: "skill", title: "Tactical Cue Card", blocks: [] },
+              {
+                session_id: "s1",
+                session_type: "strength",
+                title: "Fight-week freshness",
+                blocks: [{
+                  block_id: "band-face-pull",
+                  block_type: "strength",
+                  display_name: "Band face pull, light",
+                }],
+              },
             ],
           },
         ],
@@ -1223,11 +1232,12 @@ test("surfaces coach-led contact alongside app sessions in the same day card", (
   // with the contact surfaced above the app work. A technical-only contact must
   // read "no hard sparring", never the hard-sparring wording.
   assert.equal(html.includes("Technical Session"), true);
-  assert.equal(html.includes("Tactical Cue Card"), true);
+  assert.equal(html.includes("Fight-week freshness"), true);
+  assert.equal(html.includes("Show more (1 block)"), true);
   assert.equal(html.includes("Technical-only contact today (no hard sparring)"), true);
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
   assert.ok(
-    html.indexOf("Technical Session") < html.indexOf(">Tactical Cue Card<"),
+    html.indexOf("Technical Session") < html.indexOf(">Fight-week freshness<"),
   );
 });
 

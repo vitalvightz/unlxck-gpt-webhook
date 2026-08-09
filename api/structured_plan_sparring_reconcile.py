@@ -1,12 +1,13 @@
 """Deterministically guarantee coach-led / sparring days render as cards.
 
 The athlete-facing structured plan is a *second* LLM conversion of the Stage 2
-text. A declared hard-sparring (or technical / reduced) day legitimately carries
-no app S&C work — the contact load is the athlete's own (run with or without a
-coach) — so the converter is supposed to emit it as a day with empty ``sessions``
-and a headline naming it (e.g. "Hard sparring"). The web renderer then classifies the card *purely* from
-that free-text headline (``classifySessionlessDay`` in
-``web/lib/structured-plan.ts``). That single fragile signal is the only thing
+text. A declared contact day can also carry app work. The final plan owns that
+choice; this reconciliation layer only guarantees the contact context is
+visible and must not make a second training decision. Technical-contact days
+therefore retain every app session the converter supplied. The web renderer
+classifies a sessionless contact card purely from its free-text headline
+(``classifySessionlessDay`` in ``web/lib/structured-plan.ts``). That single
+fragile signal is the only thing
 standing between a declared sparring day and a "Rest day." card: if the LLM drops
 the day, leaves the headline blank, or phrases it without a coach/spar/technical
 token, the coach-led card silently disappears.
@@ -21,16 +22,15 @@ reconciles the converted plan against the deterministic schedule:
   headline,
 * a declared contact day the converter dropped entirely is inserted into the
   matching week as a sessionless coach-led card, and
-* a contact day that *also* carries real app work (a low-RPE app session and
-  coach-owned contact legitimately coexist on the same day) has the coach-owned
+* a contact day that *also* carries app work keeps that work and has the
   contact surfaced on a dedicated ``today_card.coach_led_contact`` field so it
   renders as a context block above the session cards.
 
-Real app session headlines and blocks are never overwritten — a day the
-converter gave actual S&C work keeps its session cards; the coach-owned contact
-is added alongside, never in place of, that work. The function mutates the plan
-dict in place and returns a list of human-readable change notes for admin/debug
-telemetry. It never raises: a malformed brief or plan is a no-op.
+Technical-contact session headlines and blocks are never overwritten or
+filtered: the coach-owned contact is added alongside, never in place of, the
+app work. The function mutates the plan dict in place and returns a list of
+human-readable change notes for admin/debug telemetry. It never raises: a
+malformed brief or plan is a no-op.
 """
 from __future__ import annotations
 
@@ -74,15 +74,6 @@ _SPARRING_RE = re.compile(r"\bspar(?:r(?:ing|ed)|s)?\b", re.I)
 _COACH_LED_RE = re.compile(r"\bcoach", re.I)
 
 _DDAY_RE = re.compile(r"D-\s*(\d+)", re.I)
-_ALLOWED_TECHNICAL_FILLER_RE = re.compile(
-    r"\b("
-    r"tactical\s+watch|tactical\s+cue\s+card|cue\s+card|"
-    r"neural\s+visuali[sz]ation|visuali[sz]ation|"
-    r"breathing\s+reset|mobility\s+reset|"
-    r"technical\s+shadow(?:boxing)?|shadowboxing|rhythm\s+flow"
-    r")\b",
-    re.I,
-)
 _ALLOWED_HARD_DAY_FILLER_RE = re.compile(
     r"\b("
     r"tactical\s+watch|tactical\s+cue\s+card|cue\s+card|"
@@ -148,16 +139,16 @@ def _session_text(session: Any) -> str:
     return " ".join(_string_values(session))
 
 
-def _is_allowed_same_day_filler(session: Any, contact: _ContactDay) -> bool:
+def _is_allowed_nontechnical_contact_filler(session: Any) -> bool:
+    """Keep the existing guard only for hard/reduced contact days.
+
+    Technical-contact cards are a display context, not a filter: all app work
+    supplied by the final plan remains visible alongside them.
+    """
     text = _session_text(session)
     if _BLOCKED_CONTACT_FILLER_RE.search(text) or _HIGH_RPE_RE.search(text):
         return False
-    allowed_re = (
-        _ALLOWED_TECHNICAL_FILLER_RE
-        if contact.headline == _HEADLINE_BY_LOAD["technical"]
-        else _ALLOWED_HARD_DAY_FILLER_RE
-    )
-    return bool(allowed_re.search(text))
+    return bool(_ALLOWED_HARD_DAY_FILLER_RE.search(text))
 
 
 def _ban_clamped_load(load: str, d_day: int | None) -> str:
@@ -511,8 +502,9 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             current = str(card.get("headline") or "").strip()
             # A day the converter gave real app work renders as session cards, but
             # the coach-owned contact (a declared / downgraded sparring day) must
-            # still show on that day — a low-RPE app session and coach-owned contact
-            # legitimately coexist. Rather than overwrite the app headline (which the
+            # still show on that day. Technical-contact context does not decide
+            # whether app work is allowed; it preserves the final plan's sessions.
+            # Rather than overwrite the app headline (which the
             # session card falls back to for its own title), surface the contact on a
             # dedicated field; the renderer shows it as a context block above the
             # session cards. The contact block is driven solely by coach_led_contact
@@ -521,11 +513,14 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             # coach-led — or the coexisting contact stays hidden.
             if day.get("sessions"):
                 sessions = day.get("sessions")
-                if isinstance(sessions, list):
+                if (
+                    contact.headline != _HEADLINE_BY_LOAD["technical"]
+                    and isinstance(sessions, list)
+                ):
                     compatible_sessions = [
                         session
                         for session in sessions
-                        if _is_allowed_same_day_filler(session, contact)
+                        if _is_allowed_nontechnical_contact_filler(session)
                     ]
                     if len(compatible_sessions) != len(sessions):
                         day["sessions"] = compatible_sessions
