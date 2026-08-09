@@ -195,6 +195,60 @@ def test_map_plan_detail_returns_structured_plan_when_valid():
     assert detail.admin_outputs.structured_schema_version == SCHEMA_VERSION
 
 
+def test_map_plan_detail_collapses_a_stale_tactical_watch_shell_on_read():
+    structured = _valid_plan()
+    day = structured["weeks"][0]["days"][0]
+    canonical = day["sessions"][0]
+    canonical["title"] = "Fight Tactical Watch"
+    day["sessions"].insert(
+        0,
+        {
+            **canonical,
+            "session_id": "watch-shell",
+            "title": "Barbell Back Squat",
+            "blocks": [],
+        },
+    )
+    planning_brief = {
+        "weeks": [{"session_roles": [{
+            "scheduled_countdown_label": "D-15",
+            "athlete_facing_label": "Fight Tactical Watch",
+            "governance": {
+                "selected_drill_locked": True,
+                "selected_drill_name": "Barbell Back Squat",
+            },
+            "tactical_watch": {
+                "name": "Barbell Back Squat",
+                "why": "Rehearse the selected tactical response.",
+                "duration_min": 8,
+                "instructions": ["Review the chosen sequence."],
+                "mindset": {
+                    "intent": "Stay calm.",
+                    "focus": "See the sequence.",
+                    "reset": "Reset and review.",
+                    "anchor": "Stay precise.",
+                },
+                "progress": "Keep the review concise.",
+            },
+        }]}],
+    }
+
+    detail = _map_plan_detail(
+        _plan_row(structured_plan=structured, planning_brief=planning_brief),
+        include_admin=False,
+    )
+
+    sessions = detail.outputs.structured_plan.weeks[0].days[0].sessions
+    assert [session.title for session in sessions] == ["Fight Tactical Watch"]
+    assert sessions[0].blocks[0].display_name == "Barbell Back Squat"
+    # The read repair is intentionally non-persistent: it changes only the
+    # returned card, never the stored training-plan payload.
+    assert [session["title"] for session in day["sessions"]] == [
+        "Barbell Back Squat",
+        "Fight Tactical Watch",
+    ]
+
+
 # A + H (none): legacy row with no structured_plan returns plan_text only.
 def test_map_plan_detail_falls_back_to_plan_text_when_missing():
     detail = _map_plan_detail(_plan_row(), include_admin=True)

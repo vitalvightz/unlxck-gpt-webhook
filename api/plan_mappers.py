@@ -44,6 +44,7 @@ from .structured_card_lifecycle import (
 )
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 from .structured_plan_generation import reconcile_late_fight_week_context
+from .structured_plan_locked_merge import merge_locked_structured_content
 from .services.open_plan_timeline import project_open_structured_plan
 from .services.active_plan import get_plan_activation_state
 
@@ -574,6 +575,18 @@ def _map_plan_detail(
     structured_payload = (
         structured_plan.model_dump(mode="json") if structured_plan is not None else {}
     )
+    locked_payload = merge_locked_structured_content(
+        structured_payload,
+        planning_brief,
+    ).plan
+    if structured_plan is not None and locked_payload != structured_payload:
+        locked_result = safe_parse_structured_plan(
+            locked_payload,
+            raw_markdown=display_plan_text or None,
+        )
+        if locked_result.ok and locked_result.plan is not None:
+            structured_plan = locked_result.plan
+            structured_payload = locked_payload
     reconciled_payload = reconcile_late_fight_week_context(
         structured_payload,
         planning_brief,
