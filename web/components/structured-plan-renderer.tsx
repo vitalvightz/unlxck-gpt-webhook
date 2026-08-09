@@ -1790,7 +1790,7 @@ function WeekOverview({
   );
   const heading = openOngoing
     ? `Block ${scheduleContext?.block_number ?? 1} \u00b7 ${openWeekHeading}`
-    : baseHeading;
+    : `Week ${weekNumber}`;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
 
   return (
