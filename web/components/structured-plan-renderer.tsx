@@ -11,6 +11,7 @@ import {
   formatMeasured,
   getBlocks,
   getBlockCoachingDisplay,
+  getBlockAdjustmentDisplay,
   getActiveNotesExcludingRedFlags,
   getCoachLedContactView,
   getDays,
@@ -18,7 +19,6 @@ import {
   getFallbackSafetyNotes,
   getRehabOrMobilityBlocks,
   isDeEmphasisedWeightCutSafety,
-  progressionRuleLabel,
   planNoteLabel,
   formatSessionObjective,
   formatWeightCutBand,
@@ -320,25 +320,20 @@ export function BlockCard({
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
   const purpose = athleteFacingRationale(block.purpose);
-  const { cues, stopRules } = getBlockCoachingDisplay(block);
+  const { cues } = getBlockCoachingDisplay(block);
   const substitutions = getStringList(block.substitutions);
   const regressions = getStringList(block.regression_options);
-  const progression = cleanText(block.progression_rule);
+  const { progression, stopRules } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
-  // With a week directive on the card, the generic Progress aside is either the
-  // same rule again (progression weeks) or a contradiction (deload week), so it
-  // hides. A stop rule is safety wording and always stays.
-  const showProgressionAside = Boolean(
-    progression && (!weekDirective || progressionRuleLabel(progression) === "Stop rule"),
-  );
+  // A week directive owns progression/deload programming for open plans, while
+  // block stop criteria are safety instructions and must always remain visible.
+  const showProgressionAside = Boolean(progression && !weekDirective);
   const adjustmentRules = [
-    ...(showProgressionAside && progression ? [progression] : []),
-    ...stopRules,
-  ].filter(
-    (rule, index, rules) =>
-      rules.findIndex((candidate) => candidate.trim().toLowerCase() === rule.trim().toLowerCase()) ===
-      index,
-  );
+    ...(showProgressionAside && progression
+      ? [{ label: "Progress" as const, text: progression }]
+      : []),
+    ...stopRules.map((text) => ({ label: "Stop rule" as const, text })),
+  ];
 
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
 
@@ -428,17 +423,14 @@ export function BlockCard({
           {regressions.join(", ")}
         </p>
       ) : null}
-      {adjustmentRules.map((rule) => {
-        const ruleLabel = progressionRuleLabel(rule);
-        return (
-          <p key={rule} className="sp-block-aside">
-            <span className="sp-stat-label">{ruleLabel}</span>
-            {/* "Stop rule" is glossed; "Progress" reads plainly on its own. */}
-            <GlossaryTooltip term={ruleLabel} />
-            {rule.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "")}
-          </p>
-        );
-      })}
+      {adjustmentRules.map((rule) => (
+        <p key={`${rule.label}:${rule.text}`} className="sp-block-aside">
+          <span className="sp-stat-label">{rule.label}</span>
+          {/* "Stop rule" is glossed; "Progress" reads plainly on its own. */}
+          <GlossaryTooltip term={rule.label} />
+          {rule.text}
+        </p>
+      ))}
     </div>
   );
 }

@@ -806,6 +806,75 @@ def _coerce_str_list(value: Any) -> list[str]:
     return [text] if text else []
 
 
+_STOP_RULE_LABEL_RE = re.compile(r"\bstop(?:\s+rule)?\s*:\s*", re.IGNORECASE)
+_PURE_STOP_RULE_RE = re.compile(r"^\s*stop(?!-)\b", re.IGNORECASE)
+_PROGRAMMING_ONLY_PROGRESSION_RE = re.compile(
+    r"^\s*(?:maintain(?:\s+(?:the|this))?\s+dose|keep\s+(?:the\s+)?dose\s+small|"
+    r"do\s+not\s+(?:add|increase)\s+(?:sets?|volume)|no\s+(?:set|volume)\s+increase)\b",
+    re.IGNORECASE,
+)
+_POSITIVE_PROGRESSION_RE = re.compile(
+    r"\b(?:progress|advance|increase|raise|build|extend|heavier|more\s+resistance|reduce\s+assistance)\b",
+    re.IGNORECASE,
+)
+_NEGATED_PROGRESSION_RE = re.compile(
+    r"\b(?:do\s+not|don't|never)\s+(?:add|increase|progress|advance|raise|build|extend)\b",
+    re.IGNORECASE,
+)
+
+
+def _strip_stop_rule_label(text: str) -> str:
+    return re.sub(r"^\s*stop(?:\s+rule)?\s*:\s*", "", text, flags=re.IGNORECASE).strip()
+
+
+def _is_programming_only_progression(text: str) -> bool:
+    """True for taper/week dose constraints that do not advance the exercise."""
+    clean = text.strip()
+    if not clean:
+        return False
+    if _NEGATED_PROGRESSION_RE.search(clean):
+        return bool(
+            _PROGRAMMING_ONLY_PROGRESSION_RE.search(clean)
+            or re.search(r"\b(?:taper|fight[ -]?week|sharpness|freshness)\b", clean, re.IGNORECASE)
+        )
+    if _POSITIVE_PROGRESSION_RE.search(clean):
+        return False
+    return bool(_PROGRAMMING_ONLY_PROGRESSION_RE.search(clean))
+
+
+def _split_progression_and_stop_rules(value: Any) -> tuple[str, list[str]]:
+    """Separate a legacy mixed progression string from labelled stop criteria."""
+    text = _coerce_str(value).strip()
+    if not text:
+        return "", []
+    match = _STOP_RULE_LABEL_RE.search(text)
+    if match:
+        progression = text[: match.start()].rstrip(" \t—–-:;,.")
+        stop = text[match.end() :].strip()
+        stops = [stop] if stop else []
+        if progression and _is_programming_only_progression(progression):
+            progression = ""
+        return progression, stops
+    if _PURE_STOP_RULE_RE.search(text):
+        return "", [_strip_stop_rule_label(text)]
+    if _is_programming_only_progression(text):
+        return "", []
+    return text, []
+
+
+def _dedupe_stop_rules(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = _strip_stop_rule_label(value)
+        key = text.casefold().strip().rstrip(".")
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
 def _normalize_mindset(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["intent"] = _coerce_str(out.get("intent"))
@@ -870,13 +939,12 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     # Carry coaching detail through, tolerating a single string instead of a
     # list. An explicit null must also become [] — the schema fields are
     # non-optional lists, so a passed-through None rejects the whole card.
-    for list_key in ("coaching_cues", "regression_options", "substitutions"):
+    for list_key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
         if list_key in out:
             out[list_key] = _coerce_str_list(out.get(list_key))
-    # Late-fight prose occasionally arrives as two fake cue bullets:
-    # ``Regression /`` and ``Stop: ...``. The former is only a dangling source
-    # label; the latter belongs in progression_rule so the card renders it as a
-    # labelled stop instruction rather than ordinary coaching.
+    # Late-fight prose occasionally arrives as fake adjustment bullets. Keep
+    # stop/safety criteria separate from exercise progression so the athlete
+    # never sees a stop condition labelled as Progress.
     cues = _coerce_str_list(out.get("coaching_cues"))
     cleaned_cues: list[str] = []
     stop_cues: list[str] = []
@@ -887,7 +955,7 @@ def _normalize_block(value: Any) -> dict[str, Any]:
             re.IGNORECASE,
         ):
             continue
-        if re.match(r"^\s*stop(?:\s+rule)?\s*:", cue, re.IGNORECASE):
+        if re.match(r"^\s*stop(?:\s+rule)?\s*:|^\s*stop(?!-)", cue, re.IGNORECASE):
             stop_cues.append(cue.strip())
             continue
         cleaned_cues.append(cue)
@@ -897,15 +965,17 @@ def _normalize_block(value: Any) -> dict[str, Any]:
         out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]
     if "effort" in out:
         out["effort"] = _normalize_effort(out.get("effort"))
-    progression_rule = _coerce_str(out.get("progression_rule")).strip()
-    if stop_cues:
-        stop_text = " ".join(stop_cues)
-        if not progression_rule:
-            progression_rule = stop_text
-        elif stop_text.lower() not in progression_rule.lower():
-            progression_rule = f"{progression_rule.rstrip('.')} — {stop_text}"
-    if out.get("progression_rule") is not None or progression_rule:
+
+    progression_rule, embedded_stops = _split_progression_and_stop_rules(out.get("progression_rule"))
+    stop_rules = _dedupe_stop_rules(
+        _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops
+    )
+    if progression_rule:
         out["progression_rule"] = progression_rule
+    else:
+        out.pop("progression_rule", None)
+    if stop_rules or "stop_rules" in out:
+        out["stop_rules"] = stop_rules
     return out
 
 
@@ -2288,7 +2358,7 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   number (e.g. 20, not ">20%" or "form breaks") — put the comparison in
   "operator" and the prose in display_text, and OMIT threshold entirely when the
   rule has no numeric trigger.
-- List fields (coaching_cues, regression_options, substitutions, applies_to)
+- List fields (coaching_cues, regression_options, substitutions, stop_rules, applies_to)
   MUST be JSON arrays — emit [] when empty, never null and never a bare string.
   A block's "effort" MUST be an object like
   {{"method": "RPE", "value": 7, "scale": "1-10"}}, never a bare string.
@@ -2325,11 +2395,16 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   dehydration, water-loading, or sodium-manipulation directives).
 - When the plan states them, carry per-block detail into each block:
   "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or
-  alternative exercises the plan offers), and "progression_rule" (how to advance).
+  alternative exercises), "progression_rule" (exercise-level advancement only),
+  and "stop_rules" (list of stop/safety criteria). progression_rule may be omitted
+  when the source gives no genuine exercise progression. Do NOT put taper/week
+  dose restrictions, injury restrictions, session-programming constraints, or
+  stop criteria into progression_rule unless the text actually says how that
+  specific exercise advances.
 - Treat "Easier:" / "Regression:" content as regression_options and "Stop:" /
-  "Stop rule:" content as progression_rule. Never place those labelled lines in
-  coaching_cues. Ignore a bare separator label such as "Regression /" rather
-  than rendering it as athlete guidance.
+  "Stop rule:" content as stop_rules. Never place those labelled lines in
+  coaching_cues or progression_rule. Ignore a bare separator label such as
+  "Regression /" rather than rendering it as athlete guidance.
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
   the day level (today_card.mindset_anchor), including "confidence_anchor" and
   "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a
@@ -2428,7 +2503,8 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
                   "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": "4-6",
                   "load": {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM", "display": "85% 1RM"}},
                   "rest": {{"value": 180, "unit": "seconds"}}, "duration": {{"value": 45, "unit": "minutes"}},
-                  "coaching_cues": ["..."], "regression_options": ["..."], "substitutions": ["..."], "progression_rule": "..."
+                  "coaching_cues": ["..."], "regression_options": ["..."], "substitutions": ["..."],
+                  "progression_rule": "...", "stop_rules": ["..."]
                 }}
               ]
             }}
