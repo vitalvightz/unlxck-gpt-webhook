@@ -944,6 +944,7 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("no hard sparring"), true);
+  assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
   assert.equal(html.includes("this is your declared hard-sparring/contact work"), false);
   assert.equal(html.includes("sp-day-card-technical"), true);
   // The genuine rest day renders as a single compact, non-expandable rest row.
@@ -1233,6 +1234,7 @@ test("surfaces technical contact alongside prescribed app work in the same day c
   assert.equal(html.includes(">Low load<"), true);
   assert.equal(html.includes("Fight-week freshness"), true);
   assert.equal(html.includes("Show more (1 block)"), true);
+  assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
   assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
@@ -1275,6 +1277,7 @@ test("renders a technical-only session as the reusable sport-neutral low-load ca
   assert.equal(html.includes("Technical-only combat"), false);
   assert.equal(html.includes("Technical Combat"), true);
   assert.equal(html.includes(">Low load<"), true);
+  assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
   assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Generated technical-only copy that should not repeat."), false);
   assert.equal(html.includes(">Skill<"), false);

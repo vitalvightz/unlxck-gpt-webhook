@@ -72,6 +72,7 @@ import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/da
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import type {
@@ -111,6 +112,8 @@ function isDeclaredLightCombatTitle(title: string): boolean {
 const HARD_SPARRING_SESSIONLESS_NOTE =
   "No extra S&C today — this is your declared hard-sparring/contact work. Keep freshness the priority.";
 const TECHNICAL_COMBAT_TITLE = "Technical Combat";
+const TECHNICAL_COMBAT_HELP =
+  "Hard sparring is reduced close to competition to lower fatigue and injury risk while keeping timing and skills sharp.";
 const TECHNICAL_COMBAT_TAG = "Low load";
 const TECHNICAL_COMBAT_RATIONALE =
   "Technical only — no hard sparring. Stay sharp and leave fresh.";
@@ -211,6 +214,16 @@ function athleteFacingRationale(value: string | null | undefined): string | null
 
 function TechnicalCombatRationale() {
   return <p className="sp-today-note">{TECHNICAL_COMBAT_RATIONALE}</p>;
+}
+
+function TechnicalCombatWhyTooltip() {
+  return (
+    <WhyTooltip
+      title={TECHNICAL_COMBAT_TITLE}
+      body={TECHNICAL_COMBAT_HELP}
+      triggerLabel="?"
+    />
+  );
 }
 
 export function MindsetAnchorCard({
@@ -541,6 +554,7 @@ export function SessionCard({
               : isTechnicalSession
                 ? TECHNICAL_COMBAT_TITLE
                 : title}
+            {isTechnicalSession ? <TechnicalCombatWhyTooltip /> : null}
           </h3>
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
@@ -725,6 +739,7 @@ export function SessionlessDayCard({
           ) : null}
           <h3 className="sp-session-title">
             {displayTitle}
+            {kind === "technical" ? <TechnicalCombatWhyTooltip /> : null}
           </h3>
         </div>
         <div className="sp-session-meta">
@@ -796,7 +811,10 @@ function CoachLedDayContext({
     <div className="cm-light-technical cm-coach-led-contact">
       <div className="cm-light-technical-head">
         {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
-        <p className="sp-today-headline">{displayTitle}</p>
+        <p className="sp-today-headline">
+          {displayTitle}
+          {isTechnical ? <TechnicalCombatWhyTooltip /> : null}
+        </p>
       </div>
       {isTechnical ? <TechnicalCombatRationale /> : <p className="sp-today-note">{description}</p>}
     </div>
