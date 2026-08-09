@@ -46,60 +46,6 @@ test("renders only the first stop rule when there is no higher-level safety owne
   );
 });
 
-test("keeps short athlete-facing stop rules unchanged", () => {
-  const selected = selectCompactStopRule(["Stop if punch speed drops across sets"]);
-  assert.equal(selected, "Stop if punch speed drops across sets");
-});
-
-test("removes a recognised action tail from a long stop rule", () => {
-  const selected = selectCompactStopRule([
-    "Stop if punch speed drops markedly across repeated explosive sets today; then end exercise and reassess readiness",
-  ]);
-  assert.equal(
-    selected,
-    "Stop if punch speed drops markedly across repeated explosive sets today",
-  );
-});
-
-test("keeps the full meaningful rule when safe cleanup still exceeds ten words", () => {
-  const selected = selectCompactStopRule([
-    "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
-  ]);
-  assert.equal(
-    selected,
-    "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
-  );
-  assert.ok((selected || "").split(/\s+/).length > 10);
-});
-
-test("action-tail cleanup accepts whitespace after semicolon separators", () => {
-  const selected = selectCompactStopRule([
-    "Stop if speed drops sharply across repeated explosive efforts during the final set; then end exercise",
-  ]);
-  assert.equal(
-    selected,
-    "Stop if speed drops sharply across repeated explosive efforts during the final set",
-  );
-});
-
-test("does not strip a second stop-if safety trigger as an action tail", () => {
-  const selected = selectCompactStopRule([
-    "Stop if speed drops across sets; stop if shoulder pain becomes sharp",
-  ]);
-  assert.equal(
-    selected,
-    "Stop if speed drops across sets; stop if shoulder pain becomes sharp",
-  );
-});
-
-test("keeps a unique exercise trigger when Safety Priority owns the injury clause", () => {
-  const selected = selectCompactStopRule(
-    ["speed collapses or any sharp left shoulder pain"],
-    ["Stop if sharp left shoulder pain increases or the wound opens."],
-  );
-  assert.equal(selected, "speed collapses");
-});
-
 test("removes escalation from Active Notes when Safety Priority already owns it", () => {
   const note =
     "Left shoulder surface abrasion. No open wound or infection reported. Keep the area clean and covered during training; stop and seek care if bleeding, spreading redness, or increased pain.";

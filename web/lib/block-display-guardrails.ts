@@ -176,29 +176,6 @@ function splitStopClauses(value: string): string[] {
     .filter(Boolean);
 }
 
-const MAX_ATHLETE_STOP_RULE_WORDS = 10;
-const STOP_RULE_EXPLANATION_TAIL_RE =
-  /\s*(?:[;—–]|,)\s*(?:then\s+|and\s+then\s+)?(?:stop(?!\s+if\b)|switch|clean|cover|seek|report|modify|omit|rest|reduce|end|reassess)\b.*$/i;
-
-function stopRuleWordCount(value: string): number {
-  return value.trim().split(/\s+/).filter(Boolean).length;
-}
-
-/**
- * Keep short athlete-facing stop rules as written. For longer legacy rules,
- * remove only a clearly recognised action/explanation tail. If the remaining
- * meaningful condition is still over the prompt's ten-word target, show it in
- * full rather than cutting through a safety condition. Stored rules stay untouched.
- */
-function compactAthleteStopRule(value: string): string {
-  const compact = stripStopLabel(value).replace(/\s+/g, " ").trim();
-  if (!compact) return "";
-  if (stopRuleWordCount(compact) <= MAX_ATHLETE_STOP_RULE_WORDS) return compact;
-
-  const withoutActionTail = compact.replace(STOP_RULE_EXPLANATION_TAIL_RE, "").trim();
-  return withoutActionTail || compact;
-}
-
 /**
  * One exercise owns at most one athlete-facing stop rule. Plan-level injury and
  * red-flag copy owns global safety only when it matches the same injury subject;
@@ -211,16 +188,12 @@ export function selectCompactStopRule(
 ): string | null {
   const rules = stopRules.map(stripStopLabel).filter(Boolean);
   if (rules.length === 0) return null;
-  if (planSafetyTexts.length === 0) return compactAthleteStopRule(rules[0]) || null;
+  if (planSafetyTexts.length === 0) return rules[0];
 
   for (const rule of rules) {
-    if (!isOwnedSafetyClause(rule, planSafetyTexts)) {
-      return compactAthleteStopRule(rule) || null;
-    }
+    if (!isOwnedSafetyClause(rule, planSafetyTexts)) return rule;
     for (const clause of splitStopClauses(rule)) {
-      if (!isOwnedSafetyClause(clause, planSafetyTexts, rule)) {
-        return compactAthleteStopRule(clause) || null;
-      }
+      if (!isOwnedSafetyClause(clause, planSafetyTexts, rule)) return clause;
     }
   }
   return null;
