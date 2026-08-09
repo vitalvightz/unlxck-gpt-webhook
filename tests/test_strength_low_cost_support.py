@@ -120,3 +120,43 @@ def test_explicit_core_priority_adds_only_one_dedicated_support_exercise(monkeyp
     assert [exercise["name"] for exercise in baseline["exercises"]] == ["Anchor Row"]
     assert [exercise["name"] for exercise in prioritized["exercises"]] == ["Anchor Row", "Pallof Hold"]
     assert "core_balance_low_cost_bonus" in prioritized["why_log"][1]["reasons"]["reason_codes"]
+
+def test_core_balance_bonus_cannot_bypass_existing_movement_cap(monkeypatch):
+    anchor_core = _support(
+        "Core Pattern Anchor",
+        movement="core",
+        tags=["anchor_core_score", "upper_body", "pull", "compound"],
+    )
+    core_one = _support(
+        "Pallof Hold One",
+        movement="core",
+        tags=["core_one_score", "core", "anti_rotation"],
+        equipment="bands",
+    )
+    core_two = _support(
+        "Pallof Hold Two",
+        movement="core",
+        tags=["core_two_score", "core", "stability"],
+        equipment="bands",
+    )
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [anchor_core, core_one, core_two],
+        {"anchor_core_score": 10.0, "core_one_score": 9.0, "core_two_score": 8.0},
+    )
+    monkeypatch.setattr(
+        strength,
+        "calculate_exercise_numbers",
+        lambda *_args, **_kwargs: {"strength": 2},
+    )
+
+    prioritized = strength.generate_strength_block(
+        flags=_flags(weaknesses=["core stability"]),
+        weaknesses=["core stability"],
+    )
+
+    names = [exercise["name"] for exercise in prioritized["exercises"]]
+    movements = [exercise.get("movement") for exercise in prioritized["exercises"]]
+    assert len(names) == 2
+    assert movements.count("core") == 2
+    assert "Pallof Hold Two" not in names

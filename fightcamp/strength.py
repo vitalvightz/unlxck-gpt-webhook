@@ -2701,11 +2701,21 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if current_core_balance >= 2 or len(exercises) >= target_exercises + 1:
             return exercises
 
+        movement_counts: dict[str, int] = {}
+        for exercise in exercises:
+            movement = _cached_movement(exercise)
+            if movement != "unknown":
+                movement_counts[movement] = movement_counts.get(movement, 0) + 1
+
         selected_names = _selected_names(exercises)
         bonus_entry = _best_candidate(
             lambda cand, _score, _reasons, profile: (
                 bool(profile.get("core_balance_support"))
                 and _cached_guarded_decision(cand).action != "exclude"
+                and (
+                    _cached_movement(cand) == "unknown"
+                    or movement_counts.get(_cached_movement(cand), 0) < 2
+                )
                 and (
                     not injuries
                     or not _cached_injury_match(cand, ("name", "movement", "method"), ("exclude",))
@@ -3177,6 +3187,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _run_real_poststep(
         "core_balance_low_cost_bonus",
         lambda: _append_core_balance_bonus(base_exercises),
+    )
+    base_exercises = _run_real_poststep(
+        "movement_caps_after_core_balance_bonus",
+        lambda: _apply_movement_caps(base_exercises),
     )
 
     _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])
