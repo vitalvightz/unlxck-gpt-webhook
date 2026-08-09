@@ -206,6 +206,9 @@
       "neural_primer",
       "rotational",
       "rate_of_force",
+      "hip_dominant",
+      "horizontal_power",
+      "boxing",
       "mech_cns_high",
       "mech_trunk_rotation",
       "mech_ballistic",
@@ -230,7 +233,8 @@
     "cut_buckets_allowed": [
       "none",
       "low"
-    ]
+    ],
+    "notes": "Use a light medicine ball and full rest; drive from the hips and transfer force through the torso without chasing fatigue."
   },
   {
     "name": "Back Squat \u2192 Box Jump",
@@ -477,6 +481,53 @@
     ]
   },
   {
+    "name": "Hang Power Clean",
+    "category": "full_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "power",
+    "movement": "olympic",
+    "type": "bilateral",
+    "tags": [
+      "explosive",
+      "triple_extension",
+      "rate_of_force",
+      "mma",
+      "wrestler",
+      "wrestling",
+      "grappling",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_upper_pull"
+    ],
+    "equipment": "barbell",
+    "movement_cost": "high",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "high",
+    "soreness_risk": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low"
+    ],
+    "sport_specific": true,
+    "notes": "Technical Olympic-lift option for experienced MMA and wrestling athletes during GPP only; use low-volume, crisp reps."
+  },
+  {
     "name": "Landmine Rotational Press",
     "category": "upper_body",
     "phases": [
@@ -687,6 +738,8 @@
     "tags": [
       "explosive",
       "power",
+      "triple_extension",
+      "rate_of_force",
       "mech_ballistic",
       "mech_lower_jump",
       "mech_trunk_stability",
@@ -719,7 +772,55 @@
     "cut_buckets_allowed": [
       "none",
       "low"
-    ]
+    ],
+    "notes": "Use a light load and full recovery; prioritize jump height and bar speed over load."
+  },
+  {
+    "name": "Jump Squat",
+    "category": "lower_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "power",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": [
+      "explosive",
+      "power",
+      "rate_of_force",
+      "triple_extension",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_lower_squat",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_landing_impact"
+    ],
+    "equipment": "bodyweight",
+    "movement_cost": "moderate",
+    "impact_cost": "moderate",
+    "eccentric_cost": "low",
+    "landing_cost": "moderate",
+    "cns_load": "high",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_squat",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ],
+    "low_impact": false,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low"
+    ],
+    "notes": "Use bodyweight or a very light load for 3-5 sets of 3 reps with full rest; stop when jump height drops."
   },
   {
     "name": "Box Jump",
@@ -778,6 +879,8 @@
     "tags": [
       "posterior_chain",
       "explosive",
+      "rate_of_force",
+      "hip_dominant",
       "mech_cns_high",
       "mech_grip_support",
       "mech_ballistic",
@@ -804,7 +907,8 @@
     "cut_buckets_allowed": [
       "none",
       "low"
-    ]
+    ],
+    "notes": "Explosive hip-hinge option for repeated alactic power; end the set when snap speed slows."
   },
   {
     "name": "Speed Box Squat",
@@ -1380,6 +1484,49 @@
       "low",
       "moderate"
     ]
+  },
+  {
+    "name": "Landmine Push Press",
+    "category": "upper_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "power",
+    "movement": "vertical_push",
+    "type": "unilateral",
+    "tags": [
+      "explosive",
+      "rate_of_force",
+      "triple_extension",
+      "boxing",
+      "anti_rotation",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
+    ],
+    "equipment": "landmine",
+    "movement_cost": "moderate",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ],
+    "notes": "Use a split stance, light-to-moderate load, and full rest; drive through the floor and finish fast."
   },
   {
     "name": "DB Alternating Incline Press (30-45\u00b0)",
