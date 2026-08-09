@@ -178,7 +178,7 @@ function splitStopClauses(value: string): string[] {
 
 const MAX_ATHLETE_STOP_RULE_WORDS = 10;
 const STOP_RULE_EXPLANATION_TAIL_RE =
-  /\s*(?:[;—–]|,)\s*(?:then\s+|and\s+then\s+)?(?:stop|switch|clean|cover|seek|report|modify|omit|rest|reduce|end|reassess)\b.*$/i;
+  /\s*(?:[;—–]|,)\s*(?:then\s+|and\s+then\s+)?(?:stop(?!\s+if\b)|switch|clean|cover|seek|report|modify|omit|rest|reduce|end|reassess)\b.*$/i;
 
 function stopRuleWordCount(value: string): number {
   return value.trim().split(/\s+/).filter(Boolean).length;
