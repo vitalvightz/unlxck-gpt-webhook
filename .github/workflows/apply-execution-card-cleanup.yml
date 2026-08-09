@@ -1,0 +1,411 @@
+name: Apply execution-card cleanup
+
+on:
+  push:
+    branches:
+      - fix/restore-block-stop-rules
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/restore-block-stop-rules
+          fetch-depth: 0
+
+      - name: Apply execution-first block cleanup
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              file.write_text(text.replace(old, new, 1))
+
+          def append_once(path: str, marker: str, addition: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              if marker in text:
+                  return
+              file.write_text(text.rstrip() + "\n\n" + addition.strip() + "\n")
+
+          # Backend schema: preserve why-today reasoning separately from execution cues.
+          replace_once(
+              "api/structured_plan_models.py",
+              '''    purpose: str | None = None\n    coaching_cues: list[str] = Field(default_factory=list)\n''',
+              '''    purpose: str | None = None\n    why_today: str | None = None\n    coaching_cues: list[str] = Field(default_factory=list)\n''',
+          )
+
+          # Frontend type mirrors the richer backend without forcing it onto the card.
+          replace_once(
+              "web/lib/types.ts",
+              '''  purpose?: string | null;\n  coaching_cues?: string[] | null;\n''',
+              '''  purpose?: string | null;\n  why_today?: string | null;\n  coaching_cues?: string[] | null;\n''',
+          )
+
+          # Backend helpers for semantic routing and dedupe.
+          replace_once(
+              "api/structured_plan_generation.py",
+              r'''def _dedupe_stop_rules(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = _strip_stop_rule_label(value)
+        key = text.casefold().strip().rstrip(".")
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
+def _normalize_mindset(value: Any) -> dict[str, Any]:
+''',
+              r'''def _dedupe_stop_rules(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = _strip_stop_rule_label(value)
+        key = text.casefold().strip().rstrip(".")
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
+_BLOCK_DETAIL_LABEL_RE = re.compile(
+    r"^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|"
+    r"stop(?:\s+rule)?|swaps?|substitutions?)\s*:\s*(.*)$",
+    re.IGNORECASE,
+)
+
+
+def _dedupe_text_values(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = _coerce_str(value).strip()
+        key = re.sub(r"\s+", " ", text).casefold().rstrip(" .")
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
+def _normalize_mindset(value: Any) -> dict[str, Any]:
+''',
+          )
+
+          # Backend normalizer: route labelled prose into its semantic field and leave
+          # coaching_cues as execution-only instructions.
+          replace_once(
+              "api/structured_plan_generation.py",
+              r'''    # Carry coaching detail through, tolerating a single string instead of a
+    # list. An explicit null must also become [] — the schema fields are
+    # non-optional lists, so a passed-through None rejects the whole card.
+    for list_key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
+        if list_key in out:
+            out[list_key] = _coerce_str_list(out.get(list_key))
+    # Late-fight prose occasionally arrives as fake adjustment bullets. Keep
+    # stop/safety criteria separate from exercise progression so the athlete
+    # never sees a stop condition labelled as Progress.
+    cues = _coerce_str_list(out.get("coaching_cues"))
+    cleaned_cues: list[str] = []
+    stop_cues: list[str] = []
+    for cue in cues:
+        if re.fullmatch(
+            r"\s*(?:progress(?:ion)?\s*/\s*)?regress(?:ion)?\s*(?:/\s*)?\s*",
+            cue,
+            re.IGNORECASE,
+        ):
+            continue
+        if re.match(r"^\s*stop(?:\s+rule)?\s*:|^\s*stop(?!-)\b", cue, re.IGNORECASE):
+            stop_cues.append(cue.strip())
+            continue
+        cleaned_cues.append(cue)
+    if "coaching_cues" in out or cleaned_cues != cues:
+        out["coaching_cues"] = cleaned_cues
+''',
+              r'''    # Carry coaching detail through, tolerating a single string instead of a
+    # list. An explicit null must also become [] — the schema fields are
+    # non-optional lists, so a passed-through None rejects the whole card.
+    for list_key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
+        if list_key in out:
+            out[list_key] = _coerce_str_list(out.get(list_key))
+    for text_key in ("purpose", "why_today"):
+        if text_key in out:
+            text_value = _coerce_str(out.get(text_key)).strip()
+            if text_value:
+                out[text_key] = text_value
+            else:
+                out.pop(text_key, None)
+
+    # Converter/source prose can leak labelled rationale and adjustment lines into
+    # coaching_cues. Route each label to its semantic field so the red cue bullets
+    # remain strictly about how to execute the exercise.
+    cues = _coerce_str_list(out.get("coaching_cues"))
+    cleaned_cues: list[str] = []
+    stop_cues: list[str] = []
+    regression_cues: list[str] = []
+    substitution_cues: list[str] = []
+    progression_cues: list[str] = []
+    for cue in cues:
+        if re.fullmatch(
+            r"\s*(?:progress(?:ion)?\s*/\s*)?regress(?:ion)?\s*(?:/\s*)?\s*",
+            cue,
+            re.IGNORECASE,
+        ):
+            continue
+        labelled = _BLOCK_DETAIL_LABEL_RE.match(cue)
+        if labelled:
+            label = re.sub(r"\s+", " ", labelled.group(1).strip().casefold())
+            detail = labelled.group(2).strip()
+            if not detail:
+                continue
+            if label == "purpose":
+                out.setdefault("purpose", detail)
+            elif label == "why today":
+                out.setdefault("why_today", detail)
+            elif label in {"easier", "regress", "regression"}:
+                regression_cues.append(detail)
+            elif label in {"progress", "progression"}:
+                progression_cues.append(detail)
+            elif label.startswith("stop"):
+                stop_cues.append(detail)
+            else:
+                substitution_cues.append(detail)
+            continue
+        if re.match(r"^\s*stop(?!-)\b", cue, re.IGNORECASE):
+            stop_cues.append(cue.strip())
+            continue
+        cleaned_cues.append(cue)
+
+    out["coaching_cues"] = _dedupe_text_values(cleaned_cues)
+    out["regression_options"] = _dedupe_text_values(
+        _coerce_str_list(out.get("regression_options")) + regression_cues
+    )
+    out["substitutions"] = _dedupe_text_values(
+        _coerce_str_list(out.get("substitutions")) + substitution_cues
+    )
+''',
+          )
+
+          replace_once(
+              "api/structured_plan_generation.py",
+              r'''    progression_rule, embedded_stops = _split_progression_and_stop_rules(out.get("progression_rule"))
+    stop_rules = _dedupe_stop_rules(
+        _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops
+    )
+    if progression_rule:
+        out["progression_rule"] = progression_rule
+    else:
+        out.pop("progression_rule", None)
+''',
+              r'''    progression_rule = ""
+    embedded_stops: list[str] = []
+    progression_candidates = [
+        _coerce_str(out.get("progression_rule")).strip(),
+        *progression_cues,
+    ]
+    for candidate in progression_candidates:
+        if not candidate:
+            continue
+        candidate_progression, candidate_stops = _split_progression_and_stop_rules(candidate)
+        embedded_stops.extend(candidate_stops)
+        if candidate_progression and not progression_rule:
+            progression_rule = candidate_progression
+    stop_rules = _dedupe_stop_rules(
+        _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops
+    )
+    if progression_rule:
+        out["progression_rule"] = progression_rule
+    else:
+        out.pop("progression_rule", None)
+''',
+          )
+
+          # Converter contract: rich backend, execution-only coaching cues.
+          replace_once(
+              "api/structured_plan_generation.py",
+              '''- When the plan states them, carry per-block detail into each block:\n  "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or\n  alternative exercises), "progression_rule" (exercise-level advancement only),\n  and "stop_rules" (list of stop/safety criteria). progression_rule may be omitted\n  when the source gives no genuine exercise progression. Do NOT put taper/week\n  dose restrictions, injury restrictions, session-programming constraints, or\n  stop criteria into progression_rule unless the text actually says how that\n  specific exercise advances.\n- Treat "Easier:" / "Regression:" content as regression_options and "Stop:" /\n  "Stop rule:" content as stop_rules. Never place those labelled lines in\n  coaching_cues or progression_rule. Ignore a bare separator label such as\n  "Regression /" rather than rendering it as athlete guidance.\n''',
+              '''- When the plan states them, carry per-block detail into separate semantic fields:\n  "purpose" (what the exercise develops), "why_today" (why it is placed today),\n  "coaching_cues" (execution-only how-to instructions),\n  "regression_options"/"substitutions" (safer or alternative exercises),\n  "progression_rule" (exercise-level advancement only), and "stop_rules"\n  (stop/safety criteria). Preserve purpose/why_today as structured backend context,\n  but NEVER copy those explanations into coaching_cues.\n- coaching_cues MUST tell the athlete how to execute the exercise: position,\n  movement, intent, brace, rhythm, guard, stance, reset, or other actionable form\n  cues. Do NOT put Purpose, Why today, Easier/Regression, Progress/Progression,\n  Stop/Stop rule, Swap/Substitution, taper rationale, phase rationale, or selection\n  reasoning in coaching_cues.\n- Route labelled source lines deterministically: "Purpose:" -> purpose;\n  "Why today:" -> why_today; "Easier:" / "Regression:" -> regression_options;\n  "Progress:" / "Progression:" -> progression_rule; "Stop:" / "Stop rule:" ->\n  stop_rules; "Swap:" / "Swaps:" / "Substitution:" -> substitutions. Ignore a\n  bare separator label such as "Regression /" rather than rendering it as athlete\n  guidance. progression_rule may be omitted when the source gives no genuine\n  exercise progression. Do NOT put taper/week dose restrictions, injury\n  restrictions, session-programming constraints, or stop criteria into it.\n''',
+          )
+
+          replace_once(
+              "api/structured_plan_generation.py",
+              '''                  "coaching_cues": ["..."], "regression_options": ["..."], "substitutions": ["..."],\n                  "progression_rule": "...", "stop_rules": ["..."]\n''',
+              '''                  "purpose": "...", "why_today": "...", "coaching_cues": ["..."],\n                  "regression_options": ["..."], "substitutions": ["..."],\n                  "progression_rule": "...", "stop_rules": ["..."]\n''',
+          )
+
+          # Frontend backward compatibility: old saved cards can still have labelled
+          # prose in coaching_cues, so classify it at render time without mutating data.
+          replace_once(
+              "web/lib/structured-plan.ts",
+              '''export function getBlockCoachingDisplay(\n  block: StructuredBlock | null | undefined,\n): { cues: string[]; stopRules: string[] } {\n  const cues: string[] = [];\n  const stopRules: string[] = [];\n  for (const cue of getCoachingCues(block)) {\n    if (BARE_ADJUSTMENT_LABEL_RE.test(cue)) {\n      continue;\n    }\n    if (COACHING_STOP_CUE_RE.test(cue)) {\n      stopRules.push(cue);\n      continue;\n    }\n    cues.push(cue);\n  }\n  return { cues, stopRules };\n}\n\n''',
+              '''export function getBlockCoachingDisplay(\n  block: StructuredBlock | null | undefined,\n): { cues: string[]; stopRules: string[] } {\n  const cues: string[] = [];\n  const stopRules: string[] = [];\n  for (const cue of getCoachingCues(block)) {\n    if (BARE_ADJUSTMENT_LABEL_RE.test(cue)) {\n      continue;\n    }\n    if (COACHING_STOP_CUE_RE.test(cue)) {\n      stopRules.push(cue);\n      continue;\n    }\n    cues.push(cue);\n  }\n  return { cues, stopRules };\n}\n\nconst BLOCK_DETAIL_LABEL_RE =\n  /^\\s*(purpose|why\\s+today|easier|regress(?:ion)?|progress(?:ion)?|stop(?:\\s+rule)?|swaps?|substitutions?)\\s*:\\s*(.*)$/i;\nconst COACHING_PURE_STOP_RE = /^\\s*stop(?!-)\\b/i;\n\nfunction dedupeBlockText(values: string[]): string[] {\n  const seen = new Set<string>();\n  const result: string[] = [];\n  for (const value of values) {\n    const text = cleanText(value);\n    if (!text) continue;\n    const key = text.toLowerCase().replace(/\\s+/g, " ").replace(/[.\\s]+$/, "");\n    if (seen.has(key)) continue;\n    seen.add(key);\n    result.push(text);\n  }\n  return result;\n}\n\n/** Athlete-facing execution projection. Rich purpose/why-today reasoning stays\n * on the block object, while labelled legacy prose is routed away from cue bullets. */\nexport function getBlockExecutionDisplay(\n  block: StructuredBlock | null | undefined,\n): {\n  cues: string[];\n  stopRules: string[];\n  regressions: string[];\n  substitutions: string[];\n  progressions: string[];\n} {\n  const cues: string[] = [];\n  const stopRules: string[] = [];\n  const regressions = getStringList(block?.regression_options);\n  const substitutions = getStringList(block?.substitutions);\n  const progressions: string[] = [];\n\n  for (const cue of getCoachingCues(block)) {\n    if (BARE_ADJUSTMENT_LABEL_RE.test(cue)) continue;\n    const labelled = BLOCK_DETAIL_LABEL_RE.exec(cue);\n    if (labelled) {\n      const label = labelled[1].toLowerCase().replace(/\\s+/g, " ");\n      const detail = cleanText(labelled[2]);\n      if (!detail) continue;\n      if (label === "purpose" || label === "why today") continue;\n      if (label === "easier" || label === "regress" || label === "regression") {\n        regressions.push(detail);\n      } else if (label === "progress" || label === "progression") {\n        progressions.push(detail);\n      } else if (label.startsWith("stop")) {\n        stopRules.push(detail);\n      } else {\n        substitutions.push(detail);\n      }\n      continue;\n    }\n    if (COACHING_PURE_STOP_RE.test(cue)) {\n      stopRules.push(cue);\n      continue;\n    }\n    cues.push(cue);\n  }\n\n  return {\n    cues: dedupeBlockText(cues),\n    stopRules: dedupeBlockText(stopRules),\n    regressions: dedupeBlockText(regressions),\n    substitutions: dedupeBlockText(substitutions),\n    progressions: dedupeBlockText(progressions),\n  };\n}\n\n''',
+          )
+
+          replace_once(
+              "web/lib/structured-plan.ts",
+              '''export function getBlockAdjustmentDisplay(\n  block: StructuredBlock | null | undefined,\n): { progression: string | null; stopRules: string[] } {\n  const explicitStops = getStringList(block?.stop_rules);\n  const legacyCueStops = getBlockCoachingDisplay(block).stopRules;\n  const rawProgression = cleanText(block?.progression_rule);\n  let progression: string | null = rawProgression;\n  const embeddedStops: string[] = [];\n\n  if (rawProgression) {\n    const match = EMBEDDED_STOP_RULE_LABEL_RE.exec(rawProgression);\n    if (match) {\n      progression = cleanText(rawProgression.slice(0, match.index).replace(/[\\s—–\\-:;,.]+$/, ""));\n      const stop = cleanText(rawProgression.slice(match.index + match[0].length));\n      if (stop) {\n        embeddedStops.push(stop);\n      }\n    } else if (isStopRuleText(rawProgression)) {\n      progression = null;\n      embeddedStops.push(rawProgression);\n    }\n  }\n\n  if (progression && isProgrammingOnlyProgression(progression)) {\n    progression = null;\n  }\n\n  return {\n    progression,\n    stopRules: dedupeStopRules([...explicitStops, ...legacyCueStops, ...embeddedStops]),\n  };\n}\n''',
+              '''export function getBlockAdjustmentDisplay(\n  block: StructuredBlock | null | undefined,\n): { progression: string | null; stopRules: string[] } {\n  const explicitStops = getStringList(block?.stop_rules);\n  const execution = getBlockExecutionDisplay(block);\n  const progressionCandidates = [\n    cleanText(block?.progression_rule),\n    ...execution.progressions,\n  ].filter((value): value is string => value !== null);\n  let progression: string | null = null;\n  const embeddedStops: string[] = [];\n\n  for (const rawProgression of progressionCandidates) {\n    let candidate: string | null = rawProgression;\n    const match = EMBEDDED_STOP_RULE_LABEL_RE.exec(rawProgression);\n    if (match) {\n      candidate = cleanText(rawProgression.slice(0, match.index).replace(/[\\s—–\\-:;,.]+$/, ""));\n      const stop = cleanText(rawProgression.slice(match.index + match[0].length));\n      if (stop) embeddedStops.push(stop);\n    } else if (isStopRuleText(rawProgression)) {\n      candidate = null;\n      embeddedStops.push(rawProgression);\n    }\n    if (candidate && isProgrammingOnlyProgression(candidate)) candidate = null;\n    if (!progression && candidate) progression = candidate;\n  }\n\n  return {\n    progression,\n    stopRules: dedupeStopRules([\n      ...explicitStops,\n      ...execution.stopRules,\n      ...embeddedStops,\n    ]),\n  };\n}\n''',
+          )
+
+          # Renderer: exercise cards are execution surfaces, not planning transcripts.
+          replace_once(
+              "web/components/structured-plan-renderer.tsx",
+              '''  getBlockCoachingDisplay,\n  getBlockAdjustmentDisplay,\n''',
+              '''  getBlockExecutionDisplay,\n  getBlockAdjustmentDisplay,\n''',
+          )
+          replace_once(
+              "web/components/structured-plan-renderer.tsx",
+              '''  const purpose = athleteFacingRationale(block.purpose);\n  const { cues } = getBlockCoachingDisplay(block);\n  const substitutions = getStringList(block.substitutions);\n  const regressions = getStringList(block.regression_options);\n''',
+              '''  const { cues, regressions, substitutions } = getBlockExecutionDisplay(block);\n''',
+          )
+          replace_once(
+              "web/components/structured-plan-renderer.tsx",
+              '''      {purpose ? <p className="sp-block-purpose">{purpose}</p> : null}\n''',
+              '''''',
+          )
+
+          # Backend regression coverage for routing and rich hidden context.
+          append_once(
+              "tests/test_structured_plan_stop_rules.py",
+              "test_normalizer_routes_planning_prose_away_from_execution_cues",
+              '''def test_normalizer_routes_planning_prose_away_from_execution_cues():
+    block = _normalize_block(
+        {
+            "block_id": "band-punch",
+            "block_type": "accessory",
+            "display_name": "Band-Resisted Punch",
+            "coaching_cues": [
+                "Purpose: transfer horizontal punching force under slight resistance",
+                "Why today: single neural touch without disrupting taper",
+                "Explosive intent; accelerate through full range",
+                "Easier: reduce band tension",
+                "Reset guard immediately",
+                "Stop: sharp ankle pain or uncontrolled balance loss",
+            ],
+            "regression_options": ["Reduce band tension"],
+        }
+    )
+    assert block["purpose"] == "transfer horizontal punching force under slight resistance"
+    assert block["why_today"] == "single neural touch without disrupting taper"
+    assert block["coaching_cues"] == [
+        "Explosive intent; accelerate through full range",
+        "Reset guard immediately",
+    ]
+    assert block["regression_options"] == ["Reduce band tension"]
+    assert block["stop_rules"] == ["sharp ankle pain or uncontrolled balance loss"]
+
+
+def test_converter_prompt_keeps_reasoning_rich_but_cues_execution_only():
+    prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
+    assert '"why_today"' in prompt
+    assert "execution-only how-to instructions" in prompt
+    assert '"Why today:" -> why_today' in prompt
+''',
+          )
+
+          # Pure frontend classification coverage for already-saved legacy plans.
+          replace_once(
+              "web/lib/structured-plan-stop-rules.test.ts",
+              '''import { getBlockAdjustmentDisplay } from "./structured-plan.ts";\n''',
+              '''import { getBlockAdjustmentDisplay, getBlockExecutionDisplay } from "./structured-plan.ts";\n''',
+          )
+          append_once(
+              "web/lib/structured-plan-stop-rules.test.ts",
+              "legacy labelled planning prose is hidden from execution cues",
+              '''test("legacy labelled planning prose is hidden from execution cues", () => {
+  assert.deepEqual(
+    getBlockExecutionDisplay({
+      coaching_cues: [
+        "Purpose: transfer horizontal punching force under slight resistance",
+        "Why today: single neural touch without disrupting taper",
+        "Explosive intent; accelerate through full range",
+        "Easier: reduce band tension",
+        "Reset guard immediately",
+        "Stop: sharp ankle pain",
+      ],
+      regression_options: ["Reduce band tension"],
+    }),
+    {
+      cues: ["Explosive intent; accelerate through full range", "Reset guard immediately"],
+      stopRules: ["sharp ankle pain"],
+      regressions: ["Reduce band tension"],
+      substitutions: [],
+      progressions: [],
+    },
+  );
+});
+''',
+          )
+
+          # Renderer regression: no purpose/why transcript, no duplicate Easier, execution cues remain.
+          append_once(
+              "web/components/structured-plan-stop-rules.test.tsx",
+              "exercise card hides planning transcript and deduplicates Easier guidance",
+              '''test("exercise card hides planning transcript and deduplicates Easier guidance", () => {
+  const html = renderToStaticMarkup(
+    <BlockCard
+      block={{
+        block_id: "band-punch",
+        block_type: "power",
+        display_name: "Band-Resisted Punch",
+        purpose: "Low-volume neural strength to preserve punch power and speed.",
+        why_today: "Single sharp neural touch in the sharpness week.",
+        coaching_cues: [
+          "Purpose: maintain punch speed under slight resistance",
+          "Why today: keep the dose small in sharpness week",
+          "Explosive intent; accelerate through full range",
+          "Easier: reduce band tension",
+          "Reset guard immediately",
+        ],
+        regression_options: ["Reduce band tension"],
+      }}
+    />,
+  );
+
+  assert.equal(html.includes("Low-volume neural strength to preserve punch power and speed."), false);
+  assert.equal(html.includes("Single sharp neural touch in the sharpness week."), false);
+  assert.equal(html.includes("maintain punch speed under slight resistance"), false);
+  assert.equal(html.includes("keep the dose small in sharpness week"), false);
+  assert.equal(html.includes("Explosive intent; accelerate through full range"), true);
+  assert.equal(html.includes("Reset guard immediately"), true);
+  assert.equal(html.split("Reduce band tension").length - 1, 1);
+});
+''',
+          )
+          PY
+
+      - name: Run focused regression tests
+        shell: bash
+        run: |
+          python -m pip install -q -r requirements.txt pytest
+          pytest -q tests/test_structured_plan_stop_rules.py
+          cd web
+          npm ci --ignore-scripts
+          npm run typecheck
+          npm run test:unit -- --test-name-pattern="stop|execution|Band-Resisted|planning transcript"
+
+      - name: Commit cleanup and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-execution-card-cleanup.yml
+          git add api/structured_plan_generation.py api/structured_plan_models.py tests/test_structured_plan_stop_rules.py web/lib/types.ts web/lib/structured-plan.ts web/lib/structured-plan-stop-rules.test.ts web/components/structured-plan-renderer.tsx web/components/structured-plan-stop-rules.test.tsx
+          git commit -m "Make exercise cards execution-first"
+          git push origin HEAD:fix/restore-block-stop-rules
