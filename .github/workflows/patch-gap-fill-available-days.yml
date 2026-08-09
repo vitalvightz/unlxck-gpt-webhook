@@ -95,7 +95,7 @@ jobs:
           source = source.replace(old, new, 1)
 
           old = '''        for target_offset in _gap_candidate_offsets(far_offset, near_offset):
-              candidates.append((target_offset, gap))
+              candidate_offsets.append((target_offset, gap))
           '''
           new = '''        # Between two authoritative sessions, select targets from days the
               # athlete can actually train. Leading/trailing taper behaviour stays
@@ -105,7 +105,7 @@ jobs:
                   near_offset,
                   eligible_offsets=eligible_offsets,
               ):
-                  candidates.append((target_offset, gap))
+                  candidate_offsets.append((target_offset, gap))
           '''
           if old not in source:
               raise SystemExit('between-session loop anchor not found')
