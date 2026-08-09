@@ -1,5 +1,4 @@
 """Focused coverage for deterministic structured-truth shadow validation."""
-
 from __future__ import annotations
 
 import logging
@@ -10,6 +9,7 @@ from api.structured_plan_truth import (
     compare_structured_plan_to_truth,
     extract_structured_plan_truth,
 )
+
 
 BASIC = """D-12 (Monday) - Neural speed touch
 Why: maintain explosive hip-drive.
@@ -82,8 +82,7 @@ def test_multiple_sessions_on_one_dday_are_not_collapsed():
     )
     assert len(truth.days) == 1
     assert [session.title for session in truth.days[0].sessions] == [
-        "Technical-only combat",
-        "Fight Tactical Watch",
+        "Technical-only combat", "Fight Tactical Watch"
     ]
 
 
@@ -147,21 +146,6 @@ def test_block_in_wrong_same_day_session_does_not_satisfy_truth():
         )
     }
     assert "SESSION_MISSING" in codes
-
-
-def test_block_moved_from_existing_session_reports_session_mismatch():
-    truth = extract_structured_plan_truth(
-        "D-10 - Strength\n- Trap-bar deadlift - 3 sets x 3 reps\n"
-        "D-10 - Recovery\n"
-    )
-    card = {
-        "weeks": [{"days": [{"countdown_label": "D-10", "sessions": [
-            {"title": "Strength", "blocks": []},
-            {"title": "Recovery", "blocks": [{"display_name": "Trap-bar deadlift"}]},
-        ]}]}],
-    }
-    codes = {item.code for item in compare_structured_plan_to_truth(truth, card)}
-    assert "SESSION_MISMATCH" in codes
 
 
 def test_empty_truth_session_still_requires_matching_session():

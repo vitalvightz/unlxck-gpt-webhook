@@ -10,7 +10,6 @@ import type {
   DeterministicWeightCut,
   LoadPrescription,
   MeasuredValue,
-  PrescriptionMeasuredValue,
   PlanOutputs,
   StructuredBlock,
   StructuredDay,
@@ -94,17 +93,12 @@ export function formatBlockLoad(load: LoadPrescription | null | undefined): stri
   if (display && !MEANINGLESS_LOAD.has(display.toLowerCase()) && !isNonFiniteNumericToken(display)) {
     return display;
   }
-  const value = formatNumericOrRange(load.value, true);
-  if (!value) {
-    return null;
-  }
-  const unit = cleanText(load.unit);
-  return unit ? `${value} ${unit}` : value;
+  return null;
 }
 
 /** Rest is shown only when it carries a positive value. Hides 0-second rest. */
-export function shouldShowRest(rest: PrescriptionMeasuredValue | null | undefined): boolean {
-  return isObject(rest) && formatNumericOrRange(rest.value) !== null;
+export function shouldShowRest(rest: MeasuredValue | null | undefined): boolean {
+  return isObject(rest) && typeof rest.value === "number" && rest.value > 0;
 }
 
 /** A finite, strictly-positive number — the guard for any count/multiplier the
@@ -122,39 +116,20 @@ export function isNonFiniteNumericToken(text: string): boolean {
   return /^[+-]?(nan|infinity)$/i.test(text.trim());
 }
 
-/** A trusted numeric scalar or range for athlete-facing prescription fields. */
-function formatNumericOrRange(value: unknown, allowZero = false): string | null {
-  if (typeof value === "number") {
-    return Number.isFinite(value) && (allowZero ? value >= 0 : value > 0) ? String(value) : null;
-  }
-  if (typeof value !== "string") {
-    return null;
-  }
-  const text = value.trim();
-  const scalar = /^\d+(?:\.\d+)?$/.test(text);
-  const range = /^\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?$/.test(text);
-  if (!scalar && !range) {
-    return null;
-  }
-  const canonical = text.replace(/\s*[-–]\s*/, "-");
-  const bounds = canonical.split("-").map(Number);
-  const validBounds = bounds.every((bound) => (allowZero ? bound >= 0 : bound > 0));
-  return validBounds && (bounds.length === 1 || bounds[0] <= bounds[1]) ? canonical : null;
-}
-
 /** "180 seconds" / "45 minutes" / null. Rejects non-finite (NaN/Infinity) and
  * negative values — a duration/rest/distance/work measure is never below zero,
  * and a bad number must not leak into the card as "NaN seconds". */
-export function formatMeasured(
-  measured: MeasuredValue | PrescriptionMeasuredValue | null | undefined,
-): string | null {
-  if (!isObject(measured)) {
+export function formatMeasured(measured: MeasuredValue | null | undefined): string | null {
+  if (
+    !isObject(measured) ||
+    typeof measured.value !== "number" ||
+    !Number.isFinite(measured.value) ||
+    measured.value < 0
+  ) {
     return null;
   }
-  const value = formatNumericOrRange(measured.value, true);
-  if (value === null) return null;
   const unit = cleanText(measured.unit);
-  return unit ? `${value} ${unit}` : value;
+  return unit ? `${measured.value} ${unit}` : `${measured.value}`;
 }
 
 /** A reps value that is really a duration string, e.g. "5-6 min", "30s", "2 min". */
@@ -210,7 +185,7 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
     repsText = null;
   }
   // The set multiplier must be a finite positive number, or it is omitted.
-  const sets = formatNumericOrRange(block.sets);
+  const sets = finitePositiveNumber(block.sets) ? (block.sets as number) : null;
   const modeLikeReps = repsText ? isModeLikeReps(repsText) : false;
 
   if ((!repsText || isTimeLikeReps(repsText) || modeLikeReps) && duration) {
@@ -240,9 +215,8 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
     metrics.push({ label: "Distance", value: distance });
   }
 
-  const rounds = formatNumericOrRange(block.rounds);
-  if (rounds) {
-    metrics.push({ label: "Rounds", value: rounds });
+  if (finitePositiveNumber(block.rounds)) {
+    metrics.push({ label: "Rounds", value: String(block.rounds) });
   }
 
   return metrics;

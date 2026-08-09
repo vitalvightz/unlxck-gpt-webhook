@@ -7,10 +7,6 @@ import pytest
 from pydantic import ValidationError
 
 from api.structured_plan_models import (
-    LoadPrescription,
-    MeasuredValue,
-    PrescriptionMeasuredValue,
-    SessionBlock,
     SCHEMA_VERSION,
     StructuredTrainingPlan,
     _STRICT_UNSUPPORTED_KEYWORDS,
@@ -20,51 +16,6 @@ from api.structured_plan_models import (
     safe_parse_structured_plan,
     validate_structured_plan,
 )
-
-
-@pytest.mark.parametrize("value", [3, 2.5, "2-3", "2.5-4", "3.5-5", "2–3"])
-def test_numeric_or_range_schema_values_are_accepted(value):
-    measured = PrescriptionMeasuredValue(value=value, unit="seconds")
-    load = LoadPrescription(method="absolute", value=value, unit="kg")
-    expected = value.replace("–", "-") if isinstance(value, str) else value
-    assert measured.value == expected
-    assert load.value == expected
-
-
-@pytest.mark.parametrize(
-    "value",
-    ["2-", "-3", "2--3", "three-five", "3 to 5", "heavy", "a few", "120-90", "5-2"],
-)
-def test_numeric_or_range_schema_values_reject_prose_and_malformed_ranges(value):
-    with pytest.raises(ValidationError):
-        PrescriptionMeasuredValue(value=value, unit="seconds")
-    with pytest.raises(ValidationError):
-        LoadPrescription(method="absolute", value=value, unit="kg")
-
-
-def test_scalar_measured_values_do_not_accept_ranges():
-    assert MeasuredValue(value=90, unit="kg").value == 90
-    with pytest.raises(ValidationError):
-        MeasuredValue(value="90-120", unit="kg")
-
-
-@pytest.mark.parametrize("field", ["sets", "rounds"])
-@pytest.mark.parametrize("value", [3, "3-5", "3–5"])
-def test_block_counts_accept_scalars_and_ranges(field, value):
-    block = {"block_id": "b", "block_type": "strength", "display_name": "Lift", field: value}
-    parsed = SessionBlock.model_validate(block)
-    expected = value.replace("–", "-") if isinstance(value, str) else value
-    assert getattr(parsed, field) == expected
-
-
-@pytest.mark.parametrize("field", ["sets", "rounds"])
-@pytest.mark.parametrize(
-    "value", ["2-", "-3", "2--3", "three-five", "3 to 5", "heavy", "a few", "5-2"]
-)
-def test_block_counts_reject_prose_and_malformed_ranges(field, value):
-    block = {"block_id": "b", "block_type": "strength", "display_name": "Lift", field: value}
-    with pytest.raises(ValidationError):
-        SessionBlock.model_validate(block)
 
 
 def _walk_schema_nodes(node, path="$"):
@@ -295,25 +246,6 @@ def test_valid_fight_camp_plan_validates():
     assert isinstance(plan, StructuredTrainingPlan)
     assert plan.plan_metadata.plan_type == "fight_camp"
     assert plan.schema_version == SCHEMA_VERSION
-
-
-@pytest.mark.parametrize(
-    "path",
-    ["body_mass", "planned_duration", "performed_duration"],
-)
-def test_non_prescription_measured_fields_reject_ranges(path):
-    data = _valid_plan()
-    session = data["weeks"][0]["days"][0]["sessions"][0]
-    if path == "body_mass":
-        data["athlete_context"]["body_mass"]["value"] = "90-120"
-    elif path == "planned_duration":
-        session["planned_duration"]["value"] = "40-50"
-    else:
-        session["completion"] = {
-            "performed_duration": {"value": "40-50", "unit": "minutes"}
-        }
-    with pytest.raises(ValidationError):
-        validate_structured_plan(data)
 
 
 def test_open_ongoing_plan_type_validates():

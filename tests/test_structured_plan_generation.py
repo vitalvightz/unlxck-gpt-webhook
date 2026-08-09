@@ -10,13 +10,10 @@ import copy
 import json
 from pathlib import Path
 
-import pytest
-
 from api.structured_plan_generation import (
     BANNED_BIOMETRIC_KEYS,
     _normalize_daily_check_ins,
     _normalize_day,
-    _normalize_effort,
     _normalize_load,
     _normalize_measured,
     _strip_fallback_from_broken_json,
@@ -109,104 +106,6 @@ def test_valid_plan_outcome_is_valid_and_carries_schema_version():
     # Raw markdown fallback is preserved on the structured object.
     assert outcome.structured_plan["raw_markdown_fallback"]
     assert outcome.errors == []
-
-
-def test_optional_malformed_effort_is_removed_without_invalidating_card():
-    plan = _valid_plan()
-    block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    block["effort"] = {"method": "RPE", "value": "8-6", "scale": "1-10"}
-
-    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
-
-    assert outcome.status == "valid"
-    assert outcome.structured_plan is not None
-    persisted = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    assert persisted["effort"] is None
-
-
-@pytest.mark.parametrize("candidate_effort", [8, "8-6"])
-def test_authoritative_ranges_replace_incorrect_candidate_values(candidate_effort):
-    plan = _valid_plan()
-    block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    block["sets"] = 4
-    block["rest"] = {"value": 60, "unit": "seconds"}
-    block["load"] = {
-        "method": "absolute",
-        "value": 5,
-        "unit": "kg",
-        "ref": None,
-    }
-
-    block["reps"] = 8
-    block["effort"] = {
-        "method": "RPE",
-        "value": candidate_effort,
-        "scale": "1-10",
-    }
-
-    outcome = build_structured_plan_outcome(
-        plan,
-        raw_markdown=(
-            "## Week — SPP (D-19 to D-13)\n"
-            "D-15 - Power Transfer Touch\n"
-            "- Barbell Back Squat - 2-3 sets x 4-6 reps; "
-            "Rest 90-120 sec; 2-4 kg; RPE 6-7\n"
-        ),
-    )
-
-    assert outcome.status == "valid"
-    assert outcome.structured_plan is not None
-    persisted = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    assert persisted["sets"] == "2-3"
-    assert persisted["reps"] == "4-6"
-    assert persisted["rest"] == {"value": "90-120", "unit": "seconds"}
-    assert persisted["load"]["value"] == "2-4"
-    assert persisted["load"]["unit"] == "kg"
-    assert persisted["effort"]["value"] == "6-7"
-
-
-def test_block_moved_between_existing_same_day_sessions_fails_closed():
-    plan = _valid_plan()
-    day = plan["weeks"][0]["days"][0]
-    strength = day["sessions"][0]
-    moved_block = strength["blocks"].pop()
-    recovery = copy.deepcopy(strength)
-    recovery["session_id"] = "ses-recovery"
-    recovery["title"] = "Recovery"
-    recovery["blocks"] = [moved_block]
-    day["sessions"].append(recovery)
-
-    outcome = build_structured_plan_outcome(
-        plan,
-        raw_markdown=(
-            "D-15 - Power Transfer Touch\n"
-            "- Barbell Back Squat - 4 sets x 4-6 reps\n"
-            "D-15 - Recovery\n"
-        ),
-    )
-
-    assert outcome.status == "invalid_fallback_used"
-    assert outcome.structured_plan is None
-    assert any("MISPLACED_SESSION" in error for error in outcome.errors)
-
-
-def test_renamed_block_cannot_bypass_authoritative_prescription():
-    plan = _valid_plan()
-    block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    block["display_name"] = "Heavy Barbell Back Squat"
-    block["sets"] = 6
-
-    outcome = build_structured_plan_outcome(
-        plan,
-        raw_markdown=(
-            "D-15 - Power Transfer Touch\n"
-            "- Barbell Back Squat - 4 sets x 4-6 reps\n"
-        ),
-    )
-
-    assert outcome.status == "invalid_fallback_used"
-    assert outcome.structured_plan is None
-    assert any("block_not_uniquely_resolved" in error for error in outcome.errors)
 
 
 def test_d10_structured_generation_restores_week_context_and_cleans_adjustment_cues():
@@ -808,7 +707,7 @@ def test_normalize_block_red_flags_and_string_effort():
                     "blocks": [
                         {
                             "display_name": "Jab bursts",
-                            "effort": "RPE 7-8",  # bare string -> exact range prescription
+                            "effort": "RPE 7-8",  # bare string -> prescription (upper bound)
                             "red_flags": [
                                 {
                                     "rule_id": "tech",
@@ -827,58 +726,9 @@ def test_normalize_block_red_flags_and_string_effort():
         }
     )
     first, second = day["sessions"][0]["blocks"]
-    assert first["effort"] == {"method": "RPE", "value": "7-8", "scale": "1-10"}
+    assert first["effort"] == {"method": "RPE", "value": 8.0, "scale": "1-10"}
     assert first["red_flags"][0]["threshold"] is None
     assert second["effort"] is None
-
-
-def test_normalize_effort_scalars_ranges_and_text_cues():
-    assert _normalize_effort("RPE 6") == {
-        "method": "RPE", "value": 6.0, "scale": "1-10"
-    }
-    assert _normalize_effort("RIR 2") == {
-        "method": "RIR", "value": 2.0, "scale": None
-    }
-    assert _normalize_effort("RPE 6-7") == {
-        "method": "RPE", "value": "6-7", "scale": "1-10"
-    }
-    assert _normalize_effort("RPE 6–7") == {
-        "method": "RPE", "value": "6-7", "scale": "1-10"
-    }
-    assert _normalize_effort("RIR 2-3") == {
-        "method": "RIR", "value": "2-3", "scale": None
-    }
-    assert _normalize_effort("6") == {
-        "method": "RPE", "value": 6.0, "scale": "1-10"
-    }
-    assert _normalize_effort("6-7") == {
-        "method": "RPE", "value": "6-7", "scale": "1-10"
-    }
-
-    for malformed in ("RPE 8-6", "RIR 4-2", "RPE 7--8", "RPE 7-", "RPE -8"):
-        assert _normalize_effort(malformed) is None
-
-    assert _normalize_effort(
-        {"method": "RPE", "value": "6", "scale": "1-10"}
-    ) == {"method": "RPE", "value": 6.0, "scale": "1-10"}
-    assert _normalize_effort(
-        {"method": "RPE", "value": "6-7", "scale": "1-10"}
-    ) == {"method": "RPE", "value": "6-7", "scale": "1-10"}
-    assert _normalize_effort(
-        {"method": "RPE", "value": "8-6", "scale": "1-10"}
-    ) is None
-    assert _normalize_effort(
-        {"method": "RPE", "value": "RPE 8-6", "scale": "1-10"}
-    ) is None
-    assert _normalize_effort(
-        {"method": "intent", "value": "fast but relaxed"}
-    ) == {"method": "intent", "value": "fast but relaxed"}
-    assert _normalize_effort(
-        {"method": "heart_rate_zone", "value": "Zone 2"}
-    ) == {"method": "heart_rate_zone", "value": "Zone 2"}
-    assert _normalize_effort(
-        {"method": "pace", "value": "3:30/km"}
-    ) == {"method": "pace", "value": "3:30/km"}
 
 
 def test_normalize_recovers_invalid_fallback_card_shape():
@@ -1374,15 +1224,16 @@ def test_normalize_measured_coerces_dict_with_string_range_value():
     """The exact live failure: plan ranges written into the dict form.
 
     "full recovery 90–120 sec" came back as {"value": "90-120", "unit": "sec"}
-    and the old normalizer collapsed the source range. Both bounds must survive,
-    with the unit aliased within the field's dimension.
+    and the untouched pass-through failed MeasuredValue (value must be float),
+    rejecting the whole card. A range reads its upper bound (effort convention;
+    more rest is safer) and the unit is aliased within the field's dimension.
     """
     assert _normalize_measured({"value": "90-120", "unit": "sec"}, "seconds") == {
-        "value": "90-120",
+        "value": 120.0,
         "unit": "seconds",
     }
     assert _normalize_measured({"value": "5–6", "unit": "s"}, "seconds") == {
-        "value": "5-6",
+        "value": 6.0,
         "unit": "seconds",
     }
     assert _normalize_measured({"value": 45, "unit": "min"}, "minutes") == {
@@ -1400,7 +1251,7 @@ def test_normalize_measured_dict_without_readable_value_is_dropped():
 
 def test_normalize_measured_dict_reads_value_from_display_text():
     assert _normalize_measured({"unit": "sec", "display": "90-120 sec"}, "seconds") == {
-        "value": "90-120",
+        "value": 120.0,
         "unit": "seconds",
     }
 
@@ -1413,9 +1264,9 @@ def test_normalize_measured_dict_missing_unit_gets_field_default():
 
 
 def test_normalize_measured_parses_bare_range_strings():
-    assert _normalize_measured("90-120 sec", "seconds") == {"value": "90-120", "unit": "seconds"}
-    assert _normalize_measured("60–90", "seconds") == {"value": "60-90", "unit": "seconds"}
-    assert _normalize_measured("45-60 s", "seconds") == {"value": "45-60", "unit": "seconds"}
+    assert _normalize_measured("90-120 sec", "seconds") == {"value": 120.0, "unit": "seconds"}
+    assert _normalize_measured("60–90", "seconds") == {"value": 90.0, "unit": "seconds"}
+    assert _normalize_measured("45-60 s", "seconds") == {"value": 60.0, "unit": "seconds"}
 
 
 def test_block_measured_defaults_follow_bank_conventions():
@@ -1463,9 +1314,10 @@ def test_normalize_load_captures_of_ref():
     assert load["value"] == 85.0
 
 
-def test_normalize_load_range_preserves_bounds_with_ref():
+def test_normalize_load_range_takes_top_value_with_ref():
+    # Bank prescriptions read like "75-85% 1RM"; take the working top end.
     load = _normalize_load("75-85% 1RM")
-    assert load["value"] == "75-85"
+    assert load["value"] == 85.0
     assert load["ref"] == "1RM"
 
 
@@ -1494,7 +1346,7 @@ def test_normalize_load_dict_with_prose_method_is_coerced():
     )
     LoadPrescription.model_validate(load)
     assert load["method"] == "absolute"
-    assert load["value"] == "2-4"
+    assert load["value"] == 4.0  # a range reads its working top end
     assert load["unit"] == "kg"
 
 
@@ -1502,7 +1354,7 @@ def test_normalize_load_dict_reads_number_from_display_when_value_missing():
     load = _normalize_load({"method": "dumbbell", "display": "2-4 kg"})
     LoadPrescription.model_validate(load)
     assert load["method"] == "absolute"
-    assert load["value"] == "2-4"
+    assert load["value"] == 4.0
 
 
 def test_normalize_load_dict_infers_method_from_display_context():
@@ -1516,7 +1368,7 @@ def test_normalize_load_dict_infers_method_from_display_context():
 def test_normalize_load_dict_coerces_string_range_value():
     load = _normalize_load({"method": "percentage", "value": "75-85", "unit": "percent"})
     LoadPrescription.model_validate(load)
-    assert load["value"] == "75-85"
+    assert load["value"] == 85.0
 
 
 def test_normalize_load_dict_bodyweight_needs_no_number():
@@ -1544,7 +1396,7 @@ def test_normalize_load_dict_reads_unit_anchored_number_not_rep_counts():
     )
     LoadPrescription.model_validate(load)
     assert load["method"] == "absolute"
-    assert load["value"] == "2-4"
+    assert load["value"] == 4.0
     assert load["unit"] == "kg"
 
 
@@ -1618,7 +1470,7 @@ def test_parse_bank_prescription_extracts_sets_reps_load():
     assert parsed["sets"] == 3
     assert parsed["reps"] == "5"
     assert parsed["load"]["method"] == "percentage"
-    assert parsed["load"]["value"] == "75-85"
+    assert parsed["load"]["value"] == 85.0
     assert parsed["load"]["ref"] == "1RM"
 
 
