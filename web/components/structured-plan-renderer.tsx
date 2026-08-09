@@ -879,7 +879,7 @@ function openTimelineDayLabel(
     return formatAppDate(date).split(" ").slice(0, 3).join(" ").toUpperCase();
   }
   const weekday = cleanText(day.weekday)?.toUpperCase();
-  return weekday ? `WEEK ${weekNumber} · ${weekday}` : fallbackLabel;
+  return weekday ? `WEEK ${weekNumber} \u00b7 ${weekday}` : fallbackLabel;
 }
 
 /** One row of the week's day timeline: a real plan day (with its original index
@@ -1092,7 +1092,7 @@ export function CampDayCard({
   completionIndex?: CompletionIndex;
   /** Server-authoritative athlete-local day (drives Missed + the retro window). */
   currentTrainingDayIso?: string | null;
-  /** Opens the retro-log flow for a past, still-loggable session. */
+  /** Opens the retro-log form for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
@@ -1789,7 +1789,7 @@ function WeekOverview({
     `Week ${openWeekNumber} of 4`,
   );
   const heading = openOngoing
-    ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
+    ? `Block ${scheduleContext?.block_number ?? 1} \u00b7 ${openWeekHeading}`
     : `Week ${weekNumber}`;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
 
