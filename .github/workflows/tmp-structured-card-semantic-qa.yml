@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Remove redundant prompt patch from temporary script
+      - name: Prepare temporary patch script
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -31,7 +31,15 @@ jobs:
               flags=re.S,
           )
           assert n == 1
-          p.write_text(s)
+          lines = s.splitlines()
+          found = False
+          for i, line in enumerate(lines):
+              if "s, n = re.subn(r'selectCompactStopRule" in line:
+                  lines[i] = "s, n = re.subn(r'selectCompactStopRule\\(\\s*stopRules,\\s*planSafetyTexts\\s*\\)', lambda _m: 'stopRules.map((rule) => rule.trim().replace(/^stop(?:\\\\s+rule)?\\\\s*:\\\\s*/i, \\\"\\\").trim()).find(Boolean) || null', s, count=1)"
+                  found = True
+                  break
+          assert found
+          p.write_text('\n'.join(lines) + '\n')
           PY
       - name: Apply patch
         run: python scripts/tmp_patch_structured_semantic_qa.py
