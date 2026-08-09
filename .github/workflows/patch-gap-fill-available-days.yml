@@ -27,19 +27,9 @@ jobs:
             requirements-dev.txt
 
       - name: Install test dependencies
-        env:
-          PIP_RETRIES: "5"
-          PIP_DEFAULT_TIMEOUT: "60"
         run: |
           python -m pip install --upgrade pip
-          n=0
-          until pip install -r requirements-dev.txt; do
-            n=$((n + 1))
-            if [ "$n" -ge 3 ]; then
-              echo "pip install failed after $n attempts"; exit 1
-            fi
-            sleep $((n * 15))
-          done
+          pip install -r requirements-dev.txt
           pip check
 
       - name: Patch between-session gap fill
@@ -47,18 +37,18 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          source_path = Path('fightcamp/gap_fill_inserts.py')
-          source = source_path.read_text()
+          path = Path("fightcamp/gap_fill_inserts.py")
+          source = path.read_text()
 
-          old = '''def _gap_candidate_offsets(far_offset: int, near_offset: int) -> list[int]:
+          old = """def _gap_candidate_offsets(far_offset: int, near_offset: int) -> list[int]:
               gap = far_offset - near_offset
               if gap < GAP_FILL_MIN_DAYS:
                   return []
               available = [offset for offset in range(far_offset - 1, near_offset, -1) if offset > 0]
               if not available:
                   return []
-          '''
-          new = '''def _gap_candidate_offsets(
+          """
+          new = """def _gap_candidate_offsets(
               far_offset: int,
               near_offset: int,
               *,
@@ -74,77 +64,78 @@ jobs:
               ]
               if not available:
                   return []
-          '''
+          """
           if old not in source:
-              raise SystemExit('gap candidate definition anchor not found')
+              raise SystemExit("gap candidate definition anchor not found")
           source = source.replace(old, new, 1)
 
-          old = '''def _candidate_offsets_from_sequence(
+          old = """def _candidate_offsets_from_sequence(
               offsets: list[int], days_until_fight: int | None = None
           ) -> list[tuple[int, int]]:
-          '''
-          new = '''def _candidate_offsets_from_sequence(
+          """
+          new = """def _candidate_offsets_from_sequence(
               offsets: list[int],
               days_until_fight: int | None = None,
               *,
               eligible_offsets: set[int] | None = None,
           ) -> list[tuple[int, int]]:
-          '''
+          """
           if old not in source:
-              raise SystemExit('candidate sequence signature anchor not found')
+              raise SystemExit("candidate sequence signature anchor not found")
           source = source.replace(old, new, 1)
 
-          old = '''        for target_offset in _gap_candidate_offsets(far_offset, near_offset):
-              candidate_offsets.append((target_offset, gap))
-          '''
-          new = '''        # Between two authoritative sessions, select targets from days the
-              # athlete can actually train. Leading/trailing taper behaviour stays
-              # unchanged; this only prevents legal in-gap weekdays being lost.
-              for target_offset in _gap_candidate_offsets(
-                  far_offset,
-                  near_offset,
-                  eligible_offsets=eligible_offsets,
-              ):
-                  candidate_offsets.append((target_offset, gap))
-          '''
-          if old not in source:
-              raise SystemExit('between-session loop anchor not found')
-          source = source.replace(old, new, 1)
+          needle = "        for target_offset in _gap_candidate_offsets(far_offset, near_offset):"
+          replacement = "\n".join([
+              "        # Between two authoritative sessions, choose targets from days the",
+              "        # athlete can actually train. Leading/trailing behaviour is unchanged.",
+              "        for target_offset in _gap_candidate_offsets(",
+              "            far_offset,",
+              "            near_offset,",
+              "            eligible_offsets=eligible_offsets,",
+              "        ):",
+          ])
+          if needle not in source:
+              raise SystemExit("between-session loop anchor not found")
+          source = source.replace(needle, replacement, 1)
 
-          old = '''    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)
-          '''
-          new = '''    # Choose ordinary between-session gap targets from legal declared
-              # training days before geometric placement. Previously D-14 -> D-8
-              # could target D-12/D-10 first and then discard both if unavailable,
-              # even when D-11/D-9 were declared available.
-              eligible_gap_offsets = {
-                  offset
-                  for offset in range(1, max(days_until_fight, max(offsets)) + 1)
-                  if offset not in existing_exclusive_offsets
-                  and can_render_late_taper_day(
-                      countdown_offset=offset,
-                      weekday=str(countdown_map.get(f"D-{offset}") or ""),
-                      training_days=training_days,
-                  )
-              }
-              candidate_offsets = _candidate_offsets_from_sequence(
-                  offsets,
-                  days_until_fight,
-                  eligible_offsets=eligible_gap_offsets,
-              )
-          '''
-          if old not in source:
-              raise SystemExit('candidate offset call anchor not found')
-          source = source.replace(old, new, 1)
-          source_path.write_text(source)
+          needle = "    candidate_offsets = _candidate_offsets_from_sequence(offsets, days_until_fight)"
+          replacement = "\n".join([
+              "    # Choose between-session gap targets from legal declared training days",
+              "    # before nearest-target placement. This prevents an unavailable geometric",
+              "    # target from being discarded when another valid day exists in the gap.",
+              "    eligible_gap_offsets = {",
+              "        offset",
+              "        for offset in range(1, max(days_until_fight, max(offsets)) + 1)",
+              "        if offset not in existing_exclusive_offsets",
+              "        and can_render_late_taper_day(",
+              "            countdown_offset=offset,",
+              "            weekday=str(countdown_map.get(f\"D-{offset}\") or \"\"),",
+              "            training_days=training_days,",
+              "        )",
+              "    }",
+              "    candidate_offsets = _candidate_offsets_from_sequence(",
+              "        offsets,",
+              "        days_until_fight,",
+              "        eligible_offsets=eligible_gap_offsets,",
+              "    )",
+          ])
+          if needle not in source:
+              raise SystemExit("candidate offset call anchor not found")
+          source = source.replace(needle, replacement, 1)
+          path.write_text(source)
 
-          test_path = Path('tests/test_late_fight_availability_contract.py')
+          test_path = Path("tests/test_late_fight_availability_contract.py")
           tests = test_path.read_text()
-          addition = '''\n\ndef test_gap_fill_rehomes_two_targets_onto_declared_available_days():
-              # Regression for the athlete-facing D-14 Fri -> D-8 Thu hole.
-              # A six-day session gap owes two support inserts. D-12 (Sun) and
-              # D-10 (Tue) are the geometric targets, but this athlete can train
-              # Monday/Wednesday instead, so the scheduler must use D-11/D-9.
+          marker = "def test_gap_fill_rehomes_two_targets_onto_declared_available_days():"
+          if marker not in tests:
+              tests += '''
+
+
+def test_gap_fill_rehomes_two_targets_onto_declared_available_days():
+              # Regression: D-14 Fri -> D-8 Thu is a six-day session gap and owes
+              # two support inserts. If Sun/Tue are unavailable but Mon/Wed are
+              # declared available, the inserts must move to D-11/D-9 rather than
+              # disappear and leave five Rest / Recovery days.
               athlete = _athlete()
               athlete["training_days"] = ["Monday", "Wednesday", "Thursday", "Friday"]
 
@@ -163,9 +154,6 @@ jobs:
                   for role in gap_support
               )
           '''
-          marker = 'def test_gap_fill_rehomes_two_targets_onto_declared_available_days():'
-          if marker not in tests:
-              tests += addition
           test_path.write_text(tests)
           PY
 
