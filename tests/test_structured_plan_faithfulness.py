@@ -466,6 +466,28 @@ def test_week_header_is_not_parsed_as_a_training_day():
     assert token_days.get("pallof") == {30}
 
 
+def test_countdown_leading_fight_week_titles_remain_distinct_day_sections():
+    """A D-day heading may legitimately include ``fight-week`` in its title."""
+    source = """D-11 (Wednesday) — Light Combat / Technical
+Your declared light-combat / technical session. Keep it as scheduled.
+
+D-9 (Friday) — Fight-week freshness
+- Band face pull, light: 2 x 12 reps, controlled tempo.
+
+D-4 (Wednesday) — Light Combat / Technical
+Your declared light-combat / technical session. Keep it as scheduled.
+
+D-2 (Friday) — Fight-week freshness
+- Band pull-apart, low volume: 2 x 12 controlled reps.
+"""
+
+    sections = faithfulness._source_day_sections(source)
+    assert set(sections) == {11, 9, 4, 2}
+    token_days = faithfulness._source_token_days(sections)
+    assert token_days.get("face") == {9}
+    assert token_days.get("apart") == {2}
+
+
 # --- fail-closed on internal error -----------------------------------------
 
 
