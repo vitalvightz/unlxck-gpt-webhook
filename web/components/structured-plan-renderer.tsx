@@ -50,7 +50,6 @@ import {
   resolveOpenPlanWeekNumber,
   resolvePlanProgress,
   weekCompletion,
-  weekLoadProxy,
   weekSessionSummary,
   type Completion,
   type CompletionIndex,
@@ -1369,7 +1368,12 @@ function DeterministicWeightCutLine({
 /** Plan nutrition prose (the legacy LLM/string fields) — fallback only. */
 function NutritionProse({ plan }: { plan: StructuredPlan }) {
   const nutrition = plan.nutrition;
-  const rows = [
+  const rows: Array<{
+    label: string;
+    value: string | null;
+    wide?: boolean;
+    wideMobile?: boolean;
+  }> = [
     { label: "Summary", value: cleanText(nutrition?.summary) },
     { label: "Daily", value: cleanText(nutrition?.daily_focus) },
     { label: "Training days", value: cleanText(nutrition?.training_day_guidance) },
@@ -1737,7 +1741,7 @@ function WeekStrip({
   );
 }
 
-/** The selected week's countdown/dates, load proxy and completion.
+/** The selected week's countdown/dates, work sources and app completion.
  *  The week goal is already shown in the heading via weekLabel, and the phase is
  *  already visible in the week pill, so this overview avoids repeating it. */
 function WeekOverview({
@@ -1754,7 +1758,6 @@ function WeekOverview({
   openOngoing: boolean;
   scheduleContext?: PlanScheduleContext | null;
 }) {
-  const load = openOngoing ? null : weekLoadProxy(week);
   const completion = weekCompletion(week, completionIndex);
   const sessionSummary = weekSessionSummary(week);
   const countdownStart = formatCountdownLabel(week.countdown_start);
@@ -1775,26 +1778,20 @@ function WeekOverview({
   const rows = [
     { label: "Countdown", value: countdownRange },
     { label: "Dates", value: dateRange, wide: true },
-    { label: "Load", value: load },
     {
-      label: "Training days",
-      value: sessionSummary.trainingDays > 0 ? `${sessionSummary.trainingDays}` : null,
-    },
-    {
-      label: "Plan sessions",
+      label: "App sessions",
       value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
     },
     {
-      label: "Coach/gym combat sessions",
+      label: "Coach/gym days",
       value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
     },
     {
-      label: "Completion",
+      label: "App completed",
       value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
+      wideMobile: true,
     },
-  ].filter((row): row is { label: string; value: string; wide?: boolean } =>
-    Boolean(row.value),
-  );
+  ].filter((row) => Boolean(row.value));
   const baseHeading = weekLabel(week);
   const openWeekNumber = resolveFiniteWeekNumber(
     week.week_index,
@@ -1826,7 +1823,12 @@ function WeekOverview({
       {rows.length > 0 ? (
         <div className="sp-block-stats cm-week-overview-stats">
           {rows.map((row) => (
-            <span key={row.label} className="sp-stat" data-wide={row.wide ? "" : undefined}>
+            <span
+              key={row.label}
+              className="sp-stat"
+              data-wide={row.wide ? "" : undefined}
+              data-wide-mobile={row.wideMobile ? "" : undefined}
+            >
               <span className="sp-stat-label">{row.label}</span>
               {row.value}
             </span>

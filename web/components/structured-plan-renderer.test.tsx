@@ -1684,7 +1684,7 @@ test("a session-less rest day does not render an awkward '0 sessions' tag", () =
   assert.equal(html.includes("0 session"), false);
 });
 
-test("week overview separates training days, app sessions, and coach-led sessions", () => {
+test("week overview separates app sessions, coach-led days, and app completion", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1697,7 +1697,14 @@ test("week overview separates training days, app sessions, and coach-led session
           {
             date: "2026-06-18",
             day_type: "high",
-            sessions: [{ session_id: "s1", title: "Lower strength", blocks: [] }],
+            sessions: [
+              {
+                session_id: "s1",
+                title: "Lower strength",
+                completion_status: "done",
+                blocks: [],
+              },
+            ],
           },
           {
             date: "2026-06-19",
@@ -1729,14 +1736,69 @@ test("week overview separates training days, app sessions, and coach-led session
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />);
 
-  assert.equal(html.includes("Training days"), true);
-  assert.equal(html.includes("Plan sessions</span>"), true);
-  assert.equal(html.includes("App-prescribed"), false);
-  assert.equal(html.includes("Coach/gym combat sessions</span>"), true);
-  assert.equal(html.includes("Completion</span>"), true);
-  assert.equal(html.includes("App completion"), false);
-  assert.equal(html.includes("Days</span>"), false);
-  assert.equal(html.includes("Completed</span>"), false);
+  assert.equal(html.includes("App sessions</span>2"), true);
+  assert.equal(html.includes("Coach/gym days</span>3"), true);
+  assert.equal(html.includes("App completed</span>1/2"), true);
+  assert.equal(html.includes("Load</span>"), false);
+  assert.equal(html.includes("Training days</span>"), false);
+  assert.equal(html.includes("Plan sessions</span>"), false);
+  assert.equal(html.includes("Coach/gym combat sessions</span>"), false);
+  assert.equal(html.includes(">Completion</span>"), false);
+});
+
+test("week overview hides source counters that are not present", () => {
+  const renderDays = (
+    days: NonNullable<NonNullable<StructuredPlan["weeks"]>[number]["days"]>,
+  ): string => {
+    const plan: StructuredPlan = {
+      schema_version: "1.0",
+      plan_metadata: { title: "Fight Camp", sport: "mma", plan_type: "fight_camp" },
+      weeks: [
+        {
+          week_id: "wk-1",
+          week_index: 1,
+          phase_label: "SPP",
+          days,
+        },
+      ],
+    };
+
+    return renderToStaticMarkup(
+      <StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />,
+    );
+  };
+
+  const appOnlyHtml = renderDays([
+    {
+      date: "2026-06-18",
+      sessions: [{ session_id: "s1", title: "Strength primer", blocks: [] }],
+    },
+  ]);
+  assert.equal(appOnlyHtml.includes("App sessions</span>1"), true);
+  assert.equal(appOnlyHtml.includes("App completed</span>0/1"), true);
+  assert.equal(appOnlyHtml.includes("Coach/gym days</span>"), false);
+
+  const coachOnlyHtml = renderDays([
+    {
+      date: "2026-06-18",
+      today_card: { headline: "Coach-led technical session" },
+      sessions: [],
+    },
+  ]);
+  assert.equal(coachOnlyHtml.includes("Coach/gym days</span>1"), true);
+  assert.equal(coachOnlyHtml.includes("App sessions</span>"), false);
+  assert.equal(coachOnlyHtml.includes("App completed</span>"), false);
+
+  const emptyHtml = renderDays([
+    {
+      date: "2026-06-18",
+      day_type: "rest",
+      sessions: [],
+    },
+  ]);
+  assert.equal(emptyHtml.includes("App sessions</span>"), false);
+  assert.equal(emptyHtml.includes("Coach/gym days</span>"), false);
+  assert.equal(emptyHtml.includes("App completed</span>"), false);
 });
 
 test("completed work is tagged with the calm success tone, never the brand red accent", () => {

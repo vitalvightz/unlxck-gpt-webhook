@@ -19911,6 +19911,12 @@ html[data-theme="light"] .loading-operational-item {
   .cm-week-overview-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* Completion is scoped to app sessions, so it closes the compact source
+     summary on its own row instead of leaving a single orphaned tile. */
+  .cm-week-overview-stats .sp-stat[data-wide-mobile] {
+    grid-column: span 2;
+  }
 }
 
 /* ── Safety notes (medical / injury / weight-cut boundaries) ───────────── */
