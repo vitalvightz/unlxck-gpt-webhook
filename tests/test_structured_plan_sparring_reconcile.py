@@ -190,8 +190,6 @@ def _late_context_brief(*, d_day: int = 9, downgraded: bool = True) -> dict:
 
 
 def test_stamps_coach_led_headline_on_mislabelled_rest_day():
-    # The converter emitted Thursday (D-31) as a sessionless day headlined like a
-    # rest day; reconciliation must restamp it so it classifies as coach-led.
     plan = _structured_plan([_day("D-31", headline="Recovery")])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
@@ -208,8 +206,6 @@ def test_stamps_when_headline_is_blank():
 
 
 def test_inserts_dropped_sparring_day_into_covering_week():
-    # The converter dropped Thursday entirely; the week still carries D-33 and
-    # D-30, so D-31 must be inserted between them in chronological order.
     plan = _structured_plan([_day("D-33", headline="Strength"), _day("D-30", headline="Aerobic")])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
@@ -223,24 +219,18 @@ def test_inserts_dropped_sparring_day_into_covering_week():
 
 
 def test_surfaces_coach_led_contact_alongside_real_app_sessions():
-    # A declared sparring day the converter also gave app work must keep its
-    # session card AND surface the coach-owned contact so the sparring day still
-    # shows — the two coexist on the same day.
     real_session = [{"title": "Fight Tactical Watch", "blocks": []}]
     plan = _structured_plan([_day("D-31", headline="Fight Tactical Watch", sessions=real_session)])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
     day = plan["weeks"][0]["days"][0]
-    # The app session headline and blocks are left untouched...
     assert day["today_card"]["headline"] == "Fight Tactical Watch"
     assert day["sessions"] == real_session
-    # ...but the coach-owned contact is surfaced on its own field for the renderer.
     assert day["today_card"]["coach_led_contact"] == "Hard sparring"
     assert any("surfaced coach-led contact" in note for note in notes)
 
 
 def test_does_not_double_surface_coach_led_contact():
-    # An already-set coach_led_contact (e.g. a re-run) is left as-is.
     real_session = [{"title": "Fight Tactical Watch", "blocks": []}]
     day = _day("D-31", headline="Fight Tactical Watch", sessions=real_session)
     day["today_card"]["coach_led_contact"] = "Hard sparring"
@@ -252,9 +242,6 @@ def test_does_not_double_surface_coach_led_contact():
 
 
 def test_surfaces_coach_led_contact_even_when_app_headline_already_coach_led():
-    # The contact block renders only from coach_led_contact, and session.title can
-    # shadow the day headline, so a coach-led-looking headline is NOT enough to keep
-    # the contact visible. Populate coach_led_contact regardless.
     real_session = [{"title": "Tactical Cue Card", "blocks": []}]
     plan = _structured_plan(
         [_day("D-31", headline="Coach-led boxing session", sessions=real_session)]
@@ -262,10 +249,8 @@ def test_surfaces_coach_led_contact_even_when_app_headline_already_coach_led():
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
     day = plan["weeks"][0]["days"][0]
-    # App headline and session are untouched...
     assert day["today_card"]["headline"] == "Coach-led boxing session"
     assert day["sessions"] == real_session
-    # ...and the coach-owned contact is still surfaced so it cannot be hidden.
     assert day["today_card"]["coach_led_contact"] == "Hard sparring"
     assert any("surfaced coach-led contact" in note for note in notes)
 
@@ -277,7 +262,7 @@ def test_d9_declared_technical_day_keeps_tactical_watch_as_attached_filler():
 
     day = plan["weeks"][0]["days"][0]
     assert day["today_card"]["headline"] == "Fight Tactical Watch"
-    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
     assert day["sessions"] == tactical_watch
     assert any("surfaced coach-led contact" in note for note in notes)
 
@@ -297,7 +282,7 @@ def test_declared_technical_day_preserves_app_work_alongside_contact():
 
     day = plan["weeks"][0]["days"][0]
     assert day["today_card"]["headline"] == "Fight-week freshness"
-    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
     assert day["sessions"] == freshness
     assert not any("removed incompatible same-day app work" in note for note in notes)
 
@@ -315,7 +300,7 @@ def test_allowed_filler_ignores_blocked_words_in_free_text_notes():
 
     day = plan["weeks"][0]["days"][0]
     assert day["sessions"] == tactical_watch
-    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
 
 
 def test_declared_technical_day_preserves_high_rpe_app_work():
@@ -325,7 +310,7 @@ def test_declared_technical_day_preserves_high_rpe_app_work():
 
     day = plan["weeks"][0]["days"][0]
     assert day["today_card"]["headline"] == "Mobility Reset"
-    assert day["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
     assert day["sessions"] == mobility
 
 
@@ -346,14 +331,23 @@ def test_d20_declared_hard_day_can_be_recovered_from_context_role():
     assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring"
 
 
-def test_declared_late_technical_context_days_remain_visible():
-    for d_day in (16, 13, 9, 6, 2):
+def test_declared_late_technical_context_cards_follow_countdown_taper():
+    expected = {
+        17: "Fight-intensity technical rounds",
+        8: "Fight-intensity technical rounds",
+        7: "Technical rhythm only",
+        5: "Technical rhythm only",
+        4: "Technical touch — pads / shadow",
+        2: "Technical touch — pads / shadow",
+        1: "Technical activation — no contact",
+    }
+    for d_day, expected_headline in expected.items():
         plan = _structured_plan([_day(f"D-{d_day}", headline="Recovery")])
         reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=d_day, downgraded=True))
 
-        assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == (
-            "Technical-only combat"
-        )
+        headline = plan["weeks"][0]["days"][0]["today_card"]["headline"]
+        assert headline == expected_headline
+        assert _classifies_coach_led(headline)
 
 
 def _normal_camp_role_brief(
@@ -363,13 +357,6 @@ def _normal_camp_role_brief(
     hard_day_class: str = "primary_hard",
     reason_codes: list[str] | None = None,
 ) -> dict:
-    """A normal-camp role map week, as ``stage2_role_map`` actually emits one.
-
-    Unlike the late-fight planner this path never sets ``downgraded`` /
-    ``downgraded_to_role_key`` — the sparring dose planner's verdict rides on
-    ``hard_sparring_status`` / ``hard_sparring_reason_codes`` instead, and the
-    role carries a ``scheduled_countdown_label`` rather than a ``countdown_offset``.
-    """
     return {
         "weekly_role_map": {
             "weeks": [
@@ -393,11 +380,19 @@ def _normal_camp_role_brief(
     }
 
 
-def test_normal_camp_converted_day_inside_d17_ban_is_not_headlined_hard_sparring():
-    # The dose planner converts these to technical; the card must say so. The
-    # role only reports it via hard_sparring_status/reason codes, never the
-    # late-fight ``downgraded`` flag.
-    for d_day in (17, 15, 11, 8, 4, 1):
+def test_normal_camp_converted_day_inside_d17_ban_uses_countdown_specific_card():
+    expected = {
+        17: "Fight-intensity technical rounds",
+        15: "Fight-intensity technical rounds",
+        11: "Fight-intensity technical rounds",
+        8: "Fight-intensity technical rounds",
+        7: "Technical rhythm only",
+        5: "Technical rhythm only",
+        4: "Technical touch — pads / shadow",
+        2: "Technical touch — pads / shadow",
+        1: "Technical activation — no contact",
+    }
+    for d_day, expected_headline in expected.items():
         plan = _structured_plan([_day(f"D-{d_day}", headline="Recovery")])
         reconcile_coach_led_sparring_days(
             plan,
@@ -408,18 +403,17 @@ def test_normal_camp_converted_day_inside_d17_ban_is_not_headlined_hard_sparring
                 reason_codes=["d17_hard_sparring_ban"],
             ),
         )
-        assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+        assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == expected_headline
 
 
 def test_normal_camp_hard_sparring_ban_boundary_is_d18():
-    # D-18 is the last coach-owned hard day; D-17 is the first banned one.
     hard_plan = _structured_plan([_day("D-18", headline="Recovery")])
     reconcile_coach_led_sparring_days(hard_plan, _normal_camp_role_brief(d_day=18))
     assert hard_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring"
 
     banned_plan = _structured_plan([_day("D-17", headline="Recovery")])
     reconcile_coach_led_sparring_days(banned_plan, _normal_camp_role_brief(d_day=17))
-    assert banned_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+    assert banned_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Fight-intensity technical rounds"
 
 
 def test_normal_camp_deloaded_hard_day_renders_reduced_dose():
@@ -437,8 +431,6 @@ def test_normal_camp_deloaded_hard_day_renders_reduced_dose():
 
 
 def test_countdown_ban_outranks_a_role_still_claiming_hard_inside_d17():
-    # Belt and braces: even a role carrying no dose verdict at all (legacy or
-    # degraded week) can never produce a hard-sparring card inside the ban.
     plan = _structured_plan([_day("D-12", headline="Recovery")])
     brief = _normal_camp_role_brief(d_day=12)
     del brief["weekly_role_map"]["weeks"][0]["session_roles"][0]["hard_sparring_status"]
@@ -446,12 +438,10 @@ def test_countdown_ban_outranks_a_role_still_claiming_hard_inside_d17():
     del brief["weekly_role_map"]["weeks"][0]["session_roles"][0]["hard_sparring_class"]
 
     reconcile_coach_led_sparring_days(plan, brief)
-    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Fight-intensity technical rounds"
 
 
-def test_schedule_derived_hard_day_inside_ban_is_clamped_to_technical():
-    # Same clamp on the weekly-schedule path: a hard_sparring_plan entry that
-    # slipped through as hard at D-17 or closer must not headline as hard.
+def test_schedule_derived_hard_day_inside_ban_is_clamped_to_countdown_specific_technical_card():
     hard_plan = [
         {
             "day": "Thursday",
@@ -460,10 +450,9 @@ def test_schedule_derived_hard_day_inside_ban_is_clamped_to_technical():
             "hard_day_class": "primary_hard",
         }
     ]
-    # end_d=7, span=7 puts Thursday at D-10 — inside the ban.
     plan = _structured_plan([_day("D-10", headline="Recovery")])
     reconcile_coach_led_sparring_days(plan, _planning_brief(hard_plan, end_d=7))
-    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Technical-only combat"
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Fight-intensity technical rounds"
 
 
 def test_leaves_already_coach_led_headline_alone():
@@ -480,7 +469,6 @@ def test_technical_and_reduced_loads_get_classifiable_headlines():
         {"day": "Friday", "effective_load": "reduced", "status": "deload_suggested",
          "hard_day_class": "managed_hard"},
     ]
-    # Thu -> D-31, Fri -> D-30.
     plan = _structured_plan([_day("D-31", headline="Rest"), _day("D-30", headline="Rest")])
     reconcile_coach_led_sparring_days(plan, _planning_brief(hard_plan))
 
@@ -494,7 +482,7 @@ def test_technical_and_reduced_loads_get_classifiable_headlines():
 
 def test_noop_when_no_contact_days_declared():
     plan = _structured_plan([_day("D-31", headline="Recovery")])
-    brief = _planning_brief([])  # no hard sparring plan
+    brief = _planning_brief([])
     before = plan["weeks"][0]["days"][0]["today_card"]["headline"]
     notes = reconcile_coach_led_sparring_days(plan, brief)
     assert notes == []
@@ -508,8 +496,6 @@ def test_noop_on_malformed_inputs():
 
 
 def test_does_not_double_insert_when_day_present_with_sessions():
-    # Present (with sessions) means "do not insert a second card" — the contact is
-    # surfaced on the existing day's coach_led_contact field instead.
     real_session = [{"title": "Fight Tactical Watch", "blocks": []}]
     plan = _structured_plan([_day("D-31", headline="Fight Tactical Watch", sessions=real_session)])
     reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
@@ -518,9 +504,6 @@ def test_does_not_double_insert_when_day_present_with_sessions():
 
 
 def test_inserts_dropped_boundary_sparring_day():
-    # Thursday is D-31. The converter dropped it AND only kept later days (D-30,
-    # D-29), so D-31 sits *outside* the span of the remaining days. The role-map
-    # week_index must still anchor it into the right week at the front.
     plan = _structured_plan([_day("D-30", headline="Strength"), _day("D-29", headline="Aerobic")])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
@@ -531,8 +514,6 @@ def test_inserts_dropped_boundary_sparring_day():
 
 
 def test_targets_correct_week_by_index_in_multi_week_plan():
-    # Two weeks each with a Thursday hard day (wk1 -> D-31, wk2 -> D-24). Each
-    # dropped day must land in its own week, never bleed across the boundary.
     brief = _multi_week_brief()
     plan = {
         "weeks": [
@@ -551,10 +532,7 @@ def test_targets_correct_week_by_index_in_multi_week_plan():
 
 
 def test_no_duplicate_when_present_by_dday_only_but_contact_has_date():
-    # The role-map contact day carries both a date and a D-day; the converter kept
-    # the day keyed by countdown_label (D-31) only, with no date. The D-day match
-    # must win so the day is not inserted a second time — it is only stamped.
-    plan = _structured_plan([_day("D-31", headline="Recovery")])  # date is ""
+    plan = _structured_plan([_day("D-31", headline="Recovery")])
     notes = reconcile_coach_led_sparring_days(plan, _dated_brief())
 
     days = plan["weeks"][0]["days"]
@@ -564,8 +542,6 @@ def test_no_duplicate_when_present_by_dday_only_but_contact_has_date():
 
 
 def test_span_fallback_inserts_when_week_index_does_not_match():
-    # The converter misnumbered the week (week_index 99), so exact matching fails;
-    # the span fallback (present-day D-day range covers D-31) still inserts it.
     plan = _structured_plan(
         [_day("D-33", headline="Strength"), _day("D-30", headline="Aerobic")],
         week_index=99,
