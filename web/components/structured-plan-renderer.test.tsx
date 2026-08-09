@@ -936,14 +936,13 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  // The contact day surfaces its headline and the coach-neutral note instead of
-  // collapsing into a rest day. A technical-only day must carry the technical note
-  // ("no hard sparring"), never the hard-sparring note.
-  assert.equal(html.includes("Technical Session"), true);
-  assert.equal(html.includes("Hard sparring is reduced close to competition"), false);
-  assert.equal(html.includes('aria-label="Why this changed: Technical Session"'), true);
-  assert.equal(html.includes('aria-label="Why this changed: Technical Session">?</button>'), true);
-  assert.equal(html.includes("Technical-only contact today"), true);
+  // The contact day surfaces its own compact card instead of collapsing into a
+  // rest day. Its athlete copy stays short and never borrows the hard-contact
+  // wording.
+  assert.equal(html.includes("Technical Combat"), true);
+  assert.equal(html.includes(">Low load<"), true);
+  assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
+  assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("no hard sparring"), true);
   assert.equal(html.includes("this is your declared hard-sparring/contact work"), false);
   assert.equal(html.includes("sp-day-card-technical"), true);
@@ -1229,16 +1228,116 @@ test("surfaces technical contact alongside prescribed app work in the same day c
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   // Both the coach-owned contact and the app session render in the one day card,
-  // with the contact surfaced above the app work. A technical-only contact must
-  // read "no hard sparring", never the hard-sparring wording.
-  assert.equal(html.includes("Technical Session"), true);
+  // with a compact technical context surfaced above the app work.
+  assert.equal(html.includes("Technical Combat"), true);
+  assert.equal(html.includes(">Low load<"), true);
   assert.equal(html.includes("Fight-week freshness"), true);
   assert.equal(html.includes("Show more (1 block)"), true);
-  assert.equal(html.includes("Technical-only contact today (no hard sparring)"), true);
+  assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
+  assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
   assert.ok(
-    html.indexOf("Technical Session") < html.indexOf(">Fight-week freshness<"),
+    html.indexOf("Technical Combat") < html.indexOf(">Fight-week freshness<"),
   );
+});
+
+test("renders a technical-only session as the reusable sport-neutral low-load card", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "TAPER",
+        days: [
+          {
+            date: "2026-06-16",
+            countdown_label: "D-12",
+            day_type: "moderate",
+            sessions: [
+              {
+                session_id: "s1",
+                session_type: "skill",
+                title: "Technical-only combat",
+                objective: "Generated technical-only copy that should not repeat.",
+                blocks: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Technical-only combat"), false);
+  assert.equal(html.includes("Technical Combat"), true);
+  assert.equal(html.includes(">Low load<"), true);
+  assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
+  assert.equal(html.includes("Generated technical-only copy that should not repeat."), false);
+  assert.equal(html.includes(">Skill<"), false);
+});
+
+test("keeps engine rationale out of athlete-facing mindset and block copy", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "TAPER",
+        days: [
+          {
+            date: "2026-06-16",
+            day_type: "moderate",
+            sessions: [
+              {
+                session_id: "s1",
+                session_type: "skill",
+                title: "Pocket exchange map",
+                mindset_anchor: {
+                  intent: "Choose a clean exit",
+                  context: "SPP pocket planning for a brawler.",
+                },
+                blocks: [
+                  {
+                    block_id: "pocket-map",
+                    display_name: "Pocket exchange map",
+                    purpose: "SPP pocket planning for a brawler.",
+                  },
+                  {
+                    block_id: "timing-rule",
+                    display_name: "Technical timing",
+                    purpose: "From D-17 onward, hard sparring is not scheduled in this window.",
+                  },
+                  {
+                    block_id: "exit-cue",
+                    display_name: "Exit cue",
+                    purpose: "Stay calm as you exit the exchange.",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+  const day = plan.weeks[0]!.days[0]!;
+  const session = day.sessions![0]!;
+
+  const html = renderToStaticMarkup(
+    <SessionCard session={session} day={day} defaultOpenBlocks />,
+  );
+
+  assert.equal(html.includes("SPP pocket planning for a brawler."), false);
+  assert.equal(html.includes("D-17 onward"), false);
+  assert.equal(countOccurrences(html, "Pocket planning."), 2);
+  assert.equal(html.includes("Choose a clean exit"), true);
+  assert.equal(html.includes("Stay calm as you exit the exchange."), true);
 });
 
 test("marks the current day and surfaces the camp status + week focus", () => {

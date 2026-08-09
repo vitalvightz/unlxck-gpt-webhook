@@ -72,7 +72,6 @@ import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/da
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
-import { WhyTooltip } from "@/components/why-tooltip";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import type {
@@ -108,21 +107,18 @@ function isDeclaredLightCombatTitle(title: string): boolean {
   return /\blight\s+(?:technical\s+)?combat\b/i.test(title);
 }
 
-// A sessionless contact day carries no app S&C. The note must match the day kind:
-// a technical-only day (D-17+ ban) must never tell the athlete to spar hard.
+// A sessionless contact day carries no app S&C. The note must match the day kind.
 const HARD_SPARRING_SESSIONLESS_NOTE =
   "No extra S&C today — this is your declared hard-sparring/contact work. Keep freshness the priority.";
-const TECHNICAL_ONLY_SESSIONLESS_NOTE =
-  "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness the priority.";
+const TECHNICAL_COMBAT_TITLE = "Technical Combat";
+const TECHNICAL_COMBAT_TAG = "Low load";
+const TECHNICAL_COMBAT_RATIONALE =
+  "Technical only — no hard sparring. Stay sharp and leave fresh.";
 
 // Coach-owned contact that coexists with app work on the same day, keyed the same
 // way so a technical-only contact block never reads as hard sparring.
 const HARD_SPARRING_CONTACT_NOTE =
   "Your declared hard-sparring/contact work today, alongside the app work below. Keep freshness the priority.";
-const TECHNICAL_ONLY_CONTACT_NOTE =
-  "Technical-only contact today (no hard sparring), alongside the app work below. Keep freshness the priority.";
-const TECHNICAL_SESSION_HELP =
-  "Hard sparring is reduced close to competition to lower fatigue and injury risk while keeping timing and skills sharp.";
 
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
@@ -187,6 +183,36 @@ function normalizeForDedupe(value: string | null | undefined): string | null {
   return clean.toLowerCase().replace(/\s+/g, " ").replace(/[.\s]+$/, "");
 }
 
+/**
+ * Keep the saved planning rationale intact, but remove engine shorthand from
+ * the athlete-facing card. Phase labels and timing rules are useful to the
+ * generator and admin audit trail; an athlete needs the concise action or
+ * rationale that remains after them.
+ */
+function athleteFacingRationale(value: string | null | undefined): string | null {
+  const raw = cleanText(value);
+  if (!raw) {
+    return null;
+  }
+
+  const simplified = raw
+    .replace(/^(?:GPP|SPP)(?:\s+|:\s*|[\u2014\u2013-]\s*)/i, "")
+    .replace(
+      /(?:^|\s)(?:from\s+)?D-\d+\+?\s*(?:onward|and beyond|or later|or closer)\b[^.!?]*(?:[.!?]|$)/gi,
+      " ",
+    )
+    .replace(/\s+for\s+(?:a|an)\s+(?:[a-z-]+\s+){0,2}(?:brawler|boxer|fighter)\.?\s*$/i, ".")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[,;:\s]+/, "")
+    .trim();
+
+  return simplified ? simplified.charAt(0).toUpperCase() + simplified.slice(1) : null;
+}
+
+function TechnicalCombatRationale() {
+  return <p className="sp-today-note">{TECHNICAL_COMBAT_RATIONALE}</p>;
+}
+
 export function MindsetAnchorCard({
   anchor,
   dedupeContext,
@@ -197,7 +223,10 @@ export function MindsetAnchorCard({
    * sentence never prints twice on one card. */
   dedupeContext?: string | (string | null | undefined)[] | null;
 }) {
-  const lines = getMindsetLines(anchor);
+  const lines = getMindsetLines(anchor).flatMap((line) => {
+    const value = line.label === "Context" ? athleteFacingRationale(line.value) : line.value;
+    return value ? [{ ...line, value }] : [];
+  });
   const dedupeTargets = new Set(
     (Array.isArray(dedupeContext) ? dedupeContext : [dedupeContext])
       .map(normalizeForDedupe)
@@ -279,7 +308,7 @@ export function BlockCard({
   // as a 1-10 perceived-exertion score. An unrecognised or missing method falls
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
-  const purpose = cleanText(block.purpose);
+  const purpose = athleteFacingRationale(block.purpose);
   const { cues, stopRules } = getBlockCoachingDisplay(block);
   const substitutions = getStringList(block.substitutions);
   const regressions = getStringList(block.regression_options);
@@ -510,17 +539,16 @@ export function SessionCard({
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession
-                ? "Technical Session"
+                ? TECHNICAL_COMBAT_TITLE
                 : title}
-            {isTechnicalSession ? (
-              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
-            ) : null}
           </h3>
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
               outright, so the reason for the session is impossible to miss. */}
           {isDeclaredLightCombat ? (
             <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
+          ) : isTechnicalSession ? (
+            <TechnicalCombatRationale />
           ) : objective ? (
             <p className="sp-session-objective">
               <span className="sp-session-why-label">Why</span>
@@ -531,6 +559,8 @@ export function SessionCard({
         <div className="sp-session-meta">
           {isDeclaredLightCombat ? (
             <span className="sp-tag sp-accent">Light combat</span>
+          ) : isTechnicalSession ? (
+            <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
           ) : sessionType ? (
             <span className="sp-tag">{titleize(sessionType)}</span>
           ) : null}
@@ -573,7 +603,13 @@ export function SessionCard({
 
       <MindsetAnchorCard
         anchor={sessionMindset}
-        dedupeContext={isDeclaredLightCombat ? DECLARED_LIGHT_COMBAT_DESCRIPTION : objective}
+        dedupeContext={
+          isDeclaredLightCombat
+            ? DECLARED_LIGHT_COMBAT_DESCRIPTION
+            : isTechnicalSession
+              ? TECHNICAL_COMBAT_RATIONALE
+              : objective
+        }
       />
       {/* The rehab/mobility summary is a compact PREVIEW of the inserts shown
           only while the full blocks are collapsed. Once expanded, every rehab
@@ -668,7 +704,13 @@ export function SessionlessDayCard({
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
   const { kind, title, tag, coachLed } = classifySessionlessDay(day);
-  const displayTitle = kind === "light_combat" ? DECLARED_LIGHT_COMBAT_TITLE : title;
+  const displayTitle =
+    kind === "light_combat"
+      ? DECLARED_LIGHT_COMBAT_TITLE
+      : kind === "technical"
+        ? TECHNICAL_COMBAT_TITLE
+        : title;
+  const displayTag = kind === "technical" ? TECHNICAL_COMBAT_TAG : tag;
   const isRest = kind === "rest";
 
   return (
@@ -682,26 +724,19 @@ export function SessionlessDayCard({
             </div>
           ) : null}
           <h3 className="sp-session-title">
-            {kind === "light_combat"
-              ? displayTitle
-              : kind === "technical"
-                ? "Technical Session"
-                : title}
-            {kind === "technical" ? (
-              <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
-            ) : null}
+            {displayTitle}
           </h3>
         </div>
         <div className="sp-session-meta">
-          {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
+          {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
         </div>
       </header>
       {kind === "light_combat" ? (
         <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
+      ) : kind === "technical" ? (
+        <TechnicalCombatRationale />
       ) : coachLed ? (
-        <p className="sp-today-note">
-          {kind === "technical" ? TECHNICAL_ONLY_SESSIONLESS_NOTE : HARD_SPARRING_SESSIONLESS_NOTE}
-        </p>
+        <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
@@ -746,29 +781,24 @@ function CoachLedDayContext({
   kind: SessionlessDayKind;
 }) {
   const isLightCombat = kind === "light_combat";
+  const isTechnical = kind === "technical";
   const displayTitle = isLightCombat
     ? DECLARED_LIGHT_COMBAT_TITLE
-    : kind === "technical"
-      ? "Technical Session"
+    : isTechnical
+      ? TECHNICAL_COMBAT_TITLE
       : title;
+  const displayTag = isTechnical ? TECHNICAL_COMBAT_TAG : tag;
   const description = isLightCombat
     ? DECLARED_LIGHT_COMBAT_DESCRIPTION
-    : kind === "technical"
-      ? TECHNICAL_ONLY_CONTACT_NOTE
-      : HARD_SPARRING_CONTACT_NOTE;
+    : HARD_SPARRING_CONTACT_NOTE;
 
   return (
     <div className="cm-light-technical cm-coach-led-contact">
       <div className="cm-light-technical-head">
-        {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
-        <p className="sp-today-headline">
-          {displayTitle}
-          {kind === "technical" ? (
-            <WhyTooltip title="Technical Session" body={TECHNICAL_SESSION_HELP} triggerLabel="?" />
-          ) : null}
-        </p>
+        {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
+        <p className="sp-today-headline">{displayTitle}</p>
       </div>
-      <p className="sp-today-note">{description}</p>
+      {isTechnical ? <TechnicalCombatRationale /> : <p className="sp-today-note">{description}</p>}
     </div>
   );
 }
