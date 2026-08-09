@@ -34,7 +34,10 @@ test("legacy technical cards project the converted-sparring title from D-day", (
 });
 
 test("D-0 follows activation band while explicit countdown-specific titles are preserved", () => {
-  assert.equal(classifySessionlessDay(technicalDay(0)).title, "Technical activation — no contact");
+  assert.equal(
+    classifySessionlessDay(technicalDay(0)).title,
+    "Technical activation — no contact",
+  );
   assert.equal(
     classifySessionlessDay(technicalDay(5, "Technical rhythm only")).title,
     "Technical rhythm only",
