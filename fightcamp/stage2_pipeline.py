@@ -59,6 +59,65 @@ def _rendered_countdown_labels(final_plan_text: str) -> set[str]:
     }
 
 
+def _normalise_render_match_text(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+
+def _rendered_countdown_sections(final_plan_text: str) -> dict[str, list[str]]:
+    text = final_plan_text or ""
+    matches = list(_COUNTDOWN_HEADER_RE.finditer(text))
+    sections: dict[str, list[str]] = {}
+    for index, match in enumerate(matches):
+        countdown_label = f"D-{int(match.group(1))}"
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        sections.setdefault(countdown_label, []).append(text[match.start():end])
+    return sections
+
+
+def _role_render_markers(role: dict[str, Any]) -> list[str]:
+    markers: list[str] = []
+    for key in (
+        "athlete_facing_label",
+        "label",
+        "session_role_label",
+        "role_label",
+        "title",
+        "name",
+    ):
+        marker = _normalise_render_match_text(role.get(key))
+        if marker and marker not in markers:
+            markers.append(marker)
+
+    role_key = _normalise_render_match_text(str(role.get("role_key") or "").replace("_", " "))
+    role_key = re.sub(r"\bday\b$", "", role_key).strip()
+    if role_key and role_key not in markers:
+        markers.append(role_key)
+    return markers
+
+
+def _required_role_survives_render(
+    *,
+    role: dict[str, Any],
+    countdown_label: str,
+    rendered_sections: dict[str, list[str]],
+) -> bool:
+    candidate_sections = rendered_sections.get(countdown_label, [])
+    if not candidate_sections:
+        return False
+
+    markers = _role_render_markers(role)
+    if not markers:
+        # Preserve the legacy header-only fallback only for roles with no usable
+        # identity marker. Scheduler-owned gap fillers carry athlete_facing_label.
+        return True
+
+    for section in candidate_sections:
+        normalised_section = _normalise_render_match_text(section)
+        if any(marker in normalised_section for marker in markers):
+            return True
+    return False
+
+
 def _is_hidden_context_role(role: dict[str, Any]) -> bool:
     role_key = str(role.get("role_key") or "").strip().lower()
     category = str(role.get("category") or "").strip().lower()
@@ -139,7 +198,7 @@ def _required_countdown_session_warnings(
     if not sequence:
         return []
 
-    rendered_labels = _rendered_countdown_labels(final_plan_text)
+    rendered_sections = _rendered_countdown_sections(final_plan_text)
     warnings: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
 
@@ -159,7 +218,11 @@ def _required_countdown_session_warnings(
             continue
         seen.add(identity)
 
-        if countdown_label in rendered_labels:
+        if _required_role_survives_render(
+            role=role,
+            countdown_label=countdown_label,
+            rendered_sections=rendered_sections,
+        ):
             continue
 
         display_label = _role_display_label(role, countdown_label)
