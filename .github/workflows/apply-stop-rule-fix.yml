@@ -1,0 +1,434 @@
+name: Apply stop-rule fix
+
+on:
+  push:
+    branches:
+      - fix/restore-block-stop-rules
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/restore-block-stop-rules
+
+      - name: Apply stop-rule contract and renderer fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              file.write_text(text.replace(old, new, 1))
+
+          # 1) Backend schema: stop rules are a first-class block field.
+          replace_once(
+              "api/structured_plan_models.py",
+              '''    coaching_cues: list[str] = Field(default_factory=list)\n    regression_options: list[str] = Field(default_factory=list)\n    progression_rule: str | None = None\n    substitutions: list[str] = Field(default_factory=list)\n''',
+              '''    coaching_cues: list[str] = Field(default_factory=list)\n    regression_options: list[str] = Field(default_factory=list)\n    progression_rule: str | None = None\n    stop_rules: list[str] = Field(default_factory=list)\n    substitutions: list[str] = Field(default_factory=list)\n''',
+          )
+
+          # 2) Frontend type contract mirrors the backend field.
+          replace_once(
+              "web/lib/types.ts",
+              '''  coaching_cues?: string[] | null;\n  regression_options?: string[] | null;\n  substitutions?: string[] | null;\n  progression_rule?: string | null;\n''',
+              '''  coaching_cues?: string[] | null;\n  regression_options?: string[] | null;\n  substitutions?: string[] | null;\n  progression_rule?: string | null;\n  stop_rules?: string[] | null;\n''',
+          )
+
+          # 3) Backend normalization: split Stop rules from progression and drop
+          # programming-only taper text that is not an exercise progression.
+          generation_path = Path("api/structured_plan_generation.py")
+          generation = generation_path.read_text()
+
+          marker = '''def _normalize_mindset(value: Any) -> dict[str, Any]:\n'''
+          helpers = r'''_STOP_RULE_LABEL_RE = re.compile(r"\bstop(?:\s+rule)?\s*:\s*", re.IGNORECASE)
+_PURE_STOP_RULE_RE = re.compile(r"^\s*stop(?!-)\b", re.IGNORECASE)
+_PROGRAMMING_ONLY_PROGRESSION_RE = re.compile(
+    r"^\s*(?:maintain(?:\s+(?:the|this))?\s+dose|keep\s+(?:the\s+)?dose\s+small|"
+    r"do\s+not\s+(?:add|increase)\s+(?:sets?|volume)|no\s+(?:set|volume)\s+increase)\b",
+    re.IGNORECASE,
+)
+_POSITIVE_PROGRESSION_RE = re.compile(
+    r"\b(?:progress|advance|increase|raise|build|extend|heavier|more\s+resistance|reduce\s+assistance)\b",
+    re.IGNORECASE,
+)
+_NEGATED_PROGRESSION_RE = re.compile(
+    r"\b(?:do\s+not|don't|never)\s+(?:add|increase|progress|advance|raise|build|extend)\b",
+    re.IGNORECASE,
+)
+
+
+def _strip_stop_rule_label(text: str) -> str:
+    return re.sub(r"^\s*stop(?:\s+rule)?\s*:\s*", "", text, flags=re.IGNORECASE).strip()
+
+
+def _is_programming_only_progression(text: str) -> bool:
+    """True for taper/week dose constraints that do not advance the exercise."""
+    clean = text.strip()
+    if not clean:
+        return False
+    if _NEGATED_PROGRESSION_RE.search(clean):
+        return bool(_PROGRAMMING_ONLY_PROGRESSION_RE.search(clean) or re.search(r"\b(?:taper|fight[ -]?week|sharpness|freshness)\b", clean, re.IGNORECASE))
+    if _POSITIVE_PROGRESSION_RE.search(clean):
+        return False
+    return bool(_PROGRAMMING_ONLY_PROGRESSION_RE.search(clean))
+
+
+def _split_progression_and_stop_rules(value: Any) -> tuple[str, list[str]]:
+    """Separate a legacy mixed progression string from labelled stop criteria."""
+    text = _coerce_str(value).strip()
+    if not text:
+        return "", []
+    match = _STOP_RULE_LABEL_RE.search(text)
+    if match:
+        progression = text[: match.start()].rstrip(" \t—–-:;,.")
+        stop = text[match.end() :].strip()
+        stops = [stop] if stop else []
+        if progression and _is_programming_only_progression(progression):
+            progression = ""
+        return progression, stops
+    if _PURE_STOP_RULE_RE.search(text):
+        return "", [_strip_stop_rule_label(text)]
+    if _is_programming_only_progression(text):
+        return "", []
+    return text, []
+
+
+def _dedupe_stop_rules(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = _strip_stop_rule_label(value)
+        key = text.casefold().strip().rstrip(".")
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
+'''
+          if marker not in generation:
+              raise SystemExit("structured_plan_generation.py: helper insertion marker missing")
+          generation = generation.replace(marker, helpers + marker, 1)
+
+          old_block = '''    # Carry coaching detail through, tolerating a single string instead of a\n    # list. An explicit null must also become [] — the schema fields are\n    # non-optional lists, so a passed-through None rejects the whole card.\n    for list_key in ("coaching_cues", "regression_options", "substitutions"):\n        if list_key in out:\n            out[list_key] = _coerce_str_list(out.get(list_key))\n    # Late-fight prose occasionally arrives as two fake cue bullets:\n    # ``Regression /`` and ``Stop: ...``. The former is only a dangling source\n    # label; the latter belongs in progression_rule so the card renders it as a\n    # labelled stop instruction rather than ordinary coaching.\n    cues = _coerce_str_list(out.get("coaching_cues"))\n    cleaned_cues: list[str] = []\n    stop_cues: list[str] = []\n    for cue in cues:\n        if re.fullmatch(\n            r"\\s*(?:progress(?:ion)?\\s*/\\s*)?regress(?:ion)?\\s*(?:/\\s*)?\\s*",\n            cue,\n            re.IGNORECASE,\n        ):\n            continue\n        if re.match(r"^\\s*stop(?:\\s+rule)?\\s*:", cue, re.IGNORECASE):\n            stop_cues.append(cue.strip())\n            continue\n        cleaned_cues.append(cue)\n    if "coaching_cues" in out or cleaned_cues != cues:\n        out["coaching_cues"] = cleaned_cues\n    if "red_flags" in out:\n        out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]\n    if "effort" in out:\n        out["effort"] = _normalize_effort(out.get("effort"))\n    progression_rule = _coerce_str(out.get("progression_rule")).strip()\n    if stop_cues:\n        stop_text = " ".join(stop_cues)\n        if not progression_rule:\n            progression_rule = stop_text\n        elif stop_text.lower() not in progression_rule.lower():\n            progression_rule = f"{progression_rule.rstrip('.')} — {stop_text}"\n    if out.get("progression_rule") is not None or progression_rule:\n        out["progression_rule"] = progression_rule\n    return out\n'''
+          new_block = '''    # Carry coaching detail through, tolerating a single string instead of a\n    # list. An explicit null must also become [] — the schema fields are\n    # non-optional lists, so a passed-through None rejects the whole card.\n    for list_key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):\n        if list_key in out:\n            out[list_key] = _coerce_str_list(out.get(list_key))\n    # Late-fight prose occasionally arrives as fake adjustment bullets. Keep\n    # stop/safety criteria separate from exercise progression so the athlete\n    # never sees a stop condition labelled as Progress.\n    cues = _coerce_str_list(out.get("coaching_cues"))\n    cleaned_cues: list[str] = []\n    stop_cues: list[str] = []\n    for cue in cues:\n        if re.fullmatch(\n            r"\\s*(?:progress(?:ion)?\\s*/\\s*)?regress(?:ion)?\\s*(?:/\\s*)?\\s*",\n            cue,\n            re.IGNORECASE,\n        ):\n            continue\n        if re.match(r"^\\s*stop(?:\\s+rule)?\\s*:|^\\s*stop(?!-)\\b", cue, re.IGNORECASE):\n            stop_cues.append(cue.strip())\n            continue\n        cleaned_cues.append(cue)\n    if "coaching_cues" in out or cleaned_cues != cues:\n        out["coaching_cues"] = cleaned_cues\n    if "red_flags" in out:\n        out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]\n    if "effort" in out:\n        out["effort"] = _normalize_effort(out.get("effort"))\n\n    progression_rule, embedded_stops = _split_progression_and_stop_rules(out.get("progression_rule"))\n    stop_rules = _dedupe_stop_rules(\n        _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops\n    )\n    if progression_rule:\n        out["progression_rule"] = progression_rule\n    else:\n        out.pop("progression_rule", None)\n    if stop_rules or "stop_rules" in out:\n        out["stop_rules"] = stop_rules\n    return out\n'''
+          if generation.count(old_block) != 1:
+              raise SystemExit(f"structured_plan_generation.py: normalize block match count {generation.count(old_block)}")
+          generation = generation.replace(old_block, new_block, 1)
+
+          generation = generation.replace(
+              '''- List fields (coaching_cues, regression_options, substitutions, applies_to)\n  MUST be JSON arrays — emit [] when empty, never null and never a bare string.\n''',
+              '''- List fields (coaching_cues, regression_options, substitutions, stop_rules, applies_to)\n  MUST be JSON arrays — emit [] when empty, never null and never a bare string.\n''',
+              1,
+          )
+          generation = generation.replace(
+              '''- When the plan states them, carry per-block detail into each block:\n  "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or\n  alternative exercises the plan offers), and "progression_rule" (how to advance).\n- Treat "Easier:" / "Regression:" content as regression_options and "Stop:" /\n  "Stop rule:" content as progression_rule. Never place those labelled lines in\n  coaching_cues. Ignore a bare separator label such as "Regression /" rather\n  than rendering it as athlete guidance.\n''',
+              '''- When the plan states them, carry per-block detail into each block:\n  "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or\n  alternative exercises), "progression_rule" (exercise-level advancement only),\n  and "stop_rules" (list of stop/safety criteria). progression_rule may be omitted\n  when the source gives no genuine exercise progression. Do NOT put taper/week\n  dose restrictions, injury restrictions, session-programming constraints, or\n  stop criteria into progression_rule unless the text actually says how that\n  specific exercise advances.\n- Treat "Easier:" / "Regression:" content as regression_options and "Stop:" /\n  "Stop rule:" content as stop_rules. Never place those labelled lines in\n  coaching_cues or progression_rule. Ignore a bare separator label such as\n  "Regression /" rather than rendering it as athlete guidance.\n''',
+              1,
+          )
+          generation = generation.replace(
+              '''                  "coaching_cues": ["..."], "regression_options": ["..."], "substitutions": ["..."], "progression_rule": "..."\n''',
+              '''                  "coaching_cues": ["..."], "regression_options": ["..."], "substitutions": ["..."],\n                  "progression_rule": "...", "stop_rules": ["..."]\n''',
+              1,
+          )
+          generation_path.write_text(generation)
+
+          # 4) Frontend pure helper: interpret new stop_rules and repair legacy
+          # mixed progression strings without mutating saved plan data.
+          structured_path = Path("web/lib/structured-plan.ts")
+          structured = structured_path.read_text()
+          insertion_marker = '''// A stop rule reads like "Stop on sharp pain." / "Stop the set if punch speed\n'''
+          if insertion_marker not in structured:
+              raise SystemExit("structured-plan.ts: stop helper insertion marker missing")
+          structured = structured.replace(
+              insertion_marker,
+              r'''const EMBEDDED_STOP_RULE_LABEL_RE = /\bstop(?:\s+rule)?\s*:\s*/i;
+const PROGRAMMING_ONLY_PROGRESSION_RE =
+  /^\s*(?:maintain(?:\s+(?:the|this))?\s+dose|keep\s+(?:the\s+)?dose\s+small|do\s+not\s+(?:add|increase)\s+(?:sets?|volume)|no\s+(?:set|volume)\s+increase)\b/i;
+const NEGATED_PROGRESSION_RE =
+  /\b(?:do\s+not|don't|never)\s+(?:add|increase|progress|advance|raise|build|extend)\b/i;
+const POSITIVE_PROGRESSION_RE =
+  /\b(?:progress|advance|increase|raise|build|extend|heavier|more\s+resistance|reduce\s+assistance)\b/i;
+const TAPER_PROGRAMMING_RE = /\b(?:taper|fight[ -]?week|sharpness|freshness)\b/i;
+
+function stripStopRuleLabel(value: string): string {
+  return value.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "").trim();
+}
+
+function isProgrammingOnlyProgression(text: string): boolean {
+  if (NEGATED_PROGRESSION_RE.test(text)) {
+    return PROGRAMMING_ONLY_PROGRESSION_RE.test(text) || TAPER_PROGRAMMING_RE.test(text);
+  }
+  if (POSITIVE_PROGRESSION_RE.test(text)) {
+    return false;
+  }
+  return PROGRAMMING_ONLY_PROGRESSION_RE.test(text);
+}
+
+function dedupeStopRules(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const text = stripStopRuleLabel(value);
+    const key = text.toLowerCase().replace(/[.\s]+$/, "");
+    if (!text || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(text);
+  }
+  return result;
+}
+
+export function getBlockAdjustmentDisplay(
+  block: StructuredBlock | null | undefined,
+): { progression: string | null; stopRules: string[] } {
+  const explicitStops = getStringList(block?.stop_rules);
+  const legacyCueStops = getBlockCoachingDisplay(block).stopRules;
+  const rawProgression = cleanText(block?.progression_rule);
+  let progression: string | null = rawProgression;
+  const embeddedStops: string[] = [];
+
+  if (rawProgression) {
+    const match = EMBEDDED_STOP_RULE_LABEL_RE.exec(rawProgression);
+    if (match) {
+      progression = cleanText(rawProgression.slice(0, match.index).replace(/[\s—–\-:;,.]+$/, ""));
+      const stop = cleanText(rawProgression.slice(match.index + match[0].length));
+      if (stop) {
+        embeddedStops.push(stop);
+      }
+    } else if (isStopRuleText(rawProgression)) {
+      progression = null;
+      embeddedStops.push(rawProgression);
+    }
+  }
+
+  if (progression && isProgrammingOnlyProgression(progression)) {
+    progression = null;
+  }
+
+  return {
+    progression,
+    stopRules: dedupeStopRules([...explicitStops, ...legacyCueStops, ...embeddedStops]),
+  };
+}
+
+''' + insertion_marker,
+              1,
+          )
+          structured_path.write_text(structured)
+
+          # 5) Renderer: render Progress and Stop rule as separate semantic rows.
+          renderer_path = Path("web/components/structured-plan-renderer.tsx")
+          renderer = renderer_path.read_text()
+          renderer = renderer.replace(
+              '''  getBlockCoachingDisplay,\n''',
+              '''  getBlockCoachingDisplay,\n  getBlockAdjustmentDisplay,\n''',
+              1,
+          )
+          renderer = renderer.replace(
+              '''  progressionRuleLabel,\n''',
+              '''''',
+              1,
+          )
+          renderer = renderer.replace(
+              '''  const { cues, stopRules } = getBlockCoachingDisplay(block);\n  const substitutions = getStringList(block.substitutions);\n  const regressions = getStringList(block.regression_options);\n  const progression = cleanText(block.progression_rule);\n  const weekDirective = openBlockWeekDirective(openWeekIntent, block);\n  // With a week directive on the card, the generic Progress aside is either the\n  // same rule again (progression weeks) or a contradiction (deload week), so it\n  // hides. A stop rule is safety wording and always stays.\n  const showProgressionAside = Boolean(\n    progression && (!weekDirective || progressionRuleLabel(progression) === "Stop rule"),\n  );\n  const adjustmentRules = [\n    ...(showProgressionAside && progression ? [progression] : []),\n    ...stopRules,\n  ].filter(\n    (rule, index, rules) =>\n      rules.findIndex((candidate) => candidate.trim().toLowerCase() === rule.trim().toLowerCase()) ===\n      index,\n  );\n''',
+              '''  const { cues } = getBlockCoachingDisplay(block);\n  const substitutions = getStringList(block.substitutions);\n  const regressions = getStringList(block.regression_options);\n  const { progression, stopRules } = getBlockAdjustmentDisplay(block);\n  const weekDirective = openBlockWeekDirective(openWeekIntent, block);\n  // A week directive owns progression/deload programming for open plans, while\n  // block stop criteria are safety instructions and must always remain visible.\n  const showProgressionAside = Boolean(progression && !weekDirective);\n  const adjustmentRules = [\n    ...(showProgressionAside && progression\n      ? [{ label: "Progress" as const, text: progression }]\n      : []),\n    ...stopRules.map((text) => ({ label: "Stop rule" as const, text })),\n  ];\n''',
+              1,
+          )
+          renderer = renderer.replace(
+              '''      {adjustmentRules.map((rule) => {\n        const ruleLabel = progressionRuleLabel(rule);\n        return (\n          <p key={rule} className="sp-block-aside">\n            <span className="sp-stat-label">{ruleLabel}</span>\n            {/* "Stop rule" is glossed; "Progress" reads plainly on its own. */}\n            <GlossaryTooltip term={ruleLabel} />\n            {rule.replace(/^\\s*stop(?:\\s+rule)?\\s*:\\s*/i, "")}\n          </p>\n        );\n      })}\n''',
+              '''      {adjustmentRules.map((rule) => (\n        <p key={`${rule.label}:${rule.text}`} className="sp-block-aside">\n          <span className="sp-stat-label">{rule.label}</span>\n          {/* "Stop rule" is glossed; "Progress" reads plainly on its own. */}\n          <GlossaryTooltip term={rule.label} />\n          {rule.text}\n        </p>\n      ))}\n''',
+              1,
+          )
+          renderer_path.write_text(renderer)
+
+          # 6) Focused regression tests.
+          Path("tests/test_structured_plan_stop_rules.py").write_text(r'''from api.structured_plan_generation import _normalize_block, build_structured_plan_prompt
+from api.structured_plan_models import SessionBlock
+
+
+def test_session_block_has_first_class_stop_rules():
+    block = SessionBlock(
+        block_id="band-punch",
+        block_type="accessory",
+        display_name="Band-Resisted Punch",
+        stop_rules=["Sharp ankle pain or uncontrolled balance loss."],
+    )
+    assert block.stop_rules == ["Sharp ankle pain or uncontrolled balance loss."]
+
+
+def test_normalizer_moves_stop_coaching_cue_out_of_cues():
+    block = _normalize_block(
+        {
+            "block_id": "burst",
+            "block_type": "conditioning",
+            "display_name": "Explosive Boxing Burst Intervals",
+            "coaching_cues": ["All-out punch intent", "Stop: if punch speed or stance control drops."],
+        }
+    )
+    assert block["coaching_cues"] == ["All-out punch intent"]
+    assert block["stop_rules"] == ["if punch speed or stance control drops."]
+    assert "progression_rule" not in block
+
+
+def test_normalizer_splits_valid_progression_from_embedded_stop_rule():
+    block = _normalize_block(
+        {
+            "block_id": "band-punch",
+            "block_type": "accessory",
+            "display_name": "Band-Resisted Punch",
+            "progression_rule": "Increase band resistance when punch speed stays high — Stop: sharp shoulder pain.",
+        }
+    )
+    assert block["progression_rule"] == "Increase band resistance when punch speed stays high"
+    assert block["stop_rules"] == ["sharp shoulder pain."]
+
+
+def test_normalizer_hides_taper_programming_but_preserves_stop_rule():
+    block = _normalize_block(
+        {
+            "block_id": "band-punch",
+            "block_type": "accessory",
+            "display_name": "Band-Resisted Punch",
+            "progression_rule": "Maintain dose; do not add volume in taper window — Stop: any sharp ankle pain, new swelling, or loss of balance.",
+        }
+    )
+    assert "progression_rule" not in block
+    assert block["stop_rules"] == ["any sharp ankle pain, new swelling, or loss of balance."]
+
+
+def test_converter_prompt_keeps_stop_rules_separate_from_progression():
+    prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
+    assert '"stop_rules"' in prompt
+    assert '"Stop rule:" content as stop_rules' in prompt
+    assert '"Stop rule:" content as progression_rule' not in prompt
+''')
+
+          Path("web/lib/structured-plan-stop-rules.test.ts").write_text(r'''import test from "node:test";
+import assert from "node:assert/strict";
+
+import { getBlockAdjustmentDisplay } from "./structured-plan.ts";
+
+test("pure exercise progression stays under Progress", () => {
+  assert.deepEqual(
+    getBlockAdjustmentDisplay({ progression_rule: "Increase band resistance when speed stays high." }),
+    { progression: "Increase band resistance when speed stays high.", stopRules: [] },
+  );
+});
+
+test("legacy pure stop text becomes a stop rule instead of Progress", () => {
+  assert.deepEqual(
+    getBlockAdjustmentDisplay({ progression_rule: "Stop if sharp quad pain appears." }),
+    { progression: null, stopRules: ["Stop if sharp quad pain appears."] },
+  );
+});
+
+test("legacy mixed progression splits into Progress and Stop rule", () => {
+  assert.deepEqual(
+    getBlockAdjustmentDisplay({
+      progression_rule: "Increase band resistance when speed stays high — Stop: sharp shoulder pain.",
+    }),
+    {
+      progression: "Increase band resistance when speed stays high",
+      stopRules: ["sharp shoulder pain."],
+    },
+  );
+});
+
+test("taper programming is not shown as exercise progression", () => {
+  assert.deepEqual(
+    getBlockAdjustmentDisplay({
+      progression_rule:
+        "Maintain dose; do not add volume in taper window — Stop: any sharp ankle pain or uncontrolled balance loss.",
+    }),
+    {
+      progression: null,
+      stopRules: ["any sharp ankle pain or uncontrolled balance loss."],
+    },
+  );
+});
+
+test("explicit and legacy stop rules are preserved and deduplicated", () => {
+  assert.deepEqual(
+    getBlockAdjustmentDisplay({
+      stop_rules: ["Stop: sharp ankle pain."],
+      coaching_cues: ["Fast hands", "Stop: sharp ankle pain."],
+    }),
+    { progression: null, stopRules: ["sharp ankle pain."] },
+  );
+});
+''')
+
+          Path("web/components/structured-plan-stop-rules.test.tsx").write_text(r'''import test from "node:test";
+import assert from "node:assert/strict";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import { BlockCard } from "./structured-plan-renderer";
+
+test("Band-Resisted Punch does not label taper safety text as Progress", () => {
+  const html = renderToStaticMarkup(
+    <BlockCard
+      block={{
+        block_id: "band-punch",
+        block_type: "accessory",
+        display_name: "Band-Resisted Punch",
+        progression_rule:
+          "Maintain dose; do not add volume in taper window — Stop: any sharp ankle pain, new swelling, or loss of balance.",
+      }}
+    />,
+  );
+
+  assert.equal(html.includes(">Progress</span>"), false);
+  assert.equal(html.includes(">Stop rule</span>"), true);
+  assert.equal(html.includes("any sharp ankle pain, new swelling, or loss of balance."), true);
+});
+
+test("a genuine progression and stop rule render as separate rows", () => {
+  const html = renderToStaticMarkup(
+    <BlockCard
+      block={{
+        block_id: "band-punch",
+        block_type: "accessory",
+        display_name: "Band-Resisted Punch",
+        progression_rule: "Increase band resistance when punch speed stays high.",
+        stop_rules: ["Sharp shoulder pain or a clear drop in punch mechanics."],
+      }}
+    />,
+  );
+
+  assert.equal(html.includes(">Progress</span>"), true);
+  assert.equal(html.includes("Increase band resistance when punch speed stays high."), true);
+  assert.equal(html.includes(">Stop rule</span>"), true);
+  assert.equal(html.includes("Sharp shoulder pain or a clear drop in punch mechanics."), true);
+});
+''')
+          PY
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          rm .github/workflows/apply-stop-rule-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/structured_plan_models.py api/structured_plan_generation.py \
+            web/lib/types.ts web/lib/structured-plan.ts \
+            web/components/structured-plan-renderer.tsx \
+            tests/test_structured_plan_stop_rules.py \
+            web/lib/structured-plan-stop-rules.test.ts \
+            web/components/structured-plan-stop-rules.test.tsx \
+            .github/workflows/apply-stop-rule-fix.yml
+          git commit -m "Restore block stop rules"
+          git push origin HEAD:fix/restore-block-stop-rules
