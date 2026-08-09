@@ -23,6 +23,7 @@ test("legacy technical cards project the converted-sparring title from D-day", (
     [4, "Technical touch — pads / shadow"],
     [2, "Technical touch — pads / shadow"],
     [1, "Technical activation — no contact"],
+    [0, "Technical activation — no contact"],
   ] as const;
 
   for (const [dDay, expected] of cases) {
@@ -32,8 +33,8 @@ test("legacy technical cards project the converted-sparring title from D-day", (
   }
 });
 
-test("D-0 and explicit countdown-specific titles are not rewritten", () => {
-  assert.equal(classifySessionlessDay(technicalDay(0)).title, "Technical-only combat");
+test("D-0 follows activation band while explicit countdown-specific titles are preserved", () => {
+  assert.equal(classifySessionlessDay(technicalDay(0)).title, "Technical activation — no contact");
   assert.equal(
     classifySessionlessDay(technicalDay(5, "Technical rhythm only")).title,
     "Technical rhythm only",

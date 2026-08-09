@@ -1296,7 +1296,7 @@ function technicalContactTitleForCountdown(headline: string, countdownLabel: unk
   if (dDay >= 2 && dDay <= 4) {
     return "Technical touch — pads / shadow";
   }
-  if (dDay === 1) {
+  if (dDay >= 0 && dDay <= 1) {
     return "Technical activation — no contact";
   }
   return headline;
