@@ -121,18 +121,57 @@ def merge_locked_structured_content(
             _normalise(governance.get("selected_drill_name")),
             _normalise(watch.get("name")),
         } - {""}
-        targets: list[tuple[dict[str, Any], dict[str, Any]]] = []
-        for session in matching_days[0].get("sessions") or []:
-            if not isinstance(session, dict):
-                continue
-            for block in session.get("blocks") or []:
-                if isinstance(block, dict) and _normalise(block.get("display_name")) in authoritative_names:
-                    targets.append((session, block))
-        if len(targets) != 1:
-            result.unresolved.append(LockedMergeIssue(day_label, name, "locked block not uniquely resolved"))
+        sessions = [
+            session
+            for session in matching_days[0].get("sessions") or []
+            if isinstance(session, dict)
+        ]
+        session_title = _normalise(role.get("athlete_facing_label") or "Fight Tactical Watch")
+        watch_sessions = [
+            session
+            for session in sessions
+            if _normalise(session.get("title")) == session_title
+        ]
+        blocks_elsewhere = any(
+            isinstance(block, dict)
+            and _normalise(block.get("display_name")) in authoritative_names
+            for session in sessions
+            if _normalise(session.get("title")) != session_title
+            for block in session.get("blocks") or []
+        )
+        if blocks_elsewhere:
+            result.unresolved.append(
+                LockedMergeIssue(
+                    day_label,
+                    name,
+                    "locked block not in Tactical Watch session",
+                )
+            )
+            continue
+        if len(watch_sessions) != 1:
+            result.unresolved.append(
+                LockedMergeIssue(
+                    day_label,
+                    name,
+                    "Tactical Watch session not uniquely resolved",
+                )
+            )
             continue
 
-        session, block = targets[0]
+        session = watch_sessions[0]
+        targets = [
+            block
+            for block in session.get("blocks") or []
+            if isinstance(block, dict)
+            and _normalise(block.get("display_name")) in authoritative_names
+        ]
+        if len(targets) != 1:
+            result.unresolved.append(
+                LockedMergeIssue(day_label, name, "locked block not uniquely resolved")
+            )
+            continue
+
+        block = targets[0]
         mindset = watch.get("mindset")
         mindset = mindset if isinstance(mindset, Mapping) else {}
         anchor = session.get("mindset_anchor")

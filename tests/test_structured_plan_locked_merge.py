@@ -66,7 +66,7 @@ def _plan(*, day="D-11", include=True):
         "energy_system": "none", "impact_level": "low",
     }]
     return {"weeks": [{"days": [{"countdown_label": day, "sessions": [{
-        "session_type": "mindset", "objective": "AI why.",
+        "session_type": "mindset", "title": "Fight Tactical Watch", "objective": "AI why.",
         "primary_stressor": "decision-making", "cns_demand": "low",
         "mindset_anchor": {"intent": "Clarify pocket decisions.", "focus_cue": "Read patterns.",
                            "reset_cue": "Reset calmly.", "confidence_anchor": "Control it."},
@@ -135,6 +135,22 @@ def test_missing_block_is_unresolved_and_not_fabricated():
     assert result.plan == plan and len(result.unresolved) == 1
     assert result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"] == []
     assert any("LOCKED_CONTENT" in issue for issue in check_structured_faithfulness(result.plan, SOURCE, _brief()))
+
+
+def test_locked_block_in_wrong_same_day_session_is_unresolved():
+    plan = _plan()
+    plan["weeks"][0]["days"][0]["sessions"][0]["title"] = "Technical-only combat"
+
+    result = _merged(plan)
+
+    assert result.plan == plan
+    assert result.applied == []
+    assert len(result.unresolved) == 1
+    assert result.unresolved[0].reason == "locked block not in Tactical Watch session"
+    assert any(
+        "LOCKED_CONTENT" in issue
+        for issue in check_structured_faithfulness(result.plan, SOURCE, _brief())
+    )
 
 
 def test_previous_pocket_exchange_failure_is_repaired_before_faithfulness():
