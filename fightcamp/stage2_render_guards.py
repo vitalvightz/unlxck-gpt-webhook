@@ -132,12 +132,20 @@ def _render_guard_flags(
     # stays true (so the hygiene note is preserved and the athlete isn't told the
     # injury does not exist).
     surface_injury_only = _all_active_injuries_surface_only(athlete_model)
+    declared_tactical_styles = dedupe_preserve_order(
+        [
+            str(style).strip()
+            for style in clean_list(athlete_model.get("tactical_styles"))
+            if str(style).strip()
+        ]
+    )
     render_mode = "open_ongoing_system" if open_ongoing_mode else ("late_fight_countdown_only" if late_fight_countdown else "camp_plan")
     return {
         "has_active_injury": has_active_injury,
         "surface_injury_only": surface_injury_only,
         "suppress_rehab_headings": (not has_active_injury) or surface_injury_only,
         "suppress_phase_toolbox_sections": late_fight_countdown or open_ongoing_mode,
+        "declared_tactical_styles": declared_tactical_styles,
         "render_mode": render_mode,
     }
 
@@ -156,6 +164,15 @@ def _append_render_guard_writing_rules(
         payload_mode=payload_mode,
         days_until_fight=days_until_fight,
     )
+    declared_tactical_styles = guards.get("declared_tactical_styles") or []
+    if declared_tactical_styles:
+        declared_labels = ", ".join(declared_tactical_styles)
+        rules.extend(
+            [
+                f"ATHLETE IDENTITY CONTRACT: athlete_model.tactical_styles is authoritative for athlete-facing tactical style identity. The athlete declared: {declared_labels}. Whenever the athlete's fighting/tactical style is named or used as an identity label, use only the declared label(s) exactly as supplied.",
+                "Internal archetypes, candidate-pool tags, exercise tags, scorer tags, programming aliases, and inferred style families may guide programming only. Never substitute them for, relabel, broaden, narrow, or 'correct' the athlete's declared tactical style in athlete-facing copy.",
+            ]
+        )
     if guards["suppress_rehab_headings"]:
         rules.extend(
             [
