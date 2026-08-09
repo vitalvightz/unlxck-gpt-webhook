@@ -24,9 +24,10 @@ constrained strings (no ``Enum`` classes), and ``from __future__`` annotations.
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 # Bump this whenever the structured shape changes in a backward-incompatible
 # way. Stored plans keep the version they were generated with so the renderer
@@ -155,10 +156,15 @@ PlanNoteCategory = Literal[
 
 
 class MeasuredValue(BaseModel):
-    """A scalar quantity with an explicit unit (duration, distance, mass...)."""
+    """A scalar or numeric range with an explicit unit."""
 
-    value: float
+    value: float | str
     unit: str
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def validate_value(cls, value: Any) -> Any:
+        return _validated_numeric_or_range(value)
 
 
 class LoadPrescription(BaseModel):
@@ -171,10 +177,15 @@ class LoadPrescription(BaseModel):
     """
 
     method: LoadMethod
-    value: float
+    value: float | str
     unit: str
     ref: str | None = None
     display: str | None = None
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def validate_value(cls, value: Any) -> Any:
+        return _validated_numeric_or_range(value)
 
 
 class EffortPrescription(BaseModel):
@@ -183,6 +194,24 @@ class EffortPrescription(BaseModel):
     method: EffortMethod
     value: float | str
     scale: str | None = None
+
+
+_NUMERIC_OR_RANGE_RE = re.compile(
+    r"^[0-9]+(?:\.[0-9]+)?(?:\s*[-–]\s*[0-9]+(?:\.[0-9]+)?)?$"
+)
+
+
+def _validated_numeric_or_range(value: Any) -> Any:
+    """Accept a finite number or a numeric range, canonicalising its dash."""
+    if isinstance(value, bool):
+        raise ValueError("must be a number or numeric range")
+    if isinstance(value, (int, float)):
+        if not float(value) >= 0 or not float(value) < float("inf"):
+            raise ValueError("must be a finite non-negative number")
+        return value
+    if isinstance(value, str) and _NUMERIC_OR_RANGE_RE.fullmatch(value.strip()):
+        return re.sub(r"\s*[-–]\s*", "-", value.strip())
+    raise ValueError("must be a number or numeric range")
 
 
 class TempoPrescription(BaseModel):
@@ -275,7 +304,7 @@ class SessionBlock(BaseModel):
     category: str | None = None
     order_index: int | None = None
     duration: MeasuredValue | None = None
-    sets: int | None = None
+    sets: int | str | None = None
     reps: int | str | None = None
     load: LoadPrescription | None = None
     effort: EffortPrescription | None = None
@@ -283,7 +312,7 @@ class SessionBlock(BaseModel):
     rest: MeasuredValue | None = None
     work: MeasuredValue | None = None
     distance: MeasuredValue | None = None
-    rounds: int | None = None
+    rounds: int | str | None = None
     intensity: str | None = None
     energy_system: str | None = None
     impact_level: str | None = None
@@ -293,6 +322,13 @@ class SessionBlock(BaseModel):
     progression_rule: str | None = None
     substitutions: list[str] = Field(default_factory=list)
     red_flags: list[RedFlagRule] = Field(default_factory=list)
+
+    @field_validator("sets", "rounds", mode="before")
+    @classmethod
+    def validate_counts(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        return _validated_numeric_or_range(value)
 
 
 class Completion(BaseModel):

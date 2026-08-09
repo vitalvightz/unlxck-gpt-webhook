@@ -7,6 +7,9 @@ import pytest
 from pydantic import ValidationError
 
 from api.structured_plan_models import (
+    LoadPrescription,
+    MeasuredValue,
+    SessionBlock,
     SCHEMA_VERSION,
     StructuredTrainingPlan,
     _STRICT_UNSUPPORTED_KEYWORDS,
@@ -16,6 +19,42 @@ from api.structured_plan_models import (
     safe_parse_structured_plan,
     validate_structured_plan,
 )
+
+
+@pytest.mark.parametrize("value", [3, 2.5, "2-3", "2.5-4", "3.5-5", "2–3"])
+def test_numeric_or_range_schema_values_are_accepted(value):
+    measured = MeasuredValue(value=value, unit="seconds")
+    load = LoadPrescription(method="absolute", value=value, unit="kg")
+    expected = value.replace("–", "-") if isinstance(value, str) else value
+    assert measured.value == expected
+    assert load.value == expected
+
+
+@pytest.mark.parametrize(
+    "value", ["2-", "-3", "2--3", "three-five", "3 to 5", "heavy", "a few"]
+)
+def test_numeric_or_range_schema_values_reject_prose_and_malformed_ranges(value):
+    with pytest.raises(ValidationError):
+        MeasuredValue(value=value, unit="seconds")
+    with pytest.raises(ValidationError):
+        LoadPrescription(method="absolute", value=value, unit="kg")
+
+
+@pytest.mark.parametrize("field", ["sets", "rounds"])
+@pytest.mark.parametrize("value", [3, "3-5", "3–5"])
+def test_block_counts_accept_scalars_and_ranges(field, value):
+    block = {"block_id": "b", "block_type": "strength", "display_name": "Lift", field: value}
+    parsed = SessionBlock.model_validate(block)
+    expected = value.replace("–", "-") if isinstance(value, str) else value
+    assert getattr(parsed, field) == expected
+
+
+@pytest.mark.parametrize("field", ["sets", "rounds"])
+@pytest.mark.parametrize("value", ["2-", "-3", "2--3", "three-five", "3 to 5", "heavy", "a few"])
+def test_block_counts_reject_prose_and_malformed_ranges(field, value):
+    block = {"block_id": "b", "block_type": "strength", "display_name": "Lift", field: value}
+    with pytest.raises(ValidationError):
+        SessionBlock.model_validate(block)
 
 
 def _walk_schema_nodes(node, path="$"):
