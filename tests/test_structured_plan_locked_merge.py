@@ -141,6 +141,62 @@ def test_missing_block_is_restored_from_authoritative_role():
     assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
 
 
+def test_drill_titled_session_is_reused_as_the_single_tactical_watch():
+    plan = _plan(include=False)
+    session = plan["weeks"][0]["days"][0]["sessions"][0]
+    session["title"] = "Pocket Exchange Map"
+
+    result = _merged(plan)
+
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Fight Tactical Watch"]
+    assert sessions[0]["blocks"][0]["display_name"] == "Pocket Exchange Map"
+    assert result.unresolved == []
+    assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
+def test_stale_drill_titled_shell_is_collapsed_into_existing_tactical_watch():
+    plan = _plan()
+    plan["weeks"][0]["days"][0]["sessions"].insert(
+        0,
+        {
+            "session_type": "skill",
+            "title": "Pocket Exchange Map",
+            "completion_status": "not_started",
+            "objective": WHY,
+            "mindset_anchor": {},
+            "blocks": [],
+        },
+    )
+
+    result = _merged(plan)
+
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Fight Tactical Watch"]
+    assert sessions[0]["blocks"][0]["display_name"] == "Pocket Exchange Map"
+    assert result.unresolved == []
+    assert merge_locked_structured_content(result.plan, _brief()).plan == result.plan
+
+
+def test_completed_drill_titled_session_is_preserved():
+    plan = _plan()
+    plan["weeks"][0]["days"][0]["sessions"].append(
+        {
+            "session_type": "skill",
+            "title": "Pocket Exchange Map",
+            "completion_status": "completed",
+            "blocks": [],
+        }
+    )
+
+    result = _merged(plan)
+
+    assert [session["title"] for session in result.plan["weeks"][0]["days"][0]["sessions"]] == [
+        "Fight Tactical Watch",
+        "Pocket Exchange Map",
+    ]
+
+
 def test_locked_block_in_wrong_same_day_session_moves_without_overwriting_combat():
     plan = _plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["title"] = "Technical-only combat"

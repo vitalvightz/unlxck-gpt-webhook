@@ -128,6 +128,28 @@ def _new_watch_session(
     }
 
 
+def _is_safe_named_watch_shell(
+    session: Mapping[str, Any], authoritative_names: set[str]
+) -> bool:
+    """Return whether a drill-titled session can safely become the Watch.
+
+    The structured converter occasionally emits the locked drill name as its
+    own otherwise-empty session. It is the same governed content, not a second
+    athlete session. Only reuse or remove that shell when it has not been
+    started and carries no independent blocks.
+    """
+    completion_status = _normalise(session.get("completion_status"))
+    if completion_status not in {"", "not_started", "not started"}:
+        return False
+
+    blocks = session.get("blocks") or []
+    return isinstance(blocks, list) and all(
+        isinstance(block, Mapping)
+        and _normalise(block.get("display_name")) in authoritative_names
+        for block in blocks
+    )
+
+
 def merge_locked_structured_content(
     structured_plan: dict[str, Any], planning_brief: Any
 ) -> LockedMergeResult:
@@ -192,6 +214,29 @@ def merge_locked_structured_content(
             )
             continue
 
+        named_watch_sessions = [
+            session
+            for session in sessions
+            if _normalise(session.get("title")) in authoritative_names
+            and _normalise(session.get("title")) != session_title
+        ]
+        if len(named_watch_sessions) > 1:
+            result.unresolved.append(
+                LockedMergeIssue(
+                    day_label,
+                    name,
+                    "named Tactical Watch session not uniquely resolved",
+                )
+            )
+            continue
+        named_watch_session = named_watch_sessions[0] if named_watch_sessions else None
+        reusable_named_watch = (
+            named_watch_session
+            if named_watch_session
+            and _is_safe_named_watch_shell(named_watch_session, authoritative_names)
+            else None
+        )
+
         targets = [
             (session, block)
             for session in sessions
@@ -207,6 +252,10 @@ def merge_locked_structured_content(
 
         if watch_sessions:
             session = watch_sessions[0]
+        elif reusable_named_watch:
+            # The converter used the locked drill name as the session title.
+            # Reuse it as the canonical Watch instead of creating a twin card.
+            session = reusable_named_watch
         elif targets:
             # Keep unrelated same-day work intact. Create the governed session,
             # then move only the authoritative block into it below.
@@ -243,6 +292,7 @@ def merge_locked_structured_content(
         mindset = watch.get("mindset")
         mindset = mindset if isinstance(mindset, Mapping) else {}
         anchor = _mindset_anchor(watch)
+        session["title"] = display_title
         session["objective"] = watch.get("why")
         session["mindset_anchor"] = anchor
         block.update(
@@ -254,6 +304,20 @@ def merge_locked_structured_content(
                 "progression_rule": watch.get("progress"),
             }
         )
+
+        if (
+            watch_sessions
+            and reusable_named_watch is not None
+            and reusable_named_watch is not session
+        ):
+            # Remove the old converter shell only after its authoritative
+            # content has been repaired on the canonical Watch. The safety
+            # check above protects completed or independently populated work.
+            matching_days[0]["sessions"] = [
+                item
+                for item in matching_days[0].get("sessions") or []
+                if item is not reusable_named_watch
+            ]
         result.applied.append(LockedMergeApplication(day_label, str(block["display_name"])))
 
     return result
