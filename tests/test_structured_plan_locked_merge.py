@@ -171,7 +171,7 @@ def test_omitted_tactical_watch_session_is_created_without_another_model_call():
     assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
 
 
-def test_renamed_mindset_block_is_reused_instead_of_duplicated():
+def test_ambiguous_renamed_mindset_block_is_preserved():
     plan = _plan()
     session = plan["weeks"][0]["days"][0]["sessions"][0]
     session["blocks"][0]["display_name"] = "Pocket review"
@@ -179,10 +179,35 @@ def test_renamed_mindset_block_is_reused_instead_of_duplicated():
     result = _merged(plan)
 
     blocks = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
-    assert len(blocks) == 1
-    assert blocks[0]["display_name"] == "Pocket Exchange Map"
-    assert blocks[0]["coaching_cues"] == STEPS
+    assert [block["display_name"] for block in blocks] == [
+        "Pocket review",
+        "Pocket Exchange Map",
+    ]
+    assert blocks[0]["coaching_cues"] == ["AI step."]
+    assert blocks[1]["coaching_cues"] == STEPS
     assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
+def test_unrelated_mindset_block_is_preserved_when_locked_block_is_missing():
+    plan = _plan()
+    session = plan["weeks"][0]["days"][0]["sessions"][0]
+    unrelated = session["blocks"][0]
+    unrelated.update(
+        {
+            "display_name": "Fight-night breathing reset",
+            "coaching_cues": ["Use a slow exhale."],
+            "purpose": "Settle pre-fight tension.",
+        }
+    )
+    original = deepcopy(unrelated)
+
+    result = _merged(plan)
+
+    blocks = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
+    assert blocks[0] == original
+    assert blocks[1]["display_name"] == "Pocket Exchange Map"
+    assert blocks[1]["coaching_cues"] == STEPS
+    assert result.unresolved == []
 
 
 def test_schema_valid_card_with_omitted_watch_is_repaired_and_persistable():

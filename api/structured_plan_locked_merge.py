@@ -124,7 +124,7 @@ def _new_watch_session(
         "objective": str(watch.get("why") or "Review the tactical plan."),
         "completion_status": "not_started",
         "mindset_anchor": _mindset_anchor(watch),
-        "blocks": [_new_watch_block(day_label=day_label, name=name, watch=watch)],
+        "blocks": [],
     }
 
 
@@ -216,7 +216,6 @@ def merge_locked_structured_content(
                 name=name,
                 watch=watch,
             )
-            session["blocks"] = []
             matching_days[0].setdefault("sessions", []).append(session)
             sessions.append(session)
         else:
@@ -235,16 +234,11 @@ def merge_locked_structured_content(
                 owner["blocks"] = [item for item in owner.get("blocks") or [] if item is not block]
                 session.setdefault("blocks", []).append(block)
         else:
-            candidates = [
-                block
-                for block in session.get("blocks") or []
-                if isinstance(block, dict) and block.get("block_type") == "mindset"
-            ]
-            if len(candidates) == 1:
-                block = candidates[0]
-            else:
-                block = _new_watch_block(day_label=day_label, name=name, watch=watch)
-                session.setdefault("blocks", []).append(block)
+            # A generic mindset block is not proof that it represents this
+            # governed drill. Preserve ambiguous/unrelated content and append
+            # the authoritative block instead of destructively repurposing it.
+            block = _new_watch_block(day_label=day_label, name=name, watch=watch)
+            session.setdefault("blocks", []).append(block)
 
         mindset = watch.get("mindset")
         mindset = mindset if isinstance(mindset, Mapping) else {}
