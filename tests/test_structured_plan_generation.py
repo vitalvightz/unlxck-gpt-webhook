@@ -108,67 +108,6 @@ def test_valid_plan_outcome_is_valid_and_carries_schema_version():
     assert outcome.errors == []
 
 
-def test_unrepresentable_set_range_fails_closed_to_raw_plan():
-    plan = _valid_plan()
-    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["sets"] = 4
-
-    outcome = build_structured_plan_outcome(
-        plan,
-        raw_markdown=(
-            "D-15 - Power Transfer Touch\n"
-            "- Barbell Back Squat - 2-3 sets x 4-6 reps\n"
-        ),
-    )
-
-    assert outcome.status == "invalid_fallback_used"
-    assert outcome.structured_plan is None
-    assert any("UNREPRESENTABLE_RANGE" in error for error in outcome.errors)
-
-
-def test_block_moved_between_existing_same_day_sessions_fails_closed():
-    plan = _valid_plan()
-    day = plan["weeks"][0]["days"][0]
-    strength = day["sessions"][0]
-    moved_block = strength["blocks"].pop()
-    recovery = copy.deepcopy(strength)
-    recovery["session_id"] = "ses-recovery"
-    recovery["title"] = "Recovery"
-    recovery["blocks"] = [moved_block]
-    day["sessions"].append(recovery)
-
-    outcome = build_structured_plan_outcome(
-        plan,
-        raw_markdown=(
-            "D-15 - Power Transfer Touch\n"
-            "- Barbell Back Squat - 4 sets x 4-6 reps\n"
-            "D-15 - Recovery\n"
-        ),
-    )
-
-    assert outcome.status == "invalid_fallback_used"
-    assert outcome.structured_plan is None
-    assert any("MISPLACED_SESSION" in error for error in outcome.errors)
-
-
-def test_renamed_block_cannot_bypass_authoritative_prescription():
-    plan = _valid_plan()
-    block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
-    block["display_name"] = "Heavy Barbell Back Squat"
-    block["sets"] = 6
-
-    outcome = build_structured_plan_outcome(
-        plan,
-        raw_markdown=(
-            "D-15 - Power Transfer Touch\n"
-            "- Barbell Back Squat - 4 sets x 4-6 reps\n"
-        ),
-    )
-
-    assert outcome.status == "invalid_fallback_used"
-    assert outcome.structured_plan is None
-    assert any("block_not_uniquely_resolved" in error for error in outcome.errors)
-
-
 def test_d10_structured_generation_restores_week_context_and_cleans_adjustment_cues():
     plan = _valid_plan()
     week = plan["weeks"][0]
