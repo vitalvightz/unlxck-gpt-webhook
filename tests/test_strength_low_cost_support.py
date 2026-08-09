@@ -121,6 +121,7 @@ def test_explicit_core_priority_adds_only_one_dedicated_support_exercise(monkeyp
     assert [exercise["name"] for exercise in prioritized["exercises"]] == ["Anchor Row", "Pallof Hold"]
     assert "core_balance_low_cost_bonus" in prioritized["why_log"][1]["reasons"]["reason_codes"]
 
+
 def test_core_balance_bonus_cannot_bypass_existing_movement_cap(monkeypatch):
     anchor_core = _support(
         "Core Pattern Anchor",
@@ -155,6 +156,7 @@ def test_core_balance_bonus_cannot_bypass_existing_movement_cap(monkeypatch):
         weaknesses=["core stability"],
     )
 
+    # The existing per-movement ceiling must still win over the low-cost bonus.
     names = [exercise["name"] for exercise in prioritized["exercises"]]
     movements = [exercise.get("movement") for exercise in prioritized["exercises"]]
     assert len(names) == 2
