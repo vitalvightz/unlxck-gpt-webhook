@@ -1,12 +1,12 @@
 name: Temp structured card semantic QA
 on:
   push:
-    branches: [fix/structured-card-semantic-qa]
+    branches:
+      - fix/structured-card-semantic-qa
 permissions:
   contents: write
 jobs:
-  patch-test-commit:
-    if: github.actor != 'github-actions[bot]'
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,245 +16,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - name: Patch semantic QA and remove brittle stop-rule surgery
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-
-          # 1) Add a narrow LLM critic contract. It reviews only athlete-facing
-          # semantics and can PASS/FAIL; it never rewrites prescriptions.
-          Path('api/structured_plan_semantic_qa.py').write_text('''"""Final semantic QA for athlete-facing structured cards.
-
-This is deliberately a critic, not a planner or rewriter.  The model may only
-PASS a card or identify clear athlete-facing defects.  A failed/invalid review
-causes the existing raw Stage 2 plan-text fallback to be used; it can never
-change exercises, dose, safety truth, dates, or classifications.
-"""
-from __future__ import annotations
-
-import json
-from dataclasses import dataclass
-from typing import Any
-
-
-@dataclass(frozen=True)
-class StructuredCardSemanticQa:
-    passed: bool
-    issues: tuple[str, ...] = ()
-
-
-def build_structured_card_semantic_qa_prompt(structured_plan: dict[str, Any]) -> str:
-    payload = json.dumps(structured_plan, ensure_ascii=False, separators=(",", ":"))
-    return f"""You are the final QA critic for an athlete-facing training-plan card.
-
-You are NOT a coach, planner, or editor. Do not rewrite the plan and do not
-change exercises, sets, reps, load, effort, dates, classifications, injuries,
-red flags, or safety decisions.
-
-Review the complete structured card below only for CLEAR athlete-facing semantic
-defects. Return FAIL only when a real user-facing problem is present, such as:
-- garbled, incomplete, or nonsensical wording;
-- an isolated noun/symptom presented as an instruction (for example a stop rule
-  containing only \"discharge\", \"pain\", or \"bleeding\");
-- a stop rule that is not a complete actionable trigger/condition;
-- a stop rule that merely repeats plan-level Safety Priority/red-flag guidance
-  and adds no exercise-specific reason to stop that block;
-- an internal contradiction between visible card fields;
-- duplicated visible copy that would clearly confuse the athlete.
-
-Do NOT fail for concise coaching phrases, normal sports terminology, minor style
-preferences, or a stop rule being longer than 10 words when it remains complete
-and meaningful. Be conservative: if the card makes sense, PASS it.
-
-Return exactly one JSON object and nothing else:
-{{"verdict":"pass","issues":[]}}
-or
-{{"verdict":"fail","issues":[{{"path":"weeks.0.days.0.sessions.0.blocks.0.stop_rules.0","reason":"isolated symptom is not an actionable stop condition"}}]}}
-
-STRUCTURED CARD JSON:
-{payload}
-"""
-
-
-def parse_structured_card_semantic_qa(text: str) -> StructuredCardSemanticQa:
-    """Parse critic JSON fail-closed; malformed QA can never approve a card."""
-    try:
-        raw = json.loads(str(text or "").strip())
-    except (TypeError, ValueError, json.JSONDecodeError):
-        return StructuredCardSemanticQa(False, ("semantic QA returned invalid JSON",))
-    if not isinstance(raw, dict):
-        return StructuredCardSemanticQa(False, ("semantic QA response was not an object",))
-
-    verdict = str(raw.get("verdict") or "").strip().lower()
-    raw_issues = raw.get("issues")
-    issues: list[str] = []
-    if isinstance(raw_issues, list):
-        for item in raw_issues:
-            if isinstance(item, str) and item.strip():
-                issues.append(item.strip())
-            elif isinstance(item, dict):
-                path = str(item.get("path") or "").strip()
-                reason = str(item.get("reason") or "").strip()
-                if reason:
-                    issues.append(f"{path}: {reason}" if path else reason)
-    if verdict == "pass" and not issues:
-        return StructuredCardSemanticQa(True)
-    if not issues:
-        issues.append("semantic QA did not return a clean pass")
-    return StructuredCardSemanticQa(False, tuple(issues))
-''', encoding='utf-8')
-
-          # 2) Wire the critic into the existing structured conversion. It runs
-          # after deterministic reconcile and degrades to raw markdown on FAIL.
-          p = Path('api/stage2_automation.py')
-          s = p.read_text(encoding='utf-8')
-          import_anchor = 'from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days\n'
-          assert import_anchor in s
-          s = s.replace(
-              import_anchor,
-              import_anchor + 'from .structured_plan_semantic_qa import (\n'
-              '    build_structured_card_semantic_qa_prompt,\n'
-              '    parse_structured_card_semantic_qa,\n'
-              ')\n',
-              1,
-          )
-
-          helper_anchor = 'def _structured_repair_enabled() -> bool:\n'
-          idx = s.index(helper_anchor)
-          next_anchor = '\n\n# Responses-API output-format object requesting a single JSON object.'
-          end = s.index(next_anchor, idx)
-          helper = '''\n\ndef _structured_semantic_qa_enabled() -> bool:\n    """Whether a final LLM critic must approve the athlete-facing card.\n\n    On by default. A QA failure never changes training content; the structured\n    card is discarded and the already-validated raw Stage 2 plan text remains\n    the athlete-facing fallback.\n    """\n    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_SEMANTIC_QA")\n    if raw is None:\n        return True\n    return raw.strip().lower() in {"1", "true", "yes", "on"}\n'''
-          s = s[:end] + helper + s[end:]
-
-          method_anchor = '    async def _generate_structured_outcome(\n'
-          assert method_anchor in s
-          qa_method = '''    async def _semantic_qa_structured_outcome(\n        self,\n        outcome: StructuredPlanOutcome,\n        *,\n        source: str,\n        log_context: dict[str, str] | None,\n        costs: list[dict[str, Any]],\n    ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:\n        """Final semantic critic. It may reject a card but never rewrite it."""\n        if (\n            not _structured_semantic_qa_enabled()\n            or outcome.status not in {"valid", "repair_attempted_valid"}\n            or outcome.structured_plan is None\n        ):\n            return outcome, costs\n\n        prompt = build_structured_card_semantic_qa_prompt(outcome.structured_plan)\n        qa_text, qa_cost = await self._generate_text(\n            prompt,\n            attempt_label="structured_semantic_qa",\n            source=source,\n            log_context=log_context,\n            timeout=_stage2_structured_timeout_seconds(),\n            response_format=_STRUCTURED_JSON_FORMAT,\n        )\n        costs.append(qa_cost)\n        qa = parse_structured_card_semantic_qa(qa_text)\n        if qa.passed:\n            logger.info("[stage2] structured_semantic_qa pass")\n            return outcome, costs\n\n        logger.warning(\n            "[stage2] structured_semantic_qa fail issues=%s; using raw plan_text fallback",\n            len(qa.issues),\n        )\n        return (\n            StructuredPlanOutcome(\n                status="invalid_fallback_used",\n                errors=[f"semantic_qa: {issue}" for issue in qa.issues],\n                warnings=list(outcome.warnings),\n            ),\n            costs,\n        )\n\n'''
-          s = s.replace(method_anchor, qa_method + method_anchor, 1)
-
-          old_first = '''        if first_outcome.status in ("valid", "blocked_by_safety_audit"):\n            return self._reconcile_coach_led(first_outcome, planning_brief), costs\n'''
-          assert old_first in s
-          new_first = '''        if first_outcome.status == "blocked_by_safety_audit":\n            return self._reconcile_coach_led(first_outcome, planning_brief), costs\n        if first_outcome.status == "valid":\n            candidate = self._reconcile_coach_led(first_outcome, planning_brief)\n            return await self._semantic_qa_structured_outcome(\n                candidate, source=source, log_context=log_context, costs=costs\n            )\n'''
-          s = s.replace(old_first, new_first, 1)
-
-          old_final = '        return self._reconcile_coach_led(repaired_outcome, planning_brief), costs\n'
-          assert old_final in s
-          new_final = '''        candidate = self._reconcile_coach_led(repaired_outcome, planning_brief)\n        return await self._semantic_qa_structured_outcome(\n            candidate, source=source, log_context=log_context, costs=costs\n        )\n'''
-          s = s.replace(old_final, new_final, 1)
-          p.write_text(s, encoding='utf-8')
-
-          # 3) Deterministic safety audit must include stop_rules too.
-          p = Path('api/structured_plan_safety.py')
-          s = p.read_text(encoding='utf-8')
-          old = '                    for key in ("coaching_cues", "regression_options", "substitutions"):\n'
-          assert old in s
-          s = s.replace(
-              old,
-              '                    for key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):\n',
-              1,
-          )
-          p.write_text(s, encoding='utf-8')
-
-          # 4) Keep the <=10-word generation target, but make the converter own
-          # dedupe/completeness before output instead of the browser modifying it.
-          p = Path('api/structured_plan_generation.py')
-          s = p.read_text(encoding='utf-8')
-          lines = s.splitlines()
-          matches = [i for i, line in enumerate(lines) if '10 words' in line and 'stop' in line.lower()]
-          assert len(matches) == 1, matches
-          i = matches[0]
-          extra = [
-              '        "- Before output, silently review every athlete-facing field for complete, coherent wording. "',
-              '        "A stop_rules entry must be a complete actionable trigger, never an isolated symptom/noun, "',
-              '        "and must not merely repeat plan-level Safety Priority/red-flag guidance when it adds no "',
-              '        "exercise-specific trigger.\\n"',
-          ]
-          lines[i+1:i+1] = extra
-          p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-
-          # 5) Delete the frontend semantic clause surgery that caused orphaned
-          # words such as "discharge". Keep the other Active Notes guardrail.
-          p = Path('web/lib/block-display-guardrails.ts')
-          s = p.read_text(encoding='utf-8')
-          s, n = re.subn(
-              r'\nfunction stripStopLabel\(value: string\): string \{.*?\n\}\n',
-              '\n', s, count=1, flags=re.S,
-          )
-          assert n == 1
-          s, n = re.subn(
-              r'\nfunction splitStopClauses\(value: string\): string\[\] \{.*?\n\}\n\n/\*\*\n \* One exercise owns at most one athlete-facing stop rule\..*?\nexport function selectCompactStopRule\(.*?\n\}\n',
-              '\n', s, count=1, flags=re.S,
-          )
-          assert n == 1
-          p.write_text(s, encoding='utf-8')
-
-          p = Path('web/components/structured-plan-renderer.tsx')
-          s = p.read_text(encoding='utf-8')
-          assert '  selectCompactStopRule,\n' in s
-          s = s.replace('  selectCompactStopRule,\n', '', 1)
-          s, n = re.subn(
-              r'selectCompactStopRule\(\s*stopRules,\s*planSafetyTexts\s*\)',
-              'stopRules.map((rule) => rule.trim().replace(/^stop(?:\\s+rule)?\\s*:\\s*/i, "").trim()).find(Boolean) || null',
-              s,
-              count=1,
-          )
-          assert n == 1
-          p.write_text(s, encoding='utf-8')
-
-          p = Path('web/lib/block-display-guardrails.test.ts')
-          s = p.read_text(encoding='utf-8')
-          s = s.replace('  selectCompactStopRule,\n', '', 1)
-          s, n = re.subn(
-              r'\ntest\("keeps one block-specific stop rule.*?(?=\ntest\("removes escalation from Active Notes)',
-              '\n', s, count=1, flags=re.S,
-          )
-          assert n == 1
-          p.write_text(s, encoding='utf-8')
-
-          # 6) Focused tests for critic parsing/prompt and safety text coverage.
-          Path('tests/test_structured_plan_semantic_qa.py').write_text('''from api.structured_plan_semantic_qa import (\n    build_structured_card_semantic_qa_prompt,\n    parse_structured_card_semantic_qa,\n)\n\n\ndef test_semantic_qa_parser_accepts_clean_pass():\n    result = parse_structured_card_semantic_qa('{"verdict":"pass","issues":[]}')\n    assert result.passed is True\n    assert result.issues == ()\n\n\ndef test_semantic_qa_parser_fails_closed_on_invalid_json():\n    result = parse_structured_card_semantic_qa('not-json')\n    assert result.passed is False\n    assert result.issues\n\n\ndef test_semantic_qa_parser_keeps_path_and_reason():\n    result = parse_structured_card_semantic_qa(\n        '{"verdict":"fail","issues":[{"path":"weeks.0.days.0.sessions.0.blocks.0.stop_rules.0","reason":"isolated symptom"}]}'\n    )\n    assert result.passed is False\n    assert result.issues == (\n        "weeks.0.days.0.sessions.0.blocks.0.stop_rules.0: isolated symptom",\n    )\n\n\ndef test_semantic_qa_prompt_explicitly_catches_orphan_stop_rule_without_rewriting():\n    prompt = build_structured_card_semantic_qa_prompt(\n        {"weeks": [{"days": [{"sessions": [{"blocks": [{"stop_rules": ["discharge"]}]}]}]}]}\n    )\n    assert 'only "discharge"' in prompt\n    assert "Do not rewrite the plan" in prompt\n    assert '"stop_rules":["discharge"]' in prompt\n''', encoding='utf-8')
-
-          # Add a direct safety collector regression without relying on private
-          # implementation details elsewhere.
-          test_path = Path('tests/test_structured_plan_safety.py')
-          t = test_path.read_text(encoding='utf-8')
-          if 'test_athlete_facing_strings_includes_stop_rules' not in t:
-              t += '''\n\ndef test_athlete_facing_strings_includes_stop_rules():\n    from api.structured_plan_safety import athlete_facing_strings\n\n    plan = {\n        "weeks": [{\n            "days": [{\n                "sessions": [{\n                    "blocks": [{\n                        "stop_rules": ["Stop if punch speed collapses"],\n                    }],\n                }],\n            }],\n        }],\n    }\n    assert "Stop if punch speed collapses" in athlete_facing_strings(plan)\n'''
-              test_path.write_text(t, encoding='utf-8')
-          PY
-      - name: Install Python test dependencies
+      - name: Apply patch
+        run: python scripts/tmp_patch_structured_semantic_qa.py
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install ruff pytest
-      - name: Python focused validation
+      - name: Python validation
         run: |
           python -m ruff check api/structured_plan_semantic_qa.py api/stage2_automation.py api/structured_plan_generation.py api/structured_plan_safety.py tests/test_structured_plan_semantic_qa.py tests/test_structured_plan_safety.py
           python -m pytest -q tests/test_structured_plan_semantic_qa.py tests/test_structured_plan_stop_rules.py tests/test_structured_plan_safety.py
-      - name: Web focused validation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Web validation
         working-directory: web
         run: |
           npm ci
           npx tsx --test lib/block-display-guardrails.test.ts
           npx tsc --noEmit
-      - name: Diff checks
+      - name: Diff validation
+        run: git diff --check
+      - name: Commit product changes
         run: |
-          git diff --check
-          test ! -e .github/workflows/tmp-structured-card-semantic-qa.yml.tmp
-          git status --short
-      - name: Commit product changes and remove temporary workflow
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add api/stage2_automation.py api/structured_plan_generation.py api/structured_plan_safety.py api/structured_plan_semantic_qa.py tests/test_structured_plan_semantic_qa.py tests/test_structured_plan_safety.py web/lib/block-display-guardrails.ts web/lib/block-display-guardrails.test.ts web/components/structured-plan-renderer.tsx
-          git commit -m "fix: add semantic QA for athlete-facing cards"
-          git rm .github/workflows/tmp-structured-card-semantic-qa.yml
-          git commit -m "chore: remove temporary semantic QA workflow"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add api tests web
+          git commit -m 'fix: add semantic QA for athlete-facing cards'
+          git rm .github/workflows/tmp-structured-card-semantic-qa.yml scripts/tmp_patch_structured_semantic_qa.py
+          git commit -m 'chore: remove temporary semantic QA patch files'
           git push origin HEAD:fix/structured-card-semantic-qa
