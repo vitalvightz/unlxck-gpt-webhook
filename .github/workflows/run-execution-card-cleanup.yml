@@ -1,0 +1,56 @@
+name: Run execution-card cleanup
+
+on:
+  push:
+    branches:
+      - fix/restore-block-stop-rules
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/restore-block-stop-rules
+          fetch-depth: 0
+
+      - name: Extract and apply patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path('.github/workflows/apply-execution-card-cleanup.yml').read_text().splitlines()
+          start = next(i for i, line in enumerate(source) if "python - <<'PY'" in line)
+          body = []
+          for line in source[start + 1:]:
+              if line.strip() == 'PY':
+                  break
+              body.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/apply_execution_cleanup.py').write_text('\n'.join(body) + '\n')
+          PY
+          python /tmp/apply_execution_cleanup.py
+
+      - name: Run focused regression tests
+        shell: bash
+        run: |
+          python -m pip install -q -r requirements.txt pytest
+          pytest -q tests/test_structured_plan_stop_rules.py
+          cd web
+          npm ci --ignore-scripts
+          npm run typecheck
+          npm run test:unit -- --test-name-pattern="stop|execution|Band-Resisted|planning transcript"
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-execution-card-cleanup.yml .github/workflows/run-execution-card-cleanup.yml
+          git add api/structured_plan_generation.py api/structured_plan_models.py tests/test_structured_plan_stop_rules.py web/lib/types.ts web/lib/structured-plan.ts web/lib/structured-plan-stop-rules.test.ts web/components/structured-plan-renderer.tsx web/components/structured-plan-stop-rules.test.tsx
+          git commit -m "Make exercise cards execution-first"
+          git push origin HEAD:fix/restore-block-stop-rules
