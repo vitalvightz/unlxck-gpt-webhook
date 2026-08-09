@@ -74,6 +74,12 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
+import {
+  applySourceSetRange,
+  getSourcePrescriptionRangeOverrides,
+  selectCompactStopRule,
+  stripSafetyOwnedClause,
+} from "@/lib/block-display-guardrails";
 import type {
   DeterministicNutritionPhase,
   DeterministicRecoveryPhase,
@@ -273,6 +279,8 @@ export function MindsetAnchorCard({
 // that print the tag without drilling it through every intermediate day/session
 // component. Null (no provider) keeps the unchanged "Rehab" wording.
 const RehabLabelContext = createContext<RehabLabelPolicy | null>(null);
+const PlanSourceTextContext = createContext<string | null>(null);
+const PlanSafetyTextContext = createContext<string[]>([]);
 
 /** Relays the Rehab/Prehab policy to the block cards below it. Standalone
  * surfaces that render SessionCard directly (Today) mount this themselves;
@@ -298,21 +306,26 @@ function blockTagLabel(block: StructuredBlock, policy: RehabLabelPolicy | null):
 export function BlockCard({
   block,
   openWeekIntent,
+  sourceCountdown,
 }: {
   block: StructuredBlock;
   /** Development-block week intent of an open (renewable) plan. Adds the
    * week-directed instruction (progress / deload) to the card; dated camps
    * never pass it. */
   openWeekIntent?: OpenBlockWeekIntent | null;
+  sourceCountdown?: string | null;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
+  const sourceText = useContext(PlanSourceTextContext);
+  const planSafetyTexts = useContext(PlanSafetyTextContext);
   const title = cleanText(block.display_name) || "Block";
+  const sourceOverrides = getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
   const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
-  const metrics = selectBlockMetric(block);
+  const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets);
   const work = formatMeasured(block.work);
   const rest = shouldShowRest(block.rest) ? formatMeasured(block.rest) : null;
-  const effort = formatEffort(block);
+  const effort = sourceOverrides.effort || formatEffort(block);
   // The effort card is glossed from the METHOD, not from the word "Effort":
   // EffortMethod covers RPE, RIR, intent, velocity, heart_rate_zone, pace and
   // max_effort_percent, so a fixed RPE definition would mis-explain "intent max"
@@ -325,11 +338,14 @@ export function BlockCard({
   // A week directive owns progression/deload programming for open plans, while
   // block stop criteria are safety instructions and must always remain visible.
   const showProgressionAside = Boolean(progression && !weekDirective);
+  const compactStopRule = selectCompactStopRule(stopRules, planSafetyTexts);
   const adjustmentRules = [
     ...(showProgressionAside && progression
       ? [{ label: "Progress" as const, text: progression }]
       : []),
-    ...stopRules.map((text) => ({ label: "Stop rule" as const, text })),
+    ...(compactStopRule
+      ? [{ label: "Stop rule" as const, text: compactStopRule }]
+      : []),
   ];
 
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
@@ -465,6 +481,7 @@ function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
 export function SessionCard({
   session,
   day,
+  sourceCountdown,
   defaultOpenBlocks,
   showDayContext = true,
   showDayLabels = true,
@@ -473,6 +490,8 @@ export function SessionCard({
 }: {
   session: StructuredSession;
   day?: StructuredDay;
+  /** Countdown used only to reconcile exact source prescription ranges. */
+  sourceCountdown?: string | null;
   defaultOpenBlocks?: boolean;
   /** When false, day-level context like warnings/nutrition/mindset is rendered by
    * the parent day card instead, so the same information does not repeat inside
@@ -640,6 +659,7 @@ export function SessionCard({
                   key={cleanText(block.block_id) || `block-${index}`}
                   block={block}
                   openWeekIntent={openWeekIntent}
+                  sourceCountdown={sourceCountdown}
                 />
               ))}
             </div>
@@ -1183,6 +1203,7 @@ export function CampDayCard({
                 key={cleanText(session.session_id) || `session-${index}`}
                 session={session}
                 day={index === 0 ? day : undefined}
+                sourceCountdown={day.countdown_label}
                 defaultOpenBlocks={isCurrent}
                 showDayContext={false}
                 showDayLabels={false}
@@ -1199,6 +1220,20 @@ export function CampDayCard({
   );
 }
 
+function getSafetyPriorityTexts(plan: StructuredPlan): string[] {
+  const rules = getDisplayableRedFlags(plan);
+  if (rules.length > 0) {
+    return rules.flatMap((rule) =>
+      [cleanText(rule.display_text), cleanText(rule.action)].filter(
+        (text): text is string => text !== null,
+      ),
+    );
+  }
+  return getFallbackSafetyNotes(plan)
+    .map((note) => cleanText(note.text))
+    .filter((text): text is string => text !== null);
+}
+
 // Plan-level "active notes": the short, always-on reminders (weight cut,
 // injury, nutrition, general non-negotiables) that live outside any week. Kept
 // as a standalone card near the top so this context is not lost in the
@@ -1206,7 +1241,11 @@ export function CampDayCard({
 export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
   // Drop any note that just restates a red-flag rule — the Red Flags card is the
   // single home for stop/report rules, so Active Notes stays context-only.
-  const notes = getActiveNotesExcludingRedFlags(plan);
+  const safetyPriorityTexts = getSafetyPriorityTexts(plan);
+  const notes = getActiveNotesExcludingRedFlags(plan).flatMap((note) => {
+    const text = stripSafetyOwnedClause(cleanText(note.text) || "", safetyPriorityTexts);
+    return text ? [{ ...note, text }] : [];
+  });
   // Collapsed by default so the plan opens short: the title + count stay visible
   // and the detail is one tap away.
   const [open, setOpen] = useState(false);
@@ -1969,6 +2008,15 @@ export function StructuredPlanRenderer({
 
   const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
+  const safetyOwnershipTexts = useMemo(
+    () => [
+      ...getSafetyPriorityTexts(plan),
+      ...getActiveNotesExcludingRedFlags(plan)
+        .map((note) => cleanText(note.text))
+        .filter((text): text is string => text !== null),
+    ],
+    [plan],
+  );
   // The raw plan dump is internal: athletes see the structured cards only. It
   // stays for admins, and for the fail-closed schedule-unavailable state whose
   // message tells the athlete to read the original plan below.
@@ -2040,6 +2088,8 @@ export function StructuredPlanRenderer({
 
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
+    <PlanSourceTextContext.Provider value={rawFallback}>
+    <PlanSafetyTextContext.Provider value={safetyOwnershipTexts}>
     <div className="sp-root cm-root">
       {weeks.length > 0 ? (
         <>
@@ -2206,6 +2256,8 @@ export function StructuredPlanRenderer({
         </details>
       ) : null}
     </div>
+    </PlanSafetyTextContext.Provider>
+    </PlanSourceTextContext.Provider>
     </RehabLabelProvider>
   );
 }
