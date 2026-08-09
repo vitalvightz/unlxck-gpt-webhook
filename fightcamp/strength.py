@@ -32,6 +32,7 @@ from .strength_session_quality import (
     infer_strength_sessions,
     missing_base_categories,
     score_band_margin,
+    support_budget_cost,
     session_starts_with_support_only,
     session_support_count_before_anchor,
     strength_quality_adjustment,
@@ -110,6 +111,35 @@ def normalize_style_tags(tags):
 
 STYLE_INSERT_SCORE_MARGIN = {"GPP": 0.2, "SPP": 0.35, "TAPER": 0.15}
 SESSION_SUPPORT_CAP_MULTIPLIER = 2
+CORE_BALANCE_PRIORITY_TOKENS = {
+    "core",
+    "core_stability",
+    "core_strength",
+    "trunk",
+    "trunk_strength",
+    "anti_rotation",
+    "balance",
+    "stability",
+}
+
+
+def _has_core_balance_priority(flags: dict, weaknesses) -> bool:
+    raw_values: list[str] = []
+
+    def add_values(value) -> None:
+        if isinstance(value, (list, tuple, set)):
+            raw_values.extend(str(item) for item in value if str(item).strip())
+        elif value is not None and str(value).strip():
+            raw_values.append(str(value))
+
+    add_values(weaknesses)
+    for key in ("weaknesses", "key_goals", "primary_goal", "primary_weak_area"):
+        add_values(flags.get(key))
+
+    normalized = {normalize_tag(value) for value in raw_values}
+    normalized.discard(None)
+    return bool(normalized & CORE_BALANCE_PRIORITY_TOKENS)
+
 
 FATIGUE_COST_BY_QUALITY_CLASS = {
     "anchor_loaded": 3.0,
@@ -1650,6 +1680,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if (canonical := normalize_tag(str(style or "")))
     ]
     goals = flags.get("key_goals", [])
+    core_balance_bonus = 1 if _has_core_balance_priority(flags, weaknesses) else 0
     priority_profile = build_priority_profile(
         SimpleNamespace(
             key_goals=goals,
@@ -2481,12 +2512,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _enforce_session_quality(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)
         support_cap = max(num_strength_sessions * SESSION_SUPPORT_CAP_MULTIPLIER, 2)
+
+        def current_support_cost() -> int:
+            return support_budget_cost(
+                updated,
+                core_balance_bonus=core_balance_bonus,
+            )
+
         guard = 0
-        while count_support_only(updated) > support_cap:
+        while current_support_cost() > support_cap:
             guard += 1
             max_iter = bounded_max_iterations(len(updated))
             if guard > max_iter:
-                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_guard", target=support_cap, actual=count_support_only(updated))
+                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_guard", target=support_cap, actual=current_support_cost())
                 break
             selected_names = _selected_names(updated)
             replacement_entry = _best_candidate(
@@ -2508,7 +2546,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement_late_safe_profile=late_safe_profile,
             )
             if not replacement_entry or replace_index is None:
-                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_no_replacement", target=support_cap, actual=count_support_only(updated))
+                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_no_replacement", target=support_cap, actual=current_support_cost())
                 break
             _replace_exercise(
                 updated,
@@ -2648,6 +2686,51 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             replacement_reasons=replacement_reasons,
         )
         return updated
+
+    def _append_core_balance_bonus(exercises: list[dict]) -> list[dict]:
+        if core_balance_bonus <= 0 or target_exercises <= 0 or num_strength_sessions <= 0:
+            return exercises
+
+        # Keep this deliberately small: at most two dedicated core/balance
+        # support exercises can survive, and only one can be added beyond the
+        # ordinary selector budget.
+        current_core_balance = sum(
+            1
+            for exercise in exercises
+            if _cached_classify(exercise).get("core_balance_support")
+        )
+        if current_core_balance >= 2 or len(exercises) >= target_exercises + 1:
+            return exercises
+
+        selected_names = _selected_names(exercises)
+        bonus_entry = _best_candidate(
+            lambda cand, _score, _reasons, profile: (
+                bool(profile.get("core_balance_support"))
+                and _cached_guarded_decision(cand).action != "exclude"
+                and (
+                    not injuries
+                    or not _cached_injury_match(cand, ("name", "movement", "method"), ("exclude",))
+                )
+            ),
+            exclude_names=selected_names,
+        )
+        if not bonus_entry:
+            return exercises
+
+        bonus, bonus_score, bonus_reasons, _profile, _late_safe_profile = bonus_entry
+        bonus_name = bonus.get("name")
+        if not bonus_name:
+            return exercises
+        bonus_reasons.setdefault("reason_codes", [])
+        bonus_reasons["reason_codes"] = list(
+            dict.fromkeys(
+                list(bonus_reasons.get("reason_codes", []))
+                + ["core_balance_low_cost_bonus"]
+            )
+        )
+        score_lookup[bonus_name] = bonus_score
+        reason_lookup[bonus_name] = bonus_reasons
+        return [*exercises, bonus]
 
     candidate_metadata: dict[str, dict[str, object]] = {}
     for ex, score, reasons in weighted_exercises:
@@ -3091,6 +3174,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _run_real_poststep(
         "early_taper_strength_maintenance_final",
         lambda: _ensure_early_taper_strength_maintenance_touch(base_exercises),
+    )
+    base_exercises = _run_real_poststep(
+        "core_balance_low_cost_bonus",
+        lambda: _append_core_balance_bonus(base_exercises),
     )
 
     _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])

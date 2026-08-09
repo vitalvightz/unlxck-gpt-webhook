@@ -73,6 +73,17 @@ _SUPPORT_HINTS = {
     "parasympathetic",
 }
 _REHAB_HINTS = {"rehab", "therapy", "prehab"}
+_CORE_BALANCE_SUPPORT_TAGS = {
+    "core",
+    "core_stability",
+    "core_strength",
+    "trunk",
+    "trunk_strength",
+    "anti_rotation",
+    "balance",
+    "stability",
+    "proprioception",
+}
 _ISOMETRIC_HINTS = {"isometric", "iso hold", "iso", "hold"}
 _FORCE_ISOMETRIC_HINTS = {
     "pins",
@@ -138,6 +149,7 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
     unilateral = "unilateral" in tags or _has_any_hint(text, _UNILATERAL_HINTS)
     power_pattern = bool(tags & _POWER_HINTS) or _has_any_hint(text, _POWER_HINTS)
     support_only = bool(tags & _SUPPORT_HINTS) or _has_any_hint(text, _SUPPORT_HINTS)
+    core_balance_signal = bool(tags & _CORE_BALANCE_SUPPORT_TAGS)
     force_isometric = is_isometric and (
         loaded_pattern
         or bool(tags & {"posterior_chain", "quad_dominant", "hip_dominant", "push", "pull"})
@@ -157,6 +169,12 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
     else:
         quality_class = "support_accessory"
 
+    core_balance_support = (
+        quality_class in SUPPORT_ONLY_CLASSES
+        and quality_class != "rehab_support"
+        and core_balance_signal
+    )
+
     base_categories: set[str] = set()
     if lower_body_loaded:
         base_categories.add("lower_body_loaded")
@@ -173,6 +191,7 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
         "loaded_pattern": loaded_pattern,
         "power_pattern": quality_class == "anchor_power",
         "rehab_support": quality_class == "rehab_support",
+        "core_balance_support": core_balance_support,
         "base_categories": sorted(base_categories),
     }
 
@@ -232,6 +251,33 @@ def has_anchor_capable_option(exercises: list[dict[str, Any]]) -> bool:
 
 def count_support_only(exercises: list[dict[str, Any]]) -> int:
     return sum(1 for exercise in exercises if classify_strength_item(exercise)["support_only"])
+
+
+def support_budget_cost(
+    exercises: list[dict[str, Any]],
+    *,
+    core_balance_bonus: int = 0,
+) -> int:
+    """Return support-cap cost while preserving low-cost support work.
+
+    Rehab/prehab never consumes the support cap. When an explicit core/balance
+    priority is active, one dedicated core/balance support exercise is also
+    free. Anchor-capable compound lifts do not qualify merely because they carry
+    trunk-stability mechanism tags.
+    """
+    remaining_core_balance_bonus = max(0, int(core_balance_bonus or 0))
+    cost = 0
+    for exercise in exercises:
+        profile = classify_strength_item(exercise)
+        if profile["rehab_support"]:
+            continue
+        if not profile["support_only"]:
+            continue
+        if remaining_core_balance_bonus and profile.get("core_balance_support"):
+            remaining_core_balance_bonus -= 1
+            continue
+        cost += 1
+    return cost
 
 
 def missing_base_categories(exercises: list[dict[str, Any]]) -> list[str]:
