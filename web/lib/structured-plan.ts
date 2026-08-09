@@ -502,6 +502,61 @@ export function getMindsetLines(
   return lines;
 }
 
+const IMPORTANT_SESSION_CONTEXT_RE =
+  /\b(?:injur(?:y|ies)|rehab(?:ilitation)?|prehab|pain|sore(?:ness)?|irritation|strain|sprain|tendon|physio(?:therapy)?|medical|restriction|restricted|modified|limit(?:ed|ing)?|avoid(?:ing)?|taper|fight[ -]?(?:week|day)|weigh[ -]?in|weight[ -]?cut|freshness|return(?:ing)? to (?:training|play))\b/i;
+const COACH_SESSION_DEPENDENCY_RE =
+  /\b(?:coach(?:[- ]?led)?|gym|sparr(?:ing)?|contact)\b.*\b(?:session|work|block|day|training)\b|\b(?:session|work|block|day|training)\b.*\b(?:coach(?:[- ]?led)?|gym|sparr(?:ing)?|contact)\b/i;
+
+function isImportantSessionContext(value: string): boolean {
+  return IMPORTANT_SESSION_CONTEXT_RE.test(value) || COACH_SESSION_DEPENDENCY_RE.test(value);
+}
+
+function coachCueValue(values: Array<string | null>): string | null {
+  const seen = new Set<string>();
+  const cues = values.filter((value): value is string => {
+    if (!value) {
+      return false;
+    }
+    const normalized = value.toLowerCase().replace(/\s+/g, " ").replace(/[.\s]+$/, "");
+    if (seen.has(normalized)) {
+      return false;
+    }
+    seen.add(normalized);
+    return true;
+  });
+  return cues.length > 0 ? cues.map(capitalizeFirst).join(" · ") : null;
+}
+
+/**
+ * The compact, athlete-facing session coaching layer. The intake-derived mental
+ * framing remains intact, but intent and confidence are one optional Coach cue
+ * rather than separate labels. Context is reserved for constraints or a
+ * coach-session dependency so generic planning rationale does not slow down the
+ * in-session scan.
+ */
+export function getSessionCoachingLines(
+  anchor: Parameters<typeof getMindsetLines>[0],
+): MindsetLine[] {
+  if (!isObject(anchor)) {
+    return [];
+  }
+  const focus = cleanText(anchor.focus_cue);
+  const reset = cleanText(anchor.reset_cue);
+  const intent = cleanText(anchor.intent);
+  const confidence = cleanText(anchor.confidence_anchor);
+  const context = cleanText(anchor.context);
+  const coachCue = coachCueValue([intent, confidence]);
+  const lines: MindsetLine[] = [];
+
+  if (focus) lines.push({ label: "Focus", value: capitalizeFirst(focus) });
+  if (reset) lines.push({ label: "Reset", value: capitalizeFirst(reset) });
+  if (coachCue) lines.push({ label: "Coach cue", value: coachCue });
+  if (context && isImportantSessionContext(context)) {
+    lines.push({ label: "Context", value: capitalizeFirst(context) });
+  }
+  return lines;
+}
+
 export function splitMindsetLines(
   anchor: Parameters<typeof getMindsetLines>[0],
 ): { primary: MindsetLine[]; secondary: MindsetLine[] } {

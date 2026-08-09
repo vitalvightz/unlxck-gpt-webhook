@@ -18992,20 +18992,15 @@ html[data-theme="light"] .loading-operational-item {
   font-weight: 700;
   color: var(--brand-red);
 }
-.sp-mindset {
+/* Keep session coaching scan-first: the mindset inputs retain their value, but
+   the athlete sees only the cue they need to execute now. */
+.sp-coaching {
   background: var(--bg-support);
   border-radius: var(--radius-stat);
   padding: 10px 12px;
   margin: 10px 0;
 }
-/* The "MINDSET" heading sits directly above the INTENT / FOCUS / RESET field
-   labels and, being muted, blended into them. Give it the brand-red accent and a
-   heavier weight (same size) so it reads clearly as the section heading. */
-.sp-mindset .sp-eyebrow {
-  color: var(--brand-red);
-  font-weight: 700;
-}
-.sp-mindset-list,
+.sp-coaching-list,
 .sp-kv-list,
 .sp-cues,
 .sp-rehab-list,
@@ -19017,14 +19012,14 @@ html[data-theme="light"] .loading-operational-item {
   flex-direction: column;
   gap: 6px;
 }
-.sp-mindset-list li,
+.sp-coaching-list li,
 .sp-kv-list li {
   display: flex;
   flex-direction: column;
   font-size: 0.86rem;
   color: var(--text-secondary);
 }
-.sp-mindset-label,
+.sp-coaching-label,
 .sp-kv-label,
 .sp-stat-label {
   font-size: 0.68rem;

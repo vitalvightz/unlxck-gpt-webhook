@@ -83,10 +83,14 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Show more (1 block)"), true);
   assert.equal(html.includes("Context"), true);
   assert.equal(html.includes("Taper freshness day"), true);
-  // The full mindset anchor renders on the session card, including the reset
-  // cue and confidence anchor (the mental content, not just training focus).
+  // The compact coaching card keeps execution cues and folds mental framing
+  // into one Coach cue instead of separate Mindset / Intent / Anchor rows.
   assert.equal(html.includes("Breathe and reset"), true);
   assert.equal(html.includes("Rounds are banked"), true);
+  assert.equal(html.includes(">Mindset<"), false);
+  assert.equal(html.includes(">Intent</span>"), false);
+  assert.equal(html.includes(">Anchor</span>"), false);
+  assert.equal(html.includes(">Coach cue</span>"), true);
 });
 
 test("open-plan weekday fallback labels today with the live date, not the stale date", () => {
@@ -359,10 +363,10 @@ function mindsetPlan({
   } as StructuredPlan;
 }
 
-// Each rendered MindsetAnchorCard emits exactly one `sp-mindset-list`, so its
-// count is the number of distinct mindset cards on screen.
+// Each rendered MindsetAnchorCard emits exactly one `sp-coaching-list`, so its
+// count is the number of distinct compact coaching cards on screen.
 function mindsetCardCount(html: string): number {
-  return countOccurrences(html, "sp-mindset-list");
+  return countOccurrences(html, "sp-coaching-list");
 }
 
 test("mindset scenario 1: day mindset is the fallback when sessions have none", () => {
@@ -1338,7 +1342,9 @@ test("keeps engine rationale out of athlete-facing mindset and block copy", () =
 
   assert.equal(html.includes("SPP pocket planning for a brawler."), false);
   assert.equal(html.includes("D-17 onward"), false);
-  assert.equal(countOccurrences(html, "Pocket planning."), 2);
+  // Generic plan rationale is not Context; it stays only where the block itself
+  // needs its athlete-facing purpose.
+  assert.equal(countOccurrences(html, "Pocket planning."), 1);
   assert.equal(html.includes("Choose a clean exit"), true);
   assert.equal(html.includes("Stay calm as you exit the exchange."), true);
 });
@@ -2327,11 +2333,9 @@ test("every EffortMethod in the schema is glossed with its own definition", () =
   }
 });
 
-test("the mindset card stays unglossed, so its Intent line cannot borrow the effort definition", () => {
-  // "Intent" is both an EffortMethod and a mindset label, and the two mean
-  // different things. The mindset card deliberately renders no "?" at all; this
-  // pins that, because glossing it from the label would explain a focus cue as
-  // bar speed.
+test("the compact coach cue stays unglossed, so it cannot borrow an effort definition", () => {
+  // The coaching card deliberately renders no "?" at all; this pins that,
+  // because glossing it from the label would explain a mental cue as bar speed.
   const session = {
     session_id: "ses-mindset",
     session_type: "mobility",
@@ -2345,7 +2349,7 @@ test("the mindset card stays unglossed, so its Intent line cannot borrow the eff
 
   const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
 
-  assert.equal(html.includes(">Intent</span>"), true);
+  assert.equal(html.includes(">Coach cue</span>"), true);
   assert.deepEqual(glossaryTerms(html), []);
 });
 
