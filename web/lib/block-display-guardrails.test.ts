@@ -59,7 +59,7 @@ test("removes escalation from Active Notes when Safety Priority already owns it"
 });
 
 test("does not strip an unrelated single-symptom escalation from another body part", () => {
-  const note = "Right calf strain; stop if calf pain increases.";
+  const note = "Right calf strain. Stop if calf pain increases.";
   const result = stripSafetyOwnedClause(note, [
     "Stop and seek care if shoulder pain increases.",
   ]);
