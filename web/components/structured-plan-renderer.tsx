@@ -915,7 +915,7 @@ function openTimelineDayLabel(
     return formatAppDate(date).split(" ").slice(0, 3).join(" ").toUpperCase();
   }
   const weekday = cleanText(day.weekday)?.toUpperCase();
-  return weekday ? `WEEK ${weekNumber} \u00b7 ${weekday}` : fallbackLabel;
+  return weekday ? `WEEK ${weekNumber} · ${weekday}` : fallbackLabel;
 }
 
 /** One row of the week's day timeline: a real plan day (with its original index
@@ -1057,8 +1057,11 @@ function RestDayRow({
   isCurrent?: boolean;
   currentLabel?: string;
 }) {
+  const fightWeekSessionless = /^D-[0-7]$/i.test(countdown ?? "");
   return (
-    <div className={`sp-week cm-day cm-rest-day${isCurrent ? " cm-day-current" : ""}`}>
+    <div
+      className={`sp-week cm-day cm-rest-day${fightWeekSessionless ? " cm-fight-week-sessionless" : ""}${isCurrent ? " cm-day-current" : ""}`}
+    >
       <span className="cm-day-head">
         {countdown ? (
           <span className={`sp-countdown cm-day-countdown${isCurrent ? " sp-accent" : ""}`}>
@@ -1844,7 +1847,7 @@ function WeekOverview({
     `Week ${openWeekNumber} of 4`,
   );
   const heading = openOngoing
-    ? `Block ${scheduleContext?.block_number ?? 1} \u00b7 ${openWeekHeading}`
+    ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
     : `Week ${weekNumber}`;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
 
