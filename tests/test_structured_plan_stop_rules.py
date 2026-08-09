@@ -93,3 +93,9 @@ def test_converter_prompt_keeps_reasoning_rich_but_cues_execution_only():
     assert '"why_today"' in prompt
     assert "execution-only how-to instructions" in prompt
     assert '"Why today:" -> why_today' in prompt
+def test_converter_prompt_requires_compact_athlete_facing_stop_rules():
+    prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
+    normalized = " ".join(prompt.split())
+    assert "contain one trigger only" in normalized
+    assert "no more than 10 words" in normalized
+    assert "never invent a new safety criterion" in normalized

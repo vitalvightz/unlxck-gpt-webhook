@@ -46,6 +46,33 @@ test("renders only the first stop rule when there is no higher-level safety owne
   );
 });
 
+test("caps athlete-facing stop rules at ten words and removes action tails", () => {
+  const selected = selectCompactStopRule([
+    "Stop if punch speed drops markedly across sets, then end the exercise and reassess readiness.",
+  ]);
+  assert.equal(selected, "Stop if punch speed drops markedly across sets");
+  assert.ok((selected || "").split(/\s+/).length <= 10);
+});
+
+test("legacy long stop rules still obey the ten-word display ceiling", () => {
+  const selected = selectCompactStopRule([
+    "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
+  ]);
+  assert.equal(
+    selected,
+    "Stop if technique deteriorates significantly and stance control becomes unstable",
+  );
+  assert.ok((selected || "").split(/\s+/).length <= 10);
+});
+
+test("keeps a unique exercise trigger when Safety Priority owns the injury clause", () => {
+  const selected = selectCompactStopRule(
+    ["speed collapses or any sharp left shoulder pain"],
+    ["Stop if sharp left shoulder pain increases or the wound opens."],
+  );
+  assert.equal(selected, "speed collapses");
+});
+
 test("removes escalation from Active Notes when Safety Priority already owns it", () => {
   const note =
     "Left shoulder surface abrasion. No open wound or infection reported. Keep the area clean and covered during training; stop and seek care if bleeding, spreading redness, or increased pain.";

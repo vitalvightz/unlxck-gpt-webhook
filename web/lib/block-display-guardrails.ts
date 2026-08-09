@@ -176,6 +176,45 @@ function splitStopClauses(value: string): string[] {
     .filter(Boolean);
 }
 
+const MAX_ATHLETE_STOP_RULE_WORDS = 10;
+const STOP_RULE_EXPLANATION_TAIL_RE =
+  /\s*(?:[;—–]|,\s*)(?:then\s+|and\s+then\s+)?(?:stop|switch|clean|cover|seek|report|modify|omit|rest|reduce|end|reassess)\b.*$/i;
+const DANGLING_STOP_RULE_WORD_RE = /\b(?:and|or|if|when|with|for|to|the|a|an)\s*$/i;
+
+function stopRuleWordCount(value: string): number {
+  return value.trim().split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Athlete-facing stop copy is deliberately tiny. Stored stop rules remain
+ * untouched; this display-only pass removes an action/explanation tail,
+ * prefers a complete semantic segment, then applies a bounded legacy
+ * fallback so older saved plans can never spill long safety prose into a card.
+ */
+function compactAthleteStopRule(value: string): string {
+  let compact = stripStopLabel(value).replace(/\s+/g, " ").trim();
+  if (!compact) return "";
+
+  compact = compact.replace(STOP_RULE_EXPLANATION_TAIL_RE, "").trim();
+  if (stopRuleWordCount(compact) <= MAX_ATHLETE_STOP_RULE_WORDS) return compact;
+
+  const semanticCandidates = [
+    compact.split(/(?<=[.!?])\s+/)[0]?.trim() || "",
+    compact.split(/\s*(?:;|—|–)\s*/)[0]?.trim() || "",
+  ];
+  for (const candidate of semanticCandidates) {
+    if (candidate && stopRuleWordCount(candidate) <= MAX_ATHLETE_STOP_RULE_WORDS) {
+      return candidate;
+    }
+  }
+
+  const words = compact.split(/\s+/).slice(0, MAX_ATHLETE_STOP_RULE_WORDS);
+  while (words.length > 1 && DANGLING_STOP_RULE_WORD_RE.test(words.join(" "))) {
+    words.pop();
+  }
+  return words.join(" ").replace(/[,:;—–-]+$/, "").trim();
+}
+
 /**
  * One exercise owns at most one athlete-facing stop rule. Plan-level injury and
  * red-flag copy owns global safety only when it matches the same injury subject;
@@ -188,12 +227,16 @@ export function selectCompactStopRule(
 ): string | null {
   const rules = stopRules.map(stripStopLabel).filter(Boolean);
   if (rules.length === 0) return null;
-  if (planSafetyTexts.length === 0) return rules[0];
+  if (planSafetyTexts.length === 0) return compactAthleteStopRule(rules[0]) || null;
 
   for (const rule of rules) {
-    if (!isOwnedSafetyClause(rule, planSafetyTexts)) return rule;
+    if (!isOwnedSafetyClause(rule, planSafetyTexts)) {
+      return compactAthleteStopRule(rule) || null;
+    }
     for (const clause of splitStopClauses(rule)) {
-      if (!isOwnedSafetyClause(clause, planSafetyTexts, rule)) return clause;
+      if (!isOwnedSafetyClause(clause, planSafetyTexts, rule)) {
+        return compactAthleteStopRule(clause) || null;
+      }
     }
   }
   return null;
