@@ -128,32 +128,29 @@ jobs:
           tests = test_path.read_text()
           marker = "def test_gap_fill_rehomes_two_targets_onto_declared_available_days():"
           if marker not in tests:
-              tests += '''
-
-
-def test_gap_fill_rehomes_two_targets_onto_declared_available_days():
-              # Regression: D-14 Fri -> D-8 Thu is a six-day session gap and owes
-              # two support inserts. If Sun/Tue are unavailable but Mon/Wed are
-              # declared available, the inserts must move to D-11/D-9 rather than
-              # disappear and leave five Rest / Recovery days.
-              athlete = _athlete()
-              athlete["training_days"] = ["Monday", "Wednesday", "Thursday", "Friday"]
-
-              sequence = apply_gap_fill_inserts([_late_role(14), _late_role(8)], athlete)
-              gap_support = [
-                  role
-                  for role in sequence
-                  if role.get("category") == "support_insert"
-                  and 8 < int(role.get("countdown_offset") or 0) < 14
-              ]
-
-              assert len(gap_support) == 2
-              assert {int(role["countdown_offset"]) for role in gap_support} == {11, 9}
-              assert all(
-                  role.get("governance", {}).get("authority") == "gap_fill_support_insert"
-                  for role in gap_support
+              addition = (
+                  "\n\ndef test_gap_fill_rehomes_two_targets_onto_declared_available_days():\n"
+                  "    # Regression: D-14 Fri -> D-8 Thu is a six-day session gap and owes\n"
+                  "    # two support inserts. If Sun/Tue are unavailable but Mon/Wed are\n"
+                  "    # declared available, the inserts must move to D-11/D-9 rather than\n"
+                  "    # disappear and leave five Rest / Recovery days.\n"
+                  "    athlete = _athlete()\n"
+                  "    athlete[\"training_days\"] = [\"Monday\", \"Wednesday\", \"Thursday\", \"Friday\"]\n\n"
+                  "    sequence = apply_gap_fill_inserts([_late_role(14), _late_role(8)], athlete)\n"
+                  "    gap_support = [\n"
+                  "        role\n"
+                  "        for role in sequence\n"
+                  "        if role.get(\"category\") == \"support_insert\"\n"
+                  "        and 8 < int(role.get(\"countdown_offset\") or 0) < 14\n"
+                  "    ]\n\n"
+                  "    assert len(gap_support) == 2\n"
+                  "    assert {int(role[\"countdown_offset\"]) for role in gap_support} == {11, 9}\n"
+                  "    assert all(\n"
+                  "        role.get(\"governance\", {}).get(\"authority\") == \"gap_fill_support_insert\"\n"
+                  "        for role in gap_support\n"
+                  "    )\n"
               )
-          '''
+              tests += addition
           test_path.write_text(tests)
           PY
 
@@ -172,6 +169,6 @@ def test_gap_fill_rehomes_two_targets_onto_declared_available_days():
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add fightcamp/gap_fill_inserts.py tests/test_late_fight_availability_contract.py .github/workflows/patch-gap-fill-available-days.yml
+          git add -A
           git commit -m "Fix gap fill placement on available days"
           git push origin HEAD:fix/gap-fill-available-days
