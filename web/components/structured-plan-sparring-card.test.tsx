@@ -18,21 +18,39 @@ function sessionlessTechnicalDay(headline: string): StructuredDay {
   } as StructuredDay;
 }
 
-test("generic D-17 technical-only cards use the fight-intensity title", () => {
+test("generic D-17 technical-only cards use the fight-intensity title and summary", () => {
   const html = renderToStaticMarkup(
     <SessionlessDayCard day={sessionlessTechnicalDay("Technical-only combat")} />,
   );
 
   assert.equal(html.includes('<h3 class="sp-session-title">Fight-intensity technical rounds'), true);
+  assert.equal(
+    html.includes("Realistic exchanges at speed, controlled contact, low total volume."),
+    true,
+  );
 });
 
-test("countdown-specific converted sparring titles survive the technical renderer", () => {
-  for (const title of [
-    "Fight-intensity technical rounds",
-    "Technical rhythm only",
-    "Technical touch — pads / shadow",
-    "Technical activation — no contact",
-  ]) {
+test("countdown-specific converted sparring titles keep their own short summaries", () => {
+  const cases = [
+    [
+      "Fight-intensity technical rounds",
+      "Realistic exchanges at speed, controlled contact, low total volume.",
+    ],
+    [
+      "Technical rhythm only",
+      "Light technical rounds. Prioritise timing, flow and clean execution.",
+    ],
+    [
+      "Technical touch — pads / shadow",
+      "Pads or shadow only. Stay sharp without contact fatigue.",
+    ],
+    [
+      "Technical activation — no contact",
+      "Brief movement and reactions. Finish feeling fresher than you started.",
+    ],
+  ] as const;
+
+  for (const [title, summary] of cases) {
     const html = renderToStaticMarkup(
       <SessionlessDayCard day={sessionlessTechnicalDay(title)} />,
     );
@@ -42,10 +60,11 @@ test("countdown-specific converted sparring titles survive the technical rendere
       true,
       `expected renderer to preserve ${title}`,
     );
+    assert.equal(html.includes(summary), true, `expected stage summary for ${title}`);
   }
 });
 
-test("converted sparring title also survives when contact shares a day with app work", () => {
+test("converted sparring title and summary survive when contact shares a day with app work", () => {
   const day = {
     date: "2026-08-26",
     countdown_label: "D-7",
@@ -69,6 +88,10 @@ test("converted sparring title also survives when contact shares a day with app 
 
   assert.equal(
     html.includes('<p class="sp-today-headline">Technical rhythm only'),
+    true,
+  );
+  assert.equal(
+    html.includes("Light technical rounds. Prioritise timing, flow and clean execution."),
     true,
   );
 });
