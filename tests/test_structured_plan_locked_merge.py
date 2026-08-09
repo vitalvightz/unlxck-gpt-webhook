@@ -155,6 +155,19 @@ def test_drill_titled_session_is_reused_as_the_single_tactical_watch():
     assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
 
 
+def test_tactical_watch_keeps_its_fixed_session_title_not_a_role_alias():
+    plan = _plan(include=False)
+    plan["weeks"][0]["days"][0]["sessions"][0]["title"] = "Pocket Exchange Map"
+    brief = _brief()
+    brief["weeks"][0]["session_roles"][0]["athlete_facing_label"] = "Pressure review"
+
+    result = _merged(plan, brief)
+
+    assert result.plan["weeks"][0]["days"][0]["sessions"][0]["title"] == (
+        "Fight Tactical Watch"
+    )
+
+
 def test_stale_drill_titled_shell_is_collapsed_into_existing_tactical_watch():
     plan = _plan()
     plan["weeks"][0]["days"][0]["sessions"].insert(

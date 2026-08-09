@@ -14,6 +14,9 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping
 
 
+_TACTICAL_WATCH_SESSION_TITLE = "Fight Tactical Watch"
+
+
 @dataclass(frozen=True)
 class LockedMergeApplication:
     countdown_label: str
@@ -197,7 +200,9 @@ def merge_locked_structured_content(
             for session in matching_days[0].get("sessions") or []
             if isinstance(session, dict)
         ]
-        display_title = str(role.get("athlete_facing_label") or "Fight Tactical Watch")
+        # This is fixed product copy. The selected drill is the card's block,
+        # never an alternate session title supplied by structured conversion.
+        display_title = _TACTICAL_WATCH_SESSION_TITLE
         session_title = _normalise(display_title)
         watch_sessions = [
             session
