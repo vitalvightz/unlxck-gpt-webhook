@@ -46,23 +46,40 @@ test("renders only the first stop rule when there is no higher-level safety owne
   );
 });
 
-test("caps athlete-facing stop rules at ten words and removes action tails", () => {
-  const selected = selectCompactStopRule([
-    "Stop if punch speed drops markedly across sets, then end the exercise and reassess readiness.",
-  ]);
-  assert.equal(selected, "Stop if punch speed drops markedly across sets");
-  assert.ok((selected || "").split(/\s+/).length <= 10);
+test("keeps short athlete-facing stop rules unchanged", () => {
+  const selected = selectCompactStopRule(["Stop if punch speed drops across sets"]);
+  assert.equal(selected, "Stop if punch speed drops across sets");
 });
 
-test("legacy long stop rules still obey the ten-word display ceiling", () => {
+test("removes a recognised action tail from a long stop rule", () => {
+  const selected = selectCompactStopRule([
+    "Stop if punch speed drops markedly across repeated explosive sets today; then end exercise and reassess readiness",
+  ]);
+  assert.equal(
+    selected,
+    "Stop if punch speed drops markedly across repeated explosive sets today",
+  );
+});
+
+test("keeps the full meaningful rule when safe cleanup still exceeds ten words", () => {
   const selected = selectCompactStopRule([
     "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
   ]);
   assert.equal(
     selected,
-    "Stop if technique deteriorates significantly and stance control becomes unstable",
+    "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
   );
-  assert.ok((selected || "").split(/\s+/).length <= 10);
+  assert.ok((selected || "").split(/\s+/).length > 10);
+});
+
+test("action-tail cleanup accepts whitespace after semicolon separators", () => {
+  const selected = selectCompactStopRule([
+    "Stop if speed drops sharply across repeated explosive efforts during the final set; then end exercise",
+  ]);
+  assert.equal(
+    selected,
+    "Stop if speed drops sharply across repeated explosive efforts during the final set",
+  );
 });
 
 test("keeps a unique exercise trigger when Safety Priority owns the injury clause", () => {
