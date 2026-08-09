@@ -1,0 +1,170 @@
+name: Temp stop rule no truncate
+
+on:
+  push:
+    branches:
+      - fix/compact-athlete-stop-rules
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/compact-athlete-stop-rules
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Remove hard truncation and fix action-tail spacing
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("web/lib/block-display-guardrails.ts")
+          text = path.read_text()
+          old = '''const MAX_ATHLETE_STOP_RULE_WORDS = 10;
+          const STOP_RULE_EXPLANATION_TAIL_RE =
+            /\\s*(?:[;—–]|,\\s*)(?:then\\s+|and\\s+then\\s+)?(?:stop|switch|clean|cover|seek|report|modify|omit|rest|reduce|end|reassess)\\b.*$/i;
+          const DANGLING_STOP_RULE_WORD_RE = /\\b(?:and|or|if|when|with|for|to|the|a|an)\\s*$/i;
+
+          function stopRuleWordCount(value: string): number {
+            return value.trim().split(/\\s+/).filter(Boolean).length;
+          }
+
+          /**
+           * Athlete-facing stop copy is deliberately tiny. Stored stop rules remain
+           * untouched; this display-only pass removes an action/explanation tail,
+           * prefers a complete semantic segment, then applies a bounded legacy
+           * fallback so older saved plans can never spill long safety prose into a card.
+           */
+          function compactAthleteStopRule(value: string): string {
+            let compact = stripStopLabel(value).replace(/\\s+/g, " ").trim();
+            if (!compact) return "";
+
+            compact = compact.replace(STOP_RULE_EXPLANATION_TAIL_RE, "").trim();
+            if (stopRuleWordCount(compact) <= MAX_ATHLETE_STOP_RULE_WORDS) return compact;
+
+            const semanticCandidates = [
+              compact.split(/(?<=[.!?])\\s+/)[0]?.trim() || "",
+              compact.split(/\\s*(?:;|—|–)\\s*/)[0]?.trim() || "",
+            ];
+            for (const candidate of semanticCandidates) {
+              if (candidate && stopRuleWordCount(candidate) <= MAX_ATHLETE_STOP_RULE_WORDS) {
+                return candidate;
+              }
+            }
+
+            const words = compact.split(/\\s+/).slice(0, MAX_ATHLETE_STOP_RULE_WORDS);
+            while (words.length > 1 && DANGLING_STOP_RULE_WORD_RE.test(words.join(" "))) {
+              words.pop();
+            }
+            return words.join(" ").replace(/[,:;—–-]+$/, "").trim();
+          }
+          '''
+          new = '''const MAX_ATHLETE_STOP_RULE_WORDS = 10;
+          const STOP_RULE_EXPLANATION_TAIL_RE =
+            /\\s*(?:[;—–]|,)\\s*(?:then\\s+|and\\s+then\\s+)?(?:stop|switch|clean|cover|seek|report|modify|omit|rest|reduce|end|reassess)\\b.*$/i;
+
+          function stopRuleWordCount(value: string): number {
+            return value.trim().split(/\\s+/).filter(Boolean).length;
+          }
+
+          /**
+           * Keep short athlete-facing stop rules as written. For longer legacy rules,
+           * remove only a clearly recognised action/explanation tail. If the remaining
+           * meaningful condition is still over the prompt's ten-word target, show it in
+           * full rather than cutting through a safety condition. Stored rules stay untouched.
+           */
+          function compactAthleteStopRule(value: string): string {
+            const compact = stripStopLabel(value).replace(/\\s+/g, " ").trim();
+            if (!compact) return "";
+            if (stopRuleWordCount(compact) <= MAX_ATHLETE_STOP_RULE_WORDS) return compact;
+
+            const withoutActionTail = compact.replace(STOP_RULE_EXPLANATION_TAIL_RE, "").trim();
+            return withoutActionTail || compact;
+          }
+          '''
+          assert text.count(old) == 1, f"guardrail helper drifted: {text.count(old)} matches"
+          path.write_text(text.replace(old, new, 1))
+
+          test_path = Path("web/lib/block-display-guardrails.test.ts")
+          tests = test_path.read_text()
+          old_tests = '''test("caps athlete-facing stop rules at ten words and removes action tails", () => {
+            const selected = selectCompactStopRule([
+              "Stop if punch speed drops markedly across sets, then end the exercise and reassess readiness.",
+            ]);
+            assert.equal(selected, "Stop if punch speed drops markedly across sets");
+            assert.ok((selected || "").split(/\\s+/).length <= 10);
+          });
+
+          test("legacy long stop rules still obey the ten-word display ceiling", () => {
+            const selected = selectCompactStopRule([
+              "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
+            ]);
+            assert.equal(
+              selected,
+              "Stop if technique deteriorates significantly and stance control becomes unstable",
+            );
+            assert.ok((selected || "").split(/\\s+/).length <= 10);
+          });
+          '''
+          new_tests = '''test("keeps short athlete-facing stop rules unchanged", () => {
+            const selected = selectCompactStopRule(["Stop if punch speed drops across sets"]);
+            assert.equal(selected, "Stop if punch speed drops across sets");
+          });
+
+          test("removes a recognised action tail from a long stop rule", () => {
+            const selected = selectCompactStopRule([
+              "Stop if punch speed drops markedly across repeated explosive sets today; then end exercise and reassess readiness",
+            ]);
+            assert.equal(
+              selected,
+              "Stop if punch speed drops markedly across repeated explosive sets today",
+            );
+          });
+
+          test("keeps the full meaningful rule when safe cleanup still exceeds ten words", () => {
+            const selected = selectCompactStopRule([
+              "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
+            ]);
+            assert.equal(
+              selected,
+              "Stop if technique deteriorates significantly and stance control becomes unstable across repeated explosive efforts",
+            );
+            assert.ok((selected || "").split(/\\s+/).length > 10);
+          });
+
+          test("action-tail cleanup accepts whitespace after semicolon separators", () => {
+            const selected = selectCompactStopRule([
+              "Stop if speed drops sharply across repeated explosive efforts during the final set; then end exercise",
+            ]);
+            assert.equal(
+              selected,
+              "Stop if speed drops sharply across repeated explosive efforts during the final set",
+            );
+          });
+          '''
+          assert tests.count(old_tests) == 1, f"guardrail tests drifted: {tests.count(old_tests)} matches"
+          test_path.write_text(tests.replace(old_tests, new_tests, 1))
+          PY
+      - name: Validate diff
+        run: git diff --check
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+      - name: Run focused stop-rule tests
+        working-directory: web
+        run: node --import tsx --test lib/block-display-guardrails.test.ts lib/structured-plan-stop-rules.test.ts
+      - name: Commit validated fix and remove temporary workflow
+        run: |
+          rm .github/workflows/tmp-stop-rule-no-truncate.yml
+          git config user.name "vitalvightz"
+          git config user.email "thevital1@protonmail.com"
+          git add -A
+          git commit -m "fix: preserve full meaningful stop rules"
+          git push origin HEAD:fix/compact-athlete-stop-rules
