@@ -10,10 +10,13 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
+
 from api.structured_plan_generation import (
     BANNED_BIOMETRIC_KEYS,
     _normalize_daily_check_ins,
     _normalize_day,
+    _normalize_effort,
     _normalize_load,
     _normalize_measured,
     _strip_fallback_from_broken_json,
@@ -108,7 +111,21 @@ def test_valid_plan_outcome_is_valid_and_carries_schema_version():
     assert outcome.errors == []
 
 
-def test_authoritative_ranges_replace_incorrect_candidate_values():
+def test_optional_malformed_effort_is_removed_without_invalidating_card():
+    plan = _valid_plan()
+    block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block["effort"] = {"method": "RPE", "value": "8-6", "scale": "1-10"}
+
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
+
+    assert outcome.status == "valid"
+    assert outcome.structured_plan is not None
+    persisted = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert persisted["effort"] is None
+
+
+@pytest.mark.parametrize("candidate_effort", [8, "8-6"])
+def test_authoritative_ranges_replace_incorrect_candidate_values(candidate_effort):
     plan = _valid_plan()
     block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
     block["sets"] = 4
@@ -121,7 +138,11 @@ def test_authoritative_ranges_replace_incorrect_candidate_values():
     }
 
     block["reps"] = 8
-    block["effort"] = {"method": "RPE", "value": 8, "scale": "1-10"}
+    block["effort"] = {
+        "method": "RPE",
+        "value": candidate_effort,
+        "scale": "1-10",
+    }
 
     outcome = build_structured_plan_outcome(
         plan,
@@ -809,6 +830,40 @@ def test_normalize_block_red_flags_and_string_effort():
     assert first["effort"] == {"method": "RPE", "value": "7-8", "scale": "1-10"}
     assert first["red_flags"][0]["threshold"] is None
     assert second["effort"] is None
+
+
+def test_normalize_effort_scalars_ranges_and_text_cues():
+    assert _normalize_effort("RPE 6") == {
+        "method": "RPE", "value": 6.0, "scale": "1-10"
+    }
+    assert _normalize_effort("RIR 2") == {
+        "method": "RIR", "value": 2.0, "scale": None
+    }
+    assert _normalize_effort("RPE 6-7") == {
+        "method": "RPE", "value": "6-7", "scale": "1-10"
+    }
+    assert _normalize_effort("RPE 6–7") == {
+        "method": "RPE", "value": "6-7", "scale": "1-10"
+    }
+    assert _normalize_effort("RIR 2-3") == {
+        "method": "RIR", "value": "2-3", "scale": None
+    }
+
+    for malformed in ("RPE 8-6", "RIR 4-2", "RPE 7--8", "RPE 7-", "RPE -8"):
+        assert _normalize_effort(malformed) is None
+
+    assert _normalize_effort(
+        {"method": "RPE", "value": "6", "scale": "1-10"}
+    ) == {"method": "RPE", "value": 6.0, "scale": "1-10"}
+    assert _normalize_effort(
+        {"method": "RPE", "value": "6-7", "scale": "1-10"}
+    ) == {"method": "RPE", "value": "6-7", "scale": "1-10"}
+    assert _normalize_effort(
+        {"method": "RPE", "value": "8-6", "scale": "1-10"}
+    ) is None
+    assert _normalize_effort(
+        {"method": "intent", "value": "fast but relaxed"}
+    ) == {"method": "intent", "value": "fast but relaxed"}
 
 
 def test_normalize_recovers_invalid_fallback_card_shape():
