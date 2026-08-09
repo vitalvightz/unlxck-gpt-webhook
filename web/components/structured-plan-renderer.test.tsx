@@ -2192,7 +2192,7 @@ test("D-10 countdown plans render a mini-title for every dated week", () => {
   assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), true);
 });
 
-test("next-session focus marks the active week before a dated camp starts", () => {
+test("next-session focus marks the active week and day before a dated camp starts", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Late Fight", sport: "boxing", plan_type: "fight_camp" },
@@ -2235,6 +2235,8 @@ test("next-session focus marks the active week before a dated camp starts", () =
 
   assert.equal(countOccurrences(html, "cm-week-pill-current"), 1);
   assert.equal(countOccurrences(html, "cm-week-pill-dot"), 1);
+  assert.equal(countOccurrences(html, "cm-day-current"), 1);
+  assert.equal(countOccurrences(html, "cm-day-now"), 1);
   assert.equal(
     html.includes("cm-week-pill cm-week-pill-selected cm-week-pill-current"),
     true,
