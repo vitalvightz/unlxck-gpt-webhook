@@ -28,7 +28,6 @@ from .injury_guard import Decision, pick_safe_replacement, make_guarded_decision
 from .restriction_filtering import evaluate_restriction_impact
 from .strength_session_quality import (
     classify_strength_item,
-    count_support_only,
     infer_strength_sessions,
     missing_base_categories,
     score_band_margin,
