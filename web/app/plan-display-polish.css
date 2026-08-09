@@ -5,7 +5,7 @@
   padding-top: var(--space-2);
 }
 
-/* Free slots keep the recovery label except deliberate fight-week gaps. */
+/* Free slots keep the recovery label except D-7 through D-0. */
 .cm-rest-reason {
   display: none;
 }
@@ -20,4 +20,6 @@
   line-height: 1.2;
 }
 
-.cm-rest-day:has(.cm-rest-reason) .cm-rest-label::after { content: "No Planned Session"; }
+.cm-fight-week-sessionless .cm-rest-label::after {
+  content: "No Planned Session";
+}
