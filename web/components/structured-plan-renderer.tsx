@@ -708,7 +708,7 @@ export function SessionlessDayCard({
     kind === "light_combat"
       ? DECLARED_LIGHT_COMBAT_TITLE
       : kind === "technical"
-        ? TECHNICAL_COMBAT_TITLE
+        ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
         : title;
   const displayTag = kind === "technical" ? TECHNICAL_COMBAT_TAG : tag;
   const isRest = kind === "rest";
@@ -786,7 +786,7 @@ function CoachLedDayContext({
   const displayTitle = isLightCombat
     ? DECLARED_LIGHT_COMBAT_TITLE
     : isTechnical
-      ? TECHNICAL_COMBAT_TITLE
+      ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
       : title;
   const displayTag = isTechnical ? TECHNICAL_COMBAT_TAG : tag;
   const description = isLightCombat
@@ -879,7 +879,7 @@ function openTimelineDayLabel(
     return formatAppDate(date).split(" ").slice(0, 3).join(" ").toUpperCase();
   }
   const weekday = cleanText(day.weekday)?.toUpperCase();
-  return weekday ? `WEEK ${weekNumber} \u00b7 ${weekday}` : fallbackLabel;
+  return weekday ? `WEEK ${weekNumber} · ${weekday}` : fallbackLabel;
 }
 
 /** One row of the week's day timeline: a real plan day (with its original index
@@ -1092,7 +1092,7 @@ export function CampDayCard({
   completionIndex?: CompletionIndex;
   /** Server-authoritative athlete-local day (drives Missed + the retro window). */
   currentTrainingDayIso?: string | null;
-  /** Opens the retro-log form for a past, still-loggable session. */
+  /** Opens the retro-log flow for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
@@ -1789,7 +1789,7 @@ function WeekOverview({
     `Week ${openWeekNumber} of 4`,
   );
   const heading = openOngoing
-    ? `Block ${scheduleContext?.block_number ?? 1} \u00b7 ${openWeekHeading}`
+    ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
     : `Week ${weekNumber}`;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
 
