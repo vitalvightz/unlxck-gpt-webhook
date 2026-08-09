@@ -1349,7 +1349,7 @@ test("keeps engine rationale out of athlete-facing mindset and block copy", () =
   assert.equal(html.includes("Stay calm as you exit the exchange."), false);
 });
 
-test("marks the current day and surfaces the camp status + week focus", () => {
+test("marks the current day and keeps the camp overview title compact", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -1383,7 +1383,8 @@ test("marks the current day and surfaces the camp status + week focus", () => {
 
   // Countdown + week focus surface via the week strip / overview.
   assert.equal(html.includes("D-28"), true);
-  assert.equal(html.includes("Convert strength into speed."), true);
+  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("Convert strength into speed."), false);
   // The day's readiness_status must never leak the exact train/modify/pull-back
   // call — that stays on Today.
   assert.equal(html.includes("Train as planned"), false);
@@ -1455,8 +1456,9 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   // The week overview no longer prints a Phase stat row (phase lives in the
   // status chips and the week pill).
   assert.equal(html.includes(">Phase</span>"), false);
-  // The week goal shows once — in the overview heading, not repeated as a body line.
-  assert.equal(count("Build single-leg drive."), 1);
+  // Fight-camp overviews intentionally show only the selected week number.
+  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(count("Build single-leg drive."), 0);
 });
 
 test("shows the raw markdown fallback to admins but hides it from athletes", () => {
@@ -2232,7 +2234,7 @@ test("week rail scrolls once there are more than four weeks", () => {
   }
 });
 
-test("D-10 countdown plans render a mini-title for every dated week", () => {
+test("D-10 countdown plans render taper mini-titles with a compact week overview", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Late Fight", sport: "boxing", plan_type: "fight_camp" },
@@ -2260,7 +2262,8 @@ test("D-10 countdown plans render a mini-title for every dated week", () => {
 
   assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 2);
   assert.equal(countOccurrences(html, 'title="Taper"'), 2);
-  assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), true);
+  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), false);
 });
 
 test("next-session focus marks the active week and day before a dated camp starts", () => {
