@@ -440,6 +440,151 @@ export function getBlockCoachingDisplay(
   return { cues, stopRules };
 }
 
+const BLOCK_DETAIL_LABEL_RE =
+  /^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|stop(?:\s+rule)?|swaps?|substitutions?)\s*:\s*(.*)$/i;
+const COACHING_PURE_STOP_RE = /^\s*stop(?!-)/i;
+
+function dedupeBlockText(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const text = cleanText(value);
+    if (!text) continue;
+    const key = text.toLowerCase().replace(/\s+/g, " ").replace(/[.\s]+$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(text);
+  }
+  return result;
+}
+
+/** Athlete-facing execution projection. Rich purpose/why-today reasoning stays
+ * on the block object, while labelled legacy prose is routed away from cue bullets. */
+export function getBlockExecutionDisplay(
+  block: StructuredBlock | null | undefined,
+): {
+  cues: string[];
+  stopRules: string[];
+  regressions: string[];
+  substitutions: string[];
+  progressions: string[];
+} {
+  const cues: string[] = [];
+  const stopRules: string[] = [];
+  const regressions = getStringList(block?.regression_options);
+  const substitutions = getStringList(block?.substitutions);
+  const progressions: string[] = [];
+
+  for (const cue of getCoachingCues(block)) {
+    if (BARE_ADJUSTMENT_LABEL_RE.test(cue)) continue;
+    const labelled = BLOCK_DETAIL_LABEL_RE.exec(cue);
+    if (labelled) {
+      const label = labelled[1].toLowerCase().replace(/\s+/g, " ");
+      const detail = cleanText(labelled[2]);
+      if (!detail) continue;
+      if (label === "purpose" || label === "why today") continue;
+      if (label === "easier" || label === "regress" || label === "regression") {
+        regressions.push(detail);
+      } else if (label === "progress" || label === "progression") {
+        progressions.push(detail);
+      } else if (label.startsWith("stop")) {
+        stopRules.push(detail);
+      } else {
+        substitutions.push(detail);
+      }
+      continue;
+    }
+    if (COACHING_PURE_STOP_RE.test(cue)) {
+      stopRules.push(cue);
+      continue;
+    }
+    cues.push(cue);
+  }
+
+  return {
+    cues: dedupeBlockText(cues),
+    stopRules: dedupeBlockText(stopRules),
+    regressions: dedupeBlockText(regressions),
+    substitutions: dedupeBlockText(substitutions),
+    progressions: dedupeBlockText(progressions),
+  };
+}
+
+const EMBEDDED_STOP_RULE_LABEL_RE = /\bstop(?:\s+rule)?\s*:\s*/i;
+const PROGRAMMING_ONLY_PROGRESSION_RE =
+  /^\s*(?:maintain(?:\s+(?:the|this))?\s+dose|keep\s+(?:the\s+)?dose\s+small|do\s+not\s+(?:add|increase)\s+(?:sets?|volume)|no\s+(?:set|volume)\s+increase)\b/i;
+const NEGATED_PROGRESSION_RE =
+  /\b(?:do\s+not|don't|never)\s+(?:add|increase|progress|advance|raise|build|extend)\b/i;
+const POSITIVE_PROGRESSION_RE =
+  /\b(?:progress|advance|increase|raise|build|extend|heavier|more\s+resistance|reduce\s+assistance)\b/i;
+const TAPER_PROGRAMMING_RE = /\b(?:taper|fight[ -]?week|sharpness|freshness)\b/i;
+
+function stripStopRuleLabel(value: string): string {
+  return value.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "").trim();
+}
+
+function isProgrammingOnlyProgression(text: string): boolean {
+  if (NEGATED_PROGRESSION_RE.test(text)) {
+    return PROGRAMMING_ONLY_PROGRESSION_RE.test(text) || TAPER_PROGRAMMING_RE.test(text);
+  }
+  if (POSITIVE_PROGRESSION_RE.test(text)) {
+    return false;
+  }
+  return PROGRAMMING_ONLY_PROGRESSION_RE.test(text);
+}
+
+function dedupeStopRules(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const text = stripStopRuleLabel(value);
+    const key = text.toLowerCase().replace(/[.\s]+$/, "");
+    if (!text || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(text);
+  }
+  return result;
+}
+
+export function getBlockAdjustmentDisplay(
+  block: StructuredBlock | null | undefined,
+): { progression: string | null; stopRules: string[] } {
+  const explicitStops = getStringList(block?.stop_rules);
+  const execution = getBlockExecutionDisplay(block);
+  const progressionCandidates = [
+    cleanText(block?.progression_rule),
+    ...execution.progressions,
+  ].filter((value): value is string => value !== null);
+  let progression: string | null = null;
+  const embeddedStops: string[] = [];
+
+  for (const rawProgression of progressionCandidates) {
+    let candidate: string | null = rawProgression;
+    const match = EMBEDDED_STOP_RULE_LABEL_RE.exec(rawProgression);
+    if (match) {
+      candidate = cleanText(rawProgression.slice(0, match.index).replace(/[\s—–\-:;,.]+$/, ""));
+      const stop = cleanText(rawProgression.slice(match.index + match[0].length));
+      if (stop) embeddedStops.push(stop);
+    } else if (isStopRuleText(rawProgression)) {
+      candidate = null;
+      embeddedStops.push(rawProgression);
+    }
+    if (candidate && isProgrammingOnlyProgression(candidate)) candidate = null;
+    if (!progression && candidate) progression = candidate;
+  }
+
+  return {
+    progression,
+    stopRules: dedupeStopRules([
+      ...explicitStops,
+      ...execution.stopRules,
+      ...embeddedStops,
+    ]),
+  };
+}
+
 // A stop rule reads like "Stop on sharp pain." / "Stop the set if punch speed
 // drops" / "stop if the ankle flares". The conversion model frequently drops
 // these into a block's `progression_rule` (its only free-text "what to do"

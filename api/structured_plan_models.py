@@ -288,9 +288,11 @@ class SessionBlock(BaseModel):
     energy_system: str | None = None
     impact_level: str | None = None
     purpose: str | None = None
+    why_today: str | None = None
     coaching_cues: list[str] = Field(default_factory=list)
     regression_options: list[str] = Field(default_factory=list)
     progression_rule: str | None = None
+    stop_rules: list[str] = Field(default_factory=list)
     substitutions: list[str] = Field(default_factory=list)
     red_flags: list[RedFlagRule] = Field(default_factory=list)
 

@@ -348,10 +348,12 @@ export type StructuredBlock = {
   energy_system?: string | null;
   impact_level?: string | null;
   purpose?: string | null;
+  why_today?: string | null;
   coaching_cues?: string[] | null;
   regression_options?: string[] | null;
   substitutions?: string[] | null;
   progression_rule?: string | null;
+  stop_rules?: string[] | null;
 };
 
 export type StructuredSession = {
