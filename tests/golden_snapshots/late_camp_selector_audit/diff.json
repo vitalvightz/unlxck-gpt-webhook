@@ -45,7 +45,7 @@
         "Band-Resisted Jab-Cross Primer",
         "Punch-Specific Max Isometric Hold",
         "Band Row Speed Focus",
-        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
         "Trap Bar Deadlift",
         "Mobility Reset Flow",
@@ -63,7 +63,7 @@
         "Band-Resisted Jab-Cross Primer",
         "Punch-Specific Max Isometric Hold",
         "Band Row Speed Focus",
-        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
         "Trap Bar Deadlift",
         "Mobility Reset Flow",
@@ -119,6 +119,7 @@
         "Plyometric Shadow Boxing",
         "Russian Twist (Weighted)",
         "Seated Medicine Ball Rotation",
+        "Seated Medicine-Ball Punch Throw",
         "Seated Russian Twist (Band-Resisted)",
         "Single-Leg 45\u00b0 Bound",
         "Single-Leg Forward Hops",
@@ -126,6 +127,7 @@
         "Single-Leg Reactive Shuffle",
         "Single-Leg Rotational Hop to Balance",
         "Slow-Lowered Pull-Up",
+        "Staggered-Stance Medicine-Ball Punch Throw",
         "Staggered-Stance Reactive Jumps",
         "Tempo Chin-Up (5-0-1)",
         "Towel Pull-Up",
@@ -198,7 +200,6 @@
         "Punch-Specific Max Isometric Hold",
         "Band Row Speed Focus",
         "Overcoming Split-Squat Isometric",
-        "Trap Bar Deadlift",
         "Mobility Reset Flow",
         "90/90 hip switches",
         "Adductor rock-back",
@@ -208,7 +209,8 @@
         "Lead-foot pivot prep",
         "Lead-leg single-leg stance with guard",
         "Line step-and-stick forward/back",
-        "Open-book reset"
+        "Open-book reset",
+        "Pivot-and-freeze lead foot"
       ],
       "added_winners": [
         "Staggered-Stance Medicine-Ball Punch Throw",
@@ -216,7 +218,6 @@
         "Punch-Specific Max Isometric Hold",
         "Band Row Speed Focus",
         "Overcoming Split-Squat Isometric",
-        "Trap Bar Deadlift",
         "Mobility Reset Flow",
         "90/90 hip switches",
         "Adductor rock-back",
@@ -226,7 +227,8 @@
         "Lead-foot pivot prep",
         "Lead-leg single-leg stance with guard",
         "Line step-and-stick forward/back",
-        "Open-book reset"
+        "Open-book reset",
+        "Pivot-and-freeze lead foot"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -285,6 +287,7 @@
         "Tempo Chin-Up (5-0-1)",
         "Towel Pull-Up",
         "Towel-assisted lateral neck isometric",
+        "Trap Bar Deadlift",
         "Trap Bar Jump (Light)",
         "Trap Bar Jump Squat",
         "Weighted Hanging Leg Raise"

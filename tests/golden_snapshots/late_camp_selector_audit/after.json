@@ -99,22 +99,17 @@
           ]
         },
         {
-          "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 6.855,
+          "name": "Isometric Mid-Thigh Pull",
+          "score": 5.8375,
           "reason_codes": [
-            "priority_secondary_goal_match:skill_refinement",
-            "late_penalty_missing_governance_metadata",
-            "late_strength_penalty_outside_window",
+            "priority_secondary_goal_match:maximal_strength_maintenance",
+            "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_ballistic_low_volume",
-            "late_strength_boost_sport_specific",
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
             "late_strength_boost_freshness",
             "late_strength_boost_crisp_ballistic"
           ]
@@ -545,6 +540,13 @@
           ]
         },
         {
+          "name": "Seated Medicine-Ball Punch Throw",
+          "score": 2.15,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Seated Russian Twist (Band-Resisted)",
           "score": -0.25,
           "reason_codes": [
@@ -591,6 +593,13 @@
           "score": 1.25,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Staggered-Stance Medicine-Ball Punch Throw",
+          "score": 4.15,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
           ]
         },
         {
@@ -920,19 +929,6 @@
           ]
         },
         {
-          "name": "Trap Bar Deadlift",
-          "score": 3.72,
-          "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
-            "late_penalty_missing_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_impact",
-            "late_strength_penalty_compound_eccentric"
-          ]
-        },
-        {
           "name": "Mobility Reset Flow",
           "score": 1.32,
           "reason_codes": [
@@ -1070,6 +1066,21 @@
         },
         {
           "name": "Open-book reset",
+          "score": 0.97,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly"
+          ]
+        },
+        {
+          "name": "Pivot-and-freeze lead foot",
           "score": 0.97,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -1441,6 +1452,13 @@
           ]
         },
         {
+          "name": "Trap Bar Deadlift",
+          "score": 2.85,
+          "reason_codes": [
+            "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
           "name": "Trap Bar Jump (Light)",
           "score": 2.05,
           "reason_codes": [
@@ -1787,6 +1805,7 @@
           "score": 3.4,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
+            "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
           ]
         },
@@ -2363,6 +2382,7 @@
           "score": 3.4,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
+            "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
           ]
         },
@@ -3014,6 +3034,7 @@
           "score": 3.4,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
+            "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
           ]
         },

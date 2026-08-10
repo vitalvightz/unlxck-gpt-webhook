@@ -17,7 +17,8 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "late_strength_touch",
-      "maximal_strength_maintenance"
+      "maximal_strength_maintenance",
+      "familiarity_required"
     ],
     "equipment": "trap_bar",
     "phase_role": "late_strength_touch",
@@ -48,7 +49,7 @@
       "none",
       "low"
     ],
-    "notes": "Familiar trap-bar hinge kept as a low-dose strength-retention touch. D-21 to D-8 only: 2-3 sets x 2-3 reps @ RPE 6-7, long rest. No grinders, no failure, no back-off volume, no soreness target; stop on any bar-speed or quality loss. Reduce to a single top set by D-8. Not for D-7 or later."
+    "notes": "Low-dose strength-retention touch, D-21 to D-8 only, and only for fighters who already train the trap-bar deadlift (familiarity_required): never introduce it cold in the final stretch. Keep it non-grinding, no failure, no back-off volume, no soreness target; stop on any bar-speed or quality loss. The taper dose caps thin sets/reps as the fight nears. Not for D-7 or later."
   },
   {
     "name": "Back Squat",
@@ -11691,7 +11692,7 @@
     "cns_freshness": true,
     "ballistic_low_volume": true,
     "sport_specific": true,
-    "notes": "Low-volume punch throw: 2-3 x 3 per side with full rest early, shrinking to 1-2 crisp throws as the fight nears. Available as a micro-dose across the final week (D-7 to D-2); med-ball is pulled at D-3 and D-1 by the final-sharpening rules, so treat any D-3 use as a coach-optional micro-dose only.",
+    "notes": "Low-volume punch throw: 2-3 x 3 per side with full rest early, shrinking to 1-2 crisp throws as the fight nears. Micro-dose only on D-7, D-6/D-5, D-4 and D-2; med-ball throws are pulled entirely on D-3 and D-1 by the final-sharpening rules.",
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
@@ -11769,7 +11770,7 @@
     "cns_freshness": true,
     "ballistic_low_volume": true,
     "sport_specific": true,
-    "notes": "2-3 x 3 throws with full rest, using progressively smaller micro-doses (down to 1-2 crisp throws) as the fight approaches. Available across the final week (D-7 to D-2); med-ball is pulled at D-3 and D-1 by the final-sharpening rules.",
+    "notes": "2-3 x 3 throws with full rest, using progressively smaller micro-doses (down to 1-2 crisp throws) as the fight approaches. Micro-dose only on D-7, D-6/D-5, D-4 and D-2; med-ball throws are pulled entirely on D-3 and D-1 by the final-sharpening rules.",
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
@@ -11804,7 +11805,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "equipment": "landmine",
+    "equipment": "barbell,landmine",
     "phase_role": "late_strength_touch",
     "subfamily": "landmine_split_stance_punch_press",
     "late_windows": [

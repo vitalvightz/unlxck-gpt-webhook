@@ -55,21 +55,26 @@ def _named(name: str) -> dict:
     return item
 
 
-def _eval(name: str, window: str, *, days_until_fight=None, cut_bucket: str = "none") -> dict:
+def _eval(name: str, window: str, *, days_until_fight=None, cut_bucket: str = "none", familiar=True) -> dict:
+    # Default the athlete to being familiar with the movement so window/cost
+    # behaviour is exercised without the familiarity gate getting in the way;
+    # tests that care about familiarity pass familiar=False explicitly.
+    familiar_names = frozenset({name}) if familiar else frozenset()
     return _evaluate_strength_late_window(
         _named(name),
         window=window,
         days_until_fight=days_until_fight,
         cut_bucket=cut_bucket,
+        familiar_names=familiar_names,
     )
 
 
-def _not_blocked(name: str, window: str, *, days_until_fight=None, cut_bucket: str = "none") -> bool:
-    return not _eval(name, window, days_until_fight=days_until_fight, cut_bucket=cut_bucket)["blocked"]
+def _not_blocked(name: str, window: str, *, days_until_fight=None, cut_bucket: str = "none", familiar=True) -> bool:
+    return not _eval(name, window, days_until_fight=days_until_fight, cut_bucket=cut_bucket, familiar=familiar)["blocked"]
 
 
-def _blocked(name: str, window: str, *, days_until_fight=None, cut_bucket: str = "none") -> bool:
-    return _eval(name, window, days_until_fight=days_until_fight, cut_bucket=cut_bucket)["blocked"]
+def _blocked(name: str, window: str, *, days_until_fight=None, cut_bucket: str = "none", familiar=True) -> bool:
+    return _eval(name, window, days_until_fight=days_until_fight, cut_bucket=cut_bucket, familiar=familiar)["blocked"]
 
 
 # --- 1. Trap Bar Deadlift: extended into D13-D8, held out of D7+ --------------
@@ -78,17 +83,35 @@ def test_trap_bar_deadlift_enters_d13_to_d8_but_not_d7():
     item = _named("Trap Bar Deadlift")
     assert item["late_windows"] == ["d21_to_d14", "d13_to_d8"]
 
+    # For a fighter who already trains it (familiar), it survives D21-D14 and
+    # D13-D8 at a low dose.
     assert _not_blocked("Trap Bar Deadlift", D21_TO_D14, days_until_fight=17)
     assert _not_blocked("Trap Bar Deadlift", D13_TO_D8, days_until_fight=10)
 
-    # D-7 and everything inside the final week stays blocked (window mismatch).
+    # D-7 and everything inside the final week stays blocked (window mismatch),
+    # even for a familiar athlete.
     assert _blocked("Trap Bar Deadlift", D7, days_until_fight=7)
     assert _blocked("Trap Bar Deadlift", D6_TO_D5, days_until_fight=6)
     assert _blocked("Trap Bar Deadlift", D4_TO_D2, days_until_fight=4)
     assert _blocked("Trap Bar Deadlift", D1, days_until_fight=1)
 
 
-def test_trap_bar_deadlift_stays_a_governed_familiar_retention_anchor():
+def test_trap_bar_deadlift_familiarity_is_athlete_dependent_not_deleted():
+    item = _named("Trap Bar Deadlift")
+    # The familiarity protection is preserved on the movement itself.
+    assert "familiarity_required" in item["tags"]
+
+    # Unfamiliar athlete: never introduced cold in the late window.
+    unfamiliar = _eval("Trap Bar Deadlift", D13_TO_D8, days_until_fight=10, familiar=False)
+    assert unfamiliar["blocked"] is True
+    assert "late_strength_block_familiarity_required_late" in unfamiliar["block_codes"]
+
+    # Familiar athlete: the same movement survives D13-D8.
+    familiar = _eval("Trap Bar Deadlift", D13_TO_D8, days_until_fight=10, familiar=True)
+    assert familiar["blocked"] is False
+
+
+def test_trap_bar_deadlift_stays_a_governed_retention_anchor():
     item = _named("Trap Bar Deadlift")
     # Genuine strength-retention anchor: governance is complete so it can
     # legitimately satisfy the maximal-strength-maintenance role.
@@ -96,9 +119,6 @@ def test_trap_bar_deadlift_stays_a_governed_familiar_retention_anchor():
     assert item["meaningful_stress"] is True
     assert item["real_strength_maintenance"] is True
     assert "maximal_strength_maintenance" in item["tags"]
-    # A foundational hinge is not gated behind the "requires familiarity" late
-    # block that guards technically demanding late-introduced movements.
-    assert "familiarity_required" not in item["tags"]
 
 
 # --- 2. Trap-Bar Pin Pull Isometric: extended through D7 ----------------------
@@ -223,7 +243,84 @@ def test_high_fatigue_penalizes_a_late_eligible_strength_anchor():
     assert high < 0.0
 
 
-# --- 9. Later-window prescription volume decreases ----------------------------
+# --- 9. Later-window STRENGTH-lift dose decreases (sets/reps, not just minutes) ---
+
+def test_strength_dose_cap_is_deterministic_and_monotonic():
+    from fightcamp.late_camp_role_morph import late_fight_strength_dose_cap
+
+    # D-18 and further out keep meaningful strength (never capped).
+    assert late_fight_strength_dose_cap(18) is None
+    assert late_fight_strength_dose_cap(21) is None
+
+    # From D-17 inward the lifting dose (sets x reps) never increases toward the
+    # fight, and the final day carries no meaningful lifting stimulus.
+    products = []
+    for d in range(17, 0, -1):
+        cap = late_fight_strength_dose_cap(d)
+        assert cap is not None
+        products.append(cap["max_sets"] * cap["max_reps"])
+    assert products == sorted(products, reverse=True)
+    assert late_fight_strength_dose_cap(1)["max_sets"] == 0
+
+    # The reviewer's concrete example: Trap Bar DL dose strictly decreases
+    # D-15 -> D-10 -> D-8 (not the same generic 2-3 x 2-3 at every day).
+    d15 = late_fight_strength_dose_cap(15)
+    d10 = late_fight_strength_dose_cap(10)
+    d8 = late_fight_strength_dose_cap(8)
+    assert (d15["max_sets"], d15["max_reps"]) == (3, 3)
+    assert (d10["max_sets"], d10["max_reps"]) == (2, 3)
+    assert (d8["max_sets"], d8["max_reps"]) == (2, 2)
+    assert d15["max_sets"] * d15["max_reps"] > d10["max_sets"] * d10["max_reps"]
+    assert d10["max_sets"] * d10["max_reps"] > d8["max_sets"] * d8["max_reps"]
+
+
+def _morphed_strength_role(d_day: int) -> dict:
+    from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
+
+    week = {
+        "session_roles": [
+            {"role_key": "transfer_strength_day", "category": "strength", "scheduled_day_hint": "monday"}
+        ],
+        "calendar_days": [{"weekday": "monday", "d_day": d_day}],
+    }
+    apply_late_camp_role_morph({"weeks": [week]})
+    return week["session_roles"][0]
+
+
+def test_role_morph_thins_actual_lifting_dose_across_the_countdown():
+    # A full strength role scheduled at D-15, D-10 and D-8 is morphed to a
+    # progressively smaller lifting dose (deterministic set/rep ceilings), not
+    # the same generic 2-3 x 2-3 cap at every countdown day.
+    d15 = _morphed_strength_role(15)
+    d10 = _morphed_strength_role(10)
+    d8 = _morphed_strength_role(8)
+
+    assert d15["set_cap"] == "2-3 sets"
+    assert d10["set_cap"] == "2 sets"
+    assert d8["set_cap"] == "1-2 sets"
+
+    v15 = d15["strength_dose_cap"]["max_sets"] * d15["strength_dose_cap"]["max_reps"]
+    v10 = d10["strength_dose_cap"]["max_sets"] * d10["strength_dose_cap"]["max_reps"]
+    v8 = d8["strength_dose_cap"]["max_sets"] * d8["strength_dose_cap"]["max_reps"]
+    assert v15 > v10 > v8
+
+    for role in (d15, d10, d8):
+        assert "neural maintenance" in role["selection_rule"].lower()
+        assert "never render this as a loaded" in role["selection_rule"].lower()
+
+
+def test_final_week_strength_touches_become_neural_microdoses():
+    # D-7 inward a surviving strength touch is a neural/max-force microdose, not
+    # a loaded strength dose.
+    from fightcamp.late_camp_role_morph import late_fight_strength_dose_cap
+
+    d7 = late_fight_strength_dose_cap(7)
+    assert d7["max_reps"] == 1
+    assert "microdose" in d7["rep_cap"].lower()
+    d4 = late_fight_strength_dose_cap(4)
+    assert (d4["max_sets"], d4["max_reps"]) == (1, 1)
+    assert "throw" in d4["rep_cap"].lower() or "primer" in d4["rep_cap"].lower()
+
 
 def _active_cap_upper_minutes(days_until_fight: int) -> int:
     caps = conditioning._late_fight_dosage_caps(days_until_fight)
@@ -232,31 +329,12 @@ def _active_cap_upper_minutes(days_until_fight: int) -> int:
     return int(match.group(1))
 
 
-def test_prescription_volume_shrinks_across_the_final_week():
-    # The existing countdown dosage caps (not a new taper system) tighten the
-    # active-minute ceiling monotonically as the fight approaches.
+def test_conditioning_active_minutes_also_shrink_supporting_evidence():
+    # Supporting (not the primary strength-dose proof): the existing conditioning
+    # countdown caps tighten the active-minute ceiling monotonically too.
     sequence = [_active_cap_upper_minutes(d) for d in (10, 7, 6, 5, 4, 3, 2, 1)]
     assert sequence == sorted(sequence, reverse=True)
-    assert sequence[0] > sequence[-1]
-    # Concretely: a later window is not identical to an earlier one.
     assert _active_cap_upper_minutes(2) < _active_cap_upper_minutes(10)
-    assert _active_cap_upper_minutes(5) < _active_cap_upper_minutes(10)
-
-
-def test_role_morph_softens_late_strength_to_low_volume_neural_maintenance():
-    from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
-
-    week = {
-        "session_roles": [
-            {"role_key": "transfer_strength_day", "category": "strength", "scheduled_day_hint": "monday"}
-        ],
-        "calendar_days": [{"weekday": "monday", "d_day": 10}],
-    }
-    apply_late_camp_role_morph({"weeks": [week]})
-    role = week["session_roles"][0]
-    assert role["rpe_cap"] == "6-7"
-    assert role["set_cap"] == "2-3 sets"
-    assert "neural maintenance" in role["selection_rule"].lower()
 
 
 # --- 10. Low-eccentric never buys a zero-fatigue bypass -----------------------

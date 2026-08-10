@@ -80,6 +80,74 @@ _NEURAL_MAINTENANCE_SELECTION_RULE = (
     "kettlebell swings, no loaded power cleans this close to the fight."
 )
 
+# Deterministic strength-lift dose caps by countdown day.
+#
+# The late-camp morph replaces a strength role's dose with these caps so the
+# *lifting* dose (sets x reps x RPE), not just conditioning minutes, thins as
+# the fight approaches. Caps apply from D-17 inward (STRENGTH_NEURAL_MORPH_MAX_D);
+# D-18 and further out keep meaningful strength retention and are never capped.
+#
+# Each band is (min_d, max_sets, max_reps, rpe_cap, set_cap, rep_cap, dose_label,
+# movement_note). Bands are ordered widest countdown -> closest to the fight so
+# the first band whose min_d <= d wins.
+_STRENGTH_DOSE_BANDS = (
+    (14, 3, 3, "6-7", "2-3 sets", "2-3 reps", "low-volume strength-retention touch",
+     "familiar low-load strength retention only; never a grinding loaded session"),
+    (10, 2, 3, "6-7", "2 sets", "2-3 reps", "reduced strength maintenance touch",
+     "familiar low-load strength maintenance only; never a grinding loaded session"),
+    (8, 2, 2, "6-7", "1-2 sets", "1-2 reps", "minimal strength maintenance touch",
+     "single familiar low-load maintenance lift; no back-off volume, no failure"),
+    (7, 2, 1, "6", "1-2 sets", "isometric / neural microdose", "neural / max-force micro-touch",
+     "isometric or neural microdose only; no loaded strength-transfer reps"),
+    (5, 1, 1, "5-6", "1 set", "low-cost neural / power microdose", "low-cost neural / power microdose",
+     "low-cost neural / power expression only; no loaded strength work"),
+    (2, 1, 1, "5", "1 set", "throw / primer microdose", "sharpness microdose only",
+     "throws / primers only, tiny sharpness dose; no loaded strength work"),
+    (0, 0, 0, "3-5", "no loaded lifting", "none", "no meaningful lifting stimulus",
+     "no meaningful lifting stimulus; readiness touch / mobility only"),
+)
+
+
+def late_fight_strength_dose_cap(d_day):
+    """Return the deterministic strength-lift dose cap for a role at ``d_day``.
+
+    Returns ``None`` for D-18 and further out (meaningful strength is retained
+    and never capped) and for values that are not a valid non-negative day.
+    Otherwise returns a dict with ``max_sets`` / ``max_reps`` (numeric ceilings
+    that decrease monotonically as the fight approaches), the human-readable
+    ``rpe_cap`` / ``set_cap`` / ``rep_cap`` strings, a ``dose_label`` and a
+    ``movement_note`` describing what is still allowed.
+    """
+    try:
+        d = int(d_day)
+    except (TypeError, ValueError):
+        return None
+    if d < 0 or d > STRENGTH_NEURAL_MORPH_MAX_D:
+        return None
+    for min_d, max_sets, max_reps, rpe_cap, set_cap, rep_cap, dose_label, movement_note in _STRENGTH_DOSE_BANDS:
+        if d >= min_d:
+            return {
+                "max_sets": max_sets,
+                "max_reps": max_reps,
+                "rpe_cap": rpe_cap,
+                "set_cap": set_cap,
+                "rep_cap": rep_cap,
+                "dose_label": dose_label,
+                "movement_note": movement_note,
+            }
+    return None
+
+
+def _strength_dose_selection_rule(cap: dict) -> str:
+    """Build the athlete-facing selection rule text from a dose cap."""
+    return (
+        f"Low-volume neural maintenance touch only: {cap['set_cap']} x "
+        f"{cap['rep_cap']} at RPE {cap['rpe_cap']} max with full recovery. "
+        f"{cap['movement_note'][0].upper()}{cap['movement_note'][1:]}. "
+        "Never render this as a loaded strength-transfer session — keep bar/"
+        "implement speed high and the dose tiny."
+    )
+
 # Role-level metadata that encodes "this is hard, meaningful combat pressure".
 # Stripped on morph so nothing downstream re-reads a stale hard signal.
 _HARD_PRESSURE_ROLE_FIELDS = (
@@ -196,13 +264,26 @@ def _morph_to_rhythm_touch(role: dict[str, Any], d_day: int) -> None:
 
 
 def _soften_full_strength_role(role: dict[str, Any], d_day: int) -> None:
-    """Cap a full strength role to a low-volume neural maintenance touch."""
-    role["rpe_cap"] = "6-7"
-    role["set_cap"] = "2-3 sets"
-    role["selection_rule"] = _NEURAL_MAINTENANCE_SELECTION_RULE
+    """Cap a full strength role to a countdown-graded low-volume neural touch."""
+    cap = late_fight_strength_dose_cap(d_day) or {
+        "rpe_cap": "6-7",
+        "set_cap": "2-3 sets",
+        "rep_cap": "2-3 reps",
+        "max_sets": 3,
+        "max_reps": 3,
+        "movement_note": "familiar low-load strength retention only",
+    }
+    role["rpe_cap"] = cap["rpe_cap"]
+    role["set_cap"] = cap["set_cap"]
+    role["rep_cap"] = cap["rep_cap"]
+    # Numeric ceilings so downstream/QA can assert the lifting dose actually
+    # shrinks across the countdown (not just the prose).
+    role["strength_dose_cap"] = {"max_sets": cap["max_sets"], "max_reps": cap["max_reps"]}
+    role["selection_rule"] = _strength_dose_selection_rule(cap)
     role["late_camp_strength_morph"] = True
     role["day_assignment_reason"] = (
-        f"Late-camp morph: full strength-transfer softened to a low-volume "
+        f"Late-camp morph: full strength-transfer softened to a "
+        f"{cap['set_cap']} x {cap['rep_cap']} @ RPE {cap['rpe_cap']} "
         f"neural maintenance touch at D-{d_day}."
     )
     if d_day <= STRENGTH_LABEL_MORPH_MAX_D:
