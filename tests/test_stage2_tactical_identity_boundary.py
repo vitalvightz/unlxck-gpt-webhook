@@ -63,6 +63,24 @@ def test_stage2_llm_projection_preserves_internal_model_and_hides_parent_family_
     ] == ["tactical_watch", "SPP"]
 
 
+def test_stage2_llm_projection_sanitizes_athlete_model_without_mutating_source():
+    planning_brief = {
+        "athlete_model": {
+            "sport": "boxing",
+            "stance": "Hybrid",
+            "tactical_styles": ["pressure fighter", "hybrid"],
+        }
+    }
+
+    llm_brief = build_stage2_llm_planning_brief(planning_brief)
+
+    assert planning_brief["athlete_model"]["tactical_styles"] == [
+        "pressure fighter",
+        "hybrid",
+    ]
+    assert llm_brief["athlete_model"]["tactical_styles"] == ["Pressure Fighter"]
+
+
 def test_pressure_fighter_hybrid_stance_stage2_handoff_contains_only_declared_tactical_identity():
     planning_brief = _planning_brief(
         tactical_styles=["pressure fighter", "hybrid"],
