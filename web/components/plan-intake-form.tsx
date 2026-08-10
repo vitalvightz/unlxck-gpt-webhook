@@ -2444,12 +2444,24 @@ export function PlanIntakeForm() {
                       <p id="technicalStyle-error" className="error-text" role="alert">{error}</p>
                     ) : null}
                   </div>
+                  <div className="field">
+                    <label htmlFor="tacticalStyle">Tactical Style</label>
+                    <CustomSelect
+                      id="tacticalStyle"
+                      value={form.athlete.tactical_style[0] ?? ""}
+                      options={TACTICAL_STYLE_OPTIONS}
+                      placeholder="Select tactical style"
+                      includeEmptyOption
+                      onChange={(value) => updateAthlete("tactical_style", value ? [value] : [])}
+                    />
+                    <p className="muted">Tactical style = how you usually fight inside that sport.</p>
+                  </div>
                 </div>
               </article>
 
               <OptionalDetails
                 title="Add more detail"
-                hint="Body stats, stance, target weight, tactical style, status, and record. Not required to generate a plan."
+                hint="Body stats, stance, target weight, status, and record. Not required to generate a plan."
               >
                 <div className="form-grid onboarding-profile-detail-grid">
                   <div className="field">
@@ -2491,18 +2503,6 @@ export function PlanIntakeForm() {
                     <label htmlFor="targetWeightKg">Target weight (kg)</label>
                     <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
                     <p className="muted">Use realistic fight-week target, not an ideal someday number.</p>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="tacticalStyle">Tactical Style</label>
-                    <CustomSelect
-                      id="tacticalStyle"
-                      value={form.athlete.tactical_style[0] ?? ""}
-                      options={TACTICAL_STYLE_OPTIONS}
-                      placeholder="Select tactical style"
-                      includeEmptyOption
-                      onChange={(value) => updateAthlete("tactical_style", value ? [value] : [])}
-                    />
-                    <p className="muted">Tactical style = how you usually fight inside that sport.</p>
                   </div>
                   <div className="field">
                     <label htmlFor="status">Professional Status</label>
