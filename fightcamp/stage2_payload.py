@@ -15,6 +15,7 @@ from typing import Any
 
 from . import stage2_planning_brief as stage2_planning_brief_module
 from .stage2_finalizer_packet import build_stage2_finalizer_packet
+from .stage2_llm_boundary import build_stage2_llm_planning_brief
 from .stage2_payload_open_ongoing import (
     _uses_open_ongoing_payload,
     build_open_ongoing_payload,
@@ -3842,6 +3843,7 @@ def build_stage2_handoff_text(
     coach_notes: str = "",
     planning_brief: dict | None = None,
 ) -> str:
+    planning_brief = build_stage2_llm_planning_brief(planning_brief)
     finalizer_packet = build_stage2_finalizer_packet(
         stage2_payload=stage2_payload,
         planning_brief=planning_brief,

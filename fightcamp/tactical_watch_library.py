@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from typing import Any, Iterable
 
@@ -51,6 +52,22 @@ _STYLE_FIELDS = (
     "fighting_styles",
     "style",
 )
+_DECLARED_STYLE_FIELDS = (
+    "tactical_style",
+    "tactical_styles",
+    "style_tactical",
+)
+_CANONICAL_DISPLAY_LABELS = {
+    "pressure_fighter": "Pressure Fighter",
+    "counter_striker": "Counter Striker",
+    "distance_striker": "Distance Striker",
+    "clinch_fighter": "Clinch Fighter",
+    "grappler": "Grappler",
+    "hybrid": "Hybrid",
+    # Legacy athlete-selectable wording is preserved rather than silently
+    # relabelled to the current parent family.
+    "brawler": "Brawler",
+}
 
 
 def _token(value: Any) -> str:
@@ -58,6 +75,72 @@ def _token(value: Any) -> str:
     for separator in (" ", "-", "/", ".", "+"):
         text = text.replace(separator, "_")
     return "_".join(part for part in text.split("_") if part)
+
+
+def _display_label(value: Any) -> str:
+    raw = str(value or "").strip()
+    token = _token(raw)
+    if not token:
+        return ""
+    canonical = _CANONICAL_DISPLAY_LABELS.get(token)
+    if canonical:
+        return canonical
+    # Unknown/legacy selections keep their own wording instead of being renamed
+    # to an internal family. This is display formatting only, not taxonomy.
+    return " ".join(part.capitalize() for part in token.split("_") if part)
+
+
+def declared_tactical_style_labels(athlete_model: dict[str, Any] | None) -> list[str]:
+    """Return athlete-facing tactical identity labels without programming aliases.
+
+    Runtime planning lowercases tactical selections and, for historical reasons,
+    appends ``hybrid`` to ``style_tactical`` when the athlete's *stance* is Hybrid.
+    That appended value is a programming signal, not a second tactical identity.
+    Modern intake permits one tactical selection, so a trailing Hybrid alongside
+    another tactical value is the stance-derived signal and must stay internal.
+    """
+    if not isinstance(athlete_model, dict):
+        return []
+
+    raw_values: list[Any] = []
+    for field in _DECLARED_STYLE_FIELDS:
+        raw = athlete_model.get(field)
+        if raw is None:
+            continue
+        values = raw if isinstance(raw, (list, tuple, set)) else [raw]
+        raw_values.extend(value for value in values if str(value or "").strip())
+        if raw_values:
+            break
+
+    if len(raw_values) > 1 and _token(raw_values[-1]) == "hybrid":
+        raw_values = raw_values[:-1]
+
+    labels: list[str] = []
+    seen: set[str] = set()
+    for value in raw_values:
+        token = _token(value)
+        label = _display_label(value)
+        if not token or not label or token in seen:
+            continue
+        seen.add(token)
+        labels.append(label)
+    return labels
+
+
+class TacticalStyleSelection(str):
+    """Internal style-family key carrying the athlete's separate display label.
+
+    It remains a real ``str`` (e.g. ``selection == "brawler"``) so existing
+    programming/scoring callers keep the same contract. ``select_tactical_watch``
+    reads ``display_label`` only when producing the selected watch for rendering.
+    """
+
+    display_label: str
+
+    def __new__(cls, family: str, display_label: str = "") -> "TacticalStyleSelection":
+        instance = str.__new__(cls, family)
+        instance.display_label = str(display_label or "").strip()
+        return instance
 
 
 def normalize_tactical_style(value: Any) -> str:
@@ -70,17 +153,22 @@ def normalize_tactical_style(value: Any) -> str:
     return "generic"
 
 
-def extract_tactical_style(athlete_model: dict[str, Any] | None) -> str:
+def extract_tactical_style(athlete_model: dict[str, Any] | None) -> TacticalStyleSelection:
     if not isinstance(athlete_model, dict):
-        return "generic"
+        return TacticalStyleSelection("generic")
+
+    declared_labels = declared_tactical_style_labels(athlete_model)
+    declared_label = declared_labels[0] if declared_labels else ""
+
     for field in _STYLE_FIELDS:
         raw = athlete_model.get(field)
         values = raw if isinstance(raw, (list, tuple, set)) else [raw]
         for value in values:
             style = normalize_tactical_style(value)
             if style != "generic":
-                return style
-    return "generic"
+                display_label = declared_label if normalize_tactical_style(declared_label) == style else _display_label(value)
+                return TacticalStyleSelection(style, display_label)
+    return TacticalStyleSelection("generic")
 
 
 @dataclass(frozen=True)
@@ -98,6 +186,7 @@ class TacticalWatch:
     duration_minutes: int
     instructions: tuple[str, ...]
     progress: str
+    display_style: str = ""
 
 
 @lru_cache(maxsize=1)
@@ -175,37 +264,62 @@ def select_tactical_watch(
     used_keys: Iterable[str] | None = None,
 ) -> TacticalWatch:
     used = {str(key) for key in (used_keys or ())}
+    display_style = str(getattr(style, "display_label", "") or "").strip()
     for watch in ordered_phase_bank(style, phase):
         if watch.key not in used:
+            if display_style and watch.style != "generic":
+                return replace(watch, display_style=display_style)
             return watch
     raise TacticalWatchBankExhausted(
         f"no unused Tactical Watch for style={style!r} phase={phase!r}"
     )
 
 
+def _athlete_visible_watch_text(watch: TacticalWatch, text: str) -> str:
+    """Swap only the internal family noun for the athlete's declared label."""
+    visible = str(text or "")
+    display_style = str(watch.display_style or "").strip()
+    if not visible or not display_style or watch.style == "generic":
+        return visible
+    family_phrase = watch.style.replace("_", " ")
+    return re.sub(
+        rf"\b{re.escape(family_phrase)}\b",
+        display_style.lower(),
+        visible,
+        flags=re.IGNORECASE,
+    )
+
+
 def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
     mindset = {
-        "intent": watch.intent,
-        "focus": watch.focus,
-        "reset": watch.reset,
-        "anchor": watch.anchor,
-        "context": watch.context,
+        "intent": _athlete_visible_watch_text(watch, watch.intent),
+        "focus": _athlete_visible_watch_text(watch, watch.focus),
+        "reset": _athlete_visible_watch_text(watch, watch.reset),
+        "anchor": _athlete_visible_watch_text(watch, watch.anchor),
+        "context": _athlete_visible_watch_text(watch, watch.context),
     }
+    visible_why = _athlete_visible_watch_text(watch, watch.why)
+    visible_instructions = [
+        _athlete_visible_watch_text(watch, instruction) for instruction in watch.instructions
+    ]
+    visible_progress = _athlete_visible_watch_text(watch, watch.progress)
     return {
         "tactical_watch_key": watch.key,
         "tactical_watch_name": watch.name,
         "tactical_watch_style": watch.style,
+        "tactical_watch_display_style": watch.display_style or None,
         "tactical_watch_phase": watch.phase,
         "tactical_watch": {
             "key": watch.key,
             "name": watch.name,
             "style": watch.style,
+            "display_style": watch.display_style or None,
             "phase": watch.phase,
-            "why": watch.why,
+            "why": visible_why,
             "duration_min": watch.duration_minutes,
             "mindset": mindset,
-            "instructions": list(watch.instructions),
-            "progress": watch.progress,
+            "instructions": visible_instructions,
+            "progress": visible_progress,
         },
         "preferred_exercise_names": [watch.name],
         "preferred_tags": ["tactical_watch", watch.style, watch.phase.lower()],
@@ -232,22 +346,24 @@ def build_watch_display_text(watch: TacticalWatch) -> str:
     whichever block happened to be last. Emitting the shared contract keeps the
     whole watch as one card with its own name, dose and coaching detail.
 
-    The bank's wording is passed through untouched; only the line shape and the
-    labels that introduce each line are chosen here.
+    Bank wording remains authoritative for the drill itself. When the selected
+    bank family is an internal alias (for example ``brawler`` for an athlete who
+    selected ``Pressure Fighter``), only that family noun is rewritten in visible
+    prose; selection tags and programming metadata stay internal and unchanged.
     """
     lines = [
-        f"Why: {watch.why}",
+        f"Why: {_athlete_visible_watch_text(watch, watch.why)}",
         f"- {watch.name}: {watch.duration_minutes} minutes, tactical review only. No physical load.",
         *(
-            f"  Step {index}: {instruction}"
+            f"  Step {index}: {_athlete_visible_watch_text(watch, instruction)}"
             for index, instruction in enumerate(watch.instructions, start=1)
         ),
-        f"  Intent: {watch.intent}",
-        f"  Focus: {watch.focus}",
-        f"  Reset: {watch.reset}",
-        f"  Anchor: {watch.anchor}",
-        f"  Purpose: {watch.context}",
-        f"  Progress: {watch.progress}",
+        f"  Intent: {_athlete_visible_watch_text(watch, watch.intent)}",
+        f"  Focus: {_athlete_visible_watch_text(watch, watch.focus)}",
+        f"  Reset: {_athlete_visible_watch_text(watch, watch.reset)}",
+        f"  Anchor: {_athlete_visible_watch_text(watch, watch.anchor)}",
+        f"  Purpose: {_athlete_visible_watch_text(watch, watch.context)}",
+        f"  Progress: {_athlete_visible_watch_text(watch, watch.progress)}",
     ]
     return "\n".join(lines)
 
