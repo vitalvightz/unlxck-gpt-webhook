@@ -1,0 +1,76 @@
+name: Patch Stage 2 tactical boundary
+
+on:
+  push:
+    branches:
+      - agent/preserve-athlete-tactical-style-labels
+    paths:
+      - .github/workflows/patch-stage2-tactical-boundary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/preserve-athlete-tactical-style-labels
+      - name: Apply boundary projection
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("fightcamp/plan_pipeline_rendering.py")
+          text = path.read_text()
+
+          import_anchor = """from .stage2_payload import (
+              build_computed_support,
+              build_planning_brief,
+              build_stage2_handoff_text,
+              build_stage2_payload,
+          )
+          from .weight_cut import parse_optional_weight_value
+          """
+          import_replacement = """from .stage2_payload import (
+              build_computed_support,
+              build_planning_brief,
+              build_stage2_handoff_text,
+              build_stage2_payload,
+          )
+          from .stage2_llm_boundary import build_stage2_llm_planning_brief
+          from .weight_cut import parse_optional_weight_value
+          """
+          if import_anchor not in text:
+              raise SystemExit("stage2 import anchor not found")
+          text = text.replace(import_anchor, import_replacement, 1)
+
+          handoff_anchor = """    stage2_handoff_text = build_stage2_handoff_text(
+              stage2_payload=stage2_payload,
+              plan_text=rendered.fight_plan_text,
+              coach_notes=rendered.coach_notes,
+              planning_brief=planning_brief,
+          )
+          """
+          handoff_replacement = """    llm_planning_brief = build_stage2_llm_planning_brief(planning_brief)
+              stage2_handoff_text = build_stage2_handoff_text(
+              stage2_payload=stage2_payload,
+              plan_text=rendered.fight_plan_text,
+              coach_notes=rendered.coach_notes,
+              planning_brief=llm_planning_brief,
+          )
+          """
+          if handoff_anchor not in text:
+              raise SystemExit("Stage 2 handoff anchor not found")
+          text = text.replace(handoff_anchor, handoff_replacement, 1)
+          path.write_text(text)
+          PY
+      - name: Remove temporary patch workflow and commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/patch-stage2-tactical-boundary.yml
+          git add fightcamp/plan_pipeline_rendering.py
+          git commit -m "Wire tactical identity sanitizer into Stage 2 handoff"
+          git push origin HEAD:agent/preserve-athlete-tactical-style-labels
