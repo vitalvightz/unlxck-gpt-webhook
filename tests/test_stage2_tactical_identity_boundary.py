@@ -81,12 +81,11 @@ def test_stage2_llm_projection_sanitizes_athlete_model_without_mutating_source()
     assert llm_brief["athlete_model"]["tactical_styles"] == ["Pressure Fighter"]
 
 
-def test_pressure_fighter_hybrid_stance_stage2_handoff_contains_only_declared_tactical_identity():
+def test_pressure_fighter_hybrid_stance_stage2_handoff_sanitizes_raw_planning_brief():
     planning_brief = _planning_brief(
         tactical_styles=["pressure fighter", "hybrid"],
         preferred_tags=["tactical_watch", "brawler", "SPP"],
     )
-    llm_brief = build_stage2_llm_planning_brief(planning_brief)
 
     handoff = build_stage2_handoff_text(
         stage2_payload={
@@ -97,11 +96,19 @@ def test_pressure_fighter_hybrid_stance_stage2_handoff_contains_only_declared_ta
             }
         },
         plan_text="# Stage 1 Draft\n- Pressure Fighter tactical watch",
-        planning_brief=llm_brief,
+        planning_brief=planning_brief,
     )
 
     packet = _json_section(handoff, "FINALIZER PACKET")
     athlete_profile = _json_section(handoff, "ATHLETE PROFILE")
+
+    assert planning_brief["athlete_snapshot"]["tactical_styles"] == [
+        "pressure fighter",
+        "hybrid",
+    ]
+    assert planning_brief["weekly_role_map"]["weeks"][0]["session_roles"][0][
+        "preferred_tags"
+    ] == ["tactical_watch", "brawler", "SPP"]
 
     assert packet["athlete_model"]["tactical_styles"] == ["Pressure Fighter"]
     assert packet["render_guards"]["declared_tactical_styles"] == ["Pressure Fighter"]
