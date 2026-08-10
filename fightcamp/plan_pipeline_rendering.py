@@ -28,7 +28,6 @@ from .stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
-from .stage2_llm_boundary import build_stage2_llm_planning_brief
 from .weight_cut import parse_optional_weight_value
 
 
@@ -702,11 +701,10 @@ def build_stage2_outputs(
         rendered.fight_plan_text = _insert_lead_summary(
             rendered.fight_plan_text, lead_summary
         )
-    llm_planning_brief = build_stage2_llm_planning_brief(planning_brief)
     stage2_handoff_text = build_stage2_handoff_text(
         stage2_payload=stage2_payload,
         plan_text=rendered.fight_plan_text,
         coach_notes=rendered.coach_notes,
-        planning_brief=llm_planning_brief,
+        planning_brief=planning_brief,
     )
     return stage2_payload, planning_brief, stage2_handoff_text
