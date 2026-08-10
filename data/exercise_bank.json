@@ -11804,7 +11804,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "equipment": "barbell,landmine",
+    "equipment": "landmine",
     "phase_role": "late_strength_touch",
     "subfamily": "landmine_split_stance_punch_press",
     "late_windows": [

@@ -69,9 +69,30 @@ def normalize_equipment_list(raw):
     return normalized
 
 
+# Equipment an athlete can improvise from other equipment they already own.
+# A landmine setup is just a barbell with one end anchored (a corner works), so
+# any athlete with a barbell can perform landmine movements. This grants the
+# implied access on the *athlete* side only — an exercise that lists ``barbell``
+# never gains an implicit ``landmine`` requirement, so landmine exercises become
+# available to barbell owners without making barbell exercises harder to select.
+EQUIPMENT_IMPLICATIONS = {
+    "barbell": ("landmine",),
+}
+
+
 def normalize_athlete_equipment_list(raw):
-    """Return athlete equipment access with implicit bodyweight availability."""
+    """Return athlete equipment access with implicit bodyweight availability.
+
+    Also expands equipment the athlete can improvise from what they own (see
+    ``EQUIPMENT_IMPLICATIONS``), e.g. a barbell owner implicitly has landmine
+    access because a landmine is a barbell anchored at one end.
+    """
     normalized = normalize_equipment_list(raw)
+    for source, implied_items in EQUIPMENT_IMPLICATIONS.items():
+        if source in normalized:
+            for token in implied_items:
+                if token not in normalized:
+                    normalized.append(token)
     if "bodyweight" not in normalized:
         normalized.append("bodyweight")
     return normalized

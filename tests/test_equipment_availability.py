@@ -113,3 +113,74 @@ def test_bodyweight_strength_drill_remains_selectable_when_athlete_does_not_list
     selected_names = {exercise["name"] for exercise in block["exercises"]}
     assert "Bodyweight Speed Push-Up" in selected_names
     assert "Medicine Ball Rotational Throw" not in selected_names
+
+
+def test_barbell_owner_gains_implicit_landmine_access():
+    # A landmine is a barbell anchored at one end, so a barbell owner can perform
+    # landmine movements (corner-anchored). The implicit access is granted on the
+    # athlete side only.
+    from fightcamp.training_context import (
+        normalize_athlete_equipment_list,
+        normalize_equipment_list,
+    )
+
+    athlete = normalize_athlete_equipment_list(["barbell"])
+    assert "landmine" in athlete
+    assert "barbell" in athlete
+
+    # Landmine ownership does not conjure a full barbell (one-directional).
+    assert "barbell" not in normalize_athlete_equipment_list(["landmine"])
+
+    # Exercise-side normalization is untouched: a barbell exercise never gains an
+    # implicit landmine requirement.
+    assert normalize_equipment_list(["barbell"]) == ["barbell"]
+
+
+def test_barbell_only_athlete_can_select_a_landmine_strength_exercise(monkeypatch):
+    exercise_bank = [
+        {
+            "name": "Landmine Rotational Press",
+            "tags": ["power", "rotational", "sport_specific"],
+            "phases": ["SPP", "TAPER", "GPP"],
+            "equipment": "landmine",
+            "movement": "rotational",
+            "method": "power",
+        },
+        {
+            "name": "Bodyweight Filler",
+            "tags": ["mobility", "rehab_friendly"],
+            "phases": ["SPP", "TAPER", "GPP"],
+            "equipment": ["bodyweight"],
+            "movement": "core",
+            "method": "rehab",
+        },
+    ]
+
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
+    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
+
+    block = strength.generate_strength_block(
+        flags={
+            "phase": "SPP",
+            "fatigue": "low",
+            "fight_format": "mma",
+            "style_tactical": ["pressure fighter"],
+            "key_goals": [],
+            "training_days": ["Mon", "Wed"],
+            "training_frequency": 2,
+            # Athlete lists only a barbell — no dedicated landmine sleeve.
+            "equipment": ["barbell"],
+            "injuries": [],
+            "prev_exercises": [],
+            "recent_exercises": [],
+            "restrictions": [],
+            "ignore_restrictions": False,
+            "random_seed": 7,
+        },
+        weaknesses=[],
+        mindset_cue=None,
+    )
+
+    selected_names = {exercise["name"] for exercise in block["exercises"]}
+    assert "Landmine Rotational Press" in selected_names
