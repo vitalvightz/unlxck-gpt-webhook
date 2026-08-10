@@ -25,46 +25,34 @@ jobs:
           path = Path("fightcamp/plan_pipeline_rendering.py")
           text = path.read_text()
 
-          import_anchor = """from .stage2_payload import (
-              build_computed_support,
-              build_planning_brief,
-              build_stage2_handoff_text,
-              build_stage2_payload,
-          )
-          from .weight_cut import parse_optional_weight_value
-          """
-          import_replacement = """from .stage2_payload import (
-              build_computed_support,
-              build_planning_brief,
-              build_stage2_handoff_text,
-              build_stage2_payload,
-          )
-          from .stage2_llm_boundary import build_stage2_llm_planning_brief
-          from .weight_cut import parse_optional_weight_value
-          """
-          if import_anchor not in text:
-              raise SystemExit("stage2 import anchor not found")
-          text = text.replace(import_anchor, import_replacement, 1)
+          weight_import = "from .weight_cut import parse_optional_weight_value"
+          boundary_import = "from .stage2_llm_boundary import build_stage2_llm_planning_brief"
+          if boundary_import not in text:
+              if weight_import not in text:
+                  raise SystemExit("weight-cut import anchor not found")
+              text = text.replace(
+                  weight_import,
+                  boundary_import + "\n" + weight_import,
+                  1,
+              )
 
-          handoff_anchor = """    stage2_handoff_text = build_stage2_handoff_text(
-              stage2_payload=stage2_payload,
-              plan_text=rendered.fight_plan_text,
-              coach_notes=rendered.coach_notes,
-              planning_brief=planning_brief,
-          )
-          """
-          handoff_replacement = """    llm_planning_brief = build_stage2_llm_planning_brief(planning_brief)
-              stage2_handoff_text = build_stage2_handoff_text(
-              stage2_payload=stage2_payload,
-              plan_text=rendered.fight_plan_text,
-              coach_notes=rendered.coach_notes,
-              planning_brief=llm_planning_brief,
-          )
-          """
-          if handoff_anchor not in text:
-              raise SystemExit("Stage 2 handoff anchor not found")
-          text = text.replace(handoff_anchor, handoff_replacement, 1)
-          path.write_text(text)
+          handoff_call = "    stage2_handoff_text = build_stage2_handoff_text("
+          handoff_index = text.rfind(handoff_call)
+          if handoff_index < 0:
+              raise SystemExit("Stage 2 handoff call not found")
+
+          prefix = text[:handoff_index]
+          suffix = text[handoff_index:]
+          if "llm_planning_brief = build_stage2_llm_planning_brief(planning_brief)" not in prefix[-300:]:
+              prefix += "    llm_planning_brief = build_stage2_llm_planning_brief(planning_brief)\n"
+
+          old_arg = "        planning_brief=planning_brief,"
+          new_arg = "        planning_brief=llm_planning_brief,"
+          if old_arg not in suffix:
+              raise SystemExit("Stage 2 planning-brief argument not found")
+          suffix = suffix.replace(old_arg, new_arg, 1)
+
+          path.write_text(prefix + suffix)
           PY
       - name: Remove temporary patch workflow and commit
         run: |
