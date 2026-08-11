@@ -141,6 +141,29 @@
           ]
         },
         {
+          "name": "Jump Squat",
+          "score": 3.57,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_soreness",
+            "late_strength_penalty_triple_extension_landing"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 2.6825,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_soreness"
+          ]
+        },
+        {
           "name": "Mobility Reset Flow",
           "score": 1.2825,
           "reason_codes": [
@@ -260,36 +283,6 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly"
           ]
-        },
-        {
-          "name": "Lead-foot pivot prep",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Lead-leg single-leg stance with guard",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
         }
       ],
       "blocked": [
@@ -310,6 +303,13 @@
         {
           "name": "Anti-Rotation Med Ball Slam",
           "score": 0.25,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Ballistic Box Jump (Min Ground Contact)",
+          "score": 2.05,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -393,6 +393,20 @@
           ]
         },
         {
+          "name": "Depth Jump (Stick Landing)",
+          "score": 1.45,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Depth Jump to Sprint",
+          "score": 2.05,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Drop-Step Lateral Bound",
           "score": 1.45,
           "reason_codes": [
@@ -435,22 +449,15 @@
           ]
         },
         {
-          "name": "Jump Squat",
-          "score": 2.75,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Jump-in-Place (Max Frequency)",
-          "score": 1.45,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
           "name": "Lateral Bound-to-Slip",
           "score": 2.35,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Lateral Box Push-Off",
+          "score": 2.05,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -556,6 +563,20 @@
         {
           "name": "Single-Leg 45\u00b0 Bound",
           "score": 1.15,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Single-Leg Box Jump",
+          "score": 1.15,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Single-Leg Depth Drop (Stick Landing)",
+          "score": 1.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -929,6 +950,28 @@
           ]
         },
         {
+          "name": "Box Jump",
+          "score": 3.32,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_soreness"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 2.72,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_soreness"
+          ]
+        },
+        {
           "name": "Mobility Reset Flow",
           "score": 1.32,
           "reason_codes": [
@@ -1063,36 +1106,6 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly"
           ]
-        },
-        {
-          "name": "Open-book reset",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Pivot-and-freeze lead foot",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
         }
       ],
       "blocked": [
@@ -1116,6 +1129,14 @@
           "score": 0.25,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Ballistic Box Jump (Min Ground Contact)",
+          "score": 2.05,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_movement_cost"
           ]
         },
         {
@@ -1199,6 +1220,20 @@
           ]
         },
         {
+          "name": "Depth Jump (Stick Landing)",
+          "score": 1.45,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Depth Jump to Sprint",
+          "score": 2.05,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Drop-Step Lateral Bound",
           "score": 1.45,
           "reason_codes": [
@@ -1256,22 +1291,15 @@
           ]
         },
         {
-          "name": "Jump Squat",
-          "score": 2.75,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Jump-in-Place (Max Frequency)",
-          "score": 1.45,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
           "name": "Lateral Bound-to-Slip",
           "score": 2.35,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Lateral Box Push-Off",
+          "score": 2.05,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1370,6 +1398,20 @@
         {
           "name": "Single-Leg 45\u00b0 Bound",
           "score": 1.15,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Single-Leg Box Jump",
+          "score": 1.15,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Single-Leg Depth Drop (Stick Landing)",
+          "score": 1.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1718,6 +1760,13 @@
           ]
         },
         {
+          "name": "Box Jump",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
           "score": 5.55,
           "reason_codes": [
@@ -1753,6 +1802,20 @@
           "score": 0.1,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Jump Squat",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
           ]
         },
         {
@@ -2288,6 +2351,13 @@
           ]
         },
         {
+          "name": "Box Jump",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
           "score": 5.55,
           "reason_codes": [
@@ -2328,6 +2398,20 @@
         {
           "name": "Isometric Mid-Thigh Pull",
           "score": 4.15,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Jump Squat",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 0.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
@@ -2873,6 +2957,13 @@
           ]
         },
         {
+          "name": "Box Jump",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Chin tuck nod",
           "score": -1.0,
           "reason_codes": [
@@ -2923,6 +3014,20 @@
         {
           "name": "Isometric Mid-Thigh Pull",
           "score": 4.15,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Jump Squat",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 0.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
@@ -3630,6 +3735,13 @@
           ]
         },
         {
+          "name": "Box Jump",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_d1_forbidden_modality"
+          ]
+        },
+        {
           "name": "Chin tuck nod",
           "score": -1.0,
           "reason_codes": [
@@ -3707,6 +3819,20 @@
           "reason_codes": [
             "late_block_d1_forbidden_modality",
             "late_block_d1_equipment"
+          ]
+        },
+        {
+          "name": "Jump Squat",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_d1_forbidden_modality"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 0.0,
+          "reason_codes": [
+            "late_block_d1_forbidden_modality"
           ]
         },
         {
