@@ -154,7 +154,14 @@ def test_d10_structured_generation_restores_week_context_and_cleans_adjustment_c
     structured_block = structured_week["days"][0]["sessions"][0]["blocks"][0]
     assert structured_block["coaching_cues"] == ["Stay relaxed through the throw."]
     assert structured_block["regression_options"] == ["Use a lighter ball."]
-    assert structured_block["progression_rule"].startswith("Stop:")
+    # A "Stop:" coaching cue is routed to the dedicated stop_rules field (see the
+    # generation contract: "Stop:" / "Stop rule:" -> stop_rules), not folded into
+    # progression_rule, which stays absent when the source gives no genuine
+    # advancement guidance.
+    assert structured_block.get("progression_rule") is None
+    assert structured_block["stop_rules"] == [
+        "reduce to breathing only if shoulder pain rises."
+    ]
 
 
 def test_read_time_week_context_repairs_each_countdown_week_but_preserves_legacy_titles():

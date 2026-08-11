@@ -601,9 +601,13 @@ class TestPlanningBriefBranching:
             for entry in brief["late_fight_session_sequence"]
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
+        # D-3 carries the freshness day + its mandatory Tactical Watch; D-1 gets a
+        # low-cost tactical cue card (a distinct cross-day tactical touch — the
+        # mandatory watch and gap-fill are only de-duplicated within the same day).
         assert [entry["role_key"] for entry in app_sequence] == [
             "fight_week_freshness_day",
             "tactical_watch",
+            "tactical_cue_card",
         ]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
@@ -842,8 +846,10 @@ class TestStage2PayloadBranching:
     def test_d3_payload_exposes_continued_session_sequence(self):
         payload = _build_stage2(3)
         assert payload["payload_mode"] == "late_fight_session_payload"
+        # Freshness day + its mandatory Tactical Watch, then the D-1 primer.
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
             "fight_week_freshness_day",
+            "tactical_watch",
             "neural_primer_day",
         ]
         assert _composite_stage_keys(payload["late_fight_session_sequence"]) == ["d4_to_d2", "d1"]
@@ -852,8 +858,11 @@ class TestStage2PayloadBranching:
         payload = _build_stage2(2)
 
         assert payload["payload_mode"] == "late_fight_session_payload"
+        # Primer is the only physical touch; the mandatory Tactical Watch rides
+        # along as a zero-load card.
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
             "neural_primer_day",
+            "tactical_watch",
         ]
 
     def test_d7_plan_spec_exposes_caps_and_forbidden_blocks(self):
