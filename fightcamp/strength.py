@@ -760,6 +760,7 @@ def _evaluate_strength_late_window(
     days_until_fight=None,
     cut_bucket: str = "none",
     source: str = "exercise_bank.json",
+    familiar_names: set[str] | frozenset[str] | None = None,
 ) -> dict:
     if not is_active_late_selector_window(window):
         return {
@@ -871,8 +872,16 @@ def _evaluate_strength_late_window(
         blocks.append("late_strength_block_no_d4_to_d1")
     if window in {D7, D6_TO_D5, D4_TO_D2, D1} and "no_d7_to_d1" in tags:
         blocks.append("late_strength_block_no_d7_to_d1")
+    # Familiarity-gated late work (loaded/technical movements that need prior
+    # exposure) is blocked from D13-D8 inward *unless* the athlete has already
+    # trained this exact exercise (prev/recent plan exposure). With no
+    # familiarity signal the default stays conservative and blocks, so a
+    # movement is never introduced cold in the final stretch.
     if window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and "familiarity_required" in tags:
-        blocks.append("late_strength_block_familiarity_required_late")
+        exercise_name = str(exercise.get("name") or "")
+        athlete_is_familiar = bool(familiar_names) and exercise_name in familiar_names
+        if not athlete_is_familiar:
+            blocks.append("late_strength_block_familiarity_required_late")
     if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS and tags & {
         "single_leg", "no_high_cut", "neck_optional", "vestibular_sensitive", "balance_challenge"
     }:
@@ -1016,9 +1025,19 @@ def _evaluate_strength_late_window(
     if window in LATE_STRENGTH_TIGHT_WINDOWS:
         block_codes = sorted(set(blocks))
     else:
-        # Outside the tight windows (e.g. D13-D8) only safety-critical hard blocks
-        # survive; the window-specific noise/diversity blocks are dropped.
-        block_codes = sorted(b for b in set(blocks) if b in LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS)
+        # Outside the tight final-week windows (D21-D14, D13-D8) the window-specific
+        # noise/diversity blocks are dropped, but *authority* blocks always survive:
+        # the safety-critical hard blocks and an explicit late_windows mismatch. An
+        # exercise that declares late_windows is never surfaced outside them — the
+        # bank's declared range is authoritative across the whole late-fight period,
+        # not just the tight windows. (Exercises with no late_windows are already
+        # hard-blocked everywhere by the missing-late-windows metadata gate.)
+        block_codes = sorted(
+            b
+            for b in set(blocks)
+            if b in LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS
+            or b == "late_strength_block_window_mismatch"
+        )
     if window in LATE_STRENGTH_TIGHT_WINDOWS and high_cut_window:
         if profile["loaded_lower"] and (
             profile["heavy_loaded_pattern"]
@@ -1698,6 +1717,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     target_exercises = exercise_counts.get("strength", 0)
     prev_exercises = flags.get("prev_exercises", [])
     recent_movements = set(flags.get("recent_exercises", []))
+    # Names the athlete has already trained (prior plan + recent exposure). Used
+    # so familiarity-gated loaded/technical work can survive the late windows
+    # only for fighters who already use the movement.
+    familiar_exercise_names = frozenset(
+        str(name) for name in list(prev_exercises) + list(recent_movements) if str(name).strip()
+    )
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
     # Bracket the candidate-pool source fetch with substep milestones so a
     # failure loading the strength bank stays visible (the "*_started" event is
@@ -1829,6 +1854,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 window=late_window,
                 days_until_fight=days_until_fight,
                 cut_bucket=cut_bucket,
+                familiar_names=familiar_exercise_names,
             )
             post_score_late_eval_cache[cache_key] = late_eval
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
@@ -2065,6 +2091,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             window=late_window,
             days_until_fight=days_until_fight,
             cut_bucket=cut_bucket,
+            familiar_names=familiar_exercise_names,
         )
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
@@ -2183,6 +2210,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 window=late_window,
                 days_until_fight=days_until_fight,
                 cut_bucket=cut_bucket,
+                familiar_names=familiar_exercise_names,
             )
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
             if late_eval["blocked"]:
@@ -2882,6 +2910,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             window=late_window,
             days_until_fight=days_until_fight,
             cut_bucket=cut_bucket,
+            familiar_names=familiar_exercise_names,
         )
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:

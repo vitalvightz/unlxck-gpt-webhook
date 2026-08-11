@@ -23,7 +23,8 @@
     "equipment": "trap_bar",
     "phase_role": "late_strength_touch",
     "late_windows": [
-      "d21_to_d14"
+      "d21_to_d14",
+      "d13_to_d8"
     ],
     "movement_cost": "moderate",
     "impact_cost": "low",
@@ -31,6 +32,11 @@
     "landing_cost": "none",
     "cns_load": "moderate",
     "soreness_risk": "high",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true,
+    "real_strength_maintenance": true,
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_lower_hip_hinge",
@@ -43,7 +49,7 @@
       "none",
       "low"
     ],
-    "notes": "2-3 sets x 2-3 reps @ RPE 6-7 only. No grinders. No soreness target."
+    "notes": "Low-dose strength-retention touch, D-21 to D-8 only, and only for fighters who already train the trap-bar deadlift (familiarity_required): never introduce it cold in the final stretch. Keep it non-grinding, no failure, no back-off volume, no soreness target; stop on any bar-speed or quality loss. The taper dose caps thin sets/reps as the fight nears. Not for D-7 or later."
   },
   {
     "name": "Back Squat",
@@ -9234,7 +9240,6 @@
       "rotational",
       "mech_trunk_rotation",
       "late_strength_touch",
-      "maximal_strength_maintenance",
       "low_impact",
       "low_eccentric",
       "cns_freshness"
@@ -9251,6 +9256,10 @@
     "landing_cost": "none",
     "cns_load": "low",
     "soreness_risk": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
       "mech_trunk_stability"
@@ -9264,7 +9273,8 @@
       "moderate",
       "high",
       "critical"
-    ]
+    ],
+    "notes": "Low-cost anti-rotation trunk-stability support (overcoming isometric). Keep the dose tiny and intent moderate; not a maximal-strength anchor."
   },
   {
     "name": "Pallof Press",
@@ -10672,7 +10682,6 @@
       "mech_trunk_stability",
       "mech_upper_carry",
       "late_strength_touch",
-      "maximal_strength_maintenance",
       "low_impact",
       "low_eccentric",
       "cns_freshness"
@@ -10681,7 +10690,9 @@
     "phase_role": "late_strength_touch",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
     ],
     "movement_cost": "low",
     "impact_cost": "low",
@@ -10689,6 +10700,10 @@
     "landing_cost": "none",
     "cns_load": "low",
     "soreness_risk": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_trunk_stability",
@@ -10703,7 +10718,8 @@
       "moderate",
       "high",
       "critical"
-    ]
+    ],
+    "notes": "Low-cost grip/anti-rotation trunk support, not a maximal-strength anchor. Use only when grip/trunk work fits the athlete; keep totals tiny (2-3 short holds per side) and never chase grip or trunk fatigue. Shrink the dose from D-7 inward."
   },
   {
     "name": "Kettlebell Suitcase Carry Hold",
@@ -10718,7 +10734,6 @@
     "tags": [
       "isometric",
       "late_strength_touch",
-      "maximal_strength_maintenance",
       "grip",
       "core",
       "anti_rotation",
@@ -10733,7 +10748,9 @@
     "phase_role": "late_strength_touch",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
     ],
     "movement_cost": "low",
     "impact_cost": "low",
@@ -10741,6 +10758,10 @@
     "landing_cost": "none",
     "cns_load": "low",
     "soreness_risk": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_trunk_stability",
@@ -10755,7 +10776,8 @@
       "moderate",
       "high",
       "critical"
-    ]
+    ],
+    "notes": "Low-cost grip/anti-rotation trunk support, not a maximal-strength anchor. Use only when grip/trunk work fits the athlete; keep totals tiny (2-3 short holds per side) and never chase grip or trunk fatigue. Shrink the dose from D-7 inward."
   },
   {
     "name": "Stability Ball Crunch",
@@ -10864,8 +10886,14 @@
     "subfamily": "isometric_mid_thigh_pull",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7"
     ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "real_strength_maintenance": true,
     "cut_buckets_allowed": [
       "none",
       "low",
@@ -10900,7 +10928,7 @@
       "skip when pins or trap bar are unavailable",
       "avoid if maximal pulling intent irritates the low back"
     ],
-    "notes": "Late-camp force-preservation pull from a fixed mid-thigh position. Keep total volume tiny and intent maximal.",
+    "notes": "Late-camp force-preservation pull from a fixed mid-thigh position; low-eccentric, low-soreness neural/max-force maintenance. Usable through D-7 at very low dose (2-3 x 3-5s, full rest, maximal intent). Keep total volume tiny. Not for D-6 or later.",
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
@@ -10947,8 +10975,14 @@
     "subfamily": "trap_bar_pin_pull_isometric",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7"
     ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "real_strength_maintenance": true,
     "cut_buckets_allowed": [
       "none",
       "low",
@@ -11041,8 +11075,15 @@
     "subfamily": "punch_specific_max_isometric_hold",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
     ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true,
+    "real_strength_maintenance": true,
     "cut_buckets_allowed": [
       "none",
       "low",
@@ -11084,8 +11125,8 @@
     "contraindications": [
       "avoid if shoulder or wrist pain spikes when bracing against the bag"
     ],
-    "notes": "D-13 to D-8: 2-3 x 3-5s per side with full rest. Not for D-1: requires equipment.",
-    "movement_cost": "high",
+    "notes": "Maximal-strength maintenance / neural work: no eccentric, no landing, low soreness. D-13 to D-8: 2-3 x 3-5s per side with full rest; shrink to 1-2 short holds per side through D-7 and D-6/D-5. Keep out of D-4 to D-1. Not for D-1: requires equipment.",
+    "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
@@ -11131,6 +11172,11 @@
       "d21_to_d14",
       "d13_to_d8"
     ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true,
+    "real_strength_maintenance": true,
     "cut_buckets_allowed": [
       "none",
       "low",
@@ -11210,6 +11256,8 @@
     "subfamily": "staggered_stance_medicine_ball_punch_throw",
     "late_windows": [
       "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
@@ -11272,7 +11320,6 @@
     "tags": [
       "isometric",
       "late_strength_touch",
-      "maximal_strength_maintenance",
       "grip",
       "pull",
       "upper_back",
@@ -11296,6 +11343,10 @@
       "d7",
       "d6_to_d5"
     ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
     "cut_buckets_allowed": [
       "none",
       "low",
@@ -11605,7 +11656,10 @@
     "phase_role": "late_strength_touch",
     "subfamily": "half_kneeling_medicine_ball_punch_throw",
     "late_windows": [
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11638,7 +11692,7 @@
     "cns_freshness": true,
     "ballistic_low_volume": true,
     "sport_specific": true,
-    "notes": "2-3 x 3 per side with full rest. Use D-3 only as micro-dose.",
+    "notes": "Low-volume punch throw: 2-3 x 3 per side with full rest early, shrinking to 1-2 crisp throws as the fight nears. Micro-dose only on D-7, D-6/D-5, D-4 and D-2; med-ball throws are pulled entirely on D-3 and D-1 by the final-sharpening rules.",
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
@@ -11681,7 +11735,10 @@
     "phase_role": "late_strength_touch",
     "subfamily": "seated_medicine_ball_punch_throw",
     "late_windows": [
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11713,7 +11770,7 @@
     "cns_freshness": true,
     "ballistic_low_volume": true,
     "sport_specific": true,
-    "notes": "2-3 x 3 throws with full rest.",
+    "notes": "2-3 x 3 throws with full rest, using progressively smaller micro-doses (down to 1-2 crisp throws) as the fight approaches. Micro-dose only on D-7, D-6/D-5, D-4 and D-2; med-ball throws are pulled entirely on D-3 and D-1 by the final-sharpening rules.",
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
@@ -11753,7 +11810,8 @@
     "subfamily": "landmine_split_stance_punch_press",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8"
+      "d13_to_d8",
+      "d7"
     ],
     "cut_buckets_allowed": [
       "none",

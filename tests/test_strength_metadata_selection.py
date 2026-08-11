@@ -456,13 +456,15 @@ def test_strength_bank_removes_taper_from_developmental_or_high_cost_items():
 
 
 def test_loaded_strength_touches_are_blocked_from_tight_late_windows():
+    # These stay capped at D13-D8 (or earlier): higher-cost loaded/lower-body
+    # work is not carried into the tight D-7 / D-1 windows.
     for name in (
-        "Isometric Mid-Thigh Pull",
-        "Trap-Bar Pin Pull Isometric",
+        "Trap Bar Deadlift",
         "Overcoming Split-Squat Isometric",
-        "Landmine Split-Stance Punch Press",
+        "Sled Push Isometric Hold",
     ):
         item = _exercise_named(name)
+        assert "d7" not in item["late_windows"]
 
         d7_result = strength._evaluate_strength_late_window(item, window=D7)
         d1_result = strength._evaluate_strength_late_window(item, window=D1)
@@ -474,7 +476,9 @@ def test_loaded_strength_touches_are_blocked_from_tight_late_windows():
 
 
 def test_d21_only_loaded_strength_touches_do_not_leak_to_d13():
-    for name in ("Trap Bar Deadlift", "Sandbag Shouldering"):
+    # Technically demanding, familiarity-gated loaded work stays at D-21..D-14
+    # and is held out of D13-D8 by the familiarity-required late block.
+    for name in ("Sandbag Shouldering",):
         item = _exercise_named(name)
 
         d13_result = strength._evaluate_strength_late_window(item, window=D13_TO_D8)
@@ -593,17 +597,21 @@ def test_split_squat_iso_variants_have_correct_late_window_intent():
     assert overcoming["subfamily"] == "loaded_lower_isometric"
 
 
-def test_high_intent_or_ballistic_late_taper_variants_are_not_in_d7_plus():
+def test_late_taper_variants_have_their_rebalanced_windows():
+    # Rebalanced late-fight progression: suitable low-eccentric neural/ballistic
+    # work stays available deeper into camp (the prescription layer shrinks the
+    # dose). None of these ever reach D-1.
     expectations = {
-        "Punch-Specific Max Isometric Hold": {"d21_to_d14", "d13_to_d8"},
-        "Staggered-Stance Medicine-Ball Punch Throw": {"d13_to_d8", "d4_to_d2"},
-        "Half-Kneeling Medicine-Ball Punch Throw": {"d13_to_d8"},
-        "Seated Medicine-Ball Punch Throw": {"d13_to_d8"},
+        # Neural/max-force isometric touch: through the D-6/D-5 window.
+        "Punch-Specific Max Isometric Hold": {"d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"},
+        # Ballistic punch throws: continuous from D13-D8 into D4-D2.
+        "Staggered-Stance Medicine-Ball Punch Throw": {"d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"},
+        "Half-Kneeling Medicine-Ball Punch Throw": {"d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"},
+        "Seated Medicine-Ball Punch Throw": {"d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"},
     }
 
     for name, windows in expectations.items():
         item = _exercise_named(name)
         assert set(item["late_windows"]) == windows
-        assert "d7" not in windows
-        assert "d6_to_d5" not in windows
+        # No rebalanced variant leaks into the no-lifting final day.
         assert "d1" not in windows

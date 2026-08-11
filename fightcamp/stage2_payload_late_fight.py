@@ -6,6 +6,7 @@ from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
 from .performance_bias import bridge_low_risk_profile
+from .late_camp_role_morph import late_fight_strength_dose_cap
 
 from collections import OrderedDict
 from copy import deepcopy
@@ -4616,13 +4617,20 @@ def _build_late_fight_weekly_role_map(
 
 # D-17 and closer never carry a full loaded strength-transfer session: once the
 # strength touch is scheduled inside that band (e.g. D-17 right after a D-18
-# fight-pace exposure), it is capped to a low-volume neural maintenance touch.
+# fight-pace exposure), it is capped to a countdown-graded low-volume neural
+# maintenance touch whose lifting dose (sets x reps x RPE) thins toward the
+# fight. The graded caps come from late_camp_role_morph.late_fight_strength_dose_cap
+# so the role-morph path and this session-sequence path stay in lockstep.
 _STRENGTH_TOUCH_NEURAL_CAP_MAX_D = 17
-_STRENGTH_TOUCH_NEURAL_CAP_RULE = (
-    "Low-volume neural maintenance touch only: 2-3 crisp low-load sets at "
-    "RPE 6-7 max with full recovery. Never render this as a loaded "
-    "strength-transfer session at RPE 7-8 — keep it a neural/speed touch."
-)
+
+
+def _strength_touch_cap_rule(cap: dict) -> str:
+    return (
+        f"Low-volume neural maintenance touch only: {cap['set_cap']} x "
+        f"{cap['rep_cap']} at RPE {cap['rpe_cap']} max with full recovery. "
+        "Never render this as a loaded strength-transfer session at RPE 7-8 — "
+        "keep it a neural/speed touch."
+    )
 
 
 def _soften_late_strength_touches(session_sequence: list[dict[str, Any]]) -> None:
@@ -4650,9 +4658,14 @@ def _soften_late_strength_touches(session_sequence: list[dict[str, Any]]) -> Non
                     offset = int("".join(digits))
         if offset is None or offset > _STRENGTH_TOUCH_NEURAL_CAP_MAX_D:
             continue
-        entry["rpe_cap"] = "6-7"
-        entry["set_cap"] = "2-3 sets"
-        entry["selection_rule"] = _STRENGTH_TOUCH_NEURAL_CAP_RULE
+        cap = late_fight_strength_dose_cap(offset)
+        if cap is None:
+            continue
+        entry["rpe_cap"] = cap["rpe_cap"]
+        entry["set_cap"] = cap["set_cap"]
+        entry["rep_cap"] = cap["rep_cap"]
+        entry["strength_dose_cap"] = {"max_sets": cap["max_sets"], "max_reps": cap["max_reps"]}
+        entry["selection_rule"] = _strength_touch_cap_rule(cap)
 
 
 def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> dict[str, Any]:
