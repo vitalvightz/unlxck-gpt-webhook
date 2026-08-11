@@ -19,7 +19,10 @@ type AppSession = {
   user_id?: string | null;
 };
 
-type LoadMe = (nextSession: AppSession | null, options?: { allowRefresh?: boolean }) => Promise<void>;
+type LoadMe = (
+  nextSession: AppSession | null,
+  options?: { allowRefresh?: boolean; force?: boolean },
+) => Promise<void>;
 
 
 type AppSessionValue = {
@@ -90,6 +93,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const loadMe = useCallback<LoadMe>(async (nextSession, options = {}) => {
     const allowRefresh = options.allowRefresh ?? true;
+    const force = options.force ?? false;
     const currentLoadId = loadGenerationRef.current + 1;
     loadGenerationRef.current = currentLoadId;
     let shouldHoldHydration = false;
@@ -111,7 +115,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setSession(nextSession);
     setIsReady(true);
 
-    if (hydratedAccessTokenRef.current === nextSession.access_token && latestMeRef.current) {
+    if (!force && hydratedAccessTokenRef.current === nextSession.access_token && latestMeRef.current) {
       setIsMeHydrated(true);
       return;
     }
@@ -181,7 +185,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
               user_id: refreshResult.data.session?.user.id ?? nextSession.user_id ?? null,
             };
             handledAccessTokenRef.current = refreshedAccessToken;
-            await loadMeRef.current?.(refreshedSession, { allowRefresh: false });
+            await loadMeRef.current?.(refreshedSession, { allowRefresh: false, force });
             return;
           }
         } catch {
@@ -205,7 +209,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
             clearRetryTimer();
             retryTimerRef.current = setTimeout(() => {
               retryTimerRef.current = null;
-              void loadMeRef.current?.(liveSession, { allowRefresh: false });
+              void loadMeRef.current?.(liveSession, { allowRefresh: false, force });
             }, ME_RETRY_DELAY_MS);
             return;
           }
@@ -217,7 +221,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           clearRetryTimer();
           retryTimerRef.current = setTimeout(() => {
             retryTimerRef.current = null;
-            void loadMeRef.current?.(nextSession, { allowRefresh: false });
+            void loadMeRef.current?.(nextSession, { allowRefresh: false, force });
           }, ME_RETRY_DELAY_MS);
           return;
         }
@@ -240,7 +244,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       clearRetryTimer();
       retryTimerRef.current = setTimeout(() => {
         retryTimerRef.current = null;
-        void loadMeRef.current?.(nextSession, { allowRefresh: false });
+        void loadMeRef.current?.(nextSession, { allowRefresh: false, force });
       }, ME_RETRY_DELAY_MS);
     } finally {
       if (loadGenerationRef.current === currentLoadId) {
@@ -354,7 +358,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, [appearancePreview, isReady, session, me]);
 
   async function refreshMe() {
-    await loadMe(session);
+    await loadMe(session, { force: true });
   }
 
   function replaceMe(nextMe: MeResponse | null) {
