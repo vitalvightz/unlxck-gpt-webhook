@@ -552,7 +552,19 @@ def can_render_late_taper_day(*, countdown_offset: int, weekday: str, training_d
     }
     if not training_set:
         return True
-    return str(weekday or "").strip().lower() in training_set
+    weekday_norm = str(weekday or "").strip().lower()
+    if weekday_norm in training_set:
+        return True
+    # Match declared days by canonical weekday so abbreviated declarations
+    # ("Mon"/"Tue") line up with the full weekday names the countdown map emits
+    # ("monday"/"tuesday"), instead of silently suppressing every session.
+    weekday_index = _WEEKDAY_ORDER.get(weekday_norm)
+    if weekday_index is None:
+        return False
+    training_indices = {
+        _WEEKDAY_ORDER[day] for day in training_set if day in _WEEKDAY_ORDER
+    }
+    return weekday_index in training_indices
 
 
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
