@@ -1481,7 +1481,28 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             usage_ledger,
         )
     )
-    final_sequence = sorted(ordered + inserts, key=lambda role: int(_role_offset(role) or 0), reverse=True)
+    combined = ordered + inserts
+    # Same-day tactical de-dup: a day carrying the mandatory Tactical Watch must
+    # not also keep a redundant gap-fill tactical cue card / self review. Single-day
+    # countdown windows (e.g. D-1) can only place both on the one available day, so
+    # this final pass drops the lower-priority tactical insert there. Tactical work
+    # on other days is untouched.
+    watch_offsets = {
+        offset
+        for role in combined
+        if str(role.get("role_key") or "") == "tactical_watch"
+        and (offset := _role_offset(role)) is not None
+    }
+    redundant_tactical = TACTICAL_INSERTS - {"tactical_watch"}
+    combined = [
+        role
+        for role in combined
+        if not (
+            str(role.get("role_key") or "") in redundant_tactical
+            and _role_offset(role) in watch_offsets
+        )
+    ]
+    final_sequence = sorted(combined, key=lambda role: int(_role_offset(role) or 0), reverse=True)
     for index, role in enumerate(final_sequence, start=1):
         role["session_index"] = index
     return final_sequence
