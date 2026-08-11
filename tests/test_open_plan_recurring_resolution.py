@@ -6,7 +6,17 @@ from fastapi import HTTPException
 
 from api.models import WeeklySchedule
 from api.services.plan_schedule import resolve_current_week, resolve_today_and_next
-from api.services.open_plan_timeline import project_open_structured_plan
+from api.services.open_plan_timeline import (
+    project_open_structured_plan,
+    PROJECTION_REASON_NO_ANCHOR,
+    PROJECTION_REASON_NO_TRAINING_DAYS,
+    PROJECTION_REASON_NO_WEEKS,
+    PROJECTION_REASON_MALFORMED_WEEK,
+    PROJECTION_REASON_DAY_SHAPE_UNRESOLVED,
+    PROJECTION_REASON_COACH_LED_OFF_OWNED_DAY,
+    PROJECTION_REASON_HARD_DAY_NOT_COACH_LED,
+    PROJECTION_REASON_WEEK_COUNT_UNEXPANDABLE,
+)
 from api.services.today_service import (
     build_today_command_view,
     _structured_next_session_entry,
@@ -143,6 +153,7 @@ def test_open_plan_projects_weekdays_and_dates_from_the_block_anchor():
     assert context == {
         "schedule_mode": "open_recurring",
         "projection_status": "projected",
+        "projection_reason": None,
         "anchor_date": "2026-07-13",
         "current_training_day": "2026-07-13",
         "block_number": 1,
@@ -395,6 +406,7 @@ def test_open_plan_does_not_guess_when_legacy_day_count_is_ambiguous():
     )
 
     assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_DAY_SHAPE_UNRESOLVED
     assert projected["weeks"][0]["days"][0].get("date") == ""
 
 
@@ -437,3 +449,139 @@ def test_undated_legacy_schedule_still_clamps_to_its_final_week():
     assert week_index == 1
     assert week is not None
     assert week.phase == "SPP"
+
+
+# ---------------------------------------------------------------------------
+# Per-guard projection_reason coverage.
+#
+# When an open plan fails to project it renders undated ("WEEK N · weekday") in
+# the Plan tab. Every fail-closed guard collapses to projection_status
+# "unavailable"; these tests pin the distinct projection_reason each one records
+# so an undated plan is diagnosable from a single logged field. The template is
+# fixed per plan, so each case varies only the Stage-2-generated structured card
+# (the day cards / week list) — the real batch-to-batch variable.
+# ---------------------------------------------------------------------------
+
+# training_days (ordered): Mon, Tue, Wed, Fri, Sat
+# hard_sparring_days: Wed, Fri     coach_owned: Tue, Wed, Fri
+_ANCHORED_TRAINING_DAY = "2026-07-13"
+
+
+def _anchored_row():
+    return {
+        "id": PLAN_ID,
+        "created_at": "2026-07-12T09:00:00+00:00",
+        "planning_brief": _open_plan_brief(),
+    }
+
+
+def _app_day(title="Support strength", *, blocks=True):
+    return {
+        "date": "",
+        "today_card": {"headline": title},
+        "sessions": [{"title": title, "blocks": [{"display_name": "Main work"}] if blocks else []}],
+    }
+
+
+def _coach_day(headline="Coach-led boxing"):
+    return {"date": "", "today_card": {"headline": headline}, "sessions": []}
+
+
+def _healthy_days():
+    # Mon=app, Tue=app, Wed=coach, Fri=coach, Sat=app — matches the template.
+    return [
+        _app_day("Support strength"),
+        _app_day("Technical rhythm"),
+        _coach_day(),
+        _coach_day(),
+        _app_day("Power transfer"),
+    ]
+
+
+def _project(plan_row, structured, *, training_day=_ANCHORED_TRAINING_DAY):
+    return project_open_structured_plan(plan_row, structured, current_training_day=training_day)
+
+
+def test_projection_reason_no_anchor_when_creation_date_missing():
+    plan_row = {"id": PLAN_ID, "planning_brief": _open_plan_brief()}  # no created_at
+
+    _, context = _project(plan_row, {"weeks": [{"week_index": 1, "days": _healthy_days()}]})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_NO_ANCHOR
+
+
+def test_projection_reason_no_training_days_when_template_empty():
+    brief = copy.deepcopy(_open_plan_brief())
+    brief["open_plan_spec"]["weekly_template"]["training_days"] = []
+    plan_row = {"id": PLAN_ID, "created_at": "2026-07-12T09:00:00+00:00", "planning_brief": brief}
+
+    _, context = _project(plan_row, {"weeks": [{"week_index": 1, "days": _healthy_days()}]})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_NO_TRAINING_DAYS
+
+
+def test_projection_reason_no_weeks_when_card_has_empty_weeks():
+    _, context = _project(_anchored_row(), {"weeks": []})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_NO_WEEKS
+
+
+def test_projection_reason_malformed_week_when_week_is_not_a_mapping():
+    _, context = _project(_anchored_row(), {"weeks": [123]})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_MALFORMED_WEEK
+
+
+def test_projection_reason_day_shape_unresolved_when_day_count_mismatches():
+    # Four day cards for a five-training-day template — the batch-1-shaped failure
+    # when two batches carry different training-day counts.
+    days = _healthy_days()[:-1]
+    _, context = _project(_anchored_row(), {"weeks": [{"week_index": 1, "days": days}]})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_DAY_SHAPE_UNRESOLVED
+
+
+def test_projection_reason_coach_led_off_owned_day():
+    # Monday (not a coach-owned day) generated as a coach-led boxing card.
+    days = _healthy_days()
+    days[0] = _coach_day("Coach-led boxing")
+    _, context = _project(_anchored_row(), {"weeks": [{"week_index": 1, "days": days}]})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_COACH_LED_OFF_OWNED_DAY
+
+
+def test_projection_reason_hard_day_not_coach_led_when_hard_day_has_blocks():
+    # Wednesday is a declared hard-sparring day, but Stage 2 attached an executable
+    # block to it — the prime-suspect guard for the batch-1 undated collapse.
+    days = _healthy_days()
+    days[2] = _app_day("Wednesday session", blocks=True)
+    _, context = _project(_anchored_row(), {"weeks": [{"week_index": 1, "days": days}]})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_HARD_DAY_NOT_COACH_LED
+
+
+def test_projection_reason_week_count_unexpandable_when_card_has_two_weeks():
+    weeks = [
+        {"week_index": 1, "days": _healthy_days()},
+        {"week_index": 2, "days": _healthy_days()},
+    ]
+    _, context = _project(_anchored_row(), {"weeks": weeks})
+
+    assert context["projection_status"] == "unavailable"
+    assert context["projection_reason"] == PROJECTION_REASON_WEEK_COUNT_UNEXPANDABLE
+
+
+def test_projection_reason_is_none_when_projection_succeeds():
+    weeks = [{"week_index": 1, "days": _healthy_days()}]
+    projected, context = _project(_anchored_row(), {"weeks": weeks})
+
+    assert context["projection_status"] == "projected"
+    assert context["projection_reason"] is None
+    assert projected["weeks"][0]["days"][0]["date"] == _ANCHORED_TRAINING_DAY

@@ -273,6 +273,22 @@ def _expand_single_template_week(
     return expanded
 
 
+# Fail-closed reason codes for an open plan that could not be projected. Each is
+# set at exactly one early-return in ``project_open_structured_plan`` so an
+# undated open plan resolves to a single logged field. ``None`` means either the
+# projection succeeded or the plan is not an open plan (no projection attempted).
+PROJECTION_REASON_NO_ANCHOR = "no_anchor"
+PROJECTION_REASON_NO_TRAINING_DAYS = "no_training_days"
+PROJECTION_REASON_NO_WEEKS = "no_weeks"
+PROJECTION_REASON_MALFORMED_WEEK = "malformed_week"
+# Day count is neither ``len(training_days)`` nor 7, or a legacy full-week card
+# has an ambiguous off-day / a weekday that disagrees with its position.
+PROJECTION_REASON_DAY_SHAPE_UNRESOLVED = "day_shape_unresolved"
+PROJECTION_REASON_COACH_LED_OFF_OWNED_DAY = "coach_led_off_owned_day"
+PROJECTION_REASON_HARD_DAY_NOT_COACH_LED = "hard_day_not_coach_led"
+PROJECTION_REASON_WEEK_COUNT_UNEXPANDABLE = "week_count_unexpandable"
+
+
 def _base_context(
     plan_row: Mapping[str, Any], *, current_training_day: date | None
 ) -> dict[str, Any]:
@@ -280,6 +296,7 @@ def _base_context(
     return {
         "schedule_mode": mode,
         "projection_status": "not_required" if mode == "event_countdown" else "unavailable",
+        "projection_reason": None,
         "anchor_date": None,
         "current_training_day": current_training_day.isoformat() if current_training_day else None,
         "block_number": None,
@@ -311,6 +328,11 @@ def project_open_structured_plan(
     if spec is None:
         return source, context
 
+    def _unavailable(reason: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Return the card undated, recording which fail-closed guard tripped."""
+        context["projection_reason"] = reason
+        return source, context
+
     anchor = open_plan_anchor_date(plan_row)
     template = spec.get("weekly_template")
     template = template if isinstance(template, Mapping) else {}
@@ -318,8 +340,12 @@ def project_open_structured_plan(
     coach_owned_days = set(_coach_owned_days(template))
     hard_sparring_days = set(_ordered_weekdays(template.get("hard_sparring_days")))
     weeks = source.get("weeks")
-    if anchor is None or not training_days or not isinstance(weeks, list) or not weeks:
-        return source, context
+    if anchor is None:
+        return _unavailable(PROJECTION_REASON_NO_ANCHOR)
+    if not training_days:
+        return _unavailable(PROJECTION_REASON_NO_TRAINING_DAYS)
+    if not isinstance(weeks, list) or not weeks:
+        return _unavailable(PROJECTION_REASON_NO_WEEKS)
 
     if training_day is None or training_day < anchor:
         block_number = 1
@@ -333,10 +359,10 @@ def project_open_structured_plan(
     resolved_weeks: list[dict[str, Any]] = []
     for week in weeks:
         if not isinstance(week, Mapping):
-            return source, context
+            return _unavailable(PROJECTION_REASON_MALFORMED_WEEK)
         resolved_days = _resolve_template_days(week.get("days"), training_days)
         if resolved_days is None:
-            return source, context
+            return _unavailable(PROJECTION_REASON_DAY_SHAPE_UNRESOLVED)
         for day, expected_weekday in zip(resolved_days, training_days, strict=True):
             is_coach_led = _is_coach_led_day(day)
             # A coach-led card may only land on a declared coach-owned day, and
@@ -344,16 +370,16 @@ def project_open_structured_plan(
             # are allowed to carry executable app work as well, so they do not
             # have to be sessionless to reconcile safely.
             if is_coach_led and expected_weekday not in coach_owned_days:
-                return source, context
+                return _unavailable(PROJECTION_REASON_COACH_LED_OFF_OWNED_DAY)
             if expected_weekday in hard_sparring_days and not is_coach_led:
-                return source, context
+                return _unavailable(PROJECTION_REASON_HARD_DAY_NOT_COACH_LED)
         normalized_week = copy.deepcopy(dict(week))
         normalized_week["days"] = resolved_days
         resolved_weeks.append(normalized_week)
 
     resolved_weeks = _expand_single_template_week(resolved_weeks, spec)
     if resolved_weeks is None:
-        return source, context
+        return _unavailable(PROJECTION_REASON_WEEK_COUNT_UNEXPANDABLE)
 
     projected = copy.deepcopy(source)
     projected["weeks"] = resolved_weeks

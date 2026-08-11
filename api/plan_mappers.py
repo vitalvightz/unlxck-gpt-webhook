@@ -604,6 +604,18 @@ def _map_plan_detail(
         structured_payload,
         current_training_day=current_training_day or datetime.now(timezone.utc).date(),
     )
+    if (
+        raw_schedule_context.get("schedule_mode") == "open_recurring"
+        and raw_schedule_context.get("projection_status") == "unavailable"
+    ):
+        # An open plan that failed to project renders undated ("WEEK N · weekday")
+        # in the Plan tab. The reason names the fail-closed guard that tripped so
+        # the cause is one log line instead of a payload-shape trace.
+        logger.warning(
+            "open plan projection unavailable: plan_id=%s reason=%s",
+            row.get("id"),
+            raw_schedule_context.get("projection_reason"),
+        )
     if structured_plan is not None and projected_payload != structured_payload:
         projected_result = safe_parse_structured_plan(
             projected_payload,
