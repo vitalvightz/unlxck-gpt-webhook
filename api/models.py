@@ -1532,6 +1532,10 @@ class PlanScheduleContext(BaseModel):
 
     schedule_mode: Literal["event_countdown", "open_recurring", "static_undated"]
     projection_status: Literal["not_required", "projected", "unavailable"]
+    # Populated only when an open plan fails to project (projection_status
+    # "unavailable"): names the fail-closed guard that tripped so an undated
+    # open plan can be diagnosed from one logged field instead of a code trace.
+    projection_reason: str | None = None
     anchor_date: str | None = None
     current_training_day: str | None = None
     block_number: int | None = None
