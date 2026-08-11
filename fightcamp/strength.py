@@ -1488,6 +1488,21 @@ def _classify_prescription_type(exercise: dict) -> str:
     tags = set(normalize_tags(exercise.get("tags") or []))
     equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
     name = (exercise.get("name") or "").lower()
+    method = str(exercise.get("method") or "").strip().lower()
+
+    # Jumps, hops and bounds are ballistic power work and must not inherit the
+    # barbell %1RM strength template just because they use a loaded implement
+    # (e.g. a trap-bar jump). Contrast/complex pairs ("Heavy RDL -> Broad Jump")
+    # are the exception: the loaded first half legitimately wants the contrast
+    # prescription, so they fall through to the barbell branch.
+    is_contrast_pair = "→" in name or "->" in name or "contrast_pairing" in tags
+    is_jump_pattern = (
+        method == "plyometric"
+        or "mech_lower_jump" in tags
+        or bool(re.search(r"\b(?:jump|jumps|bound|bounds|hop|hops|pogo)\b", name))
+    )
+    if is_jump_pattern and not is_contrast_pair:
+        return "ballistic"
 
     if equipment.intersection({"barbell", "trap_bar"}):
         return "barbell"

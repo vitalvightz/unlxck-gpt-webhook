@@ -617,4 +617,52 @@ All findings were produced by instrumenting the real runtime path:
 - `calculate_phase_weeks` traced for 21/28/42/56/84-day camps.
 - `equipment_score_adjust` called with a maximally-equipped intake selection.
 
-No code was modified.
+No code was modified *for the audit pass above*. The section below records what was implemented afterwards.
+
+---
+
+## J. Implementation status (this branch)
+
+The **seven must-fixes** are implemented. Should-fixes (H8–H16) and leave-alone items are untouched. Product decision from the owner: **box is assumed universally available**, so H3 was implemented by making box behave like bodyweight rather than by adding a "Plyo Box" intake option.
+
+### What changed
+
+| Fix | Change | Files |
+|---|---|---|
+| **H3 (box)** | Removed `box` from equipment on all 11 box records — box-only → `bodyweight`, `barbell,box` → `barbell`, `box/kettlebell` → `kettlebell`. Box now gates like bodyweight everywhere (selection, fallback, Stage 2 `universally_available`). | `data/exercise_bank.json` |
+| **H7** | Resolved as a side-effect of H3: `Depth Jump to Sprint` no longer carries a `box` token, so it matches its conditioning-bank twin (`[]`). | `data/exercise_bank.json` |
+| **H1 (dead zone)** | Backfilled `late_windows: [d21_to_d14, d13_to_d8]` on the three **safe bilateral** plyos: `Jump Squat`, `Box Jump`, `Jump-in-Place (Max Frequency)`. | `data/exercise_bank.json` |
+| **H2 (GPP)** | Added `GPP` to `Jump Squat` and `Box Jump` phases. | `data/exercise_bank.json` |
+| **H4 (alias)** | `kettlebells` → `kettlebell` in `EQUIP_ALIASES`. | `fightcamp/training_context.py` |
+| **H5 (slot key)** | `_build_strength_slots` maps `movement == "unknown"` → role `"strength_support"`, matching the reservoir key, so unclassified jumps/bounds get in-role alternates instead of `[]`. | `fightcamp/stage2_payload.py` |
+| **H6 (dose)** | `_classify_prescription_type` routes jumps/hops/bounds (`method=="plyometric"`, `mech_lower_jump`, or a word-boundary jump/hop/bound/pogo name match) to the `ballistic` template **before** the barbell check. Contrast/complex pairs (`→` / `contrast_pairing`) are excepted and keep the loaded contrast prescription. | `fightcamp/strength.py` |
+
+### Scope decision on H1 — why only three exercises
+
+§E group A (bilateral, low-eccentric, moderate-impact) is backfilled. Group B was **deliberately left blocked**:
+
+- `Alternating Skater Hops`, `Lateral Bound-to-Slip` — `type: unilateral` + high landing + ballistic. The existing `late_strength_block_landing_unilateral_power` rule already governs these; surfacing high-impact unilateral bounds into the late window conflicts with "do not weaken landing-impact safety."
+- `Trap Bar Jump (Light)` — caught by `late_strength_block_trap_bar_jump` in all late windows (a loaded jump). Correctly stays blocked regardless of metadata.
+- Depth jumps, single-leg high-impact, heavy contrast pairs — remain `late_windows`-absent → hard-blocked late, exactly as §E group B recommends.
+
+This keeps the change conservative: the block that was wiping out *legitimate* bilateral power is lifted for the three safe exercises, while every safety-motivated block is preserved. The conditioning-bank microdose unlock (§E group C / H16) is a should-fix and was **not** done here.
+
+### Verified behaviour (real runtime, healthy boxing power athlete)
+
+| Countdown | Before | After |
+|---|---|---|
+| D-21 → D-8 (SPP) | 0 lower-body plyos | `Jump Squat`, `Box Jump`, `Jump-in-Place` selected; block still balanced with med-ball/band/mobility work |
+| D-12 (audit Athlete E) | 0 plyos (all 22 late-blocked) | Box Jump + Jump Squat + Jump-in-Place |
+| D-6 → D-1 | 0 plyos | **0 plyos** (unchanged — final-week lockout preserved) |
+| Depth jumps / loaded trap-bar jumps, any late window | blocked | **still blocked** |
+| `Trap Bar Jump Squat` prescription | `3–5×3–5 @ 85–90% 1RM` | `ballistic` template (no 1RM) |
+
+### Tests
+
+- New: `tests/test_lower_body_plyo_selection.py` (15 tests — box universality, kettlebells alias, GPP eligibility, D-21/D-10 plyo selection, prescription routing, slot alternates, plus safety regressions for depth jumps, final-week lockout, and loaded trap-bar jumps). Written red-first, now green.
+- Regenerated golden snapshot `tests/golden_snapshots/late_camp_selector_audit/{after,diff}.json` (frozen `before.json` kept). The regeneration adds the three bilateral plyos as winners at `d21_to_d14`/`d13_to_d8` only; no jump appears in any final-week window.
+- Full relevant fightcamp suite run: every failure present is identical on clean `Main` (pre-existing environment gaps — `pydantic`/`fastapi`/`httpx2` and degraded spaCy parsing); this branch introduces **zero** new failures.
+
+### Not done (should-fix, deferred)
+
+H8 (jump/hop/bound movement pattern), H9 (`ab` substring), H10 (hyphenated single-leg unilateral), H11 (`lower_body_power` category), H12 (finishers-as-power reclass), H13 (rotational power vs support), H14 (over-severe cost metadata, incl. `Jump Squat cns_load`), H15 (plyometric contacts dose), H16 (conditioning microdose unlock). These remain as recommended follow-ups.
