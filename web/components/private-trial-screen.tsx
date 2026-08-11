@@ -39,6 +39,15 @@ function PrivateTrialAcknowledgement() {
     }
   }, [role, router]);
 
+  // Defensive fail-safe: once the durable profile marker exists, this route
+  // must never render as a gate again. This also protects against stale links,
+  // bookmarks, or any future route that accidentally points here.
+  useEffect(() => {
+    if (me?.profile.role === "athlete" && !isPending) {
+      router.replace(continueHref);
+    }
+  }, [continueHref, isPending, me?.profile.role, router]);
+
   async function acknowledge() {
     if (isSubmitting) {
       return;
@@ -47,9 +56,10 @@ function PrivateTrialAcknowledgement() {
     setError(null);
     try {
       await updateMe(token, { private_trial_acknowledged: true });
-      // Refresh before navigating: the landing resolver reads the
-      // acknowledgement off `me`, and a stale profile would bounce the tester
-      // straight back to this screen.
+      // Force a fresh /me read before navigating. The auth provider normally
+      // reuses the already-hydrated profile for the same access token, which is
+      // correct for ordinary navigation but would otherwise leave this newly
+      // written acknowledgement stale in client state.
       await refreshMe();
       router.replace(continueHref);
     } catch (acknowledgeError) {
