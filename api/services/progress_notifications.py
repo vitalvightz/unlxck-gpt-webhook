@@ -9,8 +9,11 @@ generated from generic engagement heuristics.
 from __future__ import annotations
 
 import logging
+import hashlib
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
+from zoneinfo import ZoneInfo
 
 from api.services.notification_foundation import NotificationCandidate
 from api.services.push_notifications import dispatch_push_candidate
@@ -21,6 +24,13 @@ from api.xp_levels import XP_LEVELS, resolve_xp_level
 logger = logging.getLogger(__name__)
 
 TERMINAL_TRAINING_STATUSES = frozenset({"done", "modified"})
+
+
+def _local_day(reference: datetime, timezone_name: str) -> str:
+    try:
+        return reference.astimezone(ZoneInfo(timezone_name or "UTC")).date().isoformat()
+    except Exception:  # noqa: BLE001
+        return reference.astimezone(timezone.utc).date().isoformat()
 
 
 def _result_totals(result: Mapping[str, Any]) -> tuple[int, int]:
@@ -63,6 +73,11 @@ def build_level_up_candidate(
         expires_at=reference + timedelta(days=3),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
+        training_day=_local_day(reference, timezone_name),
+        notification_class="event",
+        min_spacing_minutes=30,
+        action_key="review-progress",
+        source_event_metadata={"source_key": source_key, "level": current_level[0]},
     )
 
 
@@ -87,6 +102,74 @@ def build_week_complete_candidate(
         expires_at=reference + timedelta(days=3),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
+        training_day=_local_day(reference, timezone_name),
+        notification_class="event",
+        min_spacing_minutes=30,
+        action_key="review-progress",
+        source_event_metadata={"week_key": week_key},
+    )
+
+
+def merge_progress_candidates(
+    candidates: list[NotificationCandidate],
+    *,
+    now_utc: datetime,
+) -> NotificationCandidate | None:
+    """Merge simultaneous achievements into one auditable athlete moment."""
+
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    rank = {
+        "xp_level_up": 1,
+        "fight_camp_complete": 2,
+        "plan_complete": 3,
+        "first_plan_complete": 3,
+        "training_phase_complete": 4,
+        "training_week_complete": 5,
+    }
+    ordered = sorted(candidates, key=lambda candidate: (rank.get(candidate.intent, 9), candidate.priority))
+    primary = ordered[0]
+    intents = tuple(dict.fromkeys(candidate.intent for candidate in ordered))
+    labels = {
+        "fight_camp_complete": "CAMP COMPLETE",
+        "plan_complete": "PLAN COMPLETE",
+        "first_plan_complete": "FIRST PLAN COMPLETE",
+        "training_phase_complete": "PHASE COMPLETE",
+        "training_week_complete": "WEEK COMPLETE",
+        "xp_level_up": "LEVEL UP",
+    }
+    secondary_labels = [
+        labels.get(intent, intent.replace("_", " ").upper())
+        for intent in intents
+        if intent != primary.intent
+    ]
+    body = primary.body
+    if secondary_labels:
+        body = f"{primary.body.rstrip('.')} Also banked: {', '.join(secondary_labels).lower()}."[:90]
+    digest = hashlib.sha256(
+        "|".join(sorted(candidate.dedupe_key for candidate in candidates)).encode("utf-8")
+    ).hexdigest()[:24]
+    metadata = {
+        **dict(primary.source_event_metadata),
+        "compound_intents": list(intents),
+        "source_dedupe_keys": [candidate.dedupe_key for candidate in candidates],
+    }
+    suffix = f":compound:{digest}"
+    compound_key = f"{primary.dedupe_key[:160 - len(suffix)]}{suffix}"
+    return replace(
+        primary,
+        notification_type=primary.intent,
+        title=primary.title,
+        body=body,
+        dedupe_key=compound_key,
+        tag="compound-progress",
+        expires_at=max(candidate.expires_at for candidate in candidates),
+        merged_intents=tuple(intent for intent in intents if intent != primary.intent),
+        source_event_metadata=metadata,
+        notification_class="event",
+        min_spacing_minutes=30,
     )
 
 
@@ -128,7 +211,9 @@ def dispatch_progress_award_notification(
         candidates.append(level_candidate)
     if not candidates:
         return 0
-    selected = min(candidates, key=lambda candidate: candidate.priority)
+    selected = merge_progress_candidates(candidates, now_utc=reference)
+    if selected is None:
+        return 0
     return dispatch_push_candidate(store, selected, now_utc=reference)
 
 
@@ -221,6 +306,11 @@ def send_coach_message_notification(
         expires_at=reference + timedelta(days=2),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
+        training_day=_local_day(reference, timezone_name),
+        notification_class="event",
+        min_spacing_minutes=30,
+        action_key=f"coach-message:{message_id}",
+        source_event_metadata={"message_id": message_id, "urgent": urgent},
     )
     return dispatch_push_candidate(store, candidate, now_utc=reference)
 
@@ -231,6 +321,7 @@ __all__ = [
     "build_level_up_candidate",
     "build_week_complete_candidate",
     "dispatch_progress_award_notification",
+    "merge_progress_candidates",
     "resolve_xp_level",
     "send_coach_message_notification",
 ]

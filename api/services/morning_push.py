@@ -24,6 +24,7 @@ from .intelligent_notifications import (
 )
 from .push_notifications import push_notifications_configured
 from .session_timing_notifications import dispatch_session_timing_notification
+from .fight_camp_notifications import dispatch_fight_camp_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +164,18 @@ def run_morning_push_sweep(
         timezone_name = str(subscription.get("timezone") or "").strip() or "UTC"
         local_now = _local_now(subscription, now)
         try:
+            orchestration = dispatch_fight_camp_notifications(
+                store,
+                profile_id=profile_id,
+                timezone_name=timezone_name,
+                now_utc=now,
+            )
+            if orchestration.candidate_count > 0:
+                sent += orchestration.delivered_count
+                continue
+
+            # Compatibility fallback for profiles whose current state cannot yet
+            # produce a new-orchestrator candidate (and for older test/dev stores).
             # Always evaluate saved session timing. Its own window and the user's
             # quiet-hour preferences decide whether an early/late reminder exists.
             timed_result = dispatch_session_timing_notification(

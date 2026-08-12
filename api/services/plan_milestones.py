@@ -8,7 +8,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from api.services.notification_foundation import NotificationCandidate
-from api.services.progress_notifications import build_level_up_candidate
+from api.services.progress_notifications import (
+    build_level_up_candidate,
+    build_week_complete_candidate,
+    merge_progress_candidates,
+)
 from api.services.push_notifications import dispatch_push_candidate
 from api.services.week_progress import evaluate_week_completion
 from api.store import AppStore
@@ -284,6 +288,15 @@ def _milestone_candidate(
         expires_at=now_utc + timedelta(days=4),
         timezone_name=timezone_name or "UTC",
         respect_quiet_hours=True,
+        training_day=now_utc.astimezone(timezone.utc).date().isoformat(),
+        notification_class="event",
+        min_spacing_minutes=30,
+        action_key="review-progress",
+        source_event_metadata={
+            "plan_id": plan_id,
+            "milestone_type": milestone_type,
+            "milestone_key": milestone_key,
+        },
     )
 
 
@@ -392,6 +405,8 @@ def _dispatch_best_notification(
     athlete_timezone: str,
     plan_id: str,
     recorded: Sequence[tuple[str, str, str | None, Mapping[str, Any]]],
+    week_award_result: Mapping[str, Any] | None = None,
+    week_key: str | None = None,
     now_utc: datetime | None = None,
 ) -> int:
     reference = now_utc or datetime.now(timezone.utc)
@@ -432,11 +447,33 @@ def _dispatch_best_notification(
             if level_candidate is not None:
                 level_candidates.append((total, level_candidate))
 
+    combined = list(milestone_candidates)
     if level_candidates:
-        selected = max(level_candidates, key=lambda item: item[0])[1]
-    elif milestone_candidates:
-        selected = min(milestone_candidates, key=lambda candidate: candidate.priority)
-    else:
+        # Several milestone awards can cross levels in one reconciliation. The
+        # athlete should see only the highest resulting level in the compound.
+        combined.append(max(level_candidates, key=lambda item: item[0])[1])
+    if week_key and bool((week_award_result or {}).get("awarded")):
+        combined.append(
+            build_week_complete_candidate(
+                athlete_id=athlete_id,
+                week_key=week_key,
+                timezone_name=athlete_timezone or "UTC",
+                now_utc=reference,
+            )
+        )
+        previous, total = _result_totals(week_award_result or {})
+        level_candidate = build_level_up_candidate(
+            athlete_id=athlete_id,
+            previous_total_xp=previous,
+            total_xp=total,
+            source_key=week_key,
+            timezone_name=athlete_timezone or "UTC",
+            now_utc=reference,
+        )
+        if level_candidate is not None:
+            combined.append(level_candidate)
+    selected = merge_progress_candidates(combined, now_utc=reference)
+    if selected is None:
         return 0
     return dispatch_push_candidate(store, selected, now_utc=reference)
 
@@ -449,6 +486,8 @@ def record_plan_milestones_after_completed_week(
     plan: Mapping[str, Any],
     completed_week: Mapping[str, Any],
     completions: Sequence[Mapping[str, Any]],
+    week_award_result: Mapping[str, Any] | None = None,
+    week_key: str | None = None,
 ) -> list[dict[str, Any]]:
     """Idempotently record every lifecycle milestone now implied by the plan."""
 
@@ -496,6 +535,8 @@ def record_plan_milestones_after_completed_week(
             athlete_timezone=athlete_timezone,
             plan_id=plan_id,
             recorded=recorded,
+            week_award_result=week_award_result,
+            week_key=week_key,
         )
     except Exception:  # noqa: BLE001 - push must never break milestone persistence
         logger.exception(
@@ -514,6 +555,8 @@ def reconcile_plan_milestones_after_completed_week(
     plan: Mapping[str, Any],
     completed_week: Mapping[str, Any],
     completions: Sequence[Mapping[str, Any]],
+    week_award_result: Mapping[str, Any] | None = None,
+    week_key: str | None = None,
 ) -> dict[str, Any]:
     """Durably reconcile lifecycle milestones for an already-confirmed week.
 
@@ -568,6 +611,8 @@ def reconcile_plan_milestones_after_completed_week(
         plan=plan,
         completed_week=completed_week,
         completions=completions,
+        week_award_result=week_award_result,
+        week_key=week_key,
     )
     observed = {
         identity

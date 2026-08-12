@@ -63,6 +63,11 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # Secure beta feedback and its durable, per-profile abuse controls.
     "beta_feedback",
     "beta_feedback_rate_limits",
+    "notification_preferences",
+    "notification_deliveries",
+    "notification_templates",
+    "notification_action_states",
+    "notification_evaluations",
 )
 
 # ---------------------------------------------------------------------------
@@ -370,6 +375,43 @@ REQUIRED_BETA_FEEDBACK_RATE_LIMIT_COLUMNS: tuple[str, ...] = (
     "created_at",
 )
 
+REQUIRED_NOTIFICATION_PREFERENCES_COLUMNS: tuple[str, ...] = (
+    "profile_id", "push_enabled", "session_reminders", "checkin_reminders",
+    "injury_followups", "plan_update_alerts", "progress_milestones",
+    "coach_messages", "quiet_hours_enabled", "quiet_hours_start",
+    "quiet_hours_end", "preferred_training_time", "created_at", "updated_at",
+)
+
+REQUIRED_NOTIFICATION_DELIVERIES_COLUMNS: tuple[str, ...] = (
+    "id", "profile_id", "notification_type", "intent", "category", "priority",
+    "title", "body", "url", "tag", "dedupe_key", "expires_at", "status",
+    "claim_token", "claimed_at", "attempt_count", "delivered_count", "error_code",
+    "sent_at", "training_day", "scheduled_for", "timing_source",
+    "timing_confidence", "variant_id", "source_event_metadata", "action_key",
+    "notification_class", "respect_quiet_hours", "merged_intents", "cancelled_at",
+    "cancellation_reason", "created_at", "updated_at",
+)
+
+REQUIRED_NOTIFICATION_TEMPLATES_COLUMNS: tuple[str, ...] = (
+    "intent", "variant_id", "title_template", "body_template", "locale",
+    "template_version", "active", "selection_weight", "minimum_timing_confidence",
+    "created_at", "updated_at",
+)
+
+REQUIRED_NOTIFICATION_ACTION_STATES_COLUMNS: tuple[str, ...] = (
+    "profile_id", "action_key", "training_day", "completed_at", "source_metadata",
+    "created_at", "updated_at",
+)
+
+REQUIRED_NOTIFICATION_EVALUATIONS_COLUMNS: tuple[str, ...] = (
+    "id", "profile_id", "training_day", "intent", "notification_type", "category",
+    "evaluated_at", "first_evaluated_at", "last_evaluated_at", "evaluation_count",
+    "scheduled_for", "timing_source", "timing_confidence", "eligible", "decision",
+    "rejection_reasons", "priority", "dedupe_key", "variant_id",
+    "source_event_metadata", "resulting_delivery_id", "evaluation_key", "created_at",
+    "updated_at",
+)
+
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "plans": REQUIRED_PLANS_COLUMNS,
@@ -387,6 +429,11 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "xp_awards": REQUIRED_XP_AWARDS_COLUMNS,
     "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
     "beta_feedback_rate_limits": REQUIRED_BETA_FEEDBACK_RATE_LIMIT_COLUMNS,
+    "notification_preferences": REQUIRED_NOTIFICATION_PREFERENCES_COLUMNS,
+    "notification_deliveries": REQUIRED_NOTIFICATION_DELIVERIES_COLUMNS,
+    "notification_templates": REQUIRED_NOTIFICATION_TEMPLATES_COLUMNS,
+    "notification_action_states": REQUIRED_NOTIFICATION_ACTION_STATES_COLUMNS,
+    "notification_evaluations": REQUIRED_NOTIFICATION_EVALUATIONS_COLUMNS,
 }
 
 # ---------------------------------------------------------------------------
@@ -415,6 +462,9 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.validate_generation_job_active_lock",
     "public.claim_beta_feedback_rate_limit",
     "public.award_athlete_xp",
+    "public.claim_notification_delivery_v2",
+    "public.record_notification_evaluation",
+    "public.invalidate_notification_action",
 )
 
 # ---------------------------------------------------------------------------
@@ -504,6 +554,14 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         label="beta_feedback screenshot expiry index",
         accepted_names=("beta_feedback_screenshot_expiry_idx",),
     ),
+    IndexRequirement(
+        label="notification delivery profile/day/class index",
+        accepted_names=("notification_deliveries_profile_day_class_idx",),
+    ),
+    IndexRequirement(
+        label="notification evaluation diagnostic index",
+        accepted_names=("notification_evaluations_diagnostic_idx",),
+    ),
 )
 
 # ---------------------------------------------------------------------------
@@ -528,6 +586,11 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "xp_awards",
     "beta_feedback",
     "beta_feedback_rate_limits",
+    "notification_preferences",
+    "notification_deliveries",
+    "notification_templates",
+    "notification_action_states",
+    "notification_evaluations",
 )
 
 

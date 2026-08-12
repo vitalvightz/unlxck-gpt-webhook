@@ -10,6 +10,7 @@ from api.services.notification_foundation import (
     candidate_is_allowed,
     finalize_notification_delivery,
     get_notification_preferences,
+    list_notification_evaluations,
     prepare_notification_delivery,
     select_notification_candidate,
     update_notification_preferences,
@@ -241,3 +242,31 @@ def test_sent_delivery_never_reclaims_same_profile_dedupe_key():
         )
         is None
     )
+
+
+def test_arbitration_records_why_every_lower_candidate_was_not_selected():
+    store = MemoryStore()
+    now = datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc)
+    update_notification_preferences(store, "athlete-1", {"plan_update_alerts": False})
+    selected = _candidate(
+        notification_type="selected",
+        priority=10,
+        dedupe_key="selected:1",
+        now=now,
+    )
+    suppressed = _candidate(
+        notification_type="suppressed",
+        category="plan_update_alerts",
+        priority=20,
+        dedupe_key="suppressed:1",
+        now=now,
+    )
+    assert prepare_notification_delivery(store, [selected, suppressed], now_utc=now) is not None
+    rows = list_notification_evaluations(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-02",
+        intent="suppressed",
+    )
+    assert rows[0]["decision"] == "suppressed"
+    assert rows[0]["rejection_reasons"] == ["category_disabled"]

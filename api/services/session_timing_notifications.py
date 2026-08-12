@@ -1,10 +1,4 @@
-"""Session-timed coaching notifications driven by the Today command view.
-
-A preferred training time is optional. Without one, UNLXCK stays silent rather
-than guessing. STOP decisions are safety actions and may be delivered after the
-check-in; GREEN/MODIFY/PULL BACK reminders only exist around the athlete's saved
-training time.
-"""
+"""Session-timed coaching notifications driven by the Today command view."""
 
 from __future__ import annotations
 
@@ -21,6 +15,7 @@ from api.services.notification_foundation import (
     select_notification_candidate,
 )
 from api.services.push_notifications import dispatch_push_candidate
+from api.services.notification_timing import resolve_training_time
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
 
@@ -135,6 +130,11 @@ def _session_title(view: CommandView) -> str:
     return str(session.get("title") or session.get("name") or "today's session").strip()
 
 
+def _session_id(view: CommandView) -> str:
+    session = view.today.next_session or {}
+    return str(session.get("session_id") or session.get("id") or "").strip()
+
+
 def _stop_candidate(
     view: CommandView,
     *,
@@ -170,6 +170,12 @@ def _stop_candidate(
         expires_at=min(_aware_utc(now_utc) + timedelta(hours=2), local_end.astimezone(timezone.utc)),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
+        intent="session_stop",
+        training_day=view.today.training_day,
+        action_key=f"acknowledge-stop:{_session_id(view) or view.today.training_day}",
+        notification_class="safety",
+        daily_cap=2,
+        min_spacing_minutes=30,
     )
 
 
@@ -180,15 +186,21 @@ def _timed_session_candidate(
     profile_id: str,
     timezone_name: str,
     now_utc: datetime,
+    store: AppStore | None = None,
 ) -> NotificationCandidate | None:
     if not _has_today_session(view):
         return None
     state = _recommendation_state(view)
     if state == "not_checked_in" or _decision_tier(view) == "stop":
         return None
-    preferred_at = _preferred_training_at(view, preferences, timezone_name=timezone_name)
-    if preferred_at is None:
-        return None
+    timing = resolve_training_time(
+        store or object(),  # type: ignore[arg-type]
+        view,
+        preferences,
+        profile_id=profile_id,
+        timezone_name=timezone_name,
+    )
+    preferred_at = timing.resolved_training_time
     local_now = _local_now(now_utc, timezone_name)
 
     # At exactly 03:00 the new training day does not exist until rollover, so a
@@ -212,7 +224,11 @@ def _timed_session_candidate(
     else:
         notification_type = "session_ready"
         title = "Today's work is set"
-        body = f"{session_title[:45]}. Open it when you're ready."
+        body = (
+            f"{session_title[:45]}. Open it when you're ready."
+            if timing.allows_exact_copy
+            else f"{session_title[:30]}. Training is later. Open the call before you start."
+        )
         tag = "session-ready"
 
     return NotificationCandidate(
@@ -228,6 +244,13 @@ def _timed_session_candidate(
         expires_at=window_end.astimezone(timezone.utc),
         timezone_name=timezone_name,
         respect_quiet_hours=True,
+        intent=notification_type,
+        training_day=view.today.training_day,
+        scheduled_for=preferred_at.astimezone(timezone.utc),
+        timing_source=timing.timing_source,
+        timing_confidence=timing.timing_confidence,  # type: ignore[arg-type]
+        action_key=f"complete-session:{_session_id(view) or view.today.training_day}",
+        notification_class="event" if notification_type == "session_modified" else "routine",
     )
 
 
@@ -238,6 +261,7 @@ def build_session_timing_candidates_from_view(
     profile_id: str,
     timezone_name: str,
     now_utc: datetime,
+    store: AppStore | None = None,
 ) -> list[NotificationCandidate]:
     candidates = [
         _stop_candidate(
@@ -252,6 +276,7 @@ def build_session_timing_candidates_from_view(
             profile_id=profile_id,
             timezone_name=timezone_name,
             now_utc=now_utc,
+            store=store,
         ),
     ]
     return [candidate for candidate in candidates if candidate is not None]
@@ -280,6 +305,7 @@ def dispatch_session_timing_notification(
             profile_id=profile_id,
             timezone_name=timezone_name,
             now_utc=now_utc,
+            store=store,
         )
         selected = select_notification_candidate(candidates, preferences, now_utc=now_utc)
     except Exception:  # noqa: BLE001 - one profile must not break the worker sweep

@@ -9,6 +9,7 @@ resolved before fan-out to the athlete's devices.
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import math
 import os
@@ -36,6 +37,7 @@ PLAN_READY_BODY = "Your final camp is live."
 
 MORNING_CHECKIN_TITLE = "Check in before we train"
 MORNING_CHECKIN_BODY = "Give me sleep, body and pain so I can set today's call."
+ATHLETE_VISIBLE_PLAN_STATUSES = frozenset({"ready", "publishable_with_flags"})
 
 
 def vapid_private_key() -> str:
@@ -220,12 +222,23 @@ def dispatch_push_candidate(
     *,
     now_utc: datetime | None = None,
 ) -> int:
-    """Apply notification policy, claim one durable decision, then fan out."""
+    """Compatibility wrapper for dispatching one candidate."""
+
+    return dispatch_push_candidates(store, [candidate], now_utc=now_utc)
+
+
+def dispatch_push_candidates(
+    store: AppStore,
+    candidates: list[NotificationCandidate],
+    *,
+    now_utc: datetime | None = None,
+) -> int:
+    """Rank candidates, claim the first available decision, then fan out."""
 
     if not push_notifications_configured():
         return 0
     reference = now_utc or datetime.now(timezone.utc)
-    prepared = prepare_notification_delivery(store, [candidate], now_utc=reference)
+    prepared = prepare_notification_delivery(store, candidates, now_utc=reference)
     if prepared is None:
         return 0
     selected, claim = prepared
@@ -291,13 +304,21 @@ def dispatch_push_candidate(
     return sent
 
 
-def send_plan_ready_push(store: AppStore, *, athlete_id: str, plan_id: str) -> int:
-    """The enhanced camp card went live; dedupe once per athlete and plan."""
+def send_plan_ready_push(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_id: str,
+    timezone_name: str = "UTC",
+    now_utc: datetime | None = None,
+) -> int:
+    """An athlete-visible plan went live; dedupe once per athlete and plan."""
 
     plan_id = str(plan_id or "").strip()
     profile_id = str(athlete_id or "").strip()
     if not profile_id:
         return 0
+    reference = now_utc or datetime.now(timezone.utc)
     candidate = NotificationCandidate(
         profile_id=profile_id,
         notification_type="plan_ready",
@@ -308,12 +329,76 @@ def send_plan_ready_push(store: AppStore, *, athlete_id: str, plan_id: str) -> i
         url=f"/plans/{plan_id}" if plan_id else "/plans",
         tag=PLAN_READY_TAG,
         dedupe_key=f"plan-ready:{plan_id or 'latest'}",
-        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
-        # Plan completion is an explicit product event, not a routine coaching
-        # nudge. Preserve the current immediate alert behaviour.
-        respect_quiet_hours=False,
+        expires_at=reference + timedelta(days=7),
+        timezone_name=timezone_name or "UTC",
+        respect_quiet_hours=True,
+        training_day=_local_day(reference, timezone_name or "UTC"),
+        notification_class="event",
+        daily_cap=3,
+        min_spacing_minutes=30,
+        action_key=f"view-plan:{plan_id}",
+        source_event_metadata={"plan_id": plan_id, "event": "plan_published"},
     )
-    return dispatch_push_candidate(store, candidate)
+    return dispatch_push_candidate(store, candidate, now_utc=reference)
+
+
+def notify_plan_published_if_transition(
+    store: AppStore,
+    *,
+    before: dict[str, Any] | None,
+    after: dict[str, Any],
+    timezone_name: str = "UTC",
+    now_utc: datetime | None = None,
+) -> int:
+    """Send exactly once when persistence makes a plan athlete-displayable."""
+
+    previous_status = str((before or {}).get("status") or "").strip().lower()
+    current_status = str(after.get("status") or "").strip().lower()
+    if current_status not in ATHLETE_VISIBLE_PLAN_STATUSES:
+        return 0
+    if previous_status in ATHLETE_VISIBLE_PLAN_STATUSES:
+        material_fields = ("plan_text", "final_plan_text", "coach_notes", "fight_date", "plan_name")
+        before_material = {field: (before or {}).get(field) for field in material_fields}
+        after_material = {field: after.get(field) for field in material_fields}
+        if before_material == after_material:
+            return 0
+        reference = now_utc or datetime.now(timezone.utc)
+        fingerprint = hashlib.sha256(
+            json.dumps(after_material, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:20]
+        plan_id = str(after.get("id") or "")
+        candidate = NotificationCandidate(
+            profile_id=str(after.get("athlete_id") or ""),
+            notification_type="plan_updated",
+            intent="plan_updated",
+            category="plan_update_alerts",
+            priority=42,
+            title="Your plan has changed",
+            body="A material camp update is live. Open the plan to see what moved.",
+            url=f"/plans/{plan_id}" if plan_id else "/plans",
+            tag="plan-updated",
+            dedupe_key=f"plan-updated:{plan_id}:{fingerprint}",
+            expires_at=reference + timedelta(days=4),
+            timezone_name=timezone_name or "UTC",
+            respect_quiet_hours=True,
+            training_day=_local_day(reference, timezone_name or "UTC"),
+            notification_class="event",
+            min_spacing_minutes=30,
+            action_key=f"view-plan:{plan_id}",
+            source_event_metadata={
+                "plan_id": plan_id,
+                "event": "material_plan_update",
+                "material_fingerprint": fingerprint,
+            },
+        )
+        return dispatch_push_candidate(store, candidate, now_utc=reference)
+    return send_plan_ready_push(
+        store,
+        athlete_id=str(after.get("athlete_id") or ""),
+        plan_id=str(after.get("id") or ""),
+        timezone_name=timezone_name,
+        now_utc=now_utc,
+    )
 
 
 def _local_day(now_utc: datetime, timezone_name: str) -> str:

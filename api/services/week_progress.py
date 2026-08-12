@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from api.services.open_plan_timeline import project_open_structured_plan
-from api.services.progress_notifications import dispatch_progress_award_notification
+from api.services.progress_notifications import dispatch_progress_award_notification  # noqa: F401
 from api.services.xp_awards import ensure_xp_abuse_hardening
 from api.store import AppStore
 
@@ -218,6 +218,8 @@ def _reconcile_completed_week_lifecycle(
     plan: Mapping[str, Any],
     week: Mapping[str, Any],
     completions: Sequence[Mapping[str, Any]],
+    week_award_result: Mapping[str, Any] | None = None,
+    week_key: str | None = None,
 ) -> None:
     """Best-effort durable repair pass, independent of the weekly XP result."""
 
@@ -235,6 +237,8 @@ def _reconcile_completed_week_lifecycle(
             plan=plan,
             completed_week=week,
             completions=completions,
+            week_award_result=week_award_result,
+            week_key=week_key,
         )
     except Exception:  # noqa: BLE001 - repair must never break week/session logging
         logger.exception(
@@ -312,24 +316,6 @@ def award_completed_week(
             week_id,
         )
 
-    if normalized is not None:
-        try:
-            dispatch_progress_award_notification(
-                store,
-                athlete_id=athlete_id,
-                action="full_training_week_completed",
-                award_result=normalized,
-                source_key=source_key,
-                timezone_name=athlete_timezone or "UTC",
-            )
-        except Exception:  # noqa: BLE001 - push must not block lifecycle persistence
-            logger.exception(
-                "[notification] week completion delivery failed athlete_id=%s plan_id=%s week_id=%s",
-                athlete_id,
-                plan_id,
-                week_id,
-            )
-
     _reconcile_completed_week_lifecycle(
         store,
         athlete_id=athlete_id,
@@ -337,6 +323,8 @@ def award_completed_week(
         plan=effective_plan,
         week=week,
         completions=completions,
+        week_award_result=normalized,
+        week_key=source_key,
     )
     return normalized
 

@@ -9,6 +9,7 @@ from api.services.intelligent_notifications import CoachingDispatchResult
 from api.services.morning_push import is_morning_push_due, run_morning_push_sweep
 from api.services.notification_foundation import (
     NotificationCandidate,
+    list_notification_evaluations,
     update_notification_preferences,
 )
 from api.services.push_notifications import (
@@ -16,6 +17,7 @@ from api.services.push_notifications import (
     PLAN_READY_TAG,
     build_push_payload,
     dispatch_push_candidate,
+    notify_plan_published_if_transition,
     push_notifications_configured,
     send_plan_ready_push,
     send_push_to_profile,
@@ -140,6 +142,71 @@ def test_plan_ready_push_respects_account_preference(vapid_env, monkeypatch):
         lambda *_args, **_kwargs: pytest.fail("disabled category must not send"),
     )
     assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-10") == 0
+
+
+def test_plan_ready_push_defers_during_quiet_hours(vapid_env, monkeypatch):
+    store = FakeStore()
+    _subscription(store)
+    monkeypatch.setattr(
+        push_notifications,
+        "send_push_to_subscription",
+        lambda *_args, **_kwargs: pytest.fail("quiet-hour event must not send"),
+    )
+    now = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    assert send_plan_ready_push(
+        store,
+        athlete_id="athlete-1",
+        plan_id="plan-quiet",
+        now_utc=now,
+    ) == 0
+    rows = list_notification_evaluations(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-09",
+        intent="plan_ready",
+    )
+    assert rows[0]["decision"] == "deferred_until_quiet_end"
+
+
+def test_plan_ready_uses_authoritative_visibility_transition_once(monkeypatch):
+    store = FakeStore()
+    captured: list[NotificationCandidate] = []
+    monkeypatch.setattr(
+        push_notifications,
+        "dispatch_push_candidate",
+        lambda _store, candidate, **_kwargs: captured.append(candidate) or 1,
+    )
+    after = {
+        "id": "plan-live",
+        "athlete_id": "athlete-1",
+        "status": "ready",
+        "plan_text": "Athlete-facing plan",
+    }
+    assert notify_plan_published_if_transition(
+        store,
+        before={"id": "plan-live", "athlete_id": "athlete-1", "status": "review_required"},
+        after=after,
+    ) == 1
+    assert captured[-1].intent == "plan_ready"
+    assert notify_plan_published_if_transition(store, before=after, after=dict(after)) == 0
+
+
+def test_cosmetic_plan_change_does_not_send_plan_updated(monkeypatch):
+    store = FakeStore()
+    monkeypatch.setattr(
+        push_notifications,
+        "dispatch_push_candidate",
+        lambda *_args, **_kwargs: pytest.fail("cosmetic change must not send"),
+    )
+    before = {
+        "id": "plan-live",
+        "athlete_id": "athlete-1",
+        "status": "ready",
+        "plan_text": "Same plan",
+        "structured_plan": None,
+    }
+    after = {**before, "structured_plan": {"weeks": []}}
+    assert notify_plan_published_if_transition(store, before=before, after=after) == 0
 
 
 def test_push_payload_is_json_with_expected_fields():
