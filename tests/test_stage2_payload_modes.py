@@ -740,15 +740,22 @@ class TestPlanningBriefBranching:
                 "hard_sparring_days": [],
             },
         )
-        visible_offsets = [
+        # Only genuine physical (meaningful_stress) app sessions matter for
+        # spacing. A zero-load tactical_watch / support insert sharing a day
+        # with — or sitting next to — a physical session is not
+        # physical-session adjacency: per the anti-filler policy, availability
+        # is permission not obligation, so support inserts filling open days
+        # must not be treated as back-to-back hard work.
+        physical_offsets = [
             entry["countdown_offset"]
             for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
             if isinstance(entry.get("countdown_offset"), int)
+            and entry.get("stress_class") == "meaningful_stress"
         ]
 
         assert all(
             first - second > 1
-            for first, second in zip(visible_offsets, visible_offsets[1:])
+            for first, second in zip(physical_offsets, physical_offsets[1:])
         )
 
     def test_bridge_d16_avoids_meaningful_app_owned_work_on_declared_hard_days(self):
@@ -799,13 +806,15 @@ class TestPlanningBriefBranching:
         ]
         assert any(entry.get("role_key") == "hard_sparring_day" for entry in spec["visible_session_sequence"])
         # The session_sequence must cover every downstream stage where the
-        # athlete actually has activity. Stages without declared spar in the
-        # D-13 calendar (here: D-7=friday and D-6/D-5=sat/sun for a tue/thu
-        # spar declaration) legitimately stay empty — see the matching
-        # ``test_d5_continuation_does_not_invent_filler_for_an_empty_window``
-        # contract that explicitly forbids inventing fillers.
+        # athlete actually has activity. D-7 (friday) is an available support
+        # day, so fight week's required alactic sharpness touch legitimately
+        # lands there. D-6/D-5 (sat/sun) are NOT available for this tue/thu
+        # spar declaration, so that window legitimately stays empty — see the
+        # matching ``test_d5_continuation_does_not_invent_filler_for_an_empty_window``
+        # contract that explicitly forbids inventing fillers. Availability is
+        # permission, not obligation: we assert d7 (populated), not d6_to_d5.
         stage_keys = set(_composite_stage_keys(spec["session_sequence"]))
-        assert {"d13_to_d8", "d6_to_d5", "d4_to_d2", "d1"}.issubset(stage_keys)
+        assert {"d13_to_d8", "d7", "d4_to_d2", "d1"}.issubset(stage_keys)
         # Each declared spar weekday must surface as a coach-owned
         # ``hard_sparring_day`` context entry inside session_sequence (the
         # visibility filter keeps it out of visible_session_sequence).
@@ -846,13 +855,18 @@ class TestStage2PayloadBranching:
     def test_d3_payload_exposes_continued_session_sequence(self):
         payload = _build_stage2(3)
         assert payload["payload_mode"] == "late_fight_session_payload"
-        # Freshness day + its mandatory Tactical Watch, then the D-1 primer.
+        # A D-3 window runs one crisp alactic sharpness touch and a freshness
+        # reset across D-3/D-2, with the mandatory Tactical Watch co-located on
+        # the D-3 session as a zero-load card. The alactic touch already carries
+        # the CNS-priming role, so D-1 (day before the fight) is intentionally
+        # left as pre-fight rest — availability is permission, not obligation,
+        # and no session is invented merely to occupy it.
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-            "fight_week_freshness_day",
+            "alactic_sharpness_day",
             "tactical_watch",
-            "neural_primer_day",
+            "fight_week_freshness_day",
         ]
-        assert _composite_stage_keys(payload["late_fight_session_sequence"]) == ["d4_to_d2", "d1"]
+        assert _composite_stage_keys(payload["late_fight_session_sequence"]) == ["d4_to_d2", "d4_to_d2"]
 
     def test_d2_payload_exposes_primer_only_sequence(self):
         payload = _build_stage2(2)
@@ -992,15 +1006,17 @@ class TestStage2PayloadBranching:
         brief = _build_brief_for(13)
         weeks_by_key = {week["stage_key"]: week for week in brief["weekly_role_map"]["weeks"]}
 
-        # No declared spar weekday in the default _MINIMAL_ATHLETE
-        # (tuesday/thursday) lines up with the d7 segment (single-day window
-        # at D-7 = friday for the baseline 2026-04-10 fight date), so the d7
-        # week stays empty — matching the
+        # For the default _MINIMAL_ATHLETE (tue/thu spar, fri support), the
+        # d6_to_d5 segment falls on sat/sun — days the athlete has NOT made
+        # available — so that downstream window legitimately continues with
+        # zero visible app-owned sessions, matching the
         # ``test_d5_continuation_does_not_invent_filler_for_an_empty_window``
-        # contract. The downstream stages that DO see declared spar
+        # contract. (D-7 = friday IS available, so fight week's required alactic
+        # sharpness touch may land there; availability is permission, not
+        # obligation.) The downstream stages that DO see declared spar
         # (d13_to_d8 / d4_to_d2 / d1 for tuesday & thursday) must surface
-        # the coach-owned ``hard_sparring_day`` placeholder, and no d7
-        # segment role may appear in the visible insert sequence.
+        # the coach-owned ``hard_sparring_day`` placeholder, and no unavailable
+        # d6_to_d5 role may appear in the visible insert sequence.
         downstream_weeks_with_hard_spar = [
             stage
             for stage in ("d13_to_d8", "d4_to_d2", "d1")
@@ -1010,8 +1026,9 @@ class TestStage2PayloadBranching:
             )
         ]
         assert downstream_weeks_with_hard_spar
+        assert weeks_by_key.get("d6_to_d5", {}).get("session_roles", []) == []
         assert all(
-            entry.get("composite_segment_stage_key") != "d7"
+            entry.get("composite_segment_stage_key") != "d6_to_d5"
             for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
         )
 
