@@ -384,14 +384,14 @@
       "GPP"
     ],
     "system": "aerobic",
-    "duration": "30min continuous",
+    "duration": "35min continuous",
     "tags": [
       "zero_impact",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
     ],
     "notes": "Mandatory for lower body injuries",
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -473,7 +473,7 @@
       "GPP"
     ],
     "system": "aerobic",
-    "duration": "30min tempo",
+    "duration": "35min tempo",
     "tags": [
       "quad_dominant",
       "mech_lower_squat",
@@ -483,7 +483,7 @@
     "notes": "Contraindicated with knee pain",
     "equipment_note": "Requires: Step Mill",
     "work_sec": 1800,
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -537,7 +537,7 @@
       "GPP"
     ],
     "system": "aerobic",
-    "duration": "30min",
+    "duration": "35min",
     "tags": [
       "posterior_chain",
       "mech_upper_pull",
@@ -547,7 +547,7 @@
     ],
     "notes": "Low-impact deadlift alternative",
     "equipment_note": "Requires: Rower",
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -699,7 +699,7 @@
       "GPP"
     ],
     "system": "aerobic",
-    "duration": "30min",
+    "duration": "35min",
     "tags": [
       "upper_body",
       "mech_upper_pull",
@@ -708,7 +708,7 @@
     "notes": "Leg injury alternative",
     "equipment_note": "Requires: Arm Ergometer",
     "work_sec": 1800,
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -788,7 +788,7 @@
       "GPP"
     ],
     "system": "aerobic",
-    "duration": "20min",
+    "duration": "25min",
     "tags": [
       "quad_dominant",
       "mech_lower_squat",
@@ -797,7 +797,7 @@
     ],
     "notes": "Skip every other step",
     "rest_sec": 1200,
-    "total_minutes": 20,
+    "total_minutes": 25,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -818,7 +818,7 @@
       "TAPER"
     ],
     "system": "aerobic",
-    "duration": "30min",
+    "duration": "35min",
     "tags": [
       "low_impact",
       "mech_systemic_fatigue"
@@ -826,7 +826,7 @@
     "notes": "Backward motion for hamstrings",
     "equipment_note": "Requires: Elliptical",
     "work_sec": 1800,
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -4612,7 +4612,7 @@
     ],
     "system": "aerobic",
     "modality": "swim",
-    "duration": "20-30min continuous",
+    "duration": "25-35min continuous",
     "intensity": "low",
     "tags": [
       "aerobic",
@@ -4626,7 +4626,7 @@
     ],
     "notes": "Ideal for shoulder recovery post-sparring",
     "rest_sec": 1800,
-    "total_minutes": 30,
+    "total_minutes": 35,
     "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "low",
@@ -4688,7 +4688,7 @@
     ],
     "system": "aerobic",
     "modality": "row",
-    "duration": "20min",
+    "duration": "25min",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -4701,7 +4701,7 @@
     ],
     "equipment_note": "Requires: Rower",
     "notes": "",
-    "total_minutes": 20,
+    "total_minutes": 25,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -5025,7 +5025,7 @@
     ],
     "system": "aerobic",
     "modality": "run",
-    "duration": "20min",
+    "duration": "25min",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -5035,7 +5035,7 @@
       "mech_lower_lunge"
     ],
     "notes": "Weight belt optional for buoyancy",
-    "total_minutes": 20,
+    "total_minutes": 25,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -5137,7 +5137,7 @@
     ],
     "system": "aerobic",
     "modality": "walk",
-    "duration": "30min",
+    "duration": "35min",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -5150,7 +5150,7 @@
       "mech_lower_hip_hinge"
     ],
     "notes": "Outdoors only; nasal breathing encouraged",
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -6425,7 +6425,7 @@
     ],
     "system": "aerobic",
     "modality": "bike",
-    "duration": "25-30min continuous",
+    "duration": "30-35min continuous",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -6436,7 +6436,7 @@
       "mech_lower_hip_hinge"
     ],
     "notes": "Nasal breathing only; excellent recovery modality",
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -6531,7 +6531,7 @@
     ],
     "system": "aerobic",
     "modality": "bike",
-    "duration": "20min easy spin",
+    "duration": "25min easy spin",
     "intensity": "low",
     "tags": [
       "aerobic",
@@ -6543,7 +6543,7 @@
     ],
     "notes": "Pure recovery; no glycogen depletion",
     "rest_sec": 1200,
-    "total_minutes": 20,
+    "total_minutes": 25,
     "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "low",
@@ -6699,7 +6699,7 @@
     ],
     "system": "aerobic",
     "modality": "row",
-    "duration": "25min continuous",
+    "duration": "30min continuous",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -6710,7 +6710,7 @@
       "mech_lower_hip_hinge"
     ],
     "notes": "Indoor rowing variation; excellent mental focus",
-    "total_minutes": 25,
+    "total_minutes": 30,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -6763,7 +6763,7 @@
     ],
     "system": "aerobic",
     "modality": "row",
-    "duration": "15-20min easy",
+    "duration": "20-25min easy",
     "intensity": "zone 1",
     "tags": [
       "aerobic",
@@ -6775,7 +6775,7 @@
     ],
     "notes": "Parasympathetic activation; zero strain",
     "rest_sec": 1200,
-    "total_minutes": 20,
+    "total_minutes": 25,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -6871,7 +6871,7 @@
     ],
     "system": "aerobic",
     "modality": "erg",
-    "duration": "20min easy",
+    "duration": "25min easy",
     "intensity": "low",
     "tags": [
       "aerobic",
@@ -6882,7 +6882,7 @@
     ],
     "notes": "Light pole work; parasympathetic dominant",
     "rest_sec": 1200,
-    "total_minutes": 20,
+    "total_minutes": 25,
     "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "low",
@@ -7252,7 +7252,7 @@
     ],
     "system": "aerobic",
     "modality": "swim",
-    "duration": "20-30min steady strokes",
+    "duration": "25-35min steady strokes",
     "intensity": "zone 2",
     "tags": [
       "zero_impact",
@@ -7262,7 +7262,7 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Non-impact base building; mental reset",
-    "total_minutes": 30,
+    "total_minutes": 35,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -7540,7 +7540,7 @@
     ],
     "system": "aerobic",
     "modality": "stairs",
-    "duration": "15-20min steady pace",
+    "duration": "20-25min steady pace",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -7551,7 +7551,7 @@
     ],
     "notes": "Eccentric-light; excellent hamstring-safe work",
     "rest_sec": 1200,
-    "total_minutes": 20,
+    "total_minutes": 25,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -7600,7 +7600,7 @@
     ],
     "system": "aerobic",
     "modality": "climb",
-    "duration": "20-25min steady",
+    "duration": "25-30min steady",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -7610,7 +7610,7 @@
       "mech_systemic_fatigue"
     ],
     "notes": "True zero-impact full-body modality",
-    "total_minutes": 25,
+    "total_minutes": 30,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -8622,14 +8622,14 @@
     ],
     "system": "aerobic",
     "modality": "rower",
-    "duration": "10-12min easy rhythm",
+    "duration": "15-17min easy rhythm",
     "intensity": "low",
     "tags": [
       "low_impact",
       "aerobic",
       "recovery"
     ],
-    "total_minutes": 12,
+    "total_minutes": 17,
     "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "low",
@@ -8658,7 +8658,7 @@
     ],
     "system": "aerobic",
     "modality": "bike",
-    "duration": "10-25min easy",
+    "duration": "15-30min easy",
     "intensity": "zone 1-2",
     "tags": [
       "aerobic",
@@ -8692,7 +8692,7 @@
     ],
     "notes": "Easy arm-leg rhythm. No sprinting, no EMOM, no hard calories. Best low-impact gas-tank option when the athlete needs conditioning but must protect joints and freshness. Can be used before or after hard sparring as a recovery flush.",
     "equipment_note": "Requires: Assault Bike",
-    "total_minutes": 20,
+    "total_minutes": 25,
     "rpe": 4,
     "impact_cost": "low",
     "lactate_load": "low",
@@ -8721,7 +8721,7 @@
     ],
     "system": "aerobic",
     "modality": "row",
-    "duration": "12-25min continuous",
+    "duration": "17-30min continuous",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -8757,7 +8757,7 @@
     ],
     "notes": "Smooth nasal rowing with controlled stroke rate. No sprint pulls. Strong aerobic-base option when running impact is not suitable. Can sit before or after hard sparring if kept easy.",
     "equipment_note": "Requires: Rower",
-    "total_minutes": 20,
+    "total_minutes": 25,
     "rpe": 4,
     "impact_cost": "low",
     "lactate_load": "low",
@@ -8989,7 +8989,7 @@
     ],
     "system": "aerobic",
     "modality": "walk",
-    "duration": "20-35min continuous",
+    "duration": "25-40min continuous",
     "intensity": "zone 1-2",
     "tags": [
       "aerobic",
@@ -9006,7 +9006,7 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Nasal-only walk. Keep shoulders relaxed and posture tall. Best after hard sparring or on recovery days when the athlete needs aerobic work without training noise.",
-    "total_minutes": 30,
+    "total_minutes": 35,
     "rpe": 3,
     "impact_cost": "low",
     "lactate_load": "low",
