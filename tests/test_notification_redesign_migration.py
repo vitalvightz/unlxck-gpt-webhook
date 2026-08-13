@@ -35,7 +35,24 @@ def test_notification_redesign_migration_is_private_and_auditable() -> None:
 
 def test_notification_templates_include_high_frequency_variants() -> None:
     sql = MIGRATION.read_text(encoding="utf-8")
-    for prefix in ("mr", "mc", "db", "sp", "sn", "sr", "pl", "ir", "hp", "rn"):
-        for number in range(1, 5):
+    required_counts = {
+        "mr": 8,
+        "mc": 6,
+        "db": 8,
+        "sp": 8,
+        "sn": 6,
+        "sr": 6,
+        "pl": 8,
+        "ir": 8,
+        "hp": 6,
+        "rn": 8,
+        "sm": 6,
+        "ss": 4,
+        "rc": 4,
+    }
+    for prefix, count in required_counts.items():
+        for number in range(1, count + 1):
             assert f"'{prefix}-0{number}'" in sql
+    for variant_id in ("pl-low-01", "pl-low-02", "fc-d14", "fc-d07", "fc-d03", "fc-d01"):
+        assert f"'{variant_id}'" in sql
 

@@ -144,8 +144,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             training_day=training_day,
             updated_injuries=request_body.injuries,
         )
-        for injury in result.get("open_injuries", []):
-            injury_id = str(injury.get("id") or "").strip()
+        # The refreshed response contains every open injury, including untouched
+        # flags. Only invalidate follow-ups for flags this request changed.
+        for updated_injury_id in result.get("updated_injury_ids", []):
+            injury_id = str(updated_injury_id or "").strip()
             if not injury_id:
                 continue
             try:

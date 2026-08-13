@@ -15,6 +15,9 @@ from api.store import AppStore
 
 TRAINING_DAY_ROLLOVER_HOUR = 3
 DEFAULT_FALLBACK_TRAINING_TIME = "18:00"
+HIGH_CONFIDENCE_MAD_MINUTES = 30
+MEDIUM_CONFIDENCE_MAD_MINUTES = 90
+MIN_HISTORY_SAMPLES = 3
 
 
 @dataclass(frozen=True)
@@ -23,6 +26,7 @@ class ResolvedTrainingTime:
     timing_source: str
     timing_confidence: str
     sample_count: int = 0
+    median_absolute_deviation_minutes: float | None = None
 
     @property
     def allows_exact_copy(self) -> bool:
@@ -171,14 +175,16 @@ def _resolved_from_samples(
     source: str,
     training_day: str,
     timezone_name: str,
-    high_confidence_at: int | None = None,
 ) -> ResolvedTrainingTime | None:
     if not samples:
         return None
-    clock = _clock_from_logical_minutes(median(float(row["minutes"]) for row in samples))
-    if high_confidence_at is not None and len(samples) >= high_confidence_at:
+    minute_samples = [float(row["minutes"]) for row in samples]
+    centre = float(median(minute_samples))
+    dispersion = float(median(abs(value - centre) for value in minute_samples))
+    clock = _clock_from_logical_minutes(centre)
+    if len(samples) >= MIN_HISTORY_SAMPLES and dispersion <= HIGH_CONFIDENCE_MAD_MINUTES:
         confidence = "high"
-    elif len(samples) >= 3:
+    elif len(samples) >= MIN_HISTORY_SAMPLES and dispersion <= MEDIUM_CONFIDENCE_MAD_MINUTES:
         confidence = "medium"
     else:
         confidence = "low"
@@ -187,6 +193,7 @@ def _resolved_from_samples(
         timing_source=source,
         timing_confidence=confidence,
         sample_count=len(samples),
+        median_absolute_deviation_minutes=dispersion,
     )
 
 
@@ -231,7 +238,6 @@ def resolve_training_time(
         source="same_weekday_history",
         training_day=view.today.training_day,
         timezone_name=timezone_name,
-        high_confidence_at=3,
     )
     if resolved is not None:
         return resolved

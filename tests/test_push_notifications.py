@@ -74,6 +74,7 @@ def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeyp
     store = FakeStore()
     _subscription(store)
     captured: list[str] = []
+    now = datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc)
 
     def fake_send(subscription, payload, **_kwargs):
         captured.append(payload)
@@ -81,8 +82,12 @@ def test_plan_ready_push_targets_plan_and_dedupes_per_profile(vapid_env, monkeyp
 
     monkeypatch.setattr(push_notifications, "send_push_to_subscription", fake_send)
 
-    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-9") == 1
-    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-9") == 0
+    assert send_plan_ready_push(
+        store, athlete_id="athlete-1", plan_id="plan-9", now_utc=now
+    ) == 1
+    assert send_plan_ready_push(
+        store, athlete_id="athlete-1", plan_id="plan-9", now_utc=now
+    ) == 0
     assert len(captured) == 1
     assert "/plans/plan-9" in captured[0]
     assert PLAN_READY_TAG in captured[0]
@@ -121,15 +126,20 @@ def test_transient_plan_ready_failure_keeps_device_and_retries(vapid_env, monkey
     store = FakeStore()
     _subscription(store, endpoint="https://push.example/retryable")
     outcomes = iter([None, True])
+    now = datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc)
     monkeypatch.setattr(
         push_notifications,
         "send_push_to_subscription",
         lambda *_args, **_kwargs: next(outcomes),
     )
 
-    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-retry") == 0
+    assert send_plan_ready_push(
+        store, athlete_id="athlete-1", plan_id="plan-retry", now_utc=now
+    ) == 0
     assert list(store.push_subscriptions) == ["https://push.example/retryable"]
-    assert send_plan_ready_push(store, athlete_id="athlete-1", plan_id="plan-retry") == 1
+    assert send_plan_ready_push(
+        store, athlete_id="athlete-1", plan_id="plan-retry", now_utc=now
+    ) == 1
 
 
 def test_plan_ready_push_respects_account_preference(vapid_env, monkeypatch):

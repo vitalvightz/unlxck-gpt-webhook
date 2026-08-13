@@ -15,8 +15,9 @@ from api.services.notification_foundation import (
     invalidate_notification_action,
     list_notification_evaluations,
     prepare_notification_delivery,
+    update_notification_preferences,
 )
-from api.services.notification_templates import select_notification_template
+from api.services.notification_templates import BUNDLED_TEMPLATES, select_notification_template
 
 
 class OrchestrationStore:
@@ -123,15 +124,146 @@ def test_injury_followup_works_after_checkin_and_on_rest_day() -> None:
     assert "injury_recheck" in types
 
 
+def test_disabled_injury_followup_falls_back_to_morning_readiness() -> None:
+    store = OrchestrationStore()
+    update_notification_preferences(
+        store,
+        "athlete-1",
+        {"injury_followups": False, "quiet_hours_enabled": False},
+    )
+    injury = {
+        "id": "injury-1",
+        "body_area": "left knee",
+        "status": "open",
+        "severity": "severe",
+        "updated_at": "2026-08-08T08:00:00+00:00",
+    }
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidates = build_fight_camp_candidates(
+        store,
+        _view(recommendation_state="not_checked_in", injuries=[injury]),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=now,
+    )
+
+    assert {candidate.intent for candidate in candidates} >= {
+        "injury_recheck",
+        "morning_readiness",
+    }
+    selected = prepare_notification_delivery(store, candidates, now_utc=now)
+    assert selected is not None
+    assert selected[0].intent == "morning_readiness"
+
+
+def test_enabled_injury_followup_replaces_morning_readiness() -> None:
+    store = OrchestrationStore()
+    injury = {
+        "id": "injury-1",
+        "body_area": "left knee",
+        "status": "open",
+        "severity": "severe",
+        "updated_at": "2026-08-08T08:00:00+00:00",
+    }
+    candidates = build_fight_camp_candidates(
+        store,
+        _view(recommendation_state="not_checked_in", injuries=[injury]),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc),
+    )
+
+    assert "injury_recheck" in {candidate.intent for candidate in candidates}
+    assert "morning_readiness" not in {candidate.intent for candidate in candidates}
+
+
+def test_disabled_high_pain_followup_falls_back_to_morning_readiness() -> None:
+    store = OrchestrationStore()
+    store.completions = [
+        {
+            "id": "completion-1",
+            "training_day": "2026-08-08",
+            "pain_after": 8,
+            "completed_at": "2026-08-08T18:00:00+00:00",
+        }
+    ]
+    update_notification_preferences(
+        store,
+        "athlete-1",
+        {"injury_followups": False, "quiet_hours_enabled": False},
+    )
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidates = build_fight_camp_candidates(
+        store,
+        _view(recommendation_state="not_checked_in"),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=now,
+    )
+
+    assert {candidate.intent for candidate in candidates} >= {
+        "high_pain_followup",
+        "morning_readiness",
+    }
+    selected = prepare_notification_delivery(store, candidates, now_utc=now)
+    assert selected is not None
+    assert selected[0].intent == "morning_readiness"
+
+
+def test_active_camp_rest_day_has_morning_and_afternoon_recovery_touches() -> None:
+    morning_types = _types(
+        OrchestrationStore(),
+        _view(recommendation_state="not_checked_in", session_scope="none"),
+        datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc),
+    )
+    afternoon_types = _types(
+        OrchestrationStore(),
+        _view(recommendation_state="not_checked_in", session_scope="none"),
+        datetime(2026, 8, 9, 14, 0, tzinfo=timezone.utc),
+    )
+
+    assert "recovery_checkin" in morning_types
+    assert "recovery_nudge" in afternoon_types
+
+
 def test_post_session_reminder_does_not_require_started_state(monkeypatch) -> None:
     monkeypatch.setenv("UNLXCK_NOTIFICATION_FALLBACK_TRAINING_TIME", "18:00")
     store = OrchestrationStore()
-    types = _types(
+    candidates = build_fight_camp_candidates(
         store,
         _view(),
-        datetime(2026, 8, 9, 19, 50, tzinfo=timezone.utc),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=datetime(2026, 8, 9, 19, 50, tzinfo=timezone.utc),
     )
-    assert "post_session_log" in types
+    post_session = next(
+        candidate for candidate in candidates if candidate.intent == "post_session_log"
+    )
+    assert post_session.timing_confidence == "low"
+    assert post_session.title == "TRAINED YET?"
+    assert "When you're done" in post_session.body or "If training is finished" in post_session.body
+
+
+def test_real_session_start_allows_completed_session_copy_with_fallback_schedule(monkeypatch) -> None:
+    monkeypatch.setenv("UNLXCK_NOTIFICATION_FALLBACK_TRAINING_TIME", "18:00")
+    store = OrchestrationStore()
+    store.current_completion = {
+        "status": "started",
+        "started_at": "2026-08-09T18:15:00+00:00",
+    }
+    candidates = build_fight_camp_candidates(
+        store,
+        _view(),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=datetime(2026, 8, 9, 19, 50, tzinfo=timezone.utc),
+    )
+
+    post_session = next(
+        candidate for candidate in candidates if candidate.intent == "post_session_log"
+    )
+    assert post_session.timing_confidence == "low"
+    assert post_session.title != "TRAINED YET?"
 
 
 def _foundation_candidate(
@@ -252,6 +384,41 @@ def test_template_variant_never_repeats_consecutively() -> None:
     assert second_copy[2] != first_copy[2]
 
 
+def test_bundled_templates_fit_delivery_limits_with_maximum_context() -> None:
+    context = {
+        "session": "S" * 42,
+        "body_area": "B" * 24,
+        "countdown": "D-14",
+        "title": "T" * 40,
+        "body": "C" * 90,
+    }
+
+    for template in BUNDLED_TEMPLATES:
+        assert len(template.title_template.format_map(context)) <= 40, template.variant_id
+        assert len(template.body_template.format_map(context)) <= 90, template.variant_id
+
+
+def test_fight_countdown_uses_unique_copy_for_each_milestone() -> None:
+    store = OrchestrationStore()
+    expected = {
+        "D-14": ("fc-d14", "D-14. TWO WEEKS."),
+        "D-7": ("fc-d07", "D-7. FIGHT WEEK."),
+        "D-3": ("fc-d03", "D-3. STAY SHARP."),
+        "D-1": ("fc-d01", "D-1. READY."),
+    }
+
+    for countdown, (variant_id, title) in expected.items():
+        selected = select_notification_template(
+            store,
+            profile_id="athlete-1",
+            intent="fight_countdown",
+            dedupe_key=f"countdown:{countdown}",
+            context={"countdown": countdown},
+        )
+        assert selected[2] == variant_id
+        assert selected[0] == title
+
+
 def test_quiet_hour_event_rehydrates_with_original_expiry() -> None:
     store = OrchestrationStore()
     quiet_time = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
@@ -315,5 +482,45 @@ def test_observe_rollout_records_candidates_and_preserves_legacy_path(monkeypatc
         profile_id="athlete-1",
         training_day="2026-08-09",
         intent="observed-intent",
+    )
+    assert rows[0]["decision"] == "rollout_observe_only"
+
+
+def test_missing_rollout_mode_defaults_to_observe_and_never_sends(monkeypatch) -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidate = _foundation_candidate(key="default-observed-intent", at=now)
+    monkeypatch.delenv("UNLXCK_FIGHT_CAMP_NOTIFICATIONS_MODE", raising=False)
+    monkeypatch.setattr(
+        fight_camp_notifications,
+        "build_today_command_view",
+        lambda *_args, **_kwargs: _view(),
+    )
+    monkeypatch.setattr(
+        fight_camp_notifications,
+        "build_fight_camp_candidates",
+        lambda *_args, **_kwargs: [candidate],
+    )
+    monkeypatch.setattr(
+        fight_camp_notifications,
+        "dispatch_push_candidates",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("default observe mode must not send")
+        ),
+    )
+
+    result = dispatch_fight_camp_notifications(
+        store,
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=now,
+    )
+
+    assert result.candidate_count == 0
+    rows = list_notification_evaluations(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-09",
+        intent="default-observed-intent",
     )
     assert rows[0]["decision"] == "rollout_observe_only"

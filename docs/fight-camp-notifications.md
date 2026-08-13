@@ -8,7 +8,8 @@ The backend now evaluates source-backed notification intents as one athlete/day 
 - Safety and source events have separate bounded caps (two and three per day respectively) and a 30-minute anti-burst interval.
 - STOP replaces normal session touches. Modified-session copy replaces session-ready copy. Preparation compounds fuel and hydration. Simultaneous week, phase, plan, camp, and XP moments compound into one delivery.
 - Completing a check-in, injury update, or session writes an action state and cancels pending/failed reminders for that exact athlete action.
-- Training time resolves from athlete preference, authoritative session schedule, same-weekday history, session-type history, recent athlete history, then a configurable low-confidence fallback. Exact countdown copy is restricted to high-confidence timing.
+- Training time resolves from athlete preference, authoritative session schedule, same-weekday history, session-type history, recent athlete history, then a configurable low-confidence fallback. History confidence uses both sample count and median absolute deviation (30 minutes for high, 90 for medium); exact countdown copy is restricted to high-confidence timing.
+- An active-camp rest day gets a bounded morning recovery check and an afternoon recovery nudge. An eligible injury or high-pain follow-up wins priority, but a disabled injury category falls through to the morning check instead of creating silence.
 - Plan publication is the only `plan_ready` trigger. Athlete-visible material changes can create `plan_updated`; structured-card-only changes do not.
 - Routine and event notifications respect quiet hours. Deferred source events retain their original expiry and are released through normal event caps/spacing, preventing a wake-up backlog burst.
 - Hydration, fuel, recovery, and weight retain distinct internal intents while temporarily mapping to existing preference categories.
@@ -25,8 +26,8 @@ The response contains coalesced evaluation facts with first/last timestamps, cou
 
 `UNLXCK_FIGHT_CAMP_NOTIFICATIONS_MODE` supports:
 
-- `send` — new orchestration evaluates and delivers (default).
-- `observe` — new orchestration records candidate decisions, then allows the existing delivery path to run.
+- `send` — new orchestration evaluates and delivers. Enable this explicitly after migration and staging validation.
+- `observe` — new orchestration records candidate decisions, then allows the existing delivery path to run (default, including for missing or invalid values).
 - `legacy` — skips new orchestration and uses the existing delivery path.
 
 `UNLXCK_NOTIFICATION_FALLBACK_TRAINING_TIME` configures the athlete-local, low-confidence fallback (`18:00` by default).

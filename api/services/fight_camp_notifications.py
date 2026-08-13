@@ -13,6 +13,7 @@ from api.contracts.command_view import CommandView
 from api.contracts.training_day import resolve_training_day_str
 from api.services.notification_foundation import (
     NotificationCandidate,
+    candidate_is_allowed,
     get_notification_preferences,
     list_notification_evaluations,
     record_notification_evaluation,
@@ -38,6 +39,7 @@ ALL_ORCHESTRATED_INTENTS = (
     "post_session_log",
     "injury_recheck",
     "high_pain_followup",
+    "recovery_checkin",
     "recovery_nudge",
     "hydration_nudge",
     "fuel_nudge",
@@ -167,6 +169,10 @@ def _candidate(
         **dict(source_event_metadata or {}),
         "template_version": template_version,
     }
+    if timing is not None:
+        metadata["timing_sample_count"] = timing.sample_count
+        if timing.median_absolute_deviation_minutes is not None:
+            metadata["timing_mad_minutes"] = timing.median_absolute_deviation_minutes
     return NotificationCandidate(
         profile_id=profile_id,
         notification_type=intent,
@@ -475,7 +481,16 @@ def build_fight_camp_candidates(
         training_day=training_day,
         now_utc=reference,
     )
-    morning_context_intent = "morning_readiness"
+    morning_fallback_intent: str | None = None
+    if active_plan and not checked_in:
+        if today_session and _window(local_now, 7, 10):
+            morning_fallback_intent = "morning_readiness"
+        elif not today_session and _window(local_now, 8, 10):
+            morning_fallback_intent = "recovery_checkin"
+    merged_morning_intents = (
+        (morning_fallback_intent,) if morning_fallback_intent is not None else ()
+    )
+
     if injury is not None and _window(local_now, 7, 20):
         injury_id = str(injury.get("id") or "tracked")
         body_area = str(injury.get("body_area") or injury.get("label") or "your injury")[:24]
@@ -494,11 +509,11 @@ def build_fight_camp_candidates(
                 tag=f"injury-recheck-{injury_id}"[:80],
                 context={"body_area": body_area},
                 action_key=f"update-injury:{injury_id}",
+                merged_intents=merged_morning_intents,
                 source_event_metadata={"injury_id": injury_id},
             )
         )
         handled.add("injury_recheck")
-        morning_context_intent = "injury_recheck"
     else:
         reason(
             "injury_recheck",
@@ -521,12 +536,11 @@ def build_fight_camp_candidates(
                 url="/today#today-checkin",
                 tag="high-pain-followup",
                 action_key=f"checkin:{training_day}",
-                merged_intents=("morning_readiness",),
+                merged_intents=merged_morning_intents,
                 source_event_metadata={"completion_id": source},
             )
         )
         handled.add("high_pain_followup")
-        morning_context_intent = "high_pain_followup"
     else:
         reason(
             "high_pain_followup",
@@ -535,8 +549,20 @@ def build_fight_camp_candidates(
             ),
         )
 
-    if active_plan and today_session and not checked_in and _window(local_now, 7, 10):
-        if morning_context_intent == "morning_readiness":
+    eligible_morning_replacement = any(
+        candidate.intent in {"injury_recheck", "high_pain_followup"}
+        and candidate_is_allowed(candidate, preferences, now_utc=reference)
+        for candidate in candidates
+    )
+
+    if morning_fallback_intent == "morning_readiness":
+        if eligible_morning_replacement:
+            reason(
+                "morning_readiness",
+                "merged_into_other_intent",
+                decision="merged_into_eligible_injury_followup",
+            )
+        else:
             candidates.append(
                 _candidate(
                     store,
@@ -550,17 +576,53 @@ def build_fight_camp_candidates(
                     training_day=training_day,
                     url="/today#today-checkin",
                     tag="morning-readiness",
+                    context={"session": session_title},
                     action_key=f"checkin:{training_day}",
                 )
             )
             handled.add("morning_readiness")
-        else:
-            reason("morning_readiness", "merged_into_other_intent", decision=f"merged_into_{morning_context_intent}")
-    elif "morning_readiness" not in handled:
+    else:
         reason(
             "morning_readiness",
-            "already_checked_in" if checked_in else (
-                "no_today_session" if not today_session else "outside_due_window"
+            "no_active_plan" if not active_plan else (
+                "already_checked_in" if checked_in else (
+                    "no_today_session" if not today_session else "outside_due_window"
+                )
+            ),
+        )
+
+    if morning_fallback_intent == "recovery_checkin":
+        if eligible_morning_replacement:
+            reason(
+                "recovery_checkin",
+                "merged_into_other_intent",
+                decision="merged_into_eligible_injury_followup",
+            )
+        else:
+            candidates.append(
+                _candidate(
+                    store,
+                    profile_id=profile_id,
+                    intent="recovery_checkin",
+                    category="checkin_reminders",
+                    priority=20,
+                    dedupe_key=f"recovery-checkin:{training_day}",
+                    expires_at=local_now.replace(hour=10, minute=0, second=0, microsecond=0),
+                    timezone_name=timezone_name,
+                    training_day=training_day,
+                    url="/today#today-checkin",
+                    tag="recovery-checkin",
+                    action_key=f"checkin:{training_day}",
+                )
+            )
+            handled.add("recovery_checkin")
+    else:
+        reason(
+            "recovery_checkin",
+            "no_active_plan" if not active_plan else (
+                "already_checked_in" if checked_in else (
+                    "today_session" if today_session else "outside_due_window"
+                )
             ),
         )
 
@@ -578,6 +640,7 @@ def build_fight_camp_candidates(
                 training_day=training_day,
                 url="/today#today-checkin",
                 tag="missed-checkin",
+                context={"session": session_title},
                 action_key=f"checkin:{training_day}",
             )
         )
@@ -746,6 +809,7 @@ def build_fight_camp_candidates(
                         training_day=training_day,
                         url="/today#today-session",
                         tag="post-session-log",
+                        context={"_session_started": started_at is not None},
                         scheduled_for=due_at,
                         timing=timing,
                         action_key=f"complete-session:{session_id}",
@@ -764,7 +828,7 @@ def build_fight_camp_candidates(
     if "fuel_nudge" not in handled:
         reason("fuel_nudge", "outside_due_window")
 
-    if active_plan and not today_session and _window(local_now, 11, 18):
+    if active_plan and not today_session and _window(local_now, 14, 18):
         candidates.append(
             _candidate(
                 store,
@@ -850,7 +914,15 @@ def dispatch_fight_camp_notifications(
     now_utc: datetime,
 ) -> FightCampDispatchResult:
     try:
-        rollout_mode = os.getenv("UNLXCK_FIGHT_CAMP_NOTIFICATIONS_MODE", "send").strip().lower()
+        rollout_mode = os.getenv(
+            "UNLXCK_FIGHT_CAMP_NOTIFICATIONS_MODE", "observe"
+        ).strip().lower()
+        if rollout_mode not in {"send", "observe", "legacy"}:
+            logger.warning(
+                "[notification] unknown rollout mode=%s; defaulting to observe",
+                rollout_mode,
+            )
+            rollout_mode = "observe"
         if rollout_mode == "legacy":
             return FightCampDispatchResult(0, 0)
         view = build_today_command_view(
@@ -882,11 +954,6 @@ def dispatch_fight_camp_notifications(
             # Returning zero candidates intentionally allows the existing worker
             # path to continue sending legacy notifications during observation.
             return FightCampDispatchResult(0, 0)
-        if rollout_mode != "send":
-            logger.warning(
-                "[notification] unknown rollout mode=%s; defaulting to send",
-                rollout_mode,
-            )
         delivered = dispatch_push_candidates(store, candidates, now_utc=now_utc) if candidates else 0
         return FightCampDispatchResult(delivered, len(candidates))
     except Exception:  # noqa: BLE001 - one athlete must not break the sweep

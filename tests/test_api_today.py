@@ -7,6 +7,7 @@ in-process FakeStore via the shared test client.
 
 from datetime import date, timedelta
 
+from api.routes import today as today_routes
 from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -370,6 +371,45 @@ class TestInjuryCheckin:
 
         assert updated.status_code == 201
         assert updated.json()["open_injuries"][0]["severity"] == "severe"
+
+    def test_injury_update_invalidates_only_the_submitted_existing_flag(self, monkeypatch):
+        invalidated_actions: list[str] = []
+        monkeypatch.setattr(
+            today_routes,
+            "invalidate_notification_action",
+            lambda _store, **kwargs: invalidated_actions.append(kwargs["action_key"]) or 0,
+        )
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        opened = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={
+                "injuries": [
+                    {"body_area": "left shoulder", "status": "ongoing"},
+                    {"body_area": "right knee", "status": "ongoing"},
+                ]
+            },
+        ).json()["open_injuries"]
+        injury_ids = {injury["body_area"]: injury["id"] for injury in opened}
+
+        invalidated_actions.clear()
+        response = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={
+                "injuries": [
+                    {
+                        "flag_id": injury_ids["left shoulder"],
+                        "status": "improving",
+                    }
+                ]
+            },
+        )
+
+        assert response.status_code == 201
+        assert invalidated_actions == [f"update-injury:{injury_ids['left shoulder']}"]
+        assert f"update-injury:{injury_ids['right knee']}" not in invalidated_actions
 
     def test_injury_checkin_refreshes_existing_readiness_recommendation(self):
         client, store, _ = _build_client()

@@ -75,6 +75,52 @@ def test_same_weekday_history_produces_high_confidence_median() -> None:
     assert result.resolved_training_time.strftime("%H:%M") == "19:00"
     assert result.timing_source == "same_weekday_history"
     assert result.timing_confidence == "high"
+    assert result.sample_count == 3
+    assert result.median_absolute_deviation_minutes == 5
+
+
+def test_same_weekday_history_with_moderate_dispersion_is_medium_confidence() -> None:
+    store = TimingStore(
+        [
+            {"training_day": "2026-08-02", "started_at": "2026-08-02T18:00:00+00:00"},
+            {"training_day": "2026-07-26", "started_at": "2026-07-26T19:00:00+00:00"},
+            {"training_day": "2026-07-19", "started_at": "2026-07-19T20:00:00+00:00"},
+        ]
+    )
+
+    result = resolve_training_time(
+        store,
+        _view("2026-08-09"),
+        NotificationPreferences(),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+    )
+
+    assert result.resolved_training_time.strftime("%H:%M") == "19:00"
+    assert result.timing_confidence == "medium"
+    assert result.median_absolute_deviation_minutes == 60
+
+
+def test_same_weekday_history_with_wild_dispersion_is_low_confidence() -> None:
+    store = TimingStore(
+        [
+            {"training_day": "2026-08-02", "started_at": "2026-08-02T18:00:00+00:00"},
+            {"training_day": "2026-07-26", "started_at": "2026-07-26T20:00:00+00:00"},
+            {"training_day": "2026-07-19", "started_at": "2026-07-19T22:30:00+00:00"},
+        ]
+    )
+
+    result = resolve_training_time(
+        store,
+        _view("2026-08-09"),
+        NotificationPreferences(),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+    )
+
+    assert result.resolved_training_time.strftime("%H:%M") == "20:00"
+    assert result.timing_confidence == "low"
+    assert result.median_absolute_deviation_minutes == 120
 
 
 def test_missing_time_uses_low_confidence_fallback_and_non_exact_copy(monkeypatch) -> None:
