@@ -21,6 +21,7 @@ EQUIP_ALIASES = {
     "resistance bands": "bands",
     "resistance band": "bands",
     "plates": "plate",
+    "kettlebells": "kettlebell",
     "sandbags": "sandbag",
     "battle rope": "battle_ropes",
     "battle ropes": "battle_ropes",

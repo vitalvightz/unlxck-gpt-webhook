@@ -263,7 +263,7 @@
       "mech_lower_squat",
       "mech_landing_impact"
     ],
-    "equipment": "barbell,box",
+    "equipment": "barbell",
     "movement_cost": "moderate",
     "impact_cost": "moderate",
     "eccentric_cost": "low",
@@ -785,6 +785,7 @@
     "name": "Jump Squat",
     "category": "lower_body",
     "phases": [
+      "GPP",
       "SPP"
     ],
     "method": "power",
@@ -826,12 +827,17 @@
       "none",
       "low"
     ],
-    "notes": "Use bodyweight or a very light load for 3-5 sets of 3 reps with full rest; stop when jump height drops."
+    "notes": "Use bodyweight or a very light load for 3-5 sets of 3 reps with full rest; stop when jump height drops.",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
   },
   {
     "name": "Box Jump",
     "category": "lower_body",
     "phases": [
+      "GPP",
       "SPP"
     ],
     "method": "plyometric",
@@ -848,7 +854,7 @@
       "mech_lower_squat",
       "mech_landing_impact"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "moderate",
     "impact_cost": "moderate",
     "eccentric_cost": "low",
@@ -870,6 +876,10 @@
     "cut_buckets_allowed": [
       "none",
       "low"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
     ]
   },
   {
@@ -1082,7 +1092,7 @@
       "mech_trunk_stability",
       "mech_lower_squat"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "moderate",
@@ -4010,7 +4020,7 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "equipment": "box/kettlebell",
+    "equipment": "kettlebell",
     "movement_cost": "high",
     "impact_cost": "moderate",
     "eccentric_cost": "low",
@@ -5614,7 +5624,7 @@
       "mech_max_velocity",
       "mech_landing_impact"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "moderate",
     "impact_cost": "moderate",
     "eccentric_cost": "low",
@@ -5800,6 +5810,10 @@
     "cut_buckets_allowed": [
       "none",
       "low"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
     ]
   },
   {
@@ -6110,7 +6124,7 @@
       "mech_landing_impact",
       "mech_ballistic"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "moderate",
     "impact_cost": "high",
     "eccentric_cost": "moderate",
@@ -6227,7 +6241,7 @@
       "mech_deceleration",
       "mech_landing_impact"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "moderate",
     "impact_cost": "moderate",
     "eccentric_cost": "low",
@@ -6309,7 +6323,7 @@
       "mech_ballistic",
       "mech_systemic_fatigue"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "high",
     "impact_cost": "moderate",
     "eccentric_cost": "low",
@@ -6900,7 +6914,7 @@
       "mech_lower_lunge",
       "mech_trunk_stability"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -7387,7 +7401,7 @@
       "mech_reactive",
       "mech_ballistic"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "moderate",
     "impact_cost": "high",
     "eccentric_cost": "moderate",
@@ -7427,7 +7441,7 @@
       "mech_deceleration",
       "mech_landing_impact"
     ],
-    "equipment": "box",
+    "equipment": "bodyweight",
     "movement_cost": "moderate",
     "impact_cost": "high",
     "eccentric_cost": "moderate",
