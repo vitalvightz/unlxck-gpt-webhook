@@ -3221,6 +3221,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "movement_caps_after_core_balance_bonus",
         lambda: _apply_movement_caps(base_exercises),
     )
+    # Safety net: the core-balance bonus and the final movement-cap fill add
+    # exercises AFTER the last injury pass and do not injury-check what they add,
+    # so an injury-excluded movement could re-enter the block when the safe pool
+    # is exhausted. Re-run the injury-safe finalizer as the terminal step so no
+    # exercise the guard classifies as "exclude" can survive — safety beats
+    # exercise count, and the finalizer already degrades quantity (and logs the
+    # degradation) when no safe replacement exists.
+    base_exercises = _run_real_poststep(
+        "injury_safe_finalize_terminal",
+        lambda: _finalize_injury_safe_exercises(base_exercises),
+    )
 
     _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])
 
