@@ -522,17 +522,34 @@ def test_set_active_endpoint_blocks_overlapping_active_plan_until_user_chooses()
         metadata={},
     )
     store.ensure_profile(athlete)
+    # Anchor both camps to today so the "current" plan stays live (its fight
+    # date must not have passed, or the overlap guard treats it as ended and
+    # the block never fires). Fixed calendar dates turn this into a time-bomb
+    # that flips 409 -> 200 once the wall clock passes the hardcoded fight date.
+    today = date.today()
+    current_end = today + timedelta(days=25)
+    draft_end = today + timedelta(days=33)
     current = store.create_plan(
         athlete_id="athlete-1",
         intake_id="intake_current",
-        request=_build_request({"fight_date": "2026-08-12"}),
-        result=finalized_result(structured_plan=_structured_date_range("2026-07-12", "2026-08-12")),
+        request=_build_request({"fight_date": current_end.isoformat()}),
+        result=finalized_result(
+            structured_plan=_structured_date_range(
+                (today - timedelta(days=6)).isoformat(),
+                current_end.isoformat(),
+            )
+        ),
     )
     draft = store.create_plan(
         athlete_id="athlete-1",
         intake_id="intake_draft",
-        request=_build_request({"fight_date": "2026-08-20"}),
-        result=finalized_result(structured_plan=_structured_date_range("2026-07-20", "2026-08-20")),
+        request=_build_request({"fight_date": draft_end.isoformat()}),
+        result=finalized_result(
+            structured_plan=_structured_date_range(
+                (today + timedelta(days=2)).isoformat(),
+                draft_end.isoformat(),
+            )
+        ),
     )
     store.set_active_plan_id("athlete-1", current["id"])
 
