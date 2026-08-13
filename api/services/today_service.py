@@ -1199,7 +1199,8 @@ def submit_today_injury_checkin(
     move to ``monitoring``, resolved ones close (stamping ``resolved_at``), and a
     reopened flag clears its ``resolved_at``. Foreign/stale ``flag_id``s can't be
     updated — only ids in the athlete's own open set are honoured. Returns the
-    refreshed open-injury list.
+    refreshed open-injury list and the exact existing flag ids successfully
+    updated by this request.
     """
     raw_injuries = payload.get("injuries") or []
     try:
@@ -1267,7 +1268,11 @@ def submit_today_injury_checkin(
             open_injuries=open_after,
             injury_reported_worse=injury_reported_worse,
         )
-    return {"open_injuries": open_after, "recommendation": refreshed_recommendation}
+    return {
+        "open_injuries": open_after,
+        "recommendation": refreshed_recommendation,
+        "updated_injury_ids": [update.flag_id for update in plan.updates],
+    }
 
 
 def _session_id_for_entry(entry: Any) -> str | None:

@@ -530,6 +530,17 @@ async def submit_manual_stage2(
     updated = await asyncio.to_thread(
         store.update_plan_stage2_if_unchanged, plan_id, result, plan_row
     )
+    try:
+        from .push_notifications import notify_plan_published_if_transition
+
+        await asyncio.to_thread(
+            notify_plan_published_if_transition,
+            store,
+            before=plan_row,
+            after=updated,
+        )
+    except Exception:  # noqa: BLE001 - push must never break admin approval
+        logger.exception("plan publication notification failed for plan_id=%s", plan_id)
     plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
     return _map_plan_detail(
         updated,
@@ -573,6 +584,17 @@ async def approve_review_required_plan(
     updated = await asyncio.to_thread(
         store.update_plan_stage2_if_unchanged, plan_id, result, plan_row
     )
+    try:
+        from .push_notifications import notify_plan_published_if_transition
+
+        await asyncio.to_thread(
+            notify_plan_published_if_transition,
+            store,
+            before=plan_row,
+            after=updated,
+        )
+    except Exception:  # noqa: BLE001 - push must never break admin approval
+        logger.exception("plan publication notification failed for plan_id=%s", plan_id)
     plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
     return _map_plan_detail(
         updated,
@@ -745,7 +767,7 @@ async def run_structured_plan_post_processing(
         should_persist_debug = debug_status not in {None, "not_attempted"} or bool(debug_errors)
         attempt_finished = STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY not in report
         if result.get("structured_plan") is not None or should_persist_debug or attempt_finished:
-            persisted = await asyncio.to_thread(
+            await asyncio.to_thread(
                 store.update_plan_structured_artifacts,
                 plan_id,
                 structured_plan=result.get("structured_plan"),
@@ -753,28 +775,9 @@ async def run_structured_plan_post_processing(
                 stage2_validator_report=report,
                 expected_final_plan_text=conversion_source_text,
             )
-            # The lock-in card's "we'll notify you": the enhanced card just went
-            # from missing to live on an athlete-visible plan. Gated on the
-            # persisted row (the narrow writer may have skipped a stale card) and
-            # on the pre-conversion snapshot so re-runs never re-notify. Push is
-            # best-effort and never fails this task.
-            if (
-                notify
-                and isinstance(persisted, dict)
-                and persisted.get("structured_plan") is not None
-                and plan_row.get("structured_plan") is None
-                and is_athlete_displayable_plan_status(
-                    str(persisted.get("status") or "").strip().lower()
-                )
-            ):
-                from .push_notifications import send_plan_ready_push
-
-                await asyncio.to_thread(
-                    send_plan_ready_push,
-                    store,
-                    athlete_id=str(persisted.get("athlete_id") or ""),
-                    plan_id=plan_id,
-                )
+            # Plan publication is the authoritative notification trigger. A
+            # later structured-card attachment changes presentation only and
+            # must not create a second "plan ready" athlete moment.
     except Exception:  # noqa: BLE001 - background work must never bubble up
         logger.exception("structured plan post-processing failed for plan_id=%s", plan_id)
 

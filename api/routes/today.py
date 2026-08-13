@@ -9,6 +9,7 @@ non-UI backend integration — no Today UI is built here.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -29,6 +30,7 @@ from api.models import (
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.services.progress_notifications import award_session_progress
+from api.services.notification_foundation import invalidate_notification_action
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import try_award_completed_week_for_completion
 from api.services.xp_awards import (
@@ -44,6 +46,8 @@ from api.services.today_readiness_boundary import (
     upsert_session_completion,
 )
 from api.store import AppStore
+
+logger = logging.getLogger(__name__)
 
 
 def _checkin_record(row: dict[str, Any]) -> TodayCheckinRecord:
@@ -74,6 +78,19 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         )
         award_checkin_xp(store, athlete_id=profile.athlete_id, checkin=row)
         record = _checkin_record(row)
+        try:
+            invalidate_notification_action(
+                store,
+                profile_id=profile.athlete_id,
+                action_key=f"checkin:{record.training_day}",
+                training_day=record.training_day,
+                source_metadata={"checkin_id": str(row.get("id") or "")},
+            )
+        except Exception:  # noqa: BLE001 - notification state must not roll back check-in
+            logger.exception(
+                "[notification] check-in action invalidation failed profile_id=%s",
+                profile.athlete_id,
+            )
         signal = row.get("readiness_signal") or {}
         return TodayCheckinResponse(
             checkin=record,
@@ -127,6 +144,27 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             training_day=training_day,
             updated_injuries=request_body.injuries,
         )
+        # The refreshed response contains every open injury, including untouched
+        # flags. Only invalidate follow-ups for flags this request changed.
+        for updated_injury_id in result.get("updated_injury_ids", []):
+            injury_id = str(updated_injury_id or "").strip()
+            if not injury_id:
+                continue
+            try:
+                invalidate_notification_action(
+                    store,
+                    profile_id=profile.athlete_id,
+                    action_key=f"update-injury:{injury_id}",
+                    training_day=training_day,
+                    completed_at=request_now,
+                    source_metadata={"injury_id": injury_id},
+                )
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "[notification] injury action invalidation failed profile_id=%s injury_id=%s",
+                    profile.athlete_id,
+                    injury_id,
+                )
         return TodayInjuryCheckinResponse(
             open_injuries=[InjuryFlagRecord(**row) for row in result.get("open_injuries", [])],
         )
@@ -202,6 +240,20 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=request_body.model_dump(),
         )
         completion_status = completion_status_of(row)
+        if completion_status in {"done", "modified", "skipped"}:
+            try:
+                invalidate_notification_action(
+                    store,
+                    profile_id=profile.athlete_id,
+                    action_key=f"complete-session:{row.get('session_id') or request_body.session_id}",
+                    training_day=str(row.get("training_day") or request_body.training_day),
+                    source_metadata={"completion_id": str(row.get("id") or "")},
+                )
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "[notification] session action invalidation failed profile_id=%s",
+                    profile.athlete_id,
+                )
         # Preserve the completion record, but only the single server-resolved
         # active plan may drive XP. This closes the overlapping/inactive-plan
         # path without deleting legitimate history or retro logs.

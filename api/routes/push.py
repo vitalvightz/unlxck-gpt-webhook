@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from api.models import (
@@ -16,6 +16,7 @@ from api.notification_models import (
 from api.services.notification_foundation import (
     NotificationStoreError,
     get_notification_preferences,
+    list_notification_evaluations,
     update_notification_preferences,
 )
 from api.services.progress_notifications import send_coach_message_notification
@@ -147,5 +148,35 @@ def build_push_router(*, require_profile, require_admin, get_store) -> APIRouter
             urgent=request.urgent,
         )
         return {"ok": True, "delivered_count": delivered}
+
+    @router.get("/api/admin/notifications/diagnostics")
+    def notification_diagnostics(
+        athlete_id: str = Query(min_length=1, max_length=80),
+        training_day: str = Query(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        intent: str | None = Query(default=None, min_length=1, max_length=64),
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> dict[str, object]:
+        athlete = store.get_admin_athlete(athlete_id)
+        if not athlete:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        try:
+            evaluations = list_notification_evaluations(
+                store,
+                profile_id=athlete_id,
+                training_day=training_day,
+                intent=intent,
+            )
+        except NotificationStoreError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="notification diagnostics temporarily unavailable",
+            ) from exc
+        return {
+            "athlete_id": athlete_id,
+            "training_day": training_day,
+            "intent": intent,
+            "evaluations": evaluations,
+        }
 
     return router

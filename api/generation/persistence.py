@@ -22,6 +22,7 @@ from ..structured_plan_generation import has_clean_structured_card
 from .errors import TriageResumeMissingPlanError
 from .time_utils import utc_now_iso
 from .triage import _compact_generation_job_final_result
+from ..services.push_notifications import notify_plan_published_if_transition
 
 logger = logging.getLogger(__name__)
 
@@ -436,6 +437,7 @@ async def persist_plan_and_finalize(
     (the caller then falls through to its finally block, as before).
     """
     plan_row: dict[str, Any] | None = None
+    previous_plan_row: dict[str, Any] | None = None
     emit_milestone(
         "plan_persisting",
         "Saving plan row",
@@ -481,6 +483,7 @@ async def persist_plan_and_finalize(
     )
 
     if plan_row and plan_id:
+        previous_plan_row = dict(plan_row)
         # Preserve triage-approval audit markers so they aren't lost when
         # updating the existing plan in-place (important for admin resume flows).
         existing_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
@@ -535,6 +538,20 @@ async def persist_plan_and_finalize(
         plan_id = str(plan_row.get("id") or "") or None
     if not plan_id:
         raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
+    try:
+        await asyncio.to_thread(
+            notify_plan_published_if_transition,
+            store,
+            before=previous_plan_row,
+            after=plan_row,
+            timezone_name=request_body.athlete.athlete_timezone or "UTC",
+        )
+    except Exception:  # noqa: BLE001 - push must never break canonical persistence
+        logger.exception(
+            "[notification] plan publication delivery failed athlete_id=%s plan_id=%s",
+            athlete_id,
+            plan_id,
+        )
     job = await asyncio.to_thread(
         store.update_generation_job,
         job_id,
