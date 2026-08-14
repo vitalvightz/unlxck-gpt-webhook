@@ -27,7 +27,7 @@
     "notes": "Builds aerobic base and supports recovery between rounds. Low joint stress. Ideal for morning or recovery sessions.",
     "rest_sec": 3600,
     "total_minutes": 60,
-    "rpe": 9,
+    "rpe": 4,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -377,7 +377,7 @@
     "name": "Light Sled Push",
     "system": "aerobic",
     "duration": "5x20m @ 60% effort",
-    "intensity": "60-70% max HR",
+    "intensity": "60–70% max HR (Zone 2)",
     "volume": "2-3x/week",
     "equipment": [
       "sled"
@@ -397,7 +397,7 @@
     "work_sec": 20,
     "rounds": 5,
     "total_minutes": 1.67,
-    "rpe": 9,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "low",
@@ -527,8 +527,8 @@
     ],
     "name": "Assault Bike Steady State",
     "system": "aerobic",
-    "duration": "20-30 minutes",
-    "intensity": "65-75% max HR",
+    "duration": "25-35 minutes",
+    "intensity": "65–75% max HR (Zone 2)",
     "volume": "2-4x/week",
     "equipment": [
       "assault_bike"
@@ -546,8 +546,8 @@
     ],
     "notes": "Full-body aerobic work with zero joint impact. Can be used as active recovery or steady conditioning.",
     "rest_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 9,
+    "total_minutes": 35,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -597,8 +597,8 @@
     ],
     "name": "Rowing Machine Steady State",
     "system": "aerobic",
-    "duration": "20-30 minutes",
-    "intensity": "65-70% max HR",
+    "duration": "25-35 minutes",
+    "intensity": "65–70% max HR (Zone 2)",
     "volume": "2-4x/week",
     "equipment": [
       "rower"
@@ -618,8 +618,8 @@
     ],
     "notes": "Full-body cardio with emphasis on posterior chain. Zero impact makes it ideal for recovery.",
     "rest_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 9,
+    "total_minutes": 35,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -675,8 +675,8 @@
     ],
     "name": "Ski Erg Steady",
     "system": "aerobic",
-    "duration": "15-20 minutes",
-    "intensity": "65-75% max HR",
+    "duration": "20-25 minutes",
+    "intensity": "65–75% max HR (Zone 2)",
     "volume": "2-3x/week",
     "equipment": [
       "ski_erg"
@@ -693,8 +693,8 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Upper body focused cardio. Excellent for lower body injury management.",
-    "total_minutes": 20,
-    "rpe": 9,
+    "total_minutes": 25,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -783,7 +783,7 @@
     "name": "Elliptical Steady State",
     "system": "aerobic",
     "duration": "30-40 minutes",
-    "intensity": "65-75% max HR",
+    "intensity": "65–75% max HR (Zone 2)",
     "volume": "3-4x/week",
     "equipment": [
       "elliptical"
@@ -800,7 +800,7 @@
     ],
     "notes": "Very low-impact alternative to running. Good for high-volume conditioning.",
     "total_minutes": 40,
-    "rpe": 9,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -816,8 +816,8 @@
     ],
     "name": "Swimming Steady State",
     "system": "aerobic",
-    "duration": "20-30 minutes continuous",
-    "intensity": "Moderate effort",
+    "duration": "25-35 minutes continuous",
+    "intensity": "Moderate effort (Zone 2)",
     "volume": "2-3x/week",
     "equipment": [
       "pool"
@@ -833,8 +833,8 @@
     ],
     "notes": "Any stroke. Zero-impact full-body conditioning ideal for injury management or recovery.",
     "rest_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 7,
+    "total_minutes": 35,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -848,8 +848,8 @@
     ],
     "name": "Pool Running/Aqua Jogging",
     "system": "aerobic",
-    "duration": "20-30 minutes",
-    "intensity": "Moderate effort",
+    "duration": "25-35 minutes",
+    "intensity": "Moderate effort (Zone 2)",
     "volume": "2-4x/week",
     "equipment": [
       "pool"
@@ -866,8 +866,8 @@
     ],
     "notes": "Water resistance provides conditioning without any joint impact. Excellent for ankle/knee injuries.",
     "work_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 7,
+    "total_minutes": 35,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -934,7 +934,7 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Loaded carries build grip, core, and conditioning with minimal joint stress.",
-    "rpe": 9,
+    "rpe": 7,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "low",
@@ -1095,7 +1095,7 @@
     "name": "Incline Walking (Treadmill)",
     "system": "aerobic",
     "duration": "30-45 minutes @ 8-12% incline",
-    "intensity": "Moderate pace",
+    "intensity": "Moderate pace (Zone 2)",
     "volume": "3-5x/week",
     "equipment": [
       "treadmill"
@@ -1111,7 +1111,7 @@
     "notes": "Incline walking builds aerobic capacity and posterior chain with low impact.",
     "work_sec": 2700,
     "total_minutes": 45,
-    "rpe": 7,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -1126,7 +1126,7 @@
     "name": "Weighted Vest Walking",
     "system": "aerobic",
     "duration": "30-40 minutes",
-    "intensity": "Moderate pace with 10-20lb vest",
+    "intensity": "Moderate pace with 10-20lb vest (Zone 2)",
     "volume": "2-3x/week",
     "equipment": [
       "weighted_vest"
@@ -1141,7 +1141,7 @@
     "notes": "Added load increases conditioning stimulus while maintaining low impact.",
     "work_sec": 2400,
     "total_minutes": 40,
-    "rpe": 7,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -1155,8 +1155,8 @@
     ],
     "name": "Upper Body Ergometer (UBE)",
     "system": "aerobic",
-    "duration": "15-25 minutes",
-    "intensity": "65-75% max HR",
+    "duration": "20-30 minutes",
+    "intensity": "65–75% max HR (Zone 2)",
     "volume": "2-4x/week",
     "equipment": [
       "ube"
@@ -1173,8 +1173,8 @@
     ],
     "notes": "Arm crank ergometer for pure upper body cardio. Zero lower body involvement.",
     "work_sec": 1500,
-    "total_minutes": 25,
-    "rpe": 9,
+    "total_minutes": 30,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -1257,7 +1257,7 @@
     "name": "Recumbent Bike Steady",
     "system": "aerobic",
     "duration": "25-35 minutes",
-    "intensity": "65-75% max HR",
+    "intensity": "65–75% max HR (Zone 2)",
     "volume": "3-5x/week",
     "equipment": [
       "recumbent_bike"
@@ -1276,7 +1276,7 @@
     "notes": "Recumbent position provides maximal support. Excellent for injury recovery.",
     "rest_sec": 2100,
     "total_minutes": 35,
-    "rpe": 9,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
@@ -1293,7 +1293,7 @@
     "name": "Assault Runner Walking",
     "system": "aerobic",
     "duration": "20-30 minutes",
-    "intensity": "Moderate pace",
+    "intensity": "Moderate pace (Zone 2)",
     "volume": "3-4x/week",
     "equipment": [
       "assault_runner"
@@ -1309,7 +1309,7 @@
     "notes": "Self-powered curved treadmill allows natural walking mechanics with low impact.",
     "work_sec": 1800,
     "total_minutes": 30,
-    "rpe": 7,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "high",
