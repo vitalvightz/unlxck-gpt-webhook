@@ -711,6 +711,13 @@
           ]
         },
         {
+          "name": "Band-Resisted Vertical Jump",
+          "score": 0.2,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Breath Control Drills",
           "score": 0.65,
           "reason_codes": [
@@ -781,10 +788,17 @@
           ]
         },
         {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
+          "name": "Med Ball Drop Catch to Jump",
+          "score": 0.2,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Overhead Med Ball Slam (Snappy)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
           ]
         },
         {
@@ -823,10 +837,24 @@
           ]
         },
         {
+          "name": "Snapdown to Quick Hop",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Speed Bag Precision Drill",
           "score": 2.15,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Split Stance Hop Switch",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
           ]
         },
         {
@@ -837,10 +865,31 @@
           ]
         },
         {
+          "name": "Tuck Jump (Submax)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Wall Reactive Jump (Cue Start)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Yoga Flow (Dynamic)",
           "score": 0.65,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "angle entries Med Ball Toss Jump",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
           ]
         }
       ]
@@ -1542,6 +1591,13 @@
           ]
         },
         {
+          "name": "Band-Resisted Vertical Jump",
+          "score": 0.2,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Counter Striker Check-Hop",
           "score": 0.0,
           "reason_codes": [
@@ -1577,8 +1633,8 @@
           ]
         },
         {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
+          "name": "Med Ball Drop Catch to Jump",
+          "score": 0.2,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1591,15 +1647,61 @@
           ]
         },
         {
+          "name": "Snapdown to Quick Hop",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Speed Bag Precision Drill",
           "score": 2.15,
           "reason_codes": [
             "late_block_high_movement_cost"
           ]
+        },
+        {
+          "name": "Split Stance Hop Switch",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Tuck Jump (Submax)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Wall Reactive Jump (Cue Start)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "angle entries Med Ball Toss Jump",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
         }
       ]
     },
-    "ambiguous_tag_gaps": []
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Overhead Med Ball Slam (Snappy)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic",
+          "mech_shoulder_overhead",
+          "plyometric"
+        ]
+      }
+    ]
   },
   "d7": {
     "strength": {
@@ -1998,13 +2100,6 @@
           ]
         },
         {
-          "name": "Easy Continuous Swimming",
-          "score": 3.1075,
-          "reason_codes": [
-            "late_taper_safe_whitelist"
-          ]
-        },
-        {
           "name": "Foam Rolling Mobility Circuit",
           "score": 1.7575,
           "reason_codes": [
@@ -2019,34 +2114,11 @@
           ]
         },
         {
-          "name": "Low Box Jump (Fast Reset)",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact"
-          ]
-        },
-        {
           "name": "Med Ball Drop Catch to Jump",
           "score": 0.0,
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Box Depth Drop",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows"
           ]
         },
         {
@@ -2136,10 +2208,27 @@
           ]
         },
         {
+          "name": "Snapdown to Quick Hop",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact"
+          ]
+        },
+        {
           "name": "Speed Bag Precision Drill",
           "score": 2.15,
           "reason_codes": [
             "late_block_high_movement_cost"
+          ]
+        },
+        {
+          "name": "Split Stance Hop Switch",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_impact"
           ]
         },
         {
@@ -2171,10 +2260,36 @@
           ]
         },
         {
+          "name": "Tuck Jump (Submax)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact"
+          ]
+        },
+        {
+          "name": "Wall Reactive Jump (Cue Start)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_impact"
+          ]
+        },
+        {
           "name": "Yoga Flow (Dynamic)",
           "score": 2.0075,
           "reason_codes": [
             "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "angle entries Med Ball Toss Jump",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact"
           ]
         }
       ]
@@ -2596,13 +2711,6 @@
           ]
         },
         {
-          "name": "Easy Continuous Swimming",
-          "score": 3.1225,
-          "reason_codes": [
-            "late_taper_safe_whitelist"
-          ]
-        },
-        {
           "name": "Foam Rolling Mobility Circuit",
           "score": 1.7725,
           "reason_codes": [
@@ -2617,34 +2725,11 @@
           ]
         },
         {
-          "name": "Low Box Jump (Fast Reset)",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact"
-          ]
-        },
-        {
           "name": "Med Ball Drop Catch to Jump",
           "score": 0.0,
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Box Depth Drop",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows"
           ]
         },
         {
@@ -2734,10 +2819,27 @@
           ]
         },
         {
+          "name": "Snapdown to Quick Hop",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact"
+          ]
+        },
+        {
           "name": "Speed Bag Precision Drill",
           "score": 2.15,
           "reason_codes": [
             "late_block_high_movement_cost"
+          ]
+        },
+        {
+          "name": "Split Stance Hop Switch",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_impact"
           ]
         },
         {
@@ -2769,10 +2871,36 @@
           ]
         },
         {
+          "name": "Tuck Jump (Submax)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact"
+          ]
+        },
+        {
+          "name": "Wall Reactive Jump (Cue Start)",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_impact"
+          ]
+        },
+        {
           "name": "Yoga Flow (Dynamic)",
           "score": 2.0225,
           "reason_codes": [
             "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "angle entries Med Ball Toss Jump",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact"
           ]
         }
       ]
@@ -3284,13 +3412,6 @@
           ]
         },
         {
-          "name": "Easy Continuous Swimming",
-          "score": 3.1375,
-          "reason_codes": [
-            "late_taper_safe_whitelist"
-          ]
-        },
-        {
           "name": "Foam Rolling Mobility Circuit",
           "score": 0.65,
           "reason_codes": [
@@ -3305,34 +3426,11 @@
           ]
         },
         {
-          "name": "Low Box Jump (Fast Reset)",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact"
-          ]
-        },
-        {
           "name": "Med Ball Drop Catch to Jump",
           "score": 0.0,
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Box Depth Drop",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows"
           ]
         },
         {
@@ -3525,6 +3623,15 @@
           "score": 0.65,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "angle entries Med Ball Toss Jump",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact"
           ]
         }
       ]
@@ -4195,13 +4302,6 @@
           ]
         },
         {
-          "name": "Easy Continuous Swimming",
-          "score": 1.75,
-          "reason_codes": [
-            "late_conditioning_block_window_mismatch"
-          ]
-        },
-        {
           "name": "Explosive Boxing Burst Intervals",
           "score": 0.0,
           "reason_codes": [
@@ -4231,15 +4331,6 @@
           ]
         },
         {
-          "name": "Low Box Jump (Fast Reset)",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact",
-            "late_block_d1_forbidden_modality"
-          ]
-        },
-        {
           "name": "Med Ball Drop Catch to Jump",
           "score": 0.0,
           "reason_codes": [
@@ -4247,23 +4338,6 @@
             "late_block_high_impact",
             "late_block_d1_forbidden_modality",
             "late_block_d1_equipment"
-          ]
-        },
-        {
-          "name": "Mini Box Depth Drop",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_high_impact",
-            "late_block_d1_forbidden_modality"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_d1_forbidden_modality"
           ]
         },
         {
@@ -4477,6 +4551,17 @@
           "score": 0.65,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "angle entries Med Ball Toss Jump",
+          "score": 0.95,
+          "reason_codes": [
+            "late_block_missing_late_windows",
+            "late_block_high_rpe",
+            "late_block_high_impact",
+            "late_block_d1_forbidden_modality",
+            "late_block_d1_equipment"
           ]
         }
       ]

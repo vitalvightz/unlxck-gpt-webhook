@@ -1513,7 +1513,6 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                     "countdown_label": "D-13",
                     "blocked_drills": [
                         "Band-Resisted Sprint Start",
-                        "Band-Resisted Sprint Starts (ATP-PCr)",
                         "resisted acceleration",
                         "sprint start",
                     ],
@@ -1533,7 +1532,6 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                     "blocked_drills": [
                         "Band-Assisted Jump Reset",
                         "Band-Resisted Sprint Start",
-                        "Band-Resisted Sprint Starts (ATP-PCr)",
                         "kettlebell",
                         "kettlebell swing",
                         "power clean",
@@ -1578,7 +1576,6 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                         "band",
                         "banded",
                         "Band-Resisted Sprint Start",
-                        "Band-Resisted Sprint Starts (ATP-PCr)",
                         "Jump Reset",
                         "Heavy Bag",
                         "Pull-Up Hold",

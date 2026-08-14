@@ -94,7 +94,6 @@ PLAIN_CONDITIONING_NAME_MAP = {
     "Assault Bike Steady State - Counter Striker": "Assault Bike Steady State",
     "Assault Bike Zone 2 Steady": "Easy Assault Bike",
     "Bike Zone 2 (Nasal Only)": "Easy Bike",
-    "Tempo Shadowboxing (Aerobic)": "Tempo Shadowboxing",
     "Sled Harness Backward Drag": "Backward Sled Drag",
     "Dynamic Plank-to-Punch": "Plank Punch Reach",
     "Clinch-Fighter Neck Endurance": "Neck Endurance Circuit",

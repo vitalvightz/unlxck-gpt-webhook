@@ -95,6 +95,8 @@ export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = [
   { label: "Sandbag", value: "sandbag" },
   { label: "Battle Ropes", value: "battle_ropes" },
   { label: "Agility Ladder", value: "agility_ladder" },
+  { label: "Jump Rope", value: "jump_rope" },
+  { label: "Hurdles", value: "hurdles" },
   { label: "Atlas Stones", value: "atlas_stone" },
   { label: "Bench", value: "bench" },
   { label: "Bosu Ball", value: "bosu_ball" },

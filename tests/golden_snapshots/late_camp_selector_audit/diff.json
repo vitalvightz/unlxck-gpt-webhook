@@ -164,6 +164,7 @@
       "newly_blocked": [
         "Agility Ladder (Recovery)",
         "Assault Bike Steady State - Counter Striker",
+        "Band-Resisted Vertical Jump",
         "Breath Control Drills",
         "Cooldown Flow (Striking + Mobility)",
         "Counter Striker Check-Hop",
@@ -174,15 +175,21 @@
         "Easy Bike",
         "Explosive Boxing Burst Intervals",
         "Foam Rolling Mobility Circuit",
-        "Mini Hurdle Quick Steps",
+        "Med Ball Drop Catch to Jump",
+        "Overhead Med Ball Slam (Snappy)",
         "Plank Hold - Counter Striker",
         "Reactive Shuffle Repeats",
         "Recovery Cycling (Nasal Breathing)",
         "Rogue Echo Bike Recovery Spin",
         "Shadowboxing (Light Pace)",
+        "Snapdown to Quick Hop",
         "Speed Bag Precision Drill",
+        "Split Stance Hop Switch",
         "Striking Combos @ 20% Effort",
-        "Yoga Flow (Dynamic)"
+        "Tuck Jump (Submax)",
+        "Wall Reactive Jump (Cue Start)",
+        "Yoga Flow (Dynamic)",
+        "angle entries Med Ball Toss Jump"
       ],
       "no_longer_blocked": []
     },
@@ -319,18 +326,35 @@
       ],
       "newly_blocked": [
         "Assault Bike Steady State - Counter Striker",
+        "Band-Resisted Vertical Jump",
         "Counter Striker Check-Hop",
         "Counter Striker Pull-Jump",
         "Counter Striker Roll-Jump",
         "Counter Striker Slip-Jump",
         "Counter-Striker Snap Hops",
-        "Mini Hurdle Quick Steps",
+        "Med Ball Drop Catch to Jump",
         "Plank Hold - Counter Striker",
-        "Speed Bag Precision Drill"
+        "Snapdown to Quick Hop",
+        "Speed Bag Precision Drill",
+        "Split Stance Hop Switch",
+        "Tuck Jump (Submax)",
+        "Wall Reactive Jump (Cue Start)",
+        "angle entries Med Ball Toss Jump"
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [],
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Overhead Med Ball Slam (Snappy)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic",
+          "mech_shoulder_overhead",
+          "plyometric"
+        ]
+      }
+    ],
     "ambiguous_tag_gaps_removed": []
   },
   "d7": {
@@ -419,13 +443,9 @@
         "Counter Striker Slip-Jump",
         "Counter-Striker Snap Hops",
         "Defensive Rhythm Flow",
-        "Easy Continuous Swimming",
         "Foam Rolling Mobility Circuit",
         "Lateral Exit to Re-Enter",
-        "Low Box Jump (Fast Reset)",
         "Med Ball Drop Catch to Jump",
-        "Mini Box Depth Drop",
-        "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
         "Overhead Med Ball Slam (Snappy)",
@@ -438,12 +458,17 @@
         "Ring Cut-Off Walkdown",
         "Rogue Echo Bike Recovery Spin",
         "Shadowboxing (Light Pace)",
+        "Snapdown to Quick Hop",
         "Speed Bag Precision Drill",
+        "Split Stance Hop Switch",
         "Stance Reset Line Drill",
         "Step-Back Pivot Reset",
         "Striking Combos @ 20% Effort",
         "Tempo Shadowboxing",
-        "Yoga Flow (Dynamic)"
+        "Tuck Jump (Submax)",
+        "Wall Reactive Jump (Cue Start)",
+        "Yoga Flow (Dynamic)",
+        "angle entries Med Ball Toss Jump"
       ],
       "no_longer_blocked": []
     },
@@ -548,13 +573,9 @@
         "Counter Striker Slip-Jump",
         "Counter-Striker Snap Hops",
         "Defensive Rhythm Flow",
-        "Easy Continuous Swimming",
         "Foam Rolling Mobility Circuit",
         "Lateral Exit to Re-Enter",
-        "Low Box Jump (Fast Reset)",
         "Med Ball Drop Catch to Jump",
-        "Mini Box Depth Drop",
-        "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
         "Overhead Med Ball Slam (Snappy)",
@@ -567,12 +588,17 @@
         "Ring Cut-Off Walkdown",
         "Rogue Echo Bike Recovery Spin",
         "Shadowboxing (Light Pace)",
+        "Snapdown to Quick Hop",
         "Speed Bag Precision Drill",
+        "Split Stance Hop Switch",
         "Stance Reset Line Drill",
         "Step-Back Pivot Reset",
         "Striking Combos @ 20% Effort",
         "Tempo Shadowboxing",
-        "Yoga Flow (Dynamic)"
+        "Tuck Jump (Submax)",
+        "Wall Reactive Jump (Cue Start)",
+        "Yoga Flow (Dynamic)",
+        "angle entries Med Ball Toss Jump"
       ],
       "no_longer_blocked": []
     },
@@ -688,13 +714,9 @@
         "Counter-Striker Snap Hops",
         "Defensive Rhythm Flow",
         "Easy Bike",
-        "Easy Continuous Swimming",
         "Foam Rolling Mobility Circuit",
         "Lateral Exit to Re-Enter",
-        "Low Box Jump (Fast Reset)",
         "Med Ball Drop Catch to Jump",
-        "Mini Box Depth Drop",
-        "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
         "Overhead Med Ball Slam (Snappy)",
@@ -720,7 +742,8 @@
         "Tempo Shadowboxing",
         "Tuck Jump (Submax)",
         "Wall Reactive Jump (Cue Start)",
-        "Yoga Flow (Dynamic)"
+        "Yoga Flow (Dynamic)",
+        "angle entries Med Ball Toss Jump"
       ],
       "no_longer_blocked": []
     },
@@ -847,14 +870,10 @@
         "Defensive Rhythm Flow",
         "Easy Assault Bike",
         "Easy Bike",
-        "Easy Continuous Swimming",
         "Explosive Boxing Burst Intervals",
         "Foam Rolling Mobility Circuit",
         "Lateral Exit to Re-Enter",
-        "Low Box Jump (Fast Reset)",
         "Med Ball Drop Catch to Jump",
-        "Mini Box Depth Drop",
-        "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
         "Overhead Med Ball Slam (Snappy)",
@@ -881,7 +900,8 @@
         "Tempo Shadowboxing",
         "Tuck Jump (Submax)",
         "Wall Reactive Jump (Cue Start)",
-        "Yoga Flow (Dynamic)"
+        "Yoga Flow (Dynamic)",
+        "angle entries Med Ball Toss Jump"
       ],
       "no_longer_blocked": []
     },

@@ -245,7 +245,7 @@ def test_review_stage2_output_still_blocks_d13_band_resisted_drill_via_dedicated
         planning_brief=planning_brief,
         final_plan_text="""
         D-13 - Sharpness
-        - Band-Resisted Sprint Starts (ATP-PCr) - 3 x 5 m
+        - Band-Resisted Sprint Start - 3 x 5 m
         """,
     )
 

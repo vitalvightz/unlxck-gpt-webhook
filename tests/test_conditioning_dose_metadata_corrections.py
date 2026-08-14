@@ -2,7 +2,7 @@
 
 These guard four narrow corrections:
 
-1. ``Treadmill Hill Sprints (Glycolytic)`` encodes ``6x20s, 1:40 rest`` as
+1. ``Treadmill Hill Sprints`` encodes ``6x20s, 1:40 rest`` as
    20s work / 100s rest / 6 rounds, with the bank's elapsed-session convention
    ``(6*20 + 5*100)/60 = 10.33`` minutes -- not a 1:40 work:rest ratio.
 2. ``SkiErg Recovery Flow`` is continuous recovery work and must not carry a
@@ -52,7 +52,7 @@ def _selector_equipment_eligible(drill: dict, athlete_equipment: list[str]) -> b
 
 
 def test_treadmill_hill_sprints_encodes_20s_work_100s_rest_six_rounds():
-    drill = _BANK["Treadmill Hill Sprints (Glycolytic)"]
+    drill = _BANK["Treadmill Hill Sprints"]
     assert drill["work_sec"] == 20
     assert drill["rest_sec"] == 100  # 1:40 == 100 seconds, not a 1:40 ratio
     assert drill["rounds"] == 6
@@ -60,7 +60,7 @@ def test_treadmill_hill_sprints_encodes_20s_work_100s_rest_six_rounds():
 
 
 def test_treadmill_hill_sprints_total_minutes_matches_elapsed_convention():
-    drill = _BANK["Treadmill Hill Sprints (Glycolytic)"]
+    drill = _BANK["Treadmill Hill Sprints"]
     work_sec = drill["work_sec"]
     rest_sec = drill["rest_sec"]
     rounds = drill["rounds"]
@@ -69,7 +69,7 @@ def test_treadmill_hill_sprints_total_minutes_matches_elapsed_convention():
 
 
 def test_treadmill_hill_sprints_preserves_glycolytic_purpose():
-    drill = _BANK["Treadmill Hill Sprints (Glycolytic)"]
+    drill = _BANK["Treadmill Hill Sprints"]
     assert drill["system"] == "glycolytic"
     assert drill["phases"] == ["GPP"]
     assert drill["lactate_load"] == "high"

@@ -118,7 +118,7 @@ def test_allowed_exercises_by_day_uses_scheduled_roles_not_plan_wide_pool():
     assert allowed["D-1"] == []
     assert "Reactive Shuffle Repeats" not in allowed["D-1"]
     assert "Staggered-Stance Medicine-Ball Punch Throw" not in allowed["D-2"]
-    assert "Band-Resisted Sprint Starts (ATP-PCr)" not in allowed["D-13"]
+    assert "Band-Resisted Sprint Start" not in allowed["D-13"]
 
 
 def test_d13_power_transfer_drill_is_blocked_on_freshness_day():
