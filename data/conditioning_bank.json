@@ -399,7 +399,8 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "zone 2"
   },
   {
     "name": "Bike Zone 2 (Nasal Only)",
@@ -432,7 +433,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "zone 2"
   },
   {
     "name": "Swim Intervals (Freestyle)",
@@ -462,7 +464,8 @@
       "mech_trunk_stability",
       "mech_upper_pull"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "zone 2"
   },
   {
     "name": "Step Mill (No Hands)",
@@ -492,7 +495,8 @@
       "mech_lower_squat",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "zone 2"
   },
   {
     "name": "Shadowboxing (Light Pace)",
@@ -526,7 +530,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Rowing (Zone 2)",
@@ -557,7 +562,8 @@
       "mech_trunk_stability",
       "mech_upper_pull"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "zone 2"
   },
   {
     "name": "Hiking (Weighted Vest)",
@@ -584,7 +590,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "zone 2"
   },
   {
     "name": "Jump Rope (Recovery Pace)",
@@ -619,7 +626,8 @@
       "foot",
       "shin"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Sled Drag Walk",
@@ -654,7 +662,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "moderate"
   },
   {
     "name": "Recumbent Bike",
@@ -688,7 +697,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "zone 2"
   },
   {
     "name": "Arm Ergometer",
@@ -716,7 +726,8 @@
       "mech_systemic_fatigue",
       "mech_upper_pull"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "zone 2"
   },
   {
     "name": "Yoga Flow (Dynamic)",
@@ -747,7 +758,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Farmers Walk (Light)",
@@ -779,7 +791,8 @@
       "mech_trunk_stability",
       "mech_upper_carry"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "moderate"
   },
   {
     "name": "Stair Climbing (Recovery)",
@@ -806,7 +819,8 @@
       "mech_lower_squat",
       "mech_systemic_fatigue"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Elliptical (Nasal Only)",
@@ -840,7 +854,8 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "zone 2"
   },
   {
     "name": "Low-intensity capacity circuits (non-steady)",
@@ -866,7 +881,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "zone 2"
   },
   {
     "name": "Breath Control Drills",
@@ -893,7 +909,8 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "low"
   },
   {
     "name": "Sandbag Carry (Light)",
@@ -926,7 +943,8 @@
       "mech_upper_carry",
       "mech_upper_press"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Agility Ladder (Recovery)",
@@ -3177,7 +3195,8 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "zone 2"
   },
   {
     "name": "Water Jug Carries (No Sled)",
@@ -3210,7 +3229,8 @@
       "mech_trunk_stability",
       "mech_upper_carry"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Tire Flip Drag (No Sled)",
@@ -3272,7 +3292,8 @@
       "mech_lower_squat",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Dynamic Visual Tracking Drills",
@@ -5752,7 +5773,8 @@
       "mech_lower_lunge",
       "mech_reactive"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Med Ball Drop Catch to Jump",
