@@ -1009,7 +1009,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Medicine Ball Rotational Throw",
@@ -1043,7 +1044,8 @@
       "mech_lower_hip_hinge",
       "mech_trunk_rotation"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Depth Jump to Sprint",
@@ -1079,7 +1081,8 @@
       "mech_reactive",
       "mech_reactive_rebound"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Plyo Push-Up to Sprint",
@@ -1120,7 +1123,8 @@
       "mech_shoulder_overhead",
       "mech_upper_press"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Sled Sprint (Empty)",
@@ -1161,7 +1165,8 @@
       "mech_max_velocity",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Box Jump (Stick Landing)",
@@ -1194,7 +1199,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "KB Swing (Heavy)",
@@ -1228,7 +1234,8 @@
       "mech_grip_support",
       "mech_lower_hip_hinge"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Alternating Bound",
@@ -1261,7 +1268,8 @@
       "mech_reactive",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Med Ball Chest Pass (Reactive)",
@@ -1294,7 +1302,8 @@
       "mech_reactive",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Hurdle Hop (Stick Landing)",
@@ -1329,7 +1338,8 @@
       "mech_reactive",
       "mech_reactive_rebound"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Band-Resisted Sprint Start",
@@ -1367,7 +1377,8 @@
       "mech_lower_hip_hinge",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Depth Drop to Vertical",
@@ -1402,7 +1413,8 @@
       "mech_reactive",
       "mech_reactive_rebound"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Sled Push (Light)",
@@ -1437,7 +1449,8 @@
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Single-Leg Hop (Stabilize)",
@@ -1468,7 +1481,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Wall Ball Shot (Max Height)",
@@ -1501,7 +1515,8 @@
       "mech_lower_squat",
       "mech_shoulder_overhead"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Broad Jump (Stick Landing)",
@@ -1532,7 +1547,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Split Jump (Alternating)",
@@ -1567,7 +1583,8 @@
       "mech_reactive",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Med Ball Slam (Rotational)",
@@ -1600,7 +1617,8 @@
       "mech_shoulder_overhead",
       "mech_trunk_rotation"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Box Jump-Over (Continuous)",
@@ -1635,7 +1653,8 @@
       "mech_reactive",
       "mech_reactive_rebound"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Band-Resisted Lateral Bound",
@@ -1670,7 +1689,8 @@
       "mech_lower_lateral",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Thai Clinch EMOM",
@@ -1705,7 +1725,8 @@
       "mech_trunk_stability",
       "mech_upper_pull"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Takedown Sprawl Circuit",
@@ -1740,7 +1761,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Pad Round Triples",
@@ -1771,7 +1793,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Grappler Escape Chains",
@@ -1802,7 +1825,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Wall Drill Intervals",
@@ -1833,7 +1857,8 @@
       "mech_lower_hip_hinge",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Sandbag Shouldering",
@@ -1871,7 +1896,8 @@
       "mech_shoulder_overhead",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Battle Rope Gauntlet",
@@ -1910,7 +1936,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Tire Flip Sprints",
@@ -1947,7 +1974,8 @@
       "mech_lower_hip_hinge",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Kettlebell Snatch Test",
@@ -1983,7 +2011,8 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Sled Drag Intervals",
@@ -2026,7 +2055,8 @@
       "mech_trunk_stability",
       "mech_upper_pull"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Sprawl-Burpee Complex",
@@ -2060,7 +2090,8 @@
       "mech_systemic_fatigue",
       "mech_upper_press"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Rope Climb Sprints",
@@ -2101,7 +2132,8 @@
       "mech_reactive",
       "mech_upper_pull"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Med Ball Circuit",
@@ -2133,7 +2165,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Hill Sprint Repeats",
@@ -2170,7 +2203,8 @@
       "mech_lower_hip_hinge",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Wrestler Shot Series",
@@ -2205,7 +2239,8 @@
       "mech_lower_lunge",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Stair Running Intervals",
@@ -2238,7 +2273,8 @@
       "mech_lower_squat",
       "mech_systemic_fatigue"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Heavy Bag Power Rounds",
@@ -2276,7 +2312,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Sandbag Get-Up Complex",
@@ -2310,7 +2347,8 @@
       "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Sledgehammer Strikes",
@@ -2348,7 +2386,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Defensive Movement Drill",
@@ -2379,7 +2418,8 @@
       "mech_reactive",
       "mech_trunk_rotation"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Ground-N-Pound Intervals",
@@ -2410,7 +2450,8 @@
       "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Clinch Knee-to-Teep Drill",
@@ -2441,7 +2482,8 @@
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Towel Pull-Up Sprints",
@@ -2477,7 +2519,8 @@
       "mech_reactive",
       "mech_upper_pull"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Plyo Push-Up Burpee",
@@ -2510,7 +2553,8 @@
       "mech_systemic_fatigue",
       "mech_upper_press"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Sled Push-Pull Complex",
@@ -2549,7 +2593,8 @@
       "mech_trunk_stability",
       "mech_upper_pull"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Wall Ball Conditioning",
@@ -2582,7 +2627,8 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Agility Ladder Power Drills",
@@ -2616,7 +2662,8 @@
       "mech_reactive",
       "mech_trunk_stability"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Sandbag Bearhug Carry",
@@ -2652,7 +2699,8 @@
       "mech_upper_carry",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Striking Combos Under Fatigue",
@@ -2683,7 +2731,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Tire Slam Intervals",
@@ -2720,7 +2769,8 @@
       "mech_shoulder_overhead",
       "mech_trunk_rotation"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Defensive Level Change Drill",
@@ -2753,7 +2803,8 @@
       "mech_lower_squat",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Plyo Step-Up Jumps",
@@ -2788,7 +2839,8 @@
       "mech_lower_lunge",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Rope Wave Sprints",
@@ -2826,7 +2878,8 @@
       "mech_reactive",
       "mech_shoulder_overhead"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Overhead Carry Complex",
@@ -2860,7 +2913,8 @@
       "mech_trunk_stability",
       "mech_upper_carry"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Sprawl-to-Stand Sprint",
@@ -2896,7 +2950,8 @@
       "mech_lower_lunge",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Med Ball Reaction Drill",
@@ -2929,7 +2984,8 @@
       "mech_reactive",
       "mech_trunk_rotation"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Kettlebell Snatch Complex",
@@ -2963,7 +3019,8 @@
       "mech_lower_hip_hinge",
       "mech_shoulder_overhead"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Sandbag Clean & Carry",
@@ -2999,7 +3056,8 @@
       "mech_upper_carry",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Striking Defense Circuits",
@@ -3034,7 +3092,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Sled Drag Sprint Complex",
@@ -3074,7 +3133,8 @@
       "mech_trunk_stability",
       "mech_upper_pull"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "MMA Gauntlet (Strike-Grapple-Strike)",
@@ -3106,7 +3166,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Boxing Punishment Drill (Bad Position Rounds)",
@@ -3137,7 +3198,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Wrestler Chain Reaction Sparring",
@@ -3170,7 +3232,8 @@
       "mech_reactive",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Heat Acclimation Rounds",
@@ -3263,7 +3326,8 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Backpack Step-Ups (No Weight Vest)",
@@ -3323,7 +3387,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "low"
   },
   {
     "name": "Tactical Breathing Recovery",
@@ -3352,7 +3417,8 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "low"
   },
   {
     "name": "Assault Bike :10s Sprints (ATP-PCr)",
@@ -5629,7 +5695,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Pogo Jump Series (Mini Bounce)",
@@ -5667,7 +5734,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Band-Resisted Vertical Jump",
@@ -5702,7 +5770,8 @@
       "mech_reactive",
       "mech_trunk_stability"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Snapdown to Quick Hop",
@@ -5737,7 +5806,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Mini Hurdle Quick Steps",
@@ -5809,7 +5879,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Mini Box Depth Drop",
@@ -5842,7 +5913,8 @@
       "mech_reactive",
       "mech_reactive_rebound"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Band-Assisted Jump Reset",
@@ -5879,7 +5951,8 @@
       "mech_reactive",
       "mech_shoulder_overhead"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Explosive Boxing Burst Intervals",
@@ -5919,7 +5992,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "intensity": "moderate"
   },
   {
     "name": "Reactive Shuffle Repeats",
@@ -5956,7 +6030,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_reactive"
-    ]
+    ],
+    "intensity": "moderate"
   },
   {
     "name": "Wall Reactive Jump (Cue Start)",
@@ -5989,7 +6064,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Quick Lateral Hop Tap",
@@ -6027,7 +6103,8 @@
       "mech_reactive",
       "mech_trunk_stability"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Tuck Jump (Submax)",
@@ -6060,7 +6137,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Band-Resisted Split Jump",
@@ -6097,7 +6175,8 @@
       "mech_reactive"
     ],
     "late_windows": [],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Single-Leg Med Ball Toss Jump",
@@ -6132,7 +6211,8 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Split Stance Hop Switch",
@@ -6170,7 +6250,8 @@
       "mech_reactive",
       "mech_trunk_stability"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "intensity": "low"
   },
   {
     "name": "Reactive Med Ball Chest Pass",
@@ -6208,7 +6289,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Plyo Push-Up on Knees",
@@ -6248,7 +6330,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Band-Resisted Straight Punch Release",
@@ -6290,7 +6373,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Overhead Med Ball Slam (Snappy)",
@@ -6328,7 +6412,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 8
+    "rpe": 8,
+    "intensity": "high"
   },
   {
     "name": "Seated Med Ball Chest Pop",
@@ -6368,7 +6453,8 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "intensity": "moderate"
   },
   {
     "name": "Partner Manual Neck Resistance",
