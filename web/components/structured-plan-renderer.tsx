@@ -78,6 +78,7 @@ import {
   applySourceSetRange,
   getSourcePrescriptionRangeOverrides,
   stripSafetyOwnedClause,
+  stripSafetyOwnedStopRules,
 } from "@/lib/block-display-guardrails";
 import type {
   DeterministicNutritionPhase,
@@ -349,7 +350,11 @@ export function BlockCard({
   // A week directive owns progression/deload programming for open plans, while
   // block stop criteria are safety instructions and must always remain visible.
   const showProgressionAside = Boolean(progression && !weekDirective);
-  const compactStopRule = stopRules.map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim()).find(Boolean) || null;
+  // Drop stop-rule criteria that only restate injury-safety escalation the
+  // Safety Priority card already owns, so the block keeps its own criterion
+  // (technique/form/speed) instead of duplicating the centralised red flag.
+  const blockStopRules = stripSafetyOwnedStopRules(stopRules, planSafetyTexts);
+  const compactStopRule = blockStopRules.map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim()).find(Boolean) || null;
   const adjustmentRules = [
     ...(showProgressionAside && progression
       ? [{ label: "Progress" as const, text: progression }]

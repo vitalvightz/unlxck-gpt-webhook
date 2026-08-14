@@ -1488,6 +1488,21 @@ def _classify_prescription_type(exercise: dict) -> str:
     tags = set(normalize_tags(exercise.get("tags") or []))
     equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
     name = (exercise.get("name") or "").lower()
+    method = str(exercise.get("method") or "").strip().lower()
+
+    # Jumps, hops and bounds are ballistic power work and must not inherit the
+    # barbell %1RM strength template just because they use a loaded implement
+    # (e.g. a trap-bar jump). Contrast/complex pairs ("Heavy RDL -> Broad Jump")
+    # are the exception: the loaded first half legitimately wants the contrast
+    # prescription, so they fall through to the barbell branch.
+    is_contrast_pair = "→" in name or "->" in name or "contrast_pairing" in tags
+    is_jump_pattern = (
+        method == "plyometric"
+        or "mech_lower_jump" in tags
+        or bool(re.search(r"\b(?:jump|jumps|bound|bounds|hop|hops|pogo)\b", name))
+    )
+    if is_jump_pattern and not is_contrast_pair:
+        return "ballistic"
 
     if equipment.intersection({"barbell", "trap_bar"}):
         return "barbell"
@@ -3220,6 +3235,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _run_real_poststep(
         "movement_caps_after_core_balance_bonus",
         lambda: _apply_movement_caps(base_exercises),
+    )
+    # Safety net: the core-balance bonus and the final movement-cap fill add
+    # exercises AFTER the last injury pass and do not injury-check what they add,
+    # so an injury-excluded movement could re-enter the block when the safe pool
+    # is exhausted. Re-run the injury-safe finalizer as the terminal step so no
+    # exercise the guard classifies as "exclude" can survive — safety beats
+    # exercise count, and the finalizer already degrades quantity (and logs the
+    # degradation) when no safe replacement exists.
+    base_exercises = _run_real_poststep(
+        "injury_safe_finalize_terminal",
+        lambda: _finalize_injury_safe_exercises(base_exercises),
     )
 
     _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])

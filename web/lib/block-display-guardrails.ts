@@ -192,6 +192,33 @@ export function stripSafetyOwnedClause(
   return kept.join(" ").trim();
 }
 
+/**
+ * Drop block stop-rule criteria that only restate injury-safety escalation the
+ * Safety Priority / Red Flags card already owns (e.g. "any sharp pain at the
+ * left shoulder" or "wound irritation" when a shoulder abrasion drives the
+ * plan), keeping the block-specific criteria (technique, form, speed).
+ *
+ * Unlike {@link stripSafetyOwnedClause}, a stop rule is already an escalation
+ * criterion by definition, so no escalation-verb gate is applied — ownership is
+ * decided purely by injury-concept + subject matching. A rule that carries no
+ * injury concept at all (form/speed breakdown) is never owned and always kept,
+ * and the fail-closed body-part logic keeps a stop rule for a body part the
+ * safety copy does not name.
+ */
+export function stripSafetyOwnedStopRules(
+  stopRules: readonly string[],
+  safetyPriorityTexts: readonly string[],
+): string[] {
+  const cleaned = stopRules.map((rule) => clean(rule)).filter(Boolean);
+  if (safetyPriorityTexts.length === 0) return cleaned;
+  // Let a subject-less rule ("wound irritation") inherit the body part named by
+  // its sibling criteria so it matches the same injury the safety copy owns.
+  const subjectContext = cleaned.join(" ");
+  return cleaned.filter(
+    (rule) => !isOwnedSafetyClause(rule, safetyPriorityTexts, subjectContext),
+  );
+}
+
 function normalizeCountdown(value: string | null | undefined): string | null {
   const match = clean(value).toUpperCase().match(/^D-?(\d+)$/);
   return match ? `D-${Number(match[1])}` : null;

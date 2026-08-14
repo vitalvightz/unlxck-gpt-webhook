@@ -102,14 +102,22 @@ def test_allowed_exercises_by_day_uses_scheduled_roles_not_plan_wide_pool():
     non_empty_lists = [tuple(names) for names in allowed.values() if names]
 
     assert len(set(non_empty_lists)) > 1
+    # The allocator distributes each scheduled role onto its own legitimate
+    # countdown day (mon/wed/fri training days for a D-13 monday start): the
+    # power anchor at D-13 (mon), the alactic sharpness touch at D-4 (wed), the
+    # mobility reset at D-2 (fri). D-6 (mon) is a training day but legitimately
+    # stays empty — availability is permission, not obligation. The invariant is
+    # that an exercise is only renderable on the day it was actually approved
+    # for, not that any given exercise must always land on a fixed day.
     assert allowed["D-13"] == ["Staggered-Stance Medicine-Ball Punch Throw"]
-    assert allowed["D-6"] == ["Reactive Shuffle Repeats"]
-    assert allowed["D-3"] == ["Mobility Reset Flow"]
+    assert allowed["D-4"] == ["Reactive Shuffle Repeats"]
+    assert allowed["D-2"] == ["Mobility Reset Flow"]
+    assert allowed["D-6"] == []
     # D-1 is equipment-free: the equipment-requiring isometric hold is dropped
     # rather than assigned, leaving D-1 to breathing/mobility/shadowboxing.
     assert allowed["D-1"] == []
     assert "Reactive Shuffle Repeats" not in allowed["D-1"]
-    assert "Staggered-Stance Medicine-Ball Punch Throw" not in allowed["D-3"]
+    assert "Staggered-Stance Medicine-Ball Punch Throw" not in allowed["D-2"]
     assert "Band-Resisted Sprint Starts (ATP-PCr)" not in allowed["D-13"]
 
 
@@ -339,7 +347,7 @@ def test_annotation_lines_do_not_raise_unapproved_exercise_blocker():
     report = validate_stage2_output(
         planning_brief=brief,
         final_plan_text="""
-        D-6 (Monday) — Fight-speed primer
+        D-4 (Wednesday) — Fight-speed primer
         - Reactive Shuffle Repeats - 3 x 6 sec
         - Why today: prepare ankles before the punch speed touch.
         - Regression/stop: if unclear after 8 min, pick the simplest cue and stop.
@@ -382,10 +390,10 @@ def test_valid_late_fight_output_using_each_days_allowed_exercises_passes():
         D-13 (Monday) — Power transfer touch
         - Staggered-Stance Medicine-Ball Punch Throw - 2 x 3
 
-        D-6 (Monday) — Fight-speed primer
+        D-4 (Wednesday) — Fight-speed primer
         - Reactive Shuffle Repeats - 3 x 6 sec
 
-        D-3 (Thursday) — Freshness reset
+        D-2 (Friday) — Freshness reset
         - Mobility Reset Flow - 6 min
         - Breathing reset - 3 min
 

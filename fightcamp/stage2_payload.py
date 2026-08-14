@@ -3076,7 +3076,11 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
             continue
         reasons = reason_lookup.get(name, {})
         movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
-        role = movement or "strength_support"
+        # Mirror the reservoir role key: unclassified movements bucket under
+        # "strength_support" there, so the slot must use the same key or the
+        # alternate lookup silently returns nothing for jumps/bounds/hops whose
+        # movement resolves to "unknown".
+        role = movement if movement and movement != "unknown" else "strength_support"
         quality_profile = classify_strength_item(exercise)
         slots.append(
             {
