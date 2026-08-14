@@ -32,6 +32,11 @@ EQUIP_ALIASES = {
     "jump_box": "box",
     "weighted vest": "weight_vest",
     "weighted_vest": "weight_vest",
+    "weight belt": "weight_belt",
+    "weighted belt": "weight_belt",
+    "weighted_belt": "weight_belt",
+    "dip belt": "weight_belt",
+    "dip_belt": "weight_belt",
     "stability ball": "swiss_ball",
     "stability_ball": "swiss_ball",
     "cable machine": "cable",
@@ -102,7 +107,8 @@ known_equipment = [
     "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
     "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",
     "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
-    "elliptical", "pool", "bodyweight", "battle_rope", "kettlebells"
+    "elliptical", "pool", "bodyweight", "battle_rope", "kettlebells",
+    "weight_belt"
 ]
 
 

@@ -379,7 +379,10 @@
   },
   {
     "name": "Pool Running (Weight Belt)",
-    "equipment": [],
+    "equipment": [
+      "pool",
+      "weight_belt"
+    ],
     "phases": [
       "GPP"
     ],
@@ -609,7 +612,6 @@
       "mech_reactive"
     ],
     "notes": "Focus on rhythm, not speed",
-    "rest_sec": 900,
     "total_minutes": 15,
     "impact_cost": "high",
     "lactate_load": "low",
@@ -3631,9 +3633,9 @@
     ],
     "notes": "Contraindicated with hamstring tweaks (RPE 9)",
     "work_sec": 20,
-    "rest_sec": 800,
+    "rest_sec": 100,
     "rounds": 6,
-    "total_minutes": 68.67,
+    "total_minutes": 10.33,
     "rpe": 9,
     "impact_cost": "high",
     "lactate_load": "high",
@@ -6989,7 +6991,6 @@
       "cns_freshness"
     ],
     "notes": "Light pole work; parasympathetic dominant",
-    "rest_sec": 1200,
     "total_minutes": 25,
     "rpe": 5,
     "impact_cost": "low",

@@ -112,6 +112,7 @@ export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = [
   { label: "TRX", value: "trx" },
   { label: "Water Jug", value: "water_jug" },
   { label: "Weight Vest", value: "weight_vest" },
+  { label: "Weight Belt", value: "weight_belt" },
   { label: "Partner", value: "partner" },
 ];
 
