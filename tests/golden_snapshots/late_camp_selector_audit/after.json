@@ -153,8 +153,8 @@
           ]
         },
         {
-          "name": "Jump-in-Place (Max Frequency)",
-          "score": 2.6825,
+          "name": "Box Jump",
+          "score": 3.2825,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
             "late_strength_boost_window_fit",
@@ -302,7 +302,7 @@
         },
         {
           "name": "Anti-Rotation Med Ball Slam",
-          "score": 0.25,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -415,7 +415,7 @@
         },
         {
           "name": "Dynamic Plank-to-Punch",
-          "score": 0.25,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -436,7 +436,7 @@
         },
         {
           "name": "Judo Throw Simulation (Band-Resisted)",
-          "score": 1.55,
+          "score": 1.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -485,7 +485,7 @@
         },
         {
           "name": "Med-Ball Rotational Slam",
-          "score": 0.65,
+          "score": 2.35,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -506,7 +506,7 @@
         },
         {
           "name": "Overhead Slam (Rotational)",
-          "score": -0.25,
+          "score": 1.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -645,14 +645,7 @@
           ]
         },
         {
-          "name": "Trap Bar Jump (Light)",
-          "score": 2.05,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Trap Bar Jump Squat",
+          "name": "Trap Bar Jump",
           "score": 2.75,
           "reason_codes": [
             "late_block_missing_late_windows"
@@ -859,7 +852,7 @@
       "winners": [
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 8.65,
+          "score": 8.4,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_penalty_missing_governance_metadata",
@@ -874,8 +867,7 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
             "late_strength_boost_speed",
-            "late_strength_boost_freshness",
-            "late_strength_boost_crisp_ballistic"
+            "late_strength_boost_freshness"
           ]
         },
         {
@@ -937,6 +929,22 @@
           ]
         },
         {
+          "name": "Isometric Mid-Thigh Pull",
+          "score": 5.9,
+          "reason_codes": [
+            "priority_secondary_goal_match:maximal_strength_maintenance",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_freshness",
+            "late_strength_boost_crisp_ballistic"
+          ]
+        },
+        {
           "name": "Overcoming Split-Squat Isometric",
           "score": 5.47,
           "reason_codes": [
@@ -961,14 +969,15 @@
           ]
         },
         {
-          "name": "Jump-in-Place (Max Frequency)",
-          "score": 2.72,
+          "name": "Jump Squat",
+          "score": 3.42,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
             "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_soreness"
+            "late_strength_boost_low_soreness",
+            "late_strength_penalty_triple_extension_landing"
           ]
         },
         {
@@ -1091,21 +1100,6 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly"
           ]
-        },
-        {
-          "name": "Line step-and-stick forward/back",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
         }
       ],
       "blocked": [
@@ -1126,7 +1120,7 @@
         },
         {
           "name": "Anti-Rotation Med Ball Slam",
-          "score": 0.25,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1242,7 +1236,7 @@
         },
         {
           "name": "Dynamic Plank-to-Punch",
-          "score": 0.25,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1278,7 +1272,7 @@
         },
         {
           "name": "Judo Throw Simulation (Band-Resisted)",
-          "score": 1.55,
+          "score": 1.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1327,7 +1321,7 @@
         },
         {
           "name": "Med-Ball Rotational Slam",
-          "score": 0.65,
+          "score": 2.35,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1348,7 +1342,7 @@
         },
         {
           "name": "Overhead Slam (Rotational)",
-          "score": -0.25,
+          "score": 1.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1501,14 +1495,7 @@
           ]
         },
         {
-          "name": "Trap Bar Jump (Light)",
-          "score": 2.05,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Trap Bar Jump Squat",
+          "name": "Trap Bar Jump",
           "score": 2.75,
           "reason_codes": [
             "late_block_missing_late_windows"
@@ -1638,7 +1625,7 @@
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 9.55,
+          "score": 9.3,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_penalty_missing_governance_metadata",
@@ -1653,8 +1640,7 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
             "late_strength_boost_speed",
-            "late_strength_boost_freshness",
-            "late_strength_boost_crisp_ballistic"
+            "late_strength_boost_freshness"
           ]
         },
         {
@@ -1696,6 +1682,22 @@
           ]
         },
         {
+          "name": "Isometric Mid-Thigh Pull",
+          "score": 7.9,
+          "reason_codes": [
+            "priority_secondary_goal_match:maximal_strength_maintenance",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_freshness",
+            "late_strength_boost_crisp_ballistic"
+          ]
+        },
+        {
           "name": "Technical Shadowboxing Tempo",
           "score": 6.95,
           "reason_codes": [
@@ -1711,21 +1713,6 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
             "late_strength_boost_speed",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
-          "name": "Controlled Bird-Dog",
-          "score": 2.15,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly",
             "late_strength_boost_freshness"
           ]
         }
@@ -2229,7 +2216,7 @@
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 9.5875,
+          "score": 9.3375,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_penalty_missing_governance_metadata",
@@ -2244,8 +2231,7 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
             "late_strength_boost_speed",
-            "late_strength_boost_freshness",
-            "late_strength_boost_crisp_ballistic"
+            "late_strength_boost_freshness"
           ]
         },
         {
@@ -2306,12 +2292,13 @@
           ]
         },
         {
-          "name": "Controlled Bird-Dog",
-          "score": 2.1725,
+          "name": "Scapular Pull-Up Hold",
+          "score": 5.0725,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
             "late_strength_boost_cns_freshness",
@@ -2808,7 +2795,7 @@
       "winners": [
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 9.6125,
+          "score": 9.3625,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_penalty_missing_governance_metadata",
@@ -2823,8 +2810,7 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
             "late_strength_boost_speed",
-            "late_strength_boost_freshness",
-            "late_strength_boost_crisp_ballistic"
+            "late_strength_boost_freshness"
           ]
         },
         {
@@ -2885,6 +2871,22 @@
           ]
         },
         {
+          "name": "Scapular Pull-Up Hold",
+          "score": 5.0875,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
           "name": "Light Heavy-Bag Technical Tempo",
           "score": 4.7875,
           "reason_codes": [
@@ -2898,21 +2900,6 @@
             "late_strength_boost_cns_freshness",
             "late_strength_boost_sport_specific",
             "late_strength_boost_low_soreness",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
-          "name": "Controlled Bird-Dog",
-          "score": 2.1875,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly",
             "late_strength_boost_freshness"
           ]
         }

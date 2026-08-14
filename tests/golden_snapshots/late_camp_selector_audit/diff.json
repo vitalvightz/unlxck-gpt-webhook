@@ -49,7 +49,7 @@
         "Overcoming Split-Squat Isometric",
         "Trap Bar Deadlift",
         "Jump Squat",
-        "Jump-in-Place (Max Frequency)",
+        "Box Jump",
         "Mobility Reset Flow",
         "90/90 hip switches",
         "Adductor rock-back",
@@ -67,7 +67,7 @@
         "Overcoming Split-Squat Isometric",
         "Trap Bar Deadlift",
         "Jump Squat",
-        "Jump-in-Place (Max Frequency)",
+        "Box Jump",
         "Mobility Reset Flow",
         "90/90 hip switches",
         "Adductor rock-back",
@@ -135,8 +135,7 @@
         "Staggered-Stance Reactive Jumps",
         "Tempo Chin-Up (5-0-1)",
         "Towel Pull-Up",
-        "Trap Bar Jump (Light)",
-        "Trap Bar Jump Squat",
+        "Trap Bar Jump",
         "Weighted Hanging Leg Raise"
       ],
       "no_longer_blocked": []
@@ -203,9 +202,10 @@
         "Band-Resisted Jab-Cross Primer",
         "Punch-Specific Max Isometric Hold",
         "Band Row Speed Focus",
+        "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
         "Box Jump",
-        "Jump-in-Place (Max Frequency)",
+        "Jump Squat",
         "Mobility Reset Flow",
         "90/90 hip switches",
         "Adductor rock-back",
@@ -213,17 +213,17 @@
         "Dead-bug breathing",
         "Lateral step-and-stick boxer reset",
         "Lead-foot pivot prep",
-        "Lead-leg single-leg stance with guard",
-        "Line step-and-stick forward/back"
+        "Lead-leg single-leg stance with guard"
       ],
       "added_winners": [
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Band-Resisted Jab-Cross Primer",
         "Punch-Specific Max Isometric Hold",
         "Band Row Speed Focus",
+        "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
         "Box Jump",
-        "Jump-in-Place (Max Frequency)",
+        "Jump Squat",
         "Mobility Reset Flow",
         "90/90 hip switches",
         "Adductor rock-back",
@@ -231,8 +231,7 @@
         "Dead-bug breathing",
         "Lateral step-and-stick boxer reset",
         "Lead-foot pivot prep",
-        "Lead-leg single-leg stance with guard",
-        "Line step-and-stick forward/back"
+        "Lead-leg single-leg stance with guard"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -296,8 +295,7 @@
         "Towel Pull-Up",
         "Towel-assisted lateral neck isometric",
         "Trap Bar Deadlift",
-        "Trap Bar Jump (Light)",
-        "Trap Bar Jump Squat",
+        "Trap Bar Jump",
         "Weighted Hanging Leg Raise"
       ],
       "no_longer_blocked": []
@@ -348,16 +346,16 @@
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Band Row Speed Focus",
         "Seated Medicine-Ball Punch Throw",
-        "Technical Shadowboxing Tempo",
-        "Controlled Bird-Dog"
+        "Isometric Mid-Thigh Pull",
+        "Technical Shadowboxing Tempo"
       ],
       "added_winners": [
         "Punch-Specific Max Isometric Hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Band Row Speed Focus",
         "Seated Medicine-Ball Punch Throw",
-        "Technical Shadowboxing Tempo",
-        "Controlled Bird-Dog"
+        "Isometric Mid-Thigh Pull",
+        "Technical Shadowboxing Tempo"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -477,7 +475,7 @@
         "Band Row Speed Focus",
         "Seated Medicine-Ball Punch Throw",
         "Technical Shadowboxing Tempo",
-        "Controlled Bird-Dog"
+        "Scapular Pull-Up Hold"
       ],
       "added_winners": [
         "Punch-Specific Max Isometric Hold",
@@ -485,7 +483,7 @@
         "Band Row Speed Focus",
         "Seated Medicine-Ball Punch Throw",
         "Technical Shadowboxing Tempo",
-        "Controlled Bird-Dog"
+        "Scapular Pull-Up Hold"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -605,16 +603,16 @@
         "Band Row Speed Focus",
         "Seated Medicine-Ball Punch Throw",
         "Technical Shadowboxing Tempo",
-        "Light Heavy-Bag Technical Tempo",
-        "Controlled Bird-Dog"
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo"
       ],
       "added_winners": [
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Band Row Speed Focus",
         "Seated Medicine-Ball Punch Throw",
         "Technical Shadowboxing Tempo",
-        "Light Heavy-Bag Technical Tempo",
-        "Controlled Bird-Dog"
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",

@@ -141,11 +141,11 @@ def test_healthy_power_athlete_gets_lower_body_plyo_at_d10():
 # H6 — plyometric dose is not a barbell %1RM prescription
 # --------------------------------------------------------------------------- #
 def test_loaded_jump_not_routed_to_barbell_template():
-    for name in ("Trap Bar Jump Squat", "Trap Bar Jump (Light)"):
-        ptype = _classify_prescription_type(BY_NAME[name])
-        assert ptype != "barbell", f"{name} routed to barbell template"
-        template = _prescription_templates("SPP")[ptype]
-        assert "1RM" not in template, f"{name} prescription mentions 1RM: {template}"
+    name = "Trap Bar Jump"
+    ptype = _classify_prescription_type(BY_NAME[name])
+    assert ptype != "barbell", f"{name} routed to barbell template"
+    template = _prescription_templates("SPP")[ptype]
+    assert "1RM" not in template, f"{name} prescription mentions 1RM: {template}"
 
 
 def test_single_leg_box_jump_not_general_reps():
@@ -212,8 +212,7 @@ def test_no_lower_body_plyo_in_final_week():
 
 
 def test_loaded_trap_bar_jump_stays_blocked_late():
-    # Metadata backfill must not surface the loaded trap-bar jump variants late.
+    # Metadata backfill must not surface the loaded trap-bar jump late.
     for day in (21, 13, 8):
         selected = _selected_names(day)
-        assert "Trap Bar Jump Squat" not in selected, f"D-{day}: {selected}"
-        assert "Trap Bar Jump (Light)" not in selected, f"D-{day}: {selected}"
+        assert "Trap Bar Jump" not in selected, f"D-{day}: {selected}"

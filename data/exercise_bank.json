@@ -733,13 +733,13 @@
     ]
   },
   {
-    "name": "Trap Bar Jump Squat",
+    "name": "Trap Bar Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
     ],
     "method": "power",
-    "movement": "squat",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "explosive",
@@ -789,14 +789,13 @@
       "SPP"
     ],
     "method": "power",
-    "movement": "squat",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "explosive",
       "power",
       "rate_of_force",
       "triple_extension",
-      "mech_cns_high",
       "mech_ballistic",
       "mech_lower_jump",
       "mech_lower_squat",
@@ -809,11 +808,10 @@
     "impact_cost": "moderate",
     "eccentric_cost": "low",
     "landing_cost": "moderate",
-    "cns_load": "high",
+    "cns_load": "moderate",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_cns_high",
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_lower_squat",
@@ -841,7 +839,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "squat",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "explosive",
@@ -2956,27 +2954,23 @@
     "tags": [
       "core",
       "explosive",
-      "mech_lower_jump",
       "mech_trunk_stability",
-      "mech_landing_impact",
-      "mech_reactive",
+      "mech_trunk_rotation",
       "mech_ballistic"
     ],
     "equipment": "cable",
     "movement_cost": "moderate",
-    "impact_cost": "high",
+    "impact_cost": "low",
     "eccentric_cost": "moderate",
-    "landing_cost": "high",
+    "landing_cost": "none",
     "cns_load": "moderate",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
+      "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "low_impact": false,
+    "low_impact": true,
     "low_eccentric": false,
     "cns_freshness": false,
     "cut_buckets_allowed": [
@@ -3830,54 +3824,6 @@
     ]
   },
   {
-    "name": "EMOM: 5 Squat Cleans + 5 Burpees",
-    "category": "finishers",
-    "phases": [
-      "SPP"
-    ],
-    "method": "conditioning",
-    "movement": "compound",
-    "type": "bilateral",
-    "tags": [
-      "endurance",
-      "explosive",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_upper_press",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_lower_squat",
-      "mech_upper_pull"
-    ],
-    "equipment": "barbell",
-    "movement_cost": "high",
-    "impact_cost": "low",
-    "eccentric_cost": "moderate",
-    "landing_cost": "none",
-    "cns_load": "high",
-    "soreness_risk": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_lower_squat",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press",
-      "mech_upper_pull"
-    ],
-    "low_impact": true,
-    "low_eccentric": false,
-    "cns_freshness": false,
-    "cut_buckets_allowed": [
-      "none",
-      "low"
-    ]
-  },
-  {
     "name": "Death by Carry (Sandbag/Sled)",
     "category": "finishers",
     "phases": [
@@ -3992,51 +3938,6 @@
       "mech_trunk_stability"
     ],
     "low_impact": true,
-    "low_eccentric": true,
-    "cns_freshness": false,
-    "cut_buckets_allowed": [
-      "none",
-      "low",
-      "moderate"
-    ]
-  },
-  {
-    "name": "5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
-    "category": "finishers",
-    "phases": [
-      "SPP"
-    ],
-    "method": "conditioning",
-    "movement": "compound",
-    "type": "bilateral",
-    "tags": [
-      "power",
-      "endurance",
-      "mech_systemic_fatigue",
-      "mech_upper_press",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive"
-    ],
-    "equipment": "kettlebell",
-    "movement_cost": "high",
-    "impact_cost": "moderate",
-    "eccentric_cost": "low",
-    "landing_cost": "moderate",
-    "cns_load": "moderate",
-    "soreness_risk": "moderate",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "low_impact": false,
     "low_eccentric": true,
     "cns_freshness": false,
     "cut_buckets_allowed": [
@@ -4697,7 +4598,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "unilateral",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "explosive",
@@ -5569,7 +5470,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "lateral",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "agility",
@@ -5867,7 +5768,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "lateral",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "agility",
@@ -5991,7 +5892,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "lateral",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "agility",
@@ -6112,7 +6013,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "lateral",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "agility",
@@ -6311,7 +6212,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "vertical",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "high_cns",
@@ -7277,7 +7178,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "sagittal",
+    "movement": "horizontal_jump",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7314,7 +7215,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "frontal",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7352,7 +7253,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "transverse",
+    "movement": "horizontal_jump",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7390,7 +7291,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "vertical",
+    "movement": "vertical_jump",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7471,7 +7372,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "multiplanar",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -9497,27 +9398,21 @@
       "stability",
       "rotational",
       "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
       "mech_trunk_rotation"
     ],
     "equipment": "kettlebell",
     "movement_cost": "low",
-    "impact_cost": "high",
+    "impact_cost": "low",
     "eccentric_cost": "low",
-    "landing_cost": "high",
+    "landing_cost": "none",
     "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "low_impact": false,
+    "low_impact": true,
     "low_eccentric": true,
     "cns_freshness": true,
     "cut_buckets_allowed": [
@@ -11870,52 +11765,6 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Trap Bar Jump (Light)",
-    "category": "lower_body",
-    "phases": [
-      "SPP"
-    ],
-    "method": "power",
-    "movement": "squat",
-    "type": "bilateral",
-    "tags": [
-      "neural_primer",
-      "explosive",
-      "mech_cns_high",
-      "mech_ballistic",
-      "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
-      "mech_lower_squat",
-      "mech_landing_impact",
-      "mech_grip_support"
-    ],
-    "equipment": "trap_bar",
-    "movement_cost": "moderate",
-    "impact_cost": "moderate",
-    "eccentric_cost": "moderate",
-    "landing_cost": "moderate",
-    "cns_load": "high",
-    "soreness_risk": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_lower_squat",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ],
-    "low_impact": false,
-    "low_eccentric": false,
-    "cns_freshness": false,
-    "cut_buckets_allowed": [
-      "none",
-      "low"
     ]
   },
   {

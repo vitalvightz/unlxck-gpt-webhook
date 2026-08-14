@@ -9174,5 +9174,97 @@
       "mech_reactive",
       "mech_lower_lunge"
     ]
+  },
+  {
+    "name": "5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "mixed_modal",
+    "duration": "4 rounds: 5 box jumps, 10 push-ups, 15 kettlebell swings; 90s rest",
+    "intensity": "high",
+    "tags": [
+      "conditioning",
+      "power",
+      "endurance",
+      "mech_systemic_fatigue",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_jump",
+      "mech_reactive"
+    ],
+    "notes": "Keep box height conservative and every landing clean. Stop the set if jump height, swing snap or push-up position drops.",
+    "work_sec": 90,
+    "rest_sec": 90,
+    "rounds": 4,
+    "total_minutes": 12,
+    "rpe": 8,
+    "impact_cost": "moderate",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "block_if_fight_within_days": 21
+  },
+  {
+    "name": "EMOM: 5 Squat Cleans + 5 Burpees",
+    "equipment": [
+      "barbell"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "mixed_modal",
+    "duration": "10min EMOM: 5 squat cleans + 5 burpees",
+    "intensity": "high",
+    "tags": [
+      "conditioning",
+      "endurance",
+      "explosive",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_squat",
+      "mech_upper_pull"
+    ],
+    "notes": "Use a technically clean, submaximal clean load. End the interval if bar path or burpee mechanics deteriorate.",
+    "work_sec": 45,
+    "rest_sec": 15,
+    "rounds": 10,
+    "total_minutes": 10,
+    "rpe": 9,
+    "impact_cost": "moderate",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_lower_squat",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_upper_pull"
+    ],
+    "block_if_fight_within_days": 21
   }
 ]

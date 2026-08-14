@@ -51,6 +51,34 @@ test("every equipment preset value exists in EQUIPMENT_ACCESS_OPTIONS", () => {
   }
 });
 
+test("specialist exercise-bank equipment can be declared at intake", () => {
+  const known = new Set(EQUIPMENT_ACCESS_OPTIONS.map((option) => option.value));
+  const specialistEquipment = [
+    "agility_ladder",
+    "atlas_stone",
+    "bench",
+    "bosu_ball",
+    "bulgarian_bag",
+    "foam_roller",
+    "log",
+    "neck_harness",
+    "plate",
+    "sledgehammer",
+    "step_mill",
+    "swiss_ball",
+    "tire",
+    "towel",
+    "treadmill",
+    "trx",
+    "water_jug",
+    "weight_vest",
+  ];
+
+  for (const value of specialistEquipment) {
+    assert.ok(known.has(value), `"${value}" missing from EQUIPMENT_ACCESS_OPTIONS`);
+  }
+});
+
 test("every training preset day exists in TRAINING_AVAILABILITY_OPTIONS", () => {
   const known = new Set(TRAINING_AVAILABILITY_OPTIONS.map((option) => option.value));
   for (const preset of TRAINING_PRESETS) {

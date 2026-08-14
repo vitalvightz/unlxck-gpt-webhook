@@ -1449,7 +1449,7 @@ MOVEMENT_PATTERN_TAGS = {
 MOVEMENT_PATTERN_KEYWORDS = {
     "squat": ["squat"],
     "hinge": ["hinge", "deadlift", "rdl", "hip hinge"],
-    "push": ["press", "push", "bench"],
+    "push": ["press", "push", "bench", "fly"],
     "pull": ["row", "pull", "chin"],
     "lunge": ["lunge", "split squat", "step-up", "step up"],
     "rotation": ["rotation", "rotational", "anti-rotation", "anti rotation"],
@@ -1457,6 +1457,12 @@ MOVEMENT_PATTERN_KEYWORDS = {
     "core": ["core", "trunk", "ab"],
     "neck": ["neck"],
 }
+
+
+def _contains_movement_keyword(text: str, keyword: str) -> bool:
+    """Match complete movement terms instead of arbitrary substrings."""
+    pattern = rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])"
+    return re.search(pattern, text) is not None
 
 
 def _detect_movement_pattern(exercise: dict) -> str:
@@ -1467,10 +1473,27 @@ def _detect_movement_pattern(exercise: dict) -> str:
         exercise.get("type", ""),
     ]
     haystack = " ".join(str(val) for val in text_fields).lower()
-    for pattern, keywords in MOVEMENT_PATTERN_KEYWORDS.items():
-        if any(keyword in haystack for keyword in keywords):
-            return pattern
+    name = str(exercise.get("name") or "").lower()
+    method = str(exercise.get("method") or "").strip().lower()
     tags = set(normalize_tags(exercise.get("tags") or []))
+
+    # Give lower-body ballistic work its own stable movement families.  Keep
+    # contrast pairs attached to their loaded pattern because the first half of
+    # the pair controls exercise selection and prescription.
+    contrast_pair = "→" in name or "->" in name or "contrast_pairing" in tags
+    lower_body_ballistic = method == "plyometric" or "mech_lower_jump" in tags
+    if lower_body_ballistic and not contrast_pair:
+        if "mech_lower_lateral" in tags or any(
+            hint in name for hint in ("lateral", "skater", "side hop", "zig-zag")
+        ):
+            return "lateral_reactive"
+        if any(hint in name for hint in ("broad jump", "forward hop", "bounding", "bound")):
+            return "horizontal_jump"
+        return "vertical_jump"
+
+    for pattern, keywords in MOVEMENT_PATTERN_KEYWORDS.items():
+        if any(_contains_movement_keyword(haystack, keyword) for keyword in keywords):
+            return pattern
     for pattern, tag_set in MOVEMENT_PATTERN_TAGS.items():
         if tags & tag_set:
             return pattern
@@ -2481,9 +2504,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             for _, cand, merged_reasons, profile, late_safe_profile in ordered_candidates
         ]
 
+    def _required_base_categories(exercises: list[dict]) -> list[str]:
+        categories = missing_base_categories(exercises)
+        # Lower-body power is a quality requirement for normal GPP/SPP work,
+        # not a reason to override fatigue down-regulation or taper restraint.
+        if fatigue == "high" or phase == "TAPER":
+            categories = [category for category in categories if category != "lower_body_power"]
+        return categories
+
     def _promote_base_categories(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)
-        for category in missing_base_categories(updated):
+        for category in _required_base_categories(updated):
             selected_names = _selected_names(updated)
             replacement_entry = _best_candidate(
                 lambda cand, _score, _reasons, profile: profile["anchor_capable"]
@@ -2825,7 +2856,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         universal_strength = get_universal_strength()
         existing_names = _selected_names(top_exercises)
         inserted = 0
-        for category in missing_base_categories(top_exercises):
+        for category in _required_base_categories(top_exercises):
             if inserted >= 2:
                 break
             for drill, drill_reasons, drill_profile, _late_safe_profile in _sorted_external_candidates(

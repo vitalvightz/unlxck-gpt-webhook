@@ -7,7 +7,7 @@ def test_exercise_bank_removed_taper_exercises_keep_non_empty_non_taper_phases()
     by_name = {entry["name"]: entry for entry in bank}
 
     expected_spp_only = {
-        "Trap Bar Jump (Light)",
+        "Trap Bar Jump",
         "Cluster Set Trap Bar Deadlift",
         "Band-Resisted Sprawl to Sprint",
     }

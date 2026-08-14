@@ -873,7 +873,7 @@ def test_strength_d7_deprioritizes_aggressive_med_ball_slam_primer(monkeypatch):
 def test_strength_d1_blocks_trap_bar_jump_and_aggressive_med_ball_slam(monkeypatch):
     exercise_bank = [
         {
-            "name": "Trap Bar Jump (Light)",
+            "name": "Trap Bar Jump",
             "phases": ["TAPER"],
             "movement": "squat",
             "method": "power",
@@ -940,7 +940,7 @@ def test_strength_d1_blocks_trap_bar_jump_and_aggressive_med_ball_slam(monkeypat
     # D1 is the strictest window: aggressive work and band primers are all locked
     # out, so nothing from this bank survives.
     assert [entry["name"] for entry in result["why_log"]] == []
-    assert "late_strength_block_trap_bar_jump" in blocked_by_name["Trap Bar Jump (Light)"]
+    assert "late_strength_block_trap_bar_jump" in blocked_by_name["Trap Bar Jump"]
     assert "late_strength_block_aggressive_med_ball_slam" in blocked_by_name["Anti-Rotation Med Ball Slam"]
     assert "late_strength_block_band_work_lockout" in blocked_by_name["Band Snap Punch"]
 
@@ -980,7 +980,7 @@ def test_actual_bank_d13_high_cut_prefers_late_safe_strength_touch_over_legacy_t
 
     assert set(names) & NEW_LATE_STRENGTH_FAMILY_NAMES
     assert "Cluster Set Trap Bar Deadlift" not in names
-    assert "Trap Bar Jump (Light)" not in names
+    assert "Trap Bar Jump" not in names
     assert "Jump Lunge (Alternating)" not in names
 
 
@@ -1028,7 +1028,7 @@ def test_actual_bank_d1_keeps_only_ultra_safe_micro_dose_strength_options():
     }
 
     assert set(names).issubset(allowed_names)
-    assert "Trap Bar Jump (Light)" not in names
+    assert "Trap Bar Jump" not in names
     assert "Jump Lunge (Alternating)" not in names
     assert "Anti-Rotation Med Ball Slam" not in names
     # These aggressive options are SPP-only in the bank, so on D1 (a TAPER window)
