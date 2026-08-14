@@ -414,14 +414,13 @@ def test_landmine_split_stance_press_extends_to_d7_only():
     assert _blocked("Landmine Split-Stance Punch Press", D6_TO_D5, days_until_fight=6)
 
 
-# --- Trap Bar Jump (Light): deliberately left conservative -------------------
+# --- Trap Bar Jump: deliberately left conservative ---------------------------
 
-def test_trap_bar_jump_light_stays_conservative():
-    item = _named("Trap Bar Jump (Light)")
-    # Despite the "Light" name it keeps real landing / eccentric / CNS cost, so
-    # it gains no late windows.
+def test_trap_bar_jump_stays_conservative():
+    item = _named("Trap Bar Jump")
+    # It keeps real landing / eccentric / CNS cost, so it gains no late windows.
     assert not item.get("late_windows")
     assert item["landing_cost"] != "none"
     assert item["cns_load"] == "high"
     assert item["soreness_risk"] == "high"
-    assert _eval("Trap Bar Jump (Light)", D13_TO_D8, days_until_fight=10)["blocked"] is True
+    assert _eval("Trap Bar Jump", D13_TO_D8, days_until_fight=10)["blocked"] is True

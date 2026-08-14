@@ -24,6 +24,20 @@ def test_band_equipment_aliases_normalize_to_bands():
     assert normalize_equipment_list("banded") == ["bands"]
 
 
+def test_exercise_equipment_aliases_reach_canonical_intake_tokens():
+    assert normalize_equipment_list("weighted_vest") == ["weight_vest"]
+    assert normalize_equipment_list("stability_ball") == ["swiss_ball"]
+    assert normalize_equipment_list("cable_machine") == ["cable"]
+    assert normalize_equipment_list("weight_plate") == ["plate"]
+
+
+def test_box_equipment_aliases_reach_canonical_intake_token():
+    for alias in ("plyo_box", "plyo box", "plyometric box", "jump box"):
+        assert normalize_equipment_list(alias) == ["box"]
+    assert normalize_equipment_list("bench") == ["bench"]
+    assert normalize_equipment_list("step") == ["step"]
+
+
 def test_normalize_equipment_list_does_not_inject_bodyweight():
     assert normalize_equipment_list(["medicine_ball"]) == ["medicine_ball"]
 
@@ -36,6 +50,72 @@ def test_normalize_exercise_movement_fallback():
     exercise = {"name": "Test Movement", "category": "hinge", "tags": ["pull"]}
     assert normalize_exercise_movement(exercise) == "hinge"
     assert exercise["movement"] == "hinge"
+
+
+def test_lower_body_plyometrics_use_power_movement_families():
+    cases = {
+        "Ballistic Box Jump (Min Ground Contact)": "vertical_jump",
+        "Single-Leg Box Jump": "vertical_jump",
+        "Alternating Skater Hops": "lateral_reactive",
+        "Lateral Box Push-Off": "lateral_reactive",
+        "Single-Leg 45° Bound": "horizontal_jump",
+        "Side Hop-to-Stabilize": "lateral_reactive",
+    }
+    for name, expected in cases.items():
+        exercise = {"name": name, "method": "plyometric", "tags": ["mech_lower_jump"]}
+        assert normalize_exercise_movement(exercise) == expected
+
+
+def test_explicit_upper_body_movement_wins_over_plyometric_method():
+    exercise = {
+        "name": "Clap Push-Up",
+        "movement": "horizontal_push",
+        "method": "plyometric",
+        "tags": ["explosive", "mech_upper_press", "mech_ballistic"],
+    }
+    assert normalize_exercise_movement(exercise) == "horizontal_push"
+
+
+def test_mechanical_upper_press_does_not_become_vertical_jump():
+    exercise = {
+        "name": "Explosive Push-Up",
+        "movement": "compound",
+        "method": "plyometric",
+        "tags": ["mech_upper_press", "mech_ballistic"],
+    }
+    assert normalize_exercise_movement(exercise) == "horizontal_push"
+
+
+def test_directional_metadata_routes_lower_body_plyometrics():
+    assert normalize_exercise_movement(
+        {
+            "name": "Reaction Hop",
+            "movement": "horizontal",
+            "method": "plyometric",
+            "tags": ["mech_lower_jump"],
+        }
+    ) == "horizontal_jump"
+    assert normalize_exercise_movement(
+        {
+            "name": "Reactive Shuffle",
+            "movement": "frontal",
+            "method": "plyometric",
+            "tags": ["mech_lower_jump"],
+        }
+    ) == "lateral_reactive"
+    assert normalize_exercise_movement(
+        {
+            "name": "Rotational Hop",
+            "movement": "transverse",
+            "method": "plyometric",
+            "tags": ["mech_lower_jump", "mech_trunk_rotation"],
+        }
+    ) == "rotation"
+
+
+def test_movement_keyword_ab_does_not_match_inside_words():
+    assert normalize_exercise_movement({"name": "Cable Fly (High to Low)"}) == "push"
+    assert normalize_exercise_movement({"name": "Four-way manual neck isometric"}) == "neck"
 
 
 def test_no_legacy_token_in_data():

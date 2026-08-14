@@ -186,7 +186,7 @@ def test_adjustment_inactive_is_neutral():
 
 
 def test_adjustment_ignores_trap_bar_jump_squat_and_bodyweight_squat():
-    jump = {"name": "Trap Bar Jump Squat", "movement": "squat", "equipment": "trap_bar", "tags": []}
+    jump = {"name": "Trap Bar Jump", "movement": "vertical_jump", "equipment": "trap_bar", "tags": []}
     adj, _ = strength._trap_bar_anchor_preference_adjustment(jump, active=True, context_reasons=[])
     assert adj == 0.0
 
