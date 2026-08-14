@@ -1,11 +1,41 @@
 import json
 from pathlib import Path
 
+from fightcamp.strength import normalize_exercise_movement
+from fightcamp.training_context import normalize_equipment_list
+
 
 EXERCISES = json.loads(Path("data/exercise_bank.json").read_text(encoding="utf-8"))
 CONDITIONING = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
+STYLE_TAPER_CONDITIONING = json.loads(
+    Path("data/style_taper_conditioning.json").read_text(encoding="utf-8")
+)
 EXERCISES_BY_NAME = {entry["name"]: entry for entry in EXERCISES}
 CONDITIONING_BY_NAME = {entry["name"]: entry for entry in CONDITIONING}
+STYLE_TAPER_BY_NAME = {entry["name"]: entry for entry in STYLE_TAPER_CONDITIONING}
+
+
+def test_box_gated_taper_drills_use_canonical_intake_token():
+    for name in ("Box Squat Low Height - Grappler", "Low Box Step-Up - Clinch Fighter"):
+        assert normalize_equipment_list(STYLE_TAPER_BY_NAME[name]["equipment"]) == ["box"]
+
+
+def test_directional_and_upper_body_plyometrics_follow_bank_metadata():
+    expected = {
+        "Clap Push-Up": "horizontal_push",
+        "Explosive Push-Up (Clap-to-Tap)": "horizontal_push",
+        "Box Jump": "vertical_jump",
+        "Single-Leg Bounding": "horizontal_jump",
+        "Alternating Skater Hops": "lateral_reactive",
+        "Band-Resisted Reaction Hop": "horizontal_jump",
+        "Single-Leg Reactive Shuffle": "lateral_reactive",
+        "Single-Leg Rotational Hop to Balance": "rotation",
+    }
+
+    for name, movement in expected.items():
+        item = EXERCISES_BY_NAME[name].copy()
+        assert item["movement"] == movement
+        assert normalize_exercise_movement(item) == movement
 
 
 def test_conditioning_finishers_do_not_compete_in_strength_selection():

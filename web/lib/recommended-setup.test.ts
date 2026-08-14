@@ -57,6 +57,7 @@ test("specialist exercise-bank equipment can be declared at intake", () => {
     "agility_ladder",
     "atlas_stone",
     "bench",
+    "box",
     "bosu_ball",
     "bulgarian_bag",
     "foam_roller",

@@ -80,6 +80,7 @@ export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = [
   { label: "Kettlebells", value: "kettlebells" },
   { label: "Barbell", value: "barbell" },
   { label: "Trap Bar", value: "trap_bar" },
+  { label: "Plyo Box / Box", value: "box" },
   { label: "Pull-Up Bar", value: "pullup_bar" },
   { label: "Sled", value: "sled" },
   { label: "Medicine Ball", value: "medicine_ball" },

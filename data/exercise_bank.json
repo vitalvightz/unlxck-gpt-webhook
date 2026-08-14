@@ -1314,7 +1314,7 @@
       "SPP"
     ],
     "method": "power",
-    "movement": "squat",
+    "movement": "vertical_jump",
     "type": "unilateral",
     "tags": [
       "explosive",
@@ -4762,7 +4762,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "compound",
+    "movement": "horizontal_push",
     "type": "bilateral",
     "tags": [
       "rate_of_force",
@@ -5290,7 +5290,7 @@
       "SPP"
     ],
     "method": "conditioning",
-    "movement": "compound",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "endurance",
@@ -5510,7 +5510,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "compound",
+    "movement": "horizontal_jump",
     "type": "bilateral",
     "tags": [
       "high_cns",
@@ -5558,7 +5558,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "vertical",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "high_cns",
@@ -5640,7 +5640,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "horizontal",
+    "movement": "horizontal_jump",
     "type": "unilateral",
     "tags": [
       "high_cns",
@@ -5680,7 +5680,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "vertical",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "high_cns",
@@ -5806,7 +5806,7 @@
       "SPP"
     ],
     "method": "power",
-    "movement": "lateral",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "agility",
@@ -6130,7 +6130,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "vertical",
+    "movement": "vertical_jump",
     "type": "bilateral",
     "tags": [
       "high_cns",
@@ -6172,7 +6172,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "vertical",
+    "movement": "vertical_jump",
     "type": "unilateral",
     "tags": [
       "high_cns",
@@ -6254,7 +6254,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "compound",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "high_cns",
@@ -6292,7 +6292,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "horizontal",
+    "movement": "horizontal_jump",
     "type": "unilateral",
     "tags": [
       "high_cns",
@@ -6330,7 +6330,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "compound",
+    "movement": "rotation",
     "type": "unilateral",
     "tags": [
       "high_cns",
@@ -6372,7 +6372,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "vertical",
+    "movement": "vertical_jump",
     "type": "unilateral",
     "tags": [
       "high_cns",
@@ -7331,7 +7331,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "eccentric",
+    "movement": "vertical_jump",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7408,7 +7408,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "horizontal",
+    "movement": "horizontal_jump",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7446,7 +7446,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "frontal",
+    "movement": "lateral_reactive",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7482,7 +7482,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "transverse",
+    "movement": "rotation",
     "type": "unilateral",
     "tags": [
       "plyometric",
@@ -7522,7 +7522,7 @@
       "SPP"
     ],
     "method": "plyometric",
-    "movement": "compound",
+    "movement": "vertical_jump",
     "type": "unilateral",
     "tags": [
       "plyometric",

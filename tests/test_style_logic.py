@@ -31,6 +31,13 @@ def test_exercise_equipment_aliases_reach_canonical_intake_tokens():
     assert normalize_equipment_list("weight_plate") == ["plate"]
 
 
+def test_box_equipment_aliases_reach_canonical_intake_token():
+    for alias in ("plyo_box", "plyo box", "plyometric box", "jump box"):
+        assert normalize_equipment_list(alias) == ["box"]
+    assert normalize_equipment_list("bench") == ["bench"]
+    assert normalize_equipment_list("step") == ["step"]
+
+
 def test_normalize_equipment_list_does_not_inject_bodyweight():
     assert normalize_equipment_list(["medicine_ball"]) == ["medicine_ball"]
 
@@ -57,6 +64,53 @@ def test_lower_body_plyometrics_use_power_movement_families():
     for name, expected in cases.items():
         exercise = {"name": name, "method": "plyometric", "tags": ["mech_lower_jump"]}
         assert normalize_exercise_movement(exercise) == expected
+
+
+def test_explicit_upper_body_movement_wins_over_plyometric_method():
+    exercise = {
+        "name": "Clap Push-Up",
+        "movement": "horizontal_push",
+        "method": "plyometric",
+        "tags": ["explosive", "mech_upper_press", "mech_ballistic"],
+    }
+    assert normalize_exercise_movement(exercise) == "horizontal_push"
+
+
+def test_mechanical_upper_press_does_not_become_vertical_jump():
+    exercise = {
+        "name": "Explosive Push-Up",
+        "movement": "compound",
+        "method": "plyometric",
+        "tags": ["mech_upper_press", "mech_ballistic"],
+    }
+    assert normalize_exercise_movement(exercise) == "horizontal_push"
+
+
+def test_directional_metadata_routes_lower_body_plyometrics():
+    assert normalize_exercise_movement(
+        {
+            "name": "Reaction Hop",
+            "movement": "horizontal",
+            "method": "plyometric",
+            "tags": ["mech_lower_jump"],
+        }
+    ) == "horizontal_jump"
+    assert normalize_exercise_movement(
+        {
+            "name": "Reactive Shuffle",
+            "movement": "frontal",
+            "method": "plyometric",
+            "tags": ["mech_lower_jump"],
+        }
+    ) == "lateral_reactive"
+    assert normalize_exercise_movement(
+        {
+            "name": "Rotational Hop",
+            "movement": "transverse",
+            "method": "plyometric",
+            "tags": ["mech_lower_jump", "mech_trunk_rotation"],
+        }
+    ) == "rotation"
 
 
 def test_movement_keyword_ab_does_not_match_inside_words():

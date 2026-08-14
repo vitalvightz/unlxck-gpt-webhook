@@ -120,6 +120,11 @@ CORE_BALANCE_PRIORITY_TOKENS = {
     "balance",
     "stability",
 }
+LOWER_BODY_EXPLOSIVE_PRIORITY_TOKENS = {
+    "power",
+    "explosive_power",
+    "rate_of_force",
+}
 
 
 def _has_core_balance_priority(flags: dict, weaknesses) -> bool:
@@ -138,6 +143,24 @@ def _has_core_balance_priority(flags: dict, weaknesses) -> bool:
     normalized = {normalize_tag(value) for value in raw_values}
     normalized.discard(None)
     return bool(normalized & CORE_BALANCE_PRIORITY_TOKENS)
+
+
+def _has_lower_body_explosive_priority(flags: dict, weaknesses) -> bool:
+    raw_values: list[str] = []
+
+    def add_values(value) -> None:
+        if isinstance(value, (list, tuple, set)):
+            raw_values.extend(str(item) for item in value if str(item).strip())
+        elif value is not None and str(value).strip():
+            raw_values.append(str(value))
+
+    add_values(weaknesses)
+    for key in ("weaknesses", "key_goals", "primary_goal", "primary_weak_area"):
+        add_values(flags.get(key))
+
+    normalized = {normalize_tag(value) for value in raw_values}
+    normalized.discard(None)
+    return bool(normalized & LOWER_BODY_EXPLOSIVE_PRIORITY_TOKENS)
 
 
 FATIGUE_COST_BY_QUALITY_CLASS = {
@@ -967,7 +990,10 @@ def _evaluate_strength_late_window(
         profile["ballistic"]
         and not profile["landing_impact"]
         and not profile["systemic_fatigue"]
-        and normalize_exercise_movement(exercise) in {"core", "pull", "vertical_push", "horizontal_push", "rotational"}
+        # Preserve late-window scoring while movement normalization becomes
+        # more specific. Upper-body push families remain governed by their
+        # explicit late metadata rather than gaining an incidental score boost.
+        and normalize_exercise_movement(exercise) in {"core", "pull", "rotational"}
     ):
         adjustment += 0.25
         reason_codes.append("late_strength_boost_crisp_ballistic")
@@ -1458,6 +1484,28 @@ MOVEMENT_PATTERN_KEYWORDS = {
     "neck": ["neck"],
 }
 
+EXPLICIT_MOVEMENT_ALIASES = {
+    "rotational": "rotation",
+}
+
+CANONICAL_EXPLICIT_MOVEMENTS = {
+    "vertical_jump",
+    "horizontal_jump",
+    "lateral_reactive",
+    "horizontal_push",
+    "vertical_push",
+    "olympic",
+    "squat",
+    "hinge",
+    "push",
+    "pull",
+    "lunge",
+    "rotation",
+    "carry",
+    "core",
+    "neck",
+}
+
 
 def _contains_movement_keyword(text: str, keyword: str) -> bool:
     """Match complete movement terms instead of arbitrary substrings."""
@@ -1476,20 +1524,65 @@ def _detect_movement_pattern(exercise: dict) -> str:
     name = str(exercise.get("name") or "").lower()
     method = str(exercise.get("method") or "").strip().lower()
     tags = set(normalize_tags(exercise.get("tags") or []))
+    category = str(exercise.get("category") or "").strip().lower()
+    explicit = str(exercise.get("movement") or "").strip().lower().replace(" ", "_")
 
-    # Give lower-body ballistic work its own stable movement families.  Keep
-    # contrast pairs attached to their loaded pattern because the first half of
-    # the pair controls exercise selection and prescription.
+    # The bank owns movement identity. Preserve meaningful explicit metadata
+    # before consulting tags, names or method-level hints.
+    explicit = EXPLICIT_MOVEMENT_ALIASES.get(explicit, explicit)
+    if explicit in CANONICAL_EXPLICIT_MOVEMENTS:
+        return explicit
+    if explicit == "vertical" and "mech_lower_jump" in tags:
+        return "vertical_jump"
+    if explicit == "horizontal" and "mech_lower_jump" in tags:
+        return "horizontal_jump"
+    if explicit in {"lateral", "frontal"} and "mech_lower_jump" in tags:
+        return "lateral_reactive"
+    if explicit == "transverse" and ("mech_trunk_rotation" in tags or "rotat" in name):
+        return "rotation"
+
+    # Contrast pairs stay attached to the loaded first movement because that
+    # movement controls selection and prescription.
     contrast_pair = "→" in name or "->" in name or "contrast_pairing" in tags
-    lower_body_ballistic = method == "plyometric" or "mech_lower_jump" in tags
-    if lower_body_ballistic and not contrast_pair:
-        if "mech_lower_lateral" in tags or any(
-            hint in name for hint in ("lateral", "skater", "side hop", "zig-zag")
-        ):
+    if contrast_pair:
+        loaded_name = re.split(r"(?:→|->)", name, maxsplit=1)[0]
+        for pattern in ("squat", "hinge", "push", "pull", "lunge"):
+            if any(
+                _contains_movement_keyword(loaded_name, keyword)
+                for keyword in MOVEMENT_PATTERN_KEYWORDS[pattern]
+            ):
+                return pattern
+
+    # Mechanical metadata comes next. Plyometric is deliberately not treated
+    # as a lower-body signal: it describes force production, not body region.
+    upper_body_context = (
+        category == "upper_body"
+        or "upper_body" in tags
+        or bool(re.search(r"\b(?:push-up|pushup|press|punch|chest toss|chest throw)\b", name))
+    )
+    if "mech_upper_press" in tags and "mech_lower_jump" not in tags and upper_body_context:
+        return "vertical_push" if "overhead" in name else "horizontal_push"
+    if "mech_lower_lateral" in tags and "mech_lower_jump" in tags:
+        return "lateral_reactive"
+    if "mech_trunk_rotation" in tags and "mech_lower_jump" in tags:
+        return "rotation"
+    if "mech_lower_jump" in tags:
+        if any(hint in name for hint in ("lateral", "skater", "side hop", "zig-zag", "shuffle")):
             return "lateral_reactive"
-        if any(hint in name for hint in ("broad jump", "forward hop", "bounding", "bound")):
+        if any(hint in name for hint in ("broad jump", "forward hop", "bounding", "bound", "sprint")):
             return "horizontal_jump"
         return "vertical_jump"
+
+    # Directional names can refine otherwise-generic bank metadata. Method is
+    # only a weak eligibility hint here and never determines vertical direction.
+    lower_body_context = category in {"lower_body", "lateral", "locomotion", "reactive"}
+    if lower_body_context or method == "plyometric":
+        if any(hint in name for hint in ("lateral", "skater", "side hop", "zig-zag", "shuffle")):
+            return "lateral_reactive"
+        if any(hint in name for hint in ("broad jump", "forward hop", "bounding", "bound", "sprint")):
+            return "horizontal_jump"
+        if re.search(r"\b(?:jump|jumps|hop|hops|pogo)\b", name) and category != "upper_body":
+            return "vertical_jump"
 
     for pattern, keywords in MOVEMENT_PATTERN_KEYWORDS.items():
         if any(_contains_movement_keyword(haystack, keyword) for keyword in keywords):
@@ -1737,6 +1830,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     ]
     goals = flags.get("key_goals", [])
     core_balance_bonus = 1 if _has_core_balance_priority(flags, weaknesses) else 0
+    require_lower_body_explosive_anchor = (
+        phase in {"GPP", "SPP"}
+        and str(fatigue or "").strip().lower() != "high"
+        and _has_lower_body_explosive_priority(flags, weaknesses)
+    )
     priority_profile = build_priority_profile(
         SimpleNamespace(
             key_goals=goals,
@@ -2505,12 +2603,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         ]
 
     def _required_base_categories(exercises: list[dict]) -> list[str]:
-        categories = missing_base_categories(exercises)
-        # Lower-body power is a quality requirement for normal GPP/SPP work,
-        # not a reason to override fatigue down-regulation or taper restraint.
-        if fatigue == "high" or phase == "TAPER":
-            categories = [category for category in categories if category != "lower_body_power"]
-        return categories
+        return missing_base_categories(
+            exercises,
+            require_lower_body_explosive_anchor=require_lower_body_explosive_anchor,
+        )
 
     def _promote_base_categories(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)

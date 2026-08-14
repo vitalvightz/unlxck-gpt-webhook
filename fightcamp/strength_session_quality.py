@@ -59,10 +59,14 @@ _POWER_HINTS = {
     "contrast",
     "neural_primer",
 }
-_LOWER_BODY_POWER_TAGS = {
+_LOWER_BODY_JUMP_TAGS = {
     "mech_lower_jump",
     "mech_lower_lateral",
-    "triple_extension",
+}
+_LOWER_BODY_HIP_BALLISTIC_TAGS = {
+    "mech_lower_hip_hinge",
+    "hip_dominant",
+    "posterior_chain",
 }
 _ROTATIONAL_POWER_TAGS = {"rotational", "mech_trunk_rotation"}
 _UPPER_BODY_BALLISTIC_TAGS = {
@@ -160,10 +164,32 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
     upper_body_push_pull = loaded_pattern and _has_any_hint(text, _PUSH_HINTS | _PULL_HINTS | {"upper_body"})
     unilateral = "unilateral" in tags or _has_any_hint(text, _UNILATERAL_HINTS)
     power_pattern = bool(tags & _POWER_HINTS) or _has_any_hint(text, _POWER_HINTS)
-    lower_body_power = power_pattern and (
-        bool(tags & _LOWER_BODY_POWER_TAGS)
+    lower_body_jump = power_pattern and (
+        bool(tags & _LOWER_BODY_JUMP_TAGS)
         or bool(re.search(r"\b(?:jump|hop|bound|sprint)\b", text))
     )
+    lower_body_olympic = power_pattern and (
+        "olympic" in tags
+        or bool(
+            re.search(
+                r"\b(?:power clean|hang clean|clean pull|power snatch|hang snatch|high pull)\b",
+                text,
+            )
+        )
+    )
+    lower_body_hip_ballistic = (
+        power_pattern
+        and not lower_body_jump
+        and not lower_body_olympic
+        and "mech_ballistic" in tags
+        and (
+            bool(tags & _LOWER_BODY_HIP_BALLISTIC_TAGS)
+            or bool(re.search(r"\b(?:kettlebell|kb) swing\b", text))
+        )
+    )
+    lower_body_ballistic = lower_body_jump or lower_body_olympic or lower_body_hip_ballistic
+    lower_body_power = lower_body_ballistic
+    lower_body_explosive_anchor = lower_body_ballistic
     rotational_power = power_pattern and bool(tags & _ROTATIONAL_POWER_TAGS)
     upper_body_ballistic = power_pattern and (
         bool(tags & _UPPER_BODY_BALLISTIC_TAGS)
@@ -210,6 +236,15 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
         base_categories.add("unilateral")
     if lower_body_power:
         base_categories.add("lower_body_power")
+        base_categories.add("lower_body_ballistic")
+    if lower_body_explosive_anchor:
+        base_categories.add("lower_body_explosive_anchor")
+    if lower_body_jump:
+        base_categories.add("lower_body_jump")
+    if lower_body_olympic:
+        base_categories.add("lower_body_olympic")
+    if lower_body_hip_ballistic:
+        base_categories.add("lower_body_hip_ballistic")
     if rotational_power:
         base_categories.add("rotational_power")
     if upper_body_ballistic:
@@ -312,11 +347,17 @@ def support_budget_cost(
     return cost
 
 
-def missing_base_categories(exercises: list[dict[str, Any]]) -> list[str]:
+def missing_base_categories(
+    exercises: list[dict[str, Any]],
+    *,
+    require_lower_body_explosive_anchor: bool = False,
+) -> list[str]:
     present: set[str] = set()
     for exercise in exercises:
         present.update(classify_strength_item(exercise)["base_categories"])
-    ordered = ["lower_body_loaded", "upper_body_push_pull", "unilateral", "lower_body_power"]
+    ordered = ["lower_body_loaded", "upper_body_push_pull", "unilateral"]
+    if require_lower_body_explosive_anchor:
+        ordered.append("lower_body_explosive_anchor")
     return [category for category in ordered if category not in present]
 
 
