@@ -3559,24 +3559,12 @@
   {
     "bank": "conditioning_bank",
     "explicit_tags": [
-      "explosive",
-      "low_impact"
-    ],
-    "inferred_tags": [
-      "max_velocity"
-    ],
-    "item_id": "conditioning_bank:Assault Bike :10s Sprints (ATP-PCr)",
-    "name": "Assault Bike :10s Sprints (ATP-PCr)"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
       "hip_dominant",
       "posterior_chain"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:KB Swing Intervals (Glycolytic)",
-    "name": "KB Swing Intervals (Glycolytic)"
+    "item_id": "conditioning_bank:KB Swing Intervals",
+    "name": "KB Swing Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3587,8 +3575,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Sled Push Sprints (ATP-PCr)",
-    "name": "Sled Push Sprints (ATP-PCr)"
+    "item_id": "conditioning_bank:Sled Push Sprints",
+    "name": "Sled Push Sprints"
   },
   {
     "bank": "conditioning_bank",
@@ -3597,20 +3585,8 @@
       "triple_extension"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Med Ball Slams (Glycolytic)",
-    "name": "Med Ball Slams (Glycolytic)"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
-      "explosive",
-      "unilateral"
-    ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
-    "item_id": "conditioning_bank:Band-Resisted Broad Jumps (ATP-PCr)",
-    "name": "Band-Resisted Broad Jumps (ATP-PCr)"
+    "item_id": "conditioning_bank:Med Ball Slams",
+    "name": "Med Ball Slams"
   },
   {
     "bank": "conditioning_bank",
@@ -3621,8 +3597,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Treadmill Hill Sprints (Glycolytic)",
-    "name": "Treadmill Hill Sprints (Glycolytic)"
+    "item_id": "conditioning_bank:Treadmill Hill Sprints",
+    "name": "Treadmill Hill Sprints"
   },
   {
     "bank": "conditioning_bank",
@@ -3631,18 +3607,8 @@
       "grip"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Battle Rope Waves (Glycolytic)",
-    "name": "Battle Rope Waves (Glycolytic)"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
-      "reactive",
-      "eccentric"
-    ],
-    "inferred_tags": [],
-    "item_id": "conditioning_bank:Depth Drops (ATP-PCr)",
-    "name": "Depth Drops (ATP-PCr)"
+    "item_id": "conditioning_bank:Battle Rope Waves",
+    "name": "Battle Rope Waves"
   },
   {
     "bank": "conditioning_bank",
@@ -3651,8 +3617,8 @@
       "rotational"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Sandbag Shoulder Intervals (Glycolytic)",
-    "name": "Sandbag Shoulder Intervals (Glycolytic)"
+    "item_id": "conditioning_bank:Sandbag Shoulder Intervals",
+    "name": "Sandbag Shoulder Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3663,8 +3629,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Prowler Sprint Intervals (ATP-PCr)",
-    "name": "Prowler Sprint Intervals (ATP-PCr)"
+    "item_id": "conditioning_bank:Prowler Sprint Intervals",
+    "name": "Prowler Sprint Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3675,8 +3641,8 @@
     "inferred_tags": [
       "high_impact_plyo"
     ],
-    "item_id": "conditioning_bank:Burpee Broad Jumps (Glycolytic)",
-    "name": "Burpee Broad Jumps (Glycolytic)"
+    "item_id": "conditioning_bank:Burpee Broad Jumps",
+    "name": "Burpee Broad Jumps"
   },
   {
     "bank": "conditioning_bank",
@@ -3687,8 +3653,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Clap Push-Up Sprints (ATP-PCr)",
-    "name": "Clap Push-Up Sprints (ATP-PCr)"
+    "item_id": "conditioning_bank:Clap Push-Up Sprints",
+    "name": "Clap Push-Up Sprints"
   },
   {
     "bank": "conditioning_bank",
@@ -3697,30 +3663,8 @@
       "reactive"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Lateral Bound Intervals (Glycolytic)",
-    "name": "Lateral Bound Intervals (Glycolytic)"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
-      "rotational",
-      "grip"
-    ],
-    "inferred_tags": [],
-    "item_id": "conditioning_bank:Sledgehammer Strikes (Glycolytic)",
-    "name": "Sledgehammer Strikes (Glycolytic)"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
-      "quad_dominant",
-      "explosive"
-    ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
-    "item_id": "conditioning_bank:Box Jump Repeats (ATP-PCr)",
-    "name": "Box Jump Repeats (ATP-PCr)"
+    "item_id": "conditioning_bank:Lateral Bound Intervals",
+    "name": "Lateral Bound Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3729,20 +3673,8 @@
       "overhead"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Wall Ball Shot Intervals (Glycolytic)",
-    "name": "Wall Ball Shot Intervals (Glycolytic)"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
-      "acceleration",
-      "low_volume"
-    ],
-    "inferred_tags": [
-      "max_velocity"
-    ],
-    "item_id": "conditioning_bank:Band-Resisted Sprint Starts (ATP-PCr)",
-    "name": "Band-Resisted Sprint Starts (ATP-PCr)"
+    "item_id": "conditioning_bank:Wall Ball Shot Intervals",
+    "name": "Wall Ball Shot Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3753,8 +3685,8 @@
     "inferred_tags": [
       "high_impact_plyo"
     ],
-    "item_id": "conditioning_bank:Jump Squat Intervals (Glycolytic)",
-    "name": "Jump Squat Intervals (Glycolytic)"
+    "item_id": "conditioning_bank:Jump Squat Intervals",
+    "name": "Jump Squat Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3765,8 +3697,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Tire Flip Sprints (ATP-PCr)",
-    "name": "Tire Flip Sprints (ATP-PCr)"
+    "item_id": "conditioning_bank:Tire Flip + Short Sprint",
+    "name": "Tire Flip + Short Sprint"
   },
   {
     "bank": "conditioning_bank",
@@ -3775,8 +3707,8 @@
       "reactive"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Defensive Sprawl Intervals (Glycolytic)",
-    "name": "Defensive Sprawl Intervals (Glycolytic)"
+    "item_id": "conditioning_bank:Defensive Sprawl Intervals",
+    "name": "Defensive Sprawl Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3788,8 +3720,8 @@
       "overhead",
       "shoulder_heavy"
     ],
-    "item_id": "conditioning_bank:Single-Arm KB Snatch (ATP-PCr)",
-    "name": "Single-Arm KB Snatch (ATP-PCr)"
+    "item_id": "conditioning_bank:Single-Arm KB Snatch",
+    "name": "Single-Arm KB Snatch"
   },
   {
     "bank": "conditioning_bank",
@@ -3800,8 +3732,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Agility Ladder Sprints (Glycolytic)",
-    "name": "Agility Ladder Sprints (Glycolytic)"
+    "item_id": "conditioning_bank:Agility Ladder Sprints",
+    "name": "Agility Ladder Sprints"
   },
   {
     "bank": "conditioning_bank",
@@ -3810,8 +3742,8 @@
       "rotational"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Heavy Bag Power Intervals (Glycolytic)",
-    "name": "Heavy Bag Power Intervals (Glycolytic)"
+    "item_id": "conditioning_bank:Heavy Bag Power Intervals",
+    "name": "Heavy Bag Power Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3823,8 +3755,8 @@
       "front_rack",
       "wrist_loaded_extension"
     ],
-    "item_id": "conditioning_bank:Sandbag Clean & Press (ATP-PCr)",
-    "name": "Sandbag Clean & Press (ATP-PCr)"
+    "item_id": "conditioning_bank:Sandbag Clean & Press",
+    "name": "Sandbag Clean & Press"
   },
   {
     "bank": "conditioning_bank",
@@ -3835,8 +3767,8 @@
     "inferred_tags": [
       "high_impact_plyo"
     ],
-    "item_id": "conditioning_bank:Plyo Step-Up Intervals (Glycolytic)",
-    "name": "Plyo Step-Up Intervals (Glycolytic)"
+    "item_id": "conditioning_bank:Plyo Step-Up Intervals",
+    "name": "Plyo Step-Up Intervals"
   },
   {
     "bank": "conditioning_bank",
@@ -3849,8 +3781,8 @@
       "hand_crush",
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Rope Climb Sprints (ATP-PCr)",
-    "name": "Rope Climb Sprints (ATP-PCr)"
+    "item_id": "conditioning_bank:Rope Climb + Short Sprint",
+    "name": "Rope Climb + Short Sprint"
   },
   {
     "bank": "conditioning_bank",
@@ -3859,8 +3791,8 @@
       "reactive"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Shadowboxing Power Bursts (Glycolytic)",
-    "name": "Shadowboxing Power Bursts (Glycolytic)"
+    "item_id": "conditioning_bank:Shadowboxing Power Bursts",
+    "name": "Shadowboxing Power Bursts"
   },
   {
     "bank": "conditioning_bank",
@@ -3871,8 +3803,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "conditioning_bank:Sled Drag Sprints (ATP-PCr)",
-    "name": "Sled Drag Sprints (ATP-PCr)"
+    "item_id": "conditioning_bank:Sled Drag Sprints",
+    "name": "Sled Drag Sprints"
   },
   {
     "bank": "conditioning_bank",
@@ -3881,8 +3813,8 @@
       "rotational"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Med Ball Throw Circuit (Glycolytic)",
-    "name": "Med Ball Throw Circuit (Glycolytic)"
+    "item_id": "conditioning_bank:Med Ball Throw Circuit",
+    "name": "Med Ball Throw Circuit"
   },
   {
     "bank": "conditioning_bank",
@@ -3893,8 +3825,8 @@
     "inferred_tags": [
       "high_impact_plyo"
     ],
-    "item_id": "conditioning_bank:Broad Jump Repeats (ATP-PCr)",
-    "name": "Broad Jump Repeats (ATP-PCr)"
+    "item_id": "conditioning_bank:Broad Jump Repeats",
+    "name": "Broad Jump Repeats"
   },
   {
     "bank": "conditioning_bank",
@@ -3903,8 +3835,8 @@
       "reactive"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Grapple Escapes Under Fatigue (Glycolytic)",
-    "name": "Grapple Escapes Under Fatigue (Glycolytic)"
+    "item_id": "conditioning_bank:Grapple Escapes Under Fatigue",
+    "name": "Grapple Escapes Under Fatigue"
   },
   {
     "bank": "conditioning_bank",
@@ -3917,8 +3849,8 @@
       "skill"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Tempo Shadowboxing (Aerobic)",
-    "name": "Tempo Shadowboxing (Aerobic)"
+    "item_id": "conditioning_bank:Tempo Shadowboxing",
+    "name": "Tempo Shadowboxing"
   },
   {
     "bank": "conditioning_bank",
@@ -4000,8 +3932,8 @@
       "skill"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Defensive Movement Drills",
-    "name": "Defensive Movement Drills"
+    "item_id": "conditioning_bank:Defensive Movement Flow",
+    "name": "Defensive Movement Flow"
   },
   {
     "bank": "conditioning_bank",
@@ -4050,8 +3982,8 @@
       "skill"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:EMOM Jab-Cross (Aerobic)",
-    "name": "EMOM Jab-Cross (Aerobic)"
+    "item_id": "conditioning_bank:EMOM Jab-Cross",
+    "name": "EMOM Jab-Cross"
   },
   {
     "bank": "conditioning_bank",
@@ -4256,8 +4188,8 @@
       "low_impact"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Calf Raise Walk (Aerobic)",
-    "name": "Calf Raise Walk (Aerobic)"
+    "item_id": "conditioning_bank:Calf Raise Walk",
+    "name": "Calf Raise Walk"
   },
   {
     "bank": "conditioning_bank",

@@ -267,7 +267,7 @@ def test_taper_does_not_pull_from_style_conditioning_bank(monkeypatch):
 def test_late_window_blocks_non_taper_phased_conditioning_even_if_otherwise_valid():
     result = conditioning._evaluate_conditioning_late_window(
         {
-            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "name": "Band-Resisted Sprint Start",
             "phases": ["SPP"],
             "system": "alactic",
             "tags": ["acceleration", "low_volume"],
@@ -287,7 +287,7 @@ def test_late_window_blocks_non_taper_phased_conditioning_even_if_otherwise_vali
 def test_d7_and_under_blocks_non_rehab_band_conditioning_work():
     result = conditioning._evaluate_conditioning_late_window(
         {
-            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "name": "Band-Resisted Sprint Start",
             "phases": ["TAPER"],
             "system": "alactic",
             "tags": ["acceleration", "speed"],
@@ -330,7 +330,7 @@ def test_d1_blocks_rehab_band_conditioning_work():
 def test_late_window_blocks_non_taper_phased_conditioning_in_d13_to_d8():
     result = conditioning._evaluate_conditioning_late_window(
         {
-            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "name": "Band-Resisted Sprint Start",
             "phases": ["SPP"],
             "system": "alactic",
             "tags": ["acceleration", "low_volume"],
@@ -352,7 +352,7 @@ def test_late_window_blocks_non_taper_phased_conditioning_in_d13_to_d8():
 def test_late_window_blocks_non_taper_phased_conditioning_in_d1():
     result = conditioning._evaluate_conditioning_late_window(
         {
-            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "name": "Band-Resisted Sprint Start",
             "phases": ["SPP"],
             "system": "alactic",
             "tags": ["acceleration", "low_volume"],
@@ -372,7 +372,7 @@ def test_late_window_blocks_non_taper_phased_conditioning_in_d1():
 def test_bridge_window_d21_to_d14_does_not_auto_block_spp_only_by_phase():
     result = conditioning._evaluate_conditioning_late_window(
         {
-            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "name": "Band-Resisted Sprint Start",
             "phases": ["SPP"],
             "system": "alactic",
             "tags": ["acceleration", "low_volume"],
@@ -429,7 +429,7 @@ def test_late_window_keeps_taper_phased_conditioning_eligible():
 def test_athlete_facing_system_label_returns_string_for_spp_only_drill():
     label = conditioning.athlete_facing_system_label(
         {
-            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "name": "Band-Resisted Sprint Start",
             "phases": ["SPP"],
             "system": "alactic",
             "tags": ["acceleration", "low_volume"],
@@ -667,15 +667,9 @@ def test_coordination_bank_duplicate_names_are_resolved():
 def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
     data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
     by_name = {item["name"]: item for item in data}
-    sprint_starts = [
-        by_name[name]
-        for name in ("Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)")
-    ]
+    sprint_starts = [by_name[name] for name in ("Band-Resisted Sprint Start",)]
 
-    assert {item["name"] for item in sprint_starts} == {
-        "Band-Resisted Sprint Start",
-        "Band-Resisted Sprint Starts (ATP-PCr)",
-    }
+    assert {item["name"] for item in sprint_starts} == {"Band-Resisted Sprint Start"}
     for item in sprint_starts:
         assert item["phases"] == ["SPP"]
         assert "TAPER" not in item["phases"]
@@ -803,7 +797,6 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     assert "late_penalty_missing_governance_metadata" in penalized["Reactive Shuffle Repeats"]
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
-    assert "Band-Resisted Sprint Starts (ATP-PCr)" not in plan_text
 
 
 def test_final_week_taper_caps_keep_primers_submaximal():

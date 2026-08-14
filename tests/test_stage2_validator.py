@@ -1918,7 +1918,7 @@ def test_late_fight_allowlist_blocks_d13_band_resisted_sprint_starts():
         planning_brief=brief,
         final_plan_text="""
         D-13 - Sharpness
-        - Band-Resisted Sprint Starts (ATP-PCr) - 3 x 5 m
+        - Band-Resisted Sprint Start - 3 x 5 m
         """,
     )
 

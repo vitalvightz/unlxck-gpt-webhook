@@ -1,5 +1,12 @@
 # Conditioning Bank — Dose Metadata Audit (Second Pass)
 
+> **Status: pre-cleanup snapshot.** This records the bank as audited at 259
+> entries. The follow-up cleanup PR acted on most of it (deduplication, name
+> standardisation, `rest_sec`/`total_minutes`/equipment/cost corrections, notes
+> cleanup). Items deliberately left alone — chiefly the rep/distance `work_sec`
+> ambiguity and the `Treadmill Hill Sprints` "1:40 rest" reading — are called
+> out in that PR as remaining ambiguity.
+
 This report is **diagnostic only**. It does not rewrite, delete, rename, redose, or
 otherwise change any bank entry or selector logic. It catalogues every malformed or
 contradictory dose field found in `data/conditioning_bank.json` and ranks

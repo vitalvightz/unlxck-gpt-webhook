@@ -212,14 +212,12 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
     ),
     13: (
         "Band-Resisted Sprint Start",
-        "Band-Resisted Sprint Starts (ATP-PCr)",
         "resisted acceleration",
         "sprint start",
     ),
     6: (
         "Band-Assisted Jump Reset",
         "Band-Resisted Sprint Start",
-        "Band-Resisted Sprint Starts (ATP-PCr)",
         "kettlebell",
         "kettlebell swing",
         "power clean",
@@ -247,7 +245,6 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "band",
         "banded",
         "Band-Resisted Sprint Start",
-        "Band-Resisted Sprint Starts (ATP-PCr)",
         "Jump Reset",
         "Heavy Bag",
         "Pull-Up Hold",
@@ -1987,25 +1984,25 @@ _LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
         "preferred": ["Trap Bar Deadlift", "Staggered-Stance Medicine-Ball Punch Throw", "Band-Resisted Jab-Cross Primer", "Mobility Reset Flow"],
     },
     "d13_to_d8": {
-        "blocked": ["Sandbag Shouldering", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Dense Conditioning Circuit"],
+        "blocked": ["Sandbag Shouldering", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Dense Conditioning Circuit"],
         "preferred": ["Staggered-Stance Medicine-Ball Punch Throw", "Band-Resisted Jab-Cross Primer", "Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats", "Mobility Reset Flow", "Breathing Reset"],
     },
     "d7": {
-        "blocked": ["Sandbag Shouldering", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Heavy Bag Density Rounds", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "blocked": ["Sandbag Shouldering", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Heavy Bag Density Rounds", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": ["Reactive Shuffle Repeats", "Explosive Boxing Burst Intervals", "Technical Shadowboxing Tempo", "Mobility Reset Flow"],
     },
     "d6_to_d5": {
-        "blocked": ["Sandbag Shouldering", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Dense Conditioning Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "blocked": ["Sandbag Shouldering", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Dense Conditioning Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": ["Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"],
     },
     "d4_to_d2": {
-        "blocked": ["Sandbag Shouldering", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Heavy Bag Density Rounds", "Medicine Ball Power Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "blocked": ["Sandbag Shouldering", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Resisted Sprint Start", "Band-Assisted Jump Reset", "Heavy Bag Density Rounds", "Medicine Ball Power Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": ["Technical Shadowboxing Tempo", "Mobility Reset Flow", "Breathing Reset", "Band Face Pull", "Light Band Punch Cue", "Mirror Drill"],
     },
     "d1": {
         # D-1 is equipment-free: beyond the named drills, any generic
         # equipment term is blocked outright.
-        "blocked": ["Sandbag Shouldering", "Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "band", "banded", "bands", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Slow-Lowered Pull-Up", "Bulgarian Split Squat", "barbell", "dumbbell", "kettlebell", "medicine ball", "med ball", "slam ball", "sled", "sandbag", "cable", "landmine", "weight vest", "weighted", "heavy bag", "double-end bag", "double end bag", "focus mitt", "focus mitts", "reaction ball", "bosu", "pull-up", "pullup", "trap bar", "kettlebells", "dumbbells"],
+        "blocked": ["Sandbag Shouldering", "Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "band", "banded", "bands", "Band-Resisted Sprint Start", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Slow-Lowered Pull-Up", "Bulgarian Split Squat", "barbell", "dumbbell", "kettlebell", "medicine ball", "med ball", "slam ball", "sled", "sandbag", "cable", "landmine", "weight vest", "weighted", "heavy bag", "double-end bag", "double end bag", "focus mitt", "focus mitts", "reaction ball", "bosu", "pull-up", "pullup", "trap bar", "kettlebells", "dumbbells"],
         "preferred": [
             "Technical Shadowboxing Tempo",
             "Mobility Reset Flow",

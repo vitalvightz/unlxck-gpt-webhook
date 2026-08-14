@@ -520,7 +520,7 @@ def test_integration_filtering_on_mini_bank():
         "Pressure Fighter Cutoff Hop",
     ]
     shoulder_true = [
-        "Sandbag Clean & Press (ATP-PCr)",
+        "Sandbag Clean & Press",
         "Overhead Carry Complex",
         "Kettlebell Snatch Test",
         "Bench Press Isometric (110% 1RM @ 90° Elbow)",
