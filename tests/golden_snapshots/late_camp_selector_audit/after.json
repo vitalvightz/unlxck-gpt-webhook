@@ -795,13 +795,6 @@
           ]
         },
         {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
           "name": "Overhead Med Ball Slam (Snappy)",
           "score": 0.95,
           "reason_codes": [
@@ -1647,13 +1640,6 @@
           ]
         },
         {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
           "name": "Plank Hold - Counter Striker",
           "score": 0.0,
           "reason_codes": [
@@ -2133,13 +2119,6 @@
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows"
           ]
         },
         {
@@ -2751,13 +2730,6 @@
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows"
           ]
         },
         {
@@ -3459,13 +3431,6 @@
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_impact"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows"
           ]
         },
         {
@@ -4373,14 +4338,6 @@
             "late_block_high_impact",
             "late_block_d1_forbidden_modality",
             "late_block_d1_equipment"
-          ]
-        },
-        {
-          "name": "Mini Hurdle Quick Steps",
-          "score": 0.0,
-          "reason_codes": [
-            "late_block_missing_late_windows",
-            "late_block_d1_forbidden_modality"
           ]
         },
         {

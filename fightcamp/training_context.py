@@ -57,6 +57,13 @@ EQUIP_ALIASES = {
     "rowing machine": "rower",
     "rowing_machine": "rower",
     "concept2 rower": "rower",
+    "skipping rope": "jump_rope",
+    "skip rope": "jump_rope",
+    "speed rope": "jump_rope",
+    "hurdle": "hurdles",
+    "mini hurdle": "hurdles",
+    "mini hurdles": "hurdles",
+    "agility hurdles": "hurdles",
 }
 
 
@@ -108,7 +115,7 @@ known_equipment = [
     "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",
     "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
     "elliptical", "pool", "bodyweight", "battle_rope", "kettlebells",
-    "weight_belt"
+    "weight_belt", "jump_rope", "hurdles"
 ]
 
 

@@ -251,7 +251,9 @@
   },
   {
     "name": "Jump Rope Conditioning",
-    "equipment": [],
+    "equipment": [
+      "jump_rope"
+    ],
     "phases": [
       "GPP",
       "SPP"
@@ -604,7 +606,9 @@
   },
   {
     "name": "Jump Rope (Recovery Pace)",
-    "equipment": [],
+    "equipment": [
+      "jump_rope"
+    ],
     "phases": [
       "GPP",
       "SPP"
@@ -1323,7 +1327,9 @@
   },
   {
     "name": "Hurdle Hop (Stick Landing)",
-    "equipment": [],
+    "equipment": [
+      "hurdles"
+    ],
     "phases": [
       "SPP"
     ],
@@ -5632,7 +5638,9 @@
   },
   {
     "name": "Mini Hurdle Quick Steps",
-    "equipment": [],
+    "equipment": [
+      "hurdles"
+    ],
     "phases": [
       "TAPER"
     ],
