@@ -865,7 +865,7 @@
       "mech_trunk_stability"
     ],
     "notes": "Water resistance provides conditioning without any joint impact. Excellent for ankle/knee injuries.",
-    "work_sec": 1800,
+    "work_sec": 2100,
     "total_minutes": 35,
     "rpe": 5,
     "impact_cost": "low",
@@ -1172,7 +1172,7 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Arm crank ergometer for pure upper body cardio. Zero lower body involvement.",
-    "work_sec": 1500,
+    "work_sec": 1800,
     "total_minutes": 30,
     "rpe": 5,
     "impact_cost": "low",
