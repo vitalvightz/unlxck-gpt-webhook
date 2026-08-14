@@ -2896,8 +2896,8 @@
       "elastic"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Alternating Bound",
-    "name": "Alternating Bound"
+    "item_id": "conditioning_bank:Alternating Bounds",
+    "name": "Alternating Bounds"
   },
   {
     "bank": "conditioning_bank",
@@ -3027,8 +3027,8 @@
       "adductors"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Band-Resisted Lateral Bound",
-    "name": "Band-Resisted Lateral Bound"
+    "item_id": "conditioning_bank:Band-Resisted Lateral Bounds",
+    "name": "Band-Resisted Lateral Bounds"
   },
   {
     "bank": "conditioning_bank",
@@ -11300,5 +11300,49 @@
     "inferred_tags": [],
     "item_id": "coordination_bank:Chaos Corner Drill",
     "name": "Chaos Corner Drill"
+  },
+  {
+    "bank": "conditioning_bank",
+    "explicit_tags": [
+      "quad_dominant",
+      "explosive"
+    ],
+    "inferred_tags": [
+      "high_impact_plyo"
+    ],
+    "item_id": "conditioning_bank:Box Jump (Max Height)",
+    "name": "Box Jump (Max Height)"
+  },
+  {
+    "bank": "conditioning_bank",
+    "explicit_tags": [
+      "reactive",
+      "eccentric"
+    ],
+    "inferred_tags": [],
+    "item_id": "conditioning_bank:Depth Drop (No Rebound)",
+    "name": "Depth Drop (No Rebound)"
+  },
+  {
+    "bank": "conditioning_bank",
+    "explicit_tags": [
+      "rotational",
+      "grip"
+    ],
+    "inferred_tags": [],
+    "item_id": "conditioning_bank:Sledgehammer Strike Intervals",
+    "name": "Sledgehammer Strike Intervals"
+  },
+  {
+    "bank": "conditioning_bank",
+    "explicit_tags": [
+      "explosive",
+      "unilateral"
+    ],
+    "inferred_tags": [
+      "high_impact_plyo"
+    ],
+    "item_id": "conditioning_bank:Band-Resisted Broad Jump (Max Effort)",
+    "name": "Band-Resisted Broad Jump (Max Effort)"
   }
 ]

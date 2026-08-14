@@ -881,3 +881,20 @@ def test_med_ball_scoop_toss_is_not_false_positive_shoulder_press_exclusion():
     assert decision.action != "exclude"
     assert "mech_upper_press" not in (exercise.get("tags") or [])
     assert "mech_upper_press" not in (exercise.get("mechanical_risk_tags") or [])
+
+
+def test_bounding_conditioning_drills_are_gated_for_hamstring_injuries():
+    """Bounding drills must be named so the existing hamstring rule matches.
+
+    ``INJURY_RULES['hamstring']`` bans the keywords ``bounds``/``bounding``.
+    A singular name ("Alternating Bound") slips past that rule, which left
+    maximal horizontal plyometrics fully allowed for hamstring-injured
+    athletes. Keep these bank names plural so the rule actually fires.
+    """
+    data_path = Path(__file__).resolve().parents[1] / "data" / "conditioning_bank.json"
+    drills = {item["name"]: item for item in json.loads(data_path.read_text(encoding="utf-8"))}
+
+    for name in ("Alternating Bounds", "Band-Resisted Lateral Bounds"):
+        assert name in drills, f"{name} missing from conditioning_bank.json"
+        decision = injury_decision(drills[name], ["hamstring"], "SPP", "moderate")
+        assert decision.action != "allow", f"{name} should be gated for hamstring injuries"
