@@ -101,7 +101,14 @@ def _patch_small_bank(monkeypatch, *, total_drills=3):
 
 
 def test_speed_goal_renders_second_alactic_exposure(monkeypatch):
-    _patch_small_bank(monkeypatch)
+    # Budget must be able to hold every system's quota. With the small bank the
+    # speed dose lifts alactic quota to 2 (glycolytic 2 + alactic 2 + aerobic 1 =
+    # 5 demand); total_drills=4 gives a visible cap of 5 (total_drills + 1 speed
+    # slot) so the second alactic microdose and aerobic representation coexist.
+    # (At total_drills=3 the cap is 4 < 5, and the two-pass quota-fairness fill
+    # correctly gives aerobic its single slot before alactic takes a second — see
+    # test_conditioning_quota_fairness for that tight-budget case.)
+    _patch_small_bank(monkeypatch, total_drills=4)
 
     output, _names, why_log, grouped, _missing, _reservoir = conditioning.generate_conditioning_block(
         _base_flags(key_goals=["speed"])

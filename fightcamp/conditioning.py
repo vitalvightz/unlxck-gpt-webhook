@@ -3070,8 +3070,35 @@ def generate_conditioning_block(flags):
                     break
     else:
         def _fill_system_quotas() -> None:
+            # Two-pass quota fill. All systems draw from the same shared
+            # style_remaining / general_remaining budget, so filling one
+            # system's entire quota before touching the next let earlier
+            # systems in preferred_order (e.g. glycolytic/alactic in SPP)
+            # drain the budget before later systems (e.g. aerobic) ever got
+            # a first pick. Splitting into a minimum-representation pass
+            # followed by a remaining-quota pass fixes allocation fairness
+            # without changing any candidate, ratio, or scoring behaviour.
+            pass1_taken: dict[str, int] = {}
+
+            # Pass 1 — minimum representation: give every system with a
+            # positive quota exactly one opportunity to place a single drill
+            # before any system takes its second. A system with no valid
+            # candidate is skipped and does not reserve/waste a slot.
             for system in preferred_order:
-                quota = system_quota.get(system, 0)
+                if system_quota.get(system, 0) <= 0:
+                    continue
+                d, r = blended_pick(system)
+                if not d:
+                    continue
+                final_drills.append((system, [d]))
+                reason_lookup[d.get("name")] = r
+                selected_counts[system] += 1
+                pass1_taken[system] = pass1_taken.get(system, 0) + 1
+
+            # Pass 2 — remaining quota: distribute what is left using the
+            # existing preferred-order, one-system-at-a-time behaviour.
+            for system in preferred_order:
+                quota = system_quota.get(system, 0) - pass1_taken.get(system, 0)
                 if quota <= 0:
                     continue
                 guard = 0
