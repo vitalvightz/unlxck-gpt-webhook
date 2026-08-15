@@ -26,6 +26,8 @@ from .json_limits import (
     MAX_CLIENT_JSON_BYTES,
     MAX_JSON_DEPTH,
     MAX_SERVER_JSON_BYTES,
+    MAX_STAGE2_PAYLOAD_BYTES,
+    json_byte_size,
     validate_json_field,
 )
 from .models import (
@@ -1906,8 +1908,15 @@ class SupabaseAppStore:
         _guard_persisted_json(
             payload.get("stage2_payload"),
             field="stage2_payload",
-            max_bytes=MAX_SERVER_JSON_BYTES,
+            max_bytes=MAX_STAGE2_PAYLOAD_BYTES,
             context=f"athlete_id={athlete_id} intake_id={intake_id}",
+        )
+        logger.info(
+            "[store] create_plan:stage2_payload_size athlete_id=%s intake_id=%s bytes=%s max_bytes=%s",
+            athlete_id,
+            intake_id,
+            json_byte_size(payload.get("stage2_payload")),
+            MAX_STAGE2_PAYLOAD_BYTES,
         )
         _guard_persisted_json(
             payload.get("structured_plan"),
@@ -3887,7 +3896,7 @@ class SupabaseAppStore:
             _guard_persisted_json(
                 payload.get("stage2_payload"),
                 field="stage2_payload",
-                max_bytes=MAX_SERVER_JSON_BYTES,
+                max_bytes=MAX_STAGE2_PAYLOAD_BYTES,
                 context=f"plan_id={existing.get('id') or ''}",
             )
         if "structured_plan" in payload:

@@ -12,6 +12,7 @@ from api.json_limits import (
     MAX_CLIENT_JSON_BYTES,
     MAX_JSON_DEPTH,
     MAX_SERVER_JSON_BYTES,
+    MAX_STAGE2_PAYLOAD_BYTES,
     json_byte_size,
     validate_json_field,
 )
@@ -30,6 +31,10 @@ def _oversized_dict() -> dict[str, str]:
 
 def _oversized_server_dict() -> dict[str, str]:
     return {"blob": "a" * (MAX_SERVER_JSON_BYTES + 100)}
+
+
+def _stage2_payload_of_approximate_size(size: int) -> dict[str, str]:
+    return {"blob": "a" * size}
 
 
 def _too_deep_dict(depth: int) -> dict:
@@ -128,14 +133,66 @@ def test_update_profile_rejects_oversized_onboarding_draft_at_store_layer():
     store.client.table.assert_not_called()
 
 
-def test_create_plan_rejects_oversized_stage2_payload():
+def test_json_limit_constants_keep_stage2_headroom_field_specific():
+    assert MAX_CLIENT_JSON_BYTES == 100 * 1024
+    assert MAX_SERVER_JSON_BYTES == 256 * 1024
+    assert MAX_STAGE2_PAYLOAD_BYTES == 384 * 1024
+    assert MAX_JSON_DEPTH == 32
+
+
+def test_create_plan_accepts_stage2_payload_above_generic_server_limit():
+    store = _make_store()
+    persisted = {"id": "plan-1"}
+    store.client.table.return_value.insert.return_value.execute.return_value.data = [persisted]
+    payload = _stage2_payload_of_approximate_size(311 * 1024)
+
+    result = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake-1",
+        request=_build_request(),
+        result={"status": "generated", "stage2_payload": payload},
+    )
+
+    assert result == persisted
+    inserted = store.client.table.return_value.insert.call_args.args[0]
+    assert inserted["stage2_payload"] is payload
+    assert MAX_SERVER_JSON_BYTES < json_byte_size(payload) < MAX_STAGE2_PAYLOAD_BYTES
+
+
+def test_create_plan_accepts_large_candidate_pools_for_20_plus_equipment_selections():
+    store = _make_store()
+    store.client.table.return_value.insert.return_value.execute.return_value.data = [{"id": "plan-1"}]
+    equipment = [f"equipment_{index}" for index in range(24)]
+    candidates = [
+        {"name": f"Exercise {index}", "equipment": equipment[index % len(equipment)], "notes": "x" * 900}
+        for index in range(340)
+    ]
+    payload = {"athlete_model": {"equipment_access": equipment}, "candidate_pools": candidates}
+
+    store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake-1",
+        request=_build_request(),
+        result={"status": "generated", "stage2_payload": payload},
+    )
+
+    inserted = store.client.table.return_value.insert.call_args.args[0]["stage2_payload"]
+    assert inserted["athlete_model"]["equipment_access"] == equipment
+    assert inserted["candidate_pools"] == candidates
+    assert MAX_SERVER_JSON_BYTES < json_byte_size(payload) < MAX_STAGE2_PAYLOAD_BYTES
+
+
+def test_create_plan_rejects_stage2_payload_above_dedicated_limit():
     store = _make_store()
     with pytest.raises(HTTPException) as exc_info:
         store.create_plan(
             athlete_id="athlete-1",
             intake_id="intake-1",
             request=_build_request(),
-            result={"status": "generated", "stage2_payload": _oversized_server_dict()},
+            result={
+                "status": "generated",
+                "stage2_payload": _stage2_payload_of_approximate_size(MAX_STAGE2_PAYLOAD_BYTES + 100),
+            },
         )
     assert exc_info.value.status_code == 413
     store.client.table.assert_not_called()

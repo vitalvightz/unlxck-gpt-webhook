@@ -1,8 +1,9 @@
 """Size and nesting guards for large JSON fields persisted to Supabase.
 
 Athlete-supplied JSON (``onboarding_draft``, ``nutrition_profile``) and
-server-assembled payloads (``request_payload``, ``stage2_payload``) are stored
-verbatim in Supabase rows. Without bounds a single request could store an
+server-assembled payloads (including ``request_payload`` and
+``stage2_payload``) are stored verbatim in Supabase rows. Without bounds a
+single request could store an
 enormous or pathologically nested object, bloating the database and slowing the
 app. These helpers enforce a byte-size ceiling and a maximum nesting depth.
 
@@ -21,8 +22,13 @@ from typing import Any, Callable
 
 # Client-controlled free-form fields (onboarding_draft, nutrition_profile).
 MAX_CLIENT_JSON_BYTES = 100 * 1024
-# Server-assembled payloads (request_payload, stage2_payload) tend to be larger.
+# Server-assembled JSON fields use this limit unless a field-specific limit is
+# explicitly defined below.
 MAX_SERVER_JSON_BYTES = 256 * 1024
+# Stage 2 includes legitimate, equipment-dependent candidate pools. Keep its
+# persistence ceiling separate so other server and client JSON limits do not
+# inherit the additional headroom.
+MAX_STAGE2_PAYLOAD_BYTES = 384 * 1024
 # Reject structures nested deeper than this regardless of byte size.
 MAX_JSON_DEPTH = 32
 # Coarse ceiling for the entire HTTP request body, enforced at the middleware
