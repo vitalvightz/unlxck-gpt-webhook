@@ -2988,156 +2988,163 @@
     ]
   },
   {
-    "name": "Matrix Shuffle",
+    "name": "Ring Perimeter Flow",
     "equipment": [
-      "agility_ladder",
-      "cones"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
     ],
     "system": "aerobic",
-    "modality": "footwork",
-    "duration": "3min work, 1min rest x 5 rounds",
-    "intensity": "high",
+    "modality": "technical endurance",
+    "duration": "3min work, 1min rest x 3 rounds",
+    "intensity": "moderate",
     "tags": [
       "distance_striker",
       "boxing",
-      "kickboxing",
-      "mma",
-      "mech_reactive",
-      "mech_upper_press",
-      "mech_trunk_rotation",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "notes": "Sharp pivots off cones, maintain stance while circling. (80% effort)",
-    "equipment_note": "Set cones in diamond pattern",
+    "notes": "Circle in stance at a relaxed pace. Every 8-12 seconds, jab or feint, make an angle exit, then restore preferred range.",
     "work_sec": 180,
     "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Phantom Step",
-    "equipment": [
-      "bands"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "resisted footwork",
-    "duration": "30s lateral steps, 30s rest x 8 rounds",
-    "intensity": "high",
-    "tags": [
-      "distance_striker",
-      "boxing",
-      "kickboxing",
-      "mma",
-      "mech_reactive",
-      "mech_change_of_direction",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Ankle bands for defensive slide training. (70-80% effort)",
-    "equipment_note": "Light resistance bands",
-    "work_sec": 30,
-    "rest_sec": 30,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ]
-  },
-  {
-    "name": "Sniper’s Retreat",
-    "equipment": [
-      "dumbbells"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "backstep counters",
-    "duration": "10 backstep jabs + 5 cross counters, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "distance_striker",
-      "boxing",
-      "kickboxing",
-      "mech_reactive",
-      "mech_change_of_direction",
-      "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Trains pull-counter mechanics under load. (Explosive)",
-    "equipment_note": "5-10lb DBs for hand weight",
-    "rpe": 9,
+    "rounds": 3,
+    "total_minutes": 11,
+    "rpe": 6,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
       "mech_change_of_direction",
       "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ]
   },
   {
-    "name": "Ring Generalship",
+    "name": "Ring Escape Flow",
     "equipment": [
-      "bands",
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "reactive footwork",
+    "duration": "3min work, 1min rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "distance_striker",
+      "boxing",
+      "reactive",
+      "footwork",
+      "coordination",
+      "visual_processing",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ],
+    "notes": "Partner gives forward or lateral pressure cues. Move, pivot or L-step, regain open space, then reset stance and range.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 11,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Jab Volume & Position",
+    "equipment": [
       "punching_bag"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "angle striking",
-    "duration": "3min rounds: 45° cuts after combos, 1min rest x 4",
-    "intensity": "high",
+    "system": "aerobic",
+    "modality": "technical endurance",
+    "duration": "2min work, 1min rest x 3 rounds",
+    "intensity": "moderate",
     "tags": [
       "distance_striker",
       "boxing",
-      "mma",
+      "speed",
+      "coordination",
+      "skill_refinement",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_lower_lunge",
-      "mech_systemic_fatigue"
+      "mech_trunk_stability"
     ],
-    "notes": "Band-resisted shuffles to reinforce cutting angles. (85% effort)",
-    "equipment_note": "Hip-height band anchor",
-    "work_sec": 180,
+    "notes": "Maintain frequent jab output. Every jab or double jab must finish with balanced stance, defensive recovery and preferred range restored.",
+    "work_sec": 120,
     "rest_sec": 60,
-    "rpe": 9,
+    "rounds": 3,
+    "total_minutes": 8,
+    "rpe": 7,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
+      "mech_upper_press",
       "mech_trunk_rotation",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Entry-Score-Exit Bursts",
+    "equipment": [
+      "punching_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive entry-exit",
+    "duration": "6s effort / 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "distance_striker",
+      "boxing",
+      "explosive",
+      "speed",
+      "ballistic_low_volume",
+      "footwork",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_upper_press"
+    ],
+    "notes": "Explosive step-in, land 1-3 straight shots, then exit immediately at an angle. Full-quality reset before the next rep.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "total_minutes": 8.1,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_lower_lunge",
       "mech_upper_press"
     ]
   },
@@ -3180,79 +3187,88 @@
     ]
   },
   {
-    "name": "Flicker’s Gauntlet",
+    "name": "Backstep Counter Reset",
     "equipment": [
-      "bands",
-      "double-end_bag"
+      "partner"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "precision endurance",
-    "duration": "3min rounds, 1min rest x 5",
-    "intensity": "high",
+    "system": "ATP-PCr",
+    "modality": "reactive counter burst",
+    "duration": "5s effort / 60s rest x 8 rounds",
+    "intensity": "max",
     "tags": [
       "distance_striker",
       "boxing",
-      "mech_reactive",
+      "reactive",
+      "speed",
+      "explosive",
+      "ballistic_low_volume",
+      "visual_processing",
+      "mech_deceleration",
       "mech_change_of_direction",
-      "mech_shoulder_overhead",
-      "mech_systemic_fatigue",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_lunge",
       "mech_upper_press"
     ],
-    "notes": "Band-resisted shoulders during bag work. (Fast twitch focus)",
-    "equipment_note": "Light bands for delt fatigue",
-    "work_sec": 180,
+    "notes": "On the advance cue, make a controlled backstep, fire a straight counter, then exit laterally and restore range.",
+    "work_sec": 5,
     "rest_sec": 60,
-    "rpe": 9,
+    "rounds": 8,
+    "total_minutes": 7.97,
+    "rpe": 8,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
+      "mech_deceleration",
       "mech_change_of_direction",
       "mech_reactive",
-      "mech_shoulder_overhead",
-      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_lunge",
       "mech_upper_press"
     ]
   },
   {
-    "name": "Outfighter’s Crucible",
+    "name": "Straight-Shot Re-Angle",
     "equipment": [
-      "battle_ropes",
-      "cones"
+      "punching_bag"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "footwork + stamina",
-    "duration": "30s ropes + 30s cone drills, 8 rounds",
-    "intensity": "high",
+    "system": "ATP-PCr",
+    "modality": "precision power",
+    "duration": "6s effort / 60s rest x 8 rounds",
+    "intensity": "max",
     "tags": [
       "distance_striker",
       "boxing",
-      "kickboxing",
-      "mech_reactive",
+      "explosive",
+      "speed",
+      "ballistic_low_volume",
+      "coordination",
       "mech_change_of_direction",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_upper_press"
     ],
-    "notes": "Ropes fatigue arms before footwork precision. (85% effort)",
-    "equipment_note": "1.5\" ropes, 5-cone star pattern",
-    "work_sec": 30,
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "notes": "Fire one explosive jab-cross or rear straight, retract cleanly, then make a 30-45 degree angle exit before resetting.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "total_minutes": 8.1,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_change_of_direction",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_upper_press"
     ]
   },
   {
@@ -3327,75 +3343,88 @@
     ]
   },
   {
-    "name": "Band-Resisted Jab Endurance Complex",
-    "equipment": [
-      "bands",
-      "dumbbells"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "shoulder endurance",
-    "duration": "1min band-resisted jabs, 30s rest x 6",
-    "intensity": "high",
-    "tags": [
-      "distance_striker",
-      "boxing",
-      "mma",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_shoulder_overhead",
-      "mech_trunk_stability"
-    ],
-    "notes": "Trains Philly shell/long guard stamina. (80% effort)",
-    "equipment_note": "5lb DBs in non-jabbing hand",
-    "work_sec": 60,
-    "rest_sec": 30,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Sniper’s Delight",
+    "name": "Ring Generalship Rounds",
     "equipment": [
       "punching_bag"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "1-2 precision",
-    "duration": "50 straight rights on bag, reset after each, 5 rounds",
-    "intensity": "max",
+    "system": "glycolytic",
+    "modality": "angle striking",
+    "duration": "3min work, 1min rest x 4 rounds",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
-      "mech_reactive",
+      "footwork",
+      "coordination",
+      "skill_refinement",
       "mech_change_of_direction",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Emphasizes retraction and re-angle. (90% power)",
-    "equipment_note": "Bag at eye level",
-    "rpe": 9,
+    "notes": "Score with 1-3 shots, then exit at an angle. Do not stay square and do not retreat straight back repeatedly.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 4,
+    "total_minutes": 15,
+    "rpe": 7,
     "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_ballistic",
       "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Range Reset Intervals",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "range management",
+    "duration": "45s work / 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "boxing",
+      "reactive",
+      "footwork",
+      "visual_processing",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_deceleration",
       "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner advances intermittently. Use the jab, step-slide or backstep, then reset laterally to preferred range.",
+    "work_sec": 45,
+    "rest_sec": 45,
+    "rounds": 6,
+    "total_minutes": 8.25,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ]
   },
   {
@@ -3507,184 +3536,86 @@
     ]
   },
   {
-    "name": "Matador Drill",
+    "name": "Precision Under Pace",
     "equipment": [
-      "bands",
-      "punching_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "slip-counter",
-    "duration": "3min rounds: slip right → cross, 1min rest x 4",
-    "intensity": "high",
-    "tags": [
-      "distance_striker",
-      "boxing",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "notes": "Band-resisted slips for defensive load. (85% power)",
-    "equipment_note": "Anchor bands at head height",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Sniper’s Load",
-    "equipment": [
-      "barbell"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "rotational power",
-    "duration": "5 landmine twists/side, 5 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "distance_striker",
-      "boxing",
-      "mma",
-      "mech_reactive",
-      "mech_change_of_direction",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "notes": "Mimics cross/overhand torque. (60% 1RM)",
-    "equipment_note": "Use bumper plates",
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Range Master",
-    "equipment": [
-      "bands",
-      "dumbbells"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "step-in striking",
-    "duration": "10 band-resisted step jabs, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "distance_striker",
-      "boxing",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Bands force explosive entry/exit. (80% speed)",
-    "equipment_note": "5lb DBs in rear hand",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Elusive Rhythms",
-    "equipment": [
-      "agility_ladder"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "aerobic",
-    "modality": "unpredictability",
-    "duration": "3min rounds: random direction changes, 1min rest x 4",
-    "intensity": "moderate",
-    "tags": [
-      "distance_striker",
-      "boxing",
-      "kickboxing",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "No set pattern—coach calls direction. (70% effort)",
-    "equipment_note": "Use 10ft ladder",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Max-Speed Bag & Slide Complex",
-    "equipment": [
-      "bands",
       "double-end_bag"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "exhausted precision",
-    "duration": "30s max-speed punches → 30s defensive slides, 6 rounds",
+    "modality": "precision endurance",
+    "duration": "2min work, 1min rest x 4 rounds",
     "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
+      "reactive",
+      "speed",
+      "coordination",
+      "skill_refinement",
       "mech_reactive",
       "mech_change_of_direction",
-      "mech_systemic_fatigue",
-      "mech_ballistic",
-      "mech_upper_press"
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Bands on ankles during bag work. (90% effort)",
-    "equipment_note": "Light resistance only",
-    "work_sec": 30,
+    "notes": "Maintain straight-shot accuracy with movement between exchanges. Speed may reduce slightly, but stance, accuracy and defensive recovery must stay clean.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "total_minutes": 11,
     "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_change_of_direction",
       "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Punch-Slide Repeatability",
+    "equipment": [
+      "punching_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "repeat burst conditioning",
+    "duration": "1min work, 1min rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "boxing",
+      "speed",
+      "footwork",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Inside each work minute, perform a 5-8 second fast straight-punch burst, immediately slide or pivot away, move under control, then repeat.",
+    "work_sec": 60,
+    "rest_sec": 60,
+    "rounds": 6,
+    "total_minutes": 11,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ]
   },
   {
