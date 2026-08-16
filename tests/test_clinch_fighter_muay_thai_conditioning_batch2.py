@@ -18,7 +18,7 @@ EXPECTED = {
     "Clinch Reposition Intervals": ("glycolytic", {"GPP", "SPP"}, ("partner",), 30, 45, 6, 8),
     "Knee-and-Recover Intervals": ("glycolytic", {"SPP"}, ("partner", "thai_pads"), 35, 45, 6, 8),
     "Grip-Fight-to-Score Intervals": ("glycolytic", {"SPP"}, ("partner", "thai_pads"), 30, 45, 6, 8),
-    "Clinch Decision Rounds": ("aerobic", {"SPP"}, ("partner", "thai_pads"), 120, 60, 4, 6),
+    "Clinch Decision Rounds": ("glycolytic", {"SPP"}, ("partner", "thai_pads"), 60, 45, 5, 8),
 }
 LEGACY = {
     "Clinch Hold & Knee Complex", "Max Knee & Sprawl Complex", "Wall Pressure & Elbow Complex",
@@ -58,7 +58,7 @@ def test_slice_has_exact_approved_names_and_doses():
 
 def test_energy_system_doses_are_coherent():
     entries = _slice()
-    assert Counter(item["system"] for item in entries) == {"ATP-PCr": 3, "glycolytic": 3, "aerobic": 4}
+    assert Counter(item["system"] for item in entries) == {"ATP-PCr": 3, "glycolytic": 4, "aerobic": 3}
     for item in entries:
         if item["system"] == "ATP-PCr":
             assert 4 <= item["work_sec"] <= 7 and 60 <= item["rest_sec"] <= 90
@@ -83,6 +83,27 @@ def test_positional_resistance_and_archetype_boundaries_are_explicit():
     knee_entries = [item for item in entries if "knee" in item["notes"].lower()]
     assert all("controlled knee" in item["notes"].lower() and "thai_pads" in item["equipment"] for item in knee_entries)
     assert all(any(word in item["notes"].lower() for word in ("position", "posture", "control", "reconnect")) for item in entries)
+
+
+def test_decision_rounds_are_distinct_and_knee_exposure_is_consistent():
+    entries = {item["name"]: item for item in _slice()}
+    reactive = entries["Reactive Clinch Position Rounds"]
+    dense = entries["Clinch Decision Rounds"]
+    assert (reactive["system"], reactive["work_sec"], reactive["rest_sec"], reactive["rpe"]) == ("aerobic", 120, 60, 6)
+    assert (dense["system"], dense["work_sec"], dense["rest_sec"], dense["rounds"], dense["rpe"]) == ("glycolytic", 60, 45, 5, 8)
+    assert "increases positional resistance" in dense["notes"].lower()
+    assert "maintain decision quality" in dense["notes"].lower()
+
+    knee_entries = [item for item in entries.values() if "controlled knee" in item["notes"].lower()]
+    assert knee_entries
+    assert all("mech_lower_hip_hinge" in item["tags"] for item in knee_entries)
+    assert all("mech_lower_hip_hinge" in item["mechanical_risk_tags"] for item in knee_entries)
+
+
+def test_partner_only_equipment_notes_do_not_refer_to_unlisted_pads():
+    partner_only = [item for item in _slice() if item["equipment"] == ["partner"]]
+    assert partner_only
+    assert all("thai pad" not in item["equipment_note"].lower() for item in partner_only)
 
 
 def test_phase_equipment_and_mechanical_metadata_follow_conventions():
