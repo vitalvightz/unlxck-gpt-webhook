@@ -46,6 +46,7 @@ jobs:
       - name: Apply sport identity fix on target branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/codex/add-exact-sport-style-bonus'
         run: |
+          python tools/fix_exact_sport_identity_helper.py
           python tools/apply_exact_sport_identity_fix.py
           python -m py_compile fightcamp/conditioning.py
           pytest -q tests/test_style_exact_sport_bonus.py
