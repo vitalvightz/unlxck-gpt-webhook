@@ -12,8 +12,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 STYLE_CONDITIONING_BANK_PATH = REPO_ROOT / "data" / "style_conditioning_bank.json"
 
 # Batch 1 manual cleanup: names as they exist in the bank today, post-cleanup.
-# "Hammer & Tire Power Complex" was archived in batch 2 as a near-duplicate of
-# "Hammer & Tire Jump Complex", so it is intentionally absent from this list.
+# Entries superseded by later style-bank rebuilds are intentionally absent from this
+# regression list, which tracks batch-1 entries that remain active today.
 BATCH_1_CLEANED_NAMES = [
     "Sandbag Carry & Sprawl Complex",
     "Sled Push & Punch Combo",
@@ -38,11 +38,6 @@ BATCH_1_CLEANED_NAMES = [
     "Roll-Under Counter Complex",
     "Intercept & Counter Mitts",
     "Frame & Counter Knee Complex",
-    "Band-Resisted Jab Endurance Complex",
-    "Max-Speed Bag & Slide Complex",
-    "Band-Resisted Low Kick Power Complex",
-    "Band-Resisted Calf Kick Complex",
-    "Clinch Knee Endurance Complex",
     "Strongman Clinch & Sprawl Complex",
     "Rotational Power & Med Ball Complex",
     "Battle Rope & DB Punch Complex",
@@ -56,7 +51,6 @@ BATCH_1_CLEANED_NAMES = [
     "Ropes Pressure Hook & Uppercut Complex",
     "Outdoor Tire Flip & Burpee Complex",
     "Weighted Plank & Stand-Up Complex",
-    "Stance Switch & Kick Complex",
     "Calf Slicer Pressure Drill",
 ]
 
@@ -82,7 +76,6 @@ BATCH_2_ARCHIVED_NAMES = [
 BATCH_2_RENAMED_NAMES = [
     "Neck Bridge & Plate Rotation Complex",
     "Backward Sled Drag & Slip Complex",
-    "Ax Kick Precision Drill",
 ]
 
 

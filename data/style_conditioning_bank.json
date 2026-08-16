@@ -3653,409 +3653,360 @@
     ]
   },
   {
-    "name": "Band-Resisted Low Kick Power Complex",
+    "name": "Teep Range Reset",
     "equipment": [
-      "bands",
-      "heavy_bag"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "power endurance",
-    "duration": "3min rounds: 10 kicks/leg, 1min rest x 5",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "muay_thai",
-      "kickboxing",
-      "low_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "notes": "Bands on ankles for resistance during recoil. (90% power)",
-    "equipment_note": "Anchor bands to floor",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Head Hunter Protocol",
-    "equipment": [
-      "double-end_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "precision head kicks",
-    "duration": "20 switch kicks/min, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "kicker",
-      "mma",
-      "kickboxing",
-      "head_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Focus on retraction to avoid counters. (95% accuracy)",
-    "equipment_note": "Adjust bag to head height",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Teep Matrix",
-    "equipment": [
-      "bands",
-      "wall"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "push kick endurance",
-    "duration": "15 teeps/min, 3min rounds x 4",
-    "intensity": "high",
+    "system": "aerobic",
+    "modality": "range-control technical endurance",
+    "duration": "3min work, 1min rest x 3 rounds",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "muay_thai",
       "teep",
-      "mech_reactive",
-      "mech_upper_press",
-      "mech_trunk_rotation",
+      "skill_refinement",
+      "balance",
+      "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_systemic_fatigue"
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
     ],
-    "notes": "Bands resist retraction to build hip flexor strength. (80% speed)",
-    "equipment_note": "Anchor bands at hip height",
+    "notes": "Teep, retract cleanly, restore stance and regain long range before the next opportunity.",
     "work_sec": 180,
-    "rpe": 9,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
       "mech_trunk_rotation",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ]
   },
   {
-    "name": "Dutch Destroyer",
+    "name": "Kick & Exit Flow",
     "equipment": [
-      "pads",
-      "partner"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "combination kicking",
-    "duration": "3min rounds: jab-cross-low kick, 1min rest x 5",
-    "intensity": "high",
+    "system": "aerobic",
+    "modality": "kick-and-exit technical endurance",
+    "duration": "3min work, 1min rest x 3 rounds",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "kickboxing",
-      "low_kick",
-      "body_kick",
+      "muay_thai",
+      "footwork",
+      "skill_refinement",
+      "balance",
       "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_cns_high",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
     ],
-    "notes": "Partner calls random kick targets mid-combo. (85% power)",
-    "equipment_note": "Thai pads preferred",
+    "notes": "Score with a low or body kick, recover the leg, then move off the return line and restore stance.",
     "work_sec": 180,
     "rest_sec": 60,
-    "rpe": 9,
+    "rounds": 3,
+    "rpe": 6,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
       "mech_trunk_rotation",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ]
   },
   {
-    "name": "Question Mark Kick Drill",
+    "name": "Switch-Side Rhythm",
     "equipment": [
-      "slip_rope"
+      "punching_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "bilateral kicking rhythm",
+    "duration": "2min work, 1min rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "kicker",
+      "kickboxing",
+      "muay_thai",
+      "switch_kick",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "notes": "Use controlled movement and kick efficiently from both sides. Keep the rhythm relaxed and finish every kick in stance.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Rear-Kick Power Singles",
+    "equipment": [
+      "punching_bag"
     ],
     "phases": [
       "SPP"
     ],
     "system": "ATP-PCr",
-    "modality": "deception training",
-    "duration": "10 feints → 5 kicks/leg, 6 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kicker",
-      "muay_thai",
-      "question_mark_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Rope forces proper hip alignment. (Focus on technique)",
-    "equipment_note": "Rope at waist height",
-    "rpe": 7,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Elbow-Kick Synergy",
-    "equipment": [
-      "banana_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "Muay Thai combinations",
-    "duration": "3min rounds: elbow-kick-elbow, 1min rest x 4",
+    "modality": "rear-kick power",
+    "duration": "5s effort, 60s rest x 8 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
+      "kickboxing",
       "muay_thai",
+      "mma",
+      "explosive",
+      "speed",
       "body_kick",
-      "elbow",
+      "low_kick",
       "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
       "mech_lower_lunge",
-      "mech_systemic_fatigue"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic"
     ],
-    "notes": "Focus on smooth transitions. (80% power)",
-    "equipment_note": "Lean bag for elbow realism",
-    "work_sec": 180,
+    "notes": "Throw one maximum-quality rear body or low kick. Recoil fully and restore a balanced stance before resting.",
+    "work_sec": 5,
     "rest_sec": 60,
-    "rpe": 9,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic"
     ]
   },
   {
-    "name": "Band-Resisted Calf Kick Complex",
+    "name": "Reactive Body-Kick Burst",
     "equipment": [
-      "bands",
-      "heavy_bag"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "kick power endurance",
-    "duration": "20 kicks/leg, 30s rest, 5 rounds",
+    "system": "ATP-PCr",
+    "modality": "reactive body-kick power",
+    "duration": "6s effort, 60s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "kickboxing",
+      "muay_thai",
+      "reactive",
+      "visual_processing",
+      "explosive",
+      "body_kick",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ],
+    "notes": "Partner moves and presents a target unpredictably. Recognise, position, kick explosively and recover stance. No target means no kick.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ]
+  },
+  {
+    "name": "Low-Kick Exit Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "low-kick power and exit",
+    "duration": "6s effort, 60s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "low_kick",
+      "footwork",
+      "explosive",
+      "speed",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic"
+    ],
+    "notes": "Land one hard low kick, recover the leg, restore stance and exit the opponent’s return line.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Check-Return Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive check and return",
+    "duration": "5s effort, 60s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "kickboxing",
+      "muay_thai",
+      "reactive",
+      "visual_processing",
+      "explosive",
+      "low_kick",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ],
+    "notes": "Read the kick cue, check, return immediately with a kick, then reset in stance.",
+    "work_sec": 5,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ]
+  },
+  {
+    "name": "Interception Kick Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive interception kicking",
+    "duration": "5s effort, 60s rest x 8 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
       "mma",
-      "low_kick",
+      "kickboxing",
+      "reactive",
+      "visual_processing",
+      "explosive",
+      "teep",
+      "side_kick",
+      "back_kick",
       "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_cns_high",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive"
     ],
-    "notes": "Bands increase resistance on recoil. (95% power)",
-    "equipment_note": "Use thin bands for speed",
-    "rest_sec": 30,
+    "notes": "As the partner advances, intercept with a teep, side kick or back kick. Recover into a stance ready to defend another entry.",
+    "work_sec": 5,
+    "rest_sec": 60,
+    "rounds": 8,
     "rpe": 8,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Spinning Back Kick",
-    "equipment": [
-      "plyo_box"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "rotational power",
-    "duration": "10 kicks/side, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "kickboxing",
-      "spinning_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_change_of_direction",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Box ensures proper chamber height. (Explosive reps)",
-    "equipment_note": "24\" box",
-    "rpe": 9,
-    "impact_cost": "high",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_change_of_direction",
-      "mech_landing_impact",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive"
     ]
   },
   {
-    "name": "Switch Kick Storm",
-    "equipment": [
-      "double-end_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "timing under fatigue",
-    "duration": "3min rounds: 5 switch kicks → 5 punches, x5",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "muay_thai",
-      "switch_kick",
-      "hybrid",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Bag movement simulates opponent retreat. (85% effort)",
-    "equipment_note": "High tension on bag",
-    "work_sec": 180,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Ax Kick Precision Drill",
-    "equipment": [
-      "hanging_pool_noodle"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "precision targeting",
-    "duration": "15 kicks/leg, 5 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kicker",
-      "kickboxing",
-      "axe_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Noodle marks ideal chin height. (Technical focus)",
-    "equipment_note": "Hang at 6’ height",
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Body Kick Barrage",
+    "name": "Dutch Target Call",
     "equipment": [
       "partner",
       "thai_pads"
@@ -4064,533 +4015,358 @@
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "liver shot simulation",
-    "duration": "20 kicks/round, 5 rounds",
-    "intensity": "max",
+    "modality": "reactive punch-to-kick combinations",
+    "duration": "2min work, 1min rest x 4 rounds",
+    "intensity": "high",
     "tags": [
       "kicker",
-      "muay_thai",
+      "kickboxing",
+      "reactive",
+      "visual_processing",
+      "low_kick",
       "body_kick",
+      "mech_upper_press",
       "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_cns_high",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive",
       "mech_upper_press"
     ],
-    "notes": "Partner angles pads to mimic rib placement. (90% power)",
-    "equipment_note": "Focus on left side",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Step-Through Knee",
-    "equipment": [
-      "heavy_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "forward pressure",
-    "duration": "15 knees/leg, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "muay_thai",
-      "step_through_knee",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Emphasize hip thrust into bag. (85% power)",
-    "equipment_note": "Lean bag forward",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Flying Knee Drill",
-    "equipment": [
-      "plyo_box"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "explosive entry",
-    "duration": "10 jumps → knees, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "kicker",
-      "mma",
-      "flying_knee",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Box height determines trajectory. (Max height)",
-    "equipment_note": "12-18\" box",
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Scoop Kick Counter",
-    "equipment": [
-      "slip_rope"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "defensive kicking",
-    "duration": "20 counters/min, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "muay_thai",
-      "scoop_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Rope forces proper angle. (Fast retraction)",
-    "equipment_note": "Rope at calf height",
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Cartwheel Kick",
-    "equipment": [
-      "crash_mat"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "unorthodox power",
-    "duration": "10 attempts/round, 5 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kicker",
-      "kickboxing",
-      "cartwheel_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Mats reduce fear of falling. (Controlled landings)",
-    "equipment_note": "2\" thick mats",
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Clinch Knee Endurance Complex",
-    "equipment": [
-      "grappler_dummy"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "muay thai clinch",
-    "duration": "3min rounds: 10 knees/position, x5",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "muay_thai",
-      "clinch_knee",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_grip_support",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Switch between collar tie and double collar. (85% power)",
-    "equipment_note": "Dummy must be upright",
-    "work_sec": 180,
+    "notes": "Throw jab-cross. The pad holder then presents a low or body target. Select the kick, recover stance and move.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
     "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
-    "movement_cost": "high",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_grip_support",
       "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Stance Switch & Kick Complex",
-    "equipment": [
-      "cones"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "stance flexibility",
-    "duration": "20 stance switches → 5 kicks, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "mma",
-      "switch_kick",
-      "hybrid",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Cones mark pivot points. (Fast transitions)",
-    "equipment_note": "5-cone star pattern",
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Hammer Kick",
-    "equipment": [
-      "tire"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "downward force",
-    "duration": "15 kicks/leg, 5 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kicker",
-      "kickboxing",
-      "hammer_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Tire absorbs impact like a body. (Full extension)",
-    "equipment_note": "Vertical tire mount",
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Jumping Roundhouse",
-    "equipment": [
-      "plyo_box"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "aerial power",
-    "duration": "10 jumps → kicks, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "kicker",
-      "muay_thai",
-      "jumping_kick",
-      "mech_trunk_stability",
+      "mech_acceleration",
       "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_lunge",
       "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Box ensures proper takeoff. (Max height)",
-    "equipment_note": "12\" box",
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_upper_press"
     ]
   },
   {
-    "name": "Side Kick Sniper",
+    "name": "Body-Kick Repeatability",
     "equipment": [
-      "wall"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "linear power",
-    "duration": "20 kicks/leg, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "kicker",
-      "kickboxing",
-      "side_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Wall prevents over-rotation. (90% extension)",
-    "equipment_note": "Stand 12\" from wall",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Crescent Kick Precision",
-    "equipment": [
-      "hanging_tennis_ball"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "head targeting",
-    "duration": "15 kicks/leg, 5 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kicker",
-      "kickboxing",
-      "crescent_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Ball marks ideal temple height. (Technical focus)",
-    "equipment_note": "Hang at 5’8\"",
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Low-High Deception",
-    "equipment": [
+      "partner",
       "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "feint kicking",
-    "duration": "3min rounds: fake low → high kick, x5",
+    "modality": "body-kick repeatability",
+    "duration": "45s work, 45s rest x 6 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
-      "low_kick",
-      "head_kick",
-      "mech_trunk_stability",
+      "kickboxing",
+      "body_kick",
+      "skill_refinement",
+      "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Padholder calls 'check' to defend. (85% speed)",
-    "equipment_note": "Focus on hip feints",
-    "work_sec": 180,
-    "rpe": 9,
+    "notes": "Move under control and take repeated body-kick opportunities. Reduce output if recoil slows or kicks consistently finish out of stance.",
+    "work_sec": 45,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
-    "movement_cost": "high",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_systemic_fatigue"
     ]
   },
   {
-    "name": "Back Kick Blitz",
+    "name": "Switch-Kick Repeatability",
     "equipment": [
-      "heavy_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "blind power",
-    "duration": "10 kicks/side, 5 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kicker",
-      "mma",
-      "back_kick",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Bag swing simulates opponent movement. (Full rotation)",
-    "equipment_note": "Loosely hung bag",
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Teep-to-Knee",
-    "equipment": [
-      "partner"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "range transition",
-    "duration": "20 teeps → 10 knees, 5 rounds",
+    "modality": "switch-kick repeatability",
+    "duration": "45s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "muay_thai",
+      "switch_kick",
+      "coordination",
+      "skill_refinement",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Repeat switch kicks from controlled movement. Reduce output if the switch rhythm, recoil or stance breaks down.",
+    "work_sec": 45,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Low-High Decision Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "reactive kick selection",
+    "duration": "2min work, 1min rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "muay_thai",
+      "kickboxing",
+      "reactive",
+      "visual_processing",
+      "low_kick",
+      "body_kick",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Use the same initial presentation. Read the changing pad cue and choose the correct low, body or head target. Recover stance after every kick.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Kick-Punch Reposition",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "kick-punch repositioning",
+    "duration": "60s work, 60s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "kickboxing",
+      "mma",
+      "footwork",
+      "coordination",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Kick, recover stance, use straight punches as cover or a feint, then angle away instead of remaining stationary.",
+    "work_sec": 60,
+    "rest_sec": 60,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Long-to-Clinch Transition",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "long-range to clinch transition",
+    "duration": "2min work, 1min rest x 4 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "teep",
-      "clinch_knee",
+      "clinch",
+      "reactive",
+      "visual_processing",
       "mech_lower_hip_hinge",
+      "mech_lower_lunge",
       "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive",
       "mech_systemic_fatigue"
     ],
-    "notes": "Partner advances after each teep. (80% speed)",
-    "equipment_note": "Chest protector recommended",
-    "rpe": 9,
+    "notes": "Use a teep or long kick. When the partner advances, recover stance and transition to a controlled knee or clinch position.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
-    "movement_cost": "high",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ]
   },
   {
-    "name": "Capoeira Kick Flow",
+    "name": "Kick Recoil Quality Rounds",
     "equipment": [
-      "mirror"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "unorthodox angles",
-    "duration": "3min rounds: 5 kicks/stance, x5",
+    "system": "glycolytic",
+    "modality": "recoil-quality conditioning",
+    "duration": "2min work, 1min rest x 4 rounds",
     "intensity": "moderate",
     "tags": [
       "kicker",
+      "kickboxing",
+      "muay_thai",
       "mma",
-      "capoeira_kick",
+      "skill_refinement",
+      "balance",
       "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Mirror checks form during motion. (Technical focus)",
-    "equipment_note": "Full-length mirror",
-    "work_sec": 180,
+    "notes": "Repeat realistic kick opportunities. Stop the set if retraction slows or stance cannot be restored, then resume only when technique is sound.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
     "rpe": 7,
     "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
       "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Pressure-Kicker Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "adaptive range kicking",
+    "duration": "3min work, 1min rest x 3 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "muay_thai",
+      "kickboxing",
+      "reactive",
+      "visual_processing",
+      "footwork",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Maintain a credible kicking threat while the partner changes distance. Select the target, recoil and regain safe position after every attack.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ]
   },
   {
