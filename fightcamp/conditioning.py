@@ -207,13 +207,40 @@ def _conditioning_clarification_bonus(tags: list[str], derived_clarification_tag
     return bonus, hits
 
 
-def _style_exact_sport_bonus(raw_tags: list[str], selection_format: str) -> float:
+def _style_specificity_sport_tag(primary_tech: str, selection_format: str) -> str:
+    """Preserve the athlete's real sport identity before format collapsing.
+
+    BJJ and wrestling intentionally use MMA programming weights, but they must
+    not therefore make an MMA-tagged style drill look more sport-specific than
+    a BJJ- or wrestling-tagged drill.
+    """
+    tech = str(primary_tech or "").strip().lower().replace("-", " " )
+    aliases = {
+        "boxer": "boxing",
+        "boxing": "boxing",
+        "kickboxer": "kickboxing",
+        "kickboxing": "kickboxing",
+        "karate": "kickboxing",
+        "muay thai": "muay_thai",
+        "muaythai": "muay_thai",
+        "muay_thai": "muay_thai",
+        "mma": "mma",
+        "bjj": "bjj",
+        "wrestler": "wrestling",
+        "wrestling": "wrestling",
+        "grappler": "bjj",
+        "grappling": "bjj",
+    }
+    return aliases.get(tech, str(selection_format or "").strip().lower())
+
+
+def _style_exact_sport_bonus(raw_tags: list[str], athlete_sport_tag: str) -> float:
     """Return the small preference for a raw exact-sport style-bank match.
 
-    Raw bank tags are inspected before compatibility rewrites so a rewritten
-    Muay Thai tag cannot masquerade as a native boxing tag.
+    Raw bank tags are inspected before compatibility rewrites. The athlete sport
+    tag is deliberately distinct from the broader programming format.
     """
-    sport = str(selection_format or "").strip().lower()
+    sport = str(athlete_sport_tag or "").strip().lower()
     if not sport:
         return 0.0
     return STYLE_EXACT_SPORT_BONUS if sport in set(normalize_tags(raw_tags or [])) else 0.0
@@ -2061,6 +2088,7 @@ def generate_conditioning_block(flags):
     }
     fight_format = style_map.get(primary_tech, "mma")
     selection_format = _normalize_fight_format(fight_format)
+    specificity_sport_tag = _style_specificity_sport_tag(primary_tech, selection_format)
     energy_weights = get_format_weights().get(selection_format, {})
     bridge_rules = (
         _conditioning_resolve_bridge_rules(
@@ -2413,7 +2441,7 @@ def generate_conditioning_block(flags):
             for drill in style_conditioning_bank:
                 # Compute specificity before any runtime sport-tag compatibility rewrite.
                 sport_specificity_bonus = _style_exact_sport_bonus(
-                    drill.get("tags", []), selection_format
+                    drill.get("tags", []), specificity_sport_tag
                 )
                 d = drill.copy()
                 if d.get("placement", "conditioning").lower() != "conditioning":

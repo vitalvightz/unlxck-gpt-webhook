@@ -43,8 +43,8 @@ def _style_drill(name: str, style: str, sport: str | None) -> dict:
     }
 
 
-def _flags(style: str, sport: str = "mma") -> dict:
-    technical = {"mma": "mma", "boxing": "boxing", "kickboxing": "kickboxing", "muay_thai": "muay thai"}[sport]
+def _flags(style: str, sport: str = "mma", technical_style: str | None = None) -> dict:
+    technical = technical_style or {"mma": "mma", "boxing": "boxing", "kickboxing": "kickboxing", "muay_thai": "muay thai", "bjj": "bjj", "wrestling": "wrestling"}[sport]
     return {
         "phase": "GPP",
         "sport": sport,
@@ -63,12 +63,13 @@ def _flags(style: str, sport: str = "mma") -> dict:
     }
 
 
-def _run_pair(monkeypatch, style: str, sport: str = "mma", other_sport: str | None = None):
-    exact = _style_drill(f"Exact {style}", style, sport)
+def _run_pair(monkeypatch, style: str, sport: str = "mma", other_sport: str | None = None, technical_style: str | None = None):
+    exact_tag = conditioning._style_specificity_sport_tag(technical_style or sport, "mma" if sport in {"bjj", "wrestling"} else sport)
+    exact = _style_drill(f"Exact {style}", style, exact_tag)
     other = _style_drill(f"Other {style}", style, other_sport)
     monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [other, exact])
     monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [])
-    result = conditioning.generate_conditioning_block(_flags(style, sport))
+    result = conditioning.generate_conditioning_block(_flags(style, sport, technical_style=technical_style))
     reservoir = result[5]
     candidates = {
         entry["drill"]["name"]: entry
@@ -79,6 +80,8 @@ def _run_pair(monkeypatch, style: str, sport: str = "mma", other_sport: str | No
 
 
 def test_raw_exact_sport_helper_uses_pre_rewrite_tags():
+    assert conditioning._style_specificity_sport_tag("bjj", "mma") == "bjj"
+    assert conditioning._style_specificity_sport_tag("wrestling", "mma") == "wrestling"
     assert conditioning._style_exact_sport_bonus(["boxing", "counter_striker"], "boxing") == 0.5
     assert conditioning._style_exact_sport_bonus(["muay_thai", "counter_striker"], "boxing") == 0.0
     assert conditioning._style_exact_sport_bonus(["kickboxing", "muay_thai", "brawler"], "kickboxing") == 0.5
@@ -115,3 +118,31 @@ def test_boxing_runtime_rewrite_cannot_fake_exact_sport_bonus(monkeypatch):
     assert candidates[converted["name"]]["reasons"]["sport_specificity_bonus"] == 0.0
     assert candidates[exact["name"]]["score"] == pytest.approx(candidates[converted["name"]]["score"] + 0.5)
     assert diagnostics["entries_exact_sport_bonus_applied"] == 1
+
+
+def test_bjj_identity_is_preserved_when_programming_format_is_mma(monkeypatch):
+    exact, mma_drill, candidates, diagnostics = _run_pair(
+        monkeypatch, "submission_hunter", sport="bjj", other_sport="mma", technical_style="bjj"
+    )
+    assert candidates[exact["name"]]["reasons"]["sport_specificity_bonus"] == 0.5
+    assert candidates[mma_drill["name"]]["reasons"]["sport_specificity_bonus"] == 0.0
+    assert candidates[exact["name"]]["score"] == pytest.approx(candidates[mma_drill["name"]]["score"] + 0.5)
+    assert diagnostics["entries_exact_sport_bonus_applied"] == 1
+
+
+def test_wrestling_identity_is_preserved_when_programming_format_is_mma(monkeypatch):
+    exact, mma_drill, candidates, diagnostics = _run_pair(
+        monkeypatch, "wrestler", sport="wrestling", other_sport="mma", technical_style="wrestling"
+    )
+    assert candidates[exact["name"]]["reasons"]["sport_specificity_bonus"] == 0.5
+    assert candidates[mma_drill["name"]]["reasons"]["sport_specificity_bonus"] == 0.0
+    assert candidates[exact["name"]]["score"] == pytest.approx(candidates[mma_drill["name"]]["score"] + 0.5)
+    assert diagnostics["entries_exact_sport_bonus_applied"] == 1
+
+
+def test_mma_athlete_does_not_reward_bjj_specific_drill(monkeypatch):
+    exact, bjj_drill, candidates, _ = _run_pair(
+        monkeypatch, "submission_hunter", sport="mma", other_sport="bjj", technical_style="mma"
+    )
+    assert candidates[exact["name"]]["reasons"]["sport_specificity_bonus"] == 0.5
+    assert candidates[bjj_drill["name"]]["reasons"]["sport_specificity_bonus"] == 0.0
