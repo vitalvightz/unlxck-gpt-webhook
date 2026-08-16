@@ -60,9 +60,7 @@ SUPERSEDED_LEGACY_DRILLS = {
 # gimmick (answering riddles through earbuds mid-shadowbox is not combat
 # perception); it is intentionally absent from this retained set.
 RETAINED_CROSS_STYLE_DRILLS = {
-    "Forward-Blast Heavy Bag Intervals", "Overhand Right Bursts", "Forward Lunge Strikes",
-    "Liver Hook Bursts", "Swarm Entry Sprints", "Ground-and-Pound Bursts",
-    "Corner Knee Bursts", "Uppercut Barrage", "Cage Cutting Footwork",
+    "Ground-and-Pound Bursts", "Corner Knee Bursts", "Cage Cutting Footwork",
     "Brawler's Forward Shadow", "Pressure Fighter's Cutoff Circuit",
     "Pressure Fighter's Cutoff Shadow",
 }
