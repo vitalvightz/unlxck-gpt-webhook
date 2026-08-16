@@ -6990,39 +6990,39 @@
     ]
   },
   {
-    "name": "Forward-Blast Heavy Bag Intervals",
+    "name": "Pocket Power Cluster",
     "equipment": [
       "heavy_bag"
     ],
     "phases": [
-      "GPP"
+      "GPP",
+      "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "interval",
-    "duration": "20s on / 40s off",
-    "intensity": "max",
+    "system": "ATP-PCr",
+    "modality": "strike",
+    "duration": "8 x 5s / 75s rest",
+    "intensity": "high",
     "tags": [
-      "pressure_fighter",
-      "brawler",
-      "mma",
       "boxing",
-      "mech_systemic_fatigue",
+      "brawler",
       "mech_ballistic",
-      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "notes": "Advance relentlessly while throwing power hooks. No backpedaling.",
-    "equipment_note": "Bag should swing minimally.",
-    "work_sec": 20,
-    "rest_sec": 40,
-    "rpe": 9,
+    "notes": "Throw 3-4 compact hooks or uppercuts in the pocket. Restore the high guard and stance immediately. Stop if punch mechanics, stance, or guard recovery deteriorate.",
+    "equipment_note": "Set the bag so compact punches land without reaching.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ]
   },
@@ -7096,34 +7096,39 @@
     ]
   },
   {
-    "name": "Brawler's Body Shot Barrage",
+    "name": "Cover-Return Burst",
     "equipment": [
-      "heavy_bag"
+      "partner_mitts"
     ],
     "phases": [
-      "GPP"
+      "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "interval",
-    "duration": "25s on / 35s off",
-    "intensity": "max",
+    "system": "ATP-PCr",
+    "modality": "strike",
+    "duration": "8 x 6s / 75s rest",
+    "intensity": "high",
     "tags": [
-      "brawler",
       "boxing",
+      "brawler",
+      "mech_ballistic",
+      "mech_reactive",
       "mech_trunk_stability",
-      "mech_ballistic"
+      "mech_upper_press"
     ],
-    "notes": "Digging hooks to the body. Exhale sharply with each shot.",
-    "equipment_note": "Wear bag gloves for knuckle protection.",
-    "work_sec": 25,
-    "rest_sec": 35,
-    "rpe": 9,
+    "notes": "The holder gives one controlled short attack. Cover in a high guard, return 2-4 compact punches, then restore guard and stance. Fully reset; do not trade freely.",
+    "equipment_note": "The holder controls contact and presents close-range targets.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_trunk_stability"
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ]
   },
   {
@@ -7559,36 +7564,40 @@
     ]
   },
   {
-    "name": "Overhand Right Bursts",
+    "name": "Body-Head Power Burst",
     "equipment": [
       "focus_mitts"
     ],
     "phases": [
-      "GPP"
+      "GPP",
+      "SPP"
     ],
     "system": "ATP-PCr",
     "modality": "strike",
-    "duration": "8x per side / 60s rest",
-    "intensity": "max",
+    "duration": "8 x 5s / 75s rest",
+    "intensity": "high",
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter",
-      "mech_trunk_stability",
       "mech_ballistic",
-      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "notes": "Throw fight-ending power shots. Full reset between reps.",
-    "equipment_note": "Pad holder braces firmly.",
-    "rest_sec": 60,
-    "rpe": 9,
+    "notes": "The holder presents the open body or head target. Switch levels with 2-4 compact hooks, uppercuts, or short straights, then regain guard and stance. Stop if mechanics deteriorate.",
+    "equipment_note": "Hold the mitts at realistic close-range body and head positions.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -7773,36 +7782,39 @@
     ]
   },
   {
-    "name": "Forward Lunge Strikes",
+    "name": "Exchange-Reentry Burst",
     "equipment": [
-      "heavy_bag"
+      "partner_mitts"
     ],
     "phases": [
-      "GPP"
+      "SPP"
     ],
     "system": "ATP-PCr",
     "modality": "strike",
-    "duration": "8x / 60s rest",
-    "intensity": "max",
+    "duration": "6 x 7s / 75s rest",
+    "intensity": "high",
     "tags": [
       "boxing",
-      "pressure_fighter",
       "brawler",
-      "mech_trunk_stability",
       "mech_ballistic",
-      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "notes": "Lunge forward with lead hook. Reset completely.",
-    "equipment_note": "Bag should be stable.",
-    "rest_sec": 60,
-    "rpe": 9,
+    "notes": "Complete a short pocket exchange, take a half-step reset, then use the holder's opening to re-enter with a compact combination. Recover stance. Do not chase at long range.",
+    "equipment_note": "The holder creates a brief separation and a realistic re-entry opening.",
+    "work_sec": 7,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -7984,34 +7996,40 @@
     ]
   },
   {
-    "name": "Liver Hook Bursts",
+    "name": "Pocket Combination Intervals",
     "equipment": [
-      "body_opponent_bag"
+      "heavy_bag"
     ],
     "phases": [
-      "GPP"
+      "GPP",
+      "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "strike",
-    "duration": "8x / 60s rest",
-    "intensity": "max",
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "6 x 25s / 45s rest",
+    "intensity": "high",
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter",
-      "mech_trunk_stability",
       "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "notes": "Max-power left hooks to liver region. Full reset.",
-    "equipment_note": "Angle bag to mimic opponent stance.",
-    "rest_sec": 60,
-    "rpe": 9,
+    "notes": "Repeat compact pocket combinations with a guard reset between each. Alternate body-head patterns. Reduce output if punches become arm-dominant, the stance widens, or the guard disappears.",
+    "equipment_note": "Work close enough for compact hooks and uppercuts without leaning.",
+    "work_sec": 25,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
     "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -8118,38 +8136,39 @@
     ]
   },
   {
-    "name": "Swarm Entry Sprints",
+    "name": "Guard-and-Answer Intervals",
     "equipment": [
-      "open_space"
+      "partner_mitts"
     ],
     "phases": [
-      "GPP"
+      "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "sprint",
-    "duration": "10m / 50s rest",
-    "intensity": "max",
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "6 x 25s / 45s rest",
+    "intensity": "high",
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
       "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "notes": "Sprint into imaginary punching flurry. Reset completely.",
-    "equipment_note": "Mark start/stop lines.",
-    "rest_sec": 50,
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
+    "notes": "Respond to each controlled short-range attack with a cover, roll, or catch, then answer immediately and regain the high guard. Wait for the next cue; do not free-hit continuously. Reduce output if defence or stance deteriorates.",
+    "equipment_note": "The holder varies controlled hooks, short straights, and body attacks.",
+    "work_sec": 25,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
       "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -8326,34 +8345,38 @@
     ]
   },
   {
-    "name": "Uppercut Barrage",
+    "name": "Pocket Exchange Rounds",
     "equipment": [
-      "angle_bag"
+      "partner"
     ],
     "phases": [
-      "GPP"
+      "GPP",
+      "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "strike",
-    "duration": "8x / 60s rest",
-    "intensity": "max",
+    "system": "aerobic",
+    "modality": "continuous",
+    "duration": "3 x 180s / 60s rest",
+    "intensity": "moderate",
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter",
+      "mech_reactive",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
-      "mech_ballistic",
       "mech_upper_press"
     ],
-    "notes": "Max-power uppercuts from crouch position. Reset stance.",
-    "equipment_note": "Bag height at chest level.",
+    "notes": "Use controlled short pocket exchanges with body-head variation, a high guard, and stable head position. Briefly reset between exchanges. Keep a sustainable pace and do not chase across the ring.",
+    "equipment_note": "Partner contact stays controlled so technical quality is maintained.",
+    "work_sec": 180,
     "rest_sec": 60,
-    "rpe": 9,
+    "rounds": 3,
+    "rpe": 6,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -8923,37 +8946,37 @@
     ]
   },
   {
-    "name": "Brawler's Body Shot Guard",
+    "name": "Inside Decision Rounds",
     "equipment": [
-      "heavy_bag"
+      "partner_mitts"
     ],
     "phases": [
-      "GPP"
+      "SPP"
     ],
     "system": "aerobic",
     "modality": "continuous",
-    "duration": "3min rounds",
+    "duration": "4 x 120s / 60s rest",
     "intensity": "moderate",
     "tags": [
       "boxing",
       "brawler",
-      "mech_lower_hip_hinge",
       "mech_reactive",
-      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ],
-    "notes": "High guard while walking bag down with body shots.",
-    "equipment_note": "16oz gloves recommended.",
-    "work_sec": 180,
-    "rpe": 7,
+    "notes": "Read unpredictable controlled short-range attacks, cover opportunities, or brief disengagements. Choose to cover, roll, catch, answer body or head, reset, or re-engage. Do not preselect the response; lower the pace if decisions or guard deteriorate.",
+    "equipment_note": "The holder varies realistic close-range cues without calling a fixed response.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 6,
     "impact_cost": "low",
-    "lactate_load": "moderate",
+    "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
       "mech_reactive",
-      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]

@@ -215,6 +215,7 @@ BATCH_3_PURGED_NAMES = [
 # deletion by future purges.
 PROTECTED_REBUILT_NAMES = [
     "Anti-Fence Range Rounds",
+    "Body-Head Power Burst",
     "Cage Counter Movement Flow",
     "Cage Defend-Counter-Escape",
     "Failed Shot Punish & Reset",
@@ -245,6 +246,7 @@ PROTECTED_REBUILT_NAMES = [
     "Check-Hook Pivot Burst",
     "Counter Quality Rounds",
     "Counter Shadow Flow",
+    "Cover-Return Burst",
     "Corner Trap Burst",
     "Cutoff-Reposition Intervals",
     "Dutch Target Call",
@@ -255,6 +257,7 @@ PROTECTED_REBUILT_NAMES = [
     "Entry-Score-Exit Bursts",
     "Entry-and-Score Burst",
     "Escape-Recatch Burst",
+    "Exchange-Reentry Burst",
     "Explosive Cutoff Burst",
     "Failed-Entry Reset Intervals",
     "Fence Escape Denial",
@@ -276,6 +279,8 @@ PROTECTED_REBUILT_NAMES = [
     "Kick-Step Pressure Rounds",
     "Kick-and-Exit Burst",
     "Kick-to-Pressure Flow",
+    "Guard-and-Answer Intervals",
+    "Inside Decision Rounds",
     "Lateral Escape Burst",
     "Level-Change Respect Flow",
     "Level-Threat Pressure Reset",
@@ -283,6 +288,9 @@ PROTECTED_REBUILT_NAMES = [
     "Long-Range Decision Rounds",
     "Long-Range MMA Decision Rounds",
     "Long-Range Movement Flow",
+    "Pocket Combination Intervals",
+    "Pocket Exchange Rounds",
+    "Pocket Power Cluster",
     "Long-Weapon Exit Flow",
     "Long-to-Clinch Transition",
     "Low-High Decision Rounds",
@@ -343,7 +351,7 @@ PROTECTED_REBUILT_NAMES = [
 ]
 
 # Legacy entries deliberately superseded after the deletion-only purge by the
-# focused Boxing, Kickboxing and MMA Counter Striker rebuilds.
+# focused Counter Striker rebuilds and the Boxing Brawler rebuild.
 POST_PURGE_REPLACED_NAMES = {
     "Pull Counter Matrix",
     "Sniper's Timing",
@@ -357,6 +365,14 @@ POST_PURGE_REPLACED_NAMES = {
     "Clinch Counter Chaos",
     "Frame & Counter Knee Complex",
     "Slip-Counter Springs",
+    "Forward-Blast Heavy Bag Intervals",
+    "Brawler's Body Shot Barrage",
+    "Overhand Right Bursts",
+    "Forward Lunge Strikes",
+    "Liver Hook Bursts",
+    "Swarm Entry Sprints",
+    "Uppercut Barrage",
+    "Brawler's Body Shot Guard",
 }
 
 
