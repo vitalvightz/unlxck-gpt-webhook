@@ -8,6 +8,9 @@ from .config import CONDITIONING_PER_DAY, STRENGTH_PER_DAY
 from .weight_cut import WEIGHT_CUT_INPUTS_KNOWN
 
 EQUIP_ALIASES = {
+    "punching bag": "heavy_bag",
+    "punching_bag": "heavy_bag",
+    "heavy bag": "heavy_bag",
     "med balls": "medicine_ball",
     "med ball": "medicine_ball",
     "medicine balls": "medicine_ball",
