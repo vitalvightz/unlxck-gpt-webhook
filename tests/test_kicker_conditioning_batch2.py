@@ -97,7 +97,6 @@ def test_kicker_batch_2_equipment_reachability_matches_realistic_profiles():
         ["punching bag"],
         ["bodyweight", "punching bag"],
         ["heavy bag"],
-        ["banana bag"],
     ]
     for equipment in solo_bag_profiles:
         reachable = _reachable_kicker_batch(equipment)
@@ -107,6 +106,14 @@ def test_kicker_batch_2_equipment_reachability_matches_realistic_profiles():
 
     partner_reachable = _reachable_kicker_batch(["partner", "thai pads"])
     assert all(partner_reachable[system] for system in ("aerobic", "ATP-PCr", "glycolytic"))
+
+    intended_profiles = [
+        _reachable_kicker_batch(["bodyweight"]),
+        _reachable_kicker_batch(["heavy bag"]),
+        partner_reachable,
+    ]
+    reachable_names = {name for profile in intended_profiles for names in profile.values() for name in names}
+    assert reachable_names == set(EXPECTED_KICKER_BATCH_2)
 
     minimal_reachable = _reachable_kicker_batch([])
     assert minimal_reachable == {

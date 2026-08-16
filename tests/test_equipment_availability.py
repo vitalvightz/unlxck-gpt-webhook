@@ -117,5 +117,9 @@ def test_bodyweight_strength_drill_remains_selectable_when_athlete_does_not_list
 
 
 def test_striking_bag_names_normalize_to_one_equipment_gate_token():
-    for bag_name in ("punching bag", "punching_bag", "heavy bag", "heavy_bag", "banana bag", "banana_bag"):
+    for bag_name in ("punching bag", "punching_bag", "heavy bag", "heavy_bag"):
         assert normalize_equipment_list([bag_name]) == ["heavy_bag"]
+
+
+def test_banana_bag_remains_a_distinct_equipment_token():
+    assert normalize_equipment_list(["banana bag", "banana_bag"]) == ["banana_bag", "banana_bag"]
