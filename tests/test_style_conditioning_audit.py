@@ -216,6 +216,14 @@ BATCH_3_PURGED_NAMES = [
 # deletion by future purges.
 PROTECTED_REBUILT_NAMES = [
     "Anti-Fence Range Rounds",
+    "Check-Return Kick Burst",
+    "Check-Return Intervals — Kickboxing",
+    "Defend-Counter-Reposition Intervals — Kickboxing",
+    "Kick Defence Reset Flow",
+    "Pull-Kick Counter Burst",
+    "Random Attack Counter Rounds — Kickboxing",
+    "Reactive Counter Choice — Kickboxing",
+    "Teep Intercept Flow",
     "Backstep Counter Reset",
     "Body-Head Pressure Intervals",
     "Body-Kick Repeatability",
@@ -334,6 +342,8 @@ POST_PURGE_REPLACED_NAMES = {
     "Counter Striker's Retreat Drill",
     "Counter Striker's Parry Drill",
     "Tempo Shadowboxing (Slow Reps)",
+    "Counter Sniper Drill",
+    "Kick Defense March",
 }
 
 

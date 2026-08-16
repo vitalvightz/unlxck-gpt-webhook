@@ -1064,78 +1064,518 @@
     ]
   },
   {
-    "name": "Counter Sniper Drill",
+    "name": "Counter Kick Matrix",
     "equipment": [
-      "partner_mitts"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "timing development",
-    "duration": "3min rounds: catch-and-shoot only, 1min rest x 5",
+    "system": "aerobic",
+    "modality": "technical check-return flow",
+    "duration": "3 x 180 sec, 60 sec rest",
     "intensity": "moderate",
     "tags": [
       "counter_striker",
       "kickboxing",
+      "muay_thai",
       "mech_reactive",
-      "mech_upper_press",
-      "mech_cns_high",
-      "mech_systemic_fatigue"
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_trunk_rotation",
+      "mech_deceleration"
     ],
-    "notes": "No initiating - only counter strikes allowed (Precision focus)",
-    "equipment_note": "Coach varies attack angles",
+    "notes": "Partner gives controlled low- and body-kick cues. Read the kick, check, make an immediate light return kick, recoil it, then recover stance and guard before the next feed. Alternate sides without chasing pace; balance and clean position end every repetition.",
+    "equipment_note": "Partner feeds one controlled kick only after stance and guard are restored.",
     "work_sec": 180,
     "rest_sec": 60,
-    "rpe": 7,
+    "rounds": 3,
+    "rpe": 5,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_cns_high",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
       "mech_reactive",
-      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Teep Intercept Flow",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical stop-hit flow",
+    "duration": "3 x 150 sec, 60 sec rest",
+    "intensity": "moderate",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "teep",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Partner gives a clear forward-entry cue. Read the step, intercept with a light teep, recoil the kicking leg, replace the foot, recover stance, guard and range, then accept the next feed.",
+    "equipment_note": "Partner presents a body pad and varies the timing of controlled forward entries.",
+    "work_sec": 150,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Kick Defence Reset Flow",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "mixed kick-defence flow",
+    "duration": "3 x 120 sec, 60 sec rest",
+    "intensity": "moderate",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Partner mixes controlled low-kick and body-kick cues. Read each feed, check, forearm-parry or step just outside range as appropriate, make one light kick return, recoil, then recover stance and defensive position. Do not preselect the defence.",
+    "equipment_note": "Partner limits the menu to safe, controlled kicks and allows a full reset.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Check-Return Kick Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive reactive kick single",
+    "duration": "8 x 5 sec, 60 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "low_kick",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Partner gives one low-kick cue. Read and check it, fire one explosive immediate return kick, recoil quickly, and recover stance and guard inside the effort. Stop if timing, balance, recoil or defensive shape drops.",
+    "equipment_note": "Partner gives one safe low-kick feed per effort and holds for the return.",
+    "work_sec": 5,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Pull-Kick Counter Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "evade and kick counter",
+    "duration": "6 x 6 sec, 75 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Partner cues a jab or rear straight. Read it, pull or slide just beyond the strike, make one immediate body- or low-kick return, recoil, then recover stance, guard and range. One clean response per effort; stop if the athlete guesses.",
+    "equipment_note": "Partner wears Thai pads and feeds one controlled straight punch per effort.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Intercept & Counter Mitts",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "long-weapon intercept or parry-counter",
+    "duration": "8 x 7 sec, 60 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "teep",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Holder gives either a forward-entry cue or a long straight cue. Read the action: teep the entry, or parry the straight and return a straight punch or kick. Make one explosive response, then recoil and recover stance, guard and range. The holder chooses the cue, not the athlete.",
+    "equipment_note": "Partner uses Thai pads for the controlled straight cue and the safe teep or counter target.",
+    "work_sec": 7,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ]
   },
   {
-    "name": "Counter Kick Matrix",
+    "name": "Reactive Counter Choice — Kickboxing",
     "equipment": [
+      "partner",
       "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
     "system": "ATP-PCr",
-    "modality": "leg kick counters",
-    "duration": "3min rounds: check → return kick, 1min rest x 5",
-    "intensity": "moderate",
+    "modality": "unpredictable defensive choice",
+    "duration": "6 x 7 sec, 75 sec rest",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "kickboxing",
-      "mma",
+      "muay_thai",
+      "cognitive",
       "mech_reactive",
+      "mech_ballistic",
+      "mech_upper_press",
       "mech_lower_hip_hinge",
-      "mech_change_of_direction",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
     ],
-    "notes": "Focus on balance during check-counter transitions (Technical precision)",
-    "equipment_note": "Pad holder varies kick angles",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 7,
+    "notes": "Partner unpredictably chooses jab, rear straight, low kick or forward entry. Perceive the attack, select a suitable defence or interception, make one immediate punch, kick or teep counter, then recoil and recover stance and defensive position. Do not reveal the answer before the cue; stop if guessing begins.",
+    "equipment_note": "Partner uses controlled contact and Thai pads for the selected return.",
+    "work_sec": 7,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Check-Return Intervals — Kickboxing",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "repeated check-return decisions",
+    "duration": "6 x 45 sec, 30 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner varies the timing and side of controlled low- and body-kick feeds. Read, check, make an immediate kick return, recoil, and recover stance and guard before every new cue. Reduce feed rate if balance, timing or defensive shape fades.",
+    "equipment_note": "Partner holds Thai pads and waits for a complete stance reset between feeds.",
+    "work_sec": 45,
+    "rest_sec": 30,
+    "rounds": 6,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Defend-Counter-Reposition Intervals — Kickboxing",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "mixed defence-counter-reposition intervals",
+    "duration": "5 x 60 sec, 45 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "lateral",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_lateral_shift",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner mixes straight-punch, low-kick, body-kick and forward-entry cues. Read and defend, evade or intercept, make a short immediate counter of no more than two strikes, then move laterally and recover stance, guard and range. The next feed waits for the reset.",
+    "equipment_note": "Partner uses controlled feeds and presents pads for realistic returns.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 5,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lateral_shift",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Random Attack Counter Rounds — Kickboxing",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "unpredictable counter rounds",
+    "duration": "4 x 120 sec, 60 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "kickboxing",
+      "muay_thai",
+      "cognitive",
+      "lateral",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_lateral_shift",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner unpredictably feeds a jab, rear straight, low kick, body kick or forward entry. Athlete cannot initiate: read the attack, choose a sound defence or interception, counter immediately, recoil kicks, then recover stance and defensive position with a lateral reset. Lower the feed rate when choices or shape deteriorate.",
+    "equipment_note": "Partner controls contact and feed density while presenting safe pad targets.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lateral_shift",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Counter Knee Matrix",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "Muay Thai frame-and-knee counters",
+    "duration": "4 x 90 sec, 45 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "muay_thai",
+      "clinch_knee",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner cues a controlled forward punch or close-range entry. Read it, cover or frame to stop the entry, make an immediate knee counter, recoil and place the leg back in stance, then recover stance, frame, guard and position before the next feed. This is an entry counter, not a prolonged clinch exchange.",
+    "equipment_note": "Partner wears Thai pads and gives controlled entries without extended clinch fighting.",
+    "work_sec": 90,
+    "rest_sec": 45,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ]
   },
   {
@@ -1174,83 +1614,6 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Intercept & Counter Mitts",
-    "equipment": [
-      "focus_mitts"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "stop-hits",
-    "duration": "3min rounds: intercepting combos, 1min rest x 5",
-    "intensity": "high",
-    "tags": [
-      "counter_striker",
-      "kickboxing",
-      "mech_reactive",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Cutting off opponent's rhythm (Explosive entries)",
-    "equipment_note": "Holder varies rhythm unpredictably",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Counter Knee Matrix",
-    "equipment": [
-      "thai_pads"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "clinch counters",
-    "duration": "3min rounds: catch → knee, 1min rest x 5",
-    "intensity": "high",
-    "tags": [
-      "counter_striker",
-      "kickboxing",
-      "mma",
-      "mech_reactive",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_lower_hip_hinge",
-      "mech_grip_support",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Emphasize framing before counter knees (85% power)",
-    "equipment_note": "Pad holder drives forward",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
       "mech_upper_press"
     ]
   },
@@ -7815,40 +8178,6 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Kick Defense March",
-    "equipment": [
-      "open_space"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "aerobic",
-    "modality": "continuous",
-    "duration": "5min rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kickboxing",
-      "counter_striker",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Continuous check/block motions while circling. (low-moderate)",
-    "equipment_note": "Ankle weights optional.",
-    "total_minutes": 5,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ]
