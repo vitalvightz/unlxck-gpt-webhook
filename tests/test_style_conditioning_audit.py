@@ -214,6 +214,15 @@ BATCH_3_PURGED_NAMES = [
 # must remain present in the active bank. This list locks them against accidental
 # deletion by future purges.
 PROTECTED_REBUILT_NAMES = [
+    "Check-Return Pocket Burst",
+    "Close-Range Exchange Rounds",
+    "Cover-Hook-Kick Burst",
+    "Guard-and-Low-Kick Answer",
+    "Inside Decision Rounds — Kickboxing / Muay Thai",
+    "Pocket Body-Head-Leg Intervals",
+    "Pocket Knee Reentry Burst",
+    "Pocket Punch-Kick Cluster",
+    "Punch-Kick Exchange Intervals",
     "Anti-Fence Range Rounds",
     "Body-Head Power Burst",
     "Cage Counter Movement Flow",

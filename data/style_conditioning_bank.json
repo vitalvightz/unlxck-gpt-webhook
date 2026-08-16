@@ -1,5 +1,375 @@
 [
   {
+    "name": "Pocket Punch-Kick Cluster",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "compact mixed-strike cluster",
+    "duration": "8 x 6s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "notes": "Throw a short, compact punch combination in the pocket, then an immediate low or body kick. Recoil the kicking leg and restore stance and guard. Stop if kick recoil, stance recovery, or guard slows.",
+    "equipment_note": "Set the bag so punches and kicks land without reaching or chasing.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ]
+  },
+  {
+    "name": "Cover-Hook-Kick Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "defence-to-mixed-strike burst",
+    "duration": "8 x 6s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Partner gives one controlled short attack. Cover, answer with a compact hook and low or body kick, recoil the kick, then restore stance and guard. Fully reset; do not trade freely. Stop if stance recovery slows.",
+    "equipment_note": "Partner controls the feed and holds Thai pads at close range.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ]
+  },
+  {
+    "name": "Check-Return Pocket Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive pocket exchange burst",
+    "duration": "8 x 5s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "notes": "Partner feeds a controlled low kick during a close exchange. Check, return aggressively inside the pocket with a compact punch-kick answer, recoil the kick, and restore stance and guard.",
+    "equipment_note": "Partner gives a safe low-kick feed and presents Thai pads for the immediate pocket answer.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ]
+  },
+  {
+    "name": "Pocket Knee Reentry Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "brief knee reentry burst",
+    "duration": "6 x 7s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "muay_thai",
+      "brawler",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_deceleration"
+    ],
+    "notes": "Complete a short exchange, use a brief frame and separation, then take a valid Thai-pad knee opening and add one compact punch. Restore stance and guard immediately; release immediately after the knee. Stop if posture or stance recovery slows.",
+    "equipment_note": "Partner holds Thai pads, controls the knee entry, and avoids live impact.",
+    "work_sec": 7,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_deceleration"
+    ]
+  },
+  {
+    "name": "Punch-Kick Exchange Intervals",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "repeated compact exchange intervals",
+    "duration": "6 x 25s / 45s rest",
+    "intensity": "high",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Repeat separate 2-4 strike pocket exchanges using punches and a low or body kick. Recoil every kick, restore stance and guard, then begin the next exchange. No endless flurries; keep compact mechanics under fatigue.",
+    "equipment_note": "Work at pocket range on a secured heavy bag without chasing its swing.",
+    "work_sec": 25,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Guard-and-Low-Kick Answer",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "cued defence-to-offence intervals",
+    "duration": "6 x 25s / 45s rest",
+    "intensity": "high",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner varies controlled short punch attacks. Cover, catch, or roll as appropriate; answer with a short punch and low kick, recoil the kick, then restore stance and guard before the next cue. Win each exchange, then restore position.",
+    "equipment_note": "Partner controls contact and presents Thai pads for each close-range answer.",
+    "work_sec": 25,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Pocket Body-Head-Leg Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "variable-target pocket intervals",
+    "duration": "5 x 35s / 50s rest",
+    "intensity": "high",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "The holder varies body, head, and leg target availability. Build compact 2-4 strike punch-kick exchanges, recoil each kick, and restore stance and guard between exchanges. Read the open target rather than repeating a fixed combination.",
+    "equipment_note": "Partner uses Thai pads to present safe, changing close-range targets.",
+    "work_sec": 35,
+    "rest_sec": 50,
+    "rounds": 5,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Close-Range Exchange Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "sustainable close-range exchange rounds",
+    "duration": "3 x 180s / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "notes": "Work partner-led short pocket exchanges at a sustainable pace. Mix compact punches with low or body kicks, recoil every kick, and restore stance, guard, and posture before a brief reset or re-engagement. Do not chase between exchanges.",
+    "equipment_note": "Partner controls the pace and uses Thai pads for safe mixed-strike exchanges.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ]
+  },
+  {
+    "name": "Inside Decision Rounds — Kickboxing / Muay Thai",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "representative inside decision rounds",
+    "duration": "4 x 120s / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "brawler",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "notes": "Partner unpredictably presents a short punch attack, low- or body-kick cue, brief close-range entry, or cover opening. Read the exchange; cover, check, catch, or parry as appropriate; answer compactly with punches or a kick, then recoil and restore stance and guard before resetting or re-engaging. Use a controlled Thai-pad knee only on a valid close-range opening.",
+    "equipment_note": "Partner controls all feeds and holds Thai pads; knees are controlled with no live impact.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ]
+  },
+  {
     "name": "Alleyway Sprawl",
     "equipment": [
       "bodyweight"
