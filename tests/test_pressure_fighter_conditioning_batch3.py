@@ -54,13 +54,13 @@ SUPERSEDED_LEGACY_DRILLS = {
     "Chain Reactor", "Grim Reaper",
 }
 
-# Existing cross-style drills outside the rebuilt core remain untouched and tagged.
+# Existing cross-style drills outside later archetype rebuilds remain untouched and tagged.
 # "Pressure Fighter's Shadowboxing Riddle" was retained by the pressure-fighter
 # rebuild but subsequently removed by the batch-3 legacy purge as a reaction
 # gimmick (answering riddles through earbuds mid-shadowbox is not combat
 # perception); it is intentionally absent from this retained set.
 RETAINED_CROSS_STYLE_DRILLS = {
-    "Ground-and-Pound Bursts", "Corner Knee Bursts", "Cage Cutting Footwork",
+    "Corner Knee Bursts", "Cage Cutting Footwork",
     "Brawler's Forward Shadow", "Pressure Fighter's Cutoff Circuit",
     "Pressure Fighter's Cutoff Shadow",
 }
