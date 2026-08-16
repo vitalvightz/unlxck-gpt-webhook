@@ -357,6 +357,14 @@ PROTECTED_REBUILT_NAMES = [
     "Teep Range-Control Flow",
     "Teep Volume & Position",
     "Teep Walk-Down Reset",
+    "Inside Position Flow",
+    "Frame-Separate-Reset Flow",
+    "Tie-Up Position Burst",
+    "Turn-and-Separate Burst",
+    "Smother-Return Burst",
+    "Inside Position Intervals",
+    "Control-Separate-Punch Intervals",
+    "Reactive Clinch Decision Rounds",
 ]
 
 # Legacy entries deliberately superseded after the deletion-only purge by the
@@ -382,6 +390,12 @@ POST_PURGE_REPLACED_NAMES = {
     "Swarm Entry Sprints",
     "Uppercut Barrage",
     "Brawler's Body Shot Guard",
+    "Rope-A-Dope Clinch",
+    "Rope Clinch Frames",
+    "Referee Break Counters",
+    "Overhook Uppercut Drill",
+    "Corner Mauling Circuit",
+    "Slip-Clinch Reaction",
 }
 
 
