@@ -12,38 +12,22 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 STYLE_CONDITIONING_BANK_PATH = REPO_ROOT / "data" / "style_conditioning_bank.json"
 
 # Batch 1 manual cleanup: names as they exist in the bank today, post-cleanup.
-# Entries superseded by later style-bank rebuilds are intentionally absent from this
+# Entries superseded by later style-bank rebuilds, or removed by the batch-3
+# legacy purge (see BATCH_3_PURGED_NAMES), are intentionally absent from this
 # regression list, which tracks batch-1 entries that remain active today.
 BATCH_1_CLEANED_NAMES = [
-    "Sandbag Carry & Sprawl Complex",
-    "Sled Push & Punch Combo",
-    "Backward Lunge & Swing Complex",
-    "Sprint, Burpee & Shadowbox Finisher",
-    "Sled Push & KB Swing Complex",
-    "Sandbag Carry & Knee Complex",
-    "Med Ball Slam & Wall Drive Complex",
-    "Hammer & Tire Jump Complex",
-    "DB Uppercut & Med Ball Slam Complex",
-    "Hammer Strike & Sprawl Jump Complex",
     "Sprint, Sprawl & Knee Conditioning Complex",
     "Clinch Hold & Knee Complex",
     "Max Knee & Sprawl Complex",
     "Wall Pressure & Elbow Complex",
-    "Sled Push & Knee Complex",
     "Clinch & Sprawl Reaction Complex",
-    "Neck Harness Isometric Complex",
     "Band-Resisted Knee Complex",
     "Band-Resisted Whizzer & Sprawl Complex",
-    "Band-Resisted Shoulder Roll & Counter Complex",
     "Roll-Under Counter Complex",
     "Intercept & Counter Mitts",
     "Frame & Counter Knee Complex",
     "Ezekiel Finishing Drill",
     "Ground-and-Pound Bursts",
-    "Infighting Jump & Push-Up Complex",
-    "Ropes Pressure Hook & Uppercut Complex",
-    "Outdoor Tire Flip & Burpee Complex",
-    "Weighted Plank & Stand-Up Complex",
     "Calf Slicer Pressure Drill",
 ]
 
@@ -66,9 +50,260 @@ BATCH_2_ARCHIVED_NAMES = [
 # Batch 2: renamed/rebuilt in place after modality scanning surfaced gimmick
 # wording ("neck torture", "footwork torture", "annihilation") not caught by
 # the original name-only/notes-only batch-1 pass.
-BATCH_2_RENAMED_NAMES = [
-    "Neck Bridge & Plate Rotation Complex",
+#
+# NOTE: both original batch-2 renamed entries ("Neck Bridge & Plate Rotation
+# Complex" — barbell neck strength; "Backward Sled Drag & Slip Complex" — sled
+# work) were subsequently removed outright by the batch-3 legacy purge because
+# their primary identity is generic S&C rather than a style-specific behaviour.
+# They now live in BATCH_3_PURGED_NAMES / the archive file, so this list is
+# empty; it is retained as an anchor for the batch-2 regression tests below.
+BATCH_2_RENAMED_NAMES: list[str] = []
+
+# Batch 3 (legacy purge): removed outright from the active bank as clearly
+# low-value legacy style-conditioning content. Grouped by deletion reason. This
+# was a deletion-only cleanup pass ahead of a per-archetype re-audit -- no
+# replacement drills were added. Every name here must be absent from the active
+# bank and present in the archive file with an archived_reason and archived_date.
+BATCH_3_PURGED_NAMES = [
+    # generic_snc (33)
+    "Alleyway Ambush",
+    "Backward Lunge & Swing Complex",
     "Backward Sled Drag & Slip Complex",
+    "Blackout Blitz",
+    "Bouncer's Revenge",
+    "Brick Fist Protocol",
+    "Clinch Control 3.0",
+    "Concrete Clinch",
+    "Cross-Counter Plyo Pushups",
+    "DB Uppercut & Med Ball Slam Complex",
+    "Dirty Boxing Marathon",
+    "Ditch Digger",
+    "Dogfight Drill",
+    "Hammer & Tire Jump Complex",
+    "Hammer Strike & Sprawl Jump Complex",
+    "Infighting Jump & Push-Up Complex",
+    "Junkyard Judo",
+    "Lateral Escape Plyo Pushoffs",
+    "Liver Hunter",
+    "Med Ball Slam & Wall Drive Complex",
+    "Outdoor Tire Flip & Burpee Complex",
+    "Piledriver Circuit",
+    "Plumb Power Circuit",
+    "Plumb Power Rotations",
+    "Rooftop Rumble",
+    "Sandbag Carry & Knee Complex",
+    "Sandbag Carry & Sprawl Complex",
+    "Sled Push & KB Swing Complex",
+    "Sled Push & Knee Complex",
+    "Sled Push & Punch Combo",
+    "Smesh Prep Circuit",
+    "Sprint, Burpee & Shadowbox Finisher",
+    "Weighted Plank & Stand-Up Complex",
+    # artificial_resistance (9)
+    "Band-Resisted Shoulder Roll & Counter Complex",
+    "Banded Shadowboxing",
+    "Barroom Brawl",
+    "Check Hook Crucible",
+    "Check Hook Matrix",
+    "Ding-Dong Roundhouse",
+    "Dive Bar Duelist",
+    "Interception Drill",
+    "Slipping Symphony",
+    # reaction_gimmick (10)
+    "Brawler's Puzzle Defense",
+    "Clinch Auditory Triggers",
+    "Hybrid's Stance-Switch Reaction",
+    "Kick Pattern Recall",
+    "Pressure Fighter's Shadowboxing Riddle",
+    "Reaction Jab Matrix",
+    "Reaction Overload",
+    "Slip & Rip Protocol",
+    "Takedown Dilemma",
+    "Wrestling Chess",
+    # arbitrary_volume (2)
+    "Counter Uppercut Drill",
+    "Pull-Back Sniper",
+    # fatigue_before_skill (3)
+    "Concrete Hands Circuit",
+    "Counter Puncher's Gauntlet",
+    "Ropes Pressure Hook & Uppercut Complex",
+    # duplicate (4)
+    "Lateral Plyo Pushoffs",
+    "MMA Wall-Walk Conditioning",
+    "Muay Thai Matrix",
+    "Rolling Thunder",
+    # wrong_bank (69)
+    "Arch Walks (Barefoot Activation)",
+    "Assisted Chinnups (Light Load)",
+    "Assisted Dip Machine (Light Load)",
+    "Assisted Pullup (Heavy Band)",
+    "Assisted Squat (TRX)",
+    "Banded Core Chop (Anti-Rotation)",
+    "Banded External Rotation (Shoulder)",
+    "Banded Face Pulls (Rear Delt)",
+    "Banded Pull-Aparts (Light)",
+    "Banded Sled Push (Light)",
+    "Bike Sprints (Assault)",
+    "Bike Sprints (Fixed Gear Recovery)",
+    "Bike Steady-State (Easy Gear)",
+    "Bird Dog Holds (Core Stability)",
+    "Boxer's Clinch Control",
+    "Cable Woodchops (Light Load)",
+    "Chest-Supported Dumbbell Row",
+    "Core Plank Progressions",
+    "Dead Bug Progressions",
+    "Dumbbell Bent-Row (Light Load)",
+    "Dumbbell Turkish Get-Ups (Light)",
+    "Elliptical Backward Movement",
+    "Elliptical Machine Intervals",
+    "Farmer Carry (Seated Starting Position)",
+    "Foam Roll Hamstring (Seated)",
+    "Glass Jaw Redemption",
+    "Glute Bridge March (Isometric Base)",
+    "Half-Kneeling Hip Flexor Stretch",
+    "Half-Kneeling Landmine Press",
+    "Hanging Leg Raise (Assisted)",
+    "Headbutt Conditioning",
+    "Incline Push-Up Progression",
+    "Incline Treadmill Walk",
+    "Junkyard Dog",
+    "Kettle Bell Sumo Squat (Light Load)",
+    "Knuckle Dragger",
+    "Landmine Rotations (Light Load)",
+    "Landmine Single-Arm Press (Light)",
+    "Medicine Ball Chest Pass (Light Load)",
+    "Medicine Ball Rotational Slam (Light)",
+    "Neck Bridge & Plate Rotation Complex",
+    "Neck Harness Isometric Complex",
+    "Pallof Press (Anti-Rotation)",
+    "Parallette Push-Ups (Low-Impact)",
+    "Pillow Punch Combinations (Air Work)",
+    "Pool Walking (Shallow End)",
+    "Prone Superman Holds",
+    "Push-Up Hold (Isometric Chest)",
+    "Quad Foam Rolling (Active Recovery)",
+    "Quadruped Shoulder Taps",
+    "Resistance Band Chest Fly",
+    "Reverse Sled Drag (Quad Emphasis)",
+    "Rowing Machine Sprint Intervals",
+    "Rowing Machine Steady State",
+    "Side-Lying Leg Raise (Hip Stability)",
+    "Side-Plank Hold (Core Lateral)",
+    "Single-Leg Balance Series",
+    "Sled Drag Low-Impact Intervals",
+    "Sled Reverse Drag (Backward Walking)",
+    "Stair Climbing (No Sprinting)",
+    "Swimming Endurance Circuits",
+    "Swimming Technique Drills",
+    "Tall Kneeling Core Holds",
+    "Tall-Kneeling Pallof Press",
+    "Thai Skip Rope",
+    "Upper Body Sled Push",
+    "Wall Plank Hold",
+    "Wall Sit Series (Isometric)",
+    "Water Jogging (Deep End)",
+]
+
+# Protected rebuilt blocks: the Distance Striker (boxing / kickboxing-muay thai /
+# MMA / cross-sport general), Kicker, and Pressure Fighter blocks were recently
+# rebuilt from scratch. They are protected by default from cleanup passes and
+# must remain present in the active bank. This list locks them against accidental
+# deletion by future purges.
+PROTECTED_REBUILT_NAMES = [
+    "Anti-Fence Range Rounds",
+    "Backstep Counter Reset",
+    "Body-Head Pressure Intervals",
+    "Body-Kick Repeatability",
+    "Cage Cut & Re-Catch",
+    "Cage Escape Intervals",
+    "Cage-Aware Range Flow",
+    "Check-Return Burst",
+    "Corner Trap Burst",
+    "Cutoff-Reposition Intervals",
+    "Dutch Target Call",
+    "Entry-Exit Burst",
+    "Entry-Score-Angle Burst",
+    "Entry-Score-Exit Bursts",
+    "Entry-and-Score Burst",
+    "Escape-Recatch Burst",
+    "Explosive Cutoff Burst",
+    "Failed-Entry Reset Intervals",
+    "Fence Escape Denial",
+    "Fence-Escape Burst",
+    "In-Out MMA Striking Rounds",
+    "Intercept-Reposition Rounds",
+    "Intercept-and-Exit Burst",
+    "Interception Kick Burst",
+    "Jab Volume & Position",
+    "Jab-Kick Entry Burst",
+    "Jab-Teep Control Rounds",
+    "Jab-to-Pressure Flow",
+    "Kick & Exit Flow",
+    "Kick Recoil Quality Rounds",
+    "Kick-Exit Intervals",
+    "Kick-Punch Reposition",
+    "Kick-Reposition Rounds",
+    "Kick-Step Pressure Rounds",
+    "Kick-and-Exit Burst",
+    "Kick-to-Pressure Flow",
+    "Lateral Escape Burst",
+    "Level-Change Respect Flow",
+    "Level-Threat Pressure Reset",
+    "Long Combination Rounds",
+    "Long-Range Decision Rounds",
+    "Long-Range MMA Decision Rounds",
+    "Long-Range Movement Flow",
+    "Long-Weapon Exit Flow",
+    "Long-to-Clinch Transition",
+    "Low-High Decision Rounds",
+    "Low-Kick Exit Burst",
+    "Low-Kick Re-Catch Intervals",
+    "Max-Power Bag Burst",
+    "Movement Economy Rounds",
+    "Open-Space Movement Flow",
+    "Pocket Repeatability Rounds",
+    "Precision Under Pace",
+    "Pressure Combination Rounds",
+    "Pressure Decision Rounds",
+    "Pressure Escape and Reset",
+    "Pressure Footwork Flow",
+    "Pressure Reset Intervals",
+    "Pressure-Escape Distance Rounds",
+    "Pressure-Kicker Rounds",
+    "Pressure-to-Clinch Transition",
+    "Punch-Clinch Reentry",
+    "Punch-Slide Repeatability",
+    "Range Intercept Burst",
+    "Range Movement Flow",
+    "Range Recovery Intervals",
+    "Range Recovery Under Pressure",
+    "Range Reset Flow",
+    "Range Reset Intervals",
+    "Range-Recovery Intervals",
+    "Reactive Body-Kick Burst",
+    "Reactive Distance Rounds",
+    "Reactive Long-Weapon Burst",
+    "Reactive Range Decision Burst",
+    "Rear-Kick Power Singles",
+    "Rear-Kick Reposition Burst",
+    "Ring Escape Flow",
+    "Ring Generalship Rounds",
+    "Ring Perimeter Flow",
+    "Ring-Cut Flow",
+    "Ring-Cutting Intervals",
+    "Rope/Corner Pressure Rounds",
+    "Score-Reposition Rounds",
+    "Straight-Shot Re-Angle",
+    "Strike-Level-Change Decision Rounds",
+    "Strike-Sprawl-Reset Burst",
+    "Strike-to-Fence Pressure",
+    "Switch-Kick Repeatability",
+    "Switch-Side Rhythm",
+    "Teep Intercept Burst",
+    "Teep Range Reset",
+    "Teep Range-Control Flow",
+    "Teep Volume & Position",
+    "Teep Walk-Down Reset",
 ]
 
 
@@ -379,13 +614,16 @@ def test_batch_2_renamed_entries_are_not_late_eligible():
         assert row["late_fight_action"] in {"late_blocked", "not_late_eligible"}, (name, row["late_fight_action"])
 
 
-def test_batch_2_system_fix_keeps_hard_gpp_work_blocked_from_late_fight():
-    bank = _load_style_conditioning_bank()
-    by_name = {entry["name"]: entry for entry in bank}
-    entry = by_name["Hammer Strike & Sprawl Jump Complex"]
-    assert entry["system"] == "glycolytic"
-    row = audit.style_conditioning_audit_row(entry)
-    assert row["late_fight_action"] in {"late_blocked", "not_late_eligible"}
+def test_batch_2_system_fix_entry_was_purged_in_batch_3():
+    """"Hammer Strike & Sprawl Jump Complex" was a batch-2 system fix, but the
+    batch-3 legacy purge removed it outright as generic S&C (sledgehammer strikes
+    + sprawl jumps). It must be gone from the active bank and archived with a
+    reason rather than lingering as low-value style conditioning."""
+    active_names = {entry["name"] for entry in _load_style_conditioning_bank()}
+    assert "Hammer Strike & Sprawl Jump Complex" not in active_names
+    archived_by_name = {entry["name"]: entry for entry in _load_style_conditioning_archive()}
+    assert "Hammer Strike & Sprawl Jump Complex" in archived_by_name
+    assert archived_by_name["Hammer Strike & Sprawl Jump Complex"].get("archived_reason")
 
 
 def test_questionable_atp_pcr_classification_is_flagged_without_rest_proof():
@@ -417,9 +655,55 @@ def test_questionable_atp_pcr_classification_is_not_flagged_with_explicit_rest()
 
 def test_no_entries_were_newly_approved_for_late_fight_in_batch_2():
     bank = _load_style_conditioning_bank()
-    newly_touched_names = set(BATCH_2_RENAMED_NAMES) | {"Hammer Strike & Sprawl Jump Complex"}
+    # The batch-2-touched entries were all removed by the batch-3 legacy purge, so
+    # only entries that are still active are checked here. None of the surviving
+    # batch-2 renamed entries (currently none) may have become late-fight eligible.
     by_name = {entry["name"]: entry for entry in bank}
+    newly_touched_names = {name for name in BATCH_2_RENAMED_NAMES if name in by_name}
     late_eligible_actions = {"late_support_candidate", "late_technical_candidate", "late_conditioning_candidate"}
     for name in newly_touched_names:
         row = audit.style_conditioning_audit_row(by_name[name])
         assert row["late_fight_action"] not in late_eligible_actions, (name, row["late_fight_action"])
+
+
+def test_batch_3_purged_entries_removed_from_active_bank():
+    active_names = {entry["name"] for entry in _load_style_conditioning_bank()}
+    still_active = active_names & set(BATCH_3_PURGED_NAMES)
+    assert not still_active, f"Purged entries still present in active bank: {sorted(still_active)}"
+
+
+def test_batch_3_purged_entries_present_in_archive_file():
+    archive = _load_style_conditioning_archive()
+    archived_by_name = {entry["name"]: entry for entry in archive}
+    missing = [name for name in BATCH_3_PURGED_NAMES if name not in archived_by_name]
+    assert not missing, f"Purged entries missing from archive file: {missing}"
+    for name in BATCH_3_PURGED_NAMES:
+        entry = archived_by_name[name]
+        assert entry.get("archived_reason"), name
+        assert entry.get("archived_date"), name
+
+
+def test_batch_3_purge_added_no_new_drills():
+    """The legacy purge is deletion-only: the surviving active bank must be a strict
+    subset of the pre-purge bank (no new names introduced by this pass)."""
+    active_names = {entry["name"] for entry in _load_style_conditioning_bank()}
+    archived_names = {entry["name"] for entry in _load_style_conditioning_archive()}
+    # Every currently-active name must not collide with a purged name.
+    assert not (active_names & set(BATCH_3_PURGED_NAMES))
+    # Every purged name is accounted for in the archive.
+    assert set(BATCH_3_PURGED_NAMES) <= archived_names
+
+
+def test_protected_rebuilt_blocks_remain_present():
+    """Regression lock: the recently rebuilt Distance Striker, Kicker, and Pressure
+    Fighter blocks are protected from cleanup passes and must never be deleted by a
+    purge. If a future edit removes one of these, this test fails loudly."""
+    active_names = {entry["name"] for entry in _load_style_conditioning_bank()}
+    missing = [name for name in PROTECTED_REBUILT_NAMES if name not in active_names]
+    assert not missing, f"Protected rebuilt entries missing from active bank: {missing}"
+
+
+def test_protected_rebuilt_blocks_were_not_purged():
+    """The protected rebuilt blocks and the purge list must be disjoint."""
+    overlap = set(PROTECTED_REBUILT_NAMES) & set(BATCH_3_PURGED_NAMES)
+    assert not overlap, f"Protected entries wrongly listed for purge: {sorted(overlap)}"

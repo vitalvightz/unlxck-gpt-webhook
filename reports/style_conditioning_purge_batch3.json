@@ -1,0 +1,1445 @@
+{
+  "purpose": "Batch-3 legacy purge of low-value entries from data/style_conditioning_bank.json. Deletion-only pass ahead of a per-archetype re-audit. No replacement drills added.",
+  "date": "2026-08-16",
+  "counts": {
+    "total_before": 362,
+    "total_after": 232,
+    "total_deleted": 130
+  },
+  "deleted_by_reason": {
+    "generic_snc": 33,
+    "artificial_resistance": 9,
+    "reaction_gimmick": 10,
+    "arbitrary_volume": 2,
+    "fatigue_before_skill": 3,
+    "duplicate": 4,
+    "wrong_bank": 69
+  },
+  "deleted_by_archetype": {
+    "<no_archetype>": 59,
+    "brawler": 41,
+    "counter_striker": 16,
+    "clinch_fighter": 11,
+    "kicker": 1,
+    "pressure_fighter": 1,
+    "scrambler": 1
+  },
+  "surviving_per_archetype": {
+    "distance_striker": 54,
+    "counter_striker": 18,
+    "pressure_fighter": 38,
+    "brawler": 11,
+    "kicker": 18,
+    "clinch_fighter": 32,
+    "wrestler": 23,
+    "grappler": 2,
+    "scrambler": 31,
+    "submission_hunter": 33
+  },
+  "protected_rebuilt_blocks": {
+    "count": 94,
+    "all_present_in_active_bank": true
+  },
+  "no_new_drills_added": true,
+  "deletions": {
+    "generic_snc": [
+      {
+        "name": "Sandbag Carry & Sprawl Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sandbag bear-hug carry + sprawls; strongman carry with only a claimed clinch transfer."
+      },
+      {
+        "name": "Infighting Jump & Push-Up Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Trap-bar jumps + push-ups; a loaded-jump strength circuit relabeled as infighting."
+      },
+      {
+        "name": "Brick Fist Protocol",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Med-ball chest passes + burpees; generic power circuit, transfer only in the name."
+      },
+      {
+        "name": "Sled Push & Punch Combo",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sled push + DB thruster punches; sled/DB strength work with a punch label."
+      },
+      {
+        "name": "Blackout Blitz",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Band-resisted sprints + clap push-ups; generic explosive S&C, no style behaviour."
+      },
+      {
+        "name": "Backward Lunge & Swing Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "KB swings + backward lunges; hip-hinge/lunge strength circuit."
+      },
+      {
+        "name": "Sprint, Burpee & Shadowbox Finisher",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sprint + burpees + shadowbox; generic metcon finisher with a shadowbox tail."
+      },
+      {
+        "name": "Backward Sled Drag & Slip Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Backward sled drag dominates; sled strength work with a few slips appended."
+      },
+      {
+        "name": "Liver Hunter",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Med-ball rotational slams + crunch punches; med-ball power circuit."
+      },
+      {
+        "name": "Alleyway Ambush",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Band-resisted sprints + sprawls; generic conditioning, no distinguishing behaviour."
+      },
+      {
+        "name": "Bouncer's Revenge",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "KB swings + wall-sit punches; kettlebell strength circuit."
+      },
+      {
+        "name": "Rooftop Rumble",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sprint + push-press vs imaginary opponent; generic conditioning."
+      },
+      {
+        "name": "Outdoor Tire Flip & Burpee Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Tire flips + push-ups + burpees; strongman/metcon circuit."
+      },
+      {
+        "name": "Sled Push & KB Swing Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sled push + KB swings; sled/KB strength circuit with a grappling label."
+      },
+      {
+        "name": "Ditch Digger",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sledgehammer strikes + tire flips; strongman power circuit."
+      },
+      {
+        "name": "Sandbag Carry & Knee Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sandbag bear-hug carry + knees; loaded carry with a knee tail."
+      },
+      {
+        "name": "Piledriver Circuit",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Trap-bar deadlifts + sprawls; deadlift strength work labelled takedown power."
+      },
+      {
+        "name": "Concrete Clinch",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "KB cleans + wall knees; kettlebell strength circuit."
+      },
+      {
+        "name": "Junkyard Judo",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sandbag tosses + tire flips; strongman power work."
+      },
+      {
+        "name": "Weighted Plank & Stand-Up Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Weighted plank + technical stand-ups; loaded core hold, generic S&C."
+      },
+      {
+        "name": "Med Ball Slam & Wall Drive Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Med-ball slams + wall push-offs; med-ball power circuit."
+      },
+      {
+        "name": "Hammer & Tire Jump Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sledgehammer strikes + tire jumps; strongman/plyo power circuit."
+      },
+      {
+        "name": "Dogfight Drill",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "KB swings + bag-to-shoulder lifts; kettlebell/loaded-lift circuit."
+      },
+      {
+        "name": "DB Uppercut & Med Ball Slam Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "DB uppercuts + med-ball slams; loaded power circuit."
+      },
+      {
+        "name": "Hammer Strike & Sprawl Jump Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sledgehammer strikes + sprawl jumps; strongman/plyo power circuit."
+      },
+      {
+        "name": "Dirty Boxing Marathon",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "20 med-ball slams dominate the set; med-ball power work with an uppercut tail."
+      },
+      {
+        "name": "Plumb Power Circuit",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "muay_thai",
+          "kickboxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "20 KB swings dominate; kettlebell hip-hinge work with a knee tail."
+      },
+      {
+        "name": "Smesh Prep Circuit",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "KB snatches + sprawls; kettlebell power circuit."
+      },
+      {
+        "name": "Sled Push & Knee Complex",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "20m sled push dominates; sled strength drive with a knee tail."
+      },
+      {
+        "name": "Plumb Power Rotations",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "muay_thai",
+          "kickboxing"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "15 med-ball rotational throws dominate; med-ball power with a knee tail."
+      },
+      {
+        "name": "Clinch Control 3.0",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "mma",
+          "boxing",
+          "muay_thai"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Sandbag carry + knees; notes self-describe it as a 'universal' loaded carry, no style specificity."
+      },
+      {
+        "name": "Lateral Escape Plyo Pushoffs",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Plyo-box push-offs vs an imaginary strike; generic lower-body plyometric."
+      },
+      {
+        "name": "Cross-Counter Plyo Pushups",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "generic_snc",
+        "explanation": "Plyo push-ups to a cross stance; generic upper-body plyometric."
+      }
+    ],
+    "artificial_resistance": [
+      {
+        "name": "Ding-Dong Roundhouse",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Band-resisted hooks paired with KB snatches; resistance bolted onto the punch itself."
+      },
+      {
+        "name": "Dive Bar Duelist",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Weighted DB uppercuts + clinch knees; dumbbells loaded directly onto the punch."
+      },
+      {
+        "name": "Barroom Brawl",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Weighted DB hooks + KB snatches; dumbbells loaded onto the hooks."
+      },
+      {
+        "name": "Check Hook Crucible",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing",
+          "kickboxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Band-resisted pivots; resistance bolted onto a defensive footwork movement."
+      },
+      {
+        "name": "Band-Resisted Shoulder Roll & Counter Complex",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Band-resisted shoulder rolls; resistance on a defensive slip movement."
+      },
+      {
+        "name": "Interception Drill",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing",
+          "kickboxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Bands attached to punches to 'build hand speed'; resistance on the strike itself."
+      },
+      {
+        "name": "Slipping Symphony",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Band-resisted slip/pivot/counter; resistance on defensive movements."
+      },
+      {
+        "name": "Check Hook Matrix",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing",
+          "kickboxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Band on the punching hand during check hooks; resistance on the strike."
+      },
+      {
+        "name": "Banded Shadowboxing",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "kickboxing"
+        ],
+        "deletion_reason": "artificial_resistance",
+        "explanation": "Banded shadowboxing; resistance bands attached to the punches."
+      }
+    ],
+    "reaction_gimmick": [
+      {
+        "name": "Slip & Rip Protocol",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Reflex-ball slip-then-counter; abstract ball reaction, no opponent reading."
+      },
+      {
+        "name": "Reaction Overload",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Random reaction-ball tosses; abstract reaction task, no combat perception."
+      },
+      {
+        "name": "Reaction Jab Matrix",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Reaction-ball toss dictates jab/parry; abstract ball reaction, not opponent reading."
+      },
+      {
+        "name": "Clinch Auditory Triggers",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "muay_thai"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Pre-recorded beeps trigger grip switches; abstract auditory cue, no combat perception."
+      },
+      {
+        "name": "Wrestling Chess",
+        "style_tags": [
+          "scrambler"
+        ],
+        "sport_tags": [
+          "wrestling"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Chess moves between wrestling rounds; cognitive-drain gimmick, not combat decision-making."
+      },
+      {
+        "name": "Kick Pattern Recall",
+        "style_tags": [
+          "kicker"
+        ],
+        "sport_tags": [
+          "kickboxing"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Flashcard memory recall of kick combos; abstract memory task at 40% power."
+      },
+      {
+        "name": "Takedown Dilemma",
+        "style_tags": [],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Cone colour dictates takedown finish; arbitrary colour cue, not opponent reading."
+      },
+      {
+        "name": "Brawler's Puzzle Defense",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Solve puzzle pieces between mitt rounds; abstract puzzle gimmick."
+      },
+      {
+        "name": "Pressure Fighter's Shadowboxing Riddle",
+        "style_tags": [
+          "pressure_fighter"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Answer riddles mid-shadowbox; audio-distraction gimmick, not combat perception."
+      },
+      {
+        "name": "Hybrid's Stance-Switch Reaction",
+        "style_tags": [],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "reaction_gimmick",
+        "explanation": "Coloured lights dictate stance; abstract light-reaction task."
+      }
+    ],
+    "arbitrary_volume": [
+      {
+        "name": "Pull-Back Sniper",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "arbitrary_volume",
+        "explanation": "50 pull-back straights per round; volume destroys the timing/speed intent."
+      },
+      {
+        "name": "Counter Uppercut Drill",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "arbitrary_volume",
+        "explanation": "50 roll-under uppercuts per round; volume destroys the speed/quality intent."
+      }
+    ],
+    "fatigue_before_skill": [
+      {
+        "name": "Concrete Hands Circuit",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "fatigue_before_skill",
+        "explanation": "Battle-rope arm fatigue deliberately precedes punch output; exhaust-then-strike gimmick."
+      },
+      {
+        "name": "Ropes Pressure Hook & Uppercut Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "fatigue_before_skill",
+        "explanation": "Rope/push-up fatigue then uppercuts; deliberate arm exhaustion before striking."
+      },
+      {
+        "name": "Counter Puncher's Gauntlet",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "fatigue_before_skill",
+        "explanation": "30s max punches then counter-only; deliberate arm exhaustion before countering."
+      }
+    ],
+    "duplicate": [
+      {
+        "name": "Muay Thai Matrix",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "muay_thai",
+          "kickboxing"
+        ],
+        "deletion_reason": "duplicate",
+        "explanation": "Same band-resisted knees prescription as 'Band-Resisted Knee Complex'; weaker duplicate."
+      },
+      {
+        "name": "Rolling Thunder",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "duplicate",
+        "explanation": "Med-ball roll-under hooks; conceptual duplicate of 'Roll-Under Counter Complex'."
+      },
+      {
+        "name": "Lateral Plyo Pushoffs",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "duplicate",
+        "explanation": "Lateral plyo-box push-offs; duplicate of 'Lateral Escape Plyo Pushoffs'."
+      },
+      {
+        "name": "MMA Wall-Walk Conditioning",
+        "style_tags": [],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "duplicate",
+        "explanation": "Cage stand-up; duplicate of \"Wrestler's Wall-Walk Drill\" (no archetype tag, weaker)."
+      }
+    ],
+    "wrong_bank": [
+      {
+        "name": "Neck Bridge & Plate Rotation Complex",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Barbell neck bridges + plate rotations; pure neck-strength work, not a style behaviour."
+      },
+      {
+        "name": "Junkyard Dog",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Trap-bar deadlifts + farmer walk; grip/strength work, belongs in the strength bank."
+      },
+      {
+        "name": "Knuckle Dragger",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Power cleans + push-ups; Olympic-lift strength work, belongs in the strength bank."
+      },
+      {
+        "name": "Glass Jaw Redemption",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Neck-harness nods/rotations; prehab neck work, not style conditioning."
+      },
+      {
+        "name": "Headbutt Conditioning",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Neck-harness bridges/nods; prehab neck work, not style conditioning."
+      },
+      {
+        "name": "Boxer's Clinch Control",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Neck-harness endurance; isolated neck-strength work, not a style behaviour."
+      },
+      {
+        "name": "Neck Harness Isometric Complex",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "boxing",
+          "muay_thai",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Neck-harness isometric endurance; notes self-describe it as 'universal neck strengthening for all clinch styles' — isolated neck-strength/prehab, not a style behaviour."
+      },
+      {
+        "name": "Thai Skip Rope",
+        "style_tags": [
+          "clinch_fighter"
+        ],
+        "sport_tags": [
+          "muay_thai"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "10 min jump-rope skipping; universal conditioning every fighter does, no style behaviour."
+      },
+      {
+        "name": "Sled Drag Low-Impact Intervals",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "bjj"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Sled drag for joint recovery; low-impact recovery S&C, no style behaviour."
+      },
+      {
+        "name": "Swimming Endurance Circuits",
+        "style_tags": [],
+        "sport_tags": [
+          "grappling",
+          "bjj",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Swimming endurance; zero-impact general conditioning."
+      },
+      {
+        "name": "Bike Sprints (Assault)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "wrestling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Assault-bike sprints; general leg conditioning."
+      },
+      {
+        "name": "Rowing Machine Steady State",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "grappling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Rowing steady-state; general posterior-chain endurance."
+      },
+      {
+        "name": "Upper Body Sled Push",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Upper-body sled push; pressing strength work."
+      },
+      {
+        "name": "Elliptical Machine Intervals",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "kickboxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Elliptical intervals; low-impact general conditioning."
+      },
+      {
+        "name": "Parallette Push-Ups (Low-Impact)",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Parallette push-ups; upper-body endurance S&C."
+      },
+      {
+        "name": "Landmine Rotations (Light Load)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "muay_thai"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Landmine rotations for post-injury core; rehab/S&C."
+      },
+      {
+        "name": "Dumbbell Turkish Get-Ups (Light)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "grappling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Turkish get-ups; mobility/stability S&C."
+      },
+      {
+        "name": "Core Plank Progressions",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Core plank progressions; isometric core S&C."
+      },
+      {
+        "name": "Assisted Chinnups (Light Load)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "bjj"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Assisted chin-ups; upper-body pulling strength."
+      },
+      {
+        "name": "Bike Steady-State (Easy Gear)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Steady-state bike; cardiac maintenance."
+      },
+      {
+        "name": "Wall Sit Series (Isometric)",
+        "style_tags": [],
+        "sport_tags": [
+          "wrestling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Wall-sit isometrics; quad endurance S&C."
+      },
+      {
+        "name": "Prone Superman Holds",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "grappling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Superman holds; posterior-chain isometric."
+      },
+      {
+        "name": "Sled Reverse Drag (Backward Walking)",
+        "style_tags": [
+          "counter_striker"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Reverse sled drag; quad-dominant S&C."
+      },
+      {
+        "name": "Medicine Ball Chest Pass (Light Load)",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Med-ball chest pass; explosive push S&C."
+      },
+      {
+        "name": "Glute Bridge March (Isometric Base)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "wrestling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Glute-bridge march; glute-activation rehab."
+      },
+      {
+        "name": "Pallof Press (Anti-Rotation)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Pallof press; anti-rotation core S&C."
+      },
+      {
+        "name": "Bike Sprints (Fixed Gear Recovery)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Recovery bike intervals; low-impact conditioning."
+      },
+      {
+        "name": "Quadruped Shoulder Taps",
+        "style_tags": [],
+        "sport_tags": [
+          "grappling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Quadruped shoulder taps; stability prehab."
+      },
+      {
+        "name": "Dead Bug Progressions",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Dead-bug progressions; anti-extension core S&C."
+      },
+      {
+        "name": "Banded Sled Push (Light)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Banded sled push; low-impact push S&C."
+      },
+      {
+        "name": "Rowing Machine Sprint Intervals",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Rowing sprint intervals; low-impact power S&C."
+      },
+      {
+        "name": "Farmer Carry (Seated Starting Position)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "grappling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Farmer carry; loaded carry, belongs in the strength bank."
+      },
+      {
+        "name": "Pillow Punch Combinations (Air Work)",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Pillow-punch air work; low-impact rehab striking substitute."
+      },
+      {
+        "name": "Assisted Dip Machine (Light Load)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Assisted dip machine; pressing strength S&C."
+      },
+      {
+        "name": "Pool Walking (Shallow End)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "bjj"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Pool walking; zero-impact recovery."
+      },
+      {
+        "name": "Incline Treadmill Walk",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Incline treadmill walk; low-impact conditioning."
+      },
+      {
+        "name": "Banded Pull-Aparts (Light)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Banded pull-aparts; scapular prehab."
+      },
+      {
+        "name": "Arch Walks (Barefoot Activation)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Barefoot arch walks; foot-intrinsic rehab."
+      },
+      {
+        "name": "Side-Lying Leg Raise (Hip Stability)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "wrestling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Side-lying leg raises; hip-abductor rehab."
+      },
+      {
+        "name": "Reverse Sled Drag (Quad Emphasis)",
+        "style_tags": [],
+        "sport_tags": [
+          "wrestling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Reverse sled drag; eccentric quad S&C."
+      },
+      {
+        "name": "Medicine Ball Rotational Slam (Light)",
+        "style_tags": [],
+        "sport_tags": [
+          "muay_thai",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Med-ball rotational slams; rotational power S&C."
+      },
+      {
+        "name": "Tall Kneeling Core Holds",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Tall-kneeling core holds; core endurance S&C."
+      },
+      {
+        "name": "Incline Push-Up Progression",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Incline push-ups; upper-body pressing S&C."
+      },
+      {
+        "name": "Cable Woodchops (Light Load)",
+        "style_tags": [],
+        "sport_tags": [
+          "muay_thai",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Cable woodchops; rotational-stability S&C."
+      },
+      {
+        "name": "Stair Climbing (No Sprinting)",
+        "style_tags": [],
+        "sport_tags": [
+          "wrestling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Stair climbing; quad-dominant conditioning."
+      },
+      {
+        "name": "Banded Face Pulls (Rear Delt)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "kickboxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Banded face pulls; posterior-shoulder prehab."
+      },
+      {
+        "name": "Half-Kneeling Hip Flexor Stretch",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "bjj"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Hip-flexor stretch; static mobility."
+      },
+      {
+        "name": "Dumbbell Bent-Row (Light Load)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Dumbbell bent-row; back-strength S&C."
+      },
+      {
+        "name": "Bird Dog Holds (Core Stability)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Bird-dog holds; core anti-rotation S&C."
+      },
+      {
+        "name": "Elliptical Backward Movement",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "wrestling"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Backward elliptical; posterior-chain low-impact S&C."
+      },
+      {
+        "name": "Push-Up Hold (Isometric Chest)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Push-up isometric hold; pressing isometric S&C."
+      },
+      {
+        "name": "Banded Core Chop (Anti-Rotation)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "muay_thai"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Banded core chop; anti-rotation core S&C."
+      },
+      {
+        "name": "Wall Plank Hold",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Wall plank hold; core endurance S&C."
+      },
+      {
+        "name": "Single-Leg Balance Series",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "kickboxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Single-leg balance series; ankle proprioception rehab."
+      },
+      {
+        "name": "Assisted Squat (TRX)",
+        "style_tags": [],
+        "sport_tags": [
+          "wrestling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "TRX-assisted squats; lower-body S&C."
+      },
+      {
+        "name": "Landmine Single-Arm Press (Light)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Landmine single-arm press; pressing S&C."
+      },
+      {
+        "name": "Quad Foam Rolling (Active Recovery)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Quad foam rolling; soft-tissue recovery."
+      },
+      {
+        "name": "Side-Plank Hold (Core Lateral)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Side-plank hold; lateral-core S&C."
+      },
+      {
+        "name": "Hanging Leg Raise (Assisted)",
+        "style_tags": [],
+        "sport_tags": [
+          "grappling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Hanging leg raises; hip-flexor S&C."
+      },
+      {
+        "name": "Chest-Supported Dumbbell Row",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Chest-supported DB row; back-strength S&C."
+      },
+      {
+        "name": "Tall-Kneeling Pallof Press",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "muay_thai"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Tall-kneeling Pallof press; anti-rotation core S&C."
+      },
+      {
+        "name": "Swimming Technique Drills",
+        "style_tags": [],
+        "sport_tags": [
+          "grappling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Swimming technique drills; zero-impact conditioning/mobility."
+      },
+      {
+        "name": "Kettle Bell Sumo Squat (Light Load)",
+        "style_tags": [],
+        "sport_tags": [
+          "wrestling",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Kettlebell sumo squat; lower-body strength S&C."
+      },
+      {
+        "name": "Foam Roll Hamstring (Seated)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Hamstring foam rolling; soft-tissue recovery."
+      },
+      {
+        "name": "Resistance Band Chest Fly",
+        "style_tags": [
+          "brawler"
+        ],
+        "sport_tags": [
+          "boxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Resistance-band chest fly; chest-endurance S&C."
+      },
+      {
+        "name": "Assisted Pullup (Heavy Band)",
+        "style_tags": [],
+        "sport_tags": [
+          "mma",
+          "bjj"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Assisted pull-ups; upper-body pulling strength."
+      },
+      {
+        "name": "Banded External Rotation (Shoulder)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "kickboxing"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Banded external rotation; rotator-cuff prehab."
+      },
+      {
+        "name": "Water Jogging (Deep End)",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Deep-water jogging; zero-impact running substitute."
+      },
+      {
+        "name": "Half-Kneeling Landmine Press",
+        "style_tags": [],
+        "sport_tags": [
+          "boxing",
+          "mma"
+        ],
+        "deletion_reason": "wrong_bank",
+        "explanation": "Half-kneeling landmine press; pressing S&C."
+      }
+    ]
+  }
+}
