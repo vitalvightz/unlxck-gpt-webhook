@@ -43,7 +43,6 @@ REMOVED_LEGACY = {
 }
 PRESERVED_OTHER_SLICES = {
     "Intercept & Counter Mitts",
-    "Slip-Counter Springs",
     "Long-Distance Shadowboxing",
     "Shadow Flow Rounds",
 }

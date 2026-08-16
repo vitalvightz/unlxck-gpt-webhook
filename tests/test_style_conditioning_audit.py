@@ -23,7 +23,6 @@ BATCH_1_CLEANED_NAMES = [
     "Clinch & Sprawl Reaction Complex",
     "Band-Resisted Whizzer & Sprawl Complex",
     "Intercept & Counter Mitts",
-    "Frame & Counter Knee Complex",
     "Ezekiel Finishing Drill",
     "Ground-and-Pound Bursts",
     "Calf Slicer Pressure Drill",
@@ -216,6 +215,18 @@ BATCH_3_PURGED_NAMES = [
 # deletion by future purges.
 PROTECTED_REBUILT_NAMES = [
     "Anti-Fence Range Rounds",
+    "Cage Counter Movement Flow",
+    "Cage Defend-Counter-Escape",
+    "Failed Shot Punish & Reset",
+    "Intercepting Knee Entry Burst",
+    "Level-Change Uppercut Burst",
+    "MMA Counter Decision Rounds",
+    "MMA Read & Counter Flow",
+    "Reactive MMA Counter Choice",
+    "Sprawl-Counter Burst",
+    "Strike-Shot Transition Flow",
+    "Strike-or-Shot Counter Intervals",
+    "Stuff-Shot Counter Exit",
     "Check-Return Kick Burst",
     "Check-Return Intervals — Kickboxing",
     "Defend-Counter-Reposition Intervals — Kickboxing",
@@ -332,8 +343,7 @@ PROTECTED_REBUILT_NAMES = [
 ]
 
 # Legacy entries deliberately superseded after the deletion-only purge by the
-# focused Boxing Counter Striker rebuild. Shared Distance Striker, Kickboxing,
-# and MMA entries remain active and are therefore not listed here.
+# focused Boxing, Kickboxing and MMA Counter Striker rebuilds.
 POST_PURGE_REPLACED_NAMES = {
     "Pull Counter Matrix",
     "Sniper's Timing",
@@ -344,6 +354,9 @@ POST_PURGE_REPLACED_NAMES = {
     "Tempo Shadowboxing (Slow Reps)",
     "Counter Sniper Drill",
     "Kick Defense March",
+    "Clinch Counter Chaos",
+    "Frame & Counter Knee Complex",
+    "Slip-Counter Springs",
 }
 
 
