@@ -107,4 +107,4 @@ def test_equipment_requires_a_real_cue_source_and_uses_supported_tokens():
     approved = {"partner", "thai_pads", "focus_mitts"}
     for item in _slice().values():
         assert set(item["equipment"]) <= approved
-        assert "partner" in item["equipment"] or set(item["equipment"]) & {"thai_pads", "focus_mitts"}
+        assert "partner" in item["equipment"], f'{item["name"]} has no opponent cue source'

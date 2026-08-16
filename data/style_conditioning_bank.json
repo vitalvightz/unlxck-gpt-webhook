@@ -9,7 +9,7 @@
     ],
     "system": "glycolytic",
     "modality": "takedown defense",
-    "duration": "10 sprawls \u2192 10 knees \u2192 x8 rounds",
+    "duration": "10 sprawls → 10 knees → x8 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -42,7 +42,7 @@
     ],
     "system": "glycolytic",
     "modality": "high-output scramble conditioning",
-    "duration": "30s sprint \u2192 10 sprawls \u2192 10 knees \u2192 x5 rounds",
+    "duration": "30s sprint → 10 sprawls → 10 knees → x5 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -80,7 +80,7 @@
     ],
     "system": "glycolytic",
     "modality": "isometric endurance",
-    "duration": "30s clinch hold \u2192 10 knees \u2192 x5 rounds",
+    "duration": "30s clinch hold → 10 knees → x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -120,7 +120,7 @@
     ],
     "system": "glycolytic",
     "modality": "resisted pressure",
-    "duration": "30s band-resisted forward pressure \u2192 10 cage knees \u2192 x5 rounds",
+    "duration": "30s band-resisted forward pressure → 10 cage knees → x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -156,7 +156,7 @@
     ],
     "system": "glycolytic",
     "modality": "upper body clinch",
-    "duration": "30s pummeling drills \u2192 10 bodylock lifts \u2192 x5 rounds",
+    "duration": "30s pummeling drills → 10 bodylock lifts → x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -195,7 +195,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive endurance",
-    "duration": "30s rope clinch (simulated) \u2192 10 short hooks \u2192 x5 rounds",
+    "duration": "30s rope clinch (simulated) → 10 short hooks → x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -235,7 +235,7 @@
     ],
     "system": "glycolytic",
     "modality": "striking endurance",
-    "duration": "30s max knees \u2192 10 sprawls \u2192 x5 rounds",
+    "duration": "30s max knees → 10 sprawls → x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -279,7 +279,7 @@
     ],
     "system": "glycolytic",
     "modality": "clinch pressure conditioning",
-    "duration": "30s wall pressure \u2192 10 short elbows \u2192 x5 rounds",
+    "duration": "30s wall pressure → 10 short elbows → x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -314,7 +314,7 @@
     ],
     "system": "glycolytic",
     "modality": "takedown defense",
-    "duration": "30s grip fighting \u2192 5 hip toss counters \u2192 x5 rounds",
+    "duration": "30s grip fighting → 5 hip toss counters → x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -352,7 +352,7 @@
     ],
     "system": "glycolytic",
     "modality": "combo endurance",
-    "duration": "30s clinch knees \u2192 30s short punches \u2192 x5 rounds",
+    "duration": "30s clinch knees → 30s short punches → x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -389,7 +389,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive transitions",
-    "duration": "30s clinch \u2192 5 sprawls \u2192 x8 rounds",
+    "duration": "30s clinch → 5 sprawls → x8 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -430,7 +430,7 @@
     ],
     "system": "glycolytic",
     "modality": "short-range power",
-    "duration": "30s elbow combinations \u2192 10 clinch knees \u2192 x5 rounds",
+    "duration": "30s elbow combinations → 10 clinch knees → x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -467,7 +467,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive striking",
-    "duration": "30s defend collar tie \u2192 10 counter uppercuts \u2192 x5 rounds",
+    "duration": "30s defend collar tie → 10 counter uppercuts → x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -504,7 +504,7 @@
     ],
     "system": "glycolytic",
     "modality": "pure endurance",
-    "duration": "5min continuous: clinch pummeling \u2192 knees \u2192 short punches",
+    "duration": "5min continuous: clinch pummeling → knees → short punches",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -542,7 +542,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive endurance",
-    "duration": "30s band-resisted whizzers \u2192 5 sprawls \u2192 x5 rounds",
+    "duration": "30s band-resisted whizzers → 5 sprawls → x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -581,7 +581,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "max power",
-    "duration": "10 explosive knees \u2192 5 power elbows \u2192 x5 rounds",
+    "duration": "10 explosive knees → 5 power elbows → x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1285,7 +1285,7 @@
   {
     "name": "Intercept & Counter Mitts",
     "equipment": [
-      "focus_mitts",
+      "partner",
       "thai_pads"
     ],
     "phases": [
@@ -1311,7 +1311,7 @@
       "mech_deceleration"
     ],
     "notes": "Holder gives either a forward-entry cue or a long straight cue. Read the action: teep the entry, or parry the straight and return a straight punch or kick. Make one explosive response, then recoil and recover stance, guard and range. The holder chooses the cue, not the athlete.",
-    "equipment_note": "Use mitts for the straight cue and a Thai pad for the safe teep target.",
+    "equipment_note": "Partner uses Thai pads for the controlled straight cue and the safe teep or counter target.",
     "work_sec": 7,
     "rest_sec": 60,
     "rounds": 8,
@@ -1331,7 +1331,7 @@
     ]
   },
   {
-    "name": "Reactive Counter Choice \u2014 Kickboxing",
+    "name": "Reactive Counter Choice — Kickboxing",
     "equipment": [
       "partner",
       "thai_pads"
@@ -1378,7 +1378,7 @@
     ]
   },
   {
-    "name": "Check-Return Intervals \u2014 Kickboxing",
+    "name": "Check-Return Intervals — Kickboxing",
     "equipment": [
       "partner",
       "thai_pads"
@@ -1424,7 +1424,7 @@
     ]
   },
   {
-    "name": "Defend-Counter-Reposition Intervals \u2014 Kickboxing",
+    "name": "Defend-Counter-Reposition Intervals — Kickboxing",
     "equipment": [
       "partner",
       "thai_pads"
@@ -1477,7 +1477,7 @@
     ]
   },
   {
-    "name": "Random Attack Counter Rounds \u2014 Kickboxing",
+    "name": "Random Attack Counter Rounds — Kickboxing",
     "equipment": [
       "partner",
       "thai_pads"
@@ -2743,7 +2743,7 @@
     ]
   },
   {
-    "name": "Flicker\u2019s Endurance",
+    "name": "Flicker’s Endurance",
     "equipment": [
       "double-end_bag"
     ],
@@ -3506,7 +3506,7 @@
       "mech_acceleration",
       "mech_ballistic"
     ],
-    "notes": "Land one hard low kick, recover the leg, restore stance and exit the opponent\u2019s return line.",
+    "notes": "Land one hard low kick, recover the leg, restore stance and exit the opponent’s return line.",
     "work_sec": 6,
     "rest_sec": 60,
     "rounds": 8,
@@ -4459,7 +4459,7 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "Apply pressure, read the partner\u2019s escape, reposition and attack again. Cut the route before throwing; stop and reset if the athlete chases or crosses the feet.",
+    "notes": "Apply pressure, read the partner’s escape, reposition and attack again. Cut the route before throwing; stop and reset if the athlete chases or crosses the feet.",
     "work_sec": 60,
     "rest_sec": 45,
     "rounds": 6,
@@ -4716,7 +4716,7 @@
       "mech_lower_hip_hinge",
       "mech_ballistic"
     ],
-    "notes": "React to the partner\u2019s level-change threat, protect stance and head position, then take back useful pressure before a short score. Stop the rep if the feet become square or balance is lost.",
+    "notes": "React to the partner’s level-change threat, protect stance and head position, then take back useful pressure before a short score. Stop the rep if the feet become square or balance is lost.",
     "work_sec": 6,
     "rest_sec": 60,
     "rounds": 8,
@@ -5099,7 +5099,7 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "Low kick, read the partner\u2019s escape and cut the route before scoring again. Do not follow straight behind; stop and reset if kick recoil or stance recovery breaks down.",
+    "notes": "Low kick, read the partner’s escape and cut the route before scoring again. Do not follow straight behind; stop and reset if kick recoil or stance recovery breaks down.",
     "work_sec": 60,
     "rest_sec": 45,
     "rounds": 6,
@@ -5139,7 +5139,7 @@
       "mech_systemic_fatigue",
       "mech_ballistic"
     ],
-    "notes": "Partner counters takedown \u2014 you must immediately transition to back control. (90% explosiveness)",
+    "notes": "Partner counters takedown — you must immediately transition to back control. (90% explosiveness)",
     "equipment_note": "Use crash pads for throws",
     "work_sec": 180,
     "rest_sec": 60,
@@ -5163,7 +5163,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive scrambling",
-    "duration": "10 sprawl \u2192 spin sequences, 5 rounds",
+    "duration": "10 sprawl → spin sequences, 5 rounds",
     "intensity": "max",
     "tags": [
       "scrambler",
@@ -5205,7 +5205,7 @@
       "mech_systemic_fatigue",
       "mech_grip_support"
     ],
-    "notes": "Partner initiates cage clinch \u2013 you must reverse or escape. (Fight pace)",
+    "notes": "Partner initiates cage clinch – you must reverse or escape. (Fight pace)",
     "equipment_note": "MMA gloves recommended",
     "rest_sec": 180,
     "total_minutes": 3,
@@ -5228,7 +5228,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "ground transitions",
-    "duration": "20 escapes \u2192 10 sweeps, 5 rounds",
+    "duration": "20 escapes → 10 sweeps, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -5238,7 +5238,7 @@
       "mech_ballistic",
       "mech_trunk_stability"
     ],
-    "notes": "Partner starts in top turtle \u2013 you must recover guard or stand. (Explosive hips)",
+    "notes": "Partner starts in top turtle – you must recover guard or stand. (Explosive hips)",
     "equipment_note": "No-gi grips only",
     "rpe": 9,
     "impact_cost": "low",
@@ -5260,7 +5260,7 @@
     ],
     "system": "glycolytic",
     "modality": "failed shot recovery",
-    "duration": "15 shot \u2192 roll sequences, 5 rounds",
+    "duration": "15 shot → roll sequences, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -5329,7 +5329,7 @@
     ],
     "system": "glycolytic",
     "modality": "transitional awareness",
-    "duration": "10 sub attempts \u2192 5 sweeps, 5 rounds",
+    "duration": "10 sub attempts → 5 sweeps, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -5368,7 +5368,7 @@
       "mech_ballistic",
       "mech_grip_support"
     ],
-    "notes": "Partner resists \u2013 you must chain takedowns. (90% effort)",
+    "notes": "Partner resists – you must chain takedowns. (90% effort)",
     "equipment_note": "Wear rash guards",
     "work_sec": 180,
     "rest_sec": 60,
@@ -5392,7 +5392,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "positional advancement",
-    "duration": "10 passes \u2192 5 backtakes, 5 rounds",
+    "duration": "10 passes → 5 backtakes, 5 rounds",
     "intensity": "moderate",
     "tags": [
       "scrambler",
@@ -5423,7 +5423,7 @@
     ],
     "system": "glycolytic",
     "modality": "mixed reactions",
-    "duration": "3min rounds: 1-2 \u2192 shot, 1min rest x 4",
+    "duration": "3min rounds: 1-2 → shot, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -5489,7 +5489,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive urgency",
-    "duration": "15 escapes \u2192 5 shots, 5 rounds",
+    "duration": "15 escapes → 5 shots, 5 rounds",
     "intensity": "max",
     "tags": [
       "scrambler",
@@ -5528,7 +5528,7 @@
       "cage_work",
       "mech_systemic_fatigue"
     ],
-    "notes": "Partner pins to cage \u2013 you must escape to center. (Fight pace)",
+    "notes": "Partner pins to cage – you must escape to center. (Fight pace)",
     "equipment_note": "Wear MMA gloves",
     "work_sec": 180,
     "rest_sec": 60,
@@ -5582,7 +5582,7 @@
     ],
     "system": "glycolytic",
     "modality": "hybrid transitions",
-    "duration": "3min rounds: combo \u2192 shot \u2192 sub attempt, 1min rest x 4",
+    "duration": "3min rounds: combo → shot → sub attempt, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -5614,7 +5614,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "ground to stand",
-    "duration": "10 granby rolls \u2192 5 shots, 5 rounds",
+    "duration": "10 granby rolls → 5 shots, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -5874,7 +5874,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "leg entanglement drills",
-    "duration": "15 entries \u2192 5 finishes, 5 rounds",
+    "duration": "15 entries → 5 finishes, 5 rounds",
     "intensity": "max",
     "tags": [
       "submission_hunter",
@@ -5938,7 +5938,7 @@
     ],
     "system": "glycolytic",
     "modality": "back control",
-    "duration": "5 twister setups \u2192 3 finishes, 5 rounds",
+    "duration": "5 twister setups → 3 finishes, 5 rounds",
     "intensity": "moderate",
     "tags": [
       "submission_hunter",
@@ -5961,7 +5961,7 @@
     ]
   },
   {
-    "name": "D\u2019Arce Depth Charge",
+    "name": "D’Arce Depth Charge",
     "equipment": [
       "medicine_ball"
     ],
@@ -5970,7 +5970,7 @@
     ],
     "system": "glycolytic",
     "modality": "sinking mechanics",
-    "duration": "15 sprawl \u2192 D\u2019Arce entries, 5 rounds",
+    "duration": "15 sprawl → D’Arce entries, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -5985,7 +5985,7 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue"
     ],
-    "notes": "Med ball simulates opponent\u2019s head pressure. (Explosive shots)",
+    "notes": "Med ball simulates opponent’s head pressure. (Explosive shots)",
     "equipment_note": "8-12kg ball",
     "rpe": 9,
     "impact_cost": "low",
@@ -6022,7 +6022,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "notes": "KB on thigh to simulate opponent\u2019s resistance. (Slow burn)",
+    "notes": "KB on thigh to simulate opponent’s resistance. (Slow burn)",
     "equipment_note": "20-28kg KB",
     "rpe": 7,
     "impact_cost": "low",
@@ -6106,7 +6106,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "entry timing",
-    "duration": "15 entries \u2192 5 finishes, 4 rounds",
+    "duration": "15 entries → 5 finishes, 4 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -6116,7 +6116,7 @@
       "mech_shoulder_overhead",
       "mech_trunk_stability"
     ],
-    "notes": "Bands on dummy\u2019s shoulders for resistance. (Fast setups)",
+    "notes": "Bands on dummy’s shoulders for resistance. (Fast setups)",
     "equipment_note": "Dummy must have flexible neck",
     "rpe": 9,
     "impact_cost": "low",
@@ -6168,7 +6168,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "guard recovery",
-    "duration": "5 escapes \u2192 5 buggy attempts, 5 rounds",
+    "duration": "5 escapes → 5 buggy attempts, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -6198,7 +6198,7 @@
     ],
     "system": "glycolytic",
     "modality": "hip pressure",
-    "duration": "10 sweeps \u2192 3 finishes, 5 rounds",
+    "duration": "10 sweeps → 3 finishes, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -6261,7 +6261,7 @@
     ],
     "system": "glycolytic",
     "modality": "grip fighting",
-    "duration": "20 collar grips \u2192 10 finishes, 4 rounds",
+    "duration": "20 collar grips → 10 finishes, 4 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -6349,7 +6349,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "shot to finish",
-    "duration": "10 shots \u2192 5 rolls, 5 rounds",
+    "duration": "10 shots → 5 rolls, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -6385,7 +6385,7 @@
     ],
     "system": "glycolytic",
     "modality": "control transitions",
-    "duration": "3min rounds: arm trap \u2192 choke, 1min rest x 4",
+    "duration": "3min rounds: arm trap → choke, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -6447,7 +6447,7 @@
     ],
     "system": "glycolytic",
     "modality": "shoulder pressure",
-    "duration": "10 entries \u2192 5 finishes, 5 rounds",
+    "duration": "10 entries → 5 finishes, 5 rounds",
     "intensity": "moderate",
     "tags": [
       "submission_hunter",
@@ -6456,7 +6456,7 @@
       "mech_systemic_fatigue",
       "mech_shoulder_overhead"
     ],
-    "notes": "KB on wrist to simulate opponent\u2019s defense. (Slow grind)",
+    "notes": "KB on wrist to simulate opponent’s defense. (Slow grind)",
     "equipment_note": "12-16kg KB",
     "rpe": 7,
     "impact_cost": "low",
@@ -7411,7 +7411,7 @@
       "mech_acceleration",
       "mech_reactive"
     ],
-    "notes": "On the holder\u2019s advance, choose jab, teep or long kick and angle away after scoring. Stop if the choice, recoil or exit loses speed.",
+    "notes": "On the holder’s advance, choose jab, teep or long kick and angle away after scoring. Stop if the choice, recoil or exit loses speed.",
     "work_sec": 7,
     "rest_sec": 75,
     "rounds": 6,
@@ -8328,7 +8328,7 @@
       "mech_lower_lunge",
       "mech_trunk_stability"
     ],
-    "notes": "Use jab and teep to halt or redirect the holder\u2019s advance. Recover stance before moving and reset if preferred range is lost.",
+    "notes": "Use jab and teep to halt or redirect the holder’s advance. Recover stance before moving and reset if preferred range is lost.",
     "work_sec": 120,
     "rest_sec": 60,
     "rounds": 4,
@@ -8806,7 +8806,7 @@
     ],
     "system": "aerobic",
     "modality": "technical endurance",
-    "duration": "3min shadowboxing \u2192 1min rest \u2192 x5 rounds",
+    "duration": "3min shadowboxing → 1min rest → x5 rounds",
     "intensity": "moderate",
     "tags": [
       "boxing",
@@ -8843,7 +8843,7 @@
     ],
     "system": "aerobic",
     "modality": "fatigue resistance",
-    "duration": "30s rope lean \u2192 30s active framing \u2192 x8 rounds",
+    "duration": "30s rope lean → 30s active framing → x8 rounds",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -8879,7 +8879,7 @@
     ],
     "system": "aerobic",
     "modality": "rulebook exploitation",
-    "duration": "10s clinch \u2192 2s break \u2192 immediate jab \u2192 x20 rounds",
+    "duration": "10s clinch → 2s break → immediate jab → x20 rounds",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -8913,7 +8913,7 @@
     ],
     "system": "aerobic",
     "modality": "infighting transitions",
-    "duration": "20s overhook control \u2192 10s uppercuts \u2192 x10 rounds",
+    "duration": "20s overhook control → 10s uppercuts → x10 rounds",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -8948,7 +8948,7 @@
     ],
     "system": "aerobic",
     "modality": "positional dominance",
-    "duration": "45s bag pinned to wall \u2192 15s frame adjustments \u2192 x6 rounds",
+    "duration": "45s bag pinned to wall → 15s frame adjustments → x6 rounds",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -8978,7 +8978,7 @@
     ],
     "system": "aerobic",
     "modality": "defensive clinching",
-    "duration": "Partner jabs \u2192 slip \u2192 clinch \u2192 x50 reps",
+    "duration": "Partner jabs → slip → clinch → x50 reps",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -9025,7 +9025,7 @@
       "mech_trunk_stability",
       "mech_trunk_rotation"
     ],
-    "notes": "Choose jab, teep or long kick from the holder\u2019s cue, then recover stance and exit. Reduce output when decisions, recoil or range control lose quality.",
+    "notes": "Choose jab, teep or long kick from the holder’s cue, then recover stance and exit. Reduce output when decisions, recoil or range control lose quality.",
     "work_sec": 120,
     "rest_sec": 60,
     "rounds": 4,
@@ -9050,7 +9050,7 @@
     ],
     "system": "cognitive",
     "modality": "tactile sensitivity",
-    "duration": "3min pummeling blindfolded \u2192 x4 rounds",
+    "duration": "3min pummeling blindfolded → x4 rounds",
     "intensity": "low",
     "tags": [
       "grappling",
