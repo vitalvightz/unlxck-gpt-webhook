@@ -26,6 +26,19 @@ APPROVED_DRILLS = {
     "Pressure Decision Rounds": ("glycolytic", 120, 60, 4, 8),
 }
 
+SPORT_SPECIFIC_DRILLS = {
+    "Cage Cut & Re-Catch": ("mma", "aerobic", 180, 60, 3, 6),
+    "Level-Threat Pressure Reset": ("mma", "ATP-PCr", 6, 60, 8, 8),
+    "Punch-Clinch Reentry": ("mma", "ATP-PCr", 7, 60, 8, 8),
+    "Strike-to-Fence Pressure": ("mma", "glycolytic", 60, 45, 6, 8),
+    "Fence Escape Denial": ("mma", "glycolytic", 120, 60, 4, 8),
+    "Kick-to-Pressure Flow": ("muay_thai", "aerobic", 180, 60, 3, 6),
+    "Teep Walk-Down Reset": ("muay_thai", "ATP-PCr", 6, 60, 8, 8),
+    "Pressure-to-Clinch Transition": ("muay_thai", "ATP-PCr", 7, 60, 8, 8),
+    "Kick-Step Pressure Rounds": ("muay_thai", "glycolytic", 120, 60, 4, 8),
+    "Low-Kick Re-Catch Intervals": ("muay_thai", "glycolytic", 60, 45, 6, 8),
+}
+
 SUPERSEDED_LEGACY_DRILLS = {
     "Pressure Cooker", "Brawler's Gauntlet", "Ring-Cut Sprint",
     "Strongman Clinch & Sprawl Complex", "Rotational Power & Med Ball Complex",
@@ -116,3 +129,42 @@ def test_pressure_fighter_equipment_profiles_reach_each_system():
     for profile in (["bodyweight"], ["heavy bag"], ["partner"]):
         assert all(_reachable(list(profile))[system] for system in ("aerobic", "ATP-PCr", "glycolytic"))
     assert "Pressure Footwork Flow" in _reachable([])["aerobic"]
+
+
+def test_sport_specific_pressure_drills_restore_mma_and_striking_depth():
+    by_name = _by_name()
+    assert set(SPORT_SPECIFIC_DRILLS).issubset(by_name)
+
+    for name, (sport, system, work_sec, rest_sec, rounds, rpe) in SPORT_SPECIFIC_DRILLS.items():
+        item = by_name[name]
+        assert "pressure_fighter" in item["tags"]
+        assert sport in item["tags"]
+        assert "boxing" not in item["tags"]
+        assert (item["system"], item["work_sec"], item["rest_sec"], item["rounds"], item["rpe"]) == (
+            system, work_sec, rest_sec, rounds, rpe,
+        )
+
+    striking_names = {name for name, dose in SPORT_SPECIFIC_DRILLS.items() if dose[0] == "muay_thai"}
+    assert all({"muay_thai", "kickboxing"}.issubset(by_name[name]["tags"]) for name in striking_names)
+    for sport in ("mma", "muay_thai"):
+        systems = Counter(dose[1] for dose in SPORT_SPECIFIC_DRILLS.values() if dose[0] == sport)
+        assert systems == {"aerobic": 1, "ATP-PCr": 2, "glycolytic": 2}
+
+
+def test_sport_specific_pressure_drills_are_reachable_with_real_training_setups():
+    by_name = _by_name()
+
+    def reachable_systems(equipment: list[str], names: set[str]) -> set[str]:
+        access = set(normalize_athlete_equipment_list(equipment))
+        return {
+            by_name[name]["system"]
+            for name in names
+            if set(normalize_equipment_list(by_name[name]["equipment"])).issubset(access)
+        }
+
+    mma_names = {name for name, dose in SPORT_SPECIFIC_DRILLS.items() if dose[0] == "mma"}
+    striking_names = {name for name, dose in SPORT_SPECIFIC_DRILLS.items() if dose[0] == "muay_thai"}
+    assert reachable_systems(["cage", "partner"], mma_names) == {"aerobic", "ATP-PCr", "glycolytic"}
+    assert reachable_systems(["heavy bag", "partner", "thai pads"], striking_names) == {
+        "aerobic", "ATP-PCr", "glycolytic",
+    }

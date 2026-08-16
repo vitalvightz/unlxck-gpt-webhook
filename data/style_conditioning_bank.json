@@ -5034,6 +5034,476 @@
     ]
   },
   {
+    "name": "Cage Cut & Re-Catch",
+    "equipment": [
+      "cage",
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "controlled cage-cutting flow",
+    "duration": "180s work, 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "pressure_fighter",
+      "mma",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive"
+    ],
+    "notes": "Guide the partner towards the fence at a controlled pace, deny the open-side exit and re-catch each direction change. Do not chase straight behind or cross the feet; reset stance before continuing.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive"
+    ]
+  },
+  {
+    "name": "Level-Threat Pressure Reset",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive level-threat pressure burst",
+    "duration": "6s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "mma",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "speed",
+      "explosive",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_ballistic"
+    ],
+    "notes": "React to the partner’s level-change threat, protect stance and head position, then take back useful pressure before a short score. Stop the rep if the feet become square or balance is lost.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Punch-Clinch Reentry",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "punch-to-clinch reentry burst",
+    "duration": "7s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "mma",
+      "reactive",
+      "coordination",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_ballistic"
+    ],
+    "notes": "Score a short punch entry, connect to a safe clinch and settle balanced pressure. Regain stance before re-entering; stop if head position or clinch posture fails.",
+    "work_sec": 7,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Strike-to-Fence Pressure",
+    "equipment": [
+      "cage",
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "strike-to-fence pressure intervals",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "mma",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Use a clean strike entry to move the partner towards the fence, connect position, then score again. Cut the lateral escape before attacking and reduce output if stance or defensive responsibility collapses.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Fence Escape Denial",
+    "equipment": [
+      "cage",
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "reactive fence escape denial",
+    "duration": "120s work, 60s rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "mma",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "The partner attempts left and right fence escapes. Deny the route with feet and position before scoring; stop and reset if the athlete reaches, crosses feet or becomes square.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Kick-to-Pressure Flow",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "kick-led pressure flow",
+    "duration": "180s work, 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Kick at a controlled pace, step down in stance and take useful forward position before the next attack. Do not fall square or force a follow-up when balance is poor.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation"
+    ]
+  },
+  {
+    "name": "Teep Walk-Down Reset",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "teep-led walk-down burst",
+    "duration": "6s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Land a sharp teep, step forward under control and score a short follow-up before resetting. Stop the rep if the kicking leg drops out of stance or the athlete chases square.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Pressure-to-Clinch Transition",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "strike-to-clinch transition burst",
+    "duration": "7s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "reactive",
+      "coordination",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_ballistic"
+    ],
+    "notes": "Enter behind two or three clean strikes, connect to balanced clinch position and settle before release. Stop if head position, stance or posture is lost.",
+    "work_sec": 7,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Kick-Step Pressure Rounds",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "kick-step pressure rounds",
+    "duration": "120s work, 60s rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Link kicks to balanced step-down pressure and short punch combinations. Regain stance after every kick and reduce output if recoil, posture or target quality collapses.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Low-Kick Re-Catch Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "reactive low-kick recatch intervals",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Low kick, read the partner’s escape and cut the route before scoring again. Do not follow straight behind; stop and reset if kick recoil or stance recovery breaks down.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
     "name": "Takedown to Backtake Scramble",
     "equipment": [
       "mats",
