@@ -42,7 +42,6 @@ REMOVED_LEGACY = {
     "Tempo Shadowboxing (Slow Reps)",
 }
 PRESERVED_OTHER_SLICES = {
-    "Counter Sniper Drill",
     "Intercept & Counter Mitts",
     "Slip-Counter Springs",
     "Long-Distance Shadowboxing",
