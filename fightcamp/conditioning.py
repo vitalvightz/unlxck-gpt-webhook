@@ -206,6 +206,45 @@ def _conditioning_clarification_bonus(tags: list[str], derived_clarification_tag
     bonus = min(len(hits) * CONDITIONING_CLARIFICATION_TAG_BONUS, CONDITIONING_MAX_CLARIFICATION_TAG_BONUS)
     return bonus, hits
 
+
+def _style_specificity_sport_tag(primary_tech: str, selection_format: str) -> str:
+    """Preserve the athlete's real sport identity before format collapsing.
+
+    BJJ and wrestling intentionally use MMA programming weights, but they must
+    not therefore make an MMA-tagged style drill look more sport-specific than
+    a BJJ- or wrestling-tagged drill.
+    """
+    tech = str(primary_tech or "").strip().lower().replace("-", " " )
+    aliases = {
+        "boxer": "boxing",
+        "boxing": "boxing",
+        "kickboxer": "kickboxing",
+        "kickboxing": "kickboxing",
+        "karate": "kickboxing",
+        "muay thai": "muay_thai",
+        "muaythai": "muay_thai",
+        "muay_thai": "muay_thai",
+        "mma": "mma",
+        "bjj": "bjj",
+        "wrestler": "wrestling",
+        "wrestling": "wrestling",
+        "grappler": "grappling",
+        "grappling": "grappling",
+    }
+    return aliases.get(tech, str(selection_format or "").strip().lower())
+
+
+def _style_exact_sport_bonus(raw_tags: list[str], athlete_sport_tag: str) -> float:
+    """Return the small preference for a raw exact-sport style-bank match.
+
+    Raw bank tags are inspected before compatibility rewrites. The athlete sport
+    tag is deliberately distinct from the broader programming format.
+    """
+    sport = str(athlete_sport_tag or "").strip().lower()
+    if not sport:
+        return 0.0
+    return STYLE_EXACT_SPORT_BONUS if sport in set(normalize_tags(raw_tags or [])) else 0.0
+
 _MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
@@ -221,6 +260,7 @@ GLYCOLYTIC_SUSTAINED_MIN_TOTAL_MINUTES = 12
 GLYCOLYTIC_SUSTAINED_MIN_RPE = 7
 GLYCOLYTIC_LABEL_BASE_MAX_REST_SEC = 60
 PREFERRED_EXERCISE_NAME_BOOST = 3.0
+STYLE_EXACT_SPORT_BONUS = 0.5
 SPEED_REPEATABILITY_MAX_WORK_SEC = 30
 SPEED_REPEATABILITY_MIN_REST_SEC = 60
 FRESHNESS_LACTATE_LEVELS = {"none", "low"}
@@ -1803,6 +1843,8 @@ def _conditioning_explanation(reasons: dict) -> str:
         parts.append(f"{reasons['phase_hits']} phase tag")
     if reasons.get("equipment_boost"):
         parts.append("equipment boost")
+    if reasons.get("sport_specificity_bonus"):
+        parts.append("exact sport match")
     if reasons.get("load_adjustments"):
         parts.append("system emphasis")
     if reasons.get("preferred_exercise_name_match"):
@@ -2046,6 +2088,7 @@ def generate_conditioning_block(flags):
     }
     fight_format = style_map.get(primary_tech, "mma")
     selection_format = _normalize_fight_format(fight_format)
+    specificity_sport_tag = _style_specificity_sport_tag(primary_tech, selection_format)
     energy_weights = get_format_weights().get(selection_format, {})
     bridge_rules = (
         _conditioning_resolve_bridge_rules(
@@ -2105,7 +2148,9 @@ def generate_conditioning_block(flags):
         "entries_blocked_by_injury_restrictions": 0,
         "entries_blocked_by_late_window": 0,
         "entries_scored": 0,
+        "entries_exact_sport_bonus_applied": 0,
         "entries_selected": 0,
+        "final_selected_exact_sport_names": [],
         "style_target": 0,
         "style_remaining_before_selection": 0,
         "final_selected_style_conditioning_names": [],
@@ -2394,6 +2439,10 @@ def generate_conditioning_block(flags):
     def _load_and_score_style_conditioning_bank() -> None:
             nonlocal restriction_candidates, restriction_blocked
             for drill in style_conditioning_bank:
+                # Compute specificity before any runtime sport-tag compatibility rewrite.
+                sport_specificity_bonus = _style_exact_sport_bonus(
+                    drill.get("tags", []), specificity_sport_tag
+                )
                 d = drill.copy()
                 if d.get("placement", "conditioning").lower() != "conditioning":
                     continue
@@ -2537,6 +2586,9 @@ def generate_conditioning_block(flags):
                 if system == top_system:
                     score += 0.75
                 score += equip_bonus
+                score += sport_specificity_bonus
+                if sport_specificity_bonus:
+                    style_conditioning_diagnostics["entries_exact_sport_bonus_applied"] += 1
                 score += _conditioning_collision_safe_priority_bonus(
                     matched_goal_tags,
                     matched_weak_tags,
@@ -2595,6 +2647,8 @@ def generate_conditioning_block(flags):
                     "phase_hits": 1,
                     "load_adjustments": 0.75 if system == top_system else 0.0,
                     "equipment_boost": equip_bonus,
+                    "sport_specificity_bonus": sport_specificity_bonus,
+                    "exact_sport_match": bool(sport_specificity_bonus),
                     "preferred_exercise_name_match": PREFERRED_EXERCISE_NAME_BOOST if preferred_name_match else 0.0,
                     "penalties": penalty,
                     "restriction_hits": len(matched_restrictions),
@@ -2611,6 +2665,10 @@ def generate_conditioning_block(flags):
                     reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
                 if preferred_name_match:
                     reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
+                if sport_specificity_bonus:
+                    reasons["reason_codes"].append(
+                        f"exact_sport_match:+{STYLE_EXACT_SPORT_BONUS:.1f}"
+                    )
 
                 entry = (d, score, reasons)
                 style_system_drills[system].append(entry)
@@ -3836,6 +3894,11 @@ def generate_conditioning_block(flags):
     ]
     style_conditioning_diagnostics["entries_selected"] = len(final_style_conditioning_names)
     style_conditioning_diagnostics["final_selected_style_conditioning_names"] = final_style_conditioning_names
+    style_conditioning_diagnostics["final_selected_exact_sport_names"] = [
+        name
+        for name in final_style_conditioning_names
+        if reason_lookup.get(name, {}).get("sport_specificity_bonus", 0) > 0
+    ]
 
     def _build_missing_systems() -> list[str]:
         missing = [
