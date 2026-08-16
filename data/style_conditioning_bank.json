@@ -783,7 +783,6 @@
     "intensity": "high",
     "tags": [
       "clinch_fighter",
-      "muay_thai",
       "kickboxing",
       "mech_grip_intensive",
       "mech_upper_pull",
@@ -881,6 +880,404 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_pull"
+    ]
+  },
+  {
+    "name": "Clinch Position Flow",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "positional flow",
+    "duration": "180s work / 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_reactive"
+    ],
+    "notes": "From connection, gain useful inside arm and head position, keep posture, then recover and stabilise as the partner changes grips, angle and position with light resistance. No maximal pulling.",
+    "equipment_note": "Partner provides light, changing resistance in a Thai clinch position.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Posture-Control Knee Flow",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical flow",
+    "duration": "180s work / 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ],
+    "notes": "Establish useful clinch control against light resistance, create one valid opening, land one controlled knee to Thai pads, restore stance and posture, then regain position before scoring again.",
+    "equipment_note": "Partner gives realistic positional resistance; use Thai pads as listed for controlled knees.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Reactive Clinch Position Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "decision round",
+    "duration": "120s work / 60s rest x 4 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_lower_hip_hinge"
+    ],
+    "notes": "Partner unpredictably changes grips, frames, straightens, turns, separates or presents a knee opening. Choose to pummel, frame, re-posture, turn, reconnect, score one controlled knee or stabilise; no pre-called response.",
+    "equipment_note": "Partner gives realistic positional resistance; use Thai pads as listed for controlled knees.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Posture-Break Knee Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "positional power",
+    "duration": "6s work / 75s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
+    ],
+    "notes": "From connection, win safe posture control against resistance, briefly disrupt balance, land one controlled knee to Thai pads, then immediately regain a stable clinch position.",
+    "equipment_note": "Partner gives realistic positional resistance; use Thai pads as listed for controlled knees.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
+  },
+  {
+    "name": "Turn-and-Knee Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "positional power",
+    "duration": "6s work / 75s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_rotation",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
+    ],
+    "notes": "Establish useful clinch position against resistance, turn and off-balance without throwing, land one controlled knee to Thai pads, then restore position.",
+    "equipment_note": "Partner gives realistic positional resistance; use Thai pads as listed for controlled knees.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ]
+  },
+  {
+    "name": "Frame-Reconnect Burst",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "positional recovery",
+    "duration": "5s work / 75s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_deceleration"
+    ],
+    "notes": "Partner frames or creates brief separation. Maintain balance, work around the frame, reconnect, regain useful inside position and stabilise. Do not add a striking flurry.",
+    "equipment_note": "Partner provides positional resistance through a realistic frame or brief separation from Thai clinch.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_deceleration",
+      "mech_grip_intensive",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Clinch Reposition Intervals",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "positional interval",
+    "duration": "30s work / 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner contests inside position, posture, angle, turns and head or arm control. Repeatedly gain, lose or change, recover and stabilise. Reduce resistance before movement becomes wrestling.",
+    "equipment_note": "Partner provides active Thai clinch resistance and reduces it if technique drifts towards wrestling.",
+    "work_sec": 30,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_upper_pull"
+    ]
+  },
+  {
+    "name": "Knee-and-Recover Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "scoring interval",
+    "duration": "35s work / 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Gain useful clinch against resistance, land one controlled knee to Thai pads, recover posture and feet, solve the partner’s renewed position contest, then regain control before scoring again.",
+    "equipment_note": "Partner gives realistic positional resistance; use Thai pads as listed for controlled knees.",
+    "work_sec": 35,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Grip-Fight-to-Score Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "positional scoring interval",
+    "duration": "30s work / 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
+    ],
+    "notes": "Partner actively contests arm and inside position. Hand-fight to useful control, create a valid opening, score one controlled knee to Thai pads, then reset and solve the next contest. No free knee.",
+    "equipment_note": "Partner gives realistic positional resistance; use Thai pads as listed for controlled knees.",
+    "work_sec": 30,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_upper_pull"
+    ]
+  },
+  {
+    "name": "Clinch Decision Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "high-density representative decision round",
+    "duration": "60s work / 45s rest x 5 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_trunk_rotation",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner increases positional resistance and feeds frames, turns, posture battles, knee threats and brief separations at a high but controlled rate. Maintain decision quality: pummel, frame, re-posture, turn, off-balance, reconnect or score one controlled knee to Thai pads, then restore useful position before solving the next problem.",
+    "equipment_note": "Partner gives realistic positional resistance; use Thai pads as listed for controlled knees.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 5,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
     ]
   },
   {
@@ -1209,7 +1606,6 @@
     "intensity": "high",
     "tags": [
       "clinch_fighter",
-      "muay_thai",
       "kickboxing",
       "mma",
       "mech_lower_hip_hinge",
@@ -1254,7 +1650,6 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "muay_thai",
       "mech_grip_intensive",
       "mech_trunk_stability",
       "mech_systemic_fatigue",
@@ -1327,7 +1722,6 @@
     "tags": [
       "clinch_fighter",
       "kickboxing",
-      "muay_thai",
       "mech_grip_support",
       "mech_upper_press",
       "mech_trunk_rotation",
@@ -1403,7 +1797,6 @@
     "intensity": "max",
     "tags": [
       "clinch_fighter",
-      "muay_thai",
       "mma",
       "mech_upper_press",
       "mech_trunk_rotation",
@@ -1477,7 +1870,6 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "muay_thai",
       "mech_grip_intensive",
       "mech_trunk_stability",
       "mech_systemic_fatigue",
@@ -1552,7 +1944,6 @@
     "intensity": "max",
     "tags": [
       "clinch_fighter",
-      "muay_thai",
       "mma",
       "mech_grip_intensive",
       "mech_ballistic",
@@ -7933,7 +8324,6 @@
     "duration": "45s on / 60s off",
     "intensity": "high",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "mma",
       "mech_systemic_fatigue",
@@ -8113,7 +8503,6 @@
     "intensity": "high",
     "tags": [
       "clinch_fighter",
-      "muay_thai",
       "mma",
       "mech_grip_intensive",
       "mech_trunk_stability",
@@ -8397,7 +8786,6 @@
     "intensity": "max",
     "tags": [
       "clinch_fighter",
-      "muay_thai",
       "mech_trunk_stability",
       "mech_ballistic"
     ],
@@ -8466,7 +8854,6 @@
     "duration": "5s max effort / 55s rest",
     "intensity": "max",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "mma",
       "mech_trunk_stability",
@@ -8616,7 +9003,6 @@
     "duration": "5x per leg / 60s rest",
     "intensity": "max",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "mma",
       "mech_trunk_stability",
@@ -8907,7 +9293,6 @@
     "duration": "6x / 60s rest",
     "intensity": "max",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "wrestler",
       "mech_trunk_stability",
@@ -9154,7 +9539,6 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "muay_thai",
       "mech_grip_intensive",
       "mech_trunk_stability",
       "mech_ballistic",
@@ -9189,7 +9573,6 @@
     "duration": "6x / 60s rest",
     "intensity": "max",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "wrestler",
       "mech_trunk_stability",
@@ -9223,7 +9606,6 @@
     "duration": "8x / 60s rest",
     "intensity": "max",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "pressure_fighter",
       "mech_trunk_stability",
@@ -9394,7 +9776,6 @@
     "duration": "4min rounds",
     "intensity": "moderate",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "mech_grip_intensive",
       "mech_trunk_stability",
@@ -9826,7 +10207,6 @@
     "duration": "3min rounds",
     "intensity": "low",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "skill_refinement",
       "mech_trunk_stability",
@@ -10061,7 +10441,6 @@
     "duration": "3min rounds",
     "intensity": "low",
     "tags": [
-      "muay_thai",
       "clinch_fighter",
       "mech_trunk_stability",
       "mech_grip_support",

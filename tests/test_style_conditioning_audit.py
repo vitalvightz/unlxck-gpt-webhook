@@ -365,6 +365,16 @@ PROTECTED_REBUILT_NAMES = [
     "Inside Position Intervals",
     "Control-Separate-Punch Intervals",
     "Reactive Clinch Decision Rounds",
+    "Clinch Position Flow",
+    "Posture-Control Knee Flow",
+    "Reactive Clinch Position Rounds",
+    "Posture-Break Knee Burst",
+    "Turn-and-Knee Burst",
+    "Frame-Reconnect Burst",
+    "Clinch Reposition Intervals",
+    "Knee-and-Recover Intervals",
+    "Grip-Fight-to-Score Intervals",
+    "Clinch Decision Rounds",
 ]
 
 # Legacy entries deliberately superseded after the deletion-only purge by the
