@@ -610,37 +610,448 @@
     ]
   },
   {
-    "name": "Pull Counter Matrix",
+    "name": "Read & Counter Flow",
     "equipment": [
-      "double-end_bag"
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical flow",
+    "duration": "3 x 180s work / 60s rest",
+    "intensity": "low",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Partner gives controlled jab, rear straight, hook or forward-entry cues. Defend or intercept, return a light counter, then regain stance and range. Keep the pace easy; reduce cue variety if the athlete guesses or loses shape.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Counter Shadow Flow",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical flow",
+    "duration": "3 x 180s work / 60s rest",
+    "intensity": "low",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Cycle through named imagined cues: jab, rear straight, hook and forward entry. Use the matching defence, counter at light speed, then angle out and reset. Do not free-punch between cues.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Defensive Position Flow",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical flow",
+    "duration": "3 x 120s work / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Use a fixed cue sequence: jab to slip, straight to parry, hook to roll. Add one light counter after each defence, then recover stance and range before the next cue.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Slip-Cross Burst",
+    "equipment": [
+      "partner_mitts"
     ],
     "phases": [
       "SPP"
     ],
     "system": "ATP-PCr",
-    "modality": "precision countering",
-    "duration": "3min rounds, 1min rest x 5",
-    "intensity": "max",
+    "modality": "reactive power",
+    "duration": "8 x 5s work / 60s rest",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "boxing",
       "mech_reactive",
       "mech_deceleration",
       "mech_upper_press",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
-    "notes": "Focus on pulling straight rights after slipping jabs (90% accuracy)",
-    "equipment_note": "Adjust bag tension for realistic rebound",
-    "work_sec": 180,
+    "notes": "Holder shows a jab cue. Slip outside, fire one immediate cross counter, then step to safe range and reset. Stop the set if timing slows, defence gets loose or stance recovery deteriorates.",
+    "work_sec": 5,
     "rest_sec": 60,
-    "rpe": 9,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Pull-Straight Burst",
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive power",
+    "duration": "6 x 5s work / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Holder steps in with a straight-punch cue. Pull just out of range, return one straight immediately, then recover stance and distance. Every rep starts from the entry cue.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Check-Hook Pivot Burst",
+    "equipment": [
+      "partner_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive power",
+    "duration": "6 x 6s work / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Holder applies a controlled forward-pressure cue. Land a check-hook counter, pivot off the line, then reset at safe range. Reduce speed if the athlete crosses their feet or loses defensive shape.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Intercepting Straight Burst",
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "stop-hit response",
+    "duration": "8 x 4s work / 60s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Holder makes a clear forward-entry cue. Land an immediate straight stop-hit, exit off line, and reset. Use one full-quality response only; do not turn it into a combination sprint.",
+    "work_sec": 4,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Reactive Counter Choice",
+    "equipment": [
+      "partner_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive decision",
+    "duration": "6 x 7s work / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Holder gives one unpredictable jab, rear straight, hook or forward-entry cue. Select the correct defence or intercept, counter immediately, then reposition. Reduce cue choices if the athlete starts guessing.",
+    "work_sec": 7,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Parry-Return Intervals",
+    "equipment": [
+      "partner_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "repeated counter interval",
+    "duration": "6 x 45s work / 30s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Holder feeds repeated straight-punch cues at a controlled pace. Parry, return a straight immediately, then regain guard and range before the next feed. Accuracy and clean defence come before volume.",
+    "work_sec": 45,
+    "rest_sec": 30,
+    "rounds": 6,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Defend-Counter-Exit Intervals",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "decision interval",
+    "duration": "5 x 60s work / 45s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner gives controlled single attacks. Defend, counter with one to three punches, angle out, and reset before the next cue. The athlete cannot initiate freely.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 5,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Random Attack Counter Rounds",
+    "equipment": [
+      "partner_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "decision rounds",
+    "duration": "4 x 120s work / 60s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Holder attacks unpredictably with jab, rear straight, hook or forward entry. Read, defend or intercept, counter, then reposition. Slow the feeds if timing or stance recovery declines.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Counter Quality Rounds",
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "quality rounds",
+    "duration": "3 x 180s work / 60s rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Holder repeats varied attack cues under a steady pace. Athlete defends or intercepts, counters accurately, then resets. Keep timing, accuracy and defensive shape intact; never chase uncontrolled punch volume.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
       "mech_deceleration",
       "mech_reactive",
       "mech_systemic_fatigue",
@@ -662,7 +1073,6 @@
     "intensity": "moderate",
     "tags": [
       "counter_striker",
-      "boxing",
       "kickboxing",
       "mech_reactive",
       "mech_upper_press",
@@ -777,7 +1187,6 @@
     "intensity": "high",
     "tags": [
       "counter_striker",
-      "boxing",
       "kickboxing",
       "mech_reactive",
       "mech_upper_press",
@@ -874,40 +1283,6 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Sniper's Timing",
-    "equipment": [
-      "delay_timer",
-      "punching_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "rhythm breaking",
-    "duration": "3min rounds: randomized counter windows, 1min rest x 4",
-    "intensity": "moderate",
-    "tags": [
-      "counter_striker",
-      "boxing",
-      "mech_reactive",
-      "mech_change_of_direction",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Timer beeps signal counter opportunities (Precision focus)",
-    "equipment_note": "Variable delay settings",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_reactive",
-      "mech_systemic_fatigue"
     ]
   },
   {
@@ -6001,38 +6376,6 @@
     ]
   },
   {
-    "name": "Counter Striker's Shell Defense Drill",
-    "equipment": [
-      "focus_mitts",
-      "partner"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "glycolytic",
-    "modality": "interval",
-    "duration": "1min on / 1min off",
-    "intensity": "high",
-    "tags": [
-      "counter_striker",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "notes": "Block/parry flurries, then counter with 3-punch combos. (mod-high)",
-    "equipment_note": "Partner varies attack angles.",
-    "work_sec": 60,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
     "name": "Submission Chain Fatigue Drill",
     "equipment": [
       "grappler_dummy"
@@ -6799,7 +7142,6 @@
     "duration": "8x / 60s rest",
     "intensity": "max",
     "tags": [
-      "boxing",
       "counter_striker",
       "mma",
       "mech_trunk_stability",
@@ -7095,39 +7437,6 @@
     ]
   },
   {
-    "name": "Pull-Counter Springs",
-    "equipment": [
-      "slip_bag"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "reactive",
-    "duration": "8x / 60s rest",
-    "intensity": "max",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "hybrid",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_upper_press"
-    ],
-    "notes": "Pull away from bag swing, explode back with cross.",
-    "equipment_note": "Adjust bag weight for speed.",
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
     "name": "Ground-and-Pound Bursts",
     "equipment": [
       "grappler_dummy"
@@ -7310,7 +7619,6 @@
     "tags": [
       "boxing",
       "distance_striker",
-      "counter_striker",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_lower_lunge",
@@ -7635,41 +7943,6 @@
     ]
   },
   {
-    "name": "Counter Striker's Retreat Drill",
-    "equipment": [
-      "open_space"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "aerobic",
-    "modality": "continuous",
-    "duration": "3min rounds",
-    "intensity": "moderate",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "skill_refinement",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Backstep while maintaining defensive shell.",
-    "equipment_note": "Mark distance with tape.",
-    "work_sec": 180,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
     "name": "Submission Hunter's Guard Retention",
     "equipment": [
       "mat",
@@ -7967,40 +8240,6 @@
     ]
   },
   {
-    "name": "Counter Striker's Parry Drill",
-    "equipment": [
-      "double-end_bag"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "aerobic",
-    "modality": "continuous",
-    "duration": "3min rounds",
-    "intensity": "moderate",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "notes": "Parry bag strikes while maintaining distance.",
-    "equipment_note": "Adjust bag height as needed.",
-    "work_sec": 180,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
     "name": "Kicker's Switch Stance March",
     "equipment": [
       "open_space"
@@ -8238,7 +8477,6 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "counter_striker",
       "kickboxing",
       "mech_trunk_stability",
       "mech_lower_lunge",
@@ -8500,41 +8738,6 @@
       "mech_grip_support",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Tempo Shadowboxing (Slow Reps)",
-    "equipment": [
-      "mirror"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "aerobic",
-    "modality": "technical endurance",
-    "duration": "5min rounds, 1min rest × 4",
-    "intensity": "low",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "low_impact",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Slow, controlled reps = technique work without impact. (30% speed, form focus)",
-    "equipment_note": "Mirror for feedback",
-    "work_sec": 300,
-    "rest_sec": 60,
-    "total_minutes": 5,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
     ]
   }
 ]
