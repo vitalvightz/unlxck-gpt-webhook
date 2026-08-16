@@ -12,7 +12,7 @@ EXPECTED_DOSES = {
     "Lateral Escape Burst": ("ATP-PCr", 5, 70, 8, 8),
     "Range Recovery Intervals": ("glycolytic", 60, 45, 6, 8),
     "Score-Reposition Rounds": ("glycolytic", 120, 60, 4, 8),
-    "Movement Economy Rounds": ("glycolytic", 180, 60, 3, 7),
+    "Movement Economy Rounds": ("aerobic", 180, 60, 3, 6),
     "Reactive Distance Rounds": ("glycolytic", 90, 45, 5, 8),
     "Pressure Escape and Reset": ("glycolytic", 60, 45, 6, 8),
 }
@@ -30,7 +30,7 @@ def _general_slice():
 def test_batch_4_is_the_small_cross_sport_core():
     entries = _general_slice()
     assert set(entries) == set(EXPECTED_DOSES)
-    assert Counter(d[0] for d in EXPECTED_DOSES.values()) == {"aerobic": 2, "ATP-PCr": 3, "glycolytic": 5}
+    assert Counter(d[0] for d in EXPECTED_DOSES.values()) == {"aerobic": 3, "ATP-PCr": 3, "glycolytic": 4}
     for name, dose in EXPECTED_DOSES.items():
         item = entries[name]
         assert (item["system"], item["work_sec"], item["rest_sec"], item["rounds"], item["rpe"]) == dose
@@ -53,6 +53,7 @@ def test_batch_4_doses_preserve_energy_system_integrity_and_equipment_access():
     entries = _general_slice()
     aerobic = [item for item in entries.values() if item["system"] == "aerobic"]
     assert all(120 <= item["work_sec"] <= 180 and item["rest_sec"] == 60 and item["rpe"] <= 6 and item["lactate_load"] == "low" for item in aerobic)
+    assert entries["Movement Economy Rounds"]["movement_cost"] == "moderate"
     alactic = [item for item in entries.values() if item["system"] == "ATP-PCr"]
     assert all(4 <= item["work_sec"] <= 7 and 60 <= item["rest_sec"] <= 75 and 6 <= item["rounds"] <= 8 and item["lactate_load"] == "low" and "Stop and reset" in item["notes"] for item in alactic)
     glycolytic = [item for item in entries.values() if item["system"] == "glycolytic"]

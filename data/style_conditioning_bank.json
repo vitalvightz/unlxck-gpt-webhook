@@ -4488,10 +4488,10 @@
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "range movement under fatigue",
+    "system": "aerobic",
+    "modality": "economical range movement",
     "duration": "180sec work, 60sec rest x 3 rounds",
-    "intensity": "high",
+    "intensity": "moderate",
     "tags": [
       "distance_striker",
       "footwork",
@@ -4500,7 +4500,6 @@
       "skill_refinement",
       "mech_change_of_direction",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
     "notes": "Maintain preferred range while adding a light score and reposition every 6-10 seconds. Use the fewest useful steps; no excessive bouncing, crossed feet or repeated straight retreat. Lower the pace if stance or distance control fades.",
@@ -4508,14 +4507,13 @@
     "rest_sec": 60,
     "rounds": 3,
     "total_minutes": 11,
-    "rpe": 7,
+    "rpe": 6,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_change_of_direction",
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
       "mech_trunk_stability"
     ]
   },
