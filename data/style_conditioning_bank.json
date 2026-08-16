@@ -3655,8 +3655,7 @@
   {
     "name": "Teep Range Reset",
     "equipment": [
-      "partner",
-      "thai_pads"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -3676,7 +3675,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "notes": "Teep, retract cleanly, restore stance and regain long range before the next opportunity.",
+    "notes": "From stance, teep into open space, retract cleanly, restore stance and regain long range before the next repetition.",
     "work_sec": 180,
     "rest_sec": 60,
     "rounds": 3,
@@ -4057,8 +4056,7 @@
   {
     "name": "Body-Kick Repeatability",
     "equipment": [
-      "partner",
-      "thai_pads"
+      "heavy_bag"
     ],
     "phases": [
       "SPP"

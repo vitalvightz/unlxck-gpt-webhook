@@ -4,6 +4,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp import conditioning, strength
+from fightcamp.training_context import normalize_equipment_list
 
 
 def test_style_taper_bodyweight_drill_is_eligible_with_empty_athlete_equipment(monkeypatch):
@@ -113,3 +114,8 @@ def test_bodyweight_strength_drill_remains_selectable_when_athlete_does_not_list
     selected_names = {exercise["name"] for exercise in block["exercises"]}
     assert "Bodyweight Speed Push-Up" in selected_names
     assert "Medicine Ball Rotational Throw" not in selected_names
+
+
+def test_striking_bag_names_normalize_to_one_equipment_gate_token():
+    for bag_name in ("punching bag", "punching_bag", "heavy bag", "heavy_bag", "banana bag", "banana_bag"):
+        assert normalize_equipment_list([bag_name]) == ["heavy_bag"]

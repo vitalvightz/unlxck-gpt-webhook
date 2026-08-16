@@ -2,6 +2,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from fightcamp.training_context import normalize_athlete_equipment_list, normalize_equipment_list
+
 
 BANK_PATH = Path(__file__).resolve().parents[1] / "data" / "style_conditioning_bank.json"
 
@@ -77,3 +79,38 @@ def test_kicker_batch_2_carries_reaction_recovery_and_technical_stop_rules():
     assert "ready to defend another entry" in by_name["Interception Kick Burst"]["notes"]
     assert "Reduce output" in by_name["Body-Kick Repeatability"]["notes"]
     assert "Stop the set" in by_name["Kick Recoil Quality Rounds"]["notes"]
+
+
+def _reachable_kicker_batch(equipment: list[str]) -> dict[str, set[str]]:
+    access = set(normalize_athlete_equipment_list(equipment))
+    by_system: dict[str, set[str]] = {"aerobic": set(), "ATP-PCr": set(), "glycolytic": set()}
+    for name in EXPECTED_KICKER_BATCH_2:
+        item = _bank_by_name()[name]
+        required = set(normalize_equipment_list(item.get("equipment", [])))
+        if required.issubset(access):
+            by_system[item["system"]].add(name)
+    return by_system
+
+
+def test_kicker_batch_2_equipment_reachability_matches_realistic_profiles():
+    solo_bag_profiles = [
+        ["punching bag"],
+        ["bodyweight", "punching bag"],
+        ["heavy bag"],
+        ["banana bag"],
+    ]
+    for equipment in solo_bag_profiles:
+        reachable = _reachable_kicker_batch(equipment)
+        assert "Switch-Side Rhythm" in reachable["aerobic"]
+        assert "Rear-Kick Power Singles" in reachable["ATP-PCr"]
+        assert "Body-Kick Repeatability" in reachable["glycolytic"]
+
+    partner_reachable = _reachable_kicker_batch(["partner", "thai pads"])
+    assert all(partner_reachable[system] for system in ("aerobic", "ATP-PCr", "glycolytic"))
+
+    minimal_reachable = _reachable_kicker_batch([])
+    assert minimal_reachable == {
+        "aerobic": {"Teep Range Reset"},
+        "ATP-PCr": set(),
+        "glycolytic": set(),
+    }
