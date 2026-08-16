@@ -846,6 +846,44 @@
     ]
   },
   {
+    "name": "Greco-Roman Grinder",
+    "equipment": [
+      "sandbag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "upper body clinch",
+    "duration": "30s pummeling drills → 10 bodylock lifts → x5 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "mma",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_grip_support"
+    ],
+    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestler-based clinch. (85% effort)",
+    "equipment_note": "50-70lb sandbag",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
+  },
+  {
     "name": "Inside Position Flow",
     "equipment": [
       "partner"
@@ -1158,194 +1196,6 @@
     "impact_cost": "low"
   },
   {
-    "name": "Greco-Roman Grinder",
-    "equipment": [
-      "sandbag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "upper body clinch",
-    "duration": "30s pummeling drills → 10 bodylock lifts → x5 rounds",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "mma",
-      "mech_grip_intensive",
-      "mech_upper_pull",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_ballistic",
-      "mech_grip_support"
-    ],
-    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestler-based clinch. (85% effort)",
-    "equipment_note": "50-70lb sandbag",
-    "work_sec": 30,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_pull"
-    ]
-  },
-  {
-    "name": "Clinch & Sprawl Reaction Complex",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "defensive transitions",
-    "duration": "30s clinch → 5 sprawls → x8 rounds",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "mma",
-      "mech_grip_intensive",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_lunge"
-    ],
-    "notes": "Trains defensive reactions when the clinch breaks to prevent takedowns. (90% effort)",
-    "equipment_note": "Partner recommended but can shadow",
-    "work_sec": 30,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ]
-  },
-  {
-    "name": "Collar Tie Counter",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "defensive striking",
-    "duration": "30s defend collar tie → 10 counter uppercuts → x5 rounds",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "mma",
-      "mech_grip_support",
-      "mech_reactive",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Trains punching off defensive head control. (85% effort)",
-    "equipment_note": "Partner recommended",
-    "rest_sec": 30,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Clinch Gas Tank",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "pure endurance",
-    "duration": "5min continuous: clinch pummeling → knees → short punches",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "mma",
-      "muay_thai",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_grip_support",
-      "mech_upper_press"
-    ],
-    "notes": "Championship round simulation for all clinch styles. (80% effort)",
-    "equipment_note": "Partner or heavy bag",
-    "total_minutes": 5,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Clinch-to-Strike Transition Drill",
-    "equipment": [
-      "focus_mitts",
-      "partner"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "glycolytic",
-    "modality": "interval",
-    "duration": "45s on / 60s off",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "muay_thai",
-      "mma",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_upper_press"
-    ],
-    "notes": "Break clinch into 3-punch combos. Reset immediately.",
-    "equipment_note": "Partner wears belly pad for body shots.",
-    "work_sec": 45,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
     "name": "Max Knee & Sprawl Complex",
     "equipment": [
       "bodyweight"
@@ -1500,6 +1350,46 @@
     ]
   },
   {
+    "name": "Clinch & Sprawl Reaction Complex",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "defensive transitions",
+    "duration": "30s clinch → 5 sprawls → x8 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "mma",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_lower_lunge"
+    ],
+    "notes": "Trains defensive reactions when the clinch breaks to prevent takedowns. (90% effort)",
+    "equipment_note": "Partner recommended but can shadow",
+    "work_sec": 30,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
     "name": "Elbow Alley",
     "equipment": [
       "bodyweight"
@@ -1533,6 +1423,79 @@
       "mech_grip_support",
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Collar Tie Counter",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "defensive striking",
+    "duration": "30s defend collar tie → 10 counter uppercuts → x5 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "mma",
+      "mech_grip_support",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "notes": "Trains punching off defensive head control. (85% effort)",
+    "equipment_note": "Partner recommended",
+    "rest_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Clinch Gas Tank",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "pure endurance",
+    "duration": "5min continuous: clinch pummeling → knees → short punches",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "mma",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_grip_support",
+      "mech_upper_press"
+    ],
+    "notes": "Championship round simulation for all clinch styles. (80% effort)",
+    "equipment_note": "Partner or heavy bag",
+    "total_minutes": 5,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
       "mech_upper_press"
     ]
   },
@@ -8131,6 +8094,43 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Clinch-to-Strike Transition Drill",
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "45s on / 60s off",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_upper_press"
+    ],
+    "notes": "Break clinch into 3-punch combos. Reset immediately.",
+    "equipment_note": "Partner wears belly pad for body shots.",
+    "work_sec": 45,
+    "rest_sec": 60,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
