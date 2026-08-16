@@ -19,6 +19,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ],
@@ -35,6 +36,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ]
@@ -61,6 +63,7 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_deceleration"
     ],
     "notes": "Partner gives one controlled short attack. Cover, answer with a compact hook and low or body kick, recoil the kick, then restore stance and guard. Fully reset; do not trade freely. Stop if stance recovery slows.",
@@ -77,6 +80,7 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_deceleration"
     ]
   },
@@ -100,6 +104,7 @@
       "mech_ballistic",
       "mech_reactive",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ],
@@ -116,6 +121,7 @@
       "mech_ballistic",
       "mech_reactive",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ]
@@ -179,6 +185,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration",
       "mech_systemic_fatigue"
@@ -196,6 +203,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration",
       "mech_systemic_fatigue"
@@ -222,6 +230,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_deceleration",
       "mech_systemic_fatigue"
     ],
@@ -239,6 +248,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_deceleration",
       "mech_systemic_fatigue"
     ]
@@ -265,6 +275,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration",
       "mech_systemic_fatigue"
@@ -283,6 +294,7 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration",
       "mech_systemic_fatigue"
@@ -309,6 +321,7 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ],
@@ -325,6 +338,7 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ]
@@ -349,6 +363,7 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ],
@@ -365,6 +380,7 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability",
+      "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
     ]

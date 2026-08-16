@@ -60,6 +60,24 @@ def test_exchange_identity_boundaries_and_recovery_are_explicit():
         assert "recoil" in notes or item["name"] == "Pocket Knee Reentry Burst"
         assert not {"pressure_fighter", "kicker", "clinch_fighter", "counter_striker"} & set(item["tags"])
 
+def test_upper_press_tag_matches_meaningful_repeated_punching():
+    expected_upper_press = {
+        "Pocket Punch-Kick Cluster",
+        "Cover-Hook-Kick Burst",
+        "Check-Return Pocket Burst",
+        "Punch-Kick Exchange Intervals",
+        "Guard-and-Low-Kick Answer",
+        "Pocket Body-Head-Leg Intervals",
+        "Close-Range Exchange Rounds",
+        "Inside Decision Rounds — Kickboxing / Muay Thai",
+    }
+    tagged = {
+        item["name"] for item in _slice().values()
+        if "mech_upper_press" in item["tags"]
+    }
+    assert tagged == expected_upper_press
+    assert "mech_upper_press" not in _slice()["Pocket Knee Reentry Burst"]["mechanical_risk_tags"]
+
 def test_equipment_mechanics_and_phase_reachability_follow_conventions():
     valid = set(known_equipment)
     entries = _slice().values()
