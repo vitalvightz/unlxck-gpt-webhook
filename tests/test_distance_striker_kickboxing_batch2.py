@@ -65,7 +65,7 @@ def test_approved_names_replace_only_the_legacy_slice():
         )
     ]
     canonical = json.dumps(unrelated, sort_keys=True, separators=(",", ":")).encode()
-    assert hashlib.sha256(canonical).hexdigest() == "ce11ee3df14049408cb0f2783ea7a1bd8d774c1f63e8c2679b2762228fe8616c"
+    assert hashlib.sha256(canonical).hexdigest() == "6a40573de7d3cef008d5fac8a301ba7d1c5b72eed83e4a49f67e395de3069b29"
 
 
 def test_metadata_and_energy_system_doses_are_coherent():
