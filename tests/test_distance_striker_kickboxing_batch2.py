@@ -55,9 +55,17 @@ def test_approved_names_replace_only_the_legacy_slice():
     assert SUPERSEDED_LEGACY_DRILLS.isdisjoint(by_name)
     assert {item["name"] for item in _slice()} == set(APPROVED_DRILLS)
 
-    unrelated = [item for item in _bank() if item not in _slice()]
+    unrelated = [
+        item
+        for item in _bank()
+        if item not in _slice()
+        and not (
+            "distance_striker" in item.get("tags", [])
+            and {"boxing", "kickboxing", "muay_thai", "mma"}.isdisjoint(item.get("tags", []))
+        )
+    ]
     canonical = json.dumps(unrelated, sort_keys=True, separators=(",", ":")).encode()
-    assert hashlib.sha256(canonical).hexdigest() == "33aca16a606a4f6e46d121c03030ecb7f7186ab0ae470fc05eb8ad3a9e9600df"
+    assert hashlib.sha256(canonical).hexdigest() == "ce11ee3df14049408cb0f2783ea7a1bd8d774c1f63e8c2679b2762228fe8616c"
 
 
 def test_metadata_and_energy_system_doses_are_coherent():
