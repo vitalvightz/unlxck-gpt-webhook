@@ -687,6 +687,139 @@ def _memory_claim(
     )
 
 
+def _simulation_state(
+    store: Any,
+    candidates: list[NotificationCandidate],
+) -> tuple[list[dict[str, Any]], set[tuple[str, str, str]]]:
+    """Read the claim ledger and action state without changing either."""
+
+    store_key = _store_key(store)
+    client = _client(store)
+    if client is None:
+        deliveries = [dict(row) for row in _MEMORY_DELIVERIES.get(store_key, {}).values()]
+        evaluations = [
+            dict(row)
+            for row in _MEMORY_EVALUATIONS.get(store_key, {}).values()
+            if row.get("profile_id") == candidates[0].profile_id
+            and row.get("decision") == "would_select"
+        ]
+        actions = set(_MEMORY_ACTION_STATES.get(store_key, set()))
+    else:
+        try:
+            profile_id = candidates[0].profile_id
+            delivery_rows = _rows(
+                client.table("notification_deliveries")
+                .select("*")
+                .eq("profile_id", profile_id)
+                .execute()
+            )
+            evaluations = _rows(
+                client.table("notification_evaluations")
+                .select("*")
+                .eq("profile_id", profile_id)
+                .eq("decision", "would_select")
+                .execute()
+            )
+            action_rows = _rows(
+                client.table("notification_action_states")
+                .select("profile_id,action_key,training_day")
+                .eq("profile_id", profile_id)
+                .execute()
+            )
+            deliveries = delivery_rows
+            actions = {
+                (str(row["profile_id"]), str(row["action_key"]), str(row["training_day"]))
+                for row in action_rows
+            }
+        except Exception as exc:  # noqa: BLE001 - adapter normalizes backend clients
+            logger.warning(
+                "[notification] simulation state read failed profile_id=%s error_class=%s",
+                candidates[0].profile_id,
+                type(exc).__name__,
+            )
+            raise NotificationStoreError("notification simulation state unavailable") from exc
+
+    # Prior observe selections form an isolated shadow ledger. This makes later
+    # sweeps see dedupe, caps, and spacing without reserving real delivery keys.
+    real_keys = {(str(row.get("profile_id")), str(row.get("dedupe_key"))) for row in deliveries}
+    for row in evaluations:
+        key = (str(row.get("profile_id")), str(row.get("dedupe_key")))
+        if not row.get("dedupe_key") or key in real_keys:
+            continue
+        snapshot = row.get("source_event_metadata") or {}
+        snapshot = snapshot.get("_candidate_snapshot") if isinstance(snapshot, Mapping) else {}
+        deliveries.append(
+            {
+                "profile_id": row.get("profile_id"),
+                "dedupe_key": row.get("dedupe_key"),
+                "training_day": row.get("training_day"),
+                "notification_class": (snapshot or {}).get("notification_class", "routine"),
+                "status": "sent",
+                "attempt_count": 1,
+                "claimed_at": row.get("first_evaluated_at") or row.get("evaluated_at"),
+                "sent_at": row.get("first_evaluated_at") or row.get("evaluated_at"),
+            }
+        )
+    return deliveries, actions
+
+
+def _simulated_claim_decision(
+    candidate: NotificationCandidate,
+    *,
+    now_utc: datetime,
+    deliveries: list[dict[str, Any]],
+    actions: set[tuple[str, str, str]],
+) -> str:
+    """Mirror the non-mutating decisions made by claim_notification_delivery_v2."""
+
+    training_day = _candidate_training_day(candidate, now_utc)
+    if candidate.action_key and (
+        candidate.profile_id,
+        candidate.action_key,
+        training_day,
+    ) in actions:
+        return "user_action_already_done"
+    existing = next(
+        (
+            row
+            for row in deliveries
+            if row.get("profile_id") == candidate.profile_id
+            and row.get("dedupe_key") == candidate.dedupe_key
+        ),
+        None,
+    )
+    if existing is not None:
+        status = str(existing.get("status") or "")
+        attempts = int(existing.get("attempt_count") or 0)
+        claimed_at = _parse_datetime(existing.get("claimed_at"))
+        stale = claimed_at is None or now_utc - claimed_at >= NOTIFICATION_STALE_CLAIM_AFTER
+        if not (
+            attempts < NOTIFICATION_MAX_ATTEMPTS
+            and (status == "failed" or (status == "pending" and stale))
+        ):
+            return "duplicate_dedupe_key"
+        return "would_claim"
+    active = [
+        row
+        for row in deliveries
+        if row.get("profile_id") == candidate.profile_id
+        and str(row.get("training_day")) == training_day
+        and row.get("notification_class") == candidate.notification_class
+        and row.get("status") in {"pending", "sent", "partial"}
+    ]
+    if len(active) >= _candidate_daily_cap(candidate):
+        return "daily_cap"
+    spacing = _candidate_min_spacing(candidate)
+    active_times = [
+        parsed
+        for row in active
+        if (parsed := _parse_datetime(row.get("sent_at") or row.get("claimed_at"))) is not None
+    ]
+    if spacing and active_times and now_utc - max(active_times) < timedelta(minutes=spacing):
+        return "cooldown_active"
+    return "would_claim"
+
+
 def attempt_notification_delivery_claim(
     store: Any,
     candidate: NotificationCandidate,
@@ -958,6 +1091,79 @@ def prepare_notification_delivery(
     except NotificationStoreError:
         # Fail closed: a preference or ledger failure must never bypass an opt-out
         # or send a duplicate notification.
+        return None
+
+
+def simulate_notification_delivery_decision(
+    store: Any,
+    candidates: Iterable[NotificationCandidate],
+    *,
+    now_utc: datetime | None = None,
+) -> NotificationCandidate | None:
+    """Record send-equivalent arbitration without claiming or changing delivery state."""
+
+    candidate_list = list(candidates)
+    if not candidate_list:
+        return None
+    profile_ids = {candidate.profile_id for candidate in candidate_list}
+    if len(profile_ids) != 1:
+        raise ValueError("notification arbitration must be scoped to one profile")
+    reference = now_utc or datetime.now(timezone.utc)
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+    try:
+        preferences = get_notification_preferences(store, candidate_list[0].profile_id)
+        deliveries, actions = _simulation_state(store, candidate_list)
+        ranked = sorted(
+            candidate_list,
+            key=lambda candidate: (
+                candidate.priority,
+                candidate.notification_type,
+                candidate.dedupe_key,
+            ),
+        )
+        selected: NotificationCandidate | None = None
+        for candidate in ranked:
+            reasons = candidate_rejection_reasons(candidate, preferences, now_utc=reference)
+            if selected is not None and not reasons:
+                reasons = ("higher_priority_selected",)
+                decision = "would_not_select"
+                eligible = True
+            elif reasons:
+                decision = (
+                    "deferred_until_quiet_end" if reasons == ("quiet_hours",) else "would_reject"
+                )
+                eligible = False
+            else:
+                claim_decision = _simulated_claim_decision(
+                    candidate,
+                    now_utc=reference,
+                    deliveries=deliveries,
+                    actions=actions,
+                )
+                if claim_decision == "would_claim":
+                    selected = candidate
+                    decision = "would_select"
+                    reasons = ()
+                    eligible = True
+                else:
+                    decision = "would_reject"
+                    reasons = (claim_decision,)
+                    eligible = True
+            record_notification_evaluation(
+                store,
+                profile_id=candidate.profile_id,
+                training_day=_candidate_training_day(candidate, reference),
+                intent=candidate.intent,
+                now_utc=reference,
+                decision=decision,
+                rejection_reasons=reasons,
+                eligible=eligible,
+                candidate=candidate,
+            )
+        return selected
+    except NotificationStoreError:
+        # Match send mode's fail-closed behaviour when durable state is unavailable.
         return None
 
 

@@ -17,6 +17,7 @@ from api.services.notification_foundation import (
     get_notification_preferences,
     list_notification_evaluations,
     record_notification_evaluation,
+    simulate_notification_delivery_decision,
 )
 from api.services.notification_templates import select_notification_template
 from api.services.notification_timing import ResolvedTrainingTime, resolve_training_time
@@ -939,18 +940,7 @@ def dispatch_fight_camp_notifications(
             now_utc=now_utc,
         )
         if rollout_mode == "observe":
-            for candidate in candidates:
-                record_notification_evaluation(
-                    store,
-                    profile_id=profile_id,
-                    training_day=candidate.training_day or view.today.training_day,
-                    intent=candidate.intent,
-                    now_utc=now_utc,
-                    decision="rollout_observe_only",
-                    rejection_reasons=("rollout_observe_only",),
-                    eligible=True,
-                    candidate=candidate,
-                )
+            simulate_notification_delivery_decision(store, candidates, now_utc=now_utc)
             # Returning zero candidates intentionally allows the existing worker
             # path to continue sending legacy notifications during observation.
             return FightCampDispatchResult(0, 0)
