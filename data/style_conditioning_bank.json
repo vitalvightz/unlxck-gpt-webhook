@@ -1579,76 +1579,531 @@
     ]
   },
   {
-    "name": "Clinch Counter Chaos",
+    "name": "MMA Read & Counter Flow",
     "equipment": [
-      "wall"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "framing counters",
-    "duration": "30s frame-and-strike, 30s rest x 8",
-    "intensity": "high",
+    "system": "aerobic",
+    "modality": "mixed-cue technical flow",
+    "duration": "3 x 180 sec, 60 sec rest",
+    "intensity": "moderate",
     "tags": [
       "counter_striker",
       "mma",
-      "mech_grip_intensive",
       "mech_reactive",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_upper_press"
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
     ],
-    "notes": "Wall simulates cage/rope pressure (85% effort)",
-    "equipment_note": "Focus on underhook counters",
-    "work_sec": 30,
-    "rest_sec": 30,
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "notes": "Partner unpredictably feeds a controlled jab, rear straight, kick, forward entry or level-change cue. Athlete reads the threat, uses a suitable defence or interception, makes one light counter to the pads, then restores stance and range before the next feed. Keep the pace easy and reduce cue variety if the athlete starts guessing.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_landing_impact",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Strike-Shot Transition Flow",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "strike-to-shot recognition flow",
+    "duration": "3 x 150 sec, 60 sec rest",
+    "intensity": "moderate",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "notes": "Partner alternates unpredictably between a controlled striking attack and a level-change or shot cue. Athlete reads which threat is present, uses striking defence or appropriate hip and takedown defence, makes one light counter to the pads after safe separation, then recovers stance and range. Keep shot feeds submaximal; this is not a repeated-sprawl circuit.",
+    "work_sec": 150,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
   },
   {
-    "name": "Frame & Counter Knee Complex",
+    "name": "Cage Counter Movement Flow",
     "equipment": [
-      "bands",
-      "wall"
+      "partner",
+      "wall",
+      "thai_pads"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "clinch defense",
-    "duration": "30s frame under pressure, 30s counter knees x 6",
+    "system": "aerobic",
+    "modality": "cage-position counter flow",
+    "duration": "3 x 180 sec, 60 sec rest",
+    "intensity": "moderate",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_lateral_shift",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "notes": "Partner applies controlled forward pressure toward a wall or cage. Athlete reads the pressure, defends or frames, angles away, makes one light counter to the pads, regains open space, then resets in stance. Position restored is the success condition; lower pressure if footwork or defensive shape breaks down.",
+    "equipment_note": "Use a wall as the practical cage substitute; partner controls pressure and presents safe pad targets.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lateral_shift",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Sprawl-Counter Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "takedown-defence counter power",
+    "duration": "6 x 5 sec, 75 sec rest",
     "intensity": "high",
     "tags": [
       "counter_striker",
       "mma",
       "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_upper_press"
+    ],
+    "notes": "Partner gives one clear, committed but controlled shot cue. Athlete reads it, sprawls or uses appropriate hip defence, creates safe striking separation, lands one immediate counter to the pad, then resets completely. Stop the set when reaction speed, hip position or stance recovery declines.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "moderate",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Intercepting Knee Entry Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "controlled entry interception",
+    "duration": "6 x 5 sec, 75 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Partner controls a committed forward or level-change cue and presents a Thai-pad target. Where technically appropriate, athlete reads the entry, intercepts the pad with one knee, recoils, then restores stance and defensive position. Never use uncontrolled live knee contact; stop if timing, balance or recoil deteriorates.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Level-Change Uppercut Burst",
+    "equipment": [
+      "partner",
+      "focus_mitts"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "level-change intercept option",
+    "duration": "8 x 4 sec, 60 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_ballistic",
       "mech_upper_press",
       "mech_trunk_rotation",
-      "mech_grip_support"
+      "mech_trunk_stability",
+      "mech_deceleration"
     ],
-    "notes": "Wall simulates cage pressure (85% effort)",
-    "equipment_note": "Bands for additional resistance",
-    "work_sec": 30,
+    "notes": "Holder gives a controlled level-change cue and presents a mitt target. Athlete reads the cue, uses the uppercut as a specific interception option, fires once to the mitt, exits off line, then recovers stance and guard. This is not a universal takedown response; stop if the athlete guesses or loses defensive shape.",
+    "work_sec": 4,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Stuff-Shot Counter Exit",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "takedown defence-counter-exit",
+    "duration": "6 x 6 sec, 75 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_change_of_direction",
+      "mech_lateral_shift",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "notes": "Partner gives one controlled takedown-entry cue. Athlete reads and stuffs or otherwise defends the entry, establishes safe separation, lands one short counter to the pad, exits laterally into open space, then resets completely. End the effort if it becomes prolonged wrestling or stance recovery slows.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lateral_shift",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Reactive MMA Counter Choice",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "restricted mixed-threat decision",
+    "duration": "6 x 7 sec, 75 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_lateral_shift",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "notes": "Partner gives one unpredictable cue from a restricted set: jab, rear straight, kick, forward pressure, level change or controlled takedown entry. Athlete reads the threat, chooses a sound defence or interception, counters immediately to the pads, then repositions and recovers stance. Reduce the cue set if guessing begins and stop when reaction quality falls.",
+    "work_sec": 7,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lateral_shift",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Strike-or-Shot Counter Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "repeated strike-or-shot decisions",
+    "duration": "5 x 60 sec, 45 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner repeatedly alternates unpredictably between controlled strike and takedown-entry cues. Athlete reads each threat, uses the appropriate defence, counters briefly to the pads, recovers guard and stance, then waits for the next cue without free initiation. Lower feed density if defensive shape or decision accuracy breaks down.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 5,
     "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_grip_support",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
       "mech_reactive",
+      "mech_systemic_fatigue",
       "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Cage Defend-Counter-Escape",
+    "equipment": [
+      "partner",
+      "wall",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "cage defence-counter-escape",
+    "duration": "4 x 75 sec, 45 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_lateral_shift",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner applies controlled pressure toward a wall or cage. Athlete reads the pressure, frames, uses an underhook or angle where appropriate, creates safe separation, lands one short counter to the pads, then exits into open space and restores stance. Avoid static clinch grinding; reduce pressure when posture or escape footwork fails.",
+    "equipment_note": "Use a wall as the practical cage substitute; partner controls pressure and pad contact.",
+    "work_sec": 75,
+    "rest_sec": 45,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_grip_support",
+      "mech_lateral_shift",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Failed Shot Punish & Reset",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "failed-entry exploitation",
+    "duration": "6 x 45 sec, 30 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner gives a controlled failed or defended takedown entry and presents pad targets. Athlete reads the failed entry, establishes safe position, delivers a one-to-three-strike counter, disengages, then restores stance and range before the next cue. Do not extend the exchange into grappling; lower feed density if defensive position fades.",
+    "work_sec": 45,
+    "rest_sec": 30,
+    "rounds": 6,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "MMA Counter Decision Rounds",
+    "equipment": [
+      "partner",
+      "wall",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "representative mixed-cue counter rounds",
+    "duration": "4 x 120 sec, 60 sec rest",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "mma",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_lateral_shift",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Partner unpredictably provides controlled strikes, kicks, level changes, takedown entries or pressure toward a wall or cage. Athlete cannot freely initiate: read, defend or intercept, counter briefly to the pads, recover stance or open space, then wait for the next problem. Lower cue density when choices, mechanics or defensive recovery deteriorate.",
+    "equipment_note": "Use a wall as the practical cage substitute and pads for all hard counter targets.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lateral_shift",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ]
   },
@@ -7494,40 +7949,6 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Slip-Counter Springs",
-    "equipment": [
-      "double-end_bag"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "reactive",
-    "duration": "8x / 60s rest",
-    "intensity": "max",
-    "tags": [
-      "counter_striker",
-      "mma",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "notes": "Slip bag swing, then explode with 2-punch counter.",
-    "equipment_note": "Shorten bungee for faster returns.",
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
     ]
   },
   {
