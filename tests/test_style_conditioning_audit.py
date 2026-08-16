@@ -21,9 +21,7 @@ BATCH_1_CLEANED_NAMES = [
     "Max Knee & Sprawl Complex",
     "Wall Pressure & Elbow Complex",
     "Clinch & Sprawl Reaction Complex",
-    "Band-Resisted Knee Complex",
     "Band-Resisted Whizzer & Sprawl Complex",
-    "Roll-Under Counter Complex",
     "Intercept & Counter Mitts",
     "Frame & Counter Knee Complex",
     "Ezekiel Finishing Drill",
@@ -32,6 +30,11 @@ BATCH_1_CLEANED_NAMES = [
 ]
 
 STYLE_CONDITIONING_ARCHIVE_PATH = REPO_ROOT / "data" / "style_conditioning_bank_archive.json"
+
+# Frozen snapshot of every entry name in the bank immediately BEFORE the batch-3
+# legacy purge. Lets the deletion-only claim be verified against a real baseline
+# instead of only against the purge list.
+PREPURGE_BASELINE_PATH = REPO_ROOT / "tests" / "fixtures" / "style_conditioning_prepurge_names.json"
 
 # Batch 2: archived (deleted from the active bank) as duplicates or
 # fake-hard/cartoonish content surfaced once modality text was scanned.
@@ -99,7 +102,8 @@ BATCH_3_PURGED_NAMES = [
     "Smesh Prep Circuit",
     "Sprint, Burpee & Shadowbox Finisher",
     "Weighted Plank & Stand-Up Complex",
-    # artificial_resistance (9)
+    # artificial_resistance (11)
+    "Band-Resisted Knee Complex",
     "Band-Resisted Shoulder Roll & Counter Complex",
     "Banded Shadowboxing",
     "Barroom Brawl",
@@ -108,6 +112,7 @@ BATCH_3_PURGED_NAMES = [
     "Ding-Dong Roundhouse",
     "Dive Bar Duelist",
     "Interception Drill",
+    "Roll-Under Counter Complex",
     "Slipping Symphony",
     # reaction_gimmick (10)
     "Brawler's Puzzle Defense",
@@ -313,6 +318,14 @@ def _load_style_conditioning_bank() -> list[dict]:
 
 def _load_style_conditioning_archive() -> list[dict]:
     return json.loads(STYLE_CONDITIONING_ARCHIVE_PATH.read_text(encoding="utf-8"))
+
+
+def _load_prepurge_baseline_payload() -> dict:
+    return json.loads(PREPURGE_BASELINE_PATH.read_text(encoding="utf-8"))
+
+
+def _load_prepurge_baseline_names() -> list[str]:
+    return _load_prepurge_baseline_payload()["names"]
 
 
 def _batch_1_entries() -> list[dict]:
@@ -684,14 +697,41 @@ def test_batch_3_purged_entries_present_in_archive_file():
 
 
 def test_batch_3_purge_added_no_new_drills():
-    """The legacy purge is deletion-only: the surviving active bank must be a strict
-    subset of the pre-purge bank (no new names introduced by this pass)."""
+    """The legacy purge is deletion-only, checked against the frozen pre-purge
+    baseline rather than against the purge list itself.
+
+    Comparing the active bank only to BATCH_3_PURGED_NAMES would not prove
+    anything about additions: a brand-new drill invented during the purge would
+    trivially satisfy "does not collide with a purged name". The real invariant
+    needs the pre-purge name set, so it is frozen in a fixture and asserted here:
+
+      1. active names are a subset of the baseline  (nothing new was added)
+      2. baseline - active == the purge list        (exactly the intended removals)
+    """
+    baseline_names = set(_load_prepurge_baseline_names())
     active_names = {entry["name"] for entry in _load_style_conditioning_bank()}
+
+    added = sorted(active_names - baseline_names)
+    assert not added, f"Purge must not add drills, but these are new since the baseline: {added}"
+
+    removed = baseline_names - active_names
+    assert removed == set(BATCH_3_PURGED_NAMES), {
+        "removed_but_not_listed": sorted(removed - set(BATCH_3_PURGED_NAMES)),
+        "listed_but_not_removed": sorted(set(BATCH_3_PURGED_NAMES) - removed),
+    }
+
+    # And every removal is preserved in the archive rather than simply dropped.
     archived_names = {entry["name"] for entry in _load_style_conditioning_archive()}
-    # Every currently-active name must not collide with a purged name.
-    assert not (active_names & set(BATCH_3_PURGED_NAMES))
-    # Every purged name is accounted for in the archive.
-    assert set(BATCH_3_PURGED_NAMES) <= archived_names
+    assert removed <= archived_names
+
+
+def test_prepurge_baseline_fixture_matches_recorded_count():
+    """Guard the baseline itself: if someone edits the fixture, the count must move
+    with it, so a silent append cannot weaken the no-new-drills check above."""
+    payload = _load_prepurge_baseline_payload()
+    names = payload["names"]
+    assert len(names) == payload["count"]
+    assert len(set(names)) == len(names), "baseline fixture contains duplicate names"
 
 
 def test_protected_rebuilt_blocks_remain_present():

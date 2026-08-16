@@ -1800,7 +1800,7 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "archived_reason": "Same band-resisted knees prescription as 'Band-Resisted Knee Complex'; weaker duplicate. [duplicate] True conceptual duplicate of a stronger surviving entry (same behaviour, equipment, energy system and tactical purpose).",
+    "archived_reason": "Same band-resisted knees prescription as 'Band-Resisted Knee Complex' (itself since purged for artificial resistance); both apply band resistance directly to the knee strike. [artificial_resistance] Artificial resistance (bands/weights) bolted directly onto a combat technique or defensive movement, materially altering normal mechanics.",
     "archived_date": "2026-08-16"
   },
   {
@@ -2382,7 +2382,7 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "archived_reason": "Med-ball roll-under hooks; conceptual duplicate of 'Roll-Under Counter Complex'. [duplicate] True conceptual duplicate of a stronger surviving entry (same behaviour, equipment, energy system and tactical purpose).",
+    "archived_reason": "Med-ball roll-under hooks, matching 'Roll-Under Counter Complex' (itself since purged for artificial resistance); both carry a medicine ball through the roll-under counter. [artificial_resistance] Artificial resistance (bands/weights) bolted directly onto a combat technique or defensive movement, materially altering normal mechanics.",
     "archived_date": "2026-08-16"
   },
   {
@@ -5155,6 +5155,80 @@
       "mech_upper_press"
     ],
     "archived_reason": "Half-kneeling landmine press; pressing S&C. [wrong_bank] Wrong-bank entry: primary identity is strength/power/mobility/rehab/recovery/generic conditioning rather than a style-specific combat behaviour.",
+    "archived_date": "2026-08-16"
+  },
+  {
+    "name": "Band-Resisted Knee Complex",
+    "equipment": [
+      "bands"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "resisted strikes",
+    "duration": "20 band-resisted knees → 10 switch knees → x5 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "kickboxing",
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "notes": "Bands build hip-flexor endurance for combat-sports knee strikes. (90% effort)",
+    "equipment_note": "Bands anchored behind at ankle height",
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "archived_reason": "Bands anchored behind at ankle height directly resist the knee strike (20 band-resisted knees per round); resistance is applied to the technique itself rather than to an opponent proxy. Knee repeatability should be rebuilt unresisted. [artificial_resistance] Artificial resistance (bands/weights) bolted directly onto a combat technique or defensive movement, materially altering normal mechanics.",
+    "archived_date": "2026-08-16"
+  },
+  {
+    "name": "Roll-Under Counter Complex",
+    "equipment": [
+      "medicine_ball"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "duck counters",
+    "duration": "20 roll-under uppercuts, 10 body shots x 5 rounds",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mech_reactive",
+      "mech_lower_squat",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Simulate rolling under hooks to counter (85% power)",
+    "equipment_note": "10-15lb med ball",
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation"
+    ],
+    "archived_reason": "Athlete holds a 10-15lb medicine ball while performing roll-under uppercuts and body shots; external load carried through the striking/defensive movement itself, which materially alters punch mechanics. The roll-under counter behaviour is worth rebuilding without the ball. [artificial_resistance] Artificial resistance (bands/weights) bolted directly onto a combat technique or defensive movement, materially altering normal mechanics.",
     "archived_date": "2026-08-16"
   }
 ]
