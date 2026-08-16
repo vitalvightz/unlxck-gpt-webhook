@@ -4198,6 +4198,413 @@
     ]
   },
   {
+    "name": "Range Movement Flow",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical range movement",
+    "duration": "180sec work, 60sec rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "distance_striker",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "notes": "Move economically in stance at preferred range. Every 10-15 seconds, score lightly, reposition off the return line and recover stance. Keep the pace low; reduce output if balance or foot position breaks down.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 11,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Range Reset Flow",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "reactive range restoration",
+    "duration": "120sec work, 60sec rest x 4 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "distance_striker",
+      "footwork",
+      "reactive",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "notes": "The partner changes distance with controlled forward or lateral pressure. Restore preferred range with one short retreat and an angle when needed; do not retreat straight back on consecutive actions. Recover stance before the next cue.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "total_minutes": 11,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Entry-Exit Burst",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive entry and exit",
+    "duration": "5sec work, 60sec rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "speed",
+      "footwork",
+      "coordination",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "notes": "From preferred range, enter explosively, make one clean scoring action, then exit to safe range and recover stance. Use maximal speed. Stop and reset if balance, speed or position deteriorates.",
+    "work_sec": 5,
+    "rest_sec": 60,
+    "rounds": 8,
+    "total_minutes": 7,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Range Intercept Burst",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive interception",
+    "duration": "6sec work, 75sec rest x 7 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "speed",
+      "reactive",
+      "coordination",
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "notes": "The partner crosses preferred range without a fixed rhythm. Intercept only when the crossing action is clear, then leave the return line and restore range. Stop and reset if timing, stance or positional control deteriorates.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 7,
+    "total_minutes": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Lateral Escape Burst",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive pressure escape",
+    "duration": "5sec work, 70sec rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "speed",
+      "reactive",
+      "footwork",
+      "balance",
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "notes": "The partner advances from just outside scoring range. Make one short lateral or angled escape, recover stance and face the partner at usable range. Do not turn it into a long retreat. Stop and reset if speed, balance or position deteriorates.",
+    "work_sec": 5,
+    "rest_sec": 70,
+    "rounds": 8,
+    "total_minutes": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Range Recovery Intervals",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "repeat range restoration",
+    "duration": "60sec work, 45sec rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "footwork",
+      "speed",
+      "coordination",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "notes": "Start from a compressed distance cue. Restore preferred range, score once, reposition, then repeat at a demanding pace. Do not retreat straight back on consecutive actions. Reduce output if stance or balance breaks down.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "total_minutes": 9,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Score-Reposition Rounds",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "scoring and repositioning",
+    "duration": "120sec work, 60sec rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "reactive",
+      "footwork",
+      "coordination",
+      "skill_refinement",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "notes": "Work in controlled exchanges at useful range. Every score must finish with angle or space gained and stance recovered before the next exchange. Reduce output if either athlete can no longer control distance or balance.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "total_minutes": 11,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Movement Economy Rounds",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "range movement under fatigue",
+    "duration": "180sec work, 60sec rest x 3 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "notes": "Maintain preferred range while adding a light score and reposition every 6-10 seconds. Use the fewest useful steps; no excessive bouncing, crossed feet or repeated straight retreat. Lower the pace if stance or distance control fades.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 11,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Reactive Distance Rounds",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "reactive range decisions",
+    "duration": "90sec work, 45sec rest x 5 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "reactive",
+      "footwork",
+      "coordination",
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "notes": "The partner unpredictably enters, holds or gives ground. Choose whether to enter, hold range, intercept or exit, then recover stance and preferred range before the next cue. Reduce output if decisions become automatic or position breaks down.",
+    "work_sec": 90,
+    "rest_sec": 45,
+    "rounds": 5,
+    "total_minutes": 10,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Pressure Escape and Reset",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "pressure escape repeatability",
+    "duration": "60sec work, 45sec rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "distance_striker",
+      "reactive",
+      "footwork",
+      "speed",
+      "balance",
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "notes": "The partner applies controlled forward pressure. Escape with a short lateral or angled action, recover stance at usable range, score once, then reset. Do not rely on prolonged straight retreat. Reduce output if the escape no longer restores position.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "total_minutes": 9,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
+  },
+  {
     "name": "Teep Range Reset",
     "equipment": [
       "bodyweight"
