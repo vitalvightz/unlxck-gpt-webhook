@@ -4368,1015 +4368,539 @@
     ]
   },
   {
-    "name": "Pressure Cooker",
+    "name": "Pressure Footwork Flow",
     "equipment": [
-      "battle_ropes",
-      "sandbag"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "circuit",
-    "duration": "3min work, 1min rest x 3-5 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_systemic_fatigue",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_grip_support"
-    ],
-    "notes": "Simulates clinch work and punching under fatigue. Maintain forward pressure throughout. (85-90% effort)",
-    "equipment_note": "Use 50-70lb sandbag",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Brawler's Gauntlet",
-    "equipment": [
-      "bands",
-      "kettlebell",
-      "medicine_ball"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "power endurance",
-    "duration": "3min work, 1min rest x 3-5 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Trains power transfer between strikes and defensive movements. (Explosive movements)",
-    "equipment_note": "16-24kg KB, 6-10kg med ball",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Ring-Cut Sprint",
-    "equipment": [
-      "bands",
-      "dumbbells"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "footwork + sprint",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Develops ring-cutting footwork and explosive entries. (90% sprint effort)",
-    "equipment_note": "Use 15-25lb DBs for push presses",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Strongman Clinch & Sprawl Complex",
-    "equipment": [
-      "kettlebell",
-      "sandbag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "strongman + sprawl",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Builds clinch fighting strength and defensive recovery. (Heavy sandbag, explosive KB)",
-    "equipment_note": "50-70lb sandbag, 20-28kg KB",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Rotational Power & Med Ball Complex",
-    "equipment": [
-      "bands",
-      "medicine_ball"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "rotational power",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Develops body-shot power and clinch knee endurance. (Max-effort rotations)",
-    "equipment_note": "6-10kg med ball, heavy bands",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Battle Rope & DB Punch Complex",
-    "equipment": [
-      "battle_ropes",
-      "dumbbells"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "concurrent training",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Simulates late-round fatigue while maintaining punch output. (90% effort)",
-    "equipment_note": "1.5-2\" ropes, 15-25lb DBs",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Puncher's Circuit",
-    "equipment": [
-      "bands",
-      "kettlebell"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "resisted punches + squats",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Trains punching power with fatigued legs. (Explosive movements)",
-    "equipment_note": "Heavy bands, 16-24kg KB",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Rope & Smash",
-    "equipment": [
-      "battle_ropes",
-      "sandbag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "power endurance",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Develops arm endurance for late-round flurries. (85-90% effort)",
-    "equipment_note": "50-70lb sandbag",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Last 10 Seconds",
-    "equipment": [
-      "bands",
-      "kettlebell"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "max power",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Trains fight-ending flurries when exhausted. (100% effort bursts)",
-    "equipment_note": "20-28kg KB, heavy bands",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Titan's Test",
-    "equipment": [
-      "bands",
-      "battle_ropes",
-      "medicine_ball",
-      "sandbag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "full-system fatigue",
-    "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Ultimate pressure fighter gut check. No breaks between exercises. (90-95% effort)",
-    "equipment_note": "50-70lb sandbag, 6-10kg med ball",
-    "work_sec": 180,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Trap Bar Loaded Carry Complex",
-    "equipment": [
-      "trap_bar"
-    ],
-    "phases": [
-      "GPP",
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "loaded carry",
-    "duration": "30s work, 30s rest x 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Simulates clinch fighting and ring-cutting under fatigue. Keep chest up. (85% max load)",
-    "equipment_note": "Load heavy but maintain posture",
-    "work_sec": 30,
-    "rest_sec": 30,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Barbell Smash & Dash",
-    "equipment": [
-      "barbell"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "compound lifts + sprints",
-    "duration": "5 cleans + 20m sprint, 4 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Cleans mimic explosive uppercuts, sprints emulate ring-cutting. (75-80% 1RM)",
-    "equipment_note": "Use bumper plates",
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Tire Flip Fury",
-    "equipment": [
-      "tire"
-    ],
-    "phases": [
-      "GPP",
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "strongman",
-    "duration": "10 flips + 10 sprawls, 3 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Develops full-body power for clinch breaks. (Max speed flips)",
-    "equipment_note": "400-600lb tire ideal",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Sled Dragger's Delight",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "GPP",
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "loaded drag",
-    "duration": "40m forward/backward x 4 trips",
-    "intensity": "moderate",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge"
-    ],
-    "notes": "Forward drags = cutting off ring, backward = defensive footwork. (50-70% bodyweight)",
-    "equipment_note": "Use harness if available",
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Sledgehammer Showdown",
-    "equipment": [
-      "sledgehammer",
-      "tire"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "rotational power",
-    "duration": "20s L/R strikes, 10s rest x 8 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "notes": "Mimics hook/body shot mechanics. Keep hips engaged. (Max power strikes)",
-    "equipment_note": "8-12lb hammer recommended",
-    "work_sec": 20,
-    "rest_sec": 10,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Battle Rope & Bag Combo",
-    "equipment": [
-      "battle_ropes",
-      "punching_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "concurrent training",
-    "duration": "30s ropes + 30s bag, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Ropes fatigue the arms; bag work trains combos under exhaustion. (90% effort)",
-    "equipment_note": "Use 1.5-2\" thick ropes",
-    "work_sec": 30,
-    "rpe": 8,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Trap Bar Tackle",
-    "equipment": [
-      "trap_bar"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "eccentric loading",
-    "duration": "5 jumps + 5 deadlifts, 4 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Jumps develop explosive entries, deadlifts simulate clinch posture. (60% 1RM)",
-    "equipment_note": "Explode upward on jumps",
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Barbell Bully",
-    "equipment": [
-      "barbell"
-    ],
-    "phases": [
-      "GPP"
     ],
     "system": "aerobic",
-    "modality": "complex",
-    "duration": "8 rounds: 5 presses + 5 squats",
-    "intensity": "zone 2",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Builds work capacity for late-round mauling. (50% 1RM)",
-    "equipment_note": "Use fixed barbell if available",
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Tire Slam & Jam",
-    "equipment": [
-      "sledgehammer",
-      "tire"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "power endurance",
-    "duration": "10 slams + 5 burpees over tire, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "boxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Slam power transfers to hooks, burpees simulate clinch recovery. (Max effort slams)",
-    "equipment_note": "Wrist wraps recommended",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Sled Push Punishment",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "pushing",
-    "duration": "20m push + 10 sprawls, 6 rounds",
+    "modality": "controlled stalking flow",
+    "duration": "180s work, 45s rest x 3 rounds",
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
       "boxing",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability"
     ],
-    "notes": "Pushing mimics in-fighting pressure, sprawls train defense. (Bodyweight load)",
-    "equipment_note": "Use low sled height for boxing posture",
-    "rpe": 7,
+    "notes": "Stalk at a controlled pace while keeping stance width and head position. Do not cross the feet or chase straight behind an imagined opponent; reset stance after every entry.",
+    "work_sec": 180,
+    "rest_sec": 45,
+    "rounds": 3,
+    "rpe": 5,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability"
     ]
   },
   {
-    "name": "Clinch Grinder",
+    "name": "Ring-Cut Flow",
     "equipment": [
-      "sandbag"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "strongman endurance",
-    "duration": "30s bear hug carry → 10 knees, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "kickboxing",
-      "mma",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Simulates clinch control under fatigue. (90% effort)",
-    "equipment_note": "50-70lb sandbag",
-    "work_sec": 30,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Cage Bully",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "forward pressure",
-    "duration": "20m sled push → 5 sprawls, 6 rounds",
+    "system": "aerobic",
+    "modality": "lateral cutoff flow",
+    "duration": "180s work, 45s rest x 3 rounds",
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
-      "mma",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
+      "boxing",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability"
     ],
-    "notes": "Mimics cage cutting and wrestler recovery. (Bodyweight load)",
-    "equipment_note": "Low sled for MMA posture",
-    "rpe": 7,
+    "notes": "Repeat left and right cutoff patterns at an easy technical pace. Step across the escape route before advancing; never cross the feet or become square.",
+    "work_sec": 180,
+    "rest_sec": 45,
+    "rounds": 3,
+    "rpe": 5,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability"
     ]
   },
   {
-    "name": "Dirty Boxer’s Feast",
+    "name": "Jab-to-Pressure Flow",
     "equipment": [
-      "medicine_ball",
-      "wall"
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "rotational power",
-    "duration": "15 slam rotations → 10 clinch knees, 5 rounds",
-    "intensity": "max",
+    "system": "aerobic",
+    "modality": "jab-led pressure flow",
+    "duration": "180s work, 60s rest x 3 rounds",
+    "intensity": "moderate",
     "tags": [
       "pressure_fighter",
-      "kickboxing",
-      "mma",
+      "boxing",
+      "footwork",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
+      "mech_upper_press",
       "mech_trunk_rotation"
     ],
-    "notes": "Transfers to body shots and clinch knees. (Max effort)",
-    "equipment_note": "10kg med ball",
-    "rpe": 9,
+    "notes": "Use the jab to enter, take a useful forward position and reset stance after each entry. No clear target means no forced attack; circle out and rebuild.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
     "impact_cost": "low",
     "lactate_load": "low",
-    "movement_cost": "low",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ]
   },
   {
-    "name": "Trap Bar Carry & Uppercut Complex",
+    "name": "Max-Power Bag Burst",
     "equipment": [
-      "trap_bar"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "glycolytic",
-    "modality": "loaded carries",
-    "duration": "30s walk → 10 uppercuts, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "mma",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Trains posture for dirty boxing. (85% max load)",
-    "equipment_note": "Straps allowed",
-    "work_sec": 30,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "KB Swing & Marching Knee Complex",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "forward knee drive",
-    "duration": "20 KB swings → 10 marching knees, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "kickboxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Swings build power transfer for breaking the clinch. (90% effort)",
-    "equipment_note": "24kg KB",
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Wall & Maul",
-    "equipment": [
-      "punching_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "infighting",
-    "duration": "30s flurry punches → 10 collar tie knees, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "kickboxing",
-      "mma",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Simulates trapping against cage/ropes. (95% effort)",
-    "equipment_note": "Heavy bag required",
-    "work_sec": 30,
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Tire Dominator",
-    "equipment": [
-      "sledgehammer",
-      "tire"
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
     ],
     "system": "ATP-PCr",
-    "modality": "destruction",
-    "duration": "10 hammer strikes → 5 tire flips, 5 rounds",
+    "modality": "maximal bag punching burst",
+    "duration": "5s work, 60s rest x 8 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "mma",
+      "boxing",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_ballistic"
     ],
-    "notes": "Strikes mimic hooks, flips simulate scrambles. (Max power)",
-    "equipment_note": "12lb hammer, 400lb+ tire",
-    "rpe": 9,
+    "notes": "Deliver a five-second maximal-quality burst, then recover fully. Stop the burst if punch speed, shape or head position drops.",
+    "work_sec": 5,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
+      "mech_upper_press",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_ballistic"
     ]
   },
   {
-    "name": "Chain Gang",
+    "name": "Explosive Cutoff Burst",
     "equipment": [
-      "bands"
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive cutoff and shadow attack",
+    "duration": "5s work, 55s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "footwork",
+      "speed",
+      "explosive",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Close the escape route fast, score a short shadow combination and reset fully. Do not cross the feet or chase straight behind the opponent.",
+    "work_sec": 5,
+    "rest_sec": 55,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Entry-and-Score Burst",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive entry and scoring burst",
+    "duration": "6s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "footwork",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Enter explosively, land two to four clean punches, then make a technical exit and regain stance. End the rep if the athlete becomes square.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Escape-Recatch Burst",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive escape recatch",
+    "duration": "6s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "speed",
+      "explosive",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "The partner escapes left or right; reposition immediately and re-establish pressure before scoring. Cut the route rather than following, then reset fully.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Corner Trap Burst",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "reactive corner trapping burst",
+    "duration": "7s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "speed",
+      "explosive",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Cut off the partner, hold a balanced trapping position and score two to four punches. Stop and reset if the feet cross or the stance becomes square.",
+    "work_sec": 7,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Ring-Cutting Intervals",
+    "equipment": [
+      "partner"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "resisted pressure",
-    "duration": "30s band-resisted forward steps → 10 sprawls, 6 rounds",
+    "modality": "reactive ring-cutting intervals",
+    "duration": "120s work, 60s rest x 4 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "kickboxing",
-      "mma",
+      "boxing",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
+      "mech_reactive",
       "mech_systemic_fatigue"
     ],
-    "notes": "Bands anchored to hips for forward drive. (85% effort)",
-    "equipment_note": "Monster bands only",
-    "work_sec": 30,
-    "rpe": 9,
+    "notes": "The partner changes direction throughout. Cut the escape route before throwing and do not follow in a straight line; lower the pace if stance integrity is lost.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Pressure Combination Rounds",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "pressure combination rounds",
+    "duration": "120s work, 60s rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "footwork",
+      "skill_refinement",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Close distance behind a safe entry, combine in the pocket, then recover stance without giving up useful pressure. Reduce output if punch quality or defensive head position collapses.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ]
   },
   {
-    "name": "Knee Harvest",
+    "name": "Body-Head Pressure Intervals",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "body-head pressure intervals",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "coordination",
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Alternate credible body and head combinations while keeping pressure between attacks. Regain stance before each new combination and reduce output if clean target changes disappear.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Cutoff-Reposition Intervals",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "reactive cutoff and re-attack intervals",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Apply pressure, read the partner’s escape, reposition and attack again. Cut the route before throwing; stop and reset if the athlete chases or crosses the feet.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Pocket Repeatability Rounds",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "short-range repeatability rounds",
+    "duration": "45s work, 30s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "boxing",
+      "coordination",
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Repeat short-range combinations with brief stance resets inside each work bout. Reduce output if punch shape, head position or balance collapses.",
+    "work_sec": 45,
+    "rest_sec": 30,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Pressure Reset Intervals",
     "equipment": [
       "bodyweight"
     ],
@@ -5384,344 +4908,599 @@
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "clinch endurance",
-    "duration": "30s double-collar tie → 20 knees, 5 rounds",
-    "intensity": "max",
+    "modality": "attack-reset-rebuild shadow intervals",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "kickboxing",
-      "mech_lower_hip_hinge",
+      "boxing",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
       "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_grip_support",
       "mech_systemic_fatigue"
     ],
-    "notes": "No breaks between rounds. (90% effort)",
-    "equipment_note": "Use partner or heavy bag",
-    "work_sec": 30,
-    "rpe": 9,
+    "notes": "Shadow a safe entry and attack, recover stance, then rebuild pressure immediately. No opportunity means no forced attack; stop and reset if the feet become square.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 7,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ]
   },
   {
-    "name": "Pitbull Protocol",
+    "name": "Rope/Corner Pressure Rounds",
     "equipment": [
-      "kettlebell",
-      "sandbag"
+      "partner"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "strongman MMA",
-    "duration": "10 sandbag cleans → 10 KB snatches, 5 rounds",
+    "modality": "positional rope and corner pressure",
+    "duration": "180s work, 60s rest x 3 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "mma",
+      "boxing",
+      "footwork",
+      "reactive",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Cleans = takedown entries, snatches = uppercuts. (Heavy)",
-    "equipment_note": "50lb sandbag, 24kg KB",
-    "rpe": 9,
+    "notes": "Keep the partner contained and score from a balanced stance rather than throwing nonstop. Maintain defensive head position; stop and reset whenever the athlete becomes square.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Crowbar Clinch",
-    "equipment": [
-      "dumbbells"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "framing power",
-    "duration": "10 DB push presses → 10 collar tie pulls, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "kickboxing",
-      "mma",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ],
-    "notes": "Trains underhook/frame strength. (Explosive)",
-    "equipment_note": "20-25lb DBs",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
     ]
   },
   {
-    "name": "Smother Squad",
+    "name": "Pressure Decision Rounds",
     "equipment": [
-      "bodyweight"
+      "partner"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "relentless pace",
-    "duration": "10 sprawls → 10 burpee jumps, 6 rounds",
+    "modality": "escape-cue pressure decisions",
+    "duration": "120s work, 60s rest x 4 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "mma",
+      "boxing",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability",
-      "mech_landing_impact",
-      "mech_lower_lunge",
       "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "Simulates scrambles in grappler exchanges. (No rest)",
-    "equipment_note": "Concrete floor ideal",
-    "rpe": 9,
-    "impact_cost": "high",
-    "lactate_load": "high",
+    "notes": "The partner cues a left, right or backward escape. Select the correct cutoff, regain position, then score; no correct position means no forced attack.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
     "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_landing_impact",
-      "mech_lower_lunge",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
       "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ]
   },
   {
-    "name": "Dump Truck",
+    "name": "Cage Cut & Re-Catch",
     "equipment": [
-      "trap_bar"
+      "cage",
+      "partner"
     ],
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr",
-    "modality": "takedown power",
-    "duration": "5 explosive jumps → 5 deadlifts, 6 rounds",
+    "system": "aerobic",
+    "modality": "controlled cage-cutting flow",
+    "duration": "180s work, 60s rest x 3 rounds",
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
       "mma",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
       "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_reactive"
     ],
-    "notes": "Jumps = shot entries, deadlifts = finishing drives. (70% 1RM)",
-    "equipment_note": "Fast eccentric on deadlifts",
-    "rpe": 7,
-    "impact_cost": "high",
+    "notes": "Guide the partner towards the fence at a controlled pace, deny the open-side exit and re-catch each direction change. Do not chase straight behind or cross the feet; reset stance before continuing.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
     "lactate_load": "low",
-    "movement_cost": "low",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive"
     ]
   },
   {
-    "name": "Muay Dump",
+    "name": "Level-Threat Pressure Reset",
     "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "plum control",
-    "duration": "20 KB swings → 10 clinch knees, 5 rounds",
-    "intensity": "max",
-    "tags": [
-      "pressure_fighter",
-      "kickboxing",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Swings mimic off-balancing for sweeps. (90% effort)",
-    "equipment_note": "28kg KB for advanced",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Octopus Guard",
-    "equipment": [
-      "bands",
-      "medicine_ball"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "grapple-strike",
-    "duration": "10 band-resisted level changes → 10 med ball slams, 5 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "mma",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Trains shot entries under fatigue. (85% effort)",
-    "equipment_note": "Heavy bands, 8kg med ball",
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_intensive",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Brick Wall",
-    "equipment": [
-      "sandbag"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "glycolytic",
-    "modality": "clinch endurance",
-    "duration": "30s shoulder carry → 10 sprawls, 6 rounds",
-    "intensity": "high",
-    "tags": [
-      "pressure_fighter",
-      "kickboxing",
-      "mma",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_lower_lunge",
-      "mech_shoulder_overhead",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Carry simulates head control in clinch. (70lb+ sandbag)",
-    "equipment_note": "No rest between exercises",
-    "work_sec": 30,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_lower_lunge",
-      "mech_shoulder_overhead",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Chain Reactor",
-    "equipment": [
-      "bands",
-      "dumbbells"
+      "partner"
     ],
     "phases": [
       "SPP"
     ],
     "system": "ATP-PCr",
-    "modality": "resisted combos",
-    "duration": "10 band-resisted uppercuts → 10 DB thruster knees, 5 rounds",
-    "intensity": "high",
+    "modality": "reactive level-threat pressure burst",
+    "duration": "6s work, 60s rest x 8 rounds",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "kickboxing",
       "mma",
-      "mech_systemic_fatigue",
-      "mech_ballistic",
-      "mech_trunk_stability"
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "speed",
+      "explosive",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_ballistic"
     ],
-    "notes": "Bands anchored low for upward resistance. (Explosive)",
-    "equipment_note": "15-20lb DBs",
-    "rpe": 9,
+    "notes": "React to the partner’s level-change threat, protect stance and head position, then take back useful pressure before a short score. Stop the rep if the feet become square or balance is lost.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_ballistic"
     ]
   },
   {
-    "name": "Grim Reaper",
+    "name": "Punch-Clinch Reentry",
     "equipment": [
-      "sledgehammer",
-      "tire"
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "punch-to-clinch reentry burst",
+    "duration": "7s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "mma",
+      "reactive",
+      "coordination",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_ballistic"
+    ],
+    "notes": "Score a short punch entry, connect to a safe clinch and settle balanced pressure. Regain stance before re-entering; stop if head position or clinch posture fails.",
+    "work_sec": 7,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Strike-to-Fence Pressure",
+    "equipment": [
+      "cage",
+      "partner"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "killing pace",
-    "duration": "20 alternating hammer strikes → 5 burpees over tire, 5 rounds",
-    "intensity": "max",
+    "modality": "strike-to-fence pressure intervals",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "mma",
-      "mech_systemic_fatigue",
-      "mech_ballistic",
-      "mech_upper_press"
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Strikes = ground-and-pound, burpees = standups. (100% effort)",
-    "equipment_note": "10lb hammer, 24\" tire",
-    "rpe": 9,
+    "notes": "Use a clean strike entry to move the partner towards the fence, connect position, then score again. Cut the lateral escape before attacking and reduce output if stance or defensive responsibility collapses.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Fence Escape Denial",
+    "equipment": [
+      "cage",
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "reactive fence escape denial",
+    "duration": "120s work, 60s rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "mma",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "The partner attempts left and right fence escapes. Deny the route with feet and position before scoring; stop and reset if the athlete reaches, crosses feet or becomes square.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
     "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Kick-to-Pressure Flow",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "kick-led pressure flow",
+    "duration": "180s work, 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Kick at a controlled pace, step down in stance and take useful forward position before the next attack. Do not fall square or force a follow-up when balance is poor.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation"
+    ]
+  },
+  {
+    "name": "Teep Walk-Down Reset",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "teep-led walk-down burst",
+    "duration": "6s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ],
+    "notes": "Land a sharp teep, step forward under control and score a short follow-up before resetting. Stop the rep if the kicking leg drops out of stance or the athlete chases square.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Pressure-to-Clinch Transition",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "strike-to-clinch transition burst",
+    "duration": "7s work, 60s rest x 8 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "reactive",
+      "coordination",
+      "speed",
+      "explosive",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_ballistic"
+    ],
+    "notes": "Enter behind two or three clean strikes, connect to balanced clinch position and settle before release. Stop if head position, stance or posture is lost.",
+    "work_sec": 7,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_ballistic"
+    ]
+  },
+  {
+    "name": "Kick-Step Pressure Rounds",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "kick-step pressure rounds",
+    "duration": "120s work, 60s rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "coordination",
+      "balance",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Link kicks to balanced step-down pressure and short punch combinations. Regain stance after every kick and reduce output if recoil, posture or target quality collapses.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Low-Kick Re-Catch Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "reactive low-kick recatch intervals",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "muay_thai",
+      "kickboxing",
+      "footwork",
+      "reactive",
+      "visual_processing",
+      "coordination",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Low kick, read the partner’s escape and cut the route before scoring again. Do not follow straight behind; stop and reset if kick recoil or stance recovery breaks down.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ]
   },
   {
