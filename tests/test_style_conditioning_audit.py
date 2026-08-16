@@ -16,15 +16,11 @@ STYLE_CONDITIONING_BANK_PATH = REPO_ROOT / "data" / "style_conditioning_bank.jso
 # legacy purge (see BATCH_3_PURGED_NAMES), are intentionally absent from this
 # regression list, which tracks batch-1 entries that remain active today.
 BATCH_1_CLEANED_NAMES = [
-    "Sprint, Sprawl & Knee Conditioning Complex",
     "Clinch Hold & Knee Complex",
     "Max Knee & Sprawl Complex",
-    "Wall Pressure & Elbow Complex",
-    "Clinch & Sprawl Reaction Complex",
     "Band-Resisted Whizzer & Sprawl Complex",
     "Intercept & Counter Mitts",
     "Ezekiel Finishing Drill",
-    "Ground-and-Pound Bursts",
     "Calf Slicer Pressure Drill",
 ]
 
@@ -375,6 +371,25 @@ PROTECTED_REBUILT_NAMES = [
     "Knee-and-Recover Intervals",
     "Grip-Fight-to-Score Intervals",
     "Clinch Decision Rounds",
+    "MMA Pocket Power Cluster",
+    "Exchange-Sprawl-Return Burst",
+    "Clinch-Break Strike Burst",
+    "Ground-and-Pound Position Burst",
+    "Pocket Strike-Shot Intervals",
+    "Frame-Break-Reengage Intervals",
+    "Cage Pocket Exchange Intervals",
+    "MMA Close-Exchange Flow",
+    "MMA Brawler Decision Rounds",
+    "MMA Clinch Position Flow",
+    "Cage Position Flow",
+    "Reactive MMA Clinch Rounds",
+    "Underhook Position Burst",
+    "Cage Turn Burst",
+    "Level-Change Stuff-and-Recover Burst",
+    "Cage Position Intervals",
+    "Clinch Strike-Control Intervals",
+    "Pummel-to-Attack Intervals",
+    "MMA Clinch Decision Rounds",
 ]
 
 # Legacy entries deliberately superseded after the deletion-only purge by the
@@ -406,6 +421,23 @@ POST_PURGE_REPLACED_NAMES = {
     "Overhook Uppercut Drill",
     "Corner Mauling Circuit",
     "Slip-Clinch Reaction",
+    "Alleyway Sprawl",
+    "Sprint, Sprawl & Knee Conditioning Complex",
+    "Ground-and-Pound Bursts",
+    "Cage Clinch Gauntlet",
+    "Greco-Roman Grinder",
+    "Wall Pressure & Elbow Complex",
+    "Judo Clinch Transition",
+    "Clinch & Sprawl Reaction Complex",
+    "Elbow Alley",
+    "Collar Tie Counter",
+    "Clinch Gas Tank",
+    "Clinch Finisher",
+    "Clinch Knee Storm Intervals",
+    "Clinch-to-Strike Transition Drill",
+    "Neck Snap Drill",
+    "Knee Strike Bursts",
+    "Strike-to-Clinch Drill",
 }
 
 
