@@ -386,73 +386,380 @@
     ]
   },
   {
-    "name": "Alleyway Sprawl",
+    "name": "MMA Pocket Power Cluster",
     "equipment": [
-      "bodyweight"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "takedown defense",
-    "duration": "10 sprawls → 10 knees → x8 rounds",
-    "intensity": "max",
+    "system": "ATP-PCr",
+    "modality": "compact close-range MMA striking",
+    "duration": "8 x 6s / 75s rest",
+    "intensity": "high",
     "tags": [
-      "brawler",
       "mma",
-      "mech_systemic_fatigue",
-      "mech_reactive",
+      "brawler",
       "mech_ballistic",
-      "mech_lower_lunge"
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
     ],
-    "notes": "For defending shots against walls (90% effort)",
-    "equipment_note": "Concrete floor recommended",
-    "rpe": 9,
+    "notes": "Exchange at close range, then deliver a compact 2–4 strike burst. Restore stance with hips underneath, balanced posture and hands ready for an appropriate takedown defence. Stop if the athlete becomes square, reaches, or cannot remain shot-ready.",
+    "equipment_note": "The partner holds Thai pads and stays close enough for clean strikes without chasing.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ]
   },
   {
-    "name": "Sprint, Sprawl & Knee Conditioning Complex",
+    "name": "Exchange-Sprawl-Return Burst",
     "equipment": [
-      "bodyweight"
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "close exchange with live takedown decision",
+    "duration": "7 x 6s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "mma",
+      "brawler",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Begin a short striking exchange. The partner may make a genuine committed shot. Read the attack, use appropriate takedown defence only when needed, create safe separation, return 1–2 compact strikes, and restore stance and base.",
+    "equipment_note": "Use Thai pads for the return. Agree controlled shot intensity and a safe mat area.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 7,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Clinch-Break Strike Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "brief clinch interruption and strike on break",
+    "duration": "7 x 5s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "mma",
+      "brawler",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "The partner establishes one controlled brief tie-up. Frame and create safe separation, fire a compact 2–3 strike combination on the break, then restore stance and base. Reset if the tie-up becomes prolonged hand fighting.",
+    "equipment_note": "Use Thai pads after a light, agreed tie-up. No live elbows.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 7,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Ground-and-Pound Position Burst",
+    "equipment": [
+      "grappler_dummy"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "top-position striking with stable base",
+    "duration": "8 x 4s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "mma",
+      "brawler",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "notes": "Start from an already-secured mount, half-guard top, or stable postured guard-top position. Maintain base and posture through a compact 3–5 second punch or padded-strike burst. Regain stable posture and base, then fully reset. Stop when output compromises position.",
+    "equipment_note": "Use a grappler dummy or fixed pad target. Do not chase position or use uncontrolled elbows or hammerfists.",
+    "work_sec": 4,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Pocket Strike-Shot Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "repeated close exchanges with live shot decisions",
+    "duration": "6 x 30s / 50s rest",
+    "intensity": "high",
+    "tags": [
+      "mma",
+      "brawler",
+      "mech_systemic_fatigue",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "The partner unpredictably presents a short striking exchange, a genuine committed shot, or no shot. Exchange compactly, defend only when necessary, make a brief strike return or safe separation, and restore stance and base before the next exchange.",
+    "equipment_note": "Use controlled shots and Thai pads. The athlete must read the partner rather than pre-sprawl.",
+    "work_sec": 30,
+    "rest_sec": 50,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Frame-Break-Reengage Intervals",
+    "equipment": [
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "high-output scramble conditioning",
-    "duration": "30s sprint → 10 sprawls → 10 knees → x5 rounds",
+    "modality": "close striking with brief tie-up interruptions",
+    "duration": "6 x 35s / 50s rest",
     "intensity": "high",
     "tags": [
-      "brawler",
       "mma",
+      "brawler",
       "mech_systemic_fatigue",
+      "mech_reactive",
       "mech_upper_press",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_lunge",
-      "mech_reactive"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
     ],
-    "notes": "Builds output for fast scrambles and transitions (90% effort)",
-    "equipment_note": "Grass or uneven terrain ideal",
-    "work_sec": 30,
+    "notes": "Work through repeated short-range striking exchanges. The partner occasionally adds a brief tie-up. Frame for safe separation, score with a short immediate strike sequence, restore stance and base, then read the next exchange. Stop and redesign if hand fighting occupies most of the interval.",
+    "equipment_note": "Keep each tie-up brief and controlled. Use Thai pads for clean strike targets.",
+    "work_sec": 35,
+    "rest_sec": 50,
+    "rounds": 6,
     "rpe": 8,
-    "impact_cost": "high",
+    "impact_cost": "low",
     "lactate_load": "high",
-    "movement_cost": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Cage Pocket Exchange Intervals",
+    "equipment": [
+      "partner",
+      "cage"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "balanced close exchanges near the cage",
+    "duration": "5 x 40s / 55s rest",
+    "intensity": "high",
+    "tags": [
+      "mma",
+      "brawler",
+      "mech_systemic_fatigue",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_change_of_direction"
+    ],
+    "notes": "Start near the cage, not fixed against it. The partner gives short striking exchanges, occasional shot or brief tie-up threats, and lateral movement. Strike compactly, stay balanced, use appropriate defence, then angle or reset when position collapses and restore stance and base. The goal is scoring safely, not driving the partner backwards.",
+    "equipment_note": "A padded wall may replace the cage. Use controlled glove or pad contact.",
+    "work_sec": 40,
+    "rest_sec": 55,
+    "rounds": 5,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_landing_impact",
+      "mech_change_of_direction",
+      "mech_deceleration",
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "MMA Close-Exchange Flow",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "sustainable partner-led MMA pocket exchange",
+    "duration": "3 x 180s / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "brawler",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "notes": "At a sustainable pace, the partner mixes short striking exchanges, genuine level-change threats, brief tie-ups, separation and disengagement. Read each threat, use appropriate defence, continue scoring or disengage, and restore stance and base. Decision quality must stay clear.",
+    "equipment_note": "Use Thai pads and controlled contact. Reduce pace before reading or stance quality falls.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_deceleration",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "MMA Brawler Decision Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "representative close-exchange decisions",
+    "duration": "4 x 120s / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "brawler",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_change_of_direction"
+    ],
+    "notes": "The partner unpredictably presents a short striking exchange, level change, genuine committed shot, brief tie-up, or disengagement. Choose whether to continue the exchange, defend, frame, create safe separation, strike on the break, reset, or re-engage. Restore stance and base after each action; responses are not pre-called.",
+    "equipment_note": "Use Thai pads and controlled MMA feeds. Keep the pace low enough for accurate decisions.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
       "mech_upper_press"
     ]
   },
@@ -8627,42 +8934,6 @@
       "mech_ballistic",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Ground-and-Pound Bursts",
-    "equipment": [
-      "grappler_dummy"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "strike",
-    "duration": "10s max / 50s rest",
-    "intensity": "max",
-    "tags": [
-      "mma",
-      "brawler",
-      "pressure_fighter",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Short, sharp elbow/hammerfist flurries from mount.",
-    "equipment_note": "Use MMA gloves for realism.",
-    "work_sec": 10,
-    "rest_sec": 50,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
     ]
   },
   {
