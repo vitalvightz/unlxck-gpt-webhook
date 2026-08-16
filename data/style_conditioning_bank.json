@@ -846,6 +846,318 @@
     ]
   },
   {
+    "name": "Inside Position Flow",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical partner flow",
+    "duration": "3 x 180s / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_trunk_stability"
+    ],
+    "notes": "Use light continuous partner resistance. Gain inside hand or forearm position, keep the feet underneath the body and maintain posture as the partner changes arm position. Regain useful connection, then separate under control and restore stance and guard. No takedowns, neck cranking, or extended collar ties.",
+    "equipment_note": "The partner changes arm position at a sustainable pace and reduces resistance if posture or balance deteriorates.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_trunk_stability"
+    ],
+    "impact_cost": "low"
+  },
+  {
+    "name": "Frame-Separate-Reset Flow",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical separation flow",
+    "duration": "3 x 120s / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "From light partner connection, establish an appropriate forearm frame, create legal space, separate cleanly, and restore guard and boxing stance immediately. Reset only after balance and readiness return. Do not push the partner across the ring or hold statically.",
+    "equipment_note": "The partner supplies light inward pressure and allows a clean technical separation.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 5,
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "impact_cost": "low"
+  },
+  {
+    "name": "Tie-Up Position Burst",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive inside-position burst",
+    "duration": "8 x 5s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_ballistic"
+    ],
+    "notes": "Begin at first contact. Explosively gain useful inside arm position against controlled resistance, stabilise posture and balance briefly, then release and reset in stance. Stop the rep if it becomes a body lock, throw, or wrestling exchange.",
+    "equipment_note": "The partner gives controlled arm-position resistance without changing levels or attempting a takedown.",
+    "work_sec": 5,
+    "rest_sec": 75,
+    "rounds": 8,
+    "rpe": 8,
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_ballistic"
+    ],
+    "impact_cost": "low"
+  },
+  {
+    "name": "Turn-and-Separate Burst",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "clinch repositioning burst",
+    "duration": "6 x 6s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_grip_support",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_ballistic"
+    ],
+    "notes": "Control the connection, use foot position and upper-body contact to turn or reposition the partner, then separate cleanly and restore stance and guard in the better boxing position. No throws, trips, or prolonged body locks.",
+    "equipment_note": "The partner gives controlled positional resistance and stays balanced throughout the turn.",
+    "work_sec": 6,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_ballistic"
+    ],
+    "impact_cost": "low"
+  },
+  {
+    "name": "Smother-Return Burst",
+    "equipment": [
+      "partner_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "defence-clinch-return burst",
+    "duration": "6 x 7s / 75s rest",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_ballistic"
+    ],
+    "notes": "The holder gives one controlled short punching action. Smother its punching space, establish brief arm or forearm control, separate into legal punching space, land one or two short punches to the mitts, then reset stance and guard. Stop if control is skipped or live head contact develops.",
+    "equipment_note": "The partner wears mitts, keeps the opening action controlled, and presents targets only after legal space appears.",
+    "work_sec": 7,
+    "rest_sec": 75,
+    "rounds": 6,
+    "rpe": 8,
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_ballistic"
+    ],
+    "impact_cost": "low"
+  },
+  {
+    "name": "Inside Position Intervals",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "contested inside-position intervals",
+    "duration": "6 x 25s / 45s rest",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Contest inside hand position, forearm control, posture and balance repeatedly. Keep the feet underneath the body, the head stable and guard responsibility intact while regaining useful connection. Separate cleanly and restore guard at the end of each interval. Reduce resistance if either boxer starts wrestling or holding statically.",
+    "equipment_note": "The partner varies arm position and gives moderate continuous resistance without takedown attempts.",
+    "work_sec": 25,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "impact_cost": "low"
+  },
+  {
+    "name": "Control-Separate-Punch Intervals",
+    "equipment": [
+      "partner_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "clinch-to-punch intervals",
+    "duration": "5 x 35s / 45s rest",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Repeatedly establish brief arm or forearm control, separate into legal punching room, land one to three short punches to the mitts, then reconnect or reset in stance. The control problem must come before every return. Reduce output if the drill becomes static holding or free pocket trading.",
+    "equipment_note": "The partner contests the connection moderately, then presents mitt targets only after clean separation.",
+    "work_sec": 35,
+    "rest_sec": 45,
+    "rounds": 5,
+    "rpe": 8,
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "impact_cost": "low"
+  },
+  {
+    "name": "Reactive Clinch Decision Rounds",
+    "equipment": [
+      "partner_mitts"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "representative clinch decision rounds",
+    "duration": "4 x 120s / 60s rest",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "clinch_fighter",
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_deceleration"
+    ],
+    "notes": "The partner unpredictably ties one arm, squares chest-to-chest, presses inward, begins separating, exposes brief punching space, or smothers offence. Without a pre-called response, choose to frame, regain inside position, turn, smother, separate, or punch the mitts when legal space appears. Restore stance and guard after each exchange and lower resistance if decisions or balance deteriorate.",
+    "equipment_note": "The partner wears mitts and varies realistic close-contact problems at a sustainable pace; punches land only on the mitts.",
+    "work_sec": 120,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 6,
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_deceleration"
+    ],
+    "impact_cost": "low"
+  },
+  {
     "name": "Greco-Roman Grinder",
     "equipment": [
       "sandbag"
@@ -860,7 +1172,6 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "boxing",
       "mech_grip_intensive",
       "mech_upper_pull",
       "mech_trunk_stability",
@@ -885,7 +1196,7 @@
     ]
   },
   {
-    "name": "Rope-A-Dope Clinch",
+    "name": "Clinch & Sprawl Reaction Complex",
     "equipment": [
       "bodyweight"
     ],
@@ -893,33 +1204,143 @@
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "defensive endurance",
-    "duration": "30s rope clinch (simulated) → 10 short hooks → x5 rounds",
-    "intensity": "max",
+    "modality": "defensive transitions",
+    "duration": "30s clinch → 5 sprawls → x8 rounds",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
-      "boxing",
-      "mech_grip_support",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_landing_impact",
+      "mma",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_lower_lunge"
     ],
-    "notes": "Trains punching from Philly shell clinch position against ropes. (90% effort)",
-    "equipment_note": "Use corner pads if available",
+    "notes": "Trains defensive reactions when the clinch breaks to prevent takedowns. (90% effort)",
+    "equipment_note": "Partner recommended but can shadow",
     "work_sec": 30,
-    "rpe": 9,
-    "impact_cost": "high",
+    "rpe": 8,
+    "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_ballistic",
+      "mech_grip_intensive",
       "mech_grip_support",
-      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Collar Tie Counter",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "defensive striking",
+    "duration": "30s defend collar tie → 10 counter uppercuts → x5 rounds",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "mma",
+      "mech_grip_support",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "notes": "Trains punching off defensive head control. (85% effort)",
+    "equipment_note": "Partner recommended",
+    "rest_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
       "mech_reactive",
       "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Clinch Gas Tank",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "pure endurance",
+    "duration": "5min continuous: clinch pummeling → knees → short punches",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "mma",
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_grip_support",
+      "mech_upper_press"
+    ],
+    "notes": "Championship round simulation for all clinch styles. (80% effort)",
+    "equipment_note": "Partner or heavy bag",
+    "total_minutes": 5,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Clinch-to-Strike Transition Drill",
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "45s on / 60s off",
+    "intensity": "high",
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_upper_press"
+    ],
+    "notes": "Break clinch into 3-punch combos. Reset immediately.",
+    "equipment_note": "Partner wears belly pad for body shots.",
+    "work_sec": 45,
+    "rest_sec": 60,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -1079,47 +1500,6 @@
     ]
   },
   {
-    "name": "Clinch & Sprawl Reaction Complex",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "defensive transitions",
-    "duration": "30s clinch → 5 sprawls → x8 rounds",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "mma",
-      "boxing",
-      "mech_grip_intensive",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_lower_lunge"
-    ],
-    "notes": "Trains defensive reactions when the clinch breaks to prevent takedowns. (90% effort)",
-    "equipment_note": "Partner recommended but can shadow",
-    "work_sec": 30,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ]
-  },
-  {
     "name": "Elbow Alley",
     "equipment": [
       "bodyweight"
@@ -1153,81 +1533,6 @@
       "mech_grip_support",
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Collar Tie Counter",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "defensive striking",
-    "duration": "30s defend collar tie → 10 counter uppercuts → x5 rounds",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "boxing",
-      "mma",
-      "mech_grip_support",
-      "mech_reactive",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Trains punching off defensive head control. (85% effort)",
-    "equipment_note": "Partner recommended",
-    "rest_sec": 30,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Clinch Gas Tank",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "pure endurance",
-    "duration": "5min continuous: clinch pummeling → knees → short punches",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "mma",
-      "muay_thai",
-      "boxing",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_grip_support",
-      "mech_upper_press"
-    ],
-    "notes": "Championship round simulation for all clinch styles. (80% effort)",
-    "equipment_note": "Partner or heavy bag",
-    "total_minutes": 5,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
       "mech_upper_press"
     ]
   },
@@ -7831,44 +8136,6 @@
     ]
   },
   {
-    "name": "Clinch-to-Strike Transition Drill",
-    "equipment": [
-      "focus_mitts",
-      "partner"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "glycolytic",
-    "modality": "interval",
-    "duration": "45s on / 60s off",
-    "intensity": "high",
-    "tags": [
-      "clinch_fighter",
-      "muay_thai",
-      "mma",
-      "boxing",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_upper_press"
-    ],
-    "notes": "Break clinch into 3-punch combos. Reset immediately.",
-    "equipment_note": "Partner wears belly pad for body shots.",
-    "work_sec": 45,
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
     "name": "Sprawl-to-Strike Intervals",
     "equipment": [
       "mat"
@@ -9935,176 +10202,6 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Rope Clinch Frames",
-    "equipment": [
-      "heavy_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "aerobic",
-    "modality": "fatigue resistance",
-    "duration": "30s rope lean → 30s active framing → x8 rounds",
-    "intensity": "low",
-    "tags": [
-      "boxing",
-      "clinch_fighter",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Simulates late-round clinch against ropes (RPE 5)",
-    "equipment_note": "Bag must touch ropes/wall",
-    "work_sec": 30,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Referee Break Counters",
-    "equipment": [
-      "partner"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "aerobic",
-    "modality": "rulebook exploitation",
-    "duration": "10s clinch → 2s break → immediate jab → x20 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "clinch_fighter",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Trains quick strikes after forced breaks (50% speed)",
-    "equipment_note": "Headgear for partner",
-    "work_sec": 10,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Overhook Uppercut Drill",
-    "equipment": [
-      "double-end_bag"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "aerobic",
-    "modality": "infighting transitions",
-    "duration": "20s overhook control → 10s uppercuts → x10 rounds",
-    "intensity": "low",
-    "tags": [
-      "boxing",
-      "clinch_fighter",
-      "mech_change_of_direction",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Links framing to punch entries (40% power)",
-    "equipment_note": "Low-hanging bag",
-    "work_sec": 20,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Corner Mauling Circuit",
-    "equipment": [
-      "punching_bag",
-      "wall"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "aerobic",
-    "modality": "positional dominance",
-    "duration": "45s bag pinned to wall → 15s frame adjustments → x6 rounds",
-    "intensity": "low",
-    "tags": [
-      "boxing",
-      "clinch_fighter",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "notes": "Conditions forearm stamina for corner control (RPE 4)",
-    "equipment_note": "Angled bag required",
-    "work_sec": 45,
-    "rpe": 4,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Slip-Clinch Reaction",
-    "equipment": [
-      "partner"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "aerobic",
-    "modality": "defensive clinching",
-    "duration": "Partner jabs → slip → clinch → x50 reps",
-    "intensity": "low",
-    "tags": [
-      "boxing",
-      "clinch_fighter",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "notes": "Drills clinch as defensive response (30% speed)",
-    "equipment_note": "Focus mitts for partner",
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_support",
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
