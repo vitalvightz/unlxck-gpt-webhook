@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   apply:
-    if: ${{ !contains(github.event.head_commit.message, '[sport-bonus-applied]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +20,10 @@ jobs:
       - name: Apply minimal scoring change and tests
         shell: bash
         run: |
+          if grep -q "STYLE_EXACT_SPORT_BONUS = 0.5" fightcamp/conditioning.py; then
+            echo "Sport bonus already applied; nothing to patch."
+            exit 0
+          fi
           python - <<'PY'
           from pathlib import Path
 
@@ -88,8 +91,7 @@ jobs:
 
           path.write_text(text, encoding='utf-8')
 
-          test_path = Path('tests/test_style_exact_sport_bonus.py')
-          test_path.write_text(r'''import pytest
+          Path('tests/test_style_exact_sport_bonus.py').write_text(r'''import pytest
 
 from fightcamp import conditioning
 
@@ -135,27 +137,13 @@ def _style_drill(name: str, style: str, sport: str | None) -> dict:
 
 
 def _flags(style: str, sport: str = "mma") -> dict:
-    technical = {
-        "mma": "mma",
-        "boxing": "boxing",
-        "kickboxing": "kickboxing",
-        "muay_thai": "muay thai",
-    }[sport]
+    technical = {"mma": "mma", "boxing": "boxing", "kickboxing": "kickboxing", "muay_thai": "muay thai"}[sport]
     return {
-        "phase": "GPP",
-        "sport": sport,
-        "style_technical": [technical],
-        "style_tactical": [style.replace("_", " ")],
-        "key_goals": ["conditioning"],
-        "weaknesses": [],
-        "fatigue": "low",
-        "equipment": [],
-        "training_frequency": 2,
-        "days_available": 2,
-        "days_until_fight": 35,
-        "time_to_fight_days": 35,
-        "injuries": [],
-        "restrictions": [],
+        "phase": "GPP", "sport": sport, "style_technical": [technical],
+        "style_tactical": [style.replace("_", " ")], "key_goals": ["conditioning"],
+        "weaknesses": [], "fatigue": "low", "equipment": [], "training_frequency": 2,
+        "days_available": 2, "days_until_fight": 35, "time_to_fight_days": 35,
+        "injuries": [], "restrictions": [],
     }
 
 
@@ -185,11 +173,9 @@ def test_raw_exact_sport_helper_does_not_reward_runtime_boxing_rewrite():
 @pytest.mark.parametrize("style", TACTICAL_STYLES)
 def test_exact_sport_bonus_is_global_across_all_tactical_styles(monkeypatch, style):
     exact, other, candidates, diagnostics = _run_pair(monkeypatch, style)
-
     assert set(candidates) == {exact["name"], other["name"]}
     exact_entry = candidates[exact["name"]]
     other_entry = candidates[other["name"]]
-
     assert exact_entry["score"] == pytest.approx(other_entry["score"] + 0.5)
     assert exact_entry["reasons"]["sport_specificity_bonus"] == 0.5
     assert exact_entry["reasons"]["exact_sport_match"] is True
@@ -201,23 +187,13 @@ def test_exact_sport_bonus_is_global_across_all_tactical_styles(monkeypatch, sty
     assert exact["name"] in diagnostics["final_selected_exact_sport_names"]
 
 
-def test_exact_sport_bonus_breaks_cross_sport_tie_without_overriding_stronger_signal(monkeypatch):
-    exact, other, candidates, _ = _run_pair(
-        monkeypatch,
-        "counter_striker",
-        sport="mma",
-        other_sport="boxing",
-    )
+def test_exact_sport_bonus_breaks_cross_sport_tie(monkeypatch):
+    exact, other, candidates, _ = _run_pair(monkeypatch, "counter_striker", sport="mma", other_sport="boxing")
     assert candidates[exact["name"]]["score"] == pytest.approx(candidates[other["name"]]["score"] + 0.5)
 
 
 def test_boxing_compatibility_rewrite_cannot_fake_exact_sport_bonus(monkeypatch):
-    exact, converted, candidates, diagnostics = _run_pair(
-        monkeypatch,
-        "counter_striker",
-        sport="boxing",
-        other_sport="muay_thai",
-    )
+    exact, converted, candidates, diagnostics = _run_pair(monkeypatch, "counter_striker", sport="boxing", other_sport="muay_thai")
     assert set(candidates) == {exact["name"], converted["name"]}
     assert candidates[exact["name"]]["reasons"]["sport_specificity_bonus"] == 0.5
     assert candidates[converted["name"]]["reasons"]["sport_specificity_bonus"] == 0.0
@@ -229,13 +205,21 @@ def test_boxing_compatibility_rewrite_cannot_fake_exact_sport_bonus(monkeypatch)
       - name: Run focused tests
         shell: bash
         run: |
+          if ! grep -q "STYLE_EXACT_SPORT_BONUS = 0.5" fightcamp/conditioning.py; then
+            echo "Patch marker missing"
+            exit 1
+          fi
           python -m py_compile fightcamp/conditioning.py
           pytest -q tests/test_style_exact_sport_bonus.py
           git diff --check
 
-      - name: Commit patch
+      - name: Commit patch if changed
         shell: bash
         run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add fightcamp/conditioning.py tests/test_style_exact_sport_bonus.py
