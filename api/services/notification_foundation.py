@@ -690,6 +690,8 @@ def _memory_claim(
 def _simulation_state(
     store: Any,
     candidates: list[NotificationCandidate],
+    *,
+    now_utc: datetime,
 ) -> tuple[list[dict[str, Any]], set[tuple[str, str, str]]]:
     """Read the claim ledger and action state without changing either."""
 
@@ -707,26 +709,68 @@ def _simulation_state(
     else:
         try:
             profile_id = candidates[0].profile_id
-            delivery_rows = _rows(
+            dedupe_keys = sorted({candidate.dedupe_key for candidate in candidates})
+            training_days = sorted(
+                {_candidate_training_day(candidate, now_utc) for candidate in candidates}
+            )
+            notification_classes = sorted({candidate.notification_class for candidate in candidates})
+            action_keys = sorted(
+                {candidate.action_key for candidate in candidates if candidate.action_key}
+            )
+            delivery_by_dedupe = _rows(
                 client.table("notification_deliveries")
                 .select("*")
                 .eq("profile_id", profile_id)
+                .in_("dedupe_key", dedupe_keys)
                 .execute()
             )
-            evaluations = _rows(
+            active_deliveries = _rows(
+                client.table("notification_deliveries")
+                .select("*")
+                .eq("profile_id", profile_id)
+                .in_("training_day", training_days)
+                .in_("notification_class", notification_classes)
+                .in_("status", ["pending", "sent", "partial"])
+                .execute()
+            )
+            evaluations_by_dedupe = _rows(
                 client.table("notification_evaluations")
                 .select("*")
                 .eq("profile_id", profile_id)
                 .eq("decision", "would_select")
+                .in_("dedupe_key", dedupe_keys)
                 .execute()
             )
-            action_rows = _rows(
-                client.table("notification_action_states")
-                .select("profile_id,action_key,training_day")
+            active_evaluations = _rows(
+                client.table("notification_evaluations")
+                .select("*")
                 .eq("profile_id", profile_id)
+                .eq("decision", "would_select")
+                .in_("training_day", training_days)
                 .execute()
             )
-            deliveries = delivery_rows
+            action_rows = []
+            if action_keys:
+                action_rows = _rows(
+                    client.table("notification_action_states")
+                    .select("profile_id,action_key,training_day")
+                    .eq("profile_id", profile_id)
+                    .in_("action_key", action_keys)
+                    .in_("training_day", training_days)
+                    .execute()
+                )
+            deliveries = list(
+                {
+                    str(row.get("id") or (row.get("profile_id"), row.get("dedupe_key"))): row
+                    for row in [*delivery_by_dedupe, *active_deliveries]
+                }.values()
+            )
+            evaluations = list(
+                {
+                    str(row.get("id") or row.get("evaluation_key")): row
+                    for row in [*evaluations_by_dedupe, *active_evaluations]
+                }.values()
+            )
             actions = {
                 (str(row["profile_id"]), str(row["action_key"]), str(row["training_day"]))
                 for row in action_rows
@@ -739,8 +783,8 @@ def _simulation_state(
             )
             raise NotificationStoreError("notification simulation state unavailable") from exc
 
-    # Prior observe selections form an isolated shadow ledger. This makes later
-    # sweeps see dedupe, caps, and spacing without reserving real delivery keys.
+    # Prior observe selections form an isolated shadow claim ledger. A selection
+    # says a claim would have happened; it does not predict successful delivery.
     real_keys = {(str(row.get("profile_id")), str(row.get("dedupe_key"))) for row in deliveries}
     for row in evaluations:
         key = (str(row.get("profile_id")), str(row.get("dedupe_key")))
@@ -754,10 +798,10 @@ def _simulation_state(
                 "dedupe_key": row.get("dedupe_key"),
                 "training_day": row.get("training_day"),
                 "notification_class": (snapshot or {}).get("notification_class", "routine"),
-                "status": "sent",
-                "attempt_count": 1,
-                "claimed_at": row.get("first_evaluated_at") or row.get("evaluated_at"),
-                "sent_at": row.get("first_evaluated_at") or row.get("evaluated_at"),
+                "status": "pending",
+                "attempt_count": int(row.get("evaluation_count") or 1),
+                "claimed_at": row.get("last_evaluated_at") or row.get("evaluated_at"),
+                "sent_at": None,
             }
         )
     return deliveries, actions
@@ -1113,7 +1157,7 @@ def simulate_notification_delivery_decision(
         reference = reference.replace(tzinfo=timezone.utc)
     try:
         preferences = get_notification_preferences(store, candidate_list[0].profile_id)
-        deliveries, actions = _simulation_state(store, candidate_list)
+        deliveries, actions = _simulation_state(store, candidate_list, now_utc=reference)
         ranked = sorted(
             candidate_list,
             key=lambda candidate: (

@@ -590,6 +590,43 @@ def test_repeated_observe_sweep_uses_shadow_dedupe_without_real_delivery() -> No
     assert rejected["rejection_reasons"] == ["duplicate_dedupe_key"]
 
 
+def test_observe_shadow_claim_retries_when_stale_without_assuming_delivery_success() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidate = _foundation_candidate(key="retry-shadow", at=now)
+
+    first = simulate_notification_delivery_decision(store, [candidate], now_utc=now)
+    retry = simulate_notification_delivery_decision(
+        store, [candidate], now_utc=now + timedelta(minutes=16)
+    )
+
+    assert first == candidate
+    assert retry == candidate
+    assert list_recent_notification_deliveries(store, profile_id="athlete-1") == []
+    rows = list_notification_evaluations(
+        store, profile_id="athlete-1", training_day="2026-08-09", intent="retry-shadow"
+    )
+    selected = next(row for row in rows if row["decision"] == "would_select")
+    assert selected["evaluation_count"] == 2
+
+
+def test_observe_simulation_allows_retryable_failed_real_delivery() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidate = _foundation_candidate(key="failed-real-delivery", at=now)
+    prepared = prepare_notification_delivery(store, [candidate], now_utc=now - timedelta(minutes=1))
+    assert prepared is not None
+    finalize_notification_delivery(store, prepared[1], status="failed", delivered_count=0)
+
+    result = simulate_notification_delivery_decision(store, [candidate], now_utc=now)
+
+    assert result == candidate
+    deliveries = list_recent_notification_deliveries(store, profile_id="athlete-1")
+    assert len(deliveries) == 1
+    assert deliveries[0]["status"] == "failed"
+    assert deliveries[0]["attempt_count"] == 1
+
+
 def test_observe_simulation_respects_completed_action_without_mutation() -> None:
     store = OrchestrationStore()
     now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)

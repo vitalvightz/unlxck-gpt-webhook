@@ -27,7 +27,7 @@ The response contains coalesced evaluation facts with first/last timestamps, cou
 `UNLXCK_FIGHT_CAMP_NOTIFICATIONS_MODE` supports:
 
 - `send` — new orchestration evaluates and delivers. Enable this explicitly after migration and staging validation.
-- `observe` — new orchestration applies preferences, expiry, quiet hours, action state, dedupe, caps, cooldowns, and priority arbitration against a read-only shadow ledger. It records `would_select`, `would_reject`, and `would_not_select` decisions, but does not claim a delivery or consume a real dedupe key. The existing delivery path then runs (default, including for missing or invalid values).
+- `observe` — new orchestration applies preferences, expiry, quiet hours, action state, dedupe, caps, cooldowns, and priority arbitration against a read-only shadow ledger. A `would_select` is modelled as a simulated pending claim, not a successful push, so stale-claim retry rules still apply. Observe records `would_select`, `would_reject`, and `would_not_select` decisions, but does not claim a delivery or consume a real dedupe key. The existing delivery path then runs (default, including for missing or invalid values).
 - `legacy` — skips new orchestration and uses the existing delivery path.
 
 `UNLXCK_NOTIFICATION_FALLBACK_TRAINING_TIME` configures the athlete-local, low-confidence fallback (`18:00` by default).
