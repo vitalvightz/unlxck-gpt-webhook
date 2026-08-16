@@ -845,8 +845,7 @@
   {
     "name": "Cage Position Flow",
     "equipment": [
-      "partner",
-      "cage"
+      "partner"
     ],
     "phases": [
       "GPP",
@@ -865,8 +864,8 @@
       "mech_trunk_stability",
       "mech_change_of_direction"
     ],
-    "notes": "Flow between being pinned to the cage and holding favourable cage control. Against light live resistance, gain inside and head position, answer underhook battles, turn attempts, escapes and brief separation, then reverse or re-establish useful standing connection.",
-    "equipment_note": "Use a partner and padded cage or padded wall simulation. No uncontrolled impact into the surface.",
+    "notes": "Flow between being pinned to the cage and holding favourable cage control. Against light live resistance, gain inside and head position, answer underhook battles, turn attempts, escapes and brief separation, then reverse or re-establish useful standing connection. Maintain awareness of controlled MMA level-change and takedown threats while keeping the exchange standing.",
+    "equipment_note": "Use a partner and padded wall or cage simulation. No uncontrolled impact into the surface.",
     "work_sec": 180,
     "rest_sec": 60,
     "rounds": 3,
@@ -963,8 +962,7 @@
   {
     "name": "Cage Turn Burst",
     "equipment": [
-      "partner",
-      "cage"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -984,8 +982,8 @@
       "mech_deceleration",
       "mech_ballistic"
     ],
-    "notes": "Start in an unfavourable cage relationship. Establish useful inside and head position, turn the partner to reverse the position, gain favourable cage control and stabilise before resetting. Do not slam or throw.",
-    "equipment_note": "Use a partner and padded cage or padded wall simulation. Keep the turn controlled with no uncontrolled wall impact.",
+    "notes": "Start in an unfavourable cage relationship. Establish useful inside and head position, turn the partner to reverse the position, gain favourable cage control and stabilise before resetting. Do not slam or throw. Stabilise standing control without converting the turn into takedown completion.",
+    "equipment_note": "Use a partner and padded wall or cage simulation. Keep the turn controlled with no uncontrolled wall impact.",
     "work_sec": 6,
     "rest_sec": 75,
     "rounds": 7,
@@ -1050,8 +1048,7 @@
   {
     "name": "Cage Position Intervals",
     "equipment": [
-      "partner",
-      "cage"
+      "partner"
     ],
     "phases": [
       "GPP",
@@ -1072,8 +1069,8 @@
       "mech_deceleration",
       "mech_systemic_fatigue"
     ],
-    "notes": "Battle repeatedly for the pin, underhook and head position as the partner contests turns, reversals, escapes and re-pins. Preserve posture, balance, inside position and decision quality. Reduce resistance if the work becomes sloppy wrestling.",
-    "equipment_note": "Use live partner resistance at a padded cage or padded wall simulation. No uncontrolled impact into the surface.",
+    "notes": "Battle repeatedly for the pin, underhook and head position as the partner contests turns, reversals, escapes and re-pins. Preserve posture, balance, inside position and decision quality. Reduce resistance if the work becomes sloppy wrestling. The partner may show a controlled takedown threat, but the athlete must keep and recover standing control.",
+    "equipment_note": "Use live partner resistance at a padded wall or cage simulation. No uncontrolled impact into the surface.",
     "work_sec": 35,
     "rest_sec": 45,
     "rounds": 6,
@@ -1186,7 +1183,6 @@
     "name": "MMA Clinch Decision Rounds",
     "equipment": [
       "partner",
-      "cage",
       "thai_pads"
     ],
     "phases": [
@@ -1212,7 +1208,7 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Under higher live resistance, the partner unpredictably creates an underhook battle, cage pin or reversal, frame, level change, separation, short-strike opening, circle-away or takedown-entry opportunity. Choose to pummel, frame, gain head and inside position, defend the level change, turn, separate, make one controlled pad strike, establish an entry position or reconnect. Preserve decisions under fatigue and recover standing control; do not finish takedowns.",
-    "equipment_note": "Use a partner, Thai pad and padded cage or padded wall simulation. Control all contact and wall pressure; no live knees or elbows to the head.",
+    "equipment_note": "Use a partner, Thai pad and padded wall or cage simulation. Control all contact and wall pressure; no live knees or elbows to the head.",
     "work_sec": 60,
     "rest_sec": 45,
     "rounds": 5,

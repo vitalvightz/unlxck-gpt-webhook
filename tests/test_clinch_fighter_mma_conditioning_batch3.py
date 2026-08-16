@@ -4,20 +4,21 @@ from collections import Counter
 from pathlib import Path
 
 from fightcamp import conditioning
+from fightcamp.training_context import known_equipment
 
 
 BANK_PATH = Path(__file__).resolve().parents[1] / "data" / "style_conditioning_bank.json"
 EXPECTED = {
     "MMA Clinch Position Flow": ("aerobic", {"GPP", "SPP"}, ("partner",), 180, 60, 3, 5),
-    "Cage Position Flow": ("aerobic", {"GPP", "SPP"}, ("partner", "cage"), 180, 60, 3, 5),
+    "Cage Position Flow": ("aerobic", {"GPP", "SPP"}, ("partner",), 180, 60, 3, 5),
     "Reactive MMA Clinch Rounds": ("aerobic", {"SPP"}, ("partner", "thai_pads"), 120, 60, 4, 6),
     "Underhook Position Burst": ("ATP-PCr", {"GPP", "SPP"}, ("partner",), 6, 75, 8, 8),
-    "Cage Turn Burst": ("ATP-PCr", {"SPP"}, ("partner", "cage"), 6, 75, 7, 8),
+    "Cage Turn Burst": ("ATP-PCr", {"SPP"}, ("partner",), 6, 75, 7, 8),
     "Level-Change Stuff-and-Recover Burst": ("ATP-PCr", {"SPP"}, ("partner",), 7, 75, 7, 8),
-    "Cage Position Intervals": ("glycolytic", {"GPP", "SPP"}, ("partner", "cage"), 35, 45, 6, 8),
+    "Cage Position Intervals": ("glycolytic", {"GPP", "SPP"}, ("partner",), 35, 45, 6, 8),
     "Clinch Strike-Control Intervals": ("glycolytic", {"SPP"}, ("partner", "thai_pads"), 35, 45, 6, 8),
     "Pummel-to-Attack Intervals": ("glycolytic", {"GPP", "SPP"}, ("partner", "thai_pads"), 35, 45, 6, 8),
-    "MMA Clinch Decision Rounds": ("glycolytic", {"SPP"}, ("partner", "cage", "thai_pads"), 60, 45, 5, 8),
+    "MMA Clinch Decision Rounds": ("glycolytic", {"SPP"}, ("partner", "thai_pads"), 60, 45, 5, 8),
 }
 LEGACY = {
     "Cage Clinch Gauntlet", "Greco-Roman Grinder", "Max Knee & Sprawl Complex",
@@ -77,20 +78,21 @@ def test_energy_doses_and_phase_reachability_are_coherent():
 
 
 def test_standing_connection_cage_level_change_and_partner_rules_are_explicit():
-    entries = _slice()
-    assert all("partner" in item["equipment"] for item in entries)
-    assert all(not ({"wrestler", "scrambler", "brawler", "pressure_fighter", "muay_thai"} & set(item["tags"])) for item in entries)
-    text = " ".join(f"{item['name']} {item['modality']} {item['notes']} {item['equipment_note']}".lower() for item in entries)
+    entries = {item["name"]: item for item in _slice()}
+    assert all("partner" in item["equipment"] for item in entries.values())
+    assert all(not ({"wrestler", "scrambler", "brawler", "pressure_fighter", "muay_thai"} & set(item["tags"])) for item in entries.values())
+    text = " ".join(f"{item['name']} {item['modality']} {item['notes']} {item['equipment_note']}".lower() for item in entries.values())
     assert all(term in text for term in ("standing connection", "underhook", "head position", "level-change", "recover standing control"))
-    assert sum("cage" in item["equipment"] for item in entries) >= 4
-    assert "padded wall simulation" in text
+    cage_names = {name for name in EXPECTED if "Cage" in name} | {"MMA Clinch Decision Rounds"}
+    assert len(cage_names) == 4
+    assert all("padded wall or cage simulation" in entries[name]["equipment_note"].lower() for name in cage_names)
     assert all(term not in text for term in ("thai plum", "neck snap", "knee storm", "elbow combination", "mat return", "reshot", "ground control"))
     assert "do not finish takedowns" in text and "not takedown completion" in text
 
 
 def test_equipment_tokens_and_mechanical_risk_tags_follow_bank_conventions():
     bank = _bank()
-    valid_equipment = {token for item in bank for token in item.get("equipment", [])}
+    valid_equipment = set(known_equipment)
     assert len([item["name"] for item in bank]) == len({item["name"] for item in bank})
     for item in _slice():
         assert set(item["equipment"]) <= valid_equipment
@@ -111,7 +113,7 @@ def test_existing_selector_surfaces_mma_clinch_fighter_in_gpp_and_spp():
     flags = {
         "sport": "mma", "style_technical": ["mma"], "style_tactical": ["Clinch Fighter"],
         "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low",
-        "equipment": ["partner", "cage", "thai pads"], "training_frequency": 5,
+        "equipment": ["partner", "thai pads"], "training_frequency": 5,
         "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35,
         "injuries": [], "restrictions": [],
     }
