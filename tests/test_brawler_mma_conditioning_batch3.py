@@ -85,6 +85,14 @@ def test_equipment_mechanics_uniqueness_and_phase_reachability():
     for item in entries:
         assert set(item["equipment"]) <= valid_equipment
         assert {t for t in item["tags"] if t.startswith("mech_")} == set(item["mechanical_risk_tags"])
+    rotational_striking = {
+        "Exchange-Sprawl-Return Burst",
+        "Pocket Strike-Shot Intervals",
+        "Cage Pocket Exchange Intervals",
+    }
+    for name in rotational_striking:
+        assert "mech_trunk_rotation" in _slice()[name]["tags"]
+        assert "mech_trunk_rotation" in _slice()[name]["mechanical_risk_tags"]
     for phase in ("GPP", "SPP"):
         reached = [x for x in entries if phase in x["phases"]]
         assert {x["system"] for x in reached} == {"ATP-PCr", "glycolytic", "aerobic"}

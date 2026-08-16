@@ -444,6 +444,7 @@
       "mech_ballistic",
       "mech_reactive",
       "mech_upper_press",
+      "mech_trunk_rotation",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_trunk_stability",
@@ -464,6 +465,7 @@
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_reactive",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -567,6 +569,7 @@
       "mech_reactive",
       "mech_ballistic",
       "mech_upper_press",
+      "mech_trunk_rotation",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_trunk_stability",
@@ -588,6 +591,7 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
@@ -653,6 +657,7 @@
       "mech_reactive",
       "mech_ballistic",
       "mech_upper_press",
+      "mech_trunk_rotation",
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_deceleration",
@@ -674,6 +679,7 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
     ]
