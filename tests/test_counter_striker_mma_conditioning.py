@@ -94,14 +94,26 @@ def _flags(phase, equipment, **overrides):
     return flags
 
 
-def test_mma_sport_match_surfaces_rebuilt_drills_and_respects_equipment():
+def test_existing_selector_can_reach_rebuilt_mma_drills_and_respects_equipment():
     equipment = ["partner", "thai_pads", "focus_mitts", "wall"]
-    for phase in ("GPP", "SPP"):
-        result = generate_conditioning_block(_flags(phase, equipment))
+    representative_by_phase = {
+        "GPP": "Strike-Shot Transition Flow",
+        "SPP": "Strike-or-Shot Counter Intervals",
+    }
+    for phase, expected_name in representative_by_phase.items():
+        result = generate_conditioning_block(_flags(
+            phase,
+            equipment,
+            preferred_exercise_names=[expected_name],
+        ))
         selected = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]
-        assert selected and set(selected) <= set(EXPECTED_DOSES)
+        assert selected == [expected_name]
 
-    result = generate_conditioning_block(_flags("SPP", []))
+    result = generate_conditioning_block(_flags(
+        "SPP",
+        [],
+        preferred_exercise_names=["Strike-or-Shot Counter Intervals"],
+    ))
     selected = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]
     assert set(selected).isdisjoint(EXPECTED_DOSES)
 

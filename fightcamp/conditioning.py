@@ -2534,11 +2534,6 @@ def generate_conditioning_block(flags):
                 score = 0.0
                 score += 0.75  # style match already guaranteed by filter
                 score += 1.0  # phase match
-                sport_tag_match = selection_format in tags
-                if sport_tag_match:
-                    # Prefer a sport-specific representative drill over an
-                    # otherwise equal archetype drill from another ruleset.
-                    score += 0.5
                 if system == top_system:
                     score += 0.75
                 score += equip_bonus
@@ -2598,7 +2593,6 @@ def generate_conditioning_block(flags):
                     "goal_hits": goal_matches,
                     "style_hits": 1,
                     "phase_hits": 1,
-                    "sport_tag_match": 0.5 if sport_tag_match else 0.0,
                     "load_adjustments": 0.75 if system == top_system else 0.0,
                     "equipment_boost": equip_bonus,
                     "preferred_exercise_name_match": PREFERRED_EXERCISE_NAME_BOOST if preferred_name_match else 0.0,
