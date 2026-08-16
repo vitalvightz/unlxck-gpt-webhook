@@ -14,7 +14,9 @@ from api.services.notification_foundation import (
     finalize_notification_delivery,
     invalidate_notification_action,
     list_notification_evaluations,
+    list_recent_notification_deliveries,
     prepare_notification_delivery,
+    simulate_notification_delivery_decision,
     update_notification_preferences,
 )
 from api.services.notification_templates import BUNDLED_TEMPLATES, select_notification_template
@@ -483,7 +485,7 @@ def test_observe_rollout_records_candidates_and_preserves_legacy_path(monkeypatc
         training_day="2026-08-09",
         intent="observed-intent",
     )
-    assert rows[0]["decision"] == "rollout_observe_only"
+    assert rows[0]["decision"] == "would_select"
 
 
 def test_missing_rollout_mode_defaults_to_observe_and_never_sends(monkeypatch) -> None:
@@ -523,4 +525,130 @@ def test_missing_rollout_mode_defaults_to_observe_and_never_sends(monkeypatch) -
         training_day="2026-08-09",
         intent="default-observed-intent",
     )
-    assert rows[0]["decision"] == "rollout_observe_only"
+    assert rows[0]["decision"] == "would_select"
+
+
+def test_observe_simulation_applies_dedupe_and_falls_through_without_claiming() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    duplicate = _foundation_candidate(key="duplicate", at=now, priority=10)
+    lower = _foundation_candidate(key="lower", at=now, priority=20)
+    prepared = prepare_notification_delivery(store, [duplicate], now_utc=now - timedelta(minutes=31))
+    assert prepared is not None
+    finalize_notification_delivery(store, prepared[1], status="sent", delivered_count=1)
+    before = list_recent_notification_deliveries(store, profile_id="athlete-1")
+
+    result = simulate_notification_delivery_decision(store, [duplicate, lower], now_utc=now)
+
+    assert result == lower
+    assert list_recent_notification_deliveries(store, profile_id="athlete-1") == before
+    duplicate_rows = list_notification_evaluations(
+        store, profile_id="athlete-1", training_day="2026-08-09", intent="duplicate"
+    )
+    lower_rows = list_notification_evaluations(
+        store, profile_id="athlete-1", training_day="2026-08-09", intent="lower"
+    )
+    assert duplicate_rows[0]["decision"] == "would_reject"
+    assert duplicate_rows[0]["rejection_reasons"] == ["duplicate_dedupe_key"]
+    assert lower_rows[0]["decision"] == "would_select"
+
+
+def test_observe_simulation_records_lower_candidate_arbitration() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    highest = _foundation_candidate(key="highest", at=now, priority=10)
+    lower = _foundation_candidate(key="lower-arbitrated", at=now, priority=20)
+
+    result = simulate_notification_delivery_decision(store, [lower, highest], now_utc=now)
+
+    assert result == highest
+    rows = list_notification_evaluations(
+        store, profile_id="athlete-1", training_day="2026-08-09", intent="lower-arbitrated"
+    )
+    assert rows[0]["decision"] == "would_not_select"
+    assert rows[0]["rejection_reasons"] == ["higher_priority_selected"]
+
+
+def test_repeated_observe_sweep_uses_shadow_dedupe_without_real_delivery() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidate = _foundation_candidate(key="repeat-event", at=now)
+
+    first = simulate_notification_delivery_decision(store, [candidate], now_utc=now)
+    second = simulate_notification_delivery_decision(
+        store, [candidate], now_utc=now + timedelta(minutes=1)
+    )
+
+    assert first == candidate
+    assert second is None
+    assert list_recent_notification_deliveries(store, profile_id="athlete-1") == []
+    rows = list_notification_evaluations(
+        store, profile_id="athlete-1", training_day="2026-08-09", intent="repeat-event"
+    )
+    assert {row["decision"] for row in rows} == {"would_select", "would_reject"}
+    rejected = next(row for row in rows if row["decision"] == "would_reject")
+    assert rejected["rejection_reasons"] == ["duplicate_dedupe_key"]
+
+
+def test_observe_shadow_claim_retries_when_stale_without_assuming_delivery_success() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidate = _foundation_candidate(key="retry-shadow", at=now)
+
+    first = simulate_notification_delivery_decision(store, [candidate], now_utc=now)
+    retry = simulate_notification_delivery_decision(
+        store, [candidate], now_utc=now + timedelta(minutes=16)
+    )
+
+    assert first == candidate
+    assert retry == candidate
+    assert list_recent_notification_deliveries(store, profile_id="athlete-1") == []
+    rows = list_notification_evaluations(
+        store, profile_id="athlete-1", training_day="2026-08-09", intent="retry-shadow"
+    )
+    selected = next(row for row in rows if row["decision"] == "would_select")
+    assert selected["evaluation_count"] == 2
+
+
+def test_observe_simulation_allows_retryable_failed_real_delivery() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidate = _foundation_candidate(key="failed-real-delivery", at=now)
+    prepared = prepare_notification_delivery(store, [candidate], now_utc=now - timedelta(minutes=1))
+    assert prepared is not None
+    finalize_notification_delivery(store, prepared[1], status="failed", delivered_count=0)
+
+    result = simulate_notification_delivery_decision(store, [candidate], now_utc=now)
+
+    assert result == candidate
+    deliveries = list_recent_notification_deliveries(store, profile_id="athlete-1")
+    assert len(deliveries) == 1
+    assert deliveries[0]["status"] == "failed"
+    assert deliveries[0]["attempt_count"] == 1
+
+
+def test_observe_simulation_respects_completed_action_without_mutation() -> None:
+    store = OrchestrationStore()
+    now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
+    candidate = NotificationCandidate(
+        **{
+            **_foundation_candidate(key="done-action", at=now).__dict__,
+            "action_key": "morning-checkin",
+        }
+    )
+    invalidate_notification_action(
+        store,
+        profile_id="athlete-1",
+        action_key="morning-checkin",
+        training_day="2026-08-09",
+        completed_at=now,
+    )
+
+    result = simulate_notification_delivery_decision(store, [candidate], now_utc=now)
+
+    assert result is None
+    assert list_recent_notification_deliveries(store, profile_id="athlete-1") == []
+    rows = list_notification_evaluations(
+        store, profile_id="athlete-1", training_day="2026-08-09", intent="done-action"
+    )
+    assert rows[0]["rejection_reasons"] == ["user_action_already_done"]
