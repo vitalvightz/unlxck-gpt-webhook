@@ -6981,7 +6981,8 @@
   {
     "name": "Teep Intercept Burst",
     "equipment": [
-      "bodyweight"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "GPP",
@@ -6996,9 +6997,12 @@
       "kickboxing",
       "muay_thai",
       "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_ballistic",
+      "mech_acceleration",
+      "mech_reactive"
     ],
-    "notes": "React to an imagined step-in with one sharp teep, recover stance, and take a short angle. Stop if recoil or balance slows.",
+    "notes": "The holder advances unpredictably. Intercept only when the entry is genuinely there, recover stance, and take a short angle. Stop if recoil or balance slows.",
     "work_sec": 5,
     "rest_sec": 60,
     "rounds": 8,
@@ -7008,7 +7012,10 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_ballistic",
+      "mech_acceleration",
+      "mech_reactive"
     ]
   },
   {
@@ -7177,7 +7184,7 @@
   {
     "name": "Kick-and-Exit Burst",
     "equipment": [
-      "heavy_bag"
+      "bodyweight"
     ],
     "phases": [
       "GPP",
@@ -7193,7 +7200,9 @@
       "muay_thai",
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration"
     ],
     "notes": "Land one clean long kick, recover the kicking leg into stance, and exit laterally. Stop the set if speed or stance recovery deteriorates.",
     "work_sec": 6,
@@ -7206,7 +7215,9 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration"
     ]
   },
   {
@@ -7589,7 +7600,10 @@
       "muay_thai",
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration",
+      "mech_reactive"
     ],
     "notes": "Enter behind a long jab, kick the called open target, regain stance, and leave on an angle. No target means no kick.",
     "work_sec": 6,
@@ -7602,7 +7616,10 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration",
+      "mech_reactive"
     ]
   },
   {
@@ -7762,7 +7779,9 @@
       "muay_thai",
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration"
     ],
     "notes": "Score with the rear kick, recoil into stance, then reposition outside the return line. Reset fully if the bag swing pulls posture forward.",
     "work_sec": 5,
@@ -7775,7 +7794,9 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration"
     ]
   },
   {
@@ -7904,7 +7925,10 @@
       "muay_thai",
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration",
+      "mech_reactive"
     ],
     "notes": "On the holder’s advance, choose jab, teep or long kick and angle away after scoring. Stop if the choice, recoil or exit loses speed.",
     "work_sec": 7,
@@ -7917,7 +7941,10 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_acceleration",
+      "mech_reactive"
     ]
   },
   {

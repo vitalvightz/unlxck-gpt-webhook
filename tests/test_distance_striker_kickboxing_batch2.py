@@ -78,6 +78,24 @@ def test_metadata_and_energy_system_doses_are_coherent():
     assert all(60 <= x["work_sec"] <= 120 and 45 <= x["rest_sec"] <= 60 and x["rounds"] >= 4 for x in glycolytic)
 
 
+def test_intercept_is_partner_led_and_alactic_bursts_are_risk_tagged():
+    by_name = _by_name()
+    intercept = by_name["Teep Intercept Burst"]
+    assert intercept["equipment"] == ["partner", "thai_pads"]
+    assert "advances unpredictably" in intercept["notes"]
+    assert "only when the entry is genuinely there" in intercept["notes"]
+
+    reactive = {"Teep Intercept Burst", "Jab-Kick Entry Burst", "Reactive Long-Weapon Burst"}
+    for name, dose in APPROVED_DRILLS.items():
+        if dose[0] != "ATP-PCr":
+            continue
+        item = by_name[name]
+        assert {"mech_ballistic", "mech_acceleration"}.issubset(item["mechanical_risk_tags"])
+        assert set(item["mechanical_risk_tags"]).issubset(item["tags"])
+        if name in reactive:
+            assert "mech_reactive" in item["mechanical_risk_tags"]
+
+
 def test_notes_enforce_distance_and_technical_quality():
     quality = ("stance", "range", "recoil", "balance", "exit", "retreat")
     for item in _slice():
