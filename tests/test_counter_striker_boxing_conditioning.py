@@ -18,6 +18,20 @@ EXPECTED_DOSES = {
     "Random Attack Counter Rounds": ("glycolytic", 120, 60, 4, 8),
     "Counter Quality Rounds": ("glycolytic", 180, 60, 3, 8),
 }
+EXPECTED_PHASES = {
+    "Read & Counter Flow": {"GPP", "SPP"},
+    "Counter Shadow Flow": {"GPP", "SPP"},
+    "Defensive Position Flow": {"GPP", "SPP"},
+    "Slip-Cross Burst": {"GPP", "SPP"},
+    "Pull-Straight Burst": {"GPP", "SPP"},
+    "Intercepting Straight Burst": {"GPP", "SPP"},
+    "Check-Hook Pivot Burst": {"SPP"},
+    "Reactive Counter Choice": {"SPP"},
+    "Parry-Return Intervals": {"SPP"},
+    "Defend-Counter-Exit Intervals": {"SPP"},
+    "Random Attack Counter Rounds": {"SPP"},
+    "Counter Quality Rounds": {"SPP"},
+}
 REMOVED_LEGACY = {
     "Pull Counter Matrix",
     "Sniper's Timing",
@@ -92,6 +106,27 @@ def test_energy_systems_follow_counter_striker_dose_rules():
         and item["lactate_load"] == "high"
         for item in glycolytic
     )
+
+
+def test_slice_has_deliberate_gpp_and_spp_phase_coverage():
+    entries = _boxing_counter_slice()
+    assert set(entries) == set(EXPECTED_PHASES)
+    for name, phases in EXPECTED_PHASES.items():
+        assert set(entries[name]["phases"]) == phases
+
+    gpp_entries = [item for item in entries.values() if "GPP" in item["phases"]]
+    assert len(gpp_entries) == 6
+    assert Counter(item["system"] for item in gpp_entries) == {
+        "aerobic": 3,
+        "ATP-PCr": 3,
+    }
+    assert all("SPP" in item["phases"] for item in entries.values())
+
+
+def test_solo_imagined_cues_are_not_tagged_as_external_reactivity():
+    shadow_flow = _boxing_counter_slice()["Counter Shadow Flow"]
+    assert "mech_reactive" not in shadow_flow["tags"]
+    assert "mech_reactive" not in shadow_flow["mechanical_risk_tags"]
 
 
 def test_every_drill_has_an_attack_cue_counter_and_reset_or_exit():

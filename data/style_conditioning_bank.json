@@ -615,6 +615,7 @@
       "partner"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "aerobic",
@@ -652,6 +653,7 @@
       "bodyweight"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "aerobic",
@@ -661,7 +663,6 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "mech_reactive",
       "mech_deceleration",
       "mech_change_of_direction",
       "mech_upper_press",
@@ -678,7 +679,6 @@
     "mechanical_risk_tags": [
       "mech_change_of_direction",
       "mech_deceleration",
-      "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
     ]
@@ -689,6 +689,7 @@
       "bodyweight"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "aerobic",
@@ -724,6 +725,7 @@
       "partner_mitts"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "ATP-PCr",
@@ -761,6 +763,7 @@
       "focus_mitts"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "ATP-PCr",
@@ -837,6 +840,7 @@
       "focus_mitts"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "ATP-PCr",
