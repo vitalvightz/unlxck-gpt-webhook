@@ -223,9 +223,14 @@ PROTECTED_REBUILT_NAMES = [
     "Cage Escape Intervals",
     "Cage-Aware Range Flow",
     "Check-Return Burst",
+    "Check-Hook Pivot Burst",
+    "Counter Quality Rounds",
+    "Counter Shadow Flow",
     "Corner Trap Burst",
     "Cutoff-Reposition Intervals",
     "Dutch Target Call",
+    "Defend-Counter-Exit Intervals",
+    "Defensive Position Flow",
     "Entry-Exit Burst",
     "Entry-Score-Angle Burst",
     "Entry-Score-Exit Bursts",
@@ -238,6 +243,7 @@ PROTECTED_REBUILT_NAMES = [
     "In-Out MMA Striking Rounds",
     "Intercept-Reposition Rounds",
     "Intercept-and-Exit Burst",
+    "Intercepting Straight Burst",
     "Interception Kick Burst",
     "Jab Volume & Position",
     "Jab-Kick Entry Burst",
@@ -267,7 +273,12 @@ PROTECTED_REBUILT_NAMES = [
     "Movement Economy Rounds",
     "Open-Space Movement Flow",
     "Pocket Repeatability Rounds",
+    "Parry-Return Intervals",
     "Precision Under Pace",
+    "Pull-Straight Burst",
+    "Random Attack Counter Rounds",
+    "Reactive Counter Choice",
+    "Read & Counter Flow",
     "Pressure Combination Rounds",
     "Pressure Decision Rounds",
     "Pressure Escape and Reset",
@@ -296,6 +307,7 @@ PROTECTED_REBUILT_NAMES = [
     "Ring Perimeter Flow",
     "Ring-Cut Flow",
     "Ring-Cutting Intervals",
+    "Slip-Cross Burst",
     "Rope/Corner Pressure Rounds",
     "Score-Reposition Rounds",
     "Straight-Shot Re-Angle",
@@ -310,6 +322,19 @@ PROTECTED_REBUILT_NAMES = [
     "Teep Volume & Position",
     "Teep Walk-Down Reset",
 ]
+
+# Legacy entries deliberately superseded after the deletion-only purge by the
+# focused Boxing Counter Striker rebuild. Shared Distance Striker, Kickboxing,
+# and MMA entries remain active and are therefore not listed here.
+POST_PURGE_REPLACED_NAMES = {
+    "Pull Counter Matrix",
+    "Sniper's Timing",
+    "Counter Striker's Shell Defense Drill",
+    "Pull-Counter Springs",
+    "Counter Striker's Retreat Drill",
+    "Counter Striker's Parry Drill",
+    "Tempo Shadowboxing (Slow Reps)",
+}
 
 
 def _load_style_conditioning_bank() -> list[dict]:
@@ -696,7 +721,7 @@ def test_batch_3_purged_entries_present_in_archive_file():
         assert entry.get("archived_date"), name
 
 
-def test_batch_3_purge_added_no_new_drills():
+def test_batch_3_purge_baseline_accounts_for_later_protected_rebuilds():
     """The legacy purge is deletion-only, checked against the frozen pre-purge
     baseline rather than against the purge list itself.
 
@@ -711,18 +736,22 @@ def test_batch_3_purge_added_no_new_drills():
     baseline_names = set(_load_prepurge_baseline_names())
     active_names = {entry["name"] for entry in _load_style_conditioning_bank()}
 
-    added = sorted(active_names - baseline_names)
+    # Later approved style rebuilds may add protected drills. Anything else is
+    # still an unexpected addition against the frozen purge baseline.
+    added = sorted((active_names - baseline_names) - set(PROTECTED_REBUILT_NAMES))
     assert not added, f"Purge must not add drills, but these are new since the baseline: {added}"
 
     removed = baseline_names - active_names
-    assert removed == set(BATCH_3_PURGED_NAMES), {
-        "removed_but_not_listed": sorted(removed - set(BATCH_3_PURGED_NAMES)),
-        "listed_but_not_removed": sorted(set(BATCH_3_PURGED_NAMES) - removed),
+    expected_removed = set(BATCH_3_PURGED_NAMES) | POST_PURGE_REPLACED_NAMES
+    assert removed == expected_removed, {
+        "removed_but_not_listed": sorted(removed - expected_removed),
+        "listed_but_not_removed": sorted(expected_removed - removed),
     }
 
-    # And every removal is preserved in the archive rather than simply dropped.
+    # The purge removals are archived. Later purpose-built replacements are
+    # tracked above rather than being misrepresented as part of that purge.
     archived_names = {entry["name"] for entry in _load_style_conditioning_archive()}
-    assert removed <= archived_names
+    assert set(BATCH_3_PURGED_NAMES) <= archived_names
 
 
 def test_prepurge_baseline_fixture_matches_recorded_count():
