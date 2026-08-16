@@ -11,7 +11,7 @@ from tools import audit_style_conditioning_bank as audit
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STYLE_CONDITIONING_BANK_PATH = REPO_ROOT / "data" / "style_conditioning_bank.json"
 
-# Batch 1 manual cleanup: names as they exist in the bank today, post-cleanup.
+# Batch 1 manual cleanup and approved replacements in the active bank.
 # "Hammer & Tire Power Complex" was archived in batch 2 as a near-duplicate of
 # "Hammer & Tire Jump Complex", so it is intentionally absent from this list.
 BATCH_1_CLEANED_NAMES = [
@@ -38,8 +38,16 @@ BATCH_1_CLEANED_NAMES = [
     "Roll-Under Counter Complex",
     "Intercept & Counter Mitts",
     "Frame & Counter Knee Complex",
-    "Band-Resisted Jab Endurance Complex",
-    "Max-Speed Bag & Slide Complex",
+    "Ring Perimeter Flow",
+    "Ring Escape Flow",
+    "Jab Volume & Position",
+    "Entry-Score-Exit Bursts",
+    "Backstep Counter Reset",
+    "Straight-Shot Re-Angle",
+    "Ring Generalship Rounds",
+    "Range Reset Intervals",
+    "Precision Under Pace",
+    "Punch-Slide Repeatability",
     "Band-Resisted Low Kick Power Complex",
     "Band-Resisted Calf Kick Complex",
     "Clinch Knee Endurance Complex",
