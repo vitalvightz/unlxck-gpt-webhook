@@ -228,8 +228,8 @@ def _style_specificity_sport_tag(primary_tech: str, selection_format: str) -> st
         "bjj": "bjj",
         "wrestler": "wrestling",
         "wrestling": "wrestling",
-        "grappler": "bjj",
-        "grappling": "bjj",
+        "grappler": "grappling",
+        "grappling": "grappling",
     }
     return aliases.get(tech, str(selection_format or "").strip().lower())
 

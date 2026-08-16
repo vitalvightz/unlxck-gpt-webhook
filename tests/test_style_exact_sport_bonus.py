@@ -82,6 +82,7 @@ def _run_pair(monkeypatch, style: str, sport: str = "mma", other_sport: str | No
 def test_raw_exact_sport_helper_uses_pre_rewrite_tags():
     assert conditioning._style_specificity_sport_tag("bjj", "mma") == "bjj"
     assert conditioning._style_specificity_sport_tag("wrestling", "mma") == "wrestling"
+    assert conditioning._style_specificity_sport_tag("grappling", "mma") == "grappling"
     assert conditioning._style_exact_sport_bonus(["boxing", "counter_striker"], "boxing") == 0.5
     assert conditioning._style_exact_sport_bonus(["muay_thai", "counter_striker"], "boxing") == 0.0
     assert conditioning._style_exact_sport_bonus(["kickboxing", "muay_thai", "brawler"], "kickboxing") == 0.5
@@ -146,3 +147,14 @@ def test_mma_athlete_does_not_reward_bjj_specific_drill(monkeypatch):
     )
     assert candidates[exact["name"]]["reasons"]["sport_specificity_bonus"] == 0.5
     assert candidates[bjj_drill["name"]]["reasons"]["sport_specificity_bonus"] == 0.0
+
+
+def test_generic_grappling_does_not_inherit_bjj_specificity(monkeypatch):
+    exact, bjj_drill, candidates, diagnostics = _run_pair(
+        monkeypatch, "grappler", sport="mma", other_sport="bjj", technical_style="grappling"
+    )
+    # Rebuild the exact row with the canonical generic-grappling sport token.
+    assert exact["tags"][0] == "grappling"
+    assert candidates[exact["name"]]["reasons"]["sport_specificity_bonus"] == 0.5
+    assert candidates[bjj_drill["name"]]["reasons"]["sport_specificity_bonus"] == 0.0
+    assert diagnostics["entries_exact_sport_bonus_applied"] == 1
