@@ -1,5 +1,15 @@
 create extension if not exists pgcrypto;
 
+-- Internal helpers that must never be reachable as client RPCs live here, per
+-- 20260726162809_harden_internal_functions_and_search_paths. Note that this file
+-- still declares the older guard helpers (prevent_self_role_escalation,
+-- prevent_username_policy_bypass, is_admin) under `public`; that migration moved
+-- them to `private` on live databases, so those declarations are stale. New
+-- guards are written against the live convention.
+create schema if not exists private authorization postgres;
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated, service_role;
+
 -- Role foundation for the single Unlxck app. `athlete` and `admin` are live in
 -- private beta; `coach` and `gym_owner` are reserved for public beta (not yet
 -- selectable at sign-up). On databases created before these values existed, the
@@ -92,6 +102,20 @@ create table if not exists public.profiles (
   -- gate lives on the profile, not in browser storage, so it survives a device
   -- change, a reinstall, and a cleared cache.
   private_trial_ack_at timestamptz,
+  -- Compliance evidence. The athlete's age band is derived from date_of_birth
+  -- server-side (never a client-supplied is_minor flag), and Terms acceptance is
+  -- recorded separately from health-data consent because UK GDPR Art. 9(2)(a)
+  -- consent must be specific, separate and withdrawable. private_trial_ack_at
+  -- is not reusable for either: it evidences a different thing and has no
+  -- document version. See docs/health-data-lawful-basis-dpia.md.
+  date_of_birth date
+    constraint profiles_date_of_birth_plausible
+      check (date_of_birth is null or date_of_birth > date '1900-01-01'),
+  terms_version text,
+  terms_accepted_at timestamptz,
+  health_consent_version text,
+  health_consent_at timestamptz,
+  health_consent_withdrawn_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -134,6 +158,67 @@ begin
       or new.username_change_history is distinct from old.username_change_history then
       raise exception 'Use the username change endpoint.';
     end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- Consent evidence is only evidence if the subject cannot write it themselves.
+-- The live UPDATE policy (profiles_self_or_admin_update) lets a browser client
+-- write its own row and a DB-role admin write anyone's, so without this guard an
+-- athlete could stamp their own terms_accepted_at, backdate a health-data
+-- consent, or edit their date of birth out of the under-18 band.
+--
+-- Lives in `private` with a pinned search_path, per
+-- 20260726162809_harden_internal_functions_and_search_paths. Not SECURITY
+-- DEFINER: it reads auth.role() and the row, then raises, so it needs no
+-- elevated privilege.
+create or replace function private.prevent_client_compliance_writes()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, pg_temp
+as $$
+begin
+  if auth.role() <> 'service_role' then
+    if tg_op = 'INSERT' then
+      if new.date_of_birth is not null
+        or new.terms_version is not null
+        or new.terms_accepted_at is not null
+        or new.health_consent_version is not null
+        or new.health_consent_at is not null
+        or new.health_consent_withdrawn_at is not null then
+        raise exception 'Consent and date of birth are set by the backend only.';
+      end if;
+    elsif tg_op = 'UPDATE' then
+      if new.date_of_birth is distinct from old.date_of_birth
+        or new.terms_version is distinct from old.terms_version
+        or new.terms_accepted_at is distinct from old.terms_accepted_at
+        or new.health_consent_version is distinct from old.health_consent_version
+        or new.health_consent_at is distinct from old.health_consent_at
+        or new.health_consent_withdrawn_at is distinct from old.health_consent_withdrawn_at then
+        raise exception 'Consent and date of birth are set by the backend only.';
+      end if;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- The 13+ floor from docs/children-age-appropriate-use-policy.md, applied to
+-- every writer including the service role. A CHECK constraint cannot express it
+-- (check expressions must be immutable, and this needs current_date).
+create or replace function private.enforce_profile_minimum_age()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, pg_temp
+as $$
+begin
+  if new.date_of_birth is not null
+    and new.date_of_birth > (current_date - interval '13 years') then
+    raise exception 'under_minimum_age'
+      using detail = 'UNLXCK accounts require an athlete aged 13 or over.';
   end if;
 
   return new;
@@ -424,6 +509,18 @@ create trigger profiles_prevent_username_policy_bypass
 before update on public.profiles
 for each row
 execute function public.prevent_username_policy_bypass();
+
+drop trigger if exists profiles_prevent_client_compliance_writes on public.profiles;
+create trigger profiles_prevent_client_compliance_writes
+before insert or update on public.profiles
+for each row
+execute function private.prevent_client_compliance_writes();
+
+drop trigger if exists profiles_enforce_minimum_age on public.profiles;
+create trigger profiles_enforce_minimum_age
+before insert or update of date_of_birth on public.profiles
+for each row
+execute function private.enforce_profile_minimum_age();
 
 create or replace function public.try_parse_timestamptz(p_value text)
 returns timestamptz

@@ -10,7 +10,14 @@ import { InstallUnlxck } from "@/components/install-unlxck";
 import { PushNotificationSettings } from "@/components/push-notification-settings";
 import { PrivateTrialGuide } from "@/components/private-trial-guide";
 import { GlobalFeedback } from "@/components/feedback/global-feedback";
-import { ApiError, changeUsername, updateMe } from "@/lib/api";
+import { ApiError, changeUsername, recordCompliance, updateMe } from "@/lib/api";
+import {
+  consentCopyForBand,
+  hasHealthDataConsent,
+  healthConsentSummary,
+  termsSummary,
+} from "@/lib/compliance";
+import { PRIVACY_HREF, TERMS_HREF, buildDataRequestMailto } from "@/lib/legal-documents";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
@@ -353,6 +360,10 @@ export default function SettingsPage() {
   const [programmeControls, setProgrammeControls] = useState<ProgrammeControls>(DEFAULT_PROGRAMME_CONTROLS);
   const [adminTemplates, setAdminTemplates] = useState<AdminTemplateDraft>(DEFAULT_ADMIN_TEMPLATES);
 
+  const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
+  const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [isConsentSaving, setIsConsentSaving] = useState(false);
+
   const isAdmin = me?.profile.role === "admin";
   const sections = isAdmin ? ADMIN_SETTINGS_SECTIONS : ATHLETE_SETTINGS_SECTIONS;
   const isReady = isMeHydrated && Boolean(me);
@@ -368,6 +379,16 @@ export default function SettingsPage() {
   const currentUsername = (me?.profile.username ?? "").trim();
   const detectedTimeZone = detectDeviceTimeZone() || me?.profile.athlete_timezone || "Automatic";
   const lastUpdatedLabel = formatDateTime(me?.profile.updated_at);
+  const healthConsentGranted = hasHealthDataConsent(me);
+  // Age-appropriate wording for the privacy card, from the server's band.
+  const consentCopy = consentCopyForBand(me?.profile.age_band);
+  // A mailto route is only offered once a real privacy address is configured.
+  // Linking to the notice's "[ADD PRIVACY EMAIL...]" placeholder would give the
+  // athlete a deletion route that silently goes nowhere.
+  const deletionRequestHref = buildDataRequestMailto(
+    "UNLXCK account and data deletion request",
+    `Please delete my UNLXCK account and associated personal data.\n\nAccount email: ${me?.profile.email ?? ""}\n`,
+  );
   const initials = getInitials(fullName || "Athlete");
   const professionalStatusLabel =
     getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, hydratedProfile.athlete.professional_status ?? "") || "Not set";
@@ -377,6 +398,36 @@ export default function SettingsPage() {
   const usernameMax = rateLimit?.max_changes_per_window ?? 4;
   const usernameWindowDays = rateLimit?.window_days ?? 30;
   const nextAvailableLabel = formatNextAvailable(rateLimit?.next_available_at);
+
+  async function toggleHealthConsent(grant: boolean) {
+    const token = session?.access_token;
+    if (!token || isConsentSaving) {
+      return;
+    }
+    setIsConsentSaving(true);
+    setPrivacyMessage(null);
+    setPrivacyError(null);
+    try {
+      // The server records the withdrawal timestamp and returns the updated
+      // profile, so the UI reflects the stored evidence rather than an optimistic
+      // guess about what was written.
+      const next = await recordCompliance(token, { health_data_consent: grant });
+      replaceMe(next);
+      setPrivacyMessage(
+        grant
+          ? "Health-data consent recorded. Personalised health features are available again."
+          : "Health-data consent withdrawn. UNLXCK will not use your health information for new personalised guidance.",
+      );
+    } catch (consentError) {
+      setPrivacyError(
+        consentError instanceof Error
+          ? consentError.message
+          : "Your consent change could not be saved. Try again.",
+      );
+    } finally {
+      setIsConsentSaving(false);
+    }
+  }
 
   const passwordStrength = useMemo(
     () => evaluatePasswordStrength(newPassword, { fullName, email: me?.profile.email ?? "" }),
@@ -1085,17 +1136,75 @@ export default function SettingsPage() {
             <p className="kicker">Privacy</p>
             <h2 className="form-section-title">Data and consent</h2>
           </div>
+          {/* "Account required data only" was not true: UNLXCK processes
+              injuries, readiness and bodyweight, which is special-category
+              health data. The summary now states the actual consent record. */}
           <div className="settings-profile-summary-grid">
-            <SettingsSummaryItem label="Consent/data sharing" value="Account required data only" />
+            <SettingsSummaryItem label="Terms of Use" value={termsSummary(me)} />
+            <SettingsSummaryItem label="Health-data consent" value={healthConsentSummary(me)} />
             <SettingsSummaryItem label="Last profile update" value={lastUpdatedLabel} />
             <SettingsSummaryItem label="Detected time zone" value={detectedTimeZone} />
           </div>
+          <p className="muted">{consentCopy.privacySummary}</p>
+          <ul className="summary-list">
+            <li>
+              <Link href={PRIVACY_HREF} className="auth-text-link">
+                Privacy Notice
+              </Link>
+            </li>
+            <li>
+              <Link href={TERMS_HREF} className="auth-text-link">
+                Terms of Use
+              </Link>
+            </li>
+          </ul>
+          {privacyMessage ? (
+            <div className="success-banner" role="status">
+              {privacyMessage}
+            </div>
+          ) : null}
+          {privacyError ? (
+            <div className="error-banner" role="alert">
+              {privacyError}
+            </div>
+          ) : null}
+          {healthConsentGranted ? (
+            <p className="muted">
+              Withdrawing stops UNLXCK using your health information for new personalised
+              guidance. Plans already generated stay readable, and you can give consent again at
+              any time.
+            </p>
+          ) : (
+            <p className="muted">{consentCopy.declineNote}</p>
+          )}
           <div className="plan-summary-actions settings-action-row">
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => void toggleHealthConsent(!healthConsentGranted)}
+              disabled={isConsentSaving}
+            >
+              {isConsentSaving
+                ? "Saving…"
+                : healthConsentGranted
+                  ? "Withdraw health-data consent"
+                  : "Give health-data consent"}
+            </button>
+            {deletionRequestHref ? (
+              <a className="ghost-button" href={deletionRequestHref}>
+                Request account & data deletion
+              </a>
+            ) : null}
             <button type="button" className="ghost-button" onClick={() => void signOut()}>
               Sign out
             </button>
           </div>
-          <p className="settings-coming-soon">Data export and account deletion controls will be available from Privacy after launch.</p>
+          {deletionRequestHref ? null : (
+            <p className="muted">
+              To request access to your data or deletion of your account, send a request using
+              Send feedback below and we will action it under our retention policy.
+            </p>
+          )}
         </article>
 
         {/* The same briefing shown at sign-up, kept readable for the whole

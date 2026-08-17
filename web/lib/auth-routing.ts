@@ -1,3 +1,4 @@
+import { requiresComplianceAcceptance } from "@/lib/compliance";
 import { requiresPrivateTrialAcknowledgement } from "@/lib/private-trial";
 import type { MeResponse } from "@/lib/types";
 
@@ -30,6 +31,14 @@ export function getAuthenticatedLandingHref(me: MeResponse | null): string {
 
   if (me?.profile.role === "gym_owner") {
     return "/gym-owner";
+  }
+
+  // Age and Terms come first: an athlete who has not accepted the Terms has not
+  // completed signup, so they cannot be sent into the trial briefing or intake.
+  // Only reached by accounts that predate the consent fields — a signup through
+  // the current form already satisfies this.
+  if (requiresComplianceAcceptance(me)) {
+    return "/consent";
   }
 
   // The trial briefing sits between account creation and onboarding: a tester

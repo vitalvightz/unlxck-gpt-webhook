@@ -890,6 +890,8 @@ export function PlanIntakeForm() {
   const searchParams = useSearchParams();
   const refiningFromQuickBuild = searchParams.get("from") === "quick_build";
   const { me, session, replaceMe } = useAppSession();
+  // Server-derived age band; the client never decides this.
+  const isMinorAthlete = Boolean(me?.profile.is_minor);
   const [currentStep, setCurrentStep] = useState(0);
   const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
@@ -2058,7 +2060,12 @@ export function PlanIntakeForm() {
     : performanceFocusCapReached
       ? FOCUS_CAP_DISABLED_REASON
       : undefined;
-  const weightCutStatus = formatWeightCutStatus(form.athlete.weight_kg, form.athlete.target_weight_kg);
+  // A draft written before target-weight suppression can still carry one, so
+  // the derived cut status and the review row are suppressed for a minor too —
+  // otherwise a hidden field would keep surfacing through the summaries.
+  const weightCutStatus = isMinorAthlete
+    ? null
+    : formatWeightCutStatus(form.athlete.weight_kg, form.athlete.target_weight_kg);
   const equipmentLimitations = formatEquipmentLimitations(form.equipment_access);
   const sparringConsistency = getSparringConsistency(
     form.training_availability,
@@ -2096,7 +2103,9 @@ export function PlanIntakeForm() {
     ...(hasValue(form.athlete.age) ? [{ label: "Age", value: formatValue(form.athlete.age) }] : []),
     ...(hasValue(form.athlete.height_cm) ? [{ label: "Height", value: `${form.athlete.height_cm} cm` }] : []),
     ...(hasValue(form.athlete.weight_kg) ? [{ label: "Current weight", value: `${form.athlete.weight_kg} kg` }] : []),
-    ...(hasValue(form.athlete.target_weight_kg) ? [{ label: "Target weight", value: `${form.athlete.target_weight_kg} kg` }] : []),
+    ...(!isMinorAthlete && hasValue(form.athlete.target_weight_kg)
+      ? [{ label: "Target weight", value: `${form.athlete.target_weight_kg} kg` }]
+      : []),
     { label: "Stance", value: stanceLabel },
     { label: "Combat sport", value: technicalStyleLabel },
     { label: "Tactical style", value: tacticalStyleLabel },
@@ -2499,11 +2508,18 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateAthlete("stance", value)}
                     />
                   </div>
-                  <div className="field">
-                    <label htmlFor="targetWeightKg">Target weight (kg)</label>
-                    <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
-                    <p className="muted">Use realistic fight-week target, not an ideal someday number.</p>
-                  </div>
+                  {/* Not shown to under-18s. UNLXCK provides them no weight-cut
+                      guidance, so a fight-week target has no feature to serve —
+                      and the Children's Code says a child's data is minimised to
+                      what the active feature needs. The backend strips the field
+                      too, so hiding it here is presentation, not enforcement. */}
+                  {isMinorAthlete ? null : (
+                    <div className="field">
+                      <label htmlFor="targetWeightKg">Target weight (kg)</label>
+                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
+                      <p className="muted">Use realistic fight-week target, not an ideal someday number.</p>
+                    </div>
+                  )}
                   <div className="field">
                     <label htmlFor="status">Professional Status</label>
                     <CustomSelect

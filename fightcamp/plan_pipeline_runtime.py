@@ -27,7 +27,12 @@ from .strength import (
 )
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
 from .training_context import TrainingContext, normalize_equipment_list
-from .weight_cut import compute_weight_cut_pct, parse_weight_value, weight_cut_input_status
+from .weight_cut import (
+    WEIGHT_CUT_INPUTS_KNOWN,
+    compute_weight_cut_pct,
+    parse_weight_value,
+    weight_cut_input_status,
+)
 
 PHASES = ("GPP", "SPP", "TAPER")
 PHASE_COLORS = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}
@@ -315,6 +320,17 @@ def build_runtime_context(
     weight_cut_status_val = weight_cut_input_status(weight, target_weight)
     weight_cut_pct_val = compute_weight_cut_pct(weight_val, target_val)
     weight_cut_risk_flag = weight_cut_pct_val >= 3.0
+    if plan_input.is_minor:
+        # Under-18s get no weight-cut pathway at all. Clearing the flag here is
+        # the whole guard: every cut-derived output downstream — the acute-cut
+        # protocol, rehydration and diuretic notes, cut-pressure load softening,
+        # supervision warnings — hangs off `weight_cut_risk`, so switching it off
+        # at the source removes them without touching the nutrition system.
+        # `weight_cut_status` becomes "known" so nothing downstream reports a
+        # missing target weight and invites the athlete to supply one.
+        weight_cut_risk_flag = False
+        weight_cut_pct_val = 0.0
+        weight_cut_status_val = WEIGHT_CUT_INPUTS_KNOWN
     mental_block_class = classify_mental_block(plan_input.mental_block or "")
     mental_block_class = _filter_mindset_blocks(mental_block_class, tech_styles, tactical_styles)
 
@@ -389,6 +405,7 @@ def build_runtime_context(
         mental_block=mental_block_class,
         mental_block_raw=(plan_input.mental_block or "").strip(),
         age=parse_int_or_none(plan_input.age),
+        is_minor=plan_input.is_minor,
         weight=parse_float_or_none(weight),
         prev_exercises=[],
         recent_exercises=[],

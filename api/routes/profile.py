@@ -4,7 +4,10 @@ import logging
 
 from fastapi import APIRouter, Depends
 
+from api.compliance_guards import require_onboarding_compliance
+from api.minor_safety import strip_minor_target_weight
 from api.models import (
+    ComplianceAcceptanceRequest,
     MeResponse,
     OnboardingDraftSaveRequest,
     ProfileRecord,
@@ -83,6 +86,29 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
         return _build_me_with_activation_xp(updated, store)
 
+    @router.post("/api/me/compliance", response_model=MeResponse)
+    def record_compliance(
+        acceptance: ComplianceAcceptanceRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> MeResponse:
+        """Record date of birth, Terms acceptance and health-data consent.
+
+        One endpoint covers first-time acceptance, later re-acceptance after a
+        version bump, and withdrawal, because all three write the same evidence
+        columns and all three must be server-stamped. The request carries intent
+        only — see :class:`ComplianceAcceptanceRequest`.
+        """
+        updated = _map_profile_row(
+            store.record_compliance_acceptance(
+                profile.athlete_id,
+                date_of_birth=acceptance.date_of_birth,
+                accept_terms=acceptance.accept_terms,
+                health_data_consent=acceptance.health_data_consent,
+            )
+        )
+        return _build_me_with_activation_xp(updated, store)
+
     @router.post("/api/me/username", response_model=MeResponse)
     def change_username_endpoint(
         update: UsernameChangeRequest,
@@ -98,7 +124,19 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> dict[str, str | bool]:
+        # Terms acceptance must precede intake. The draft is the first thing
+        # onboarding writes, so gating it here is what makes "an athlete cannot
+        # complete onboarding without accepting the Terms" true on the server
+        # rather than only in the client's routing.
+        require_onboarding_compliance(profile)
         update_data = update.model_dump(exclude_unset=True)
+        if profile.is_minor and isinstance(update_data.get("onboarding_draft"), dict):
+            # The draft carries the same athlete block as the intake, so a
+            # target weight would otherwise persist here for an under-18 even
+            # though generation strips it later.
+            update_data["onboarding_draft"] = strip_minor_target_weight(
+                update_data["onboarding_draft"]
+            )
         updated = store.update_profile(
             profile.athlete_id,
             ProfileUpdateRequest(**update_data),

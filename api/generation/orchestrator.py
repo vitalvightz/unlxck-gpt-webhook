@@ -19,7 +19,9 @@ from typing import Any, Callable
 
 from fastapi import HTTPException, status
 
+from ..compliance import evaluate_profile_compliance
 from ..error_sanitizer import sanitize_error_text
+from ..minor_safety import minor_safe_stage1_payload
 from ..models import (
     PROFILE_REFRESH_FAILED_WARNING as _PROFILE_REFRESH_FAILED_WARNING,
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY as _PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
@@ -51,6 +53,29 @@ from .types import Planner, ProgressCallback
 
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
+
+
+def _athlete_is_minor(store: AppStore, athlete_id: str) -> bool:
+    """Whether the athlete is under 18, read from the stored profile.
+
+    Fails safe: an unreadable profile is treated as a minor, because guessing
+    "adult" would hand an unverified account exactly the weight-cut guidance the
+    child policy prohibits. The cost of guessing wrong the other way is a plan
+    without cut guidance, which every athlete can still train from.
+    """
+    try:
+        profile_row = store.get_profile(athlete_id)
+    except Exception as exc:  # noqa: BLE001 - safeguard must not depend on a clean read
+        logger.error(
+            "[jobs] generation:minor_check_failed athlete_id=%s exc_type=%s error=%s",
+            athlete_id,
+            type(exc).__name__,
+            sanitize_error_text(exc),
+        )
+        return True
+    if not profile_row:
+        return True
+    return evaluate_profile_compliance(profile_row).is_minor
 
 
 def _mark_profile_refresh_failed(final_result: dict[str, Any]) -> dict[str, Any]:
@@ -395,6 +420,18 @@ async def run_generation_job(
         stage1_result = job.get("stage1_result")
         if not isinstance(stage1_result, dict):
             planner_payload = request_body.to_payload()
+            # The age band comes from the stored profile, never from the intake
+            # payload the client submitted. A minor's payload has its cut inputs
+            # stripped before the planner ever sees them, so no weight-cut,
+            # dehydration or water-cut guidance can be generated in the first
+            # place (docs/children-age-appropriate-use-policy.md).
+            if await _to_thread_with_heartbeat(_athlete_is_minor, store, athlete_id):
+                planner_payload = minor_safe_stage1_payload(planner_payload)
+                logger.info(
+                    "[jobs] generation:minor_weight_cut_guard_applied athlete_id=%s job_id=%s",
+                    athlete_id,
+                    job_id,
+                )
             if isinstance(raw_request_payload, dict):
                 triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
                 if isinstance(triage_override, dict):

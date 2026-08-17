@@ -16,6 +16,7 @@ from api.generation_job_helpers import (
     _normalized_client_request_id,
     daily_generation_cap_window,
 )
+from api.compliance_guards import require_health_feature_access
 from api.errors import generation_already_in_flight_error
 from api.models import GenerationJobResponse, ProfileRecord
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
@@ -102,6 +103,10 @@ async def retry_generation_job(
     plan_generate_daily_limit_per_user: Callable[[], int],
     is_exempt_from_daily_generation_cap: Callable[[str], bool],
 ) -> GenerationJobResponse:
+    # A retry re-runs the same health-data processing as the original request,
+    # so it goes through the same consent gate. Without this, withdrawing
+    # consent would stop new plans but leave the retry path open.
+    require_health_feature_access(profile)
     original = await asyncio.to_thread(store.get_generation_job, job_id)
     if not original:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")

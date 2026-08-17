@@ -1138,6 +1138,31 @@ class PlanRequest(BaseModel):
         return payload
 
 
+class ComplianceAcceptanceRequest(BaseModel):
+    """Age, Terms and health-data consent submitted by the athlete.
+
+    Deliberately carries *intent*, never evidence: no timestamps and no version
+    strings. The server stamps both, so an acceptance cannot be backdated or
+    attributed to a document version the athlete never saw. Every field is
+    optional so the same endpoint serves first-time acceptance, a later Terms
+    re-acceptance, and a standalone consent withdrawal.
+    """
+
+    # ISO ``YYYY-MM-DD``. Rejected below 13; the age band is derived from it and
+    # never sent by the client.
+    date_of_birth: str | None = Field(default=None, max_length=32)
+    accept_terms: bool | None = None
+    # True grants health-data consent, False withdraws it. Separate from
+    # ``accept_terms`` on purpose: bundling the two would make the Article 9
+    # consent non-specific and therefore invalid.
+    health_data_consent: bool | None = None
+
+    @field_validator("date_of_birth", mode="before")
+    @classmethod
+    def clean_date_of_birth(cls, value: Any) -> str | None:
+        return _clean_optional_text(value)
+
+
 class ProfileUpdateRequest(BaseModel):
     full_name: str | None = Field(default=None, max_length=ATHLETE_FULL_NAME_MAX_CHARS)
     technical_style: list[str] | None = Field(default=None, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
@@ -1449,6 +1474,22 @@ class ProfileRecord(BaseModel):
     # Null until the athlete confirms they read the private trial instructions.
     # The web app gates onboarding on this, so it is part of every /api/me read.
     private_trial_ack_at: str | None = None
+    # Compliance evidence. `date_of_birth` is the only input to the age band —
+    # `is_minor` and `age_band` below are *derived server-side* on every read, so
+    # a client that fabricates them changes nothing. Terms and health-data
+    # consent are recorded separately (UK GDPR Art. 9(2)(a) requires the health
+    # consent to be specific, separate and withdrawable).
+    date_of_birth: str | None = None
+    age_band: str = "unknown"
+    is_minor: bool = True
+    meets_minimum_age: bool = False
+    terms_version: str | None = None
+    terms_accepted_at: str | None = None
+    terms_accepted: bool = False
+    health_consent_version: str | None = None
+    health_consent_at: str | None = None
+    health_consent_withdrawn_at: str | None = None
+    health_consent_granted: bool = False
     created_at: str
     updated_at: str
 

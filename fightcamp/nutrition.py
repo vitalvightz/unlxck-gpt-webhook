@@ -10,6 +10,15 @@ from .weight_cut import (
     weight_cut_supervision_required,
 )
 
+# Shown to under-18 athletes in place of any cut guidance. Kept identical to
+# api.minor_safety.MINOR_WEIGHT_CUT_NOTE so the deterministic block and the
+# output-scrubbing backstop say the same thing.
+MINOR_WEIGHT_CUT_NOTE = (
+    "Weight-cut, dehydration and water-cut guidance is not provided to athletes "
+    "under 18. Talk to your coach and an appropriately qualified health "
+    "professional about making weight safely."
+)
+
 _WEIGHT_CUT_UNKNOWN_NOTES = {
     WEIGHT_CUT_INPUTS_MISSING_TARGET: (
         "No target weight set — cut size unknown. Add a fight-week target weight "
@@ -175,7 +184,15 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
             weight_cut_risk, cut_pct, days_until_fight
         ),
     }
-    if weight_cut_status in WEIGHT_CUT_INPUTS_UNKNOWN_STATUSES:
+    if bool(flags.get("is_minor")):
+        # Under-18: there is no cut, and "no active cut" alone would be
+        # ambiguous. The extra keys mirror the unknown-inputs precedent above —
+        # added only in this state, so the ordinary athlete-facing shape for a
+        # known cut stays {active, risk_band, supervision_required}.
+        targets["weight_cut"]["blocked"] = True
+        targets["weight_cut"]["blocked_reason"] = "under_18"
+        targets["weight_cut"]["note"] = MINOR_WEIGHT_CUT_NOTE
+    elif weight_cut_status in WEIGHT_CUT_INPUTS_UNKNOWN_STATUSES:
         # Mirror the missing-bodyweight handling above: never present "no active
         # cut" as a finding when the inputs to decide that were never collected.
         # These keys are added ONLY in the unknown state — the athlete-facing
@@ -237,6 +254,12 @@ def generate_nutrition_block(*, flags: dict) -> str:
     nutrition_block += "- Whole foods focus: lean protein, complex carbs, healthy fats\n"
     nutrition_block += f"- Protein intake: 1.7-2.2 g/kg{_daily(1.7, 2.2)}\n"
     nutrition_block += f"- Hydration: 0.03-0.04 l/kg{_daily(30, 40, 'ml', 0)}\n"
+
+    if bool(flags.get("is_minor")):
+        # The cut flag is already false for a minor, so nothing is being removed
+        # here — this states the rule so an under-18 athlete is not left assuming
+        # the section is missing by accident.
+        nutrition_block += f"- {MINOR_WEIGHT_CUT_NOTE}\n"
 
     if weight_cut_risk:
         nutrition_block += "\n**Active Weight-Cut Note:**\n"

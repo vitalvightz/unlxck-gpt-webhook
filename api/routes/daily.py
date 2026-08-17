@@ -20,6 +20,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from api.compliance_guards import require_health_feature_access
 from api.contracts.injury_checkin import MAX_INFECTION_SIGNS
 from api.contracts.readiness_message import classify_injury_surface
 from api.models import (
@@ -212,6 +213,8 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> InjuryFlagRecord:
+        # An athlete-reported injury is special-category health data.
+        require_health_feature_access(profile)
         plan_row = latest_visible_plan_row(store, profile.athlete_id)
         flag_row = store.create_injury_flag(
             profile.athlete_id,

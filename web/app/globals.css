@@ -995,6 +995,56 @@ select:focus-visible {
   padding-top: 4px;
 }
 
+/* Consent controls. The checkbox keeps its natural size and sits beside a
+   full-width label, so the wording an athlete is agreeing to stays readable at
+   phone width instead of being squeezed into a single line. */
+.auth-consent-field {
+  gap: 6px;
+}
+
+.auth-consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: var(--type-body-sm);
+  font-weight: 500;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.auth-consent-row input[type="checkbox"] {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--accent, currentColor);
+}
+
+.auth-consent-help {
+  font-size: var(--type-body-sm);
+  line-height: 1.45;
+}
+
+/* Legal documents render as long-form prose, so they get a reading measure
+   rather than the app's dense panel rhythm. */
+.legal-document {
+  max-width: 72ch;
+  margin: 0 auto;
+}
+
+.legal-document-section {
+  margin-top: 24px;
+}
+
+.legal-document-section h2 {
+  font-size: var(--type-body-lg, 1.05rem);
+  margin-bottom: 8px;
+}
+
+.legal-document p {
+  line-height: 1.6;
+}
+
 .auth-text-link {
   color: var(--text-muted);
   font-size: var(--type-body-sm);

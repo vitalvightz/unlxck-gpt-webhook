@@ -14,6 +14,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
 
+from api.compliance_guards import require_health_feature_access
 from api.models import (
     InjuryFlagRecord,
     LandingResponse,
@@ -70,6 +71,9 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> TodayCheckinResponse:
+        # A readiness check-in collects soreness, fatigue, sleep and pain: health
+        # data under Art. 9. No consent, no new collection.
+        require_health_feature_access(profile)
         row = submit_today_checkin(
             store,
             athlete_id=profile.athlete_id,
@@ -123,6 +127,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         # Pin the injury write and its calendar-scoped XP award to one instant so
         # a request crossing the 03:00 training-day rollover cannot split them
         # across two different athlete-local days.
+        require_health_feature_access(profile)
         request_now = datetime.now(timezone.utc)
         result = submit_today_injury_checkin(
             store,

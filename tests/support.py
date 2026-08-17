@@ -14,6 +14,15 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from api.auth import AuthenticatedUser
+from api.compliance import (
+    CODE_DOB_INVALID,
+    CODE_UNDER_MINIMUM_AGE,
+    HEALTH_CONSENT_VERSION,
+    TERMS_VERSION,
+    UNDER_MINIMUM_AGE_MESSAGE,
+    meets_minimum_age,
+    parse_date_of_birth,
+)
 from api.errors import client_request_id_payload_mismatch_error
 from api.generation.payloads import _stable_payload_hash
 from api.models import (
@@ -31,7 +40,7 @@ from api.state_machine import (
 )
 from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
-from api.store import _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
+from api.store import _signup_date_of_birth, _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
 from datetime import timedelta
 
@@ -223,10 +232,64 @@ class FakeStore:
             "appearance_mode": "dark",
             "onboarding_draft": None,
             "nutrition_profile": {},
+            # Mirrors AppStore._build_profile_payload: the date supplied to the
+            # signup form seeds the profile once, and an under-13 or malformed
+            # value is dropped rather than stored.
+            "date_of_birth": _signup_date_of_birth(user),
+            "terms_version": None,
+            "terms_accepted_at": None,
+            "health_consent_version": None,
+            "health_consent_at": None,
+            "health_consent_withdrawn_at": None,
             "created_at": _now(),
             "updated_at": _now(),
         }
         self.profiles[user.user_id] = profile
+        return profile
+
+    def get_profile(self, athlete_id: str) -> dict | None:
+        return self.profiles.get(athlete_id)
+
+    def record_compliance_acceptance(
+        self,
+        athlete_id: str,
+        *,
+        date_of_birth: str | None = None,
+        accept_terms: bool | None = None,
+        health_data_consent: bool | None = None,
+    ) -> dict:
+        """Mirrors AppStore.record_compliance_acceptance: server owns the stamps."""
+        profile = self.profiles[athlete_id]
+        if date_of_birth is not None:
+            parsed = parse_date_of_birth(date_of_birth)
+            if parsed is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={
+                        "code": CODE_DOB_INVALID,
+                        "message": "Enter your date of birth as a valid date.",
+                    },
+                )
+            if not meets_minimum_age(parsed):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "code": CODE_UNDER_MINIMUM_AGE,
+                        "message": UNDER_MINIMUM_AGE_MESSAGE,
+                    },
+                )
+            profile["date_of_birth"] = parsed.isoformat()
+        now = _now()
+        if accept_terms:
+            profile["terms_version"] = TERMS_VERSION
+            profile["terms_accepted_at"] = now
+        if health_data_consent is True:
+            profile["health_consent_version"] = HEALTH_CONSENT_VERSION
+            profile["health_consent_at"] = now
+            profile["health_consent_withdrawn_at"] = None
+        elif health_data_consent is False:
+            profile["health_consent_withdrawn_at"] = now
+        profile["updated_at"] = now
         return profile
 
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict:
@@ -2190,6 +2253,51 @@ DEFAULT_ADMIN_USER = AuthenticatedUser(
 )
 
 
+# The default test athlete is an onboarded adult: old enough for the standard
+# flow, Terms accepted, health-data consent given. That is the state a real
+# athlete reaches at the end of signup, so it is the right baseline for every
+# test that is about something else. Tests that exercise the compliance gates
+# clear these explicitly (see ``clear_compliance`` / ``withdraw_health_consent``).
+DEFAULT_ADULT_DATE_OF_BIRTH = "1996-05-04"
+
+
+def grant_default_compliance(
+    store: "FakeStore",
+    athlete_id: str = DEFAULT_ATHLETE_USER.user_id,
+    *,
+    date_of_birth: str = DEFAULT_ADULT_DATE_OF_BIRTH,
+) -> dict:
+    """Put a profile in the fully consented state signup produces."""
+    return store.record_compliance_acceptance(
+        athlete_id,
+        date_of_birth=date_of_birth,
+        accept_terms=True,
+        health_data_consent=True,
+    )
+
+
+def clear_compliance(store: "FakeStore", athlete_id: str = DEFAULT_ATHLETE_USER.user_id) -> dict:
+    """Reset a profile to the pre-consent state a brand-new account is in."""
+    profile = store.profiles[athlete_id]
+    profile.update(
+        {
+            "date_of_birth": None,
+            "terms_version": None,
+            "terms_accepted_at": None,
+            "health_consent_version": None,
+            "health_consent_at": None,
+            "health_consent_withdrawn_at": None,
+        }
+    )
+    return profile
+
+
+def withdraw_health_consent(
+    store: "FakeStore", athlete_id: str = DEFAULT_ATHLETE_USER.user_id
+) -> dict:
+    return store.record_compliance_acceptance(athlete_id, health_data_consent=False)
+
+
 def seed_default_profiles(store: "FakeStore") -> None:
     """Ensure the default athlete and admin profiles exist in ``store``.
 
@@ -2197,9 +2305,14 @@ def seed_default_profiles(store: "FakeStore") -> None:
     first authenticated request. Tests that build a ``FakeStore`` directly and
     seed intakes/plans without going through ``_build_client`` should call this
     to satisfy the profile-row prerequisite of admin/plan endpoints.
+
+    The athlete is left fully consented, matching an account that finished
+    signup — otherwise every health-dependent endpoint in the suite would 403 on
+    a gate that is not what the test is checking.
     """
     store.ensure_profile(DEFAULT_ATHLETE_USER)
     store.ensure_profile(DEFAULT_ADMIN_USER)
+    grant_default_compliance(store)
 
 
 def _build_client(

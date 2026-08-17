@@ -16,6 +16,15 @@ from storage3.exceptions import StorageApiError
 from supabase import Client, ClientOptions, create_client
 
 from .auth import AuthenticatedUser
+from .compliance import (
+    CODE_DOB_INVALID,
+    CODE_UNDER_MINIMUM_AGE,
+    HEALTH_CONSENT_VERSION,
+    TERMS_VERSION,
+    UNDER_MINIMUM_AGE_MESSAGE,
+    meets_minimum_age,
+    parse_date_of_birth,
+)
 from .errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
 from .environment import is_production_environment
 from .error_sanitizer import sanitize_error_text
@@ -230,6 +239,26 @@ def is_effective_admin_profile(profile: Any, store: "AppStore") -> bool:
     return role == "admin" and store.is_admin_email(str(email or ""))
 
 
+def _signup_date_of_birth(user: AuthenticatedUser) -> str | None:
+    """The date of birth declared at signup, when it is usable and 13+.
+
+    Supabase auth metadata is client-writable, so this is only ever a *seed* for
+    a profile that has none: :meth:`AppStore._build_profile_payload` prefers an
+    already-stored value, and no later read re-imports metadata. An under-13 or
+    malformed date returns ``None`` so profile creation still succeeds — the
+    account then has no date of birth and cannot pass the compliance gate, which
+    is the correct outcome and a far better one than a bootstrap failure that
+    leaves an authenticated user with no profile row.
+    """
+    metadata = getattr(user, "metadata", None)
+    if not isinstance(metadata, dict):
+        return None
+    parsed = parse_date_of_birth(metadata.get("date_of_birth"))
+    if parsed is None or not meets_minimum_age(parsed):
+        return None
+    return parsed.isoformat()
+
+
 def _raise_client_request_payload_mismatch_if_known(job: dict[str, Any], payload_hash: str) -> None:
     existing_hash = job.get("payload_hash")
     if existing_hash and existing_hash != payload_hash:
@@ -245,7 +274,18 @@ class AppStore(Protocol):
 
     def approve_profile_access(self, athlete_id: str) -> dict[str, Any]: ...
 
+    def get_profile(self, athlete_id: str) -> dict[str, Any] | None: ...
+
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]: ...
+
+    def record_compliance_acceptance(
+        self,
+        athlete_id: str,
+        *,
+        date_of_birth: str | None = None,
+        accept_terms: bool | None = None,
+        health_data_consent: bool | None = None,
+    ) -> dict[str, Any]: ...
 
     def change_username(self, athlete_id: str, username: str) -> dict[str, Any]: ...
 
@@ -1360,6 +1400,87 @@ class SupabaseAppStore:
             )
         return rows
 
+    def get_profile(self, athlete_id: str) -> dict[str, Any] | None:
+        """One profile row by id, or ``None``.
+
+        Server-side callers that need a profile fact (the age band, a consent
+        state) without a request-scoped ``ProfileRecord`` — the generation
+        worker, for instance — read it through here.
+        """
+        return self._get_profile_by_id(athlete_id)
+
+    def record_compliance_acceptance(
+        self,
+        athlete_id: str,
+        *,
+        date_of_birth: str | None = None,
+        accept_terms: bool | None = None,
+        health_data_consent: bool | None = None,
+    ) -> dict[str, Any]:
+        """Persist age, Terms acceptance and health-data consent.
+
+        The caller supplies intent only. Every timestamp and version string is
+        written here, from the server clock and the constants currently in
+        force, so the stored record is auditable evidence rather than a client
+        assertion. Withdrawal is recorded as its own timestamp instead of
+        clearing the grant: "consented on X, withdrew on Y" is the fact the
+        retention policy needs, and erasing it would destroy the audit trail.
+        """
+        fields: dict[str, Any] = {}
+        if date_of_birth is not None:
+            parsed = parse_date_of_birth(date_of_birth)
+            if parsed is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={
+                        "code": CODE_DOB_INVALID,
+                        "message": "Enter your date of birth as a valid date.",
+                    },
+                )
+            if not meets_minimum_age(parsed):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "code": CODE_UNDER_MINIMUM_AGE,
+                        "message": UNDER_MINIMUM_AGE_MESSAGE,
+                    },
+                )
+            fields["date_of_birth"] = parsed.isoformat()
+
+        now = datetime.now(timezone.utc).isoformat()
+        if accept_terms:
+            fields["terms_version"] = TERMS_VERSION
+            fields["terms_accepted_at"] = now
+        if health_data_consent is True:
+            fields["health_consent_version"] = HEALTH_CONSENT_VERSION
+            fields["health_consent_at"] = now
+            # A fresh grant supersedes any earlier withdrawal. The withdrawal
+            # timestamp is cleared rather than left behind, because a stale
+            # withdrawal newer than the grant would read as "still withdrawn".
+            fields["health_consent_withdrawn_at"] = None
+        elif health_data_consent is False:
+            fields["health_consent_withdrawn_at"] = now
+
+        if not fields:
+            return self._require_profile(athlete_id)
+
+        try:
+            logger.info(
+                "[store] compliance:record athlete_id=%s fields=%s",
+                athlete_id,
+                sorted(fields.keys()),
+            )
+            self.client.table("profiles").update(fields).eq("id", athlete_id).execute()
+            return self._require_profile(athlete_id)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"record_compliance_acceptance athlete_id={athlete_id}",
+                detail="failed to record consent",
+                exc=exc,
+            )
+
     def _build_profile_payload(
         self,
         *,
@@ -1388,6 +1509,14 @@ class SupabaseAppStore:
             "onboarding_draft": existing.get("onboarding_draft"),
             "avatar_url": existing.get("avatar_url"),
             "private_trial_ack_at": existing.get("private_trial_ack_at"),
+            # Seeded once, from the date the athlete supplied to the signup form
+            # (Supabase auth user metadata). An already-stored value always wins,
+            # so re-authenticating with edited metadata cannot move an account
+            # out of the under-18 band. Anything under 13 is dropped rather than
+            # written: the DB trigger would reject the row and strand the
+            # account with no profile at all.
+            "date_of_birth": existing.get("date_of_birth")
+            or _signup_date_of_birth(user),
         }
 
     def _upsert_profile_with_retry(

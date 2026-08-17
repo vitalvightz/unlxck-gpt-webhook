@@ -19,6 +19,14 @@ import { getMe } from "@/lib/api";
 import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@/lib/auth-feedback";
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
+import {
+  TERMS_CONSENT_LABEL,
+  consentCopyForBand,
+  provisionalAgeBand,
+  validateDateOfBirth,
+} from "@/lib/compliance";
+import { PRIVACY_HREF, TERMS_HREF } from "@/lib/legal-documents";
+import { recordCompliance } from "@/lib/api";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
 import { buildAuthRedirectUrl } from "@/lib/site-url";
@@ -49,6 +57,9 @@ export function AuthForm({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [healthDataConsent, setHealthDataConsent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +71,22 @@ export function AuthForm({
   const requiresCaptcha = isTurnstileConfigured();
   const isSignupPasswordBlocked = mode === "signup" && !passwordStrength.isAcceptable;
   const isCaptchaBlocked = requiresCaptcha && !captchaToken;
+  // Client-side courtesy checks only. The backend and a Postgres trigger both
+  // reject an under-13 signup, and the server stamps every consent record, so
+  // disabling the button here is about giving a clear message — not about being
+  // the control.
+  const dateOfBirthError = mode === "signup" ? validateDateOfBirth(dateOfBirth) : null;
+  // Health-data consent is deliberately NOT part of this condition. Making it a
+  // precondition of creating an account would make it conditional, and consent
+  // that is a condition of the service is not freely given (UK GDPR Art. 7(4)) —
+  // which would invalidate the very Article 9 basis it exists to establish. An
+  // athlete can decline it, keep their account, and give it later from Settings.
+  const isSignupConsentBlocked =
+    mode === "signup" && (dateOfBirthError !== null || !acceptedTerms);
+  // Wording only. The band is derived locally from the date being typed so the
+  // explanation matches the reader before the profile exists; the server
+  // re-derives it from the stored date and owns every actual consequence.
+  const consentCopy = consentCopyForBand(provisionalAgeBand(dateOfBirth));
 
   const handleCaptchaUnavailable = useCallback(() => {
     setError(CAPTCHA_UNAVAILABLE_MESSAGE);
@@ -109,6 +136,17 @@ export function AuthForm({
       return;
     }
 
+    if (mode === "signup") {
+      if (dateOfBirthError) {
+        setError(dateOfBirthError);
+        return;
+      }
+      if (!acceptedTerms) {
+        setError("Accept the Terms of Use to create an account.");
+        return;
+      }
+    }
+
     const captchaTokenForRequest = requiresCaptcha ? captchaToken ?? undefined : undefined;
     if (requiresCaptcha && !captchaTokenForRequest) {
       setError(CAPTCHA_REQUIRED_MESSAGE);
@@ -136,6 +174,11 @@ export function AuthForm({
               emailRedirectTo: buildAuthRedirectUrl("/login"),
               data: {
                 full_name: fullName,
+                // Seeds the profile's date of birth on first sign-in and lets a
+                // Postgres trigger reject an under-13 signup even when the
+                // caller bypasses this form. The server re-reads and re-derives
+                // the age band; nothing trusts this value as an age claim.
+                date_of_birth: dateOfBirth,
                 role: selectedRole,
               },
             },
@@ -153,6 +196,27 @@ export function AuthForm({
           return;
         }
         if (data.session) {
+          // Record the acceptances against the new session so the evidence is
+          // server-stamped and versioned. If this call fails the account still
+          // exists but is not consented, and the compliance gate catches it on
+          // the next screen — so a failure here is surfaced, not swallowed.
+          try {
+            await recordCompliance(data.session.access_token, {
+              date_of_birth: dateOfBirth,
+              accept_terms: true,
+              // Only sent when ticked. Sending `false` would record a
+              // withdrawal, and someone who never consented has not withdrawn —
+              // those are different facts and the audit trail keeps them apart.
+              ...(healthDataConsent ? { health_data_consent: true } : {}),
+            });
+          } catch (complianceError) {
+            setError(
+              complianceError instanceof Error
+                ? complianceError.message
+                : "Your account was created but your consent could not be saved. Sign in to finish setup.",
+            );
+            return;
+          }
           router.replace("/onboarding");
           return;
         }
@@ -334,6 +398,74 @@ export function AuthForm({
             {mode === "signup" ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
           </div>
 
+          {mode === "signup" ? (
+            <>
+              <div className="field">
+                <label htmlFor="dateOfBirth">Date of birth</label>
+                <input
+                  id="dateOfBirth"
+                  name="bday"
+                  type="date"
+                  autoComplete="bday"
+                  value={dateOfBirth}
+                  onChange={(event) => setDateOfBirth(event.target.value)}
+                  aria-describedby="dateOfBirthHelp"
+                  required
+                />
+                <p id="dateOfBirthHelp" className="muted auth-consent-help">
+                  UNLXCK is for athletes aged 13 and over. Under-18 accounts get extra privacy
+                  and safety protections.
+                </p>
+              </div>
+
+              <div className="field auth-consent-field">
+                <label className="auth-consent-row" htmlFor="acceptTerms">
+                  <input
+                    id="acceptTerms"
+                    name="acceptTerms"
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(event) => setAcceptedTerms(event.target.checked)}
+                    required
+                  />
+                  <span>
+                    {TERMS_CONSENT_LABEL}{" "}
+                    <Link href={TERMS_HREF} className="auth-text-link" target="_blank">
+                      Read the Terms
+                    </Link>
+                  </span>
+                </label>
+              </div>
+
+              {/* Kept as its own affirmative tick, never folded into the Terms:
+                  UK GDPR Art. 9(2)(a) consent has to be specific and separate,
+                  and a bundled tick would not be valid consent at all. It is
+                  also optional — see isSignupConsentBlocked. */}
+              <div className="field auth-consent-field">
+                <label className="auth-consent-row" htmlFor="healthDataConsent">
+                  <input
+                    id="healthDataConsent"
+                    name="healthDataConsent"
+                    type="checkbox"
+                    checked={healthDataConsent}
+                    onChange={(event) => setHealthDataConsent(event.target.checked)}
+                    aria-describedby="healthDataConsentHelp"
+                  />
+                  <span>{consentCopy.healthConsentLabel}</span>
+                </label>
+                <p id="healthDataConsentHelp" className="muted auth-consent-help">
+                  {consentCopy.healthConsentHelp}{" "}
+                  <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
+                    Read the Privacy Notice
+                  </Link>
+                </p>
+                {healthDataConsent ? null : (
+                  <p className="muted auth-consent-help">{consentCopy.declineNote}</p>
+                )}
+              </div>
+            </>
+          ) : null}
+
           <TurnstileChallenge
             action={mode}
             onTokenChange={setCaptchaToken}
@@ -345,7 +477,9 @@ export function AuthForm({
             <button
               type="submit"
               className="cta"
-              disabled={isPending || isSignupPasswordBlocked || isCaptchaBlocked}
+              disabled={
+                isPending || isSignupPasswordBlocked || isSignupConsentBlocked || isCaptchaBlocked
+              }
             >
               {isPending
                 ? mode === "signup"
