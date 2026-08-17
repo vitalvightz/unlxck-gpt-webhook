@@ -75,48 +75,94 @@ export const TRAINING_AVAILABILITY_OPTIONS: IntakeOption[] = [
   { label: "Sunday", value: "Sunday" },
 ];
 
-export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = [
-  { label: "Dumbbells", value: "dumbbells" },
-  { label: "Kettlebells", value: "kettlebells" },
-  { label: "Barbell", value: "barbell" },
-  { label: "Trap Bar", value: "trap_bar" },
-  { label: "Plyo Box / Box", value: "box" },
-  { label: "Pull-Up Bar", value: "pullup_bar" },
-  { label: "Sled", value: "sled" },
-  { label: "Medicine Ball", value: "medicine_ball" },
-  { label: "Bands", value: "bands" },
-  { label: "Cable", value: "cable" },
-  { label: "Landmine", value: "landmine" },
-  { label: "Heavy Bag", value: "heavy_bag" },
-  { label: "Thai Pads", value: "thai_pads" },
-  { label: "Assault Bike", value: "assault_bike" },
-  { label: "Rower", value: "rower" },
-  { label: "Pool", value: "pool" },
-  { label: "Sandbag", value: "sandbag" },
-  { label: "Battle Ropes", value: "battle_ropes" },
-  { label: "Agility Ladder", value: "agility_ladder" },
-  { label: "Jump Rope", value: "jump_rope" },
-  { label: "Hurdles", value: "hurdles" },
-  { label: "Atlas Stones", value: "atlas_stone" },
-  { label: "Bench", value: "bench" },
-  { label: "Bosu Ball", value: "bosu_ball" },
-  { label: "Bulgarian Bag", value: "bulgarian_bag" },
-  { label: "Foam Roller", value: "foam_roller" },
-  { label: "Log", value: "log" },
-  { label: "Neck Harness", value: "neck_harness" },
-  { label: "Plates", value: "plate" },
-  { label: "Sledgehammer", value: "sledgehammer" },
-  { label: "Step Mill", value: "step_mill" },
-  { label: "Swiss Ball", value: "swiss_ball" },
-  { label: "Tire", value: "tire" },
-  { label: "Towel", value: "towel" },
-  { label: "Treadmill", value: "treadmill" },
-  { label: "TRX", value: "trx" },
-  { label: "Water Jug", value: "water_jug" },
-  { label: "Weight Vest", value: "weight_vest" },
-  { label: "Weight Belt", value: "weight_belt" },
-  { label: "Partner", value: "partner" },
+export type EquipmentAccessGroup = {
+  label: string;
+  options: IntakeOption[];
+};
+
+// This grouped list is the intake source of truth. Keep the persisted values
+// stable: plans, drafts and previously completed intakes store these values.
+export const EQUIPMENT_ACCESS_GROUPS: EquipmentAccessGroup[] = [
+  {
+    label: "Free weights",
+    options: [
+      { label: "Dumbbells", value: "dumbbells" },
+      { label: "Kettlebells", value: "kettlebells" },
+      { label: "Medicine Ball", value: "medicine_ball" },
+      { label: "Sandbag", value: "sandbag" },
+      { label: "Bulgarian Bag", value: "bulgarian_bag" },
+      { label: "Atlas Stones", value: "atlas_stone" },
+      { label: "Plates", value: "plate" },
+      { label: "Water Jug", value: "water_jug" },
+    ],
+  },
+  {
+    label: "Bars & strength stations",
+    options: [
+      { label: "Barbell", value: "barbell" },
+      { label: "Trap Bar", value: "trap_bar" },
+      { label: "Pull-Up Bar", value: "pullup_bar" },
+      { label: "Cable", value: "cable" },
+      { label: "Landmine", value: "landmine" },
+      { label: "Bench", value: "bench" },
+      { label: "Log", value: "log" },
+    ],
+  },
+  {
+    label: "Conditioning machines",
+    options: [
+      { label: "Assault Bike", value: "assault_bike" },
+      { label: "Rower", value: "rower" },
+      { label: "Pool", value: "pool" },
+      { label: "Step Mill", value: "step_mill" },
+      { label: "Treadmill", value: "treadmill" },
+    ],
+  },
+  {
+    label: "Combat training",
+    options: [
+      { label: "Heavy Bag", value: "heavy_bag" },
+      { label: "Thai Pads", value: "thai_pads" },
+      { label: "Partner", value: "partner" },
+    ],
+  },
+  {
+    label: "Plyometrics & agility",
+    options: [
+      { label: "Plyo Box / Box", value: "box" },
+      { label: "Agility Ladder", value: "agility_ladder" },
+      { label: "Jump Rope", value: "jump_rope" },
+      { label: "Hurdles", value: "hurdles" },
+    ],
+  },
+  {
+    label: "Functional conditioning",
+    options: [
+      { label: "Sled", value: "sled" },
+      { label: "Battle Ropes", value: "battle_ropes" },
+      { label: "Sledgehammer", value: "sledgehammer" },
+      { label: "Tire", value: "tire" },
+      { label: "Weight Vest", value: "weight_vest" },
+    ],
+  },
+  {
+    label: "Accessories & recovery",
+    options: [
+      { label: "Bands", value: "bands" },
+      { label: "Bosu Ball", value: "bosu_ball" },
+      { label: "Foam Roller", value: "foam_roller" },
+      { label: "Neck Harness", value: "neck_harness" },
+      { label: "Swiss Ball", value: "swiss_ball" },
+      { label: "Towel", value: "towel" },
+      { label: "TRX", value: "trx" },
+      { label: "Weight Belt", value: "weight_belt" },
+    ],
+  },
 ];
+
+export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = EQUIPMENT_ACCESS_GROUPS.flatMap(
+  (group) => group.options,
+);
 
 export const KEY_GOAL_OPTIONS: IntakeOption[] = [
   { label: "Power", value: "power" },

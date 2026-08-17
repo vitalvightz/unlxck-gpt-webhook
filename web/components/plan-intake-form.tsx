@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
+import { EquipmentSelector } from "@/components/equipment-selector";
 import { saveOnboardingDraft } from "@/lib/api";
 import { formatAppDate } from "@/lib/date-format";
 import { markGenerationIntent } from "@/lib/generation-intent";
@@ -2899,10 +2900,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Resources</p>
                   <h2 className="form-section-title">Equipment access</h2>
                 </div>
-                <CheckboxGroup
-                  label="Equipment access"
-                  hideLabel
-                  options={EQUIPMENT_ACCESS_OPTIONS}
+                <EquipmentSelector
                   selectedValues={form.equipment_access}
                   onToggle={(value) => toggleFieldValue("equipment_access", value)}
                 />

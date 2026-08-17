@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
+import { EquipmentSelector } from "@/components/equipment-selector";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { saveOnboardingDraft } from "@/lib/api";
 import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
@@ -999,9 +1000,7 @@ function QuickBuildFormInner() {
           activeKey={activeEquipmentPreset}
           onSelect={handleEquipmentPresetSelect}
         />
-        <ChipMultiSelect
-          label="Equipment access"
-          options={EQUIPMENT_ACCESS_OPTIONS}
+        <EquipmentSelector
           selectedValues={input.equipment_access}
           onToggle={(value) => toggleField("equipment_access", value)}
         />
