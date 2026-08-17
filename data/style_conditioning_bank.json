@@ -5318,7 +5318,7 @@
       "mech_acceleration",
       "mech_ballistic"
     ],
-    "notes": "Throw one maximum-quality rear body or low kick. Recoil fully and restore a balanced defensive stance before resting; in MMA, it must be ready for a level change or forward entry.",
+    "notes": "Throw one maximum-quality rear body or low kick. Recoil fully and restore a balanced defensive stance before resting.",
     "work_sec": 5,
     "rest_sec": 60,
     "rounds": 8,
@@ -5411,7 +5411,7 @@
       "mech_acceleration",
       "mech_ballistic"
     ],
-    "notes": "Land one hard low kick, recover the leg, restore stance and exit the opponent’s return line. Keep the hips under the body; do not over-rotate or exit in poor takedown posture.",
+    "notes": "Land one hard low kick, recover the leg, restore stance and exit the opponent’s return line. Keep the hips under the body and do not over-rotate.",
     "work_sec": 6,
     "rest_sec": 60,
     "rounds": 8,

@@ -62,6 +62,18 @@ def test_gpp_and_spp_architecture_is_meaningful():
     assert {item["system"] for item in entries.values() if "SPP" in item["phases"]} == {"aerobic", "ATP-PCr", "glycolytic"}
 
 
+def test_shared_mma_entries_keep_sport_neutral_coaching_notes():
+    entries = _slice()
+    assert entries["Rear-Kick Power Singles"]["notes"] == (
+        "Throw one maximum-quality rear body or low kick. Recoil fully and "
+        "restore a balanced defensive stance before resting."
+    )
+    assert entries["Low-Kick Exit Burst"]["notes"] == (
+        "Land one hard low kick, recover the leg, restore stance and exit the "
+        "opponent’s return line. Keep the hips under the body and do not over-rotate."
+    )
+
+
 def test_doses_quality_rules_and_representative_decisions_are_coherent():
     for item in _slice().values():
         if item["system"] == "aerobic":
