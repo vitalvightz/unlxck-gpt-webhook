@@ -6,31 +6,23 @@
 // the athlete can read what they are agreeing to at the moment they agree, and a
 // repository markdown file is not reachable from a phone at signup.
 //
-// This copy currently runs AHEAD of the canonical markdown in three places, all
-// deliberate product decisions recorded in PR #2312:
-//
-//   * the operator is named (`Unlxck`) and the Terms carry an effective date,
-//     where the canonical Terms still hold `[LEGAL OPERATOR NAME]` and `[DATE]`;
-//   * Sentry is not listed as a processor, because UNLXCK does not use it
-//     (docs/processor-dpa-international-transfer-verification.md records this,
-//     but the canonical notice has not been updated to match);
-//   * the international-transfer and retention sections state the verified
-//     position instead of saying it is still to be completed.
-//
-// docs/privacy-notice.md and docs/terms-of-use.md need the same edits. Until
-// they get them, legal-documents.test.ts is the drift check — it pins every
-// substantive fact and upgrades to a direct comparison automatically once the
-// canonical markdown lands in this repo.
+// The canonical markdown now lives in this repo, so legal-documents.test.ts
+// compares the two copies directly rather than pinning facts about a file it
+// could not see. Any edit here needs the same edit in docs/privacy-notice.md or
+// docs/terms-of-use.md, and the Service providers and International transfers
+// paragraphs are compared verbatim.
 //
 // When either document changes, update the text here and bump the matching
-// version in api/compliance.py and web/lib/compliance.ts so existing acceptances
-// are re-collected rather than silently carried over.
+// version in api/compliance.py and web/lib/compliance.ts. Note which version:
+// TERMS_VERSION and HEALTH_CONSENT_VERSION gate acceptance, so bumping either
+// re-collects it from every athlete; PRIVACY_NOTICE_VERSION gates nothing and
+// is the one to bump when the notice is corrected.
 //
 // The two remaining bracketed placeholders are real and intentional: no contact
 // address has been decided, and inventing one would be worse than showing it is
 // outstanding.
 
-import { HEALTH_CONSENT_VERSION, TERMS_VERSION } from "@/lib/compliance";
+import { PRIVACY_NOTICE_VERSION, TERMS_VERSION } from "@/lib/compliance";
 
 export type LegalSection = {
   heading: string;
@@ -56,9 +48,10 @@ export const TERMS_OF_USE: LegalDocument = {
   title: "Terms of Use",
   version: TERMS_VERSION,
   effectiveDate: "19 August 2026",
-  status: "A contact address is still to be published.",
+  status:
+    "Not ready for publication: the trader name, trading address and contact email are still to be inserted.",
   intro:
-    "These Terms govern use of UNLXCK, operated by Unlxck (“UNLXCK”, “we”, “us”). By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
+    "These Terms govern use of UNLXCK, operated by [SOLE TRADER NAME], a sole trader trading as Unlxck (“UNLXCK”, “we”, “us”), of [TRADING ADDRESS]. By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
   sections: [
     {
       heading: "Eligibility",
@@ -174,16 +167,17 @@ export const TERMS_OF_USE: LegalDocument = {
 export const PRIVACY_NOTICE: LegalDocument = {
   slug: "privacy-notice",
   title: "Privacy Notice",
-  version: HEALTH_CONSENT_VERSION,
+  version: PRIVACY_NOTICE_VERSION,
   lastUpdated: "19 August 2026",
-  status: "A privacy contact address is still to be published.",
+  status:
+    "Not ready for publication: the controller name, trading address and privacy contact are still to be inserted.",
   intro:
     "UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.",
   sections: [
     {
       heading: "Who we are",
       paragraphs: [
-        "UNLXCK is the controller of personal data used to provide the UNLXCK service.",
+        "UNLXCK is the controller of personal data used to provide the UNLXCK service. UNLXCK is operated by [SOLE TRADER NAME], a sole trader trading as Unlxck, of [TRADING ADDRESS].",
         "Privacy contact: [ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
       ],
     },
@@ -216,8 +210,11 @@ export const PRIVACY_NOTICE: LegalDocument = {
     {
       heading: "Lawful bases",
       paragraphs: [
-        "For personal data needed to provide the requested UNLXCK service, we generally rely on Article 6(1)(b) UK GDPR (contract).",
-        "Where UNLXCK processes health data for personalised training and safety features, we rely on Article 9(2)(a) explicit consent, alongside the applicable Article 6 basis. Health-data consent must be given separately and can be withdrawn.",
+        "We rely on three lawful bases, depending on what the processing is for.",
+        "Article 6(1)(b) UK GDPR (contract) — for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.",
+        "Article 6(1)(f) UK GDPR (legitimate interests) — for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.",
+        "Article 9(2)(a) UK GDPR (explicit consent) — for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.",
+        "We do not use your health information to improve UNLXCK, and we do not use it to train AI models. It is used to build and adapt your own training and to apply safety rules to it — nothing else. Where we look at how the product is performing, or decide what to build next, we do that without using health information at all. This applies to aggregated and anonymised forms of it too.",
         "Withdrawing consent does not affect processing already carried out lawfully, but UNLXCK may be unable to provide features that require health data afterwards.",
       ],
     },
@@ -225,28 +222,39 @@ export const PRIVACY_NOTICE: LegalDocument = {
       heading: "AI and automated adaptation",
       paragraphs: [
         "UNLXCK uses software rules and AI-assisted processing to help generate and adapt training guidance from the information you provide. Relevant plan context may be sent to service providers supporting this processing.",
-        "These systems may change, restrict or withhold training guidance. UNLXCK does not currently intend these decisions to produce legal or similarly significant effects about you.",
+        "These systems may change, restrict or withhold training guidance. We have assessed whether that is a decision based solely on automated processing with legal or similarly significant effects under Article 22 UK GDPR, and concluded it is not: it changes what training UNLXCK suggests to you, not your legal position or your access to anything comparable, and you remain free to train differently. We keep that assessment under review, and apply it more cautiously to athletes under 18.",
+        "If you think an automated adaptation has got something wrong, contact us using the privacy contact above and a person will look at it.",
       ],
     },
     {
       heading: "Service providers",
       paragraphs: [
-        "We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.",
+        "We use trusted service providers to run UNLXCK. We share only the information each one needs to provide its part of the service, and require appropriate data-protection safeguards from all of them.",
+      ],
+      bullets: [
+        "Supabase — sign-in, database and file storage. Holds your account, profile, training, health and feedback data, on servers in the EU.",
+        "OpenAI — AI-assisted plan generation. Receives the plan context needed to build your training, which can include injury and restriction information. Your data is not used to train their models.",
+        "Vercel — hosting for the UNLXCK website and app. Handles request and device information.",
+        "Hetzner — hosting for our backend and plan-generation service, on servers in Germany.",
+        "Resend — service and feedback email.",
+        "Cloudflare Turnstile — blocks automated abuse of signup and login. Receives device and network signals, never health information.",
+        "Sentry — error diagnostics, used to find and fix faults. Receives technical information about what went wrong. Injury, pain, readiness and similar information is filtered out before a report is sent, and UNLXCK does not record your screen or session.",
       ],
     },
     {
       heading: "International transfers",
       paragraphs: [
-        "Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies.",
+        "Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.",
       ],
     },
     {
       heading: "How long we keep data",
       paragraphs: [
-        "We keep identifiable data only for as long as needed for the purpose it was collected for, then delete it or irreversibly anonymise it.",
-        "Your account, profile, intake, plans, training history, injury, readiness and nutrition data are kept while they are needed to provide the service, and are deleted or reviewed for deletion when your account closes or you ask us to delete it.",
-        "Feedback is kept while it is needed for support and product improvement, then anonymised or deleted. Beta screenshots are kept for no more than 90 days.",
-        "Security and audit logs are kept only for as long as their security purpose requires. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.",
+        "We keep identifiable data only for as long as we need it, then delete it or irreversibly anonymise it.",
+        "While your account is open we keep your profile, plans, training history, injury, readiness and nutrition data, so the service works and your history is there when you come back to it.",
+        "If you ask us to delete your data, we do it within one month. You can ask at any time, for any reason or none — see “Your rights”.",
+        "Beta screenshots are kept for no more than 90 days. Feedback is kept while it is needed for support and product improvement, then anonymised or deleted.",
+        "For closed and long-inactive accounts, we keep data only while it is still needed to provide the service or to meet a legal obligation. Security and audit logs are kept only for as long as their security purpose requires. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.",
       ],
     },
     {
@@ -257,10 +265,11 @@ export const PRIVACY_NOTICE: LegalDocument = {
         "Request deletion.",
         "Restrict processing.",
         "Receive portable data.",
-        "Object to certain processing.",
+        "Object to processing we carry out under legitimate interests.",
         "Withdraw consent at any time where processing relies on consent.",
       ],
       paragraphs: [
+        "The right to object applies to the processing we carry out under legitimate interests — security, abuse prevention, fault investigation and service improvement. Tell us and we will stop, unless we can show compelling grounds that override your interests. It does not cover what we have to process to provide the service under our agreement with you; for health information, withdraw your consent instead, which you can do at any time without giving a reason.",
         "Requests can be made using the privacy contact above, or from Settings → Privacy. We may verify identity where reasonably necessary.",
       ],
     },

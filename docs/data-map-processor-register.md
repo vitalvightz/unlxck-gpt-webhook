@@ -28,9 +28,28 @@ Internal record of the main personal-data flows used by UNLXCK. Keep this aligne
 | **Hetzner** | Backend and generation-worker hosting | Data processed by backend/worker in transit and memory; server logs | **VERIFIED** — Nuremberg, Germany; AVV/DPA accepted |
 | **Resend** | Service/feedback email | Privacy-minimised email and feedback notification data | **VERIFIED** — DPA and UK transfer framework documented |
 | **Cloudflare Turnstile** | Signup/login abuse prevention | Device/network/security-challenge information | **VERIFIED** — DPA and UK transfer safeguards documented; health data must not be sent |
+| **Sentry** | Error diagnostics, frontend and backend | Error events, technical context, scrubbed request metadata. No session recording. | **NOT VERIFIED** — see below |
 
-## Not used
-**Sentry is not used by UNLXCK** and is not a production processor.
+## Sentry
+
+This register previously recorded that Sentry was not used. That was wrong, and the error is kept visible here rather than quietly overwritten, because it is what let an undisclosed processor run in production.
+
+Sentry is live in both surfaces:
+
+- frontend — `@sentry/nextjs` in `web/package.json`, initialised in `web/instrumentation-client.ts`, plus server and edge configs;
+- backend — `sentry-sdk` in `requirements.txt`, `init_sentry()` called unconditionally at `api/app.py`.
+
+**Session Replay has been removed** (see `docs/cookies-and-local-storage.md`). Sentry no longer records athlete sessions, which closes the PECR question and the child-session recording question. It does not change Sentry's status as a processor receiving personal data.
+
+**Outstanding before this can be marked VERIFIED:**
+
+1. Execute and record the Sentry DPA.
+2. Confirm the data region and, if data leaves the UK, record the UK Addendum/IDTA and complete a transfer risk assessment.
+3. Update the DPIA to cover error-monitoring data flows.
+
+Mitigations already in place: `api/sentry_config.py` sets `send_default_pii=false` and scrubs injuries, pain, notes, intake, goals and credentials before send. This reduces the exposure but closes none of the three items above.
+
+**Status is NOT VERIFIED and stays that way until all three are complete.** Removing replay reduced the risk; it did not verify the processor.
 
 ## Controller position
 UNLXCK determines why and how athlete data is processed for the service and treats itself as the controller for these core processing activities. External services acting on UNLXCK's instructions are assessed and contracted as processors where appropriate.

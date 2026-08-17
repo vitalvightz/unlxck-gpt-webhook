@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { HEALTH_CONSENT_VERSION, TERMS_VERSION } from "@/lib/compliance";
+import { PRIVACY_NOTICE_VERSION, TERMS_VERSION } from "@/lib/compliance";
 import {
   LEGAL_DOCUMENTS,
   PRIVACY_HREF,
@@ -18,16 +18,17 @@ import {
 /**
  * Anti-drift checks for the in-app legal copy.
  *
- * The canonical Terms and Privacy Notice live on the `docs/regulatory-intended-purpose`
- * branch. The app ships its own rendering of them so an athlete can read what
- * they are agreeing to at the moment they agree, which means two copies exist
- * and can diverge silently. These tests pin every substantive fact — service-provider
- * safeguards, the placeholders, the operator, the dates, the versions — so a
- * change to one has to be a deliberate change to the other.
+ * The app ships its own rendering of the Terms and Privacy Notice so an athlete
+ * can read what they are agreeing to at the moment they agree, which means two
+ * copies exist and can diverge silently. These tests pin every substantive fact
+ * — service-provider safeguards, the placeholders, the operator, the dates, the
+ * versions — so a change to one has to be a deliberate change to the other.
  *
- * The final test upgrades automatically from "pinned facts" to a direct
- * comparison the moment the canonical markdown lands in this repo (it has not
- * yet — it is on the docs branch).
+ * The canonical markdown now lives in this repo under docs/, so the final test
+ * compares the two copies directly instead of relying on the pinned facts alone.
+ * It holds the Service providers and International transfers paragraphs to a
+ * verbatim match, because those are the ones where a silent divergence would
+ * misdescribe who receives athlete data.
  */
 
 const REPO_ROOT = path.resolve(process.cwd(), "..");
@@ -91,36 +92,73 @@ test("internal compliance documents never leak into athlete-facing copy", () => 
 
 // --- service providers -------------------------------------------------------
 
-test("the public notice describes provider categories without exposing the internal register", () => {
+/**
+ * Every processor in the register is named in the public notice.
+ *
+ * This used to assert the opposite — that the notice described categories only
+ * and named nobody. Categories do satisfy Article 13(1)(e), so the old rule was
+ * not unlawful, but it meant an athlete could not find out who actually receives
+ * their health data, and it gave a passing test to a notice that omitted Sentry
+ * while Sentry was live in both the frontend and the backend.
+ *
+ * The list is deliberately checked in both directions: a provider added to the
+ * register without reaching the notice is an undisclosed recipient, and a
+ * provider dropped from production without leaving the notice is a false one.
+ */
+const REGISTERED_PROCESSORS = [
+  "Supabase",
+  "OpenAI",
+  "Vercel",
+  "Hetzner",
+  "Resend",
+  "Cloudflare Turnstile",
+  "Sentry",
+] as const;
+
+test("the public notice names every processor in the internal register", () => {
   const section = PRIVACY_NOTICE.sections.find((entry) => entry.heading === "Service providers");
-  assert.deepEqual(section?.paragraphs, [
-    "We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.",
-  ]);
-  assert.equal(section?.bullets, undefined);
+  assert.equal(section?.bullets?.length, REGISTERED_PROCESSORS.length, "one bullet per processor");
 
   const publicNotice = allText(PRIVACY_NOTICE);
-  for (const provider of [
-    "Supabase",
-    "OpenAI",
-    "Vercel",
-    "Hetzner",
-    "Resend",
-    "Cloudflare Turnstile",
-  ]) {
-    assert.ok(!publicNotice.includes(provider), `public notice must not name ${provider}`);
-  }
-
   const internalRegister = readFileSync(
     path.join(REPO_ROOT, "docs", "processor-dpa-international-transfer-verification.md"),
     "utf8",
   );
-  for (const provider of ["Supabase", "OpenAI", "Vercel", "Hetzner", "Resend", "Cloudflare Turnstile"]) {
+
+  for (const provider of REGISTERED_PROCESSORS) {
+    assert.ok(publicNotice.includes(provider), `public notice must name ${provider}`);
     assert.ok(internalRegister.includes(provider), `internal register must retain ${provider}`);
   }
 });
 
-test("Sentry is named nowhere — UNLXCK does not use it", () => {
-  assert.ok(!everyDocumentText().toLowerCase().includes("sentry"));
+test("Sentry is disclosed as a processor, and session recording is ruled out", () => {
+  // Sentry ran undisclosed in production while three compliance documents and
+  // this test recorded that it was not used. Naming it does not close the DPA
+  // or transfer work — see docs/data-map-processor-register.md — but a notice
+  // that omits a live processor is a separate failure stacked on top of those.
+  const notice = allText(PRIVACY_NOTICE);
+  assert.ok(notice.includes("Sentry"));
+
+  // Session Replay was removed rather than put behind consent, so the notice
+  // now states the stronger fact. If replay is ever reintroduced this assertion
+  // fails, which is the point: the claim and the code have to move together.
+  assert.match(notice, /does not record your screen or session/i);
+});
+
+test("Session Replay stays out of the client Sentry configuration", () => {
+  // The compliance position published to athletes is "we do not record your
+  // screen or session". That promise lives in a document; this is what keeps it
+  // true in the code. Replay also re-engages PECR reg. 6 consent, which UNLXCK
+  // has no mechanism for.
+  const client = readFileSync(path.join(process.cwd(), "instrumentation-client.ts"), "utf8");
+  const active = client
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("//") && !line.trimStart().startsWith("*"))
+    .join("\n");
+
+  for (const forbidden of ["replayIntegration", "replaysSessionSampleRate", "replaysOnErrorSampleRate"]) {
+    assert.ok(!active.includes(forbidden), `${forbidden} must not be configured`);
+  }
 });
 
 test("international-transfer safeguards remain concise and specific", () => {
@@ -150,40 +188,89 @@ test("wording that the completed verification made untrue is gone", () => {
   }
 });
 
-test("retention is stated as rules rather than deferred", () => {
+test("the notice publishes only retention periods UNLXCK actually enforces", () => {
   const retention = PRIVACY_NOTICE.sections.find(
     (entry) => entry.heading === "How long we keep data",
   );
   const text = (retention?.paragraphs ?? []).join(" ");
-  // The periods the internal policy actually defines.
-  assert.ok(text.includes("90 days"), "screenshot retention should be stated");
+
   assert.ok(/irreversibly anonymise/i.test(text));
-  // Log periods are genuinely still undefined in the policy, so the notice must
-  // describe the rule without inventing a number.
-  assert.ok(/as long as their security purpose requires/i.test(text));
-  assert.ok(!/\blogs are kept for \d+/i.test(text), "do not state a log period we have not set");
+
+  // The two periods that are met: screenshots are enforced in
+  // api/services/feedback_service.py, and erasure is a request-driven process
+  // with a named owner rather than a background job.
+  assert.ok(text.includes("90 days"), "the screenshot period should be stated");
+  assert.match(text, /within one month/i, "the erasure deadline should be stated");
+
+  // Everything else is criteria-based on purpose. Article 13(2)(a) permits
+  // criteria where a period cannot be given, and a published period that is
+  // missed is a specific evidenced failure — worse than the vagueness it
+  // replaced. Dormancy, post-closure deletion and log expiry have no scheduled
+  // job yet (docs/data-retention-deletion-user-rights.md), so their periods
+  // stay internal targets until the automation exists.
+  for (const unenforced of ["24 months", "30 days"]) {
+    assert.ok(
+      !text.includes(unenforced),
+      `"${unenforced}" is an internal target, not an enforced period — do not publish it`,
+    );
+  }
+  assert.match(text, /only while it is still needed/i, "state the criteria for the unautomated cases");
 });
 
 // --- placeholders ------------------------------------------------------------
 
-test("the two intended placeholders are present and are the only ones", () => {
-  // Both are deliberate: no contact address has been decided yet, and inventing
-  // one would be worse than showing it is outstanding.
-  const published = everyDocumentText();
-  assert.ok(published.includes("[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]"));
-  assert.ok(published.includes("[LEGAL/CONTACT EMAIL]"));
+/**
+ * The outstanding launch blockers, tracked as data.
+ *
+ * UNLXCK trades as a sole trader, so the proprietor's own name and a geographic
+ * address have to appear in both documents — reg. 6 of the Electronic Commerce
+ * (EC Directive) Regulations 2002, Sch. 2 of the Consumer Contracts Regulations
+ * 2013, and Article 13(1)(a) UK GDPR for the controller's identity. None of
+ * those is satisfied by the trading name alone.
+ *
+ * Each stays a visible placeholder until the real value is inserted. Inventing
+ * one, or quietly omitting the field, would turn a known gap into a silent
+ * defect — and the placeholder is what makes it impossible to publish these
+ * documents without noticing.
+ */
+const OUTSTANDING_PLACEHOLDERS = [
+  "[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
+  "[LEGAL/CONTACT EMAIL]",
+  "[SOLE TRADER NAME]",
+  "[TRADING ADDRESS]",
+] as const;
 
+test("every outstanding identity and contact blocker is still visible", () => {
+  const published = everyDocumentText();
+  for (const placeholder of OUTSTANDING_PLACEHOLDERS) {
+    assert.ok(published.includes(placeholder), `${placeholder} should still be marked outstanding`);
+  }
+
+  // No placeholder may exist that is not on the register above: an unlisted one
+  // is a gap nobody is tracking.
   const bracketed = published.match(/\[[^\]]+\]/g) ?? [];
   assert.deepEqual(
     [...new Set(bracketed)].sort(),
-    ["[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]", "[LEGAL/CONTACT EMAIL]"],
-    "an unexpected placeholder is still in the published copy",
+    [...OUTSTANDING_PLACEHOLDERS].sort(),
+    "an untracked placeholder is in the published copy",
   );
 });
 
-test("the operator name is filled in and no longer a placeholder", () => {
-  assert.ok(TERMS_OF_USE.intro.includes("operated by Unlxck"));
-  assert.ok(!allText(TERMS_OF_USE).includes("[LEGAL OPERATOR NAME]"));
+test("both documents declare themselves not ready for publication", () => {
+  // While the identity fields are outstanding, neither document may present
+  // itself as final. The status line is what an athlete and a reviewer see.
+  for (const document of LEGAL_DOCUMENTS) {
+    assert.match(
+      document.status,
+      /not ready for publication/i,
+      `${document.slug} must not read as publishable while identity fields are outstanding`,
+    );
+  }
+
+  // The trading name on its own is not a legal identity for a sole trader.
+  assert.ok(TERMS_OF_USE.intro.includes("[SOLE TRADER NAME]"));
+  assert.ok(TERMS_OF_USE.intro.includes("[TRADING ADDRESS]"));
+  assert.ok(TERMS_OF_USE.intro.includes("sole trader trading as Unlxck"));
 });
 
 test("no data-request route is offered until a real address is configured", () => {
@@ -196,10 +283,18 @@ test("no data-request route is offered until a real address is configured", () =
 
 // --- versions and dates ------------------------------------------------------
 
-test("document versions track the consent versions the server records", () => {
-  // A bumped document version re-collects consent, so these must not drift.
+test("each document carries its own version, and the Terms track acceptance", () => {
+  // The Terms version gates acceptance: bumping it re-collects agreement from
+  // every athlete, so the displayed version and the recorded one must not drift.
   assert.equal(TERMS_OF_USE.version, TERMS_VERSION);
-  assert.equal(PRIVACY_NOTICE.version, HEALTH_CONSENT_VERSION);
+
+  // The notice tracks its own revision rather than HEALTH_CONSENT_VERSION. They
+  // were the same constant, which meant correcting the notice re-collected
+  // Article 9(2)(a) consent from every athlete and took their health-dependent
+  // features offline until they answered — a cost that argued for leaving the
+  // notice wrong. Keeping them apart is what lets the notice be fixed.
+  assert.equal(PRIVACY_NOTICE.version, PRIVACY_NOTICE_VERSION);
+  assert.notEqual(PRIVACY_NOTICE_VERSION, TERMS_VERSION);
 });
 
 test("the Terms carry an effective date and the notice a revision date", () => {

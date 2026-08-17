@@ -1,9 +1,9 @@
 # UNLXCK Terms of Use
 
-**Status:** A contact address is still to be published.
+**Status: NOT READY FOR PUBLICATION.** Three details are outstanding and each is a legal requirement, not a formatting gap: the trader's name, the trading address, and the contact email. UNLXCK trades as a sole trader, so the proprietor's own name and a geographic address must appear here before these Terms are used — required by reg. 6 of the Electronic Commerce (EC Directive) Regulations 2002 and Schedule 2 of the Consumer Contracts Regulations 2013. Do not publish while any bracketed placeholder below remains.
 
 ## 1. About these Terms
-These Terms govern use of UNLXCK, operated by **Unlxck** ("UNLXCK", "we", "us"). By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.
+These Terms govern use of UNLXCK, operated by **[SOLE TRADER NAME]**, a sole trader trading as Unlxck ("UNLXCK", "we", "us"), of **[TRADING ADDRESS]**. By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.
 
 ## 2. Eligibility
 UNLXCK is intended for users aged **13 or over**. Users must provide accurate age information. Additional privacy and safety protections apply to users under 18. UNLXCK does not currently support accounts for children under 13.

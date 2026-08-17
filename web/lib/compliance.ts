@@ -13,6 +13,24 @@ import type { MeResponse, ProfileRecord } from "@/lib/types";
 export const TERMS_VERSION = "0.1-pre-launch";
 export const HEALTH_CONSENT_VERSION = "1.0";
 
+/**
+ * The Privacy Notice's own revision, tracked separately from the health-data
+ * consent wording that sits beside it.
+ *
+ * These were the same constant, which made every correction to the notice look
+ * like a change of consent: bumping it re-collects Article 9(2)(a) consent from
+ * every athlete and takes their health-dependent features offline until they
+ * answer again. That is a real cost, and paying it for an editorial fix creates
+ * pressure to leave the notice wrong instead — the opposite of what versioning
+ * is for.
+ *
+ * Split, the notice can be corrected whenever it is inaccurate, and re-consent
+ * stays reserved for the case that actually warrants it: the consent wording
+ * itself changing. Bump this when the notice is revised; bump
+ * HEALTH_CONSENT_VERSION only when what the athlete is agreeing to changes.
+ */
+export const PRIVACY_NOTICE_VERSION = "1.2";
+
 export const MINIMUM_SIGNUP_AGE_YEARS = 13;
 export const ADULT_AGE_YEARS = 18;
 
