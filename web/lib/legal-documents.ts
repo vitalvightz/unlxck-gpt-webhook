@@ -292,6 +292,12 @@ export const PRIVACY_NOTICE: LegalDocument = {
         "Please contact UNLXCK first if you have a privacy concern. You also have the right to complain to the UK Information Commissioner’s Office (ICO).",
       ],
     },
+    {
+      heading: "Changes",
+      paragraphs: [
+        "We will review this notice when our data uses, processors or legal requirements materially change. Where a new use of your personal data requires notice, we will tell you before that processing begins.",
+      ],
+    },
   ],
 };
 

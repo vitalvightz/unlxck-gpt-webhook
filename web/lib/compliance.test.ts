@@ -5,11 +5,15 @@ import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
   HEALTH_CONSENT_VERSION,
   MINIMUM_SIGNUP_AGE_YEARS,
+  SIGNUP_TERMS_CONSENT_LABEL,
+  TERMS_CONSENT_LABEL,
+  TERMS_REQUIRED_MESSAGE,
   TERMS_VERSION,
   UNDER_MINIMUM_AGE_MESSAGE,
   ageInYears,
   consentCopyForBand,
   provisionalAgeBand,
+  signupConsentBlockReason,
   hasHealthDataConsent,
   hasWithdrawnHealthConsent,
   healthConsentSummary,
@@ -216,5 +220,122 @@ test("declining health consent never blocks the account in any band", () => {
       /still have an account|keep your account|does not affect your account/.test(note),
       `${band} decline note should confirm the account survives`,
     );
+  }
+});
+
+
+// ---------------------------------------------------------------------------
+// Signup: what blocks account creation
+// ---------------------------------------------------------------------------
+
+const ADULT_DOB = "1996-05-04";
+
+test("Terms remain mandatory to create an account", () => {
+  assert.equal(
+    signupConsentBlockReason({ dateOfBirth: ADULT_DOB, acceptedTerms: false }, TODAY),
+    TERMS_REQUIRED_MESSAGE,
+  );
+});
+
+test("health-data consent remains optional — it is not part of the block rule", () => {
+  // Consent that is a condition of the service is not freely given
+  // (UK GDPR Art. 7(4)), which would invalidate the Art. 9(2)(a) basis.
+  // The rule takes no health-consent input at all, so it cannot gate on one.
+  assert.equal(
+    signupConsentBlockReason({ dateOfBirth: ADULT_DOB, acceptedTerms: true }, TODAY),
+    null,
+  );
+});
+
+test("declining health consent still allows account creation", () => {
+  // Same call as the passing case above: there is no health-consent argument to
+  // decline with, which is the point.
+  const withTermsOnly = signupConsentBlockReason(
+    { dateOfBirth: ADULT_DOB, acceptedTerms: true },
+    TODAY,
+  );
+  assert.equal(withTermsOnly, null);
+});
+
+test("under-13 still blocks signup ahead of the Terms", () => {
+  assert.equal(
+    signupConsentBlockReason({ dateOfBirth: dobForAge(12), acceptedTerms: true }, TODAY),
+    UNDER_MINIMUM_AGE_MESSAGE,
+  );
+  // Age is reported before the Terms so the athlete is asked one thing at a time.
+  assert.equal(
+    signupConsentBlockReason({ dateOfBirth: dobForAge(12), acceptedTerms: false }, TODAY),
+    UNDER_MINIMUM_AGE_MESSAGE,
+  );
+});
+
+test("a missing date of birth blocks signup", () => {
+  assert.notEqual(signupConsentBlockReason({ dateOfBirth: "", acceptedTerms: true }, TODAY), null);
+});
+
+// ---------------------------------------------------------------------------
+// Signup: concise copy, with the detail kept for Settings
+// ---------------------------------------------------------------------------
+
+test("Terms and health consent stay two separate statements", () => {
+  for (const band of ["13-15", "16-17", "adult"]) {
+    const label = consentCopyForBand(band).signupHealthConsentLabel;
+    // The health tick must not mention the Terms, or it becomes a bundled
+    // consent and stops being specific.
+    assert.ok(!/terms of use/i.test(label), `${band} health label must not reference the Terms`);
+  }
+  assert.ok(/terms of use/i.test(SIGNUP_TERMS_CONSENT_LABEL));
+  assert.ok(!/health/i.test(SIGNUP_TERMS_CONSENT_LABEL));
+});
+
+test("signup wording is materially shorter than the Settings wording", () => {
+  for (const band of ["13-15", "16-17", "adult"]) {
+    const copy = consentCopyForBand(band);
+    const signup = `${copy.signupHealthConsentLabel} ${copy.signupHealthConsentHelp}`;
+    const detailed = `${copy.healthConsentLabel} ${copy.healthConsentHelp} ${copy.declineNote}`;
+    assert.ok(
+      signup.length < detailed.length / 2,
+      `${band}: signup copy should be well under half the detailed copy`,
+    );
+  }
+  assert.ok(SIGNUP_TERMS_CONSENT_LABEL.length < TERMS_CONSENT_LABEL.length);
+});
+
+test("13-15 gets the simpler wording and names the categories inline", () => {
+  const early = consentCopyForBand("13-15").signupHealthConsentLabel;
+  const adult = consentCopyForBand("adult").signupHealthConsentLabel;
+
+  assert.notEqual(early, adult);
+  // A 13-year-old should not have to follow a link to learn what "health data"
+  // covers, so the short form spells it out.
+  for (const category of [/injur/i, /soreness/i, /sleep/i, /bodyweight/i]) {
+    assert.ok(category.test(early), `13-15 signup label should name ${category}`);
+  }
+  assert.ok(!/health data/i.test(early), "13-15 wording should avoid the abstract term");
+});
+
+test("16-17 uses the same concise structure as adults", () => {
+  assert.equal(
+    consentCopyForBand("16-17").signupHealthConsentLabel,
+    consentCopyForBand("adult").signupHealthConsentLabel,
+  );
+});
+
+test("every band's signup help says it is optional and reversible", () => {
+  for (const band of ["13-15", "16-17", "adult", "unknown"]) {
+    const help = consentCopyForBand(band).signupHealthConsentHelp;
+    assert.ok(/optional/i.test(help), `${band} help should say optional`);
+    assert.ok(/settings/i.test(help), `${band} help should point at Settings`);
+  }
+});
+
+test("the detailed wording survives for Settings and the consent gate", () => {
+  // Shortening signup must not delete the full explanation — it moved, it did
+  // not disappear. The band-substance tests above still run against these.
+  for (const band of ["13-15", "16-17", "adult"]) {
+    const copy = consentCopyForBand(band);
+    assert.ok(copy.healthConsentHelp.length > 100, `${band} detailed help should remain`);
+    assert.ok(copy.declineNote.length > 0, `${band} decline note should remain`);
+    assert.ok(copy.privacySummary.length > 0, `${band} privacy summary should remain`);
   }
 });

@@ -20,10 +20,10 @@ import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
-  TERMS_CONSENT_LABEL,
+  SIGNUP_TERMS_CONSENT_LABEL,
   consentCopyForBand,
   provisionalAgeBand,
-  validateDateOfBirth,
+  signupConsentBlockReason,
 } from "@/lib/compliance";
 import { PRIVACY_HREF, TERMS_HREF } from "@/lib/legal-documents";
 import { recordCompliance } from "@/lib/api";
@@ -75,14 +75,14 @@ export function AuthForm({
   // reject an under-13 signup, and the server stamps every consent record, so
   // disabling the button here is about giving a clear message — not about being
   // the control.
-  const dateOfBirthError = mode === "signup" ? validateDateOfBirth(dateOfBirth) : null;
+  const signupBlockReason =
+    mode === "signup" ? signupConsentBlockReason({ dateOfBirth, acceptedTerms }) : null;
   // Health-data consent is deliberately NOT part of this condition. Making it a
   // precondition of creating an account would make it conditional, and consent
   // that is a condition of the service is not freely given (UK GDPR Art. 7(4)) —
   // which would invalidate the very Article 9 basis it exists to establish. An
   // athlete can decline it, keep their account, and give it later from Settings.
-  const isSignupConsentBlocked =
-    mode === "signup" && (dateOfBirthError !== null || !acceptedTerms);
+  const isSignupConsentBlocked = signupBlockReason !== null;
   // Wording only. The band is derived locally from the date being typed so the
   // explanation matches the reader before the profile exists; the server
   // re-derives it from the stored date and owns every actual consequence.
@@ -136,15 +136,9 @@ export function AuthForm({
       return;
     }
 
-    if (mode === "signup") {
-      if (dateOfBirthError) {
-        setError(dateOfBirthError);
-        return;
-      }
-      if (!acceptedTerms) {
-        setError("Accept the Terms of Use to create an account.");
-        return;
-      }
+    if (signupBlockReason) {
+      setError(signupBlockReason);
+      return;
     }
 
     const captchaTokenForRequest = requiresCaptcha ? captchaToken ?? undefined : undefined;
@@ -429,7 +423,7 @@ export function AuthForm({
                     required
                   />
                   <span>
-                    {TERMS_CONSENT_LABEL}{" "}
+                    {SIGNUP_TERMS_CONSENT_LABEL}{" "}
                     <Link href={TERMS_HREF} className="auth-text-link" target="_blank">
                       Read the Terms
                     </Link>
@@ -440,7 +434,7 @@ export function AuthForm({
               {/* Kept as its own affirmative tick, never folded into the Terms:
                   UK GDPR Art. 9(2)(a) consent has to be specific and separate,
                   and a bundled tick would not be valid consent at all. It is
-                  also optional — see isSignupConsentBlocked. */}
+                  also optional — see signupConsentBlockReason. */}
               <div className="field auth-consent-field">
                 <label className="auth-consent-row" htmlFor="healthDataConsent">
                   <input
@@ -451,17 +445,18 @@ export function AuthForm({
                     onChange={(event) => setHealthDataConsent(event.target.checked)}
                     aria-describedby="healthDataConsentHelp"
                   />
-                  <span>{consentCopy.healthConsentLabel}</span>
+                  <span>{consentCopy.signupHealthConsentLabel}</span>
                 </label>
+                {/* The full explanation — what each category is used for, that
+                    it is never shown to other users, what declining costs —
+                    lives in the Privacy Notice linked here and in Settings →
+                    Privacy. Repeating it inline buried the form on a phone. */}
                 <p id="healthDataConsentHelp" className="muted auth-consent-help">
-                  {consentCopy.healthConsentHelp}{" "}
+                  {consentCopy.signupHealthConsentHelp}{" "}
                   <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
                     Read the Privacy Notice
                   </Link>
                 </p>
-                {healthDataConsent ? null : (
-                  <p className="muted auth-consent-help">{consentCopy.declineNote}</p>
-                )}
               </div>
             </>
           ) : null}
