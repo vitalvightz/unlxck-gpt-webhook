@@ -8,7 +8,7 @@ in-process FakeStore via the shared test client.
 from datetime import date, timedelta
 
 from api.routes import today as today_routes
-from tests.support import _build_client
+from tests.support import _build_client, withdraw_health_consent
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
 PLAN_ID = "11111111-1111-1111-1111-111111111111"
@@ -144,6 +144,18 @@ class TestSessionCompletion:
         assert body["completion_status"] == "started"
         assert body["landing_session_state"] == "resume"
         assert body["completion"]["started_at"]
+
+    def test_completion_without_health_consent_strips_pain(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        withdraw_health_consent(store)
+
+        resp = self._post(client, status="done", session_rpe=7, pain_after=8)
+
+        assert resp.status_code == 201
+        assert resp.json()["completion"]["status"] == "done"
+        assert resp.json()["completion"]["pain_after"] is None
+        assert store.session_completions["athlete-1"][0]["pain_after"] is None
 
     def test_done_requires_completed_at_is_stamped(self):
         client, store, _ = _build_client()

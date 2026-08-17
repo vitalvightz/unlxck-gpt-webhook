@@ -359,7 +359,9 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
         errorCode = errorCode ?? detailCode;
         if (detailMessage) {
           throw new ApiError(
-            bodyRequestId ? `${detailMessage} (request id: ${String(bodyRequestId)})` : detailMessage,
+            detailCode === "health_data_consent_required"
+              ? detailMessage
+              : bodyRequestId ? `${detailMessage} (request id: ${String(bodyRequestId)})` : detailMessage,
             response.status,
             errorCode,
           );

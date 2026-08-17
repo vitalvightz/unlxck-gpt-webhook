@@ -48,6 +48,9 @@ import {
   type QuickBuildValidationErrors,
 } from "@/lib/quick-build";
 import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
+import { hasHealthDataConsent } from "@/lib/compliance";
+
+const HEALTH_CONSENT_BLOCKED_MESSAGE = "Health data consent required. Manage it in Settings → Privacy.";
 import {
   EQUIPMENT_PRESETS,
   TRAINING_PRESETS,
@@ -710,7 +713,9 @@ function QuickBuildFormInner() {
 
     startTransition(async () => {
       try {
-        const planRequest = quickBuildToPlanRequest(input);
+        const planRequest = quickBuildToPlanRequest(
+          hasHealthDataConsent(me) ? input : { ...input, injuries: "" },
+        );
         const equipmentPresetMatch = matchesEquipmentPreset(planRequest.equipment_access);
         const trainingPresetMatch = matchesTrainingPreset(
           planRequest.training_availability,
@@ -1050,7 +1055,7 @@ function QuickBuildFormInner() {
           <p className="kicker">Restrictions (optional)</p>
           <h2 className="form-section-title">Injuries or limitations</h2>
         </div>
-        <div className="field">
+        {hasHealthDataConsent(me) ? <div className="field">
           <label htmlFor="qb-injuries">Anything the planner should avoid (injuries, pain, or limitations)</label>
           <textarea
             id="qb-injuries"
@@ -1059,7 +1064,7 @@ function QuickBuildFormInner() {
             placeholder="Example: Left knee sprain. Avoid jumping and hard pivots for 2 weeks."
           />
           <p className="muted">Be specific. Include body area, injury type, and what to avoid.</p>
-        </div>
+        </div> : <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>}
       </article>
 
       <div className="form-actions quick-build-action-bar">

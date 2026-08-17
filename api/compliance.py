@@ -62,10 +62,7 @@ UNDER_MINIMUM_AGE_MESSAGE = (
     f"UNLXCK accounts are for athletes aged {MINIMUM_SIGNUP_AGE_YEARS} or over."
 )
 TERMS_REQUIRED_MESSAGE = "Accept the Terms of Use to continue."
-HEALTH_CONSENT_REQUIRED_MESSAGE = (
-    "This feature uses health information, so it needs your separate health-data "
-    "consent. You can give or withdraw it in Settings under Privacy."
-)
+HEALTH_CONSENT_REQUIRED_MESSAGE = "Health data consent required. Manage it in Settings → Privacy."
 
 
 def _today(reference: date | None = None) -> date:

@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, status
 
 from api.compliance_guards import require_health_feature_access
+from api.compliance import evaluate_profile_compliance
 from api.models import (
     InjuryFlagRecord,
     LandingResponse,
@@ -238,11 +239,16 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> SessionCompletionResponse:
+        payload = request_body.model_dump()
+        if not evaluate_profile_compliance(profile).health_consent_granted:
+            # Completion is mixed-purpose: preserve the training log while
+            # dropping the sole health field after consent withdrawal.
+            payload["pain_after"] = None
         row = upsert_session_completion(
             store,
             athlete_id=profile.athlete_id,
             athlete_timezone=profile.athlete_timezone,
-            payload=request_body.model_dump(),
+            payload=payload,
         )
         completion_status = completion_status_of(row)
         if completion_status in {"done", "modified", "skipped"}:
