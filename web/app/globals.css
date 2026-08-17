@@ -1050,6 +1050,12 @@ select:focus-visible {
   line-height: 1.45;
 }
 
+/* Align optional consent metadata with the statement rather than the checkbox,
+   so it reads as one compact secondary row. */
+.auth-consent-meta {
+  margin-left: 28px;
+}
+
 /* Legal documents render as long-form prose, so they get a reading measure
    rather than the app's dense panel rhythm. */
 .legal-document {

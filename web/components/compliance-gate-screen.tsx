@@ -9,7 +9,8 @@ import { useAppSession } from "@/components/auth-provider";
 import { recordCompliance } from "@/lib/api";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
-  TERMS_CONSENT_LABEL,
+  TERMS_CONSENT_LEAD,
+  TERMS_LINK_LABEL,
   consentCopyForBand,
   hasHealthDataConsent,
   provisionalAgeBand,
@@ -130,8 +131,7 @@ function ComplianceAcceptance() {
             required
           />
           <p className="muted auth-consent-help">
-            UNLXCK is for athletes aged 13 and over. Under-18 accounts get extra privacy and
-            safety protections.
+            13+ only. Under-18s get extra privacy and safety protections.
           </p>
         </div>
       ) : null}
@@ -146,10 +146,11 @@ function ComplianceAcceptance() {
               onChange={(event) => setAcceptedTerms(event.target.checked)}
             />
             <span>
-              {TERMS_CONSENT_LABEL}{" "}
+              {TERMS_CONSENT_LEAD}{" "}
               <Link href={TERMS_HREF} className="auth-text-link" target="_blank">
-                Read the Terms
+                {TERMS_LINK_LABEL}
               </Link>
+              .
             </span>
           </label>
         </div>
@@ -169,7 +170,7 @@ function ComplianceAcceptance() {
           <p className="muted auth-consent-help">
             {consentCopy.healthConsentHelp}{" "}
             <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
-              Read the Privacy Notice
+              Privacy Notice
             </Link>
           </p>
           {healthDataConsent ? null : (

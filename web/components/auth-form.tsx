@@ -20,7 +20,8 @@ import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
-  SIGNUP_TERMS_CONSENT_LABEL,
+  TERMS_CONSENT_LEAD,
+  TERMS_LINK_LABEL,
   consentCopyForBand,
   provisionalAgeBand,
   signupConsentBlockReason,
@@ -407,8 +408,7 @@ export function AuthForm({
                   required
                 />
                 <p id="dateOfBirthHelp" className="muted auth-consent-help">
-                  UNLXCK is for athletes aged 13 and over. Under-18 accounts get extra privacy
-                  and safety protections.
+                  13+ only. Under-18s get extra privacy and safety protections.
                 </p>
               </div>
 
@@ -423,10 +423,11 @@ export function AuthForm({
                     required
                   />
                   <span>
-                    {SIGNUP_TERMS_CONSENT_LABEL}{" "}
+                    {TERMS_CONSENT_LEAD}{" "}
                     <Link href={TERMS_HREF} className="auth-text-link" target="_blank">
-                      Read the Terms
+                      {TERMS_LINK_LABEL}
                     </Link>
+                    .
                   </span>
                 </label>
               </div>
@@ -451,10 +452,10 @@ export function AuthForm({
                     it is never shown to other users, what declining costs —
                     lives in the Privacy Notice linked here and in Settings →
                     Privacy. Repeating it inline buried the form on a phone. */}
-                <p id="healthDataConsentHelp" className="muted auth-consent-help">
-                  {consentCopy.signupHealthConsentHelp}{" "}
+                <p id="healthDataConsentHelp" className="muted auth-consent-help auth-consent-meta">
+                  {consentCopy.signupHealthConsentHelp} ·{" "}
                   <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
-                    Read the Privacy Notice
+                    Privacy Notice
                   </Link>
                 </p>
               </div>
