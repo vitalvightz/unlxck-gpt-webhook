@@ -52,19 +52,31 @@ These systems may change, restrict or withhold training guidance. We have assess
 If you think an automated adaptation has got something wrong, contact us using the privacy contact above and a person will look at it.
 
 ## Service providers
-We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.
+We use trusted service providers to run UNLXCK. We share only the information each one needs to provide its part of the service, and require appropriate data-protection safeguards from all of them.
+
+- **Supabase** — sign-in, database and file storage. Holds your account, profile, training, health and feedback data, on servers in the EU.
+- **OpenAI** — AI-assisted plan generation. Receives the plan context needed to build your training, which can include injury and restriction information. Your data is not used to train their models.
+- **Vercel** — hosting for the UNLXCK website and app. Handles request and device information.
+- **Hetzner** — hosting for our backend and plan-generation service, on servers in Germany.
+- **Resend** — service and feedback email.
+- **Cloudflare Turnstile** — blocks automated abuse of signup and login. Receives device and network signals, never health information.
+- **Sentry** — error diagnostics and session recording, used to find and fix faults. Text and form inputs are masked, and injury, pain, readiness and similar information is filtered out before a report is sent.
 
 ## International transfers
 Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.
 
 ## How long we keep data
-We keep identifiable data only for as long as needed for the purpose for which it was collected, then delete it or irreversibly anonymise it where appropriate.
+We keep identifiable data only for as long as we need it, then delete it or irreversibly anonymise it.
 
-Account, profile, intake, plans, training history, injury, readiness and nutrition data are kept while needed to provide the service and are deleted or reviewed for deletion when an account closes or a valid deletion request is completed.
+While your account is open we keep your profile, plans, training history, injury, readiness and nutrition data, so the service works and your history is there when you come back to it.
 
-Feedback is kept while needed for support and product improvement, then anonymised or deleted. Beta screenshots are retained for no more than 90 days.
+If you have not signed in for 24 months we will get in touch, and if you do not come back we delete or anonymise your training data.
 
-Security and audit logs are kept only for as long as their security purpose requires. Backups expire through their normal operational lifecycle, and data deleted from the live service is not restored back into ordinary use.
+If you close your account we delete your health information — injuries, readiness, pain and nutrition — after 90 days, and anonymise the remaining training history after 24 months. If you ask us to delete your data rather than simply closing the account, we do all of it within 30 days.
+
+Feedback is kept while it is needed for support and product improvement, then anonymised or deleted. Beta screenshots are kept for no more than 90 days.
+
+Security and audit logs are kept for 90 days. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.
 
 ## Your rights
 Depending on the processing, you may have rights to:

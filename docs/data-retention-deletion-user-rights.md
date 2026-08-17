@@ -5,19 +5,37 @@ UNLXCK keeps identifiable personal data only for as long as needed for the purpo
 
 ## Retention Schedule
 
-| Data | Retention rule |
+Four distinct events end retention, and they are not interchangeable. Collapsing them was the previous schedule's weakness: "review on account closure" is a trigger, not a period, and leaves data in place indefinitely if the review never happens.
+
+| Event | Meaning |
 |---|---|
-| Account/profile | While account is active; delete following valid account-deletion request, subject to necessary exceptions |
-| Intake, plans and training history | While needed to provide the active service; review on account closure |
-| Injury, pain, readiness and recovery data | While needed for personalised training/safety functions; delete with the account unless continued retention is specifically justified |
-| Nutrition/bodyweight data | While needed for nutrition, weight and camp functions; delete with the account unless continued retention is specifically justified |
-| Session/check-in data | While needed for training history and adaptation; review on account closure |
-| Feedback | While needed for product support/improvement; anonymise or delete when identifiable data is no longer required |
-| Beta screenshots | Maximum 90 days under the existing screenshot-retention process; delete earlier where no longer needed |
-| Security/audit logs | Keep only for the documented security/audit period required for their purpose |
+| **Active** | Account open and in use |
+| **Dormant** | No sign-in for 24 months |
+| **Closed** | Athlete stopped using UNLXCK and closed the account |
+| **Erasure request** | Athlete exercised the Article 17 right |
+
+| Data | Active | Dormant (24m no sign-in) | Closed | Erasure request |
+|---|---|---|---|---|
+| Account/profile | Retained | Contact, then delete if no return | Delete after 90 days | Delete within 30 days |
+| Injury, pain, readiness, recovery | Retained | Delete | Delete after 90 days | Delete within 30 days |
+| Nutrition/bodyweight | Retained | Delete | Delete after 90 days | Delete within 30 days |
+| Intake, plans, training/session history | Retained | Anonymise | Anonymise after 24 months | Delete within 30 days |
+| Feedback | While needed for support/improvement, then anonymise or delete | — | — | Delete or anonymise within 30 days |
+| Beta screenshots | Maximum 90 days — enforced in `api/services/feedback_service.py` | — | — | Delete within 30 days |
+| Security/audit logs | 90 days | — | — | Retained where the security purpose justifies it; record the reason |
 | Backups | Removed through the applicable backup expiry cycle; deleted data must not be restored into active processing except where necessary for recovery |
 
-Exact operational periods not already enforced in code must be documented and implemented before public launch. UNLXCK must not retain data indefinitely "just in case".
+**Why closure and erasure differ.** Closing an account is not the same as asking to be erased. A 90-day grace period after closure lets an athlete come back without losing their history, and the 24-month anonymisation window reflects that athletes return after breaks. An *erasure request* carries no such grace: Article 17 requires deletion without undue delay, and holding special-category health data for 90 days after someone has asked for it to go is not defensible. When in doubt, treat the request as erasure.
+
+**Anonymisation means irreversible.** Training history retained past the health-data deletion point must be stripped of identifiers so it cannot be linked back to the athlete. If it can be re-linked, it is still personal data and the retention period has not been honoured.
+
+## Implementation status
+
+> **These periods are published in the Privacy Notice but are not yet automated.** Only screenshot retention is enforced in code. Until scheduled deletion exists, the periods above are met by manual action, which means they can be missed — and a specific published period that is missed is a worse position than the vague wording it replaced, because the promise is now precise.
+>
+> Required: scheduled jobs for dormancy detection and notification, post-closure health deletion at 90 days, training-history anonymisation at 24 months, and audit-log expiry at 90 days. Until those exist, run the schedule manually on a recorded cadence and log each run.
+
+UNLXCK must not retain data indefinitely "just in case".
 
 ## User Rights
 UNLXCK must support applicable UK data-protection rights, including:

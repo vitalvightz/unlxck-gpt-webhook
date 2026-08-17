@@ -92,36 +92,53 @@ test("internal compliance documents never leak into athlete-facing copy", () => 
 
 // --- service providers -------------------------------------------------------
 
-test("the public notice describes provider categories without exposing the internal register", () => {
+/**
+ * Every processor in the register is named in the public notice.
+ *
+ * This used to assert the opposite — that the notice described categories only
+ * and named nobody. Categories do satisfy Article 13(1)(e), so the old rule was
+ * not unlawful, but it meant an athlete could not find out who actually receives
+ * their health data, and it gave a passing test to a notice that omitted Sentry
+ * while Sentry was live in both the frontend and the backend.
+ *
+ * The list is deliberately checked in both directions: a provider added to the
+ * register without reaching the notice is an undisclosed recipient, and a
+ * provider dropped from production without leaving the notice is a false one.
+ */
+const REGISTERED_PROCESSORS = [
+  "Supabase",
+  "OpenAI",
+  "Vercel",
+  "Hetzner",
+  "Resend",
+  "Cloudflare Turnstile",
+  "Sentry",
+] as const;
+
+test("the public notice names every processor in the internal register", () => {
   const section = PRIVACY_NOTICE.sections.find((entry) => entry.heading === "Service providers");
-  assert.deepEqual(section?.paragraphs, [
-    "We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.",
-  ]);
-  assert.equal(section?.bullets, undefined);
+  assert.equal(section?.bullets?.length, REGISTERED_PROCESSORS.length, "one bullet per processor");
 
   const publicNotice = allText(PRIVACY_NOTICE);
-  for (const provider of [
-    "Supabase",
-    "OpenAI",
-    "Vercel",
-    "Hetzner",
-    "Resend",
-    "Cloudflare Turnstile",
-  ]) {
-    assert.ok(!publicNotice.includes(provider), `public notice must not name ${provider}`);
-  }
-
   const internalRegister = readFileSync(
     path.join(REPO_ROOT, "docs", "processor-dpa-international-transfer-verification.md"),
     "utf8",
   );
-  for (const provider of ["Supabase", "OpenAI", "Vercel", "Hetzner", "Resend", "Cloudflare Turnstile"]) {
+
+  for (const provider of REGISTERED_PROCESSORS) {
+    assert.ok(publicNotice.includes(provider), `public notice must name ${provider}`);
     assert.ok(internalRegister.includes(provider), `internal register must retain ${provider}`);
   }
 });
 
-test("Sentry is named nowhere — UNLXCK does not use it", () => {
-  assert.ok(!everyDocumentText().toLowerCase().includes("sentry"));
+test("Sentry is disclosed as a processor, and what it receives is described", () => {
+  // Sentry ran undisclosed in production while three compliance documents and
+  // this test recorded that it was not used. Naming it does not close the DPA,
+  // transfer or PECR work — see docs/cookies-and-local-storage.md — but a notice
+  // that omits a live processor is a separate failure stacked on top of those.
+  const notice = allText(PRIVACY_NOTICE);
+  assert.ok(notice.includes("Sentry"));
+  assert.match(notice, /session recording/i, "session replay must be disclosed, not just error reporting");
 });
 
 test("international-transfer safeguards remain concise and specific", () => {
@@ -151,18 +168,27 @@ test("wording that the completed verification made untrue is gone", () => {
   }
 });
 
-test("retention is stated as rules rather than deferred", () => {
+test("retention is stated as periods rather than triggers", () => {
   const retention = PRIVACY_NOTICE.sections.find(
     (entry) => entry.heading === "How long we keep data",
   );
   const text = (retention?.paragraphs ?? []).join(" ");
-  // The periods the internal policy actually defines.
-  assert.ok(text.includes("90 days"), "screenshot retention should be stated");
+
   assert.ok(/irreversibly anonymise/i.test(text));
-  // Log periods are genuinely still undefined in the policy, so the notice must
-  // describe the rule without inventing a number.
-  assert.ok(/as long as their security purpose requires/i.test(text));
-  assert.ok(!/\blogs are kept for \d+/i.test(text), "do not state a log period we have not set");
+  assert.ok(text.includes("90 days"), "screenshot and log retention should be stated");
+  assert.ok(text.includes("24 months"), "the dormancy and anonymisation window should be stated");
+  assert.ok(text.includes("30 days"), "the erasure-request deadline should be stated");
+
+  // Closure and erasure are different events with different deadlines, and the
+  // notice has to say so: a 90-day grace period after closure is reasonable,
+  // while holding health data 90 days after an Article 17 request is not.
+  assert.match(text, /close your account/i);
+  assert.match(text, /delete your data/i);
+
+  // "Review on closure" is a trigger, not a period. It leaves data in place
+  // indefinitely if the review never happens, which is what Article 5(1)(e)
+  // is there to prevent.
+  assert.ok(!/review(ed)? for deletion/i.test(text), "state a period, not a review trigger");
 });
 
 // --- placeholders ------------------------------------------------------------

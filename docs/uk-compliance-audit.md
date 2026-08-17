@@ -236,11 +236,24 @@ The findings above are kept as-found. This section records what has since been a
 | **L6** DPO assessment | **Closed** | Recorded in the DPIA as a reasoned "not required at current scale", with reassessment triggers. |
 | **H1** Under-18 Art. 6 basis | **Logged** | Recorded as an open question in the DPIA. The assessment itself is still to be done. |
 
-**Deliberately not done in this pass:**
+### 17 August 2026 — second pass, after operator decisions
 
-- **M2 (name processors)** — a passing test at `legal-documents.test.ts:94` *requires* the notice to describe categories without naming providers. Reversing that is a deliberate decision, not a drafting fix, and it is entangled with the Sentry question: naming six live processors while omitting the seventh would introduce a fresh accuracy defect rather than close one.
-- **L2 (Terms version → 1.0)** — `TERMS_VERSION` gates acceptance, so bumping it re-collects agreement from every athlete. It should ride with the B2 entity fix so athletes are asked once, not twice.
-- **B2, B3, and retention periods** — blocked on the legal entity, the privacy address, and the retention decisions respectively.
+| Finding | Status | What changed |
+|---|---|---|
+| **M2** Processors not named | **Closed** | All seven processors named in the notice with what each receives. The two tests that enforced the opposite position were rewritten to check the list in both directions — a processor in the register but not the notice is an undisclosed recipient; one in the notice but not production is a false one. |
+| **B1** Sentry (disclosure half only) | **Partly closed** | The register and transfer record no longer state Sentry is unused: it is listed, marked **NOT VERIFIED**, with the four outstanding items enumerated. The launch gate is re-opened. The notice now discloses error diagnostics *and* session recording. **The DPA, transfer safeguards, PECR consent and DPIA update remain open** — disclosure does not cure them. |
+| **H3** Retention periods | **Closed on paper, open in code** | Concrete periods set across four distinct end events. See the caveat below. |
+
+**Retention — one deliberate departure from the instruction given.** The direction was "longer, athletes return after breaks", with training history at 24 months and health data at 90 days post-closure. That is implemented for *account closure*, but not for an *erasure request*: Article 17 requires deletion without undue delay, and holding special-category health data for 90 days after someone has asked for it to be erased is not defensible. The schedule therefore separates the two — 90-day grace and 24-month anonymisation on closure, 30 days for everything on an erasure request. The "athletes return" case is served by a 24-month dormancy rule, which is where it belongs.
+
+> **The published periods are not automated.** Only screenshot retention is enforced in code. A specific published period that is missed is a worse position than the vague wording it replaced, because the promise is now precise. Scheduled deletion jobs — dormancy detection, post-closure health deletion, history anonymisation, log expiry — are now the single largest open engineering item. Until they exist, the schedule must be run manually on a recorded cadence.
+
+**Still blocked:**
+
+- **B2 (trader identity)** — Unlxck trades as a sole trader, so the notice and Terms must carry the proprietor's own name and a geographic address. Awaiting those values.
+- **B3 (privacy contact)** — a personal address will be used at trial scale. Awaiting confirmation of the address before it is written into a published document.
+- **L2 (Terms version → 1.0)** — rides with B2, so athletes are asked to re-accept once rather than twice.
+- **H1, H4** — the under-18 Article 6 assessment and the portability runbook.
 
 ### Verification
 
