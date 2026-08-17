@@ -5318,7 +5318,7 @@
       "mech_acceleration",
       "mech_ballistic"
     ],
-    "notes": "Throw one maximum-quality rear body or low kick. Recoil fully and restore a balanced stance before resting.",
+    "notes": "Throw one maximum-quality rear body or low kick. Recoil fully and restore a balanced defensive stance before resting.",
     "work_sec": 5,
     "rest_sec": 60,
     "rounds": 8,
@@ -5411,7 +5411,7 @@
       "mech_acceleration",
       "mech_ballistic"
     ],
-    "notes": "Land one hard low kick, recover the leg, restore stance and exit the opponent’s return line.",
+    "notes": "Land one hard low kick, recover the leg, restore stance and exit the opponent’s return line. Keep the hips under the body and do not over-rotate.",
     "work_sec": 6,
     "rest_sec": 60,
     "rounds": 8,
@@ -5458,54 +5458,6 @@
       "mech_reactive"
     ],
     "notes": "Read the kick cue, check, return immediately with a clean kick, then recover a balanced stance. Success means a clean kick return and stance recovery, not merely fast counter timing.",
-    "work_sec": 5,
-    "rest_sec": 60,
-    "rounds": 8,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_acceleration",
-      "mech_ballistic",
-      "mech_reactive"
-    ]
-  },
-  {
-    "name": "Interception Kick Burst",
-    "equipment": [
-      "partner",
-      "thai_pads"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "reactive interception kicking",
-    "duration": "5s effort, 60s rest x 8 rounds",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "mma",
-      "reactive",
-      "visual_processing",
-      "explosive",
-      "teep",
-      "side_kick",
-      "back_kick",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_acceleration",
-      "mech_ballistic",
-      "mech_reactive"
-    ],
-    "notes": "As the partner advances, intercept with a teep, side kick or back kick. Recover into a stance ready to defend another entry.",
     "work_sec": 5,
     "rest_sec": 60,
     "rounds": 8,
@@ -5655,51 +5607,6 @@
     ]
   },
   {
-    "name": "Kick-Punch Reposition",
-    "equipment": [
-      "partner",
-      "thai_pads"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "kick-punch repositioning",
-    "duration": "60s work, 60s rest x 6 rounds",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "mma",
-      "footwork",
-      "coordination",
-      "mech_upper_press",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_change_of_direction",
-      "mech_upper_press",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Kick, recover stance, use straight punches as cover or a feint, then angle away instead of remaining stationary.",
-    "work_sec": 60,
-    "rest_sec": 60,
-    "rounds": 6,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_change_of_direction",
-      "mech_upper_press",
-      "mech_systemic_fatigue"
-    ]
-  },
-  {
     "name": "Kick Recoil Flow",
     "equipment": [
       "heavy_bag"
@@ -5736,46 +5643,6 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Kick Recoil Quality Rounds",
-    "equipment": [
-      "partner",
-      "thai_pads"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "recoil-quality conditioning",
-    "duration": "2min work, 1min rest x 4 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "kicker",
-      "mma",
-      "skill_refinement",
-      "balance",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Repeat realistic kick opportunities. Stop the set if retraction slows or stance cannot be restored, then resume only when technique is sound.",
-    "work_sec": 120,
-    "rest_sec": 60,
-    "rounds": 4,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue"
     ]
   },
   {
@@ -5822,6 +5689,457 @@
       "mech_acceleration",
       "mech_deceleration",
       "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "MMA Kick Recoil Flow",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "MMA kick recoil and stance recovery",
+    "duration": "180s work, 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "kicker",
+      "mma",
+      "skill_refinement",
+      "balance",
+      "low_kick",
+      "body_kick",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Throw controlled low or body kicks, recoil cleanly and finish with the hips under the body in a stance ready for a punch or takedown threat. Reduce output if balance, recoil or stance recovery fades.",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ]
+  },
+  {
+    "name": "Bilateral MMA Kick Flow",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "bilateral MMA kicking and stance recovery",
+    "duration": "150s work, 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "kicker",
+      "mma",
+      "skill_refinement",
+      "balance",
+      "low_kick",
+      "body_kick",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ],
+    "notes": "Build credible low and body kicks from both stances without chasing switch-kick volume. Recoil and restore a defensively useful stance after each kick; reduce output if either side becomes square or unstable.",
+    "work_sec": 150,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration"
+    ]
+  },
+  {
+    "name": "Cage-Space Kick Flow",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "limited-space kick selection and recovery",
+    "duration": "150s work, 60s rest x 3 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "kicker",
+      "mma",
+      "spatial_awareness",
+      "decision_making",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction"
+    ],
+    "notes": "Use an open-space lane with one edge marked as the limited-space boundary. The partner changes distance and position. Kick only when posture and space allow, then recoil; reposition instead when a kick would weaken stance. Reduce output if stance recovery or decisions fade.",
+    "work_sec": 150,
+    "rest_sec": 60,
+    "rounds": 3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction"
+    ]
+  },
+  {
+    "name": "Kick-Level-Change Ready Reset",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "kick and level-change-ready reset",
+    "duration": "6s effort, 60s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "mma",
+      "reactive",
+      "explosive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ],
+    "notes": "Kick the held target, recoil and restore stance. The holder then shows either a normal striking reset or a controlled level-change threat; respond with sound defensive posture only. Do not complete a takedown.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ]
+  },
+  {
+    "name": "Entry-Safe Low-Kick Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "entry-safe low-kick selection",
+    "duration": "6s effort, 60s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "mma",
+      "low_kick",
+      "decision_making",
+      "explosive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ],
+    "notes": "The partner varies range and posture. Throw one hard low kick only when stance is stable, the target is available and the partner is not entering deeply. Recoil to defensive stance. No safe window means no kick.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ]
+  },
+  {
+    "name": "Intercept-and-Frame Kick Burst",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "linear kick entry control and frame",
+    "duration": "6s effort, 60s rest x 8 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "mma",
+      "teep",
+      "reactive",
+      "explosive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ],
+    "notes": "As the partner advances, use a front kick to the pad, recoil and restore stance. If the partner keeps moving forward, establish a safe defensive frame and reset. Keep this to one linear kick family.",
+    "work_sec": 6,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_reactive"
+    ]
+  },
+  {
+    "name": "Low-Kick Repeatability",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "MMA low-kick repeatability",
+    "duration": "45s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "mma",
+      "low_kick",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Repeat realistic low or calf-kick opportunities and restore an MMA stance after each kick. Reduce or stop output if recoil slows, support-leg balance or accuracy drops, the stance becomes square, or it cannot handle an entry threat.",
+    "work_sec": 45,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Kick-or-Defend Decision Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "MMA kick-or-defend decisions",
+    "duration": "60s work, 45s rest x 5 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "mma",
+      "decision_making",
+      "reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "The partner presents a kickable target and range, a punching entry or a controlled level-change threat. Choose to kick, reposition or defend; not kicking is a correct repetition. Reduce output if stance recovery, accuracy or threat recognition fades.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 5,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Cage-Space Kick Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "kick-led offence under limited-space pressure",
+    "duration": "90s work, 60s rest x 4 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "mma",
+      "spatial_awareness",
+      "decision_making",
+      "reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Use an open-space lane with one edge marked as the limited-space boundary. The partner varies usable kick space, compressed range, forward pressure and lateral escape. Choose to kick, reposition, frame or reset without pursuing or wall wrestling. Reduce output if stance or decisions fade.",
+    "work_sec": 90,
+    "rest_sec": 60,
+    "rounds": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Kick-Exit Anti-Entry Rounds",
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "kick recoil and anti-entry exit",
+    "duration": "60s work, 45s rest x 6 rounds",
+    "intensity": "high",
+    "tags": [
+      "kicker",
+      "mma",
+      "footwork",
+      "reactive",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Kick the held target and recoil. The partner gives an immediate forward response; exit or reposition, then restore a kick-ready defensive stance. No punch combination is required. Reduce or stop output if recoil, balance, accuracy or entry response fades.",
+    "work_sec": 60,
+    "rest_sec": 45,
+    "rounds": 6,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_deceleration",
+      "mech_reactive",
+      "mech_change_of_direction",
       "mech_systemic_fatigue"
     ]
   },
@@ -8657,45 +8975,6 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Switch-Kick Power Bursts",
-    "equipment": [
-      "heavy_bag"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "strike",
-    "duration": "8x per leg / 60s rest",
-    "intensity": "max",
-    "tags": [
-      "kicker",
-      "mma",
-      "hybrid",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "notes": "Max-power roundhouse kicks with full hip rotation.",
-    "equipment_note": "Secure bag to prevent swing.",
-    "rest_sec": 60,
-    "rpe": 9,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
     ]
   },
   {

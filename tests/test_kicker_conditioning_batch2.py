@@ -62,6 +62,18 @@ def test_gpp_and_spp_architecture_is_meaningful():
     assert {item["system"] for item in entries.values() if "SPP" in item["phases"]} == {"aerobic", "ATP-PCr", "glycolytic"}
 
 
+def test_shared_mma_entries_keep_sport_neutral_coaching_notes():
+    entries = _slice()
+    assert entries["Rear-Kick Power Singles"]["notes"] == (
+        "Throw one maximum-quality rear body or low kick. Recoil fully and "
+        "restore a balanced defensive stance before resting."
+    )
+    assert entries["Low-Kick Exit Burst"]["notes"] == (
+        "Land one hard low kick, recover the leg, restore stance and exit the "
+        "opponent’s return line. Keep the hips under the body and do not over-rotate."
+    )
+
+
 def test_doses_quality_rules_and_representative_decisions_are_coherent():
     for item in _slice().values():
         if item["system"] == "aerobic":
@@ -119,20 +131,29 @@ def test_existing_selector_surfaces_kicker_for_both_sports_and_phases():
             assert set(selected) & expected, (sport, phase, selected)
 
 
-def test_deferred_mma_kicker_coverage_is_preserved_without_leaking_into_batch_1():
+def test_rebuilt_mma_kicker_coverage_does_not_leak_into_batch_1():
     by_name = {item["name"]: item for item in _bank()}
-    mma_only_legacy = {
+    superseded_mma_legacy = {
         "Interception Kick Burst",
         "Kick-Punch Reposition",
         "Kick Recoil Quality Rounds",
         "Switch-Kick Power Bursts",
     }
-    for name in mma_only_legacy:
+    assert superseded_mma_legacy.isdisjoint(by_name)
+
+    mma_only_replacements = {
+        "MMA Kick Recoil Flow", "Bilateral MMA Kick Flow", "Cage-Space Kick Flow",
+        "Kick-Level-Change Ready Reset", "Entry-Safe Low-Kick Burst",
+        "Intercept-and-Frame Kick Burst", "Low-Kick Repeatability",
+        "Kick-or-Defend Decision Rounds", "Cage-Space Kick Rounds",
+        "Kick-Exit Anti-Entry Rounds",
+    }
+    for name in mma_only_replacements:
         sports = set(by_name[name]["tags"]) & {"kickboxing", "muay_thai", "mma"}
         assert sports == {"mma"}, name
 
     # These approved Batch-1 concepts already served all three sports, so their
-    # existing MMA reachability remains on the shared record pending Batch 2.
+    # existing MMA reachability remains on the shared record after Batch 2.
     for name in ("Rear-Kick Power Singles", "Low-Kick Exit Burst"):
         assert "mma" in by_name[name]["tags"]
 
