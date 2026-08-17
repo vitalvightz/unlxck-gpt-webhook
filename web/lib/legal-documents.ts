@@ -1,15 +1,34 @@
 // The Terms of Use and Privacy Notice, rendered in-app.
 //
-// Canonical source: docs/terms-of-use.md and docs/privacy-notice.md. This file
-// mirrors them so the documents are readable *inside* the product — consent is
-// only informed if the athlete can actually read what they are agreeing to, and
-// a repository markdown file is not reachable from a phone at signup. When
-// either document changes, update the text here and bump the matching version
-// in api/compliance.py and web/lib/compliance.ts so existing acceptances are
-// re-collected rather than silently carried over.
+// Canonical source: docs/terms-of-use.md and docs/privacy-notice.md on the
+// `docs/regulatory-intended-purpose` branch. The app ships its own rendering so
+// the documents are readable *inside* the product — consent is only informed if
+// the athlete can read what they are agreeing to at the moment they agree, and a
+// repository markdown file is not reachable from a phone at signup.
 //
-// Placeholders in square brackets are the launch blockers listed at the end of
-// each source document; they are reproduced verbatim rather than invented.
+// This copy currently runs AHEAD of the canonical markdown in three places, all
+// deliberate product decisions recorded in PR #2312:
+//
+//   * the operator is named (`Unlxck`) and the Terms carry an effective date,
+//     where the canonical Terms still hold `[LEGAL OPERATOR NAME]` and `[DATE]`;
+//   * Sentry is not listed as a processor, because UNLXCK does not use it
+//     (docs/processor-dpa-international-transfer-verification.md records this,
+//     but the canonical notice has not been updated to match);
+//   * the international-transfer and retention sections state the verified
+//     position instead of saying it is still to be completed.
+//
+// docs/privacy-notice.md and docs/terms-of-use.md need the same edits. Until
+// they get them, legal-documents.test.ts is the drift check — it pins every
+// substantive fact and upgrades to a direct comparison automatically once the
+// canonical markdown lands in this repo.
+//
+// When either document changes, update the text here and bump the matching
+// version in api/compliance.py and web/lib/compliance.ts so existing acceptances
+// are re-collected rather than silently carried over.
+//
+// The two remaining bracketed placeholders are real and intentional: no contact
+// address has been decided, and inventing one would be worse than showing it is
+// outstanding.
 
 import { HEALTH_CONSENT_VERSION, TERMS_VERSION } from "@/lib/compliance";
 
@@ -23,6 +42,10 @@ export type LegalDocument = {
   slug: string;
   title: string;
   version: string;
+  /** Terms only: the date this version takes effect. */
+  effectiveDate?: string;
+  /** Privacy Notice only: when the wording was last revised. */
+  lastUpdated?: string;
   status: string;
   intro: string;
   sections: LegalSection[];
@@ -32,9 +55,10 @@ export const TERMS_OF_USE: LegalDocument = {
   slug: "terms-of-use",
   title: "Terms of Use",
   version: TERMS_VERSION,
-  status: "Pre-launch draft. Operator and contact details are completed before publication.",
+  effectiveDate: "19 August 2026",
+  status: "A contact address is still to be published.",
   intro:
-    "These Terms govern use of UNLXCK, operated by [LEGAL OPERATOR NAME] (“UNLXCK”, “we”, “us”). By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
+    "These Terms govern use of UNLXCK, operated by Unlxck (“UNLXCK”, “we”, “us”). By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
   sections: [
     {
       heading: "Eligibility",
@@ -151,7 +175,8 @@ export const PRIVACY_NOTICE: LegalDocument = {
   slug: "privacy-notice",
   title: "Privacy Notice",
   version: HEALTH_CONSENT_VERSION,
-  status: "Last updated 17 August 2026. Privacy contact and transfer safeguards are completed before public launch.",
+  lastUpdated: "19 August 2026",
+  status: "A privacy contact address is still to be published.",
   intro:
     "UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.",
   sections: [
@@ -206,28 +231,32 @@ export const PRIVACY_NOTICE: LegalDocument = {
     {
       heading: "Who we use",
       bullets: [
-        "Supabase — authentication, database and private storage.",
-        "OpenAI — AI-assisted plan generation.",
-        "Vercel — web hosting and routing.",
-        "Hetzner — backend and worker hosting.",
-        "Sentry — diagnostics and error monitoring.",
-        "Resend — selected service/feedback email processing.",
-        "Cloudflare Turnstile — abuse and automated-signup prevention.",
+        "Supabase — your account, the database and private file storage. Hosted in Paris, France.",
+        "OpenAI — AI-assisted plan generation. Your data is not used to train their models.",
+        "Vercel — hosting and routing for the website and app.",
+        "Hetzner — the backend and plan-generation servers. Hosted in Nuremberg, Germany.",
+        "Resend — service and feedback emails.",
+        "Cloudflare Turnstile — blocking automated sign-ups and abuse.",
       ],
-      paragraphs: ["We aim to send each provider only the data required for its function."],
+      paragraphs: [
+        "We check each provider's data-protection agreement and transfer safeguards before relying on it, and send each one only the data its function needs.",
+        "We keep health information out of our email and anti-abuse providers, and we do not send it to them unless it is genuinely necessary.",
+      ],
     },
     {
       heading: "International transfers",
       paragraphs: [
-        "Some providers may process data outside the UK. Before public launch, UNLXCK will complete and document the applicable transfer locations and safeguards and update this section where required.",
+        "Our main systems are hosted in the EU: Supabase in Paris and our backend servers in Nuremberg, Germany.",
+        "Some providers may process limited data outside the UK. Where they do, we rely on that provider's data-protection agreement together with the UK's approved transfer safeguards, such as the UK Addendum to the Standard Contractual Clauses, and we keep a record of the safeguard that applies.",
       ],
     },
     {
       heading: "How long we keep data",
       paragraphs: [
-        "We keep identifiable data only for as long as needed for the purpose for which it is used.",
-        "Account, training, injury, readiness, nutrition and related service data are generally retained while needed to provide the service and reviewed for deletion when an account closes. Beta screenshots are retained for no more than 90 days under the current process. Security logs and backups follow their documented operational lifecycle.",
-        "More specific operational periods will be finalised before public launch.",
+        "We keep identifiable data only for as long as needed for the purpose it was collected for, then delete it or irreversibly anonymise it.",
+        "Your account, profile, intake, plans, training history, injury, readiness and nutrition data are kept while they are needed to provide the service, and are deleted or reviewed for deletion when your account closes or you ask us to delete it.",
+        "Feedback is kept while it is needed for support and product improvement, then anonymised or deleted. Beta screenshots are kept for no more than 90 days.",
+        "Security and audit logs are kept only for as long as their security purpose requires. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.",
       ],
     },
     {
@@ -249,6 +278,12 @@ export const PRIVACY_NOTICE: LegalDocument = {
       heading: "Users under 18",
       paragraphs: [
         "Under-18 accounts get high-privacy defaults and additional safety rules. UNLXCK does not provide aggressive weight-cut, dehydration or water-cut guidance to athletes under 18.",
+      ],
+    },
+    {
+      heading: "How to reach us",
+      paragraphs: [
+        "You can exercise any of these rights, or ask a question about this notice, using the privacy contact at the top of this page. In the app you can also review and change your health-data consent, and request account deletion, from Settings → Privacy.",
       ],
     },
     {

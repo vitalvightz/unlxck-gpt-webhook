@@ -25,7 +25,10 @@ export default async function LegalDocumentPage({
       <p className="kicker">UNLXCK</p>
       <h1>{document.title}</h1>
       <p className="muted">
-        Version {document.version} · {document.status}
+        Version {document.version}
+        {document.effectiveDate ? ` · Effective ${document.effectiveDate}` : ""}
+        {document.lastUpdated ? ` · Last updated ${document.lastUpdated}` : ""}
+        {document.status ? ` · ${document.status}` : ""}
       </p>
       <p>{document.intro}</p>
 
