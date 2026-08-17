@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { HEALTH_CONSENT_VERSION, TERMS_VERSION } from "@/lib/compliance";
+import { PRIVACY_NOTICE_VERSION, TERMS_VERSION } from "@/lib/compliance";
 import {
   LEGAL_DOCUMENTS,
   PRIVACY_HREF,
@@ -18,16 +18,17 @@ import {
 /**
  * Anti-drift checks for the in-app legal copy.
  *
- * The canonical Terms and Privacy Notice live on the `docs/regulatory-intended-purpose`
- * branch. The app ships its own rendering of them so an athlete can read what
- * they are agreeing to at the moment they agree, which means two copies exist
- * and can diverge silently. These tests pin every substantive fact — service-provider
- * safeguards, the placeholders, the operator, the dates, the versions — so a
- * change to one has to be a deliberate change to the other.
+ * The app ships its own rendering of the Terms and Privacy Notice so an athlete
+ * can read what they are agreeing to at the moment they agree, which means two
+ * copies exist and can diverge silently. These tests pin every substantive fact
+ * — service-provider safeguards, the placeholders, the operator, the dates, the
+ * versions — so a change to one has to be a deliberate change to the other.
  *
- * The final test upgrades automatically from "pinned facts" to a direct
- * comparison the moment the canonical markdown lands in this repo (it has not
- * yet — it is on the docs branch).
+ * The canonical markdown now lives in this repo under docs/, so the final test
+ * compares the two copies directly instead of relying on the pinned facts alone.
+ * It holds the Service providers and International transfers paragraphs to a
+ * verbatim match, because those are the ones where a silent divergence would
+ * misdescribe who receives athlete data.
  */
 
 const REPO_ROOT = path.resolve(process.cwd(), "..");
@@ -196,10 +197,18 @@ test("no data-request route is offered until a real address is configured", () =
 
 // --- versions and dates ------------------------------------------------------
 
-test("document versions track the consent versions the server records", () => {
-  // A bumped document version re-collects consent, so these must not drift.
+test("each document carries its own version, and the Terms track acceptance", () => {
+  // The Terms version gates acceptance: bumping it re-collects agreement from
+  // every athlete, so the displayed version and the recorded one must not drift.
   assert.equal(TERMS_OF_USE.version, TERMS_VERSION);
-  assert.equal(PRIVACY_NOTICE.version, HEALTH_CONSENT_VERSION);
+
+  // The notice tracks its own revision rather than HEALTH_CONSENT_VERSION. They
+  // were the same constant, which meant correcting the notice re-collected
+  // Article 9(2)(a) consent from every athlete and took their health-dependent
+  // features offline until they answered — a cost that argued for leaving the
+  // notice wrong. Keeping them apart is what lets the notice be fixed.
+  assert.equal(PRIVACY_NOTICE.version, PRIVACY_NOTICE_VERSION);
+  assert.notEqual(PRIVACY_NOTICE_VERSION, TERMS_VERSION);
 });
 
 test("the Terms carry an effective date and the notice a revision date", () => {

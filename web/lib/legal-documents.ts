@@ -6,31 +6,23 @@
 // the athlete can read what they are agreeing to at the moment they agree, and a
 // repository markdown file is not reachable from a phone at signup.
 //
-// This copy currently runs AHEAD of the canonical markdown in three places, all
-// deliberate product decisions recorded in PR #2312:
-//
-//   * the operator is named (`Unlxck`) and the Terms carry an effective date,
-//     where the canonical Terms still hold `[LEGAL OPERATOR NAME]` and `[DATE]`;
-//   * Sentry is not listed as a processor, because UNLXCK does not use it
-//     (docs/processor-dpa-international-transfer-verification.md records this,
-//     but the canonical notice has not been updated to match);
-//   * the international-transfer and retention sections state the verified
-//     position instead of saying it is still to be completed.
-//
-// docs/privacy-notice.md and docs/terms-of-use.md need the same edits. Until
-// they get them, legal-documents.test.ts is the drift check — it pins every
-// substantive fact and upgrades to a direct comparison automatically once the
-// canonical markdown lands in this repo.
+// The canonical markdown now lives in this repo, so legal-documents.test.ts
+// compares the two copies directly rather than pinning facts about a file it
+// could not see. Any edit here needs the same edit in docs/privacy-notice.md or
+// docs/terms-of-use.md, and the Service providers and International transfers
+// paragraphs are compared verbatim.
 //
 // When either document changes, update the text here and bump the matching
-// version in api/compliance.py and web/lib/compliance.ts so existing acceptances
-// are re-collected rather than silently carried over.
+// version in api/compliance.py and web/lib/compliance.ts. Note which version:
+// TERMS_VERSION and HEALTH_CONSENT_VERSION gate acceptance, so bumping either
+// re-collects it from every athlete; PRIVACY_NOTICE_VERSION gates nothing and
+// is the one to bump when the notice is corrected.
 //
 // The two remaining bracketed placeholders are real and intentional: no contact
 // address has been decided, and inventing one would be worse than showing it is
 // outstanding.
 
-import { HEALTH_CONSENT_VERSION, TERMS_VERSION } from "@/lib/compliance";
+import { PRIVACY_NOTICE_VERSION, TERMS_VERSION } from "@/lib/compliance";
 
 export type LegalSection = {
   heading: string;
@@ -174,7 +166,7 @@ export const TERMS_OF_USE: LegalDocument = {
 export const PRIVACY_NOTICE: LegalDocument = {
   slug: "privacy-notice",
   title: "Privacy Notice",
-  version: HEALTH_CONSENT_VERSION,
+  version: PRIVACY_NOTICE_VERSION,
   lastUpdated: "19 August 2026",
   status: "A privacy contact address is still to be published.",
   intro:
@@ -216,8 +208,11 @@ export const PRIVACY_NOTICE: LegalDocument = {
     {
       heading: "Lawful bases",
       paragraphs: [
-        "For personal data needed to provide the requested UNLXCK service, we generally rely on Article 6(1)(b) UK GDPR (contract).",
-        "Where UNLXCK processes health data for personalised training and safety features, we rely on Article 9(2)(a) explicit consent, alongside the applicable Article 6 basis. Health-data consent must be given separately and can be withdrawn.",
+        "We rely on three lawful bases, depending on what the processing is for.",
+        "Article 6(1)(b) UK GDPR (contract) — for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.",
+        "Article 6(1)(f) UK GDPR (legitimate interests) — for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.",
+        "Article 9(2)(a) UK GDPR (explicit consent) — for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.",
+        "We do not use your health information to improve UNLXCK. It is used to build and adapt your own training and to apply safety rules to it. Where we look at how the product is performing, we do that without using health information.",
         "Withdrawing consent does not affect processing already carried out lawfully, but UNLXCK may be unable to provide features that require health data afterwards.",
       ],
     },
@@ -225,7 +220,8 @@ export const PRIVACY_NOTICE: LegalDocument = {
       heading: "AI and automated adaptation",
       paragraphs: [
         "UNLXCK uses software rules and AI-assisted processing to help generate and adapt training guidance from the information you provide. Relevant plan context may be sent to service providers supporting this processing.",
-        "These systems may change, restrict or withhold training guidance. UNLXCK does not currently intend these decisions to produce legal or similarly significant effects about you.",
+        "These systems may change, restrict or withhold training guidance. We have assessed whether that is a decision based solely on automated processing with legal or similarly significant effects under Article 22 UK GDPR, and concluded it is not: it changes what training UNLXCK suggests to you, not your legal position or your access to anything comparable, and you remain free to train differently. We keep that assessment under review, and apply it more cautiously to athletes under 18.",
+        "If you think an automated adaptation has got something wrong, contact us using the privacy contact above and a person will look at it.",
       ],
     },
     {
@@ -237,7 +233,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
     {
       heading: "International transfers",
       paragraphs: [
-        "Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies.",
+        "Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.",
       ],
     },
     {
@@ -257,10 +253,11 @@ export const PRIVACY_NOTICE: LegalDocument = {
         "Request deletion.",
         "Restrict processing.",
         "Receive portable data.",
-        "Object to certain processing.",
+        "Object to processing we carry out under legitimate interests.",
         "Withdraw consent at any time where processing relies on consent.",
       ],
       paragraphs: [
+        "The right to object applies to the processing we carry out under legitimate interests — security, abuse prevention, fault investigation and service improvement. Tell us and we will stop, unless we can show compelling grounds that override your interests. It does not cover what we have to process to provide the service under our agreement with you; for health information, withdraw your consent instead, which you can do at any time without giving a reason.",
         "Requests can be made using the privacy contact above, or from Settings → Privacy. We may verify identity where reasonably necessary.",
       ],
     },

@@ -32,22 +32,30 @@ We use personal data to:
 UNLXCK is a performance and wellbeing service. It is not intended to diagnose, treat or replace professional medical care.
 
 ## Lawful bases
-For personal data needed to provide the requested UNLXCK service, we generally rely on **Article 6(1)(b) UK GDPR (contract)**.
+We rely on three lawful bases, depending on what the processing is for.
 
-Where UNLXCK processes health data for personalised training and safety features, we rely on **Article 9(2)(a) explicit consent**, alongside the applicable Article 6 basis. Health-data consent must be given separately and can be withdrawn.
+**Article 6(1)(b) UK GDPR (contract)** — for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.
+
+**Article 6(1)(f) UK GDPR (legitimate interests)** — for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.
+
+**Article 9(2)(a) UK GDPR (explicit consent)** — for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.
+
+**We do not use your health information to improve UNLXCK.** It is used to build and adapt your own training and to apply safety rules to it. Where we look at how the product is performing, we do that without using health information.
 
 Withdrawing consent does not affect processing already carried out lawfully, but UNLXCK may be unable to provide features that require health data afterwards.
 
 ## AI and automated adaptation
 UNLXCK uses software rules and AI-assisted processing to help generate and adapt training guidance from the information you provide. Relevant plan context may be sent to service providers supporting this processing.
 
-These systems may change, restrict or withhold training guidance. UNLXCK does not currently intend these decisions to produce legal or similarly significant effects about you.
+These systems may change, restrict or withhold training guidance. We have assessed whether that is a decision based solely on automated processing with legal or similarly significant effects under Article 22 UK GDPR, and concluded it is not: it changes what training UNLXCK suggests to you, not your legal position or your access to anything comparable, and you remain free to train differently. We keep that assessment under review, and apply it more cautiously to athletes under 18.
+
+If you think an automated adaptation has got something wrong, contact us using the privacy contact above and a person will look at it.
 
 ## Service providers
 We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.
 
 ## International transfers
-Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies.
+Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.
 
 ## How long we keep data
 We keep identifiable data only for as long as needed for the purpose for which it was collected, then delete it or irreversibly anonymise it where appropriate.
@@ -65,10 +73,10 @@ Depending on the processing, you may have rights to:
 - request deletion;
 - restrict processing;
 - receive portable data;
-- object to certain processing; and
+- object to processing we carry out under legitimate interests; and
 - withdraw consent at any time where processing relies on consent.
 
-**Right to object:** where the right applies, you may object to our processing of your personal data.
+**Right to object:** the right to object applies to the processing we carry out under legitimate interests — security, abuse prevention, fault investigation and service improvement. Tell us and we will stop, unless we can show compelling grounds that override your interests. It does not cover what we have to process to provide the service under our agreement with you; for health information, withdraw your consent instead, which you can do at any time without giving a reason.
 
 Requests can be made using the privacy contact above or from **Settings → Privacy**. We may verify identity where reasonably necessary.
 

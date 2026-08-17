@@ -218,6 +218,34 @@ Worth stating plainly, because it is unusual to see this done properly:
 
 ---
 
+## Remediation log
+
+The findings above are kept as-found. This section records what has since been actioned.
+
+### 17 August 2026 — first remediation pass
+
+| Finding | Status | What changed |
+|---|---|---|
+| **M3** Notice/consent version coupling | **Closed** | `PRIVACY_NOTICE_VERSION` added to `api/compliance.py` and `web/lib/compliance.ts`, notice moved onto it. Verified the notice can now be revised without re-collecting Art. 9(2)(a) consent or taking health features offline. Done first, because every other notice fix depended on it. |
+| **B4** Lawful bases | **Closed** | Art. 6(1)(f) added with named interests; `docs/legitimate-interests-assessment.md` written; right-to-object rewritten to state when it applies; explicit statement added that health data is not used for product improvement. |
+| **H2** Art. 22 asserted not assessed | **Closed** | Restated as a reasoned conclusion with the child-caution caveat, plus a human-review route. |
+| **M1** Transfer safeguards copy | **Closed** | "You can ask us for a copy of the safeguard we rely on" added to both copies. |
+| **H3** Screenshot retention ceiling | **Closed** | `screenshot_retention_days()` now clamps at 90. Verified no environment value can exceed the published commitment. *(The wider retention-period work remains open.)* |
+| **L1** Stale drift comment | **Closed** | PR #2312 comment removed; the test-file header claiming the canonical docs live on another branch corrected — they are in this repo and the comparison test is live. |
+| **L3** Turnstile PECR position | **Closed** | `docs/cookies-and-local-storage.md` written, registering every cookie and storage key with its reg. 6 assessment. Sentry Replay is recorded there as a known unremediated gap rather than a compliant position. |
+| **L6** DPO assessment | **Closed** | Recorded in the DPIA as a reasoned "not required at current scale", with reassessment triggers. |
+| **H1** Under-18 Art. 6 basis | **Logged** | Recorded as an open question in the DPIA. The assessment itself is still to be done. |
+
+**Deliberately not done in this pass:**
+
+- **M2 (name processors)** — a passing test at `legal-documents.test.ts:94` *requires* the notice to describe categories without naming providers. Reversing that is a deliberate decision, not a drafting fix, and it is entangled with the Sentry question: naming six live processors while omitting the seventh would introduce a fresh accuracy defect rather than close one.
+- **L2 (Terms version → 1.0)** — `TERMS_VERSION` gates acceptance, so bumping it re-collects agreement from every athlete. It should ride with the B2 entity fix so athletes are asked once, not twice.
+- **B2, B3, and retention periods** — blocked on the legal entity, the privacy address, and the retention decisions respectively.
+
+### Verification
+
+`web` unit suite 1238/1238 pass, including the canonical-vs-in-app comparison; `tsc --noEmit` clean. The two Python changes were verified directly (version split does not disturb consent gating; the retention clamp holds across valid, oversized, zero and malformed inputs).
+
 ## Review triggers
 
 Re-run this audit when: a processor is added or removed; session replay, analytics or marketing tooling is introduced; payments launch; coach/parent/gym visibility of junior athlete data is enabled; community or user-to-user features are added (Online Safety Act); under-13 access is contemplated; or the Art. 9 consent wording changes.

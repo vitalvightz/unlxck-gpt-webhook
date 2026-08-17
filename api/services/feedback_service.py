@@ -122,8 +122,15 @@ def screenshot_limit_per_hour() -> int:
 
 
 def screenshot_retention_days() -> int:
+    """Days a beta screenshot is kept, capped at the period the notice promises.
+
+    The Privacy Notice tells athletes screenshots are kept "no more than 90
+    days", so 90 is a ceiling here and not merely a default — a misconfigured
+    environment must not be able to quietly outlive a published commitment. A
+    shorter period is a valid operational choice and passes through unchanged.
+    """
     value = _configured_non_negative_int("FEEDBACK_SCREENSHOT_RETENTION_DAYS", 90)
-    return value or 90
+    return min(value or 90, 90)
 
 
 def app_version() -> str:

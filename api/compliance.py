@@ -34,6 +34,15 @@ TERMS_VERSION = "0.1-pre-launch"
 # the Privacy Notice (docs/privacy-notice.md, "Lawful bases").
 HEALTH_CONSENT_VERSION = "1.0"
 
+# PRIVACY_NOTICE_VERSION tracks revisions to the Privacy Notice itself. It is
+# deliberately NOT the same constant as HEALTH_CONSENT_VERSION: the notice can be
+# corrected without changing what the athlete agreed to, and re-collecting
+# Article 9(2)(a) consent for an editorial fix would take health-dependent
+# features offline for every athlete until they answered again. Unlike the other
+# two this version gates nothing — the notice is information, not agreement — so
+# it is recorded for display and audit only.
+PRIVACY_NOTICE_VERSION = "1.1"
+
 # Age bands. 13 is the floor for an account at all; 18 is the line above which
 # the adult flow applies. Both come from the Children & Age-Appropriate Use
 # Policy and the Terms ("intended for users aged 13 or over").
