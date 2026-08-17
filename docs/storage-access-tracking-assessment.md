@@ -15,17 +15,19 @@ Where the statistical or appearance exception is relied upon, provide a simple f
 
 ## Current UNLXCK assessment
 
-| Technology / use | Likely purpose | Initial position |
+| Technology / use | Likely purpose | Current position |
 |---|---|---|
-| Supabase authentication/session storage | Sign-in and account security | Likely strictly necessary; no PECR consent if limited to this purpose |
+| Supabase authentication/session storage | Sign-in and account security | Likely strictly necessary if limited to this purpose |
 | UNLXCK appearance preference/local storage | Remember dark/light or similar user preference | May fall within the appearance exception; disclose and provide objection control where required |
 | Private-trial / app state storage required to operate requested features | Service operation | Assess individually; strictly necessary use may not require consent |
-| Cloudflare Turnstile | Authentication abuse/bot prevention | Likely security/service necessity, but verify exact storage/access behaviour and disclosure requirements |
-| Sentry | Error/performance monitoring | Verify SDK configuration, identifiers, cookies/local storage and whether use can meet an applicable exception; otherwise consent before non-essential storage/access |
+| Cloudflare Turnstile | Authentication abuse/bot prevention | Security/service necessity; verify deployed browser storage/access behaviour before launch |
 | Vercel platform logs/hosting | Server-side request/technical logs | PECR consent generally concerns storage/access on the user's device; separately disclose personal-data processing where applicable |
-| Vercel Analytics or other analytics, if enabled | Product usage measurement | Verify whether enabled and whether implementation satisfies the UK statistical-purpose exception; if not, obtain consent |
+| Vercel Analytics or equivalent analytics | Product usage measurement | No `@vercel/analytics` integration was identified in the repository check on 17 August 2026; reassess if analytics is enabled through configuration or later added |
 | Advertising pixels / behavioural tracking | Advertising/profiling | No such tool should be added without prior compliance review; normally expect consent |
-| Push subscription/browser notification data | Deliver notifications requested by the user | Permission/consent flow is handled by browser/platform; assess any additional device storage separately |
+| Push subscription/browser notification data | Deliver notifications requested by the user | Permission flow is handled by browser/platform; assess any additional device storage separately |
+
+## Not used
+**Sentry is not used by UNLXCK** and is therefore excluded from the production tracking assessment.
 
 ## Launch decision
 A generic cookie banner is **not automatically required**. Before launch, audit the deployed app in-browser and list every cookie, local-storage/session-storage key, SDK, script, tag and other device storage/access operation.
@@ -39,7 +41,7 @@ For each item record:
 6. PECR exception relied upon, if any; and
 7. whether an objection or prior-consent control is required.
 
-If all device storage/access is strictly necessary or validly within another statutory exception, use clear disclosure and the required objection mechanisms rather than an unnecessary consent banner.
+If all device storage/access is strictly necessary or validly within another statutory exception, use clear disclosure and any required objection mechanism rather than an unnecessary consent banner.
 
 If any non-exempt technology is present, it must not operate until valid consent has been obtained.
 
@@ -51,8 +53,7 @@ Reassess this document before enabling analytics, advertising, attribution, new 
 
 ## Outstanding verification
 Before public launch confirm:
-- whether Vercel Analytics or any equivalent analytics is enabled;
-- Sentry's exact browser storage/access behaviour and event payload;
-- Turnstile's current storage/access behaviour;
-- the complete set of UNLXCK local/session storage keys; and
+- Turnstile's deployed browser storage/access behaviour;
+- the complete set of UNLXCK local/session storage keys;
+- whether analytics is enabled outside the checked repository integration; and
 - whether any third-party script performs non-essential tracking.
