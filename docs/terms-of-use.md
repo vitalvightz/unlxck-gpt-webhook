@@ -1,9 +1,9 @@
 # UNLXCK Terms of Use
 
-**Status:** Pre-launch draft. Complete the operator/contact placeholders before publication.
+**Status:** A contact address is still to be published.
 
 ## 1. About these Terms
-These Terms govern use of UNLXCK, operated by **[LEGAL OPERATOR NAME]** ("UNLXCK", "we", "us"). By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.
+These Terms govern use of UNLXCK, operated by **Unlxck** ("UNLXCK", "we", "us"). By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.
 
 ## 2. Eligibility
 UNLXCK is intended for users aged **13 or over**. Users must provide accurate age information. Additional privacy and safety protections apply to users under 18. UNLXCK does not currently support accounts for children under 13.
@@ -71,4 +71,4 @@ These Terms are governed by the laws of England and Wales, subject to any mandat
 Questions or complaints about these Terms can be sent to **[LEGAL/CONTACT EMAIL]**.
 
 **Version:** 0.1 pre-launch
-**Effective date:** [DATE]
+**Effective date:** 19 August 2026
