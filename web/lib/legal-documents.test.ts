@@ -21,8 +21,8 @@ import {
  * The canonical Terms and Privacy Notice live on the `docs/regulatory-intended-purpose`
  * branch. The app ships its own rendering of them so an athlete can read what
  * they are agreeing to at the moment they agree, which means two copies exist
- * and can diverge silently. These tests pin every substantive fact — the
- * processor list, the placeholders, the operator, the dates, the versions — so a
+ * and can diverge silently. These tests pin every substantive fact — service-provider
+ * safeguards, the placeholders, the operator, the dates, the versions — so a
  * change to one has to be a deliberate change to the other.
  *
  * The final test upgrades automatically from "pinned facts" to a direct
@@ -89,30 +89,48 @@ test("internal compliance documents never leak into athlete-facing copy", () => 
   }
 });
 
-// --- processors --------------------------------------------------------------
+// --- service providers -------------------------------------------------------
 
-test("the processor list matches the verified register exactly", () => {
-  // Adding or removing a provider is a notice change and a register change.
-  // Pinning the list here means one cannot happen without the other.
-  const expected = ["Supabase", "OpenAI", "Vercel", "Hetzner", "Resend", "Cloudflare Turnstile"];
-  const section = PRIVACY_NOTICE.sections.find((entry) => entry.heading === "Who we use");
-  assert.ok(section?.bullets, "Privacy Notice should list processors");
+test("the public notice describes provider categories without exposing the internal register", () => {
+  const section = PRIVACY_NOTICE.sections.find((entry) => entry.heading === "Service providers");
+  assert.deepEqual(section?.paragraphs, [
+    "We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.",
+  ]);
+  assert.equal(section?.bullets, undefined);
 
-  const named = section.bullets.map((bullet) => bullet.split(" — ")[0].trim());
-  assert.deepEqual(named, expected);
+  const publicNotice = allText(PRIVACY_NOTICE);
+  for (const provider of [
+    "Supabase",
+    "OpenAI",
+    "Vercel",
+    "Hetzner",
+    "Resend",
+    "Cloudflare Turnstile",
+  ]) {
+    assert.ok(!publicNotice.includes(provider), `public notice must not name ${provider}`);
+  }
+
+  const internalRegister = readFileSync(
+    path.join(REPO_ROOT, "docs", "processor-dpa-international-transfer-verification.md"),
+    "utf8",
+  );
+  for (const provider of ["Supabase", "OpenAI", "Vercel", "Hetzner", "Resend", "Cloudflare Turnstile"]) {
+    assert.ok(internalRegister.includes(provider), `internal register must retain ${provider}`);
+  }
 });
 
 test("Sentry is named nowhere — UNLXCK does not use it", () => {
   assert.ok(!everyDocumentText().toLowerCase().includes("sentry"));
 });
 
-test("the EU hosting locations are stated, not left vague", () => {
+test("international-transfer safeguards remain concise and specific", () => {
   const transfers = PRIVACY_NOTICE.sections.find(
     (entry) => entry.heading === "International transfers",
   );
   const text = (transfers?.paragraphs ?? []).join(" ");
-  assert.ok(text.includes("Paris"), "Supabase region should be stated");
-  assert.ok(text.includes("Nuremberg"), "backend region should be stated");
+  assert.equal(transfers?.paragraphs?.length, 1);
+  assert.match(text, /outside the UK/);
+  assert.match(text, /restricted transfer/);
   assert.ok(/Standard Contractual Clauses|UK Addendum/.test(text), "safeguard should be named");
 });
 
@@ -245,6 +263,16 @@ test("in-app copy matches the canonical docs when they are present", () => {
     // A processor named in the canonical notice must be named in-app, and
     // vice versa — this is the drift that matters most.
     if (document.slug === "privacy-notice") {
+      for (const heading of ["Service providers", "International transfers"]) {
+        const section = document.sections.find((entry) => entry.heading === heading);
+        assert.ok(section, `in-app notice should contain ${heading}`);
+        for (const paragraph of section.paragraphs ?? []) {
+          assert.ok(
+            markdown.includes(paragraph),
+            `canonical notice is out of sync with the in-app ${heading} copy`,
+          );
+        }
+      }
       for (const provider of ["Supabase", "OpenAI", "Vercel", "Hetzner", "Resend", "Cloudflare"]) {
         assert.equal(
           markdown.includes(provider),
