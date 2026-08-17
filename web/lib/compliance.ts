@@ -64,7 +64,7 @@ type ConsentCopy = {
 // saying it the same way everywhere is what makes it read as a standing promise
 // rather than band-specific small print.
 const SIGNUP_CONSENT_LABEL =
-  "I agree to UNLXCK using things like injuries, soreness, sleep and bodyweight to personalise my training.";
+  "I agree to UNLXCK using my health information to personalise my training.";
 const SIGNUP_CONSENT_HELP = "Optional · Change anytime in Settings";
 
 const EARLY_TEEN_COPY: ConsentCopy = {
