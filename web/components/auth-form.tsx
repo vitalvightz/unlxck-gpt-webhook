@@ -20,7 +20,11 @@ import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
+  DATE_OF_BIRTH_PURPOSE_NOTE,
+  SIGNUP_CONSENT_META_SEPARATOR,
+  SIGNUP_PRIVACY_LINK_TEXT,
   SIGNUP_TERMS_CONSENT_LABEL,
+  SIGNUP_TERMS_LINK_TEXT,
   consentCopyForBand,
   provisionalAgeBand,
   signupConsentBlockReason,
@@ -87,6 +91,12 @@ export function AuthForm({
   // explanation matches the reader before the profile exists; the server
   // re-derives it from the stored date and owns every actual consequence.
   const consentCopy = consentCopyForBand(provisionalAgeBand(dateOfBirth));
+  // Split the Terms sentence around its document name so "Terms of Use" is the
+  // link, inline, with no trailing "Read the Terms". The label is composed from
+  // SIGNUP_TERMS_LINK_TEXT, so this split always yields the surrounding words.
+  const [termsBeforeLink, termsAfterLink] = SIGNUP_TERMS_CONSENT_LABEL.split(
+    SIGNUP_TERMS_LINK_TEXT,
+  );
 
   const handleCaptchaUnavailable = useCallback(() => {
     setError(CAPTCHA_UNAVAILABLE_MESSAGE);
@@ -407,8 +417,7 @@ export function AuthForm({
                   required
                 />
                 <p id="dateOfBirthHelp" className="muted auth-consent-help">
-                  UNLXCK is for athletes aged 13 and over. Under-18 accounts get extra privacy
-                  and safety protections.
+                  {DATE_OF_BIRTH_PURPOSE_NOTE}
                 </p>
               </div>
 
@@ -423,10 +432,11 @@ export function AuthForm({
                     required
                   />
                   <span>
-                    {SIGNUP_TERMS_CONSENT_LABEL}{" "}
+                    {termsBeforeLink}
                     <Link href={TERMS_HREF} className="auth-text-link" target="_blank">
-                      Read the Terms
+                      {SIGNUP_TERMS_LINK_TEXT}
                     </Link>
+                    {termsAfterLink}
                   </span>
                 </label>
               </div>
@@ -447,14 +457,16 @@ export function AuthForm({
                   />
                   <span>{consentCopy.signupHealthConsentLabel}</span>
                 </label>
-                {/* The full explanation — what each category is used for, that
-                    it is never shown to other users, what declining costs —
-                    lives in the Privacy Notice linked here and in Settings →
-                    Privacy. Repeating it inline buried the form on a phone. */}
-                <p id="healthDataConsentHelp" className="muted auth-consent-help">
-                  {consentCopy.signupHealthConsentHelp}{" "}
+                {/* One compact metadata row, not a second sentence: optionality,
+                    where to change it, and the Privacy Notice link read as a
+                    single dotted line aligned under the checkbox label. The full
+                    explanation lives behind that link and in Settings → Privacy —
+                    repeating it inline buried the form on a phone. */}
+                <p id="healthDataConsentHelp" className="muted auth-consent-meta">
+                  {consentCopy.signupHealthConsentHelp}
+                  {SIGNUP_CONSENT_META_SEPARATOR}
                   <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
-                    Read the Privacy Notice
+                    {SIGNUP_PRIVACY_LINK_TEXT}
                   </Link>
                 </p>
               </div>

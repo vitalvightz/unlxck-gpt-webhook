@@ -17,13 +17,32 @@ export const MINIMUM_SIGNUP_AGE_YEARS = 13;
 export const ADULT_AGE_YEARS = 18;
 
 export const UNDER_MINIMUM_AGE_MESSAGE = `UNLXCK accounts are for athletes aged ${MINIMUM_SIGNUP_AGE_YEARS} or over.`;
+
+/**
+ * Why we ask for a date of birth, shown under the field.
+ *
+ * States the purpose without any age framing. The eligibility floor is a term
+ * of the contract and lives in the Terms of Use (section 2), which is linked
+ * and accepted immediately below this field; putting it on the form as well
+ * made a product for professional fighters read as a product for children, and
+ * bought nothing — nobody self-selects out of signup on reading it, and the
+ * floor is enforced server-side and by two Postgres triggers regardless.
+ *
+ * Someone who does enter an under-13 date still gets told exactly why they were
+ * refused, via UNDER_MINIMUM_AGE_MESSAGE.
+ */
+export const DATE_OF_BIRTH_PURPOSE_NOTE =
+  "Used to apply the right training and safety rules to your plan.";
 export const DATE_OF_BIRTH_REQUIRED_MESSAGE = "Enter your date of birth to continue.";
 export const DATE_OF_BIRTH_INVALID_MESSAGE = "Enter your date of birth as a valid date.";
 
 export const TERMS_CONSENT_LABEL = "I have read and accept the Terms of Use.";
-// Signup runs the checkbox label through an uppercase, letter-spaced style, so
-// every word costs a line on a phone. The Terms link sits immediately beside it.
-export const SIGNUP_TERMS_CONSENT_LABEL = "I accept the Terms of Use.";
+// Signup keeps the sentence short and makes the document name itself the link,
+// so there is no dangling "Read the Terms" tacked on the end. The label is
+// composed from the link text so the rendered sentence and the link can never
+// drift: the form splits the label on SIGNUP_TERMS_LINK_TEXT to place the link.
+export const SIGNUP_TERMS_LINK_TEXT = "Terms of Use";
+export const SIGNUP_TERMS_CONSENT_LABEL = `I accept the ${SIGNUP_TERMS_LINK_TEXT}.`;
 
 /**
  * Age-appropriate privacy wording.
@@ -60,10 +79,16 @@ type ConsentCopy = {
   privacySummary: string;
 };
 
+// The text half of the compact secondary row beneath the health checkbox. The
+// form renders it as "Optional · Change anytime in Settings · Privacy Notice",
+// appending the middot and the Privacy Notice link itself — so the row reads as
+// one metadata line rather than a second sentence plus a dangling link.
 // Identical across bands: it is already as short and plain as it can be, and
 // saying it the same way everywhere is what makes it read as a standing promise
 // rather than band-specific small print.
-const SIGNUP_CONSENT_HELP = "Optional. You can change this anytime in Settings.";
+export const SIGNUP_CONSENT_META_SEPARATOR = " · ";
+export const SIGNUP_PRIVACY_LINK_TEXT = "Privacy Notice";
+const SIGNUP_CONSENT_HELP = "Optional · Change anytime in Settings";
 
 const EARLY_TEEN_COPY: ConsentCopy = {
   // Names the categories inline rather than saying "health data": a 13-15

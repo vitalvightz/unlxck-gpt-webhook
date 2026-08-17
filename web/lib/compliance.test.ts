@@ -3,9 +3,13 @@ import assert from "node:assert/strict";
 
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
+  DATE_OF_BIRTH_PURPOSE_NOTE,
   HEALTH_CONSENT_VERSION,
   MINIMUM_SIGNUP_AGE_YEARS,
+  SIGNUP_CONSENT_META_SEPARATOR,
+  SIGNUP_PRIVACY_LINK_TEXT,
   SIGNUP_TERMS_CONSENT_LABEL,
+  SIGNUP_TERMS_LINK_TEXT,
   TERMS_CONSENT_LABEL,
   TERMS_REQUIRED_MESSAGE,
   TERMS_VERSION,
@@ -338,4 +342,55 @@ test("the detailed wording survives for Settings and the consent gate", () => {
     assert.ok(copy.declineNote.length > 0, `${band} decline note should remain`);
     assert.ok(copy.privacySummary.length > 0, `${band} privacy summary should remain`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Signup consent hierarchy: inline Terms link, one metadata row, no age framing
+// ---------------------------------------------------------------------------
+
+test("the Terms link text is the document name itself, embedded in the sentence", () => {
+  // The form splits the label on the link text to render "Terms of Use" as an
+  // inline link. If the link text stopped being a substring, the split would
+  // silently drop the link, so pin the relationship.
+  assert.ok(SIGNUP_TERMS_CONSENT_LABEL.includes(SIGNUP_TERMS_LINK_TEXT));
+  assert.equal(SIGNUP_TERMS_LINK_TEXT, "Terms of Use");
+  const [before, after] = SIGNUP_TERMS_CONSENT_LABEL.split(SIGNUP_TERMS_LINK_TEXT);
+  assert.equal(`${before}${SIGNUP_TERMS_LINK_TEXT}${after}`, SIGNUP_TERMS_CONSENT_LABEL);
+  assert.ok(before.length > 0, "there should be lead-in text before the link");
+});
+
+test("the health secondary row composes into one dotted metadata line", () => {
+  const help = consentCopyForBand("adult").signupHealthConsentHelp;
+  const line = `${help}${SIGNUP_CONSENT_META_SEPARATOR}${SIGNUP_PRIVACY_LINK_TEXT}`;
+  assert.equal(line, "Optional · Change anytime in Settings · Privacy Notice");
+  // The link is the Privacy Notice; the rest is plain metadata text.
+  assert.equal(SIGNUP_PRIVACY_LINK_TEXT, "Privacy Notice");
+  assert.ok(!help.includes(SIGNUP_PRIVACY_LINK_TEXT), "the link text is appended, not baked in");
+});
+
+test("no signup consent wording uses a dangling 'Read the …' link label", () => {
+  // The document name is the link now, so the old "Read the Terms" /
+  // "Read the Privacy Notice" trailers are gone.
+  const strings = [
+    SIGNUP_TERMS_CONSENT_LABEL,
+    SIGNUP_TERMS_LINK_TEXT,
+    SIGNUP_PRIVACY_LINK_TEXT,
+    ...["13-15", "16-17", "adult"].flatMap((band) => {
+      const copy = consentCopyForBand(band);
+      return [copy.signupHealthConsentLabel, copy.signupHealthConsentHelp];
+    }),
+  ];
+  for (const value of strings) {
+    assert.ok(!/read the/i.test(value), `signup copy should not say "Read the": ${value}`);
+  }
+});
+
+test("the date-of-birth helper states its purpose without any age framing", () => {
+  // A fight-camp product must not read like a youth app: the eligibility floor
+  // is a Term of Use, not signup-form copy. If a future edit wants the age
+  // wording back, this test and DATE_OF_BIRTH_PURPOSE_NOTE change together.
+  assert.ok(!/\b13\b/.test(DATE_OF_BIRTH_PURPOSE_NOTE), "no 13+ framing on the form");
+  assert.ok(!/\b18\b/.test(DATE_OF_BIRTH_PURPOSE_NOTE), "no under-18 framing on the form");
+  assert.ok(!/under-?18|minor|child/i.test(DATE_OF_BIRTH_PURPOSE_NOTE));
+  assert.ok(DATE_OF_BIRTH_PURPOSE_NOTE.length > 0, "the field still explains why it is asked");
 });

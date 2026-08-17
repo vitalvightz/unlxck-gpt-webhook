@@ -1050,6 +1050,17 @@ select:focus-visible {
   line-height: 1.45;
 }
 
+/* The compact secondary row beneath the health checkbox: optionality, where to
+   change it, and the Privacy Notice link as one dotted metadata line. Indented
+   to sit under the label text (18px checkbox + 10px gap), and a step smaller
+   than the sentence above so it reads as metadata rather than a second, equal
+   statement — which is what made the Privacy Notice link look accidental. */
+.auth-consent-meta {
+  padding-left: 28px;
+  font-size: var(--type-meta);
+  line-height: 1.4;
+}
+
 /* Legal documents render as long-form prose, so they get a reading measure
    rather than the app's dense panel rhythm. */
 .legal-document {

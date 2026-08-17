@@ -9,6 +9,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { recordCompliance } from "@/lib/api";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
+  DATE_OF_BIRTH_PURPOSE_NOTE,
   TERMS_CONSENT_LABEL,
   consentCopyForBand,
   hasHealthDataConsent,
@@ -129,10 +130,7 @@ function ComplianceAcceptance() {
             onChange={(event) => setDateOfBirth(event.target.value)}
             required
           />
-          <p className="muted auth-consent-help">
-            UNLXCK is for athletes aged 13 and over. Under-18 accounts get extra privacy and
-            safety protections.
-          </p>
+          <p className="muted auth-consent-help">{DATE_OF_BIRTH_PURPOSE_NOTE}</p>
         </div>
       ) : null}
 
