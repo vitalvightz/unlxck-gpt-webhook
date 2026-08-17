@@ -436,14 +436,10 @@ POST_PURGE_REPLACED_NAMES = {
     "Knee Strike Bursts",
     "Strike-to-Clinch Drill",
     "Switch-Side Rhythm",
-    "Interception Kick Burst",
     "Dutch Target Call",
     "Low-High Decision Rounds",
-    "Kick-Punch Reposition",
     "Long-to-Clinch Transition",
-    "Kick Recoil Quality Rounds",
     "Pressure-Kicker Rounds",
-    "Switch-Kick Power Bursts",
     "Kicker's Switch Stance March",
 }
 

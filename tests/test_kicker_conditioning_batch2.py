@@ -13,8 +13,8 @@ EXPECTED = {
     "Teep Range Reset": ({"muay_thai"}, "aerobic", (180, 60, 3, 6), {"GPP", "SPP"}, ("bodyweight",)),
     "Kick & Exit Flow": ({"kickboxing", "muay_thai"}, "aerobic", (180, 60, 3, 6), {"GPP", "SPP"}, ("partner", "thai_pads")),
     "Bilateral Round-Kick Flow": ({"kickboxing", "muay_thai"}, "aerobic", (120, 60, 3, 6), {"GPP", "SPP"}, ("heavy_bag",)),
-    "Rear-Kick Power Singles": ({"kickboxing", "muay_thai"}, "ATP-PCr", (5, 60, 8, 8), {"GPP", "SPP"}, ("heavy_bag",)),
-    "Low-Kick Exit Burst": ({"kickboxing", "muay_thai"}, "ATP-PCr", (6, 60, 8, 8), {"SPP"}, ("partner", "thai_pads")),
+    "Rear-Kick Power Singles": ({"kickboxing", "muay_thai", "mma"}, "ATP-PCr", (5, 60, 8, 8), {"GPP", "SPP"}, ("heavy_bag",)),
+    "Low-Kick Exit Burst": ({"kickboxing", "muay_thai", "mma"}, "ATP-PCr", (6, 60, 8, 8), {"SPP"}, ("partner", "thai_pads")),
     "Reactive Body-Kick Burst": ({"kickboxing", "muay_thai"}, "ATP-PCr", (6, 60, 8, 8), {"SPP"}, ("partner", "thai_pads")),
     "Check-Return Burst": ({"kickboxing", "muay_thai"}, "ATP-PCr", (5, 60, 8, 8), {"SPP"}, ("partner", "thai_pads")),
     "Body-Kick Repeatability": ({"kickboxing", "muay_thai"}, "glycolytic", (45, 45, 6, 8), {"GPP", "SPP"}, ("heavy_bag",)),
@@ -23,7 +23,7 @@ EXPECTED = {
     "Range-Adaptive Kick Rounds": ({"kickboxing", "muay_thai"}, "glycolytic", (180, 60, 3, 8), {"SPP"}, ("partner", "thai_pads")),
 }
 
-SUPERSEDED = {
+SUPERSEDED_FOR_KICKBOXING_MUAY_THAI = {
     "Switch-Side Rhythm", "Interception Kick Burst", "Dutch Target Call",
     "Low-High Decision Rounds", "Kick-Punch Reposition", "Long-to-Clinch Transition",
     "Kick Recoil Quality Rounds", "Pressure-Kicker Rounds", "Switch-Kick Power Bursts",
@@ -81,8 +81,11 @@ def test_doses_quality_rules_and_representative_decisions_are_coherent():
 
 
 def test_legacy_and_tactical_overlap_are_removed():
-    all_names = {item["name"] for item in _bank()}
-    assert SUPERSEDED.isdisjoint(all_names)
+    assert not {
+        item["name"] for item in _bank()
+        if item["name"] in SUPERSEDED_FOR_KICKBOXING_MUAY_THAI
+        and ({"kickboxing", "muay_thai"} & set(item.get("tags", [])))
+    }
     for item in _slice().values():
         assert FORBIDDEN_DRIFT.isdisjoint(item["tags"]), item["name"]
         blob = f'{item["name"]} {item["modality"]} {item["notes"]}'.lower()
@@ -114,3 +117,23 @@ def test_existing_selector_surfaces_kicker_for_both_sports_and_phases():
             result = conditioning.generate_conditioning_block({**flags, "phase": phase})
             selected = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]
             assert set(selected) & expected, (sport, phase, selected)
+
+
+def test_deferred_mma_kicker_coverage_is_preserved_without_leaking_into_batch_1():
+    by_name = {item["name"]: item for item in _bank()}
+    mma_only_legacy = {
+        "Interception Kick Burst",
+        "Kick-Punch Reposition",
+        "Kick Recoil Quality Rounds",
+        "Switch-Kick Power Bursts",
+    }
+    for name in mma_only_legacy:
+        sports = set(by_name[name]["tags"]) & {"kickboxing", "muay_thai", "mma"}
+        assert sports == {"mma"}, name
+
+    # These approved Batch-1 concepts already served all three sports, so their
+    # existing MMA reachability remains on the shared record pending Batch 2.
+    for name in ("Rear-Kick Power Singles", "Low-Kick Exit Burst"):
+        assert "mma" in by_name[name]["tags"]
+
+    assert set(_slice()) == set(EXPECTED)
