@@ -21,6 +21,12 @@ from fastapi import HTTPException, status
 
 from ..compliance import evaluate_profile_compliance
 from ..error_sanitizer import sanitize_error_text
+from ..generation_health import (
+    NON_HEALTH_GENERATION_MODE,
+    NON_HEALTH_GENERATION_MODE_KEY,
+    build_non_health_generation_payload,
+    non_health_planner_payload,
+)
 from ..minor_safety import minor_safe_stage1_payload
 from ..models import (
     PROFILE_REFRESH_FAILED_WARNING as _PROFILE_REFRESH_FAILED_WARNING,
@@ -263,6 +269,27 @@ async def run_generation_job(
             payload_keys,
         )
 
+        non_health_mode = (
+            isinstance(raw_request_payload, dict)
+            and raw_request_payload.get(NON_HEALTH_GENERATION_MODE_KEY) == NON_HEALTH_GENERATION_MODE
+        )
+        current_profile = await _to_thread_with_heartbeat(store.get_profile, athlete_id)
+        if (
+            isinstance(current_profile, dict)
+            and current_profile.get("role") == "athlete"
+            and bool(current_profile.get("health_consent_withdrawn_at"))
+            and not evaluate_profile_compliance(current_profile).health_consent_granted
+            and not non_health_mode
+        ):
+            # Consent can be withdrawn while a job is queued. Never let a
+            # previously accepted health-bearing job cross the worker boundary
+            # after that point.
+            raise ValueError("health consent is no longer active for this generation job")
+        if non_health_mode:
+            # Re-validate the stored job at the worker boundary. This prevents
+            # a modified job row from bypassing the API sanitiser.
+            raw_request_payload = build_non_health_generation_payload(raw_request_payload)
+
         # Triaging override information: track approval flag and any allowed modes.
         triage_resume_override_approved = False
         triage_override_allowed_modes: list[Any] = []
@@ -420,6 +447,8 @@ async def run_generation_job(
         stage1_result = job.get("stage1_result")
         if not isinstance(stage1_result, dict):
             planner_payload = request_body.to_payload()
+            if non_health_mode:
+                planner_payload = non_health_planner_payload(planner_payload)
             # The age band comes from the stored profile, never from the intake
             # payload the client submitted. A minor's payload has its cut inputs
             # stripped before the planner ever sees them, so no weight-cut,

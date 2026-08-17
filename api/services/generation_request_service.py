@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
 
-from api.compliance_guards import require_health_feature_access
+from api.compliance import evaluate_profile_compliance
+from api.compliance_guards import require_health_data_consent, require_onboarding_compliance
+from api.generation_health import build_non_health_generation_payload, health_generation_fields
 from api.generation.payloads import _stable_payload_hash
 from api.generation_job_helpers import (
     _PROTECTED_TRIAGE_STATUSES,
@@ -69,11 +71,7 @@ async def generate_plan_for_current_user(
     plan_generate_daily_limit_per_user: Callable[[], int],
     is_exempt_from_daily_generation_cap: Callable[[str], bool],
 ) -> GenerationJobResponse:
-    # Plan generation consumes injuries, readiness, fatigue and bodyweight, so
-    # it is health-data processing under Art. 9 and needs explicit consent that
-    # is still current. Checked before any work is scheduled, so a withdrawn
-    # consent stops the processing rather than merely hiding its output.
-    require_health_feature_access(profile)
+    require_onboarding_compliance(profile)
     if profile.is_minor and request_body.athlete.target_weight_kg is not None:
         # Data minimisation, not just output suppression: an under-18 has no
         # weight-cut feature, so the field that sizes one has no purpose to be
@@ -101,6 +99,16 @@ async def generate_plan_for_current_user(
         "cli",
     )
     request_payload = request_body.model_dump(mode="json")
+    if (
+        profile.role == "athlete"
+        and not evaluate_profile_compliance(profile).health_consent_granted
+    ):
+        # Empty model defaults are safe to remove. A health-bearing stale or
+        # manipulated request is rejected rather than silently changing what
+        # the athlete asked the planner to use.
+        if health_generation_fields(request_payload):
+            require_health_data_consent(profile)
+        request_payload = build_non_health_generation_payload(request_payload)
     payload_hash = _stable_payload_hash(request_payload)
     if not is_production_environment():
         logger.info(

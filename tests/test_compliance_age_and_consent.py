@@ -390,7 +390,8 @@ def test_onboarding_draft_succeeds_once_the_terms_are_accepted():
     assert response.json()["ok"] is True
 
 
-def test_plan_generation_requires_health_data_consent():
+@pytest.mark.parametrize("plan_source", ["self_serve", "quick_build"])
+def test_plan_generation_without_health_consent_allows_non_health_payload(plan_source):
     client, store, _ = _build_client()
     clear_compliance(store)
     store.record_compliance_acceptance(
@@ -399,11 +400,57 @@ def test_plan_generation_requires_health_data_consent():
         accept_terms=True,
     )
 
+    request_payload = _build_request().model_dump(mode="json")
+    request_payload["fatigue_level"] = ""
+    request_payload["injuries"] = ""
+    request_payload["guided_injury"] = None
+    request_payload["guided_injuries"] = None
+    request_payload["athlete"]["weight_kg"] = None
+    request_payload["athlete"]["target_weight_kg"] = None
     response = client.post(
         "/api/plans/generate",
-        headers=ATHLETE,
-        json=_build_request().model_dump(mode="json"),
+        headers={**ATHLETE, "X-Plan-Source": plan_source},
+        json=request_payload,
     )
+
+    assert response.status_code == 202
+    job = store.get_generation_job(response.json()["job_id"])
+    assert job is not None
+    assert job["source"] == plan_source
+    assert job["request_payload"]["_generation_health_mode"] == "withheld"
+    assert "fatigue_level" not in job["request_payload"]
+    assert "injuries" not in job["request_payload"]
+    assert "weight_kg" not in job["request_payload"]["athlete"]
+    assert "target_weight_kg" not in job["request_payload"]["athlete"]
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"injuries": "sore knee"},
+        {"fatigue_level": "high"},
+        {"athlete": {"weight_kg": 72}},
+        {"athlete": {"target_weight_kg": 68}},
+    ],
+)
+def test_plan_generation_without_health_consent_rejects_health_payload(override):
+    client, store, _ = _build_client()
+    withdraw_health_consent(store)
+    payload = _build_request(
+        {
+            "fatigue_level": "",
+            "injuries": "",
+            "guided_injury": None,
+            "guided_injuries": None,
+            "athlete": {"weight_kg": None, "target_weight_kg": None},
+        }
+    ).model_dump(mode="json")
+    athlete_override = override.get("athlete")
+    payload.update({key: value for key, value in override.items() if key != "athlete"})
+    if athlete_override:
+        payload["athlete"].update(athlete_override)
+
+    response = client.post("/api/plans/generate", headers=ATHLETE, json=payload)
 
     assert response.status_code == 403
     assert response.json()["detail"]["code"] == CODE_HEALTH_CONSENT_REQUIRED

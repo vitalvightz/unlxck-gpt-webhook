@@ -41,6 +41,7 @@ from support import (
     grant_default_compliance,
     seed_default_profiles,
     stage1_result,
+    withdraw_health_consent,
 )
 
 
@@ -188,6 +189,36 @@ def test_generate_plan_uses_submitted_request_over_stale_latest_intake():
     assert created_intake["primary_weak_area"] == "footwork"
     assert created_intake["fatigue_level"] == "low"
     assert created_intake["athlete"]["professional_status"] == "amateur"
+
+
+def test_worker_does_not_use_queued_health_payload_after_consent_withdrawal():
+    store = FakeStore()
+    seed_default_profiles(store)
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="withdrawn-before-worker",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    withdraw_health_consent(store)
+    planner_calls: list[dict[str, Any]] = []
+
+    def planner(payload: dict[str, Any]) -> dict[str, Any]:
+        planner_calls.append(payload)
+        return stage1_result()
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    assert planner_calls == []
+    assert store.get_generation_job(job["id"])["status"] == "failed"
 
 
 def test_generate_plan_reuses_existing_terminal_job_for_same_payload():
