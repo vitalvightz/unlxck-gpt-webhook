@@ -404,12 +404,8 @@ export function AuthForm({
                   autoComplete="bday"
                   value={dateOfBirth}
                   onChange={(event) => setDateOfBirth(event.target.value)}
-                  aria-describedby="dateOfBirthHelp"
                   required
                 />
-                <p id="dateOfBirthHelp" className="muted auth-consent-help">
-                  13+ only. Under-18s get extra privacy and safety protections.
-                </p>
               </div>
 
               <div className="field auth-consent-field">
