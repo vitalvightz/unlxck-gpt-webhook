@@ -11,18 +11,18 @@ For each production processor, UNLXCK records its role, DPA/contract position, r
 |---|---|---|---|
 | Supabase | Auth, database, storage | UNLXCK Pro project confirmed in Paris (`eu-west-3`). Supabase DPA, sub-processor controls and UK Addendum/SCC safeguards confirmed. Pro database backups are retained on the provider's documented backup schedule. No Supabase Edge Functions are currently deployed. | **VERIFIED** |
 | OpenAI | AI-assisted plan/content processing | OpenAI DPA and UK Addendum/SCC safeguards confirmed. API data is not used for model training by default. Published sub-processors apply; eligible API usage may use additional retention controls such as Zero Data Retention where available. Minimise health context sent to the API. | **VERIFIED** |
-| Vercel | Frontend hosting/deployment | Current Vercel DPA verified for covered Pro/Enterprise services, with UK transfer safeguards and sub-processor controls. Connected Vercel account returned no UNLXCK project, so actual production use/plan is not confirmed. If UNLXCK does not use Vercel in production, remove it from this register. | **OPEN — confirm production use/plan** |
-| Hetzner | Backend infrastructure | Hetzner provides Article 28 data-processing terms and publishes sub-processors. EU-hosted cloud workloads remain in the selected EU location, subject to documented operational/sub-processor access. | **OPEN — confirm UNLXCK server region and DPA accepted in account** |
-| Sentry | Error monitoring | Sentry provides processor/data-protection terms and supports EU/Germany data residency. Production error reporting must minimise/redact athlete health information. | **OPEN — confirm UNLXCK project exists and its region** |
+| Vercel | Frontend hosting/deployment | UNLXCK production use confirmed on Vercel Pro. Current Vercel DPA covers Pro services and includes UK transfer safeguards and sub-processor controls. | **VERIFIED** |
+| Hetzner | Backend infrastructure | UNLXCK server location confirmed as Nuremberg, Germany (`eu-central`). Hetzner provides Article 28 data-processing terms and publishes sub-processors. EU-hosted cloud workloads remain in the selected EU location, subject to documented operational/sub-processor access. | **OPEN — confirm DPA accepted in account** |
 | Resend | Transactional email | Resend DPA, UK GDPR/SCC transfer framework and published sub-processors confirmed. Provider documentation states email data is retained for a limited default period. Keep health data out of transactional email unless necessary. | **VERIFIED** |
 | Cloudflare Turnstile | Bot/abuse prevention | Cloudflare DPA, sub-processor framework and UK transfer safeguards confirmed. Turnstile processes device/network/security signals for abuse prevention; do not send athlete health data to Turnstile. | **VERIFIED** |
 
-## Open launch checks
-Only these account-specific checks remain:
+## Not used
+**Sentry is not used by UNLXCK** and is therefore not a production processor for this register.
 
-1. **Vercel:** confirm whether UNLXCK is actually deployed on Vercel and, if so, the applicable plan. If not used, remove Vercel.
-2. **Hetzner:** confirm the production server region and that the Hetzner DPA has been concluded/accepted in the customer account.
-3. **Sentry:** confirm whether UNLXCK has a production Sentry project and, if so, its data region. If not used, remove Sentry.
+## Open launch check
+Only one account-specific processor check remains:
+
+1. **Hetzner:** confirm that the Hetzner Data Processing Agreement / AVV has been concluded or accepted in the customer account.
 
 ## Sensitive-data rule
 UNLXCK processes health/injury information and data relating to children. Send third parties only the data necessary for their function. Production logs, monitoring, email and anti-abuse systems must not unnecessarily contain injury descriptions, symptoms, readiness responses or other health information.
