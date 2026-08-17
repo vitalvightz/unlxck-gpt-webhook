@@ -7,7 +7,26 @@
 
 The Privacy Notice previously offered only Article 6(1)(b) (contract) and Article 9(2)(a) (explicit consent for health data), while declaring purposes those bases do not reach: security, abuse prevention, fault investigation and service improvement. None of those is *necessary for performance of the contract* with the athlete, so each needs its own basis. This assessment records the Article 6(1)(f) analysis for them.
 
-**Health data is out of scope of this assessment.** Special-category data is never processed under legitimate interests at UNLXCK — it runs on Article 9(2)(a) explicit consent and is used only to build, adapt and apply safety rules to the athlete's own training.
+## Absolute exclusion: health data
+
+**No special-category data is processed under Article 6(1)(f) at UNLXCK, for any purpose in this assessment, in any form.** This is a hard boundary, not a default that a future purpose can argue its way past.
+
+Specifically, health data — injuries, pain, soreness, fatigue, sleep, readiness, symptoms, recovery, bodyweight, target weight, and anything from which health status can be inferred — **must not** be used to:
+
+- measure, analyse or report on product performance or engagement;
+- prioritise, design, evaluate or A/B test features;
+- train, fine-tune, evaluate or benchmark any model, including via a third party;
+- build aggregate datasets, dashboards or research outputs, even where identifiers are stripped;
+- populate examples, fixtures, demos or test data; or
+- inform any decision other than the individual athlete's own training and safety.
+
+Health data runs on **Article 9(2)(a) explicit consent** and is used only to build and adapt that athlete's own training and to apply safety rules to it. That is the whole of the consent the athlete gave, and it is the whole of what the data may be used for.
+
+**Why the boundary is absolute rather than balanced.** Article 9(1) prohibits processing special-category data unless an Article 9 condition applies. Legitimate interests is an Article 6 basis and satisfies nothing under Article 9 — so there is no version of the balancing test that could authorise health data for product improvement. It is not a close call to be weighed; it is outside the basis entirely. Consent obtained "to personalise my training" does not stretch to cover it either: using it for improvement would be processing beyond the specified purpose, contrary to Article 5(1)(b).
+
+**Aggregation and anonymisation do not create an exception.** If a dataset can be re-linked to an athlete it is still personal data. Genuinely anonymous, irreversibly aggregated statistics fall outside UK GDPR — but the anonymisation itself is processing of the underlying health data, and needs its own basis. Do not treat "we only looked at aggregates" as a defence.
+
+**If a future purpose appears to need health data, the answer is separate explicit consent for that purpose, or no processing.** Do not revisit this assessment looking for room; there is none.
 
 ## Scope
 
@@ -16,7 +35,7 @@ The Privacy Notice previously offered only Article 6(1)(b) (contract) and Articl
 | Platform security and availability | Account identifiers, IP, device/technical metadata, security events | Injury, readiness, pain, nutrition or bodyweight data |
 | Abuse prevention at signup and login | Device/network signals via Cloudflare Turnstile, rate-limit counters | Any health information |
 | Fault investigation and diagnostics | Error events, technical context, scrubbed request metadata | Injury descriptions, symptoms, readiness answers — actively scrubbed (`api/sentry_config.py`) |
-| Service improvement | Aggregate feature usage, generation reliability and failure rates | Health information; individual athlete plans as training material |
+| Service improvement | Aggregate feature usage, generation reliability and failure rates | Health information in any form; individual athlete plans as training material; anything from which health status can be inferred |
 
 ## The three-part test
 
@@ -34,7 +53,7 @@ Third parties and the wider public also benefit from the first two: athletes oth
 
 - **Security / abuse prevention.** Yes. There is no way to keep credential-stuffing and automated signup abuse off an authentication endpoint without processing device and network signals. A less intrusive alternative that works does not exist.
 - **Fault investigation.** Yes, but only in scrubbed form. The necessity is for *technical* context — what broke, where, in what state — not for the athlete's health inputs. The scrubber in `api/sentry_config.py` enforces that boundary, and the necessity claim depends on it continuing to.
-- **Service improvement.** Necessary only in aggregate. Improving the product does not require reading an identified athlete's plan or health record, so it must not, and does not, do so.
+- **Service improvement.** Necessary only in aggregate, and only over non-health signals. Improving the product does not require reading an athlete's health record — which is fortunate, because Article 9 would not permit it under this basis regardless of necessity. What is necessary here is knowing which features are used and where generation fails, neither of which needs health data.
 
 ### 3. Balancing test — do the individual's interests override?
 

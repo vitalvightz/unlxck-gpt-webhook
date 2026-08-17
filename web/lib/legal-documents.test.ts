@@ -131,14 +131,34 @@ test("the public notice names every processor in the internal register", () => {
   }
 });
 
-test("Sentry is disclosed as a processor, and what it receives is described", () => {
+test("Sentry is disclosed as a processor, and session recording is ruled out", () => {
   // Sentry ran undisclosed in production while three compliance documents and
-  // this test recorded that it was not used. Naming it does not close the DPA,
-  // transfer or PECR work — see docs/cookies-and-local-storage.md — but a notice
+  // this test recorded that it was not used. Naming it does not close the DPA
+  // or transfer work — see docs/data-map-processor-register.md — but a notice
   // that omits a live processor is a separate failure stacked on top of those.
   const notice = allText(PRIVACY_NOTICE);
   assert.ok(notice.includes("Sentry"));
-  assert.match(notice, /session recording/i, "session replay must be disclosed, not just error reporting");
+
+  // Session Replay was removed rather than put behind consent, so the notice
+  // now states the stronger fact. If replay is ever reintroduced this assertion
+  // fails, which is the point: the claim and the code have to move together.
+  assert.match(notice, /does not record your screen or session/i);
+});
+
+test("Session Replay stays out of the client Sentry configuration", () => {
+  // The compliance position published to athletes is "we do not record your
+  // screen or session". That promise lives in a document; this is what keeps it
+  // true in the code. Replay also re-engages PECR reg. 6 consent, which UNLXCK
+  // has no mechanism for.
+  const client = readFileSync(path.join(process.cwd(), "instrumentation-client.ts"), "utf8");
+  const active = client
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("//") && !line.trimStart().startsWith("*"))
+    .join("\n");
+
+  for (const forbidden of ["replayIntegration", "replaysSessionSampleRate", "replaysOnErrorSampleRate"]) {
+    assert.ok(!active.includes(forbidden), `${forbidden} must not be configured`);
+  }
 });
 
 test("international-transfer safeguards remain concise and specific", () => {
@@ -168,49 +188,89 @@ test("wording that the completed verification made untrue is gone", () => {
   }
 });
 
-test("retention is stated as periods rather than triggers", () => {
+test("the notice publishes only retention periods UNLXCK actually enforces", () => {
   const retention = PRIVACY_NOTICE.sections.find(
     (entry) => entry.heading === "How long we keep data",
   );
   const text = (retention?.paragraphs ?? []).join(" ");
 
   assert.ok(/irreversibly anonymise/i.test(text));
-  assert.ok(text.includes("90 days"), "screenshot and log retention should be stated");
-  assert.ok(text.includes("24 months"), "the dormancy and anonymisation window should be stated");
-  assert.ok(text.includes("30 days"), "the erasure-request deadline should be stated");
 
-  // Closure and erasure are different events with different deadlines, and the
-  // notice has to say so: a 90-day grace period after closure is reasonable,
-  // while holding health data 90 days after an Article 17 request is not.
-  assert.match(text, /close your account/i);
-  assert.match(text, /delete your data/i);
+  // The two periods that are met: screenshots are enforced in
+  // api/services/feedback_service.py, and erasure is a request-driven process
+  // with a named owner rather than a background job.
+  assert.ok(text.includes("90 days"), "the screenshot period should be stated");
+  assert.match(text, /within one month/i, "the erasure deadline should be stated");
 
-  // "Review on closure" is a trigger, not a period. It leaves data in place
-  // indefinitely if the review never happens, which is what Article 5(1)(e)
-  // is there to prevent.
-  assert.ok(!/review(ed)? for deletion/i.test(text), "state a period, not a review trigger");
+  // Everything else is criteria-based on purpose. Article 13(2)(a) permits
+  // criteria where a period cannot be given, and a published period that is
+  // missed is a specific evidenced failure — worse than the vagueness it
+  // replaced. Dormancy, post-closure deletion and log expiry have no scheduled
+  // job yet (docs/data-retention-deletion-user-rights.md), so their periods
+  // stay internal targets until the automation exists.
+  for (const unenforced of ["24 months", "30 days"]) {
+    assert.ok(
+      !text.includes(unenforced),
+      `"${unenforced}" is an internal target, not an enforced period — do not publish it`,
+    );
+  }
+  assert.match(text, /only while it is still needed/i, "state the criteria for the unautomated cases");
 });
 
 // --- placeholders ------------------------------------------------------------
 
-test("the two intended placeholders are present and are the only ones", () => {
-  // Both are deliberate: no contact address has been decided yet, and inventing
-  // one would be worse than showing it is outstanding.
-  const published = everyDocumentText();
-  assert.ok(published.includes("[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]"));
-  assert.ok(published.includes("[LEGAL/CONTACT EMAIL]"));
+/**
+ * The outstanding launch blockers, tracked as data.
+ *
+ * UNLXCK trades as a sole trader, so the proprietor's own name and a geographic
+ * address have to appear in both documents — reg. 6 of the Electronic Commerce
+ * (EC Directive) Regulations 2002, Sch. 2 of the Consumer Contracts Regulations
+ * 2013, and Article 13(1)(a) UK GDPR for the controller's identity. None of
+ * those is satisfied by the trading name alone.
+ *
+ * Each stays a visible placeholder until the real value is inserted. Inventing
+ * one, or quietly omitting the field, would turn a known gap into a silent
+ * defect — and the placeholder is what makes it impossible to publish these
+ * documents without noticing.
+ */
+const OUTSTANDING_PLACEHOLDERS = [
+  "[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
+  "[LEGAL/CONTACT EMAIL]",
+  "[SOLE TRADER NAME]",
+  "[TRADING ADDRESS]",
+] as const;
 
+test("every outstanding identity and contact blocker is still visible", () => {
+  const published = everyDocumentText();
+  for (const placeholder of OUTSTANDING_PLACEHOLDERS) {
+    assert.ok(published.includes(placeholder), `${placeholder} should still be marked outstanding`);
+  }
+
+  // No placeholder may exist that is not on the register above: an unlisted one
+  // is a gap nobody is tracking.
   const bracketed = published.match(/\[[^\]]+\]/g) ?? [];
   assert.deepEqual(
     [...new Set(bracketed)].sort(),
-    ["[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]", "[LEGAL/CONTACT EMAIL]"],
-    "an unexpected placeholder is still in the published copy",
+    [...OUTSTANDING_PLACEHOLDERS].sort(),
+    "an untracked placeholder is in the published copy",
   );
 });
 
-test("the operator name is filled in and no longer a placeholder", () => {
-  assert.ok(TERMS_OF_USE.intro.includes("operated by Unlxck"));
-  assert.ok(!allText(TERMS_OF_USE).includes("[LEGAL OPERATOR NAME]"));
+test("both documents declare themselves not ready for publication", () => {
+  // While the identity fields are outstanding, neither document may present
+  // itself as final. The status line is what an athlete and a reviewer see.
+  for (const document of LEGAL_DOCUMENTS) {
+    assert.match(
+      document.status,
+      /not ready for publication/i,
+      `${document.slug} must not read as publishable while identity fields are outstanding`,
+    );
+  }
+
+  // The trading name on its own is not a legal identity for a sole trader.
+  assert.ok(TERMS_OF_USE.intro.includes("[SOLE TRADER NAME]"));
+  assert.ok(TERMS_OF_USE.intro.includes("[TRADING ADDRESS]"));
+  assert.ok(TERMS_OF_USE.intro.includes("sole trader trading as Unlxck"));
 });
 
 test("no data-request route is offered until a real address is configured", () => {

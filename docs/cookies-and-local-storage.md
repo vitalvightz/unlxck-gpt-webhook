@@ -1,7 +1,7 @@
 # UNLXCK Cookies & Local Storage (PECR Position)
 
 **Regulation:** Regulation 6, Privacy and Electronic Communications (EC Directive) Regulations 2003
-**Status:** One open item — see "Sentry Session Replay" below.
+**Status:** Compliant. Every item of storage is strictly necessary, so no consent mechanism is required.
 
 ## The rule
 
@@ -19,25 +19,27 @@ UNLXCK uses **no cookie banner**, which is only correct while every item of stor
 | Cloudflare Turnstile (`__cf_bm` and related) | Bot and abuse prevention at signup and login | **Strictly necessary.** Reg. 6(4) covers security measures protecting the requested service. The ICO accepts security storage on this footing, and the data at risk here is children's health data. Turnstile must never receive athlete health data — see `docs/processor-dpa-international-transfer-verification.md`. |
 | Appearance mode (`auth-provider.tsx:55`) | Remembers the athlete's light/dark preference | **Strictly necessary.** A user-preference store set in direct response to a user action is the textbook reg. 6(4) example. |
 | Generation status / dismissed-ribbon keys (`generation-status-provider.tsx`, `global-generation-status.tsx`) | Tracks an in-flight plan generation across tabs and remembers a dismissed notice | **Strictly necessary.** Purely functional state for a feature the athlete started. Contains no health information beyond a job identifier. |
-| **Sentry Session Replay** (`instrumentation-client.ts`) | Records session video-reconstructions at 10% of sessions and 100% of error sessions | **NOT strictly necessary — consent required, and not currently obtained.** See below. |
+| Sentry error monitoring (`instrumentation-client.ts`) | Reports faults so they can be fixed | **No reg. 6 engagement.** Error events are transmitted, not stored on the device. Session Replay — which did store — has been removed. |
 
-## Sentry Session Replay — open item
+## Sentry Session Replay — removed
 
-`web/instrumentation-client.ts` initialises `Sentry.replayIntegration()` with `replaysSessionSampleRate: 0.1` and `replaysOnErrorSampleRate: 1.0`. Replay writes a session identifier to browser storage, which engages reg. 6, and session recording does not qualify as strictly necessary under reg. 6(4).
+`web/instrumentation-client.ts` previously initialised `Sentry.replayIntegration()` at `replaysSessionSampleRate: 0.1` and `replaysOnErrorSampleRate: 1.0`, recording one in ten athlete sessions and every session that hit an error. Replay writes a session identifier to browser storage, engaging reg. 6, and session recording is not strictly necessary under reg. 6(4).
 
-Two things follow, and they are independent:
+**It has been removed rather than put behind a consent banner.** That was the stronger option: it takes UNLXCK out of reg. 6 for this path completely, leaves no consent mechanism to build or maintain, and removes the question of how to ask a 13-year-old for consent to being recorded in a way that meets the Age Appropriate Design Code. Error events themselves require no storage consent, so fault diagnosis is unaffected.
 
-1. **PECR** — consent is required before replay initialises. There is no consent mechanism in the product today.
-2. **UK GDPR** — Sentry is a processor receiving personal data. It is absent from `docs/data-map-processor-register.md` and `docs/processor-dpa-international-transfer-verification.md`, both of which currently state it is not used. That is an Article 30 and Article 13(1)(e) problem, and a Chapter V one if the data leaves the UK, and it is not cured by fixing PECR.
+The masking previously configured (`maskAllText`, `maskAllInputs`, `blockAllMedia`) was the right configuration and reduced what a recording contained — but it never removed the consent requirement, and URL paths, breadcrumbs and tags sat outside it.
 
-The replay configuration is otherwise conservative — `maskAllText`, `maskAllInputs` and `blockAllMedia` are all set — which materially reduces what a recording contains. It does not remove the consent requirement, and URL paths, breadcrumbs, tags and client log capture (`enableLogs: true`) sit outside the masking.
+`web/lib/legal-documents.test.ts` asserts that no replay option reappears in the client configuration, so the published claim that UNLXCK does not record your screen or session cannot silently stop being true.
 
-**Resolution options, in order of preference:**
+**Reintroducing replay requires, before any code:** a consent mechanism defaulting to off, a DPIA covering recording of child sessions, and the AADC position on obtaining that consent from a minor.
 
-1. **Remove replay, keep error monitoring.** Deleting `replayIntegration` takes UNLXCK out of reg. 6 for this item entirely and leaves no PECR obligation to satisfy. Error events themselves do not require storage consent. The UK GDPR processor work at (2) above still has to be done.
-2. **Keep replay behind consent.** Build a PECR-compliant consent mechanism, default off, and initialise replay only on an affirmative choice. Note that a 13-year-old is the one being asked, so the request has to meet the Age Appropriate Design Code's transparency standard, and refusing must be as easy as accepting.
+**Note — this does not close the Sentry processor work.** Sentry still receives personal data as an error-monitoring processor. The DPA, data region and UK transfer safeguards remain outstanding and are tracked in `docs/data-map-processor-register.md`. PECR and UK GDPR are separate regimes; satisfying one does not satisfy the other.
 
-Until one of these is done, this document records a known unremediated gap rather than a compliant position.
+## Client log capture — recommendation, not yet actioned
+
+`instrumentation-client.ts` sets `enableLogs: true`, which ships browser console output to Sentry. The backend scrubs sensitive keys before send (`api/sentry_config.py`), but **no equivalent scrubber is configured on the client**, so a console statement carrying athlete data would reach Sentry unfiltered.
+
+This is not a PECR matter — no device storage is involved — but it is a data-minimisation one. Either disable client log capture, or add a `beforeSendLog` scrubber mirroring the backend's. Left as-is pending a decision, since it is a live debugging capability.
 
 ## Rules
 

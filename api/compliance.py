@@ -41,7 +41,7 @@ HEALTH_CONSENT_VERSION = "1.0"
 # features offline for every athlete until they answered again. Unlike the other
 # two this version gates nothing — the notice is information, not agreement — so
 # it is recorded for display and audit only.
-PRIVACY_NOTICE_VERSION = "1.1"
+PRIVACY_NOTICE_VERSION = "1.2"
 
 # Age bands. 13 is the floor for an account at all; 18 is the line above which
 # the adult flow applies. Both come from the Children & Age-Appropriate Use

@@ -15,13 +15,15 @@ For each production processor, UNLXCK records its role, DPA/contract position, r
 | Hetzner | Backend infrastructure | UNLXCK server location confirmed as Nuremberg, Germany (`eu-central`). Hetzner Article 28 Data Processing Agreement / AVV confirmed accepted in the customer account. Hetzner publishes sub-processors; EU-hosted cloud workloads remain in the selected EU location, subject to documented operational/sub-processor access. | **VERIFIED** |
 | Resend | Transactional email | Resend DPA, UK GDPR/SCC transfer framework and published sub-processors confirmed. Provider documentation states email data is retained for a limited default period. Keep health data out of transactional email unless necessary. | **VERIFIED** |
 | Cloudflare Turnstile | Bot/abuse prevention | Cloudflare DPA, sub-processor framework and UK transfer safeguards confirmed. Turnstile processes device/network/security signals for abuse prevention; do not send athlete health data to Turnstile. | **VERIFIED** |
-| Sentry | Error diagnostics and session replay | DPA not yet executed or recorded. Data region unconfirmed; if processing occurs outside the UK a UK Addendum/IDTA and transfer risk assessment are required and are not on file. Session replay additionally engages PECR reg. 6 consent, not currently obtained. | **NOT VERIFIED** |
+| Sentry | Error diagnostics | DPA not yet executed or recorded. Data region unconfirmed; if processing occurs outside the UK a UK Addendum/IDTA and transfer risk assessment are required and are not on file. Session replay has been removed, which closes the PECR question but not these. | **NOT VERIFIED** |
 
 ## Sentry
 
-This record previously stated that Sentry was not used. It is, in both the frontend (`@sentry/nextjs`, with session replay enabled) and the backend (`sentry-sdk`, initialised unconditionally). The correction is recorded here rather than silently applied, because the false entry is what allowed the launch gate below to be passed.
+This record previously stated that Sentry was not used. It is, in both the frontend (`@sentry/nextjs`) and the backend (`sentry-sdk`, initialised unconditionally). The correction is recorded here rather than silently applied, because the false entry is what allowed the launch gate below to be passed.
 
-See `docs/data-map-processor-register.md` for the four outstanding items and `docs/cookies-and-local-storage.md` for the PECR position.
+Session Replay has been removed. That was the largest single risk — recording child athletes' sessions and sending them to an unverified processor — but it is not what this register measures. **Sentry remains NOT VERIFIED on contractual and transfer grounds**, and the launch gate stays open until the DPA is executed, the data region is confirmed and any UK transfer safeguard is recorded.
+
+See `docs/data-map-processor-register.md` for the three outstanding items and `docs/cookies-and-local-storage.md` for the replay removal.
 
 ## Sensitive-data rule
 UNLXCK processes health/injury information and data relating to children. Send third parties only the data necessary for their function. Production logs, monitoring, email and anti-abuse systems must not unnecessarily contain injury descriptions, symptoms, readiness responses or other health information.

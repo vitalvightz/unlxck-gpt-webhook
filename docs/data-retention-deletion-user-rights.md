@@ -3,7 +3,17 @@
 ## Purpose
 UNLXCK keeps identifiable personal data only for as long as needed for the purpose it was collected for. Data must then be deleted or irreversibly anonymised unless a legal or operational reason justifies further retention.
 
-## Retention Schedule
+## Publication rule
+
+**A retention period is published in the Privacy Notice only once it is enforced — in code, or by a manual process that runs on a recorded cadence.** Until then the notice states the criteria instead, which Article 13(2)(a) expressly permits where a period cannot be given.
+
+This rule exists because the alternative is worse than vagueness. A published period is a representation to the athlete and to the ICO. Missing it is a specific, evidenced failure; missing a criteria-based commitment is a judgement call. Precision that outruns capability converts a soft position into a hard breach, so the schedule below stays internal until the automation catches up with it.
+
+**Currently published** (and met): deletion within one month of a request; beta screenshots maximum 90 days, enforced in `api/services/feedback_service.py`; feedback anonymised or deleted when no longer needed; criteria-based wording for closed accounts, dormancy, logs and backups.
+
+**Not published:** every fixed period in the target schedule below.
+
+## Target Retention Schedule — internal, pending automation
 
 Four distinct events end retention, and they are not interchangeable. Collapsing them was the previous schedule's weakness: "review on account closure" is a trigger, not a period, and leaves data in place indefinitely if the review never happens.
 
@@ -31,11 +41,20 @@ Four distinct events end retention, and they are not interchangeable. Collapsing
 
 ## Implementation status
 
-> **These periods are published in the Privacy Notice but are not yet automated.** Only screenshot retention is enforced in code. Until scheduled deletion exists, the periods above are met by manual action, which means they can be missed — and a specific published period that is missed is a worse position than the vague wording it replaced, because the promise is now precise.
->
-> Required: scheduled jobs for dormancy detection and notification, post-closure health deletion at 90 days, training-history anonymisation at 24 months, and audit-log expiry at 90 days. Until those exist, run the schedule manually on a recorded cadence and log each run.
+The table above is a **target**, not a published commitment. Only screenshot retention is enforced in code today.
 
-UNLXCK must not retain data indefinitely "just in case".
+**Engineering work required before any of these periods may be published:**
+
+1. Dormancy detection and athlete notification at 24 months without sign-in.
+2. Post-closure health-data deletion at 90 days.
+3. Training-history anonymisation at 24 months, verified irreversible.
+4. Audit-log expiry at 90 days.
+
+Each becomes publishable individually — there is no need to wait for all four. When one lands, move its period from this schedule into the Privacy Notice, bump `PRIVACY_NOTICE_VERSION`, and record the move here.
+
+Erasure requests are already met within one month by the documented manual process in `docs/data-breach-user-rights-procedure.md`, which is why that period is published: it is request-driven and owned, not a background job that silently does not exist.
+
+UNLXCK must not retain data indefinitely "just in case". The absence of automation is a reason to publish criteria rather than periods; it is not a reason to keep data.
 
 ## User Rights
 UNLXCK must support applicable UK data-protection rights, including:

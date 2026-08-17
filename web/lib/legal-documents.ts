@@ -48,9 +48,10 @@ export const TERMS_OF_USE: LegalDocument = {
   title: "Terms of Use",
   version: TERMS_VERSION,
   effectiveDate: "19 August 2026",
-  status: "A contact address is still to be published.",
+  status:
+    "Not ready for publication: the trader name, trading address and contact email are still to be inserted.",
   intro:
-    "These Terms govern use of UNLXCK, operated by Unlxck (“UNLXCK”, “we”, “us”). By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
+    "These Terms govern use of UNLXCK, operated by [SOLE TRADER NAME], a sole trader trading as Unlxck (“UNLXCK”, “we”, “us”), of [TRADING ADDRESS]. By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
   sections: [
     {
       heading: "Eligibility",
@@ -168,14 +169,15 @@ export const PRIVACY_NOTICE: LegalDocument = {
   title: "Privacy Notice",
   version: PRIVACY_NOTICE_VERSION,
   lastUpdated: "19 August 2026",
-  status: "A privacy contact address is still to be published.",
+  status:
+    "Not ready for publication: the controller name, trading address and privacy contact are still to be inserted.",
   intro:
     "UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.",
   sections: [
     {
       heading: "Who we are",
       paragraphs: [
-        "UNLXCK is the controller of personal data used to provide the UNLXCK service.",
+        "UNLXCK is the controller of personal data used to provide the UNLXCK service. UNLXCK is operated by [SOLE TRADER NAME], a sole trader trading as Unlxck, of [TRADING ADDRESS].",
         "Privacy contact: [ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
       ],
     },
@@ -212,7 +214,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
         "Article 6(1)(b) UK GDPR (contract) — for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.",
         "Article 6(1)(f) UK GDPR (legitimate interests) — for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.",
         "Article 9(2)(a) UK GDPR (explicit consent) — for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.",
-        "We do not use your health information to improve UNLXCK. It is used to build and adapt your own training and to apply safety rules to it. Where we look at how the product is performing, we do that without using health information.",
+        "We do not use your health information to improve UNLXCK, and we do not use it to train AI models. It is used to build and adapt your own training and to apply safety rules to it — nothing else. Where we look at how the product is performing, or decide what to build next, we do that without using health information at all. This applies to aggregated and anonymised forms of it too.",
         "Withdrawing consent does not affect processing already carried out lawfully, but UNLXCK may be unable to provide features that require health data afterwards.",
       ],
     },
@@ -236,7 +238,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
         "Hetzner — hosting for our backend and plan-generation service, on servers in Germany.",
         "Resend — service and feedback email.",
         "Cloudflare Turnstile — blocks automated abuse of signup and login. Receives device and network signals, never health information.",
-        "Sentry — error diagnostics and session recording, used to find and fix faults. Text and form inputs are masked, and injury, pain, readiness and similar information is filtered out before a report is sent.",
+        "Sentry — error diagnostics, used to find and fix faults. Receives technical information about what went wrong. Injury, pain, readiness and similar information is filtered out before a report is sent, and UNLXCK does not record your screen or session.",
       ],
     },
     {
@@ -250,10 +252,9 @@ export const PRIVACY_NOTICE: LegalDocument = {
       paragraphs: [
         "We keep identifiable data only for as long as we need it, then delete it or irreversibly anonymise it.",
         "While your account is open we keep your profile, plans, training history, injury, readiness and nutrition data, so the service works and your history is there when you come back to it.",
-        "If you have not signed in for 24 months we will get in touch, and if you do not come back we delete or anonymise your training data.",
-        "If you close your account we delete your health information — injuries, readiness, pain and nutrition — after 90 days, and anonymise the remaining training history after 24 months. If you ask us to delete your data rather than simply closing the account, we do all of it within 30 days.",
-        "Feedback is kept while it is needed for support and product improvement, then anonymised or deleted. Beta screenshots are kept for no more than 90 days.",
-        "Security and audit logs are kept for 90 days. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.",
+        "If you ask us to delete your data, we do it within one month. You can ask at any time, for any reason or none — see “Your rights”.",
+        "Beta screenshots are kept for no more than 90 days. Feedback is kept while it is needed for support and product improvement, then anonymised or deleted.",
+        "For closed and long-inactive accounts, we keep data only while it is still needed to provide the service or to meet a legal obligation. Security and audit logs are kept only for as long as their security purpose requires. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.",
       ],
     },
     {

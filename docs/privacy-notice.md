@@ -5,7 +5,7 @@ _Last updated: 19 August 2026_
 UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.
 
 ## Who we are
-UNLXCK is the controller of personal data used to provide the UNLXCK service.
+UNLXCK is the controller of personal data used to provide the UNLXCK service. UNLXCK is operated by **[SOLE TRADER NAME]**, a sole trader trading as Unlxck, of **[TRADING ADDRESS]**.
 
 **Privacy contact:** [ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]
 
@@ -40,7 +40,7 @@ We rely on three lawful bases, depending on what the processing is for.
 
 **Article 9(2)(a) UK GDPR (explicit consent)** — for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.
 
-**We do not use your health information to improve UNLXCK.** It is used to build and adapt your own training and to apply safety rules to it. Where we look at how the product is performing, we do that without using health information.
+**We do not use your health information to improve UNLXCK, and we do not use it to train AI models.** It is used to build and adapt your own training and to apply safety rules to it — nothing else. Where we look at how the product is performing, or decide what to build next, we do that without using health information at all. This applies to aggregated and anonymised forms of it too.
 
 Withdrawing consent does not affect processing already carried out lawfully, but UNLXCK may be unable to provide features that require health data afterwards.
 
@@ -60,7 +60,7 @@ We use trusted service providers to run UNLXCK. We share only the information ea
 - **Hetzner** — hosting for our backend and plan-generation service, on servers in Germany.
 - **Resend** — service and feedback email.
 - **Cloudflare Turnstile** — blocks automated abuse of signup and login. Receives device and network signals, never health information.
-- **Sentry** — error diagnostics and session recording, used to find and fix faults. Text and form inputs are masked, and injury, pain, readiness and similar information is filtered out before a report is sent.
+- **Sentry** — error diagnostics, used to find and fix faults. Receives technical information about what went wrong. Injury, pain, readiness and similar information is filtered out before a report is sent, and UNLXCK does not record your screen or session.
 
 ## International transfers
 Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.
@@ -70,13 +70,11 @@ We keep identifiable data only for as long as we need it, then delete it or irre
 
 While your account is open we keep your profile, plans, training history, injury, readiness and nutrition data, so the service works and your history is there when you come back to it.
 
-If you have not signed in for 24 months we will get in touch, and if you do not come back we delete or anonymise your training data.
+**If you ask us to delete your data, we do it within one month.** You can ask at any time, for any reason or none — see "Your rights".
 
-If you close your account we delete your health information — injuries, readiness, pain and nutrition — after 90 days, and anonymise the remaining training history after 24 months. If you ask us to delete your data rather than simply closing the account, we do all of it within 30 days.
+Beta screenshots are kept for no more than 90 days. Feedback is kept while it is needed for support and product improvement, then anonymised or deleted.
 
-Feedback is kept while it is needed for support and product improvement, then anonymised or deleted. Beta screenshots are kept for no more than 90 days.
-
-Security and audit logs are kept for 90 days. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.
+For closed and long-inactive accounts, we keep data only while it is still needed to provide the service or to meet a legal obligation. Security and audit logs are kept only for as long as their security purpose requires. Backups are removed on their normal expiry cycle, and data deleted from the live service is not restored back into ordinary use.
 
 ## Your rights
 Depending on the processing, you may have rights to:

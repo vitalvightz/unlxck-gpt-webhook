@@ -248,12 +248,32 @@ The findings above are kept as-found. This section records what has since been a
 
 > **The published periods are not automated.** Only screenshot retention is enforced in code. A specific published period that is missed is a worse position than the vague wording it replaced, because the promise is now precise. Scheduled deletion jobs — dormancy detection, post-closure health deletion, history anonymisation, log expiry — are now the single largest open engineering item. Until they exist, the schedule must be run manually on a recorded cadence.
 
+### 17 August 2026 — third pass, operator directions
+
+| Finding | Status | What changed |
+|---|---|---|
+| **B1** Sentry Session Replay | **Closed by removal** | `replayIntegration` and both sample rates deleted from `web/instrumentation-client.ts`. Error monitoring retained. This takes UNLXCK out of PECR reg. 6 for that path entirely, so no consent mechanism is needed, and removes the recording of child athletes' sessions. A test guard asserts no replay option returns to the client config — verified to fail on reintroduction, not merely to pass today. |
+| **B1** Sentry processor status | **Deliberately open** | Remains **NOT VERIFIED**. Outstanding items reduced from four to three (the PECR item is gone with replay): DPA, data region and UK transfer safeguard, DPIA update. The launch gate stays open. Removing replay reduced the risk; it did not verify the processor, and the register now says so in those words. |
+| **B4** Health data excluded from improvement | **Hardened** | The LIA now carries an absolute exclusion — six named prohibited uses, the reasoning that Article 9 offers no condition legitimate interests could satisfy, and an explicit statement that aggregation is not an exception. The notice says UNLXCK does not use health data to improve the product or train models, in aggregated or anonymised form either. |
+| **H3** Retention | **Reverted to criteria, deliberately** | See below. |
+| **B2/B3** Identity and contact | **Escalated to enforced blockers** | See below. |
+
+**Retention — the fixed periods have been withdrawn from the notice.** Publishing 24-month dormancy, 90-day post-closure deletion and 90-day log expiry created precise public promises that nothing in code enforces. A published period that is missed is a specific, evidenced failure; criteria-based wording is a judgement call. Precision that outruns capability converts a soft position into a hard breach, so the notice now publishes **only the two periods actually met** — screenshots at 90 days, enforced in code, and deletion within one month of a request, which is request-driven with a named owner — and states criteria for everything else, as Article 13(2)(a) expressly permits.
+
+The target schedule survives as an internal document in `docs/data-retention-deletion-user-rights.md`, together with a standing publication rule: *a retention period is published only once it is enforced.* Each of the four scheduled jobs becomes publishable individually as it lands. A test asserts the unenforced periods stay out of the notice.
+
+This reopens **H3** as a finding, correctly. The honest position is that UNLXCK states criteria rather than periods, not that it has set periods.
+
+**B2 and B3 are now enforced blockers rather than notes.** Both documents carry `[SOLE TRADER NAME]` and `[TRADING ADDRESS]` alongside the two existing contact placeholders, and both status lines read "Not ready for publication". The personal email was **not** written into either document — a published address is hard to withdraw, and the placeholder is what makes publication impossible to do by accident. Two tests enforce this: one holds the placeholder register and fails on any untracked placeholder, the other requires both status lines to declare the documents unpublishable while identity fields are outstanding.
+
 **Still blocked:**
 
-- **B2 (trader identity)** — Unlxck trades as a sole trader, so the notice and Terms must carry the proprietor's own name and a geographic address. Awaiting those values.
-- **B3 (privacy contact)** — a personal address will be used at trial scale. Awaiting confirmation of the address before it is written into a published document.
-- **L2 (Terms version → 1.0)** — rides with B2, so athletes are asked to re-accept once rather than twice.
+- **B2 (trader identity)** — awaiting the proprietor's legal name and a geographic address. A service address is advisable over a home address, since it becomes public.
+- **B3 (privacy contact)** — awaiting a confirmed address. A role address on an owned domain remains the recommendation over a personal one.
+- **L2 (Terms version → 1.0)** — rides with B2, so athletes re-accept once rather than twice.
 - **H1, H4** — the under-18 Article 6 assessment and the portability runbook.
+- **New: client log capture.** `enableLogs: true` ships browser console output to Sentry with no client-side scrubber, while the backend has one. Not a PECR matter, but a data-minimisation one. Left in place pending a decision, since it is a live debugging capability — recorded in `docs/cookies-and-local-storage.md`.
+- **New: four retention jobs** — dormancy detection, post-closure health deletion, history anonymisation, log expiry. Now the gating work for publishing real periods.
 
 ### Verification
 
