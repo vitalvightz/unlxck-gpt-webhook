@@ -12,10 +12,13 @@ from zoneinfo import ZoneInfo
 from api.contracts.command_view import CommandView
 from api.contracts.training_day import resolve_training_day_str
 from api.services.notification_foundation import (
+    NOTIFICATION_MAX_ATTEMPTS,
+    NOTIFICATION_STALE_CLAIM_AFTER,
     NotificationCandidate,
     candidate_is_allowed,
     get_notification_preferences,
     list_notification_evaluations,
+    list_recent_notification_deliveries,
     record_notification_evaluation,
     simulate_notification_delivery_decision,
 )
@@ -309,6 +312,7 @@ def _deferred_event_candidates(
     """Rehydrate quiet-hour-deferred source events without extending TTLs."""
 
     candidates: list[NotificationCandidate] = []
+    evaluation_rows: list[dict[str, Any]] = []
     days = [training_day]
     try:
         days.append((date.fromisoformat(training_day) - timedelta(days=1)).isoformat())
@@ -323,56 +327,107 @@ def _deferred_event_candidates(
             )
         except Exception:  # noqa: BLE001
             continue
-        for row in rows:
-            if row.get("decision") != "deferred_until_quiet_end" or row.get("resulting_delivery_id"):
+        evaluation_rows.extend(rows)
+
+    deferred_rows = [
+        row
+        for row in evaluation_rows
+        if row.get("decision") == "deferred_until_quiet_end"
+        and not row.get("resulting_delivery_id")
+    ]
+    if not deferred_rows:
+        return candidates
+    delivery_rows = list_recent_notification_deliveries(
+        store,
+        profile_id=profile_id,
+        limit=500,
+    )
+    deliveries_by_key = {
+        str(row.get("dedupe_key") or ""): row
+        for row in delivery_rows
+        if row.get("dedupe_key")
+    }
+    observed_selected_keys = {
+        str(row.get("dedupe_key") or "")
+        for row in evaluation_rows
+        if row.get("decision") == "would_select" and row.get("dedupe_key")
+    }
+    reference = _aware_utc(now_utc)
+
+    for row in deferred_rows:
+        metadata = row.get("source_event_metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        snapshot = metadata.get("_candidate_snapshot")
+        if not isinstance(snapshot, Mapping):
+            continue
+        if str(snapshot.get("notification_class") or "") != "event":
+            continue
+        expires_at = _parse_datetime(snapshot.get("expires_at"))
+        if expires_at is None or expires_at <= _aware_utc(now_utc):
+            continue
+        intent = str(row.get("intent") or "").strip()
+        category = str(row.get("category") or "").strip()
+        dedupe_key = str(row.get("dedupe_key") or "").strip()
+        if not intent or not category or not dedupe_key:
+            continue
+        delivery = deliveries_by_key.get(dedupe_key)
+        if delivery is None:
+            # In observe mode a prior selection is the terminal lifecycle
+            # fact. Rebuilding it as a stale shadow claim every sweep only
+            # measures the rehydrator, not a new source event.
+            if dedupe_key in observed_selected_keys:
                 continue
-            metadata = row.get("source_event_metadata")
-            if not isinstance(metadata, Mapping):
-                continue
-            snapshot = metadata.get("_candidate_snapshot")
-            if not isinstance(snapshot, Mapping):
-                continue
-            if str(snapshot.get("notification_class") or "") != "event":
-                continue
-            expires_at = _parse_datetime(snapshot.get("expires_at"))
-            if expires_at is None or expires_at <= _aware_utc(now_utc):
-                continue
-            intent = str(row.get("intent") or "").strip()
-            category = str(row.get("category") or "").strip()
-            dedupe_key = str(row.get("dedupe_key") or "").strip()
-            if not intent or not category or not dedupe_key:
-                continue
-            candidates.append(
-                NotificationCandidate(
-                    profile_id=profile_id,
-                    notification_type=str(row.get("notification_type") or intent),
-                    intent=intent,
-                    category=category,  # type: ignore[arg-type]
-                    priority=int(row.get("priority") or 100),
-                    title=str(snapshot.get("title") or "")[:40],
-                    body=str(snapshot.get("body") or "")[:90],
-                    url=str(snapshot.get("url") or "/today"),
-                    tag=str(snapshot.get("tag") or intent)[:80],
-                    dedupe_key=dedupe_key,
-                    expires_at=expires_at,
-                    timezone_name=timezone_name,
-                    respect_quiet_hours=bool(snapshot.get("respect_quiet_hours", True)),
-                    training_day=training_day,
-                    scheduled_for=_parse_datetime(row.get("scheduled_for")),
-                    timing_source=str(row.get("timing_source") or "") or None,
-                    timing_confidence=str(row.get("timing_confidence") or "") or None,  # type: ignore[arg-type]
-                    variant_id=str(row.get("variant_id") or "") or None,
-                    source_event_metadata={
-                        **dict(metadata),
-                        "deferred_from_training_day": day,
-                    },
-                    action_key=str(snapshot.get("action_key") or "") or None,
-                    notification_class="event",
-                    daily_cap=int(snapshot.get("daily_cap") or 3),
-                    min_spacing_minutes=max(30, int(snapshot.get("min_spacing_minutes") or 0)),
-                    merged_intents=tuple(str(value) for value in snapshot.get("merged_intents") or ()),
-                )
+        else:
+            status = str(delivery.get("status") or "")
+            attempts = int(delivery.get("attempt_count") or 0)
+            claimed_at = _parse_datetime(delivery.get("claimed_at"))
+            stale = (
+                claimed_at is None
+                or reference - claimed_at >= NOTIFICATION_STALE_CLAIM_AFTER
             )
+            retryable = attempts < NOTIFICATION_MAX_ATTEMPTS and (
+                status == "failed" or (status == "pending" and stale)
+            )
+            if not retryable:
+                continue
+        candidates.append(
+            NotificationCandidate(
+                profile_id=profile_id,
+                notification_type=str(row.get("notification_type") or intent),
+                intent=intent,
+                category=category,  # type: ignore[arg-type]
+                priority=int(row.get("priority") or 100),
+                title=str(snapshot.get("title") or "")[:40],
+                body=str(snapshot.get("body") or "")[:90],
+                url=str(snapshot.get("url") or "/today"),
+                tag=str(snapshot.get("tag") or intent)[:80],
+                dedupe_key=dedupe_key,
+                expires_at=expires_at,
+                timezone_name=timezone_name,
+                respect_quiet_hours=bool(snapshot.get("respect_quiet_hours", True)),
+                training_day=training_day,
+                scheduled_for=_parse_datetime(row.get("scheduled_for")),
+                timing_source=str(row.get("timing_source") or "") or None,
+                timing_confidence=str(row.get("timing_confidence") or "") or None,  # type: ignore[arg-type]
+                variant_id=str(row.get("variant_id") or "") or None,
+                source_event_metadata={
+                    **dict(metadata),
+                    "deferred_from_training_day": str(
+                        row.get("training_day") or training_day
+                    ),
+                },
+                action_key=str(snapshot.get("action_key") or "") or None,
+                notification_class="event",
+                daily_cap=int(snapshot.get("daily_cap") or 3),
+                min_spacing_minutes=max(
+                    30, int(snapshot.get("min_spacing_minutes") or 0)
+                ),
+                merged_intents=tuple(
+                    str(value) for value in snapshot.get("merged_intents") or ()
+                ),
+            )
+        )
     return candidates
 
 
