@@ -799,7 +799,8 @@ def parse_float_or_none(value: object) -> float | None:
     return None
 
 
-def _coerce_no_scheduled_fight(value: object) -> bool:
+def _coerce_bool_flag(value: object) -> bool:
+    """Boolean from the loose truthy/falsy shapes an API payload can carry."""
     if value is None:
         return False
     if isinstance(value, bool):
@@ -813,6 +814,10 @@ def _coerce_no_scheduled_fight(value: object) -> bool:
         if normalized in _NO_SCHEDULED_FIGHT_FALSE_TOKENS:
             return False
     return bool(value)
+
+
+def _coerce_no_scheduled_fight(value: object) -> bool:
+    return _coerce_bool_flag(value)
 
 
 def _coerce_open_camp_weeks(value: object) -> int:
@@ -882,6 +887,11 @@ class PlanInput:
     no_scheduled_fight: bool = False
     camp_timeline_type: CampTimelineType = "scheduled_fight"
     open_camp_weeks: int = DEFAULT_OPEN_CAMP_WEEKS
+    # Under-18 safeguard. Set by the backend from the profile's stored date of
+    # birth — never from an intake answer, and never from an ``Age`` field the
+    # athlete typed. When true the pipeline must not produce weight-cut,
+    # dehydration or water-cut guidance (docs/children-age-appropriate-use-policy.md).
+    is_minor: bool = False
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
@@ -1014,6 +1024,12 @@ class PlanInput:
             # absent flag plus an empty next_fight_date implies open camp.
             no_scheduled_fight = not bool(next_fight_date)
 
+        is_minor = (
+            _coerce_bool_flag(data.get("is_minor"))
+            if isinstance(data, dict)
+            else False
+        )
+
         open_camp_weeks_raw = data.get("open_camp_weeks") if isinstance(data, dict) else None
         open_camp_weeks = _coerce_open_camp_weeks(open_camp_weeks_raw)
 
@@ -1067,6 +1083,7 @@ class PlanInput:
             no_scheduled_fight=no_scheduled_fight,
             camp_timeline_type=camp_timeline_type,
             open_camp_weeks=open_camp_weeks,
+            is_minor=is_minor,
             parsing_metadata={
                 "training_frequency": training_frequency_metadata,
                 "available_days": available_days_metadata,

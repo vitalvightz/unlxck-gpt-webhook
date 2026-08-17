@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
 
+from api.compliance_guards import require_health_feature_access
 from api.generation.payloads import _stable_payload_hash
 from api.generation_job_helpers import (
     _PROTECTED_TRIAGE_STATUSES,
@@ -68,6 +69,11 @@ async def generate_plan_for_current_user(
     plan_generate_daily_limit_per_user: Callable[[], int],
     is_exempt_from_daily_generation_cap: Callable[[str], bool],
 ) -> GenerationJobResponse:
+    # Plan generation consumes injuries, readiness, fatigue and bodyweight, so
+    # it is health-data processing under Art. 9 and needs explicit consent that
+    # is still current. Checked before any work is scheduled, so a withdrawn
+    # consent stops the processing rather than merely hiding its output.
+    require_health_feature_access(profile)
     focus_validation = validate_performance_focus_selections(
         request_body.effective_fight_date,
         key_goals=request_body.key_goals,

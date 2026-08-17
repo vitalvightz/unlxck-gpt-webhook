@@ -185,6 +185,16 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "active_plan_id",
     "appearance_mode",
     "private_trial_ack_at",
+    # Compliance evidence: age band source, Terms acceptance and the separate
+    # health-data consent. Missing columns here mean the consent gate cannot be
+    # evaluated, so the runtime check must fail loudly rather than treat an
+    # absent column as "not consented" for every athlete.
+    "date_of_birth",
+    "terms_version",
+    "terms_accepted_at",
+    "health_consent_version",
+    "health_consent_at",
+    "health_consent_withdrawn_at",
 )
 
 REQUIRED_ADMIN_ROLE_AUDIT_COLUMNS: tuple[str, ...] = (

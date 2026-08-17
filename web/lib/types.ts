@@ -260,8 +260,36 @@ export type ProfileRecord = {
   nutrition_profile: NutritionProfileInput;
   /** Null until the athlete confirms they read the private trial instructions. */
   private_trial_ack_at?: string | null;
+  /**
+   * Compliance state. Every field below is decided by the server: `is_minor`,
+   * `age_band`, `terms_accepted` and `health_consent_granted` are derived from
+   * the stored date of birth and consent timestamps on each read, so the client
+   * displays them and never computes them.
+   */
+  date_of_birth?: string | null;
+  age_band?: string;
+  is_minor?: boolean;
+  meets_minimum_age?: boolean;
+  terms_version?: string | null;
+  terms_accepted_at?: string | null;
+  terms_accepted?: boolean;
+  health_consent_version?: string | null;
+  health_consent_at?: string | null;
+  health_consent_withdrawn_at?: string | null;
+  health_consent_granted?: boolean;
   created_at: string;
   updated_at: string;
+};
+
+/**
+ * Intent only — the server stamps every timestamp and version string, so an
+ * acceptance cannot be backdated or attributed to a document the athlete never
+ * saw. `health_data_consent: false` withdraws consent.
+ */
+export type ComplianceAcceptanceRequest = {
+  date_of_birth?: string;
+  accept_terms?: boolean;
+  health_data_consent?: boolean;
 };
 
 export type UsernameRateLimitInfo = {

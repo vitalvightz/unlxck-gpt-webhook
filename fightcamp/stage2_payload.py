@@ -2621,6 +2621,12 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
         "nutrition": {"by_phase": nutrition_by_phase},
         "recovery": {"by_phase": recovery_by_phase},
         "mindset": compute_mindset_plan(flags),
+        # Deterministic safeguard state travels with the deterministic numbers.
+        # The structured-plan safety audit reads this to decide whether Stage 2
+        # wording is allowed to mention a cut at all, which is how "AI is
+        # subordinate to the deterministic safety rules" is actually enforced
+        # rather than merely asserted.
+        "safeguards": {"is_minor": bool(flags.get("is_minor", False))},
     }
 
 

@@ -8,6 +8,7 @@ import type {
   AdminPlanSummary,
   AdminReviewRecord,
   AdminReviewResolveRequest,
+  ComplianceAcceptanceRequest,
   InjuryFlagCreateRequest,
   InjuryFlagRecord,
   InjuryFlagStatus,
@@ -495,6 +496,31 @@ export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<
   meRequestsByToken.delete(token);
   const request = readJson<MeResponse>("/api/me", {
     method: "PUT",
+    token,
+    body: JSON.stringify(payload),
+  }).finally(() => {
+    if (meUpdatesByToken.get(token) === request) {
+      meUpdatesByToken.delete(token);
+    }
+    meRequestsByToken.delete(token);
+  });
+  meUpdatesByToken.set(token, request);
+  return request;
+}
+
+/**
+ * Record date of birth, Terms acceptance and health-data consent.
+ *
+ * Shares `updateMe`'s cache handling: the response is the authoritative profile,
+ * so any in-flight `/api/me` read is invalidated rather than allowed to win.
+ */
+export function recordCompliance(
+  token: string,
+  payload: ComplianceAcceptanceRequest,
+): Promise<MeResponse> {
+  meRequestsByToken.delete(token);
+  const request = readJson<MeResponse>("/api/me/compliance", {
+    method: "POST",
     token,
     body: JSON.stringify(payload),
   }).finally(() => {

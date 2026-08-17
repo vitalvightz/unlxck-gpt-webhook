@@ -150,6 +150,11 @@ class TrainingContext:
     # 0.0 when either is missing, so this is the only way downstream consumers
     # can tell "no cut" apart from "no cut data".
     weight_cut_status: str = WEIGHT_CUT_INPUTS_KNOWN
+    # Under-18 safeguard, derived server-side from the profile's date of birth.
+    # ``weight_cut_risk`` is already forced false for a minor upstream; this
+    # carries the *reason* through to the flags so athlete-facing blocks can say
+    # why cut guidance is absent instead of silently omitting it.
+    is_minor: bool = False
     training_split: dict[str, Any] = field(default_factory=dict)
     hard_sparring_days: list[str] = field(default_factory=list)
     support_work_days: list[str] = field(default_factory=list)

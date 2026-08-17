@@ -15,6 +15,7 @@ from fightcamp.stage2_policy import (
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
+from .compliance import evaluate_profile_compliance
 from .contracts.training_day import current_training_day
 
 from .models import (
@@ -102,6 +103,10 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
     raw_username = row.get("username")
     history_raw = row.get("username_change_history") or []
     username_history: list[str] = [str(entry) for entry in history_raw if entry]
+    # Derived here, on every read, from the stored date of birth and consent
+    # timestamps. Nothing downstream re-derives an age band or a consent verdict
+    # from client input, so this is the single place the answer comes from.
+    compliance = evaluate_profile_compliance(row)
     return ProfileRecord(
         athlete_id=str(row["id"]),
         email=str(row.get("email") or ""),
@@ -122,6 +127,17 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         avatar_url=row.get("avatar_url") or None,
         nutrition_profile=row.get("nutrition_profile") or {},
         private_trial_ack_at=str(row.get("private_trial_ack_at") or "") or None,
+        date_of_birth=compliance.date_of_birth,
+        age_band=compliance.age_band,
+        is_minor=compliance.is_minor,
+        meets_minimum_age=compliance.meets_minimum_age,
+        terms_version=str(row.get("terms_version") or "") or None,
+        terms_accepted_at=str(row.get("terms_accepted_at") or "") or None,
+        terms_accepted=compliance.terms_accepted,
+        health_consent_version=str(row.get("health_consent_version") or "") or None,
+        health_consent_at=str(row.get("health_consent_at") or "") or None,
+        health_consent_withdrawn_at=str(row.get("health_consent_withdrawn_at") or "") or None,
+        health_consent_granted=compliance.health_consent_granted,
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
     )

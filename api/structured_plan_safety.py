@@ -424,6 +424,35 @@ def detect_computed_support_conflicts(structured_plan: dict, computed_support: d
     return warnings
 
 
+def is_minor_support(computed_support: dict | None) -> bool:
+    """Whether Stage 1 marked this athlete as under 18.
+
+    Reads the deterministic ``safeguards`` block rather than any Stage 2 field:
+    the age band is a server fact, and Stage 2 has no standing to restate it.
+    """
+    safeguards = _as_dict(_as_dict(computed_support).get("safeguards"))
+    return bool(safeguards.get("is_minor", False))
+
+
+def detect_minor_guidance_leakage_findings(
+    structured_plan: dict, computed_support: dict | None
+) -> list[str]:
+    """Blocking findings when a card would show a child blocked cut guidance.
+
+    Stage 1 never produces this for a minor, so anything matching here came from
+    Stage 2's own wording. The finding is publication-blocking: a plan that
+    tells an under-18 athlete how to cut water must not reach them, even if the
+    rest of the card is sound.
+    """
+    if not is_minor_support(computed_support):
+        return []
+    # Imported here rather than at module scope: api.minor_safety imports the
+    # LEAKAGE constant and athlete_facing_strings from this module.
+    from api.minor_safety import detect_minor_guidance_leakage
+
+    return detect_minor_guidance_leakage(structured_plan, is_minor=True)
+
+
 def audit_structured_plan(structured_plan: dict, computed_support: dict | None = None) -> list[str]:
     """Run all safety audits, returning prefixed finding strings.
 
@@ -434,6 +463,7 @@ def audit_structured_plan(structured_plan: dict, computed_support: dict | None =
     try:
         findings: list[str] = []
         findings.extend(detect_coach_gated_leakage(structured_plan, computed_support))
+        findings.extend(detect_minor_guidance_leakage_findings(structured_plan, computed_support))
         findings.extend(detect_computed_support_conflicts(structured_plan, computed_support))
         findings.extend(detect_duplicate_rendered_strings(structured_plan))
         return findings

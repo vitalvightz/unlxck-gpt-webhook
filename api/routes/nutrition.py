@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from api.compliance_guards import require_health_feature_access
 from api.models import NutritionWorkspaceState, NutritionWorkspaceUpdateRequest, ProfileRecord, ProfileUpdateRequest
 from api.nutrition_workspace import (
     build_nutrition_workspace,
@@ -37,6 +38,12 @@ def build_nutrition_router(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> NutritionWorkspaceState:
+        # Bodyweight, target weight, appetite and supplement use are health-
+        # inference data (docs/data-map-processor-register.md), so writing them
+        # needs current explicit consent. The GET above is left ungated: reading
+        # back data already collected lawfully is how withdrawal degrades safely
+        # instead of locking an athlete out of their own record.
+        require_health_feature_access(profile)
         latest_intake = store.get_latest_intake(profile.athlete_id)
         current_workspace = build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
         update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})

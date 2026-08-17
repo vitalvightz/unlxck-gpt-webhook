@@ -18,6 +18,12 @@ function meFixture({
     profile: {
       role,
       private_trial_ack_at: ack,
+      // A signed-up athlete has already given their date of birth and accepted
+      // the Terms — the consent gate sits ahead of the trial briefing, so these
+      // must be satisfied for the briefing to be the next stop.
+      date_of_birth: "1996-05-04",
+      meets_minimum_age: true,
+      terms_accepted: true,
     },
     latest_plan: planId ? { plan_id: planId } : null,
   } as unknown as MeResponse;
