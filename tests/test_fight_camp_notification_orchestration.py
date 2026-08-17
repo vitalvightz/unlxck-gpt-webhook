@@ -455,6 +455,123 @@ def test_quiet_hour_event_rehydrates_with_original_expiry() -> None:
     assert rehydrated[0].training_day == "2026-08-10"
 
 
+def test_selected_deferred_event_is_not_rebuilt_on_later_sweeps() -> None:
+    store = OrchestrationStore()
+    quiet_time = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    candidate = NotificationCandidate(
+        **{
+            **_foundation_candidate(
+                key="plan-ready:plan-1",
+                at=quiet_time,
+                notification_class="event",
+            ).__dict__,
+            "notification_type": "plan_ready",
+            "intent": "plan_ready",
+            "category": "plan_update_alerts",
+            "expires_at": quiet_time + timedelta(days=7),
+            "source_event_metadata": {"plan_id": "plan-1"},
+        }
+    )
+    assert prepare_notification_delivery(store, [candidate], now_utc=quiet_time) is None
+    due_time = datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc)
+    rehydrated = _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=due_time,
+    )
+    assert (
+        simulate_notification_delivery_decision(store, rehydrated, now_utc=due_time)
+        == rehydrated[0]
+    )
+
+    for sweep in range(1, 21):
+        assert (
+            _deferred_event_candidates(
+                store,
+                profile_id="athlete-1",
+                training_day="2026-08-10",
+                timezone_name="UTC",
+                now_utc=due_time + timedelta(minutes=10 * sweep),
+            )
+            == []
+        )
+
+    rows = list_notification_evaluations(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        intent="plan_ready",
+    )
+    assert sum(int(row["evaluation_count"]) for row in rows) == 1
+    assert list_recent_notification_deliveries(store, profile_id="athlete-1") == []
+
+
+def test_deferred_event_keeps_failed_and_stale_pending_retries() -> None:
+    store = OrchestrationStore()
+    quiet_time = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    candidate = NotificationCandidate(
+        **{
+            **_foundation_candidate(
+                key="plan-ready:retryable",
+                at=quiet_time,
+                notification_class="event",
+            ).__dict__,
+            "notification_type": "plan_ready",
+            "intent": "plan_ready",
+            "category": "plan_update_alerts",
+            "expires_at": quiet_time + timedelta(days=7),
+        }
+    )
+    assert prepare_notification_delivery(store, [candidate], now_utc=quiet_time) is None
+    claim = prepare_notification_delivery(
+        store,
+        [candidate],
+        now_utc=datetime(2026, 8, 10, 7, 0, tzinfo=timezone.utc),
+    )
+    assert claim is not None
+    finalize_notification_delivery(store, claim[1], status="failed", delivered_count=0)
+
+    retry_time = datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc)
+    assert (
+        len(
+            _deferred_event_candidates(
+                store,
+                profile_id="athlete-1",
+                training_day="2026-08-10",
+                timezone_name="UTC",
+                now_utc=retry_time,
+            )
+        )
+        == 1
+    )
+    retry_claim = prepare_notification_delivery(store, [candidate], now_utc=retry_time)
+    assert retry_claim is not None
+    assert (
+        _deferred_event_candidates(
+            store,
+            profile_id="athlete-1",
+            training_day="2026-08-10",
+            timezone_name="UTC",
+            now_utc=retry_time + timedelta(minutes=14),
+        )
+        == []
+    )
+    assert (
+        len(
+            _deferred_event_candidates(
+                store,
+                profile_id="athlete-1",
+                training_day="2026-08-10",
+                timezone_name="UTC",
+                now_utc=retry_time + timedelta(minutes=15),
+            )
+        )
+        == 1
+    )
+
+
 def test_observe_rollout_records_candidates_and_preserves_legacy_path(monkeypatch) -> None:
     store = OrchestrationStore()
     now = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
