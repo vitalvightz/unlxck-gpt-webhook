@@ -1,5 +1,15 @@
 create extension if not exists pgcrypto;
 
+-- Internal helpers that must never be reachable as client RPCs live here, per
+-- 20260726162809_harden_internal_functions_and_search_paths. Note that this file
+-- still declares the older guard helpers (prevent_self_role_escalation,
+-- prevent_username_policy_bypass, is_admin) under `public`; that migration moved
+-- them to `private` on live databases, so those declarations are stale. New
+-- guards are written against the live convention.
+create schema if not exists private authorization postgres;
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated, service_role;
+
 -- Role foundation for the single Unlxck app. `athlete` and `admin` are live in
 -- private beta; `coach` and `gym_owner` are reserved for public beta (not yet
 -- selectable at sign-up). On databases created before these values existed, the
@@ -155,14 +165,19 @@ end;
 $$;
 
 -- Consent evidence is only evidence if the subject cannot write it themselves.
--- profiles_self_update lets a browser client update its own row, so without this
--- an athlete could stamp their own terms_accepted_at, backdate a health-data
+-- The live UPDATE policy (profiles_self_or_admin_update) lets a browser client
+-- write its own row and a DB-role admin write anyone's, so without this guard an
+-- athlete could stamp their own terms_accepted_at, backdate a health-data
 -- consent, or edit their date of birth out of the under-18 band.
-create or replace function public.prevent_client_compliance_writes()
+--
+-- Lives in `private` with a pinned search_path, per
+-- 20260726162809_harden_internal_functions_and_search_paths. Not SECURITY
+-- DEFINER: it reads auth.role() and the row, then raises, so it needs no
+-- elevated privilege.
+create or replace function private.prevent_client_compliance_writes()
 returns trigger
 language plpgsql
-security definer
-set search_path = public
+set search_path = pg_catalog, pg_temp
 as $$
 begin
   if auth.role() <> 'service_role' then
@@ -194,9 +209,10 @@ $$;
 -- The 13+ floor from docs/children-age-appropriate-use-policy.md, applied to
 -- every writer including the service role. A CHECK constraint cannot express it
 -- (check expressions must be immutable, and this needs current_date).
-create or replace function public.enforce_profile_minimum_age()
+create or replace function private.enforce_profile_minimum_age()
 returns trigger
 language plpgsql
+set search_path = pg_catalog, pg_temp
 as $$
 begin
   if new.date_of_birth is not null
@@ -498,13 +514,13 @@ drop trigger if exists profiles_prevent_client_compliance_writes on public.profi
 create trigger profiles_prevent_client_compliance_writes
 before insert or update on public.profiles
 for each row
-execute function public.prevent_client_compliance_writes();
+execute function private.prevent_client_compliance_writes();
 
 drop trigger if exists profiles_enforce_minimum_age on public.profiles;
 create trigger profiles_enforce_minimum_age
 before insert or update of date_of_birth on public.profiles
 for each row
-execute function public.enforce_profile_minimum_age();
+execute function private.enforce_profile_minimum_age();
 
 create or replace function public.try_parse_timestamptz(p_value text)
 returns timestamptz

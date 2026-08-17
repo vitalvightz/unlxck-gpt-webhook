@@ -13,6 +13,16 @@
 -- private_trial_ack_at is left alone. It evidences a different thing (that a
 -- tester read the trial briefing), carries no document version, and must not be
 -- pressed into service as consent for either document.
+--
+-- The trigger helpers below follow the convention established by
+-- 20260726162809_harden_internal_functions_and_search_paths: guard functions
+-- live in the `private` schema with a pinned search_path and no grants to
+-- anon/authenticated, so they can only ever run through their bound trigger and
+-- never as a client RPC.
+
+begin;
+
+create schema if not exists private authorization postgres;
 
 alter table public.profiles
   add column if not exists date_of_birth date,
@@ -37,7 +47,7 @@ comment on column public.profiles.health_consent_withdrawn_at is
 
 -- Sanity bound only. The real 13+ rule needs current_date, which a CHECK
 -- constraint cannot use (check expressions must be immutable), so it is
--- enforced by the triggers below instead.
+-- enforced by the trigger below instead.
 do $$
 begin
   if not exists (
@@ -54,16 +64,23 @@ end
 $$;
 
 -- Consent evidence is only evidence if the subject cannot write it themselves.
--- profiles_self_update lets a browser client update its own row, so without this
--- an athlete could stamp their own terms_accepted_at, backdate a consent, or
--- edit their date of birth out of the under-18 band. Mirrors the existing
--- prevent_self_role_escalation / prevent_username_policy_bypass pattern: the
--- service-role backend is the only sanctioned writer.
-create or replace function public.prevent_client_compliance_writes()
+-- The live UPDATE policy is profiles_self_or_admin_update — `id = auth.uid() OR
+-- private.is_admin()` — so a browser client can write its own row, and a
+-- DB-role admin can write anyone's. Without this guard an athlete could stamp
+-- their own terms_accepted_at, backdate a consent, or edit their date of birth
+-- out of the under-18 band, and an admin could do it to any athlete straight
+-- from the browser. Mirrors the existing prevent_self_role_escalation /
+-- prevent_client_access_status_change guards: the service-role backend is the
+-- only sanctioned writer.
+--
+-- Deliberately not SECURITY DEFINER. The function reads auth.role() and the
+-- row, then raises — it needs no elevated privilege, so it does not get one.
+-- Matches private.prevent_client_access_status_change, the most recent guard of
+-- this shape.
+create or replace function private.prevent_client_compliance_writes()
 returns trigger
 language plpgsql
-security definer
-set search_path = public
+set search_path = pg_catalog, pg_temp
 as $$
 begin
   if auth.role() <> 'service_role' then
@@ -92,18 +109,14 @@ begin
 end;
 $$;
 
-drop trigger if exists profiles_prevent_client_compliance_writes on public.profiles;
-create trigger profiles_prevent_client_compliance_writes
-before insert or update on public.profiles
-for each row
-execute function public.prevent_client_compliance_writes();
-
--- The 13+ floor, applied to every writer including the service role. The API
--- rejects an under-13 date of birth with a clean error; this is the backstop
--- that makes it impossible to store one at all.
-create or replace function public.enforce_profile_minimum_age()
+-- The 13+ floor from docs/children-age-appropriate-use-policy.md, applied to
+-- every writer including the service role. The API rejects an under-13 date of
+-- birth with a clean error; this is the backstop that makes it impossible to
+-- store one at all.
+create or replace function private.enforce_profile_minimum_age()
 returns trigger
 language plpgsql
+set search_path = pg_catalog, pg_temp
 as $$
 begin
   if new.date_of_birth is not null
@@ -116,15 +129,29 @@ begin
 end;
 $$;
 
+-- Trigger helpers must only run through their bound triggers, never as client
+-- RPCs.
+revoke all on function private.prevent_client_compliance_writes() from public, anon, authenticated;
+revoke all on function private.enforce_profile_minimum_age() from public, anon, authenticated;
+grant execute on function private.prevent_client_compliance_writes() to service_role;
+grant execute on function private.enforce_profile_minimum_age() to service_role;
+
+drop trigger if exists profiles_prevent_client_compliance_writes on public.profiles;
+create trigger profiles_prevent_client_compliance_writes
+before insert or update on public.profiles
+for each row
+execute function private.prevent_client_compliance_writes();
+
 drop trigger if exists profiles_enforce_minimum_age on public.profiles;
 create trigger profiles_enforce_minimum_age
 before insert or update of date_of_birth on public.profiles
 for each row
-execute function public.enforce_profile_minimum_age();
+execute function private.enforce_profile_minimum_age();
 
 -- Reject an under-13 signup inside Postgres, so the rule still holds when a
--- caller bypasses unlxck.com and posts to /auth/v1/signup directly. Mirrors the
--- existing enforce_auth_signup_rate_limit guard.
+-- caller bypasses unlxck.com and calls /auth/v1/signup directly. Mirrors the
+-- existing private.enforce_auth_signup_rate_limit guard, including its
+-- SECURITY DEFINER + search_path = pg_catalog shape.
 --
 -- A signup that carries no date_of_birth metadata is allowed through here on
 -- purpose: magic-link invites and admin-created accounts have no signup form to
@@ -174,3 +201,5 @@ create trigger enforce_auth_signup_minimum_age
 before insert on auth.users
 for each row
 execute function private.enforce_auth_signup_minimum_age();
+
+commit;

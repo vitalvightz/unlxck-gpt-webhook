@@ -53,7 +53,8 @@ def test_the_migration_is_additive():
 
 
 def test_clients_cannot_write_their_own_consent_evidence():
-    # profiles_self_update lets a browser update its own row, so the trigger is
+    # The live UPDATE policy (profiles_self_or_admin_update) lets a browser
+    # write its own row and a DB-role admin write anyone's, so the trigger is
     # what stops an athlete stamping their own terms_accepted_at or editing a
     # date of birth out of the under-18 band.
     for sql in (SCHEMA, MIGRATION):
@@ -69,6 +70,49 @@ def test_the_minimum_age_floor_is_enforced_in_the_database():
         assert "current_date - interval '13 years'" in sql
     assert "profiles_enforce_minimum_age" in SCHEMA
     assert "profiles_enforce_minimum_age" in MIGRATION
+
+
+def test_guard_helpers_follow_the_internal_hardening_convention():
+    # 20260726162809_harden_internal_functions_and_search_paths moved guard
+    # helpers into `private` with a pinned search_path so they cannot be reached
+    # as client RPCs or hijacked through search-path injection. A new guard in
+    # `public` with an unpinned path would quietly reverse that.
+    for helper in ("prevent_client_compliance_writes", "enforce_profile_minimum_age"):
+        for sql in (SCHEMA, MIGRATION):
+            assert f"create or replace function private.{helper}()" in sql, helper
+            assert f"public.{helper}" not in sql, helper
+            assert f"execute function private.{helper}()" in sql, helper
+        body = MIGRATION.split(f"create or replace function private.{helper}()", 1)[1]
+        assert "set search_path = pg_catalog, pg_temp" in body.split("as $$", 1)[0], helper
+        assert (
+            f"revoke all on function private.{helper}() from public, anon, authenticated"
+            in MIGRATION
+        ), helper
+
+
+def test_the_auth_signup_guard_matches_its_sibling_shape():
+    # private.enforce_auth_signup_rate_limit is SECURITY DEFINER with
+    # search_path = pg_catalog because it runs during signup under the auth
+    # admin role. The age guard sits on the same table and matches it.
+    header = MIGRATION.split(
+        "create or replace function private.enforce_auth_signup_minimum_age()", 1
+    )[1].split("as $$", 1)[0]
+    assert "security definer" in header
+    assert "set search_path = pg_catalog" in header
+    assert (
+        "revoke all on function private.enforce_auth_signup_minimum_age() "
+        "from public, anon, authenticated" in MIGRATION
+    )
+
+
+def test_the_migration_is_transactional():
+    # Matches the hardening migrations: a partially applied consent guard would
+    # leave the columns present but unprotected.
+    statements = "\n".join(
+        line for line in MIGRATION.splitlines() if not line.strip().startswith("--")
+    ).strip()
+    assert statements.startswith("begin;")
+    assert statements.endswith("commit;")
 
 
 def test_under_13_signup_is_refused_at_the_auth_layer():
