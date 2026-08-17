@@ -193,6 +193,7 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "terms_version",
     "terms_accepted_at",
     "health_consent_version",
+    "health_data_consent",
     "health_consent_at",
     "health_consent_withdrawn_at",
 )

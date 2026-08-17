@@ -9,15 +9,10 @@ import { useAppSession } from "@/components/auth-provider";
 import { recordCompliance } from "@/lib/api";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
-  TERMS_CONSENT_LEAD,
-  TERMS_LINK_LABEL,
-  consentCopyForBand,
   hasHealthDataConsent,
-  provisionalAgeBand,
   requiresComplianceAcceptance,
   validateDateOfBirth,
 } from "@/lib/compliance";
-import { PRIVACY_HREF, TERMS_HREF } from "@/lib/legal-documents";
 
 /**
  * The consent step for an account that does not already have one on record.
@@ -47,11 +42,11 @@ function ComplianceAcceptance() {
   const needsHealthConsent = !hasHealthDataConsent(me);
   const isPending = requiresComplianceAcceptance(me);
   const dateOfBirthError = needsDateOfBirth ? validateDateOfBirth(dateOfBirth) : null;
-  // Prefer the server's band for an account that already has a date of birth;
-  // fall back to the one being typed so the wording matches the reader either way.
-  const consentCopy = consentCopyForBand(
-    needsDateOfBirth ? provisionalAgeBand(dateOfBirth) : me?.profile.age_band,
-  );
+  const canContinue =
+    !isSubmitting &&
+    !dateOfBirthError &&
+    (!needsTerms || acceptedTerms) &&
+    (!needsHealthConsent || healthDataConsent);
 
   // A non-athlete has no onboarding to gate; send them to their own workspace
   // rather than stranding them on a screen whose only action does not apply.
@@ -81,6 +76,10 @@ function ComplianceAcceptance() {
       setError("Accept the Terms of Use to continue.");
       return;
     }
+    if (needsHealthConsent && !healthDataConsent) {
+      setError("Give explicit health data consent to continue to personalised camp generation.");
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
@@ -107,10 +106,9 @@ function ComplianceAcceptance() {
   return (
     <section className="panel private-trial-panel" aria-labelledby={headingId}>
       <p className="kicker">Before you start</p>
-      <h1 id={headingId}>Confirm your details</h1>
+      <h1 id={headingId}>Athlete Profile Verification</h1>
       <p className="muted">
-        We need these before UNLXCK can build your camp. Your age decides which safety rules
-        apply to you.
+        Set your baseline to unlock personalized camp programming and safety protocols.
       </p>
 
       {error ? (
@@ -131,7 +129,7 @@ function ComplianceAcceptance() {
             required
           />
           <p className="muted auth-consent-help">
-            13+ only. Under-18s get extra privacy and safety protections.
+            Must be 18+ for full weight-cut protocols.
           </p>
         </div>
       ) : null}
@@ -146,9 +144,13 @@ function ComplianceAcceptance() {
               onChange={(event) => setAcceptedTerms(event.target.checked)}
             />
             <span>
-              {TERMS_CONSENT_LEAD}{" "}
-              <Link href={TERMS_HREF} className="auth-text-link" target="_blank">
-                {TERMS_LINK_LABEL}
+              I agree to the{" "}
+              <Link href="/terms" className="auth-text-link" target="_blank">
+                Terms of Use
+              </Link>
+              {" and "}
+              <Link href="/privacy" className="auth-text-link" target="_blank">
+                Privacy Notice
               </Link>
               .
             </span>
@@ -165,22 +167,13 @@ function ComplianceAcceptance() {
               checked={healthDataConsent}
               onChange={(event) => setHealthDataConsent(event.target.checked)}
             />
-            <span>{consentCopy.healthConsentLabel}</span>
+            <span>Allow UNLXCK to process health and recovery metrics to adapt my camp.</span>
           </label>
-          <p className="muted auth-consent-help">
-            {consentCopy.healthConsentHelp}{" "}
-            <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
-              Privacy Notice
-            </Link>
-          </p>
-          {healthDataConsent ? null : (
-            <p className="muted auth-consent-help">{consentCopy.declineNote}</p>
-          )}
         </div>
       ) : null}
 
       <div className="private-trial-actions">
-        <button type="button" className="cta" onClick={() => void submit()} disabled={isSubmitting}>
+        <button type="button" className="cta" onClick={() => void submit()} disabled={!canContinue}>
           {isSubmitting ? "Saving…" : "CONTINUE"}
         </button>
       </div>

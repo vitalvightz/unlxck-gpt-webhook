@@ -255,6 +255,7 @@ def test_consent_timestamps_and_versions_come_from_the_server():
     assert datetime.fromisoformat(profile["health_consent_at"]).year >= 2026
     stored = store.profiles[DEFAULT_ATHLETE_USER.user_id]
     assert stored["terms_accepted_at"] == profile["terms_accepted_at"]
+    assert stored["health_data_consent"] is True
 
 
 def test_terms_acceptance_does_not_grant_health_consent():

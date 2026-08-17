@@ -34,13 +34,13 @@ UNLXCK is a performance and wellbeing service. It is not intended to diagnose, t
 ## Lawful bases
 We rely on three lawful bases, depending on what the processing is for.
 
-**Article 6(1)(b) UK GDPR (contract)** — for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.
+**Article 6(1)(b) UK GDPR (contract):** for the personal data we need in order to provide the service you have asked for: your account, profile, intake, plans, sessions and training history.
 
-**Article 6(1)(f) UK GDPR (legitimate interests)** — for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.
+**Article 6(1)(f) UK GDPR (legitimate interests):** for keeping UNLXCK secure and available, preventing abuse of signup and login, investigating faults, and improving the service. Our interests are running a secure, reliable product and making it work better for athletes. We have weighed those interests against your rights, and you can object to this processing at any time.
 
-**Article 9(2)(a) UK GDPR (explicit consent)** — for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.
+**Article 9(2)(a) UK GDPR (explicit consent):** for health information: injuries, pain, soreness, fatigue, sleep, readiness and bodyweight, used for personalised training and safety features. This consent is asked for separately, is optional, and can be withdrawn at any time.
 
-**We do not use your health information to improve UNLXCK, and we do not use it to train AI models.** It is used to build and adapt your own training and to apply safety rules to it — nothing else. Where we look at how the product is performing, or decide what to build next, we do that without using health information at all. This applies to aggregated and anonymised forms of it too.
+**We do not use your health information to improve UNLXCK, and we do not use it to train AI models.** It is used only to build and adapt your own training and to apply safety rules to it. Where we look at how the product is performing, or decide what to build next, we do that without using health information at all. This applies to aggregated and anonymised forms of it too.
 
 Withdrawing consent does not affect processing already carried out lawfully, but UNLXCK may be unable to provide features that require health data afterwards.
 
@@ -54,13 +54,13 @@ If you think an automated adaptation has got something wrong, contact us using t
 ## Service providers
 We use trusted service providers to run UNLXCK. We share only the information each one needs to provide its part of the service, and require appropriate data-protection safeguards from all of them.
 
-- **Supabase** — sign-in, database and file storage. Holds your account, profile, training, health and feedback data, on servers in the EU.
-- **OpenAI** — AI-assisted plan generation. Receives the plan context needed to build your training, which can include injury and restriction information. Your data is not used to train their models.
-- **Vercel** — hosting for the UNLXCK website and app. Handles request and device information.
-- **Hetzner** — hosting for our backend and plan-generation service, on servers in Germany.
-- **Resend** — service and feedback email.
-- **Cloudflare Turnstile** — blocks automated abuse of signup and login. Receives device and network signals, never health information.
-- **Sentry** — error diagnostics, used to find and fix faults. Receives technical information about what went wrong. Injury, pain, readiness and similar information is filtered out before a report is sent, and UNLXCK does not record your screen or session.
+- **Supabase:** sign-in, database and file storage. Holds your account, profile, training, health and feedback data, on servers in the EU.
+- **OpenAI:** AI-assisted plan generation. Receives the plan context needed to build your training, which can include injury and restriction information. Your data is not used to train their models.
+- **Vercel:** hosting for the UNLXCK website and app. Handles request and device information.
+- **Hetzner:** hosting for our backend and plan-generation service, on servers in Germany.
+- **Resend:** service and feedback email.
+- **Cloudflare Turnstile:** blocks automated abuse of signup and login. Receives device and network signals, never health information.
+- **Sentry:** error diagnostics, used to find and fix faults. Receives technical information about what went wrong. Injury, pain, readiness and similar information is filtered out before a report is sent, and UNLXCK does not record your screen or session.
 
 ## International transfers
 Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.
@@ -70,7 +70,7 @@ We keep identifiable data only for as long as we need it, then delete it or irre
 
 While your account is open we keep your profile, plans, training history, injury, readiness and nutrition data, so the service works and your history is there when you come back to it.
 
-**If you ask us to delete your data, we do it within one month.** You can ask at any time, for any reason or none — see "Your rights".
+**If you ask us to delete your data, we do it within one month.** You can ask at any time, for any reason or none. See "Your rights".
 
 Beta screenshots are kept for no more than 90 days. Feedback is kept while it is needed for support and product improvement, then anonymised or deleted.
 
@@ -86,7 +86,7 @@ Depending on the processing, you may have rights to:
 - object to processing we carry out under legitimate interests; and
 - withdraw consent at any time where processing relies on consent.
 
-**Right to object:** the right to object applies to the processing we carry out under legitimate interests — security, abuse prevention, fault investigation and service improvement. Tell us and we will stop, unless we can show compelling grounds that override your interests. It does not cover what we have to process to provide the service under our agreement with you; for health information, withdraw your consent instead, which you can do at any time without giving a reason.
+**Right to object:** the right to object applies to the processing we carry out under legitimate interests: security, abuse prevention, fault investigation and service improvement. Tell us and we will stop, unless we can show compelling grounds that override your interests. It does not cover what we have to process to provide the service under our agreement with you; for health information, withdraw your consent instead, which you can do at any time without giving a reason.
 
 Requests can be made using the privacy contact above or from **Settings → Privacy**. We may verify identity where reasonably necessary.
 

@@ -61,6 +61,10 @@ test("only the Terms and the Privacy Notice are exposed in-app", () => {
   assert.equal(PRIVACY_HREF, "/legal/privacy-notice");
 });
 
+test("athlete-facing legal documents do not contain em dashes", () => {
+  assert.ok(!everyDocumentText().includes("—"));
+});
+
 test("internal compliance documents never leak into athlete-facing copy", () => {
   // The DPIA, processor/DPA register, breach procedure, intended-purpose memo,
   // internal retention procedure and storage/tracking assessment are internal

@@ -11,7 +11,7 @@ import type { MeResponse, ProfileRecord } from "@/lib/types";
 
 /** Version strings mirroring api/compliance.py. Shown next to each consent. */
 export const TERMS_VERSION = "0.1-pre-launch";
-export const HEALTH_CONSENT_VERSION = "1.0";
+export const HEALTH_CONSENT_VERSION = "1.1";
 
 /**
  * The Privacy Notice's own revision, tracked separately from the health-data
@@ -29,7 +29,7 @@ export const HEALTH_CONSENT_VERSION = "1.0";
  * itself changing. Bump this when the notice is revised; bump
  * HEALTH_CONSENT_VERSION only when what the athlete is agreeing to changes.
  */
-export const PRIVACY_NOTICE_VERSION = "1.2";
+export const PRIVACY_NOTICE_VERSION = "1.3";
 
 export const MINIMUM_SIGNUP_AGE_YEARS = 13;
 export const ADULT_AGE_YEARS = 18;

@@ -114,11 +114,15 @@ create table if not exists public.profiles (
   terms_version text,
   terms_accepted_at timestamptz,
   health_consent_version text,
+  health_data_consent boolean not null default false,
   health_consent_at timestamptz,
   health_consent_withdrawn_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+comment on column public.profiles.health_data_consent is
+  'Current explicit health-data consent choice. Server-owned and stored with the grant or withdrawal timestamp.';
 
 
 -- Role and username changes must flow through the service-role backend (which
@@ -185,6 +189,7 @@ begin
       if new.date_of_birth is not null
         or new.terms_version is not null
         or new.terms_accepted_at is not null
+        or new.health_data_consent is true
         or new.health_consent_version is not null
         or new.health_consent_at is not null
         or new.health_consent_withdrawn_at is not null then
@@ -194,6 +199,7 @@ begin
       if new.date_of_birth is distinct from old.date_of_birth
         or new.terms_version is distinct from old.terms_version
         or new.terms_accepted_at is distinct from old.terms_accepted_at
+        or new.health_data_consent is distinct from old.health_data_consent
         or new.health_consent_version is distinct from old.health_consent_version
         or new.health_consent_at is distinct from old.health_consent_at
         or new.health_consent_withdrawn_at is distinct from old.health_consent_withdrawn_at then
@@ -2233,4 +2239,3 @@ on conflict (id) do update set
   public = excluded.public,
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
-

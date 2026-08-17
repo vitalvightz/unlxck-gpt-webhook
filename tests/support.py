@@ -239,6 +239,7 @@ class FakeStore:
             "terms_version": None,
             "terms_accepted_at": None,
             "health_consent_version": None,
+            "health_data_consent": False,
             "health_consent_at": None,
             "health_consent_withdrawn_at": None,
             "created_at": _now(),
@@ -284,10 +285,12 @@ class FakeStore:
             profile["terms_version"] = TERMS_VERSION
             profile["terms_accepted_at"] = now
         if health_data_consent is True:
+            profile["health_data_consent"] = True
             profile["health_consent_version"] = HEALTH_CONSENT_VERSION
             profile["health_consent_at"] = now
             profile["health_consent_withdrawn_at"] = None
         elif health_data_consent is False:
+            profile["health_data_consent"] = False
             profile["health_consent_withdrawn_at"] = now
         profile["updated_at"] = now
         return profile
@@ -2285,6 +2288,7 @@ def clear_compliance(store: "FakeStore", athlete_id: str = DEFAULT_ATHLETE_USER.
             "terms_version": None,
             "terms_accepted_at": None,
             "health_consent_version": None,
+            "health_data_consent": False,
             "health_consent_at": None,
             "health_consent_withdrawn_at": None,
         }
