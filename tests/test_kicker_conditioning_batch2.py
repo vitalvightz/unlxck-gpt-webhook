@@ -2,122 +2,115 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from fightcamp.training_context import normalize_athlete_equipment_list, normalize_equipment_list
+from fightcamp import conditioning
+from fightcamp.training_context import known_equipment
 
 
 BANK_PATH = Path(__file__).resolve().parents[1] / "data" / "style_conditioning_bank.json"
 
-EXPECTED_KICKER_BATCH_2 = {
-    "Teep Range Reset": ("aerobic", 180, 60, 3, 6),
-    "Kick & Exit Flow": ("aerobic", 180, 60, 3, 6),
-    "Switch-Side Rhythm": ("aerobic", 120, 60, 3, 6),
-    "Rear-Kick Power Singles": ("ATP-PCr", 5, 60, 8, 8),
-    "Reactive Body-Kick Burst": ("ATP-PCr", 6, 60, 8, 8),
-    "Low-Kick Exit Burst": ("ATP-PCr", 6, 60, 8, 8),
-    "Check-Return Burst": ("ATP-PCr", 5, 60, 8, 8),
-    "Interception Kick Burst": ("ATP-PCr", 5, 60, 8, 8),
-    "Dutch Target Call": ("glycolytic", 120, 60, 4, 8),
-    "Body-Kick Repeatability": ("glycolytic", 45, 45, 6, 8),
-    "Switch-Kick Repeatability": ("glycolytic", 45, 45, 6, 8),
-    "Low-High Decision Rounds": ("glycolytic", 120, 60, 4, 8),
-    "Kick-Punch Reposition": ("glycolytic", 60, 60, 6, 8),
-    "Long-to-Clinch Transition": ("glycolytic", 120, 60, 4, 8),
-    "Kick Recoil Quality Rounds": ("glycolytic", 120, 60, 4, 7),
-    "Pressure-Kicker Rounds": ("glycolytic", 180, 60, 3, 8),
+EXPECTED = {
+    "Kick Recoil Flow": ({"kickboxing", "muay_thai"}, "aerobic", (180, 60, 3, 6), {"GPP", "SPP"}, ("heavy_bag",)),
+    "Teep Range Reset": ({"muay_thai"}, "aerobic", (180, 60, 3, 6), {"GPP", "SPP"}, ("bodyweight",)),
+    "Kick & Exit Flow": ({"kickboxing", "muay_thai"}, "aerobic", (180, 60, 3, 6), {"GPP", "SPP"}, ("partner", "thai_pads")),
+    "Bilateral Round-Kick Flow": ({"kickboxing", "muay_thai"}, "aerobic", (120, 60, 3, 6), {"GPP", "SPP"}, ("heavy_bag",)),
+    "Rear-Kick Power Singles": ({"kickboxing", "muay_thai"}, "ATP-PCr", (5, 60, 8, 8), {"GPP", "SPP"}, ("heavy_bag",)),
+    "Low-Kick Exit Burst": ({"kickboxing", "muay_thai"}, "ATP-PCr", (6, 60, 8, 8), {"SPP"}, ("partner", "thai_pads")),
+    "Reactive Body-Kick Burst": ({"kickboxing", "muay_thai"}, "ATP-PCr", (6, 60, 8, 8), {"SPP"}, ("partner", "thai_pads")),
+    "Check-Return Burst": ({"kickboxing", "muay_thai"}, "ATP-PCr", (5, 60, 8, 8), {"SPP"}, ("partner", "thai_pads")),
+    "Body-Kick Repeatability": ({"kickboxing", "muay_thai"}, "glycolytic", (45, 45, 6, 8), {"GPP", "SPP"}, ("heavy_bag",)),
+    "Switch-Kick Repeatability": ({"muay_thai"}, "glycolytic", (45, 45, 6, 8), {"SPP"}, ("partner", "thai_pads")),
+    "Target-Choice Kick Rounds": ({"kickboxing", "muay_thai"}, "glycolytic", (120, 60, 4, 8), {"SPP"}, ("partner", "thai_pads")),
+    "Range-Adaptive Kick Rounds": ({"kickboxing", "muay_thai"}, "glycolytic", (180, 60, 3, 8), {"SPP"}, ("partner", "thai_pads")),
 }
 
-REMOVED_CORE_DRILLS = {
-    "Band-Resisted Low Kick Power Complex",
-    "Band-Resisted Calf Kick Complex",
-    "Cartwheel Kick",
-    "Hammer Kick",
-    "Crescent Kick Precision",
-    "Ax Kick Precision Drill",
-    "Flying Knee Drill",
-    "Jumping Roundhouse",
-    "Scoop Kick Counter",
-    "Capoeira Kick Flow",
+SUPERSEDED = {
+    "Switch-Side Rhythm", "Interception Kick Burst", "Dutch Target Call",
+    "Low-High Decision Rounds", "Kick-Punch Reposition", "Long-to-Clinch Transition",
+    "Kick Recoil Quality Rounds", "Pressure-Kicker Rounds", "Switch-Kick Power Bursts",
+    "Kicker's Switch Stance March",
 }
+FORBIDDEN_DRIFT = {"pressure_fighter", "distance_striker", "counter_striker", "brawler", "clinch_fighter", "clinch"}
 
 
-def _bank_by_name() -> dict[str, dict]:
-    data = json.loads(BANK_PATH.read_text(encoding="utf-8"))
-    return {item["name"]: item for item in data}
+def _bank():
+    return json.loads(BANK_PATH.read_text(encoding="utf-8"))
 
 
-def test_kicker_batch_2_has_the_approved_behaviour_led_doses():
-    by_name = _bank_by_name()
-
-    assert Counter(dose[0] for dose in EXPECTED_KICKER_BATCH_2.values()) == {
-        "aerobic": 3,
-        "ATP-PCr": 5,
-        "glycolytic": 8,
-    }
-    for name, (system, work_sec, rest_sec, rounds, rpe) in EXPECTED_KICKER_BATCH_2.items():
-        item = by_name[name]
-        assert "kicker" in item["tags"]
-        assert (item["system"], item["work_sec"], item["rest_sec"], item["rounds"], item["rpe"]) == (
-            system,
-            work_sec,
-            rest_sec,
-            rounds,
-            rpe,
-        )
+def _slice():
+    return {item["name"]: item for item in _bank() if "kicker" in item.get("tags", []) and ({"kickboxing", "muay_thai"} & set(item["tags"]))}
 
 
-def test_kicker_batch_2_removes_niche_and_resisted_core_drills():
-    by_name = _bank_by_name()
-
-    assert REMOVED_CORE_DRILLS.isdisjoint(by_name)
-
-
-def test_kicker_batch_2_carries_reaction_recovery_and_technical_stop_rules():
-    by_name = _bank_by_name()
-
-    assert "No target means no kick" in by_name["Reactive Body-Kick Burst"]["notes"]
-    assert "exit the opponent’s return line" in by_name["Low-Kick Exit Burst"]["notes"]
-    assert "ready to defend another entry" in by_name["Interception Kick Burst"]["notes"]
-    assert "Reduce output" in by_name["Body-Kick Repeatability"]["notes"]
-    assert "Stop the set" in by_name["Kick Recoil Quality Rounds"]["notes"]
+def test_exact_kickboxing_muay_thai_kicker_slice_and_metadata():
+    entries = _slice()
+    assert set(entries) == set(EXPECTED)
+    assert Counter(item["system"] for item in entries.values()) == {"aerobic": 4, "ATP-PCr": 4, "glycolytic": 4}
+    for name, (sports, system, dose, phases, equipment) in EXPECTED.items():
+        item = entries[name]
+        assert set(item["tags"]) & {"kickboxing", "muay_thai", "mma"} == sports
+        assert item["system"] == system
+        assert (item["work_sec"], item["rest_sec"], item["rounds"], item["rpe"]) == dose
+        assert set(item["phases"]) == phases
+        assert tuple(item["equipment"]) == equipment
 
 
-def _reachable_kicker_batch(equipment: list[str]) -> dict[str, set[str]]:
-    access = set(normalize_athlete_equipment_list(equipment))
-    by_system: dict[str, set[str]] = {"aerobic": set(), "ATP-PCr": set(), "glycolytic": set()}
-    for name in EXPECTED_KICKER_BATCH_2:
-        item = _bank_by_name()[name]
-        required = set(normalize_equipment_list(item.get("equipment", [])))
-        if required.issubset(access):
-            by_system[item["system"]].add(name)
-    return by_system
+def test_gpp_and_spp_architecture_is_meaningful():
+    entries = _slice()
+    required_gpp = {"Kick Recoil Flow", "Teep Range Reset", "Kick & Exit Flow", "Bilateral Round-Kick Flow", "Rear-Kick Power Singles", "Body-Kick Repeatability"}
+    assert {name for name, item in entries.items() if "GPP" in item["phases"]} == required_gpp
+    assert all("SPP" in item["phases"] for item in entries.values())
+    assert {item["system"] for item in entries.values() if "GPP" in item["phases"]} == {"aerobic", "ATP-PCr", "glycolytic"}
+    assert {item["system"] for item in entries.values() if "SPP" in item["phases"]} == {"aerobic", "ATP-PCr", "glycolytic"}
 
 
-def test_kicker_batch_2_equipment_reachability_matches_realistic_profiles():
-    solo_bag_profiles = [
-        ["punching bag"],
-        ["bodyweight", "punching bag"],
-        ["heavy bag"],
-    ]
-    for equipment in solo_bag_profiles:
-        reachable = _reachable_kicker_batch(equipment)
-        assert "Switch-Side Rhythm" in reachable["aerobic"]
-        assert "Rear-Kick Power Singles" in reachable["ATP-PCr"]
-        assert "Body-Kick Repeatability" in reachable["glycolytic"]
+def test_doses_quality_rules_and_representative_decisions_are_coherent():
+    for item in _slice().values():
+        if item["system"] == "aerobic":
+            assert 120 <= item["work_sec"] <= 180 and item["rest_sec"] == 60 and item["rpe"] in {5, 6}
+            assert item["lactate_load"] == "low"
+        elif item["system"] == "ATP-PCr":
+            assert 4 <= item["work_sec"] <= 7 and 60 <= item["rest_sec"] <= 90 and 6 <= item["rounds"] <= 8
+            assert item["rpe"] == 8 and item["lactate_load"] == "low"
+        else:
+            assert 30 <= item["work_sec"] <= 180 and item["rest_sec"] < item["work_sec"] * 2 and item["rpe"] in {7, 8}
+        if item["system"] != "ATP-PCr":
+            notes = item["notes"].lower()
+            assert ("reduce" in notes or "stop" in notes) and "stance" in notes
+    for name in ("Reactive Body-Kick Burst", "Check-Return Burst", "Target-Choice Kick Rounds", "Range-Adaptive Kick Rounds"):
+        assert _slice()[name]["equipment"] == ["partner", "thai_pads"]
+    assert "No target means no kick" in _slice()["Reactive Body-Kick Burst"]["notes"]
 
-    partner_reachable = _reachable_kicker_batch(["partner", "thai pads"])
-    assert all(partner_reachable[system] for system in ("aerobic", "ATP-PCr", "glycolytic"))
 
-    intended_profiles = [
-        _reachable_kicker_batch(["bodyweight"]),
-        _reachable_kicker_batch(["heavy bag"]),
-        partner_reachable,
-    ]
-    reachable_names = {name for profile in intended_profiles for names in profile.values() for name in names}
-    assert reachable_names == set(EXPECTED_KICKER_BATCH_2)
+def test_legacy_and_tactical_overlap_are_removed():
+    all_names = {item["name"] for item in _bank()}
+    assert SUPERSEDED.isdisjoint(all_names)
+    for item in _slice().values():
+        assert FORBIDDEN_DRIFT.isdisjoint(item["tags"]), item["name"]
+        blob = f'{item["name"]} {item["modality"]} {item["notes"]}'.lower()
+        assert "jab-cross" not in blob and "clinch" not in blob and "walk-down" not in blob and "trapping" not in blob
 
-    minimal_reachable = _reachable_kicker_batch([])
-    assert minimal_reachable == {
-        "aerobic": {"Teep Range Reset"},
-        "ATP-PCr": set(),
-        "glycolytic": set(),
-    }
+
+def test_equipment_and_mechanical_tags_follow_runtime_conventions():
+    valid = set(known_equipment)
+    for item in _slice().values():
+        assert set(item["equipment"]) <= valid
+        mechanical = [tag for tag in item["tags"] if tag.startswith("mech_")]
+        assert len(mechanical) == len(set(mechanical))
+        assert set(mechanical) == set(item["mechanical_risk_tags"])
+        assert len(item["mechanical_risk_tags"]) == len(set(item["mechanical_risk_tags"]))
+
+
+def test_existing_selector_surfaces_kicker_for_both_sports_and_phases():
+    expected = set(EXPECTED)
+    for sport in ("kickboxing", "muay_thai"):
+        flags = {
+            "sport": sport, "style_technical": [sport], "style_tactical": ["Kicker"],
+            "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low",
+            "equipment": ["heavy bag", "partner", "thai pads"], "training_frequency": 5,
+            "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35,
+            "injuries": [], "restrictions": [],
+        }
+        for phase in ("GPP", "SPP"):
+            conditioning._style_conditioning_bank_cache = None
+            result = conditioning.generate_conditioning_block({**flags, "phase": phase})
+            selected = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]
+            assert set(selected) & expected, (sport, phase, selected)
