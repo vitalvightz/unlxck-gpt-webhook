@@ -4,7 +4,8 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from api.compliance_guards import require_onboarding_compliance
+from api.compliance import evaluate_profile_compliance
+from api.compliance_guards import require_onboarding_compliance, strip_health_intake_fields
 from api.minor_safety import strip_minor_target_weight
 from api.models import (
     ComplianceAcceptanceRequest,
@@ -130,6 +131,13 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         # rather than only in the client's routing.
         require_onboarding_compliance(profile)
         update_data = update.model_dump(exclude_unset=True)
+        if (
+            not evaluate_profile_compliance(profile).health_consent_granted
+            and isinstance(update_data.get("onboarding_draft"), dict)
+        ):
+            update_data["onboarding_draft"] = strip_health_intake_fields(
+                update_data["onboarding_draft"]
+            )
         if profile.is_minor and isinstance(update_data.get("onboarding_draft"), dict):
             # The draft carries the same athlete block as the intake, so a
             # target weight would otherwise persist here for an under-18 even

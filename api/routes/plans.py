@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 
+from api.compliance import evaluate_profile_compliance
 from api.contracts.training_day import resolve_training_day_str
 from api.models import (
     PlanCompletionsResponse,
@@ -83,6 +84,8 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         plans remain read-only and cannot re-seed historical injuries.
         """
         owner_id = str(plan_row.get("athlete_id") or profile.athlete_id)
+        if not evaluate_profile_compliance(profile).health_consent_granted:
+            return resolve_rehab_label_policy(store, athlete_id=owner_id)
         try:
             active_plan = resolve_active_plan(
                 store,

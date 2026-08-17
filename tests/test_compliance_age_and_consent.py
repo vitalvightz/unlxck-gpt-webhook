@@ -18,6 +18,7 @@ from api.compliance import (
     CODE_TERMS_REQUIRED,
     CODE_UNDER_MINIMUM_AGE,
     HEALTH_CONSENT_VERSION,
+    HEALTH_CONSENT_REQUIRED_MESSAGE,
     MINIMUM_SIGNUP_AGE_YEARS,
     TERMS_VERSION,
     age_band,
@@ -437,6 +438,32 @@ def test_health_data_writes_require_consent(method, path, payload):
 
     assert response.status_code == 403
     assert response.json()["detail"]["code"] == CODE_HEALTH_CONSENT_REQUIRED
+    assert response.json()["detail"]["message"] == HEALTH_CONSENT_REQUIRED_MESSAGE
+
+
+def test_onboarding_without_health_consent_keeps_only_non_health_fields():
+    client, store, _ = _build_client()
+    withdraw_health_consent(store)
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers=ATHLETE,
+        json={"onboarding_draft": {
+            "current_step": 3,
+            "fight_date": "2026-10-01",
+            "fatigue_level": "high",
+            "injuries": "sore knee",
+            "guided_injuries": [{"area": "knee"}],
+            "athlete": {"full_name": "Ari", "weight_kg": 72, "target_weight_kg": 68},
+        }},
+    )
+
+    assert response.status_code == 200
+    draft = store.profiles["athlete-1"]["onboarding_draft"]
+    assert draft["current_step"] == 3
+    assert draft["fight_date"] == "2026-10-01"
+    assert draft["athlete"] == {"full_name": "Ari"}
+    assert not ({"fatigue_level", "injuries", "guided_injuries"} & draft.keys())
 
 
 def test_withdrawal_stops_new_health_processing():

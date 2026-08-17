@@ -33,6 +33,28 @@ from .compliance import (
     evaluate_profile_compliance,
 )
 
+# Intake is a mixed endpoint. Keep ordinary camp setup usable after consent is
+# withdrawn, but never persist these health/readiness inputs from a bypassed UI.
+HEALTH_INTAKE_FIELDS = frozenset({
+    "fatigue_level", "injuries", "guided_injury", "guided_injuries",
+    "pain", "pain_level", "soreness", "recovery", "sleep", "sleep_quality",
+    "medical", "medical_conditions", "medical_restrictions", "restrictions",
+    "current_weight_kg", "target_weight_kg", "target_weight_range_kg",
+    "bodyweight", "body_weight",
+})
+HEALTH_ATHLETE_FIELDS = frozenset({"weight_kg", "target_weight_kg"})
+
+
+def strip_health_intake_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return an intake draft with only non-health fields retained."""
+    cleaned = {key: value for key, value in payload.items() if key not in HEALTH_INTAKE_FIELDS}
+    athlete = cleaned.get("athlete")
+    if isinstance(athlete, dict):
+        cleaned["athlete"] = {
+            key: value for key, value in athlete.items() if key not in HEALTH_ATHLETE_FIELDS
+        }
+    return cleaned
+
 
 def _forbidden(code: str, message: str, **extra: Any) -> HTTPException:
     return HTTPException(

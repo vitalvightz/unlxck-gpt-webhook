@@ -2,7 +2,9 @@
 
 import { type FormEvent, useId, useState } from "react";
 
+import { useAppSession } from "@/components/auth-provider";
 import { EffortSlider, FaceScale } from "@/components/rating-controls";
+import { hasHealthDataConsent } from "@/lib/compliance";
 import { sessionStatusLabel } from "@/lib/history";
 import {
   completionRequiresModificationReason,
@@ -50,6 +52,8 @@ export function SessionCompletionForm({
   onSubmit: (status: Exclude<CompletionIntent, null>, payload: CompletionFormPayload) => Promise<void>;
   showStatusPicker?: boolean;
 }) {
+  const { me } = useAppSession();
+  const canCollectPain = hasHealthDataConsent(me);
   const fieldId = useId();
   const [pickedIntent, setPickedIntent] = useState<CompletionIntent>(intent);
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
@@ -78,8 +82,8 @@ export function SessionCompletionForm({
       setError(getCompletionReasonError(activeIntent));
       return;
     }
-    if (needsReviewFields && (sessionRpe === null || painAfter === null)) {
-      setError("Add session RPE and pain-after before saving.");
+    if (needsReviewFields && (sessionRpe === null || (canCollectPain && painAfter === null))) {
+      setError(canCollectPain ? "Add session RPE and pain-after before saving." : "Add session RPE before saving.");
       return;
     }
     await onSubmit(activeIntent, {
@@ -122,10 +126,10 @@ export function SessionCompletionForm({
               onChange={setSessionRpe}
             />
           </div>
-          <div className="field">
+          {canCollectPain ? <div className="field">
             <span>Pain after</span>
             <FaceScale value={painAfter} onChange={setPainAfter} />
-          </div>
+          </div> : null}
         </div>
       ) : null}
       {needsReason && activeIntent ? (
