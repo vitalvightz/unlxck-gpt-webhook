@@ -20,10 +20,10 @@ export const UNDER_MINIMUM_AGE_MESSAGE = `UNLXCK accounts are for athletes aged 
 export const DATE_OF_BIRTH_REQUIRED_MESSAGE = "Enter your date of birth to continue.";
 export const DATE_OF_BIRTH_INVALID_MESSAGE = "Enter your date of birth as a valid date.";
 
-export const TERMS_CONSENT_LABEL = "I have read and accept the Terms of Use.";
-// Signup runs the checkbox label through an uppercase, letter-spaced style, so
-// every word costs a line on a phone. The Terms link sits immediately beside it.
-export const SIGNUP_TERMS_CONSENT_LABEL = "I accept the Terms of Use.";
+export const TERMS_CONSENT_LEAD = "I accept the";
+export const TERMS_LINK_LABEL = "Terms of Use";
+export const TERMS_CONSENT_LABEL = `${TERMS_CONSENT_LEAD} ${TERMS_LINK_LABEL}.`;
+export const SIGNUP_TERMS_CONSENT_LABEL = TERMS_CONSENT_LABEL;
 
 /**
  * Age-appropriate privacy wording.
@@ -63,14 +63,14 @@ type ConsentCopy = {
 // Identical across bands: it is already as short and plain as it can be, and
 // saying it the same way everywhere is what makes it read as a standing promise
 // rather than band-specific small print.
-const SIGNUP_CONSENT_HELP = "Optional. You can change this anytime in Settings.";
+const SIGNUP_CONSENT_LABEL =
+  "I agree to UNLXCK using things like injuries, soreness, sleep and bodyweight to personalise my training.";
+const SIGNUP_CONSENT_HELP = "Optional · Change anytime in Settings";
 
 const EARLY_TEEN_COPY: ConsentCopy = {
-  // Names the categories inline rather than saying "health data": a 13-15
-  // reader should not have to follow a link to find out what they are agreeing
-  // to. This is the one place the short form stays longer than the adult one.
-  signupHealthConsentLabel:
-    "I agree to UNLXCK using things like injuries, soreness, sleep and bodyweight to personalise my training.",
+  // Names the categories inline rather than saying "health data", so an athlete
+  // does not have to follow a link to understand what they are agreeing to.
+  signupHealthConsentLabel: SIGNUP_CONSENT_LABEL,
   signupHealthConsentHelp: SIGNUP_CONSENT_HELP,
   healthConsentLabel:
     "Yes, UNLXCK can use my health information to plan my training. That means things like injuries, pain, how sore or tired I am, how I slept, and my bodyweight.",
@@ -89,8 +89,7 @@ const CONSENT_COPY: Record<AgeBand, ConsentCopy> = {
   under_13: EARLY_TEEN_COPY,
   "13-15": EARLY_TEEN_COPY,
   "16-17": {
-    signupHealthConsentLabel:
-      "I agree to UNLXCK using my health data to personalise my training and safety guidance.",
+    signupHealthConsentLabel: SIGNUP_CONSENT_LABEL,
     signupHealthConsentHelp: SIGNUP_CONSENT_HELP,
     healthConsentLabel:
       "I consent to UNLXCK using my health information — injuries, pain, soreness, fatigue, sleep, readiness and bodyweight — to personalise my training and safety guidance.",
@@ -102,8 +101,7 @@ const CONSENT_COPY: Record<AgeBand, ConsentCopy> = {
       "UNLXCK uses your health information to personalise training and apply safety rules. It is not visible to other users, and your consent is optional and withdrawable.",
   },
   adult: {
-    signupHealthConsentLabel:
-      "I agree to UNLXCK using my health data to personalise my training and safety guidance.",
+    signupHealthConsentLabel: SIGNUP_CONSENT_LABEL,
     signupHealthConsentHelp: SIGNUP_CONSENT_HELP,
     healthConsentLabel:
       "I explicitly consent to UNLXCK using my health information (injuries, pain, soreness, fatigue, sleep, readiness and bodyweight) to personalise my training and safety guidance.",

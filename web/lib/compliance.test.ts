@@ -298,20 +298,19 @@ test("signup wording is materially shorter than the Settings wording", () => {
       `${band}: signup copy should be well under half the detailed copy`,
     );
   }
-  assert.ok(SIGNUP_TERMS_CONSENT_LABEL.length < TERMS_CONSENT_LABEL.length);
+  assert.equal(SIGNUP_TERMS_CONSENT_LABEL, TERMS_CONSENT_LABEL);
 });
 
-test("13-15 gets the simpler wording and names the categories inline", () => {
+test("every age band gets the plain signup wording and names the categories inline", () => {
   const early = consentCopyForBand("13-15").signupHealthConsentLabel;
   const adult = consentCopyForBand("adult").signupHealthConsentLabel;
 
-  assert.notEqual(early, adult);
-  // A 13-year-old should not have to follow a link to learn what "health data"
-  // covers, so the short form spells it out.
+  assert.equal(early, adult);
+  // No athlete should have to follow a link to learn what "health data" covers.
   for (const category of [/injur/i, /soreness/i, /sleep/i, /bodyweight/i]) {
-    assert.ok(category.test(early), `13-15 signup label should name ${category}`);
+    assert.ok(category.test(early), `signup label should name ${category}`);
   }
-  assert.ok(!/health data/i.test(early), "13-15 wording should avoid the abstract term");
+  assert.ok(!/health data/i.test(early), "signup wording should avoid the abstract term");
 });
 
 test("16-17 uses the same concise structure as adults", () => {
