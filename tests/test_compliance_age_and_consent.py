@@ -285,6 +285,58 @@ def test_compliance_state_survives_a_profile_update():
     assert profile["health_consent_granted"] is True
 
 
+def test_declining_health_consent_still_leaves_a_usable_account():
+    """Health consent must not be a precondition of having an account.
+
+    Consent that is a condition of the service is not freely given (UK GDPR
+    Art. 7(4)), which would invalidate the Article 9(2)(a) basis it exists to
+    establish. So an athlete can supply their age, accept the Terms, decline
+    health processing, and still hold an account and finish onboarding.
+    """
+    client, store, _ = _build_client()
+    clear_compliance(store)
+
+    response = client.post(
+        "/api/me/compliance",
+        headers=ATHLETE,
+        json={"date_of_birth": "1996-05-04", "accept_terms": True},
+    )
+
+    assert response.status_code == 200
+    profile = response.json()["profile"]
+    assert profile["terms_accepted"] is True
+    assert profile["health_consent_granted"] is False
+    # Never consented is not the same as withdrew — the audit trail keeps them
+    # apart, so declining at signup must not write a withdrawal timestamp.
+    assert profile["health_consent_at"] is None
+    assert profile["health_consent_withdrawn_at"] is None
+
+    # The account works: onboarding proceeds, only the health-dependent
+    # features are unavailable.
+    assert (
+        client.patch(
+            "/api/onboarding/draft",
+            headers=ATHLETE,
+            json={"onboarding_draft": {"current_step": 1}},
+        ).status_code
+        == 200
+    )
+    assert client.get("/api/me", headers=ATHLETE).status_code == 200
+
+
+def test_onboarding_completeness_does_not_depend_on_health_consent():
+    state = evaluate_profile_compliance(
+        {
+            "date_of_birth": "1996-05-04",
+            "terms_version": TERMS_VERSION,
+            "terms_accepted_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+
+    assert state.health_consent_granted is False
+    assert state.onboarding_complete is True
+
+
 # ---------------------------------------------------------------------------
 # The gates
 # ---------------------------------------------------------------------------

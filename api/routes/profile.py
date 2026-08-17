@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends
 
 from api.compliance_guards import require_onboarding_compliance
+from api.minor_safety import strip_minor_target_weight
 from api.models import (
     ComplianceAcceptanceRequest,
     MeResponse,
@@ -129,6 +130,13 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         # rather than only in the client's routing.
         require_onboarding_compliance(profile)
         update_data = update.model_dump(exclude_unset=True)
+        if profile.is_minor and isinstance(update_data.get("onboarding_draft"), dict):
+            # The draft carries the same athlete block as the intake, so a
+            # target weight would otherwise persist here for an under-18 even
+            # though generation strips it later.
+            update_data["onboarding_draft"] = strip_minor_target_weight(
+                update_data["onboarding_draft"]
+            )
         updated = store.update_profile(
             profile.athlete_id,
             ProfileUpdateRequest(**update_data),

@@ -9,10 +9,10 @@ import { useAppSession } from "@/components/auth-provider";
 import { recordCompliance } from "@/lib/api";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
-  HEALTH_CONSENT_HELP,
-  HEALTH_CONSENT_LABEL,
   TERMS_CONSENT_LABEL,
+  consentCopyForBand,
   hasHealthDataConsent,
+  provisionalAgeBand,
   requiresComplianceAcceptance,
   validateDateOfBirth,
 } from "@/lib/compliance";
@@ -46,6 +46,11 @@ function ComplianceAcceptance() {
   const needsHealthConsent = !hasHealthDataConsent(me);
   const isPending = requiresComplianceAcceptance(me);
   const dateOfBirthError = needsDateOfBirth ? validateDateOfBirth(dateOfBirth) : null;
+  // Prefer the server's band for an account that already has a date of birth;
+  // fall back to the one being typed so the wording matches the reader either way.
+  const consentCopy = consentCopyForBand(
+    needsDateOfBirth ? provisionalAgeBand(dateOfBirth) : me?.profile.age_band,
+  );
 
   // A non-athlete has no onboarding to gate; send them to their own workspace
   // rather than stranding them on a screen whose only action does not apply.
@@ -159,14 +164,17 @@ function ComplianceAcceptance() {
               checked={healthDataConsent}
               onChange={(event) => setHealthDataConsent(event.target.checked)}
             />
-            <span>{HEALTH_CONSENT_LABEL}</span>
+            <span>{consentCopy.healthConsentLabel}</span>
           </label>
           <p className="muted auth-consent-help">
-            {HEALTH_CONSENT_HELP}{" "}
+            {consentCopy.healthConsentHelp}{" "}
             <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
               Read the Privacy Notice
             </Link>
           </p>
+          {healthDataConsent ? null : (
+            <p className="muted auth-consent-help">{consentCopy.declineNote}</p>
+          )}
         </div>
       ) : null}
 

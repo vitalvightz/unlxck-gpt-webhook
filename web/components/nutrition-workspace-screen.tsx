@@ -168,6 +168,10 @@ function StatusRows({ workspace }: { workspace: NutritionWorkspaceState }) {
 
 export function NutritionWorkspaceScreen() {
   const { session, me, refreshMe } = useAppSession();
+  // Server-derived age band. Under-18s get no weight-cut feature, so the target
+  // weight and the gap-to-target derived from it are not shown; the backend
+  // strips the stored value too.
+  const isMinorAthlete = Boolean(me?.profile.is_minor);
   const { showToast } = useToast();
   const [workspace, setWorkspace] = useState<NutritionWorkspaceState | null>(null);
   const [form, setForm] = useState<NutritionWorkspaceUpdateRequest>(() => emptyUpdateRequest());
@@ -263,9 +267,10 @@ export function NutritionWorkspaceScreen() {
   const latestEntry = workspace ? getLatestBodyweightEntry(workspace.nutrition_monitoring.daily_bodyweight_log) : null;
   const latestEffectiveWeight = workspace ? getLatestEffectiveWeight(workspace) : null;
   const rollingAverage = workspace ? getSevenDayAverage(workspace.nutrition_monitoring.daily_bodyweight_log) : null;
-  const targetGap = workspace
-    ? getTargetGap(latestEffectiveWeight, workspace.shared_camp_context.target_weight_kg)
-    : null;
+  const targetGap =
+    workspace && !isMinorAthlete
+      ? getTargetGap(latestEffectiveWeight, workspace.shared_camp_context.target_weight_kg)
+      : null;
 
   return (
     <RequireAuth>
@@ -312,7 +317,14 @@ export function NutritionWorkspaceScreen() {
                       ["Age", formatNumber(workspace.nutrition_profile.age)],
                       ["Height", formatNumber(workspace.nutrition_profile.height_cm, "cm")],
                       ["Current weight", formatNumber(workspace.shared_camp_context.current_weight_kg, "kg")],
-                      ["Target weight", formatNumber(workspace.shared_camp_context.target_weight_kg, "kg")],
+                      ...(isMinorAthlete
+                        ? []
+                        : [
+                            [
+                              "Target weight",
+                              formatNumber(workspace.shared_camp_context.target_weight_kg, "kg"),
+                            ] as [string, string],
+                          ]),
                     ].map(([label, value]) => (
                       <div key={label} className="review-detail-row">
                         <p className="review-detail-label">{label}</p>

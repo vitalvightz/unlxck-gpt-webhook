@@ -17,6 +17,7 @@ import pytest
 
 from api.minor_safety import (
     MINOR_WEIGHT_CUT_NOTE,
+    strip_minor_target_weight,
     blocked_guidance_reasons,
     contains_blocked_minor_guidance,
     detect_minor_guidance_leakage,
@@ -409,3 +410,96 @@ def test_an_admin_reviewing_a_minors_plan_sees_it_unscrubbed():
 
     assert response.status_code == 200
     assert "Cut water" in response.json()["outputs"]["plan_text"]
+
+
+# ---------------------------------------------------------------------------
+# Data minimisation: no target weight collected from an under-18
+# ---------------------------------------------------------------------------
+
+
+def test_target_weight_is_stripped_from_a_minors_intake_payload():
+    payload = {
+        "athlete": {"full_name": "Junior", "weight_kg": 62.0, "target_weight_kg": 57.0},
+        "shared_camp_context": {"target_weight_kg": 57.0, "target_weight_range_kg": [56.0, 57.5]},
+    }
+
+    cleaned = strip_minor_target_weight(payload)
+
+    assert "target_weight_kg" not in cleaned["athlete"]
+    assert "target_weight_kg" not in cleaned["shared_camp_context"]
+    assert "target_weight_range_kg" not in cleaned["shared_camp_context"]
+    # Current bodyweight survives: it drives macros and hydration, which
+    # under-18 athletes still receive, so it has a purpose of its own.
+    assert cleaned["athlete"]["weight_kg"] == 62.0
+    # The caller's payload is untouched.
+    assert payload["athlete"]["target_weight_kg"] == 57.0
+
+
+def test_stripping_leaves_an_unrelated_payload_alone():
+    payload = {"athlete": {"full_name": "Junior", "weight_kg": 62.0}}
+    assert strip_minor_target_weight(payload) == payload
+    assert strip_minor_target_weight(None) is None
+
+
+def test_a_minors_generation_request_never_stores_a_target_weight():
+    client, store, _ = _build_client()
+    store.record_compliance_acceptance(
+        DEFAULT_ATHLETE_USER.user_id,
+        date_of_birth=_minor_dob(),
+        accept_terms=True,
+        health_data_consent=True,
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers=ATHLETE,
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    # _build_request carries target_weight_kg=70.0; it must not reach the stored
+    # generation payload or the intake derived from it.
+    job = store.generation_jobs[response.json()["job_id"]]
+    assert job["request_payload"]["athlete"]["target_weight_kg"] is None
+    intake = store.get_latest_intake(DEFAULT_ATHLETE_USER.user_id)
+    assert intake["intake"]["athlete"]["target_weight_kg"] is None
+
+
+def test_an_adults_generation_request_keeps_the_target_weight():
+    client, store, _ = _build_client()
+
+    response = client.post(
+        "/api/plans/generate",
+        headers=ATHLETE,
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    job = store.generation_jobs[response.json()["job_id"]]
+    assert job["request_payload"]["athlete"]["target_weight_kg"] == 70.0
+
+
+def test_a_minors_onboarding_draft_never_stores_a_target_weight():
+    client, store, _ = _build_client()
+    store.record_compliance_acceptance(
+        DEFAULT_ATHLETE_USER.user_id,
+        date_of_birth=_minor_dob(),
+        accept_terms=True,
+        health_data_consent=True,
+    )
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers=ATHLETE,
+        json={
+            "onboarding_draft": {
+                "current_step": 2,
+                "athlete": {"full_name": "Junior", "weight_kg": 62.0, "target_weight_kg": 57.0},
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    draft = store.profiles[DEFAULT_ATHLETE_USER.user_id]["onboarding_draft"]
+    assert "target_weight_kg" not in draft["athlete"]
+    assert draft["athlete"]["weight_kg"] == 62.0

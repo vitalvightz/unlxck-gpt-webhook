@@ -21,10 +21,102 @@ export const DATE_OF_BIRTH_REQUIRED_MESSAGE = "Enter your date of birth to conti
 export const DATE_OF_BIRTH_INVALID_MESSAGE = "Enter your date of birth as a valid date.";
 
 export const TERMS_CONSENT_LABEL = "I have read and accept the Terms of Use.";
-export const HEALTH_CONSENT_LABEL =
-  "I explicitly consent to UNLXCK using my health information (injuries, pain, soreness, fatigue, sleep, readiness and bodyweight) to personalise my training and safety guidance.";
-export const HEALTH_CONSENT_HELP =
-  "This is separate from the Terms and you can withdraw it at any time in Settings. Without it, UNLXCK cannot run the features that depend on health information.";
+
+/**
+ * Age-appropriate privacy wording.
+ *
+ * The ICO's Age Appropriate Design Code expects privacy information "suited to
+ * the age of the child", and the children policy asks for simpler explanations
+ * at 13-15 and more mature wording at 16-17. The substance is identical in all
+ * three bands — same data, same purpose, same right to refuse and withdraw —
+ * only the register changes. Shortening it must never mean saying less about
+ * what is collected or what declining costs.
+ *
+ * Keyed on the server-derived `age_band`, with `unknown` falling back to the
+ * 13-15 wording: the plainest version is the safe default when we do not yet
+ * know who is reading it.
+ */
+type AgeBand = "unknown" | "under_13" | "13-15" | "16-17" | "adult";
+
+type ConsentCopy = {
+  healthConsentLabel: string;
+  healthConsentHelp: string;
+  declineNote: string;
+  privacySummary: string;
+};
+
+const EARLY_TEEN_COPY: ConsentCopy = {
+  healthConsentLabel:
+    "Yes, UNLXCK can use my health information to plan my training. That means things like injuries, pain, how sore or tired I am, how I slept, and my bodyweight.",
+  healthConsentHelp:
+    "This is a separate choice from the rules above. You do not have to say yes. If you say yes, we use this information to build your training and to tell you when to stop or take it easier. We do not show it to other users. You can change your mind whenever you want in Settings.",
+  declineNote:
+    "If you say no, you can still have an account. We just cannot build or change your training plan, because that needs this information.",
+  privacySummary:
+    "Your health information is used to plan your training and keep you safe. Only you and the UNLXCK team can see it. You can say no, or change your mind later.",
+};
+
+const CONSENT_COPY: Record<AgeBand, ConsentCopy> = {
+  // A 13-15 reader is the most likely person behind an unresolved band, and the
+  // plainest wording is never wrong for an older reader — only the reverse is.
+  unknown: EARLY_TEEN_COPY,
+  under_13: EARLY_TEEN_COPY,
+  "13-15": EARLY_TEEN_COPY,
+  "16-17": {
+    healthConsentLabel:
+      "I consent to UNLXCK using my health information — injuries, pain, soreness, fatigue, sleep, readiness and bodyweight — to personalise my training and safety guidance.",
+    healthConsentHelp:
+      "This is a separate choice from the Terms and it is optional. We use this information to build and adapt your plan and to restrict training when our safety rules say you should ease off. It is not shared with other users. You can withdraw at any time in Settings.",
+    declineNote:
+      "You can decline and keep your account. Features that depend on health information — plan generation, check-ins and nutrition targets — will not run until you consent.",
+    privacySummary:
+      "UNLXCK uses your health information to personalise training and apply safety rules. It is not visible to other users, and your consent is optional and withdrawable.",
+  },
+  adult: {
+    healthConsentLabel:
+      "I explicitly consent to UNLXCK using my health information (injuries, pain, soreness, fatigue, sleep, readiness and bodyweight) to personalise my training and safety guidance.",
+    healthConsentHelp:
+      "This is separate from the Terms and is optional. You can withdraw it at any time in Settings. Without it, UNLXCK cannot run the features that depend on health information.",
+    declineNote:
+      "Declining does not affect your account. Health-dependent features stay unavailable until consent is given.",
+    privacySummary:
+      "UNLXCK relies on your explicit consent (UK GDPR Art. 9(2)(a)) to process health data for personalised training and safety features.",
+  },
+};
+
+/** Consent wording for a band, defaulting to the plainest version. */
+export function consentCopyForBand(band: string | null | undefined): ConsentCopy {
+  return CONSENT_COPY[(band ?? "unknown") as AgeBand] ?? EARLY_TEEN_COPY;
+}
+
+/**
+ * The band implied by a date of birth still being typed into the signup form.
+ *
+ * Signup has no server verdict yet — the profile does not exist — so the form
+ * derives the band locally purely to pick which wording to show. Nothing is
+ * decided from it: the server re-derives the band from the stored date and owns
+ * every downstream consequence.
+ */
+export function provisionalAgeBand(dateOfBirth: string, today: Date = new Date()): string {
+  const years = ageInYears(dateOfBirth, today);
+  if (years === null) {
+    return "unknown";
+  }
+  if (years < MINIMUM_SIGNUP_AGE_YEARS) {
+    return "under_13";
+  }
+  if (years < 16) {
+    return "13-15";
+  }
+  if (years < ADULT_AGE_YEARS) {
+    return "16-17";
+  }
+  return "adult";
+}
+
+// Adult wording kept as the module-level default for callers with no band.
+export const HEALTH_CONSENT_LABEL = CONSENT_COPY.adult.healthConsentLabel;
+export const HEALTH_CONSENT_HELP = CONSENT_COPY.adult.healthConsentHelp;
 
 /** Machine-readable codes the API returns on a blocked request. */
 export const COMPLIANCE_ERROR_CODES = {

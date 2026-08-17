@@ -20,9 +20,9 @@ import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
-  HEALTH_CONSENT_HELP,
-  HEALTH_CONSENT_LABEL,
   TERMS_CONSENT_LABEL,
+  consentCopyForBand,
+  provisionalAgeBand,
   validateDateOfBirth,
 } from "@/lib/compliance";
 import { PRIVACY_HREF, TERMS_HREF } from "@/lib/legal-documents";
@@ -76,8 +76,17 @@ export function AuthForm({
   // disabling the button here is about giving a clear message — not about being
   // the control.
   const dateOfBirthError = mode === "signup" ? validateDateOfBirth(dateOfBirth) : null;
+  // Health-data consent is deliberately NOT part of this condition. Making it a
+  // precondition of creating an account would make it conditional, and consent
+  // that is a condition of the service is not freely given (UK GDPR Art. 7(4)) —
+  // which would invalidate the very Article 9 basis it exists to establish. An
+  // athlete can decline it, keep their account, and give it later from Settings.
   const isSignupConsentBlocked =
-    mode === "signup" && (dateOfBirthError !== null || !acceptedTerms || !healthDataConsent);
+    mode === "signup" && (dateOfBirthError !== null || !acceptedTerms);
+  // Wording only. The band is derived locally from the date being typed so the
+  // explanation matches the reader before the profile exists; the server
+  // re-derives it from the stored date and owns every actual consequence.
+  const consentCopy = consentCopyForBand(provisionalAgeBand(dateOfBirth));
 
   const handleCaptchaUnavailable = useCallback(() => {
     setError(CAPTCHA_UNAVAILABLE_MESSAGE);
@@ -134,12 +143,6 @@ export function AuthForm({
       }
       if (!acceptedTerms) {
         setError("Accept the Terms of Use to create an account.");
-        return;
-      }
-      if (!healthDataConsent) {
-        setError(
-          "UNLXCK needs your separate health-data consent to personalise training. You can withdraw it later in Settings.",
-        );
         return;
       }
     }
@@ -201,7 +204,10 @@ export function AuthForm({
             await recordCompliance(data.session.access_token, {
               date_of_birth: dateOfBirth,
               accept_terms: true,
-              health_data_consent: true,
+              // Only sent when ticked. Sending `false` would record a
+              // withdrawal, and someone who never consented has not withdrawn —
+              // those are different facts and the audit trail keeps them apart.
+              ...(healthDataConsent ? { health_data_consent: true } : {}),
             });
           } catch (complianceError) {
             setError(
@@ -433,7 +439,8 @@ export function AuthForm({
 
               {/* Kept as its own affirmative tick, never folded into the Terms:
                   UK GDPR Art. 9(2)(a) consent has to be specific and separate,
-                  and a bundled tick would not be valid consent at all. */}
+                  and a bundled tick would not be valid consent at all. It is
+                  also optional — see isSignupConsentBlocked. */}
               <div className="field auth-consent-field">
                 <label className="auth-consent-row" htmlFor="healthDataConsent">
                   <input
@@ -443,16 +450,18 @@ export function AuthForm({
                     checked={healthDataConsent}
                     onChange={(event) => setHealthDataConsent(event.target.checked)}
                     aria-describedby="healthDataConsentHelp"
-                    required
                   />
-                  <span>{HEALTH_CONSENT_LABEL}</span>
+                  <span>{consentCopy.healthConsentLabel}</span>
                 </label>
                 <p id="healthDataConsentHelp" className="muted auth-consent-help">
-                  {HEALTH_CONSENT_HELP}{" "}
+                  {consentCopy.healthConsentHelp}{" "}
                   <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
                     Read the Privacy Notice
                   </Link>
                 </p>
+                {healthDataConsent ? null : (
+                  <p className="muted auth-consent-help">{consentCopy.declineNote}</p>
+                )}
               </div>
             </>
           ) : null}

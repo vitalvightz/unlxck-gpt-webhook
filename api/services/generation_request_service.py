@@ -74,6 +74,16 @@ async def generate_plan_for_current_user(
     # is still current. Checked before any work is scheduled, so a withdrawn
     # consent stops the processing rather than merely hiding its output.
     require_health_feature_access(profile)
+    if profile.is_minor and request_body.athlete.target_weight_kg is not None:
+        # Data minimisation, not just output suppression: an under-18 has no
+        # weight-cut feature, so the field that sizes one has no purpose to be
+        # collected for. Cleared before the payload is hashed, stored as the
+        # generation job request, or written to the intake.
+        request_body.athlete.target_weight_kg = None
+        logger.info(
+            "[generation] request:minor_target_weight_suppressed athlete_id=%s",
+            profile.athlete_id,
+        )
     focus_validation = validate_performance_focus_selections(
         request_body.effective_fight_date,
         key_goals=request_body.key_goals,

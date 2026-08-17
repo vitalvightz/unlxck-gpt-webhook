@@ -11,7 +11,12 @@ import { PushNotificationSettings } from "@/components/push-notification-setting
 import { PrivateTrialGuide } from "@/components/private-trial-guide";
 import { GlobalFeedback } from "@/components/feedback/global-feedback";
 import { ApiError, changeUsername, recordCompliance, updateMe } from "@/lib/api";
-import { hasHealthDataConsent, healthConsentSummary, termsSummary } from "@/lib/compliance";
+import {
+  consentCopyForBand,
+  hasHealthDataConsent,
+  healthConsentSummary,
+  termsSummary,
+} from "@/lib/compliance";
 import { PRIVACY_HREF, TERMS_HREF, buildDataRequestMailto } from "@/lib/legal-documents";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
@@ -375,6 +380,8 @@ export default function SettingsPage() {
   const detectedTimeZone = detectDeviceTimeZone() || me?.profile.athlete_timezone || "Automatic";
   const lastUpdatedLabel = formatDateTime(me?.profile.updated_at);
   const healthConsentGranted = hasHealthDataConsent(me);
+  // Age-appropriate wording for the privacy card, from the server's band.
+  const consentCopy = consentCopyForBand(me?.profile.age_band);
   // A mailto route is only offered once a real privacy address is configured.
   // Linking to the notice's "[ADD PRIVACY EMAIL...]" placeholder would give the
   // athlete a deletion route that silently goes nowhere.
@@ -1138,12 +1145,7 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Last profile update" value={lastUpdatedLabel} />
             <SettingsSummaryItem label="Detected time zone" value={detectedTimeZone} />
           </div>
-          <p className="muted">
-            UNLXCK uses health information — injuries, pain, soreness, fatigue, sleep, readiness
-            and bodyweight — to personalise your training and safety guidance. That processing
-            relies on your explicit consent, which is separate from the Terms and can be
-            withdrawn at any time.
-          </p>
+          <p className="muted">{consentCopy.privacySummary}</p>
           <ul className="summary-list">
             <li>
               <Link href={PRIVACY_HREF} className="auth-text-link">
@@ -1173,10 +1175,7 @@ export default function SettingsPage() {
               any time.
             </p>
           ) : (
-            <p className="muted">
-              Without health-data consent UNLXCK cannot generate or adapt plans, accept readiness
-              or injury check-ins, or update nutrition targets.
-            </p>
+            <p className="muted">{consentCopy.declineNote}</p>
           )}
           <div className="plan-summary-actions settings-action-row">
             <button

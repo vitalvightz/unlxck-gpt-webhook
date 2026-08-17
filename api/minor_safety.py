@@ -141,6 +141,45 @@ def _is_section_heading(stripped: str) -> bool:
     return stripped.startswith("**") and stripped.rstrip().endswith((":**", ":"))
 
 
+# Fields that exist only to size a weight cut. Under the Children's Code a
+# child's data must be minimised to what the active feature actually needs, and
+# for an under-18 the cut feature does not exist — so the input that feeds it is
+# not "collected but unused", it is collected for no lawful purpose at all.
+#
+# Current bodyweight is deliberately NOT in this list: it drives macro and
+# hydration targets, which under-18 athletes still receive, so it has a
+# documented purpose independent of weight cutting.
+MINOR_SUPPRESSED_ATHLETE_FIELDS: tuple[str, ...] = ("target_weight_kg",)
+MINOR_SUPPRESSED_CAMP_FIELDS: tuple[str, ...] = (
+    "target_weight_kg",
+    "target_weight_range_kg",
+)
+
+
+def strip_minor_target_weight(payload: Any) -> Any:
+    """Remove target-weight fields from an athlete-submitted intake payload.
+
+    Applied on write, not on read: the point is that the value is never stored
+    for a minor, so there is nothing to suppress later. Handles the nested
+    ``athlete`` / ``shared_camp_context`` shapes the intake and nutrition
+    workspace use, and leaves anything else untouched.
+    """
+    if not isinstance(payload, dict):
+        return payload
+
+    cleaned = dict(payload)
+    for key in MINOR_SUPPRESSED_ATHLETE_FIELDS:
+        cleaned.pop(key, None)
+    for key in MINOR_SUPPRESSED_CAMP_FIELDS:
+        cleaned.pop(key, None)
+
+    for nested_key in ("athlete", "shared_camp_context", "nutrition_profile"):
+        nested = cleaned.get(nested_key)
+        if isinstance(nested, dict):
+            cleaned[nested_key] = strip_minor_target_weight(nested)
+    return cleaned
+
+
 def minor_safe_stage1_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """A Stage 1 planner payload with the weight-cut inputs neutralised.
 

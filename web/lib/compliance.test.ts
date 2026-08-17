@@ -8,6 +8,8 @@ import {
   TERMS_VERSION,
   UNDER_MINIMUM_AGE_MESSAGE,
   ageInYears,
+  consentCopyForBand,
+  provisionalAgeBand,
   hasHealthDataConsent,
   hasWithdrawnHealthConsent,
   healthConsentSummary,
@@ -132,4 +134,87 @@ test("settings summaries state the recorded version, not a generic phrase", () =
   assert.equal(healthConsentSummary(meFixture()), `Given (v${HEALTH_CONSENT_VERSION})`);
   assert.equal(termsSummary(meFixture()), `Accepted (v${TERMS_VERSION})`);
   assert.equal(termsSummary(meFixture({ terms_accepted: false })), "Not accepted");
+});
+
+
+test("the provisional band tracks the ICO developmental groups", () => {
+  assert.equal(provisionalAgeBand(dobForAge(14), TODAY), "13-15");
+  assert.equal(provisionalAgeBand(dobForAge(15), TODAY), "13-15");
+  assert.equal(provisionalAgeBand(dobForAge(16), TODAY), "16-17");
+  assert.equal(provisionalAgeBand(dobForAge(17), TODAY), "16-17");
+  assert.equal(provisionalAgeBand(dobForAge(18), TODAY), "adult");
+  assert.equal(provisionalAgeBand(dobForAge(12), TODAY), "under_13");
+  assert.equal(provisionalAgeBand("", TODAY), "unknown");
+});
+
+test("each age band gets its own consent wording", () => {
+  const early = consentCopyForBand("13-15");
+  const older = consentCopyForBand("16-17");
+  const adult = consentCopyForBand("adult");
+
+  assert.notEqual(early.healthConsentLabel, older.healthConsentLabel);
+  assert.notEqual(older.healthConsentLabel, adult.healthConsentLabel);
+});
+
+test("an unknown band falls back to the plainest wording", () => {
+  // The plainest version is never wrong for an older reader; the reverse is.
+  assert.deepEqual(consentCopyForBand("unknown"), consentCopyForBand("13-15"));
+  assert.deepEqual(consentCopyForBand(undefined), consentCopyForBand("13-15"));
+  assert.deepEqual(consentCopyForBand("nonsense"), consentCopyForBand("13-15"));
+});
+
+test("the 13-15 wording is plainer than the adult wording", () => {
+  const early = consentCopyForBand("13-15");
+  const adult = consentCopyForBand("adult");
+
+  // Legal register that a 13-year-old should not have to decode.
+  for (const jargon of ["explicitly consent", "UK GDPR", "Art. 9"]) {
+    assert.ok(
+      !early.healthConsentLabel.includes(jargon) && !early.healthConsentHelp.includes(jargon),
+      `early-teen copy should avoid "${jargon}"`,
+    );
+  }
+  assert.ok(adult.privacySummary.includes("Art. 9(2)(a)"));
+});
+
+test("every band still says what is collected, that it is optional, and what declining costs", () => {
+  // Simpler wording must never mean saying less about the substance.
+  for (const band of ["13-15", "16-17", "adult"]) {
+    const copy = consentCopyForBand(band);
+    const all = `${copy.healthConsentLabel} ${copy.healthConsentHelp}`.toLowerCase();
+
+    // The categories of data. Matched as concepts, not exact words: the
+    // early-teen copy says "how I slept", which names sleep perfectly well and
+    // is the plainer phrasing the whole band exists to allow.
+    const categories: Array<[string, RegExp]> = [
+      ["injuries", /injur/],
+      ["sleep", /sleep|slept/],
+      ["bodyweight", /bodyweight|body weight/],
+      ["soreness or fatigue", /sore|tired|fatigue/],
+    ];
+    for (const [name, pattern] of categories) {
+      assert.ok(pattern.test(all), `${band} copy should name ${name}`);
+    }
+    // That it is a choice, and reversible.
+    assert.ok(
+      /do not have to|optional|you can decline/.test(all),
+      `${band} copy should say the consent is optional`,
+    );
+    assert.ok(
+      /change your mind|withdraw/.test(all),
+      `${band} copy should say it can be withdrawn`,
+    );
+    // What refusing means.
+    assert.ok(copy.declineNote.length > 0, `${band} copy should explain declining`);
+  }
+});
+
+test("declining health consent never blocks the account in any band", () => {
+  for (const band of ["13-15", "16-17", "adult"]) {
+    const note = consentCopyForBand(band).declineNote.toLowerCase();
+    assert.ok(
+      /still have an account|keep your account|does not affect your account/.test(note),
+      `${band} decline note should confirm the account survives`,
+    );
+  }
 });
