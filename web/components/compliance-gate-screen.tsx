@@ -45,8 +45,7 @@ function ComplianceAcceptance() {
   const canContinue =
     !isSubmitting &&
     !dateOfBirthError &&
-    (!needsTerms || acceptedTerms) &&
-    (!needsHealthConsent || healthDataConsent);
+    (!needsTerms || acceptedTerms);
 
   // A non-athlete has no onboarding to gate; send them to their own workspace
   // rather than stranding them on a screen whose only action does not apply.
@@ -74,10 +73,6 @@ function ComplianceAcceptance() {
     }
     if (needsTerms && !acceptedTerms) {
       setError("Accept the Terms of Use to continue.");
-      return;
-    }
-    if (needsHealthConsent && !healthDataConsent) {
-      setError("Give explicit health data consent to continue to personalised camp generation.");
       return;
     }
     setIsSubmitting(true);
@@ -128,9 +123,6 @@ function ComplianceAcceptance() {
             onChange={(event) => setDateOfBirth(event.target.value)}
             required
           />
-          <p className="muted auth-consent-help">
-            Must be 18+ for full weight-cut protocols.
-          </p>
         </div>
       ) : null}
 
@@ -144,17 +136,18 @@ function ComplianceAcceptance() {
               onChange={(event) => setAcceptedTerms(event.target.checked)}
             />
             <span>
-              I agree to the{" "}
+              I accept the{" "}
               <Link href="/terms" className="auth-text-link" target="_blank">
                 Terms of Use
-              </Link>
-              {" and "}
-              <Link href="/privacy" className="auth-text-link" target="_blank">
-                Privacy Notice
               </Link>
               .
             </span>
           </label>
+          <div className="auth-consent-help">
+            <Link href="/privacy" className="auth-text-link" target="_blank">
+              Privacy Notice
+            </Link>
+          </div>
         </div>
       ) : null}
 

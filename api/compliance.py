@@ -32,7 +32,7 @@ from typing import Any
 TERMS_VERSION = "0.1-pre-launch"
 # HEALTH_CONSENT_VERSION tracks the health-data consent wording shown alongside
 # the Privacy Notice (docs/privacy-notice.md, "Lawful bases").
-HEALTH_CONSENT_VERSION = "1.1"
+HEALTH_CONSENT_VERSION = "1.0"
 
 # PRIVACY_NOTICE_VERSION tracks revisions to the Privacy Notice itself. It is
 # deliberately NOT the same constant as HEALTH_CONSENT_VERSION: the notice can be

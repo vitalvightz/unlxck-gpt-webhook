@@ -11,7 +11,7 @@ import type { MeResponse, ProfileRecord } from "@/lib/types";
 
 /** Version strings mirroring api/compliance.py. Shown next to each consent. */
 export const TERMS_VERSION = "0.1-pre-launch";
-export const HEALTH_CONSENT_VERSION = "1.1";
+export const HEALTH_CONSENT_VERSION = "1.0";
 
 /**
  * The Privacy Notice's own revision, tracked separately from the health-data
