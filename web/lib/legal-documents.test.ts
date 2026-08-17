@@ -223,7 +223,12 @@ test("in-app copy matches the canonical docs when they are present", () => {
 
   for (const [document, file] of present) {
     const markdown = readFileSync(file, "utf8");
-    const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
+    // The canonical Terms number their sections ("## 2. Eligibility"); the
+    // in-app rendering does not, because the numbering carries no meaning once
+    // the sections are cards on a page. Compare on the text alone.
+    const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) =>
+      match[1].trim().replace(/^\d+\.\s*/, ""),
+    );
     const rendered = document.sections.map((section) => section.heading);
 
     for (const heading of headings) {

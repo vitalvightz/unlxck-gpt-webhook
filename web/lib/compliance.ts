@@ -21,6 +21,9 @@ export const DATE_OF_BIRTH_REQUIRED_MESSAGE = "Enter your date of birth to conti
 export const DATE_OF_BIRTH_INVALID_MESSAGE = "Enter your date of birth as a valid date.";
 
 export const TERMS_CONSENT_LABEL = "I have read and accept the Terms of Use.";
+// Signup runs the checkbox label through an uppercase, letter-spaced style, so
+// every word costs a line on a phone. The Terms link sits immediately beside it.
+export const SIGNUP_TERMS_CONSENT_LABEL = "I accept the Terms of Use.";
 
 /**
  * Age-appropriate privacy wording.
@@ -39,13 +42,36 @@ export const TERMS_CONSENT_LABEL = "I have read and accept the Terms of Use.";
 type AgeBand = "unknown" | "under_13" | "13-15" | "16-17" | "adult";
 
 type ConsentCopy = {
+  /**
+   * Signup wording: short enough to read in full on a phone without scrolling
+   * past it. The detail lives one tap away behind the Privacy Notice link that
+   * sits beside the checkbox, and again in Settings once the account exists.
+   */
+  signupHealthConsentLabel: string;
+  signupHealthConsentHelp: string;
+  /**
+   * Full wording, used where there is room to read it and where an athlete goes
+   * specifically to understand or change the decision: Settings → Privacy and
+   * the consent gate. Not shown at signup.
+   */
   healthConsentLabel: string;
   healthConsentHelp: string;
   declineNote: string;
   privacySummary: string;
 };
 
+// Identical across bands: it is already as short and plain as it can be, and
+// saying it the same way everywhere is what makes it read as a standing promise
+// rather than band-specific small print.
+const SIGNUP_CONSENT_HELP = "Optional. You can change this anytime in Settings.";
+
 const EARLY_TEEN_COPY: ConsentCopy = {
+  // Names the categories inline rather than saying "health data": a 13-15
+  // reader should not have to follow a link to find out what they are agreeing
+  // to. This is the one place the short form stays longer than the adult one.
+  signupHealthConsentLabel:
+    "I agree to UNLXCK using things like injuries, soreness, sleep and bodyweight to personalise my training.",
+  signupHealthConsentHelp: SIGNUP_CONSENT_HELP,
   healthConsentLabel:
     "Yes, UNLXCK can use my health information to plan my training. That means things like injuries, pain, how sore or tired I am, how I slept, and my bodyweight.",
   healthConsentHelp:
@@ -63,6 +89,9 @@ const CONSENT_COPY: Record<AgeBand, ConsentCopy> = {
   under_13: EARLY_TEEN_COPY,
   "13-15": EARLY_TEEN_COPY,
   "16-17": {
+    signupHealthConsentLabel:
+      "I agree to UNLXCK using my health data to personalise my training and safety guidance.",
+    signupHealthConsentHelp: SIGNUP_CONSENT_HELP,
     healthConsentLabel:
       "I consent to UNLXCK using my health information — injuries, pain, soreness, fatigue, sleep, readiness and bodyweight — to personalise my training and safety guidance.",
     healthConsentHelp:
@@ -73,6 +102,9 @@ const CONSENT_COPY: Record<AgeBand, ConsentCopy> = {
       "UNLXCK uses your health information to personalise training and apply safety rules. It is not visible to other users, and your consent is optional and withdrawable.",
   },
   adult: {
+    signupHealthConsentLabel:
+      "I agree to UNLXCK using my health data to personalise my training and safety guidance.",
+    signupHealthConsentHelp: SIGNUP_CONSENT_HELP,
     healthConsentLabel:
       "I explicitly consent to UNLXCK using my health information (injuries, pain, soreness, fatigue, sleep, readiness and bodyweight) to personalise my training and safety guidance.",
     healthConsentHelp:
@@ -182,6 +214,34 @@ export function validateDateOfBirth(
   }
   return null;
 }
+
+/**
+ * Why signup cannot proceed yet, or null when it can.
+ *
+ * The mandatory/optional split lives here rather than inside the form so it is
+ * one testable rule instead of a condition duplicated between a disabled button
+ * and a submit handler. Health-data consent is deliberately absent: making it a
+ * condition of getting an account would make it not freely given (UK GDPR
+ * Art. 7(4)) and invalidate the Article 9(2)(a) basis it establishes.
+ *
+ * Client-side courtesy only — the backend and a Postgres trigger both reject an
+ * under-13 signup, and the server stamps every consent record.
+ */
+export function signupConsentBlockReason(
+  input: { dateOfBirth: string; acceptedTerms: boolean },
+  today: Date = new Date(),
+): string | null {
+  const dateOfBirthError = validateDateOfBirth(input.dateOfBirth, today);
+  if (dateOfBirthError) {
+    return dateOfBirthError;
+  }
+  if (!input.acceptedTerms) {
+    return TERMS_REQUIRED_MESSAGE;
+  }
+  return null;
+}
+
+export const TERMS_REQUIRED_MESSAGE = "Accept the Terms of Use to create an account.";
 
 function profileOf(me: MeResponse | null): ProfileRecord | null {
   return me?.profile ?? null;
