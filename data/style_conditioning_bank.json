@@ -5175,6 +5175,7 @@
       "bodyweight"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "aerobic",
@@ -5192,7 +5193,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "notes": "From stance, teep into open space, retract cleanly, restore stance and regain long range before the next repetition.",
+    "notes": "Use a basic teep to control range. Retract cleanly, restore stance and regain long range before repeating. Reduce output if recoil, balance or stance quality deteriorates.",
     "work_sec": 180,
     "rest_sec": 60,
     "rounds": 3,
@@ -5214,6 +5215,7 @@
       "thai_pads"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "aerobic",
@@ -5232,7 +5234,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "notes": "Score with a low or body kick, recover the leg, then move off the return line and restore stance.",
+    "notes": "Land a low or body kick, recoil, leave the return line and restore stance before repeating. Reduce output if recoil, balance, accuracy or stance quality deteriorates.",
     "work_sec": 180,
     "rest_sec": 60,
     "rounds": 3,
@@ -5248,22 +5250,22 @@
     ]
   },
   {
-    "name": "Switch-Side Rhythm",
+    "name": "Bilateral Round-Kick Flow",
     "equipment": [
-      "punching_bag"
+      "heavy_bag"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "aerobic",
-    "modality": "bilateral kicking rhythm",
+    "modality": "bilateral round-kick technical flow",
     "duration": "2min work, 1min rest x 3 rounds",
     "intensity": "moderate",
     "tags": [
       "kicker",
       "kickboxing",
       "muay_thai",
-      "switch_kick",
       "coordination",
       "balance",
       "skill_refinement",
@@ -5272,7 +5274,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability"
     ],
-    "notes": "Use controlled movement and kick efficiently from both sides. Keep the rhythm relaxed and finish every kick in stance.",
+    "notes": "Kick the bag with controlled round kicks from both sides. Recoil and restore stance after every kick; do not chase volume. Reduce output if support-leg balance, accuracy or stance quality deteriorates.",
     "work_sec": 120,
     "rest_sec": 60,
     "rounds": 3,
@@ -5290,9 +5292,10 @@
   {
     "name": "Rear-Kick Power Singles",
     "equipment": [
-      "punching_bag"
+      "heavy_bag"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "ATP-PCr",
@@ -5361,7 +5364,7 @@
       "mech_ballistic",
       "mech_reactive"
     ],
-    "notes": "Partner moves and presents a target unpredictably. Recognise, position, kick explosively and recover stance. No target means no kick.",
+    "notes": "The holder moves and presents an actual body target. Recognise the opportunity, kick explosively, recoil and restore stance. No target means no kick.",
     "work_sec": 6,
     "rest_sec": 60,
     "rounds": 8,
@@ -5454,7 +5457,7 @@
       "mech_ballistic",
       "mech_reactive"
     ],
-    "notes": "Read the kick cue, check, return immediately with a kick, then reset in stance.",
+    "notes": "Read the kick cue, check, return immediately with a clean kick, then recover a balanced stance. Success means a clean kick return and stance recovery, not merely fast counter timing.",
     "work_sec": 5,
     "rest_sec": 60,
     "rounds": 8,
@@ -5488,7 +5491,6 @@
     "tags": [
       "kicker",
       "mma",
-      "kickboxing",
       "reactive",
       "visual_processing",
       "explosive",
@@ -5522,60 +5524,12 @@
     ]
   },
   {
-    "name": "Dutch Target Call",
-    "equipment": [
-      "partner",
-      "thai_pads"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "reactive punch-to-kick combinations",
-    "duration": "2min work, 1min rest x 4 rounds",
-    "intensity": "high",
-    "tags": [
-      "kicker",
-      "kickboxing",
-      "reactive",
-      "visual_processing",
-      "low_kick",
-      "body_kick",
-      "mech_upper_press",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_acceleration",
-      "mech_ballistic",
-      "mech_reactive",
-      "mech_upper_press"
-    ],
-    "notes": "Throw jab-cross. The pad holder then presents a low or body target. Select the kick, recover stance and move.",
-    "work_sec": 120,
-    "rest_sec": 60,
-    "rounds": 4,
-    "rpe": 8,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_acceleration",
-      "mech_ballistic",
-      "mech_reactive",
-      "mech_upper_press"
-    ]
-  },
-  {
     "name": "Body-Kick Repeatability",
     "equipment": [
       "heavy_bag"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
     "system": "glycolytic",
@@ -5594,7 +5548,7 @@
       "mech_trunk_stability",
       "mech_systemic_fatigue"
     ],
-    "notes": "Move under control and take repeated body-kick opportunities. Reduce output if recoil slows or kicks consistently finish out of stance.",
+    "notes": "Take repeated realistic body-kick opportunities. Reduce or stop output if recoil slows, support-leg balance deteriorates, accuracy falls, or stance cannot be restored.",
     "work_sec": 45,
     "rest_sec": 45,
     "rounds": 6,
@@ -5635,7 +5589,7 @@
       "mech_trunk_stability",
       "mech_systemic_fatigue"
     ],
-    "notes": "Repeat switch kicks from controlled movement. Reduce output if the switch rhythm, recoil or stance breaks down.",
+    "notes": "Repeat switch kicks from controlled movement. Reduce or stop output if switch rhythm or recoil slows, support-leg balance or accuracy deteriorates, the athlete becomes square, or stance cannot be restored.",
     "work_sec": 45,
     "rest_sec": 45,
     "rounds": 6,
@@ -5652,7 +5606,7 @@
     ]
   },
   {
-    "name": "Low-High Decision Rounds",
+    "name": "Target-Choice Kick Rounds",
     "equipment": [
       "partner",
       "thai_pads"
@@ -5661,13 +5615,13 @@
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "reactive kick selection",
+    "modality": "target-choice kick repeatability",
     "duration": "2min work, 1min rest x 4 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
-      "muay_thai",
       "kickboxing",
+      "muay_thai",
       "reactive",
       "visual_processing",
       "low_kick",
@@ -5681,7 +5635,7 @@
       "mech_reactive",
       "mech_systemic_fatigue"
     ],
-    "notes": "Use the same initial presentation. Read the changing pad cue and choose the correct low, body or head target. Recover stance after every kick.",
+    "notes": "The holder presents a meaningful low, body or high pad target. Read it, select the appropriate kick, recoil and restore stance. Reduce feed density if recoil slows, support-leg balance or accuracy deteriorates, the athlete becomes square, or stance cannot be restored.",
     "work_sec": 120,
     "rest_sec": 60,
     "rounds": 4,
@@ -5715,7 +5669,6 @@
     "intensity": "high",
     "tags": [
       "kicker",
-      "kickboxing",
       "mma",
       "footwork",
       "coordination",
@@ -5747,51 +5700,42 @@
     ]
   },
   {
-    "name": "Long-to-Clinch Transition",
+    "name": "Kick Recoil Flow",
     "equipment": [
-      "partner",
-      "thai_pads"
+      "heavy_bag"
     ],
     "phases": [
+      "GPP",
       "SPP"
     ],
-    "system": "glycolytic",
-    "modality": "long-range to clinch transition",
-    "duration": "2min work, 1min rest x 4 rounds",
-    "intensity": "high",
+    "system": "aerobic",
+    "modality": "kick recoil technical flow",
+    "duration": "3min work, 1min rest x 3 rounds",
+    "intensity": "moderate",
     "tags": [
       "kicker",
+      "kickboxing",
       "muay_thai",
-      "teep",
-      "clinch",
-      "reactive",
-      "visual_processing",
+      "skill_refinement",
+      "balance",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_acceleration",
-      "mech_ballistic",
-      "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_trunk_stability"
     ],
-    "notes": "Use a teep or long kick. When the partner advances, recover stance and transition to a controlled knee or clinch position.",
-    "work_sec": 120,
+    "notes": "Use controlled low or body kicks. Recoil cleanly, regain balance and restore stance before repeating; never rush volume. Reduce or stop output if recoil, support-leg balance, accuracy or stance quality deteriorates.",
+    "work_sec": 180,
     "rest_sec": 60,
-    "rounds": 4,
-    "rpe": 8,
+    "rounds": 3,
+    "rpe": 6,
     "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "moderate",
+    "lactate_load": "low",
+    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_acceleration",
-      "mech_ballistic",
-      "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_trunk_stability"
     ]
   },
   {
@@ -5809,8 +5753,6 @@
     "intensity": "moderate",
     "tags": [
       "kicker",
-      "kickboxing",
-      "muay_thai",
       "mma",
       "skill_refinement",
       "balance",
@@ -5837,7 +5779,7 @@
     ]
   },
   {
-    "name": "Pressure-Kicker Rounds",
+    "name": "Range-Adaptive Kick Rounds",
     "equipment": [
       "partner",
       "thai_pads"
@@ -5846,26 +5788,25 @@
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "adaptive range kicking",
+    "modality": "range-adaptive kick selection",
     "duration": "3min work, 1min rest x 3 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
-      "muay_thai",
       "kickboxing",
+      "muay_thai",
       "reactive",
       "visual_processing",
-      "footwork",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_acceleration",
-      "mech_ballistic",
+      "mech_deceleration",
       "mech_reactive",
       "mech_systemic_fatigue"
     ],
-    "notes": "Maintain a credible kicking threat while the partner changes distance. Select the target, recoil and regain safe position after every attack.",
+    "notes": "The holder changes distance without inviting pursuit. Maintain a credible kick-led threat, select a kick suited to the available range, recoil and regain useful position. Reduce feed density if recoil, balance, accuracy or stance recovery deteriorates.",
     "work_sec": 180,
     "rest_sec": 60,
     "rounds": 3,
@@ -5879,7 +5820,7 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_acceleration",
-      "mech_ballistic",
+      "mech_deceleration",
       "mech_reactive",
       "mech_systemic_fatigue"
     ]
@@ -8732,7 +8673,6 @@
     "intensity": "max",
     "tags": [
       "kicker",
-      "muay_thai",
       "mma",
       "hybrid",
       "mech_trunk_stability",
@@ -10238,43 +10178,6 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Kicker's Switch Stance March",
-    "equipment": [
-      "open_space"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "aerobic",
-    "modality": "continuous",
-    "duration": "5min",
-    "intensity": "moderate",
-    "tags": [
-      "muay_thai",
-      "kicker",
-      "hybrid",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "notes": "Switch stances every 10 steps with teep feints. (low-moderate)",
-    "equipment_note": "Focus on balance.",
-    "total_minutes": 5,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
     ]
   },
   {
