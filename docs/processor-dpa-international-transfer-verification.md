@@ -3,53 +3,35 @@
 **Status:** Pre-launch internal verification record.
 
 ## Rule
-UNLXCK must identify every third party that processes personal data on its behalf, confirm an appropriate UK GDPR Article 28 contract/DPA is in place where required, identify relevant sub-processors and hosting locations, and determine whether any restricted international transfer occurs.
+For each production processor, UNLXCK records its role, DPA/contract position, relevant processing location/sub-processors and UK international-transfer safeguards. Sensitive health and children's data must be minimised when sent to third parties.
 
-Where a restricted transfer occurs, UNLXCK must document the lawful transfer mechanism and any required transfer risk assessment before public launch.
+## Verification register
 
-## Processor register verification
+| Provider | Purpose | Verification | Status |
+|---|---|---|---|
+| Supabase | Auth, database, storage | UNLXCK Pro project confirmed in Paris (`eu-west-3`). Supabase DPA, sub-processor controls and UK Addendum/SCC safeguards confirmed. Pro database backups are retained on the provider's documented backup schedule. No Supabase Edge Functions are currently deployed. | **VERIFIED** |
+| OpenAI | AI-assisted plan/content processing | OpenAI DPA and UK Addendum/SCC safeguards confirmed. API data is not used for model training by default. Published sub-processors apply; eligible API usage may use additional retention controls such as Zero Data Retention where available. Minimise health context sent to the API. | **VERIFIED** |
+| Vercel | Frontend hosting/deployment | Current Vercel DPA verified for covered Pro/Enterprise services, with UK transfer safeguards and sub-processor controls. Connected Vercel account returned no UNLXCK project, so actual production use/plan is not confirmed. If UNLXCK does not use Vercel in production, remove it from this register. | **OPEN — confirm production use/plan** |
+| Hetzner | Backend infrastructure | Hetzner provides Article 28 data-processing terms and publishes sub-processors. EU-hosted cloud workloads remain in the selected EU location, subject to documented operational/sub-processor access. | **OPEN — confirm UNLXCK server region and DPA accepted in account** |
+| Sentry | Error monitoring | Sentry provides processor/data-protection terms and supports EU/Germany data residency. Production error reporting must minimise/redact athlete health information. | **OPEN — confirm UNLXCK project exists and its region** |
+| Resend | Transactional email | Resend DPA, UK GDPR/SCC transfer framework and published sub-processors confirmed. Provider documentation states email data is retained for a limited default period. Keep health data out of transactional email unless necessary. | **VERIFIED** |
+| Cloudflare Turnstile | Bot/abuse prevention | Cloudflare DPA, sub-processor framework and UK transfer safeguards confirmed. Turnstile processes device/network/security signals for abuse prevention; do not send athlete health data to Turnstile. | **VERIFIED** |
 
-| Provider | Main purpose | Data potentially involved | DPA / Article 28 terms | Hosting / transfer position | Status |
-|---|---|---|---|---|---|
-| Supabase | Authentication, database and storage | Account, profile, training, health/injury and usage data | [VERIFY] | [VERIFY REGION + SUB-PROCESSORS] | OPEN |
-| OpenAI | AI-assisted plan/content processing | Prompt/context data, potentially including athlete health/training information | [VERIFY] | [VERIFY UK TRANSFER POSITION + SUB-PROCESSORS] | OPEN |
-| Vercel | Frontend hosting/deployment | Technical/request data and any server-side data processed through deployed services | [VERIFY] | [VERIFY] | OPEN |
-| Hetzner | Backend infrastructure | Application/API data processed by backend | [VERIFY] | [VERIFY SERVER REGION] | OPEN |
-| Sentry | Error monitoring | Technical/error data; ensure sensitive athlete data is minimised/redacted | [VERIFY] | [VERIFY] | OPEN |
-| Resend | Transactional email | Email address and message metadata/content | [VERIFY] | [VERIFY] | OPEN |
-| Cloudflare Turnstile | Abuse/bot prevention | Device/network/request information | [VERIFY ROLE/TERMS] | [VERIFY] | OPEN |
+## Open launch checks
+Only these account-specific checks remain:
 
-## Verification checklist
-For each provider, record evidence of:
-
-1. controller/processor role;
-2. binding DPA or equivalent Article 28 terms where the provider acts as processor;
-3. processing purpose and data categories;
-4. confidentiality and security commitments;
-5. sub-processor terms/list and change-notification mechanism;
-6. assistance with data-subject rights, breaches and DPIAs;
-7. deletion/return provisions when service ends;
-8. audit/compliance information;
-9. countries/regions in which data may be processed; and
-10. international-transfer mechanism where required.
-
-## International transfers
-A provider being headquartered outside the UK does not by itself determine the transfer position. Check where UNLXCK data is actually transferred or made accessible and whether the recipient is covered by UK adequacy regulations or another permitted safeguard.
-
-Where an appropriate safeguard is required, verify the applicable mechanism, such as the UK International Data Transfer Agreement (IDTA) or UK Addendum to the EU Standard Contractual Clauses, and complete any required transfer risk assessment.
-
-Do not mark a provider **VERIFIED** solely because it publishes a privacy policy.
+1. **Vercel:** confirm whether UNLXCK is actually deployed on Vercel and, if so, the applicable plan. If not used, remove Vercel.
+2. **Hetzner:** confirm the production server region and that the Hetzner DPA has been concluded/accepted in the customer account.
+3. **Sentry:** confirm whether UNLXCK has a production Sentry project and, if so, its data region. If not used, remove Sentry.
 
 ## Sensitive-data rule
-Because UNLXCK processes health/injury information and data relating to children, processor due diligence must consider the sensitivity and risk of the processing. Minimise health data sent to third parties, particularly monitoring/analytics services, and ensure production logs and error reports do not unnecessarily expose athlete health information.
+UNLXCK processes health/injury information and data relating to children. Send third parties only the data necessary for their function. Production logs, monitoring, email and anti-abuse systems must not unnecessarily contain injury descriptions, symptoms, readiness responses or other health information.
+
+## International transfers
+Where processing involves a restricted UK transfer, retain evidence of the applicable adequacy position or safeguard, including an IDTA/UK Addendum where relevant, and complete any required transfer-risk assessment.
 
 ## Launch gate
-Public launch is blocked until all providers that process UNLXCK personal data are either:
-
-- **VERIFIED** — role, contract/DPA, sub-processors and transfer position documented; or
-- **REMOVED / DISABLED** — the integration does not process production personal data.
-
-Any unresolved restricted international transfer is a launch blocker.
+A provider that processes production personal data must be **VERIFIED** before public launch. Otherwise the integration must be removed/disabled or the outstanding contractual/transfer issue resolved.
 
 ## Review
-Re-check this record when adding a provider, changing hosting region, enabling a new data flow, materially changing a provider's use, or receiving notice of relevant sub-processor/transfer changes.
+Re-check this record when a provider, hosting region, data flow, DPA, sub-processor arrangement or transfer mechanism materially changes.
