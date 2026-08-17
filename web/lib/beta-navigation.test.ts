@@ -9,17 +9,17 @@ import {
   STANDALONE_NUTRITION_ENABLED,
 } from "./beta-navigation.ts";
 
-test("bottom nav shows Overview, Today, Plan and Intake", () => {
+test("bottom nav shows Overview, Today, Plan and Camp Setup", () => {
   assert.deepEqual(
     BOTTOM_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "Intake"],
+    ["Overview", "Today", "Plan", "Camp Setup"],
   );
 });
 
 test("Progress is not promoted into primary navigation", () => {
   assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Progress"), false);
   assert.equal(SIDE_NAV_ITEMS.some((item) => item.label === "Progress"), false);
-  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Intake"), true);
+  assert.equal(BOTTOM_NAV_ITEMS.some((item) => item.label === "Camp Setup"), true);
 });
 
 test("bottom nav never links to the standalone Nutrition route", () => {
@@ -29,10 +29,21 @@ test("bottom nav never links to the standalone Nutrition route", () => {
   );
 });
 
-test("side menu keeps Intake without exposing Progress", () => {
+test("side menu keeps Camp Setup without exposing Progress", () => {
   assert.deepEqual(
     SIDE_NAV_ITEMS.map((item) => item.label),
-    ["Overview", "Today", "Plan", "History", "Intake", "Settings"],
+    ["Overview", "Today", "Plan", "History", "Camp Setup", "Settings"],
+  );
+});
+
+test("side menu explains the Plan, Camp Setup and Settings destinations", () => {
+  assert.deepEqual(
+    SIDE_NAV_ITEMS.filter((item) => ["Plan", "Camp Setup", "Settings"].includes(item.label)),
+    [
+      { href: "/plans", label: "Plan", meta: "Active and saved plans" },
+      { href: "/onboarding", label: "Camp Setup", meta: "Build your camp" },
+      { href: "/settings", label: "Settings", meta: "Account & preferences" },
+    ],
   );
 });
 
