@@ -49,9 +49,9 @@ export const TERMS_OF_USE: LegalDocument = {
   version: TERMS_VERSION,
   effectiveDate: "19 August 2026",
   status:
-    "Not ready for publication: the trader name, trading address and contact email are still to be inserted.",
+    "Not ready for publication: the trading address and contact email are still to be inserted.",
   intro:
-    "These Terms govern use of UNLXCK, operated by [SOLE TRADER NAME], a sole trader trading as Unlxck (“UNLXCK”, “we”, “us”), of [TRADING ADDRESS]. By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
+    "These Terms govern use of UNLXCK, operated by Michael Okafor, a sole trader trading as Unlxck (“UNLXCK”, “we”, “us”), of [TRADING ADDRESS]. By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
   sections: [
     {
       heading: "Eligibility",
@@ -170,14 +170,14 @@ export const PRIVACY_NOTICE: LegalDocument = {
   version: PRIVACY_NOTICE_VERSION,
   lastUpdated: "19 August 2026",
   status:
-    "Not ready for publication: the controller name, trading address and privacy contact are still to be inserted.",
+    "Not ready for publication: the trading address and privacy contact are still to be inserted.",
   intro:
     "UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.",
   sections: [
     {
       heading: "Who we are",
       paragraphs: [
-        "UNLXCK is the controller of personal data used to provide the UNLXCK service. UNLXCK is operated by [SOLE TRADER NAME], a sole trader trading as Unlxck, of [TRADING ADDRESS].",
+        "UNLXCK is the controller of personal data used to provide the UNLXCK service. UNLXCK is operated by Michael Okafor, a sole trader trading as Unlxck, of [TRADING ADDRESS].",
         "Privacy contact: [ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
       ],
     },
