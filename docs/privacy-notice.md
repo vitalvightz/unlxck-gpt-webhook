@@ -1,6 +1,6 @@
 # UNLXCK Privacy Notice
 
-_Last updated: 17 August 2026_
+_Last updated: 19 August 2026_
 
 UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.
 
@@ -45,25 +45,28 @@ These systems may change, restrict or withhold training guidance. UNLXCK does no
 
 ## Who we use
 UNLXCK currently uses service providers including:
-- **Supabase** — authentication, database and private storage;
-- **OpenAI** — AI-assisted plan generation;
-- **Vercel** — web hosting and routing;
-- **Hetzner** — backend and worker hosting;
-- **Sentry** — diagnostics and error monitoring;
-- **Resend** — selected service/feedback email processing;
+- **Supabase** — your account, database and private file storage, hosted in Paris, France;
+- **OpenAI** — AI-assisted plan generation; API data is not used to train OpenAI models by default;
+- **Vercel** — website and app hosting and routing;
+- **Hetzner** — backend and plan-generation servers, hosted in Nuremberg, Germany;
+- **Resend** — selected service and feedback email processing;
 - **Cloudflare Turnstile** — abuse and automated-signup prevention.
 
-We aim to send each provider only the data required for its function.
+We verify the relevant data-processing and transfer safeguards for these providers and aim to send each provider only the data required for its function. Health information should not be sent to email or anti-abuse providers unless genuinely necessary.
 
 ## International transfers
-Some providers may process data outside the UK. Before public launch, UNLXCK will complete and document the applicable transfer locations and safeguards and update this section where required.
+Our main systems are hosted in the EU: Supabase in Paris and backend servers in Nuremberg, Germany.
+
+Some providers may process limited data outside the UK. Where this creates a restricted transfer, UNLXCK relies on the applicable approved safeguard, such as the UK Addendum to the Standard Contractual Clauses, and keeps a record of the mechanism used.
 
 ## How long we keep data
-We keep identifiable data only for as long as needed for the purpose for which it is used.
+We keep identifiable data only for as long as needed for the purpose for which it was collected, then delete it or irreversibly anonymise it where appropriate.
 
-Account, training, injury, readiness, nutrition and related service data are generally retained while needed to provide the service and reviewed for deletion when an account closes. Beta screenshots are retained for no more than 90 days under the current process. Security logs and backups follow their documented operational lifecycle.
+Account, profile, intake, plans, training history, injury, readiness and nutrition data are kept while needed to provide the service and are deleted or reviewed for deletion when an account closes or a valid deletion request is completed.
 
-More specific operational periods will be finalised before public launch.
+Feedback is kept while needed for support and product improvement, then anonymised or deleted. Beta screenshots are retained for no more than 90 days.
+
+Security and audit logs are kept only for as long as their security purpose requires. Backups expire through their normal operational lifecycle, and data deleted from the live service is not restored back into ordinary use.
 
 ## Your rights
 Depending on the processing, you may have rights to:
@@ -77,13 +80,16 @@ Depending on the processing, you may have rights to:
 
 **Right to object:** where the right applies, you may object to our processing of your personal data.
 
-Requests can be made using the privacy contact above. We may verify identity where reasonably necessary.
+Requests can be made using the privacy contact above or from **Settings → Privacy**. We may verify identity where reasonably necessary.
+
+## Users under 18
+Under-18 accounts receive additional privacy and safety safeguards. UNLXCK does not provide aggressive weight-cut, dehydration or water-cut guidance to athletes under 18.
+
+## How to reach us
+You can exercise your data rights or ask a question about this notice using the privacy contact above. In the app, you can also review or change your health-data consent and request account deletion from **Settings → Privacy**.
 
 ## Complaints
 Please contact UNLXCK first if you have a privacy concern. You also have the right to complain to the UK Information Commissioner's Office (ICO).
 
 ## Changes
 We will review this notice when our data uses, processors or legal requirements materially change. Where a new use of your personal data requires notice, we will tell you before that processing begins.
-
-## Launch status
-Items marked for completion, including the privacy contact, transfer safeguards and unresolved retention periods, must be finalised before this notice is used for public launch.
