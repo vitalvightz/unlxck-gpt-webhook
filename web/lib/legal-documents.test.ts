@@ -228,19 +228,18 @@ test("the notice publishes only retention periods UNLXCK actually enforces", () 
  * 2013, and Article 13(1)(a) UK GDPR for the controller's identity. None of
  * those is satisfied by the trading name alone.
  *
- * Each stays a visible placeholder until the real value is inserted. Inventing
- * one, or quietly omitting the field, would turn a known gap into a silent
- * defect — and the placeholder is what makes it impossible to publish these
- * documents without noticing.
+ * Each outstanding value stays a visible placeholder until the real value is
+ * inserted. Inventing one, or quietly omitting the field, would turn a known
+ * gap into a silent defect — and the placeholder is what makes it impossible
+ * to publish these documents without noticing.
  */
 const OUTSTANDING_PLACEHOLDERS = [
   "[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
   "[LEGAL/CONTACT EMAIL]",
-  "[SOLE TRADER NAME]",
   "[TRADING ADDRESS]",
 ] as const;
 
-test("every outstanding identity and contact blocker is still visible", () => {
+test("every outstanding address and contact blocker is still visible", () => {
   const published = everyDocumentText();
   for (const placeholder of OUTSTANDING_PLACEHOLDERS) {
     assert.ok(published.includes(placeholder), `${placeholder} should still be marked outstanding`);
@@ -257,18 +256,17 @@ test("every outstanding identity and contact blocker is still visible", () => {
 });
 
 test("both documents declare themselves not ready for publication", () => {
-  // While the identity fields are outstanding, neither document may present
+  // While the address and contact fields are outstanding, neither document may present
   // itself as final. The status line is what an athlete and a reviewer see.
   for (const document of LEGAL_DOCUMENTS) {
     assert.match(
       document.status,
       /not ready for publication/i,
-      `${document.slug} must not read as publishable while identity fields are outstanding`,
+      `${document.slug} must not read as publishable while address and contact fields are outstanding`,
     );
   }
 
-  // The trading name on its own is not a legal identity for a sole trader.
-  assert.ok(TERMS_OF_USE.intro.includes("[SOLE TRADER NAME]"));
+  assert.ok(TERMS_OF_USE.intro.includes("Michael Okafor"));
   assert.ok(TERMS_OF_USE.intro.includes("[TRADING ADDRESS]"));
   assert.ok(TERMS_OF_USE.intro.includes("sole trader trading as Unlxck"));
 });

@@ -264,11 +264,11 @@ The target schedule survives as an internal document in `docs/data-retention-del
 
 This reopens **H3** as a finding, correctly. The honest position is that UNLXCK states criteria rather than periods, not that it has set periods.
 
-**B2 and B3 are now enforced blockers rather than notes.** Both documents carry `[SOLE TRADER NAME]` and `[TRADING ADDRESS]` alongside the two existing contact placeholders, and both status lines read "Not ready for publication". The personal email was **not** written into either document — a published address is hard to withdraw, and the placeholder is what makes publication impossible to do by accident. Two tests enforce this: one holds the placeholder register and fails on any untracked placeholder, the other requires both status lines to declare the documents unpublishable while identity fields are outstanding.
+**B2 and B3 are now enforced blockers rather than notes.** Both documents identify Michael Okafor as the sole trader and retain `[TRADING ADDRESS]` alongside the two existing contact placeholders, and both status lines read "Not ready for publication". The personal email was **not** written into either document — a published address is hard to withdraw, and the placeholder is what makes publication impossible to do by accident. Two tests enforce this: one holds the placeholder register and fails on any untracked placeholder, the other requires both status lines to declare the documents unpublishable while address and contact fields are outstanding.
 
 **Still blocked:**
 
-- **B2 (trader identity)** — awaiting the proprietor's legal name and a geographic address. A service address is advisable over a home address, since it becomes public.
+- **B2 (trader identity)** — Michael Okafor is identified as the proprietor; a geographic trading address is still awaited. A service address is advisable over a home address, since it becomes public. Do not use a hosting or server location.
 - **B3 (privacy contact)** — awaiting a confirmed address. A role address on an owned domain remains the recommendation over a personal one.
 - **L2 (Terms version → 1.0)** — rides with B2, so athletes re-accept once rather than twice.
 - **H1, H4** — the under-18 Article 6 assessment and the portability runbook.
