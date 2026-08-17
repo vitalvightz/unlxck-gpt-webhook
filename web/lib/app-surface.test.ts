@@ -5,6 +5,7 @@ import {
   getServerShellSurface,
   getShellSurface,
   isAuthSurfaceRoute,
+  shouldShowBrandTopbar,
 } from "./app-surface";
 
 const AUTH_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password"];
@@ -34,6 +35,15 @@ test("auth routes always resolve to the brand surface, logged in or out", () => 
 test("the homepage is brand when logged out and workspace when signed in", () => {
   assert.equal(getShellSurface("/", false), "brand");
   assert.equal(getShellSurface("/", true), "workspace");
+});
+
+test("the public top bar stays on the homepage but off focused auth screens", () => {
+  assert.equal(shouldShowBrandTopbar("/", false), true);
+  assert.equal(shouldShowBrandTopbar("/", true), false);
+
+  for (const route of AUTH_ROUTES) {
+    assert.equal(shouldShowBrandTopbar(route, false), false, `${route} should not duplicate auth actions`);
+  }
 });
 
 test("workspace routes resolve to the workspace surface", () => {

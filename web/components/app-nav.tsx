@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "
 import { useAppSession } from "@/components/auth-provider";
 import { Skeleton } from "@/components/skeleton";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
-import { getShellSurface, isAuthSurfaceRoute } from "@/lib/app-surface";
+import { getShellSurface, isAuthSurfaceRoute, shouldShowBrandTopbar } from "@/lib/app-surface";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
 import { isNavToggleCondensed } from "@/lib/nav-toggle-scroll";
@@ -53,6 +53,7 @@ export function AppNav() {
   const hasSession = Boolean(session);
   const isSessionResolving = Boolean(session && !isMeHydrated);
   const shellSurface = getShellSurface(pathname, hasSession);
+  const showBrandTopbar = isReady && shouldShowBrandTopbar(pathname, hasSession);
   // Public auth routes (login / signup / password reset) render only the brand
   // shell. Suppress every piece of workspace navigation there (the floating
   // Menu control, the sidebar, and its "checking your session" loading card)
@@ -298,7 +299,7 @@ export function AppNav() {
 
   return (
     <>
-      {shellSurface === "brand" && isReady && !session ? (
+      {showBrandTopbar ? (
         <header className="brand-topbar" aria-label="UNLXCK entry navigation">
           <Link href="/" className="brand-topbar-mark">
             <span className="eyebrow">UNLXCK</span>

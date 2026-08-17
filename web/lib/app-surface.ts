@@ -37,6 +37,14 @@ export function isAuthSurfaceRoute(pathname: string): boolean {
   return AUTH_SURFACE_ROUTES.has(pathname);
 }
 
+// The public top bar is useful on the marketing homepage, but auth forms
+// already provide their own account switch link. Keeping the bar off auth
+// routes avoids duplicate calls to action and, on narrow screens, leaves the
+// form heading clear of fixed navigation.
+export function shouldShowBrandTopbar(pathname: string, hasSession: boolean): boolean {
+  return getShellSurface(pathname, hasSession) === "brand" && !hasSession && !isAuthSurfaceRoute(pathname);
+}
+
 export function getShellSurface(pathname: string, hasSession: boolean): ShellSurface {
   // Auth routes always use the brand shell. Signed-in users are redirected off
   // them, so we never want workspace chrome to flash in behind the form.
