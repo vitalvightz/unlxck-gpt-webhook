@@ -13,7 +13,7 @@ test("health consent UI uses the compliance message", () => {
   assert.equal(HEALTH_CONSENT_BLOCKED_MESSAGE, "Health data consent required. Manage it in Settings → Privacy.");
 });
 
-test("withdrawal removes current weight, target weight, fatigue, and restrictions from Intake state", () => {
+test("withdrawal omits every generation health field from Intake state without mutation", () => {
   const input = emptyPlanRequest("Athlete");
   input.athlete.weight_kg = 72;
   input.athlete.target_weight_kg = 68;
@@ -23,14 +23,18 @@ test("withdrawal removes current weight, target weight, fatigue, and restriction
   input.guided_injuries = [{ area: "Knee", notes: "Sore" }];
 
   const safe = withoutIntakeHealthData(input);
-  assert.equal(safe.athlete.weight_kg, null);
-  assert.equal(safe.athlete.target_weight_kg, null);
-  assert.equal(safe.fatigue_level, "low");
-  assert.equal(safe.injuries, "");
-  assert.equal(safe.guided_injury, null);
-  assert.deepEqual(safe.guided_injuries, []);
+  assert.equal("weight_kg" in safe.athlete, false);
+  assert.equal("target_weight_kg" in safe.athlete, false);
+  assert.equal("fatigue_level" in safe, false);
+  assert.equal("injuries" in safe, false);
+  assert.equal("guided_injury" in safe, false);
+  assert.equal("guided_injuries" in safe, false);
   assert.equal(safe.athlete.full_name, "Athlete", "non-health Intake remains usable");
   assert.notEqual(safe, input, "historical source data is not mutated");
+  assert.notEqual(safe.athlete, input.athlete, "nested athlete data is not mutated");
+  assert.equal(input.fatigue_level, "high");
+  assert.equal(input.athlete.weight_kg, 72);
+  assert.deepEqual(input.guided_injuries, [{ area: "Knee", notes: "Sore" }]);
 });
 
 test("withdrawal removes Quick Build restrictions but keeps non-health setup", () => {
@@ -40,4 +44,12 @@ test("withdrawal removes Quick Build restrictions but keeps non-health setup", (
   assert.equal(safe.full_name, "Athlete");
   assert.deepEqual(safe.equipment_access, ["gym"]);
   assert.equal(input.injuries, "Shoulder pain", "historical source data is not mutated");
+});
+
+test("Quick Build does not invent a fatigue value", async () => {
+  const { quickBuildToPlanRequest } = await import("./quick-build");
+  const request = quickBuildToPlanRequest(emptyQuickBuildInput("Athlete"));
+
+  assert.equal(request.fatigue_level, undefined);
+  assert.equal("fatigue_level" in JSON.parse(JSON.stringify(request)), false);
 });
