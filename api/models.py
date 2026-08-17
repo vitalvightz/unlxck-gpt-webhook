@@ -1487,6 +1487,7 @@ class ProfileRecord(BaseModel):
     terms_accepted_at: str | None = None
     terms_accepted: bool = False
     health_consent_version: str | None = None
+    health_data_consent: bool = False
     health_consent_at: str | None = None
     health_consent_withdrawn_at: str | None = None
     health_consent_granted: bool = False

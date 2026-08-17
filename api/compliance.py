@@ -41,7 +41,7 @@ HEALTH_CONSENT_VERSION = "1.0"
 # features offline for every athlete until they answered again. Unlike the other
 # two this version gates nothing — the notice is information, not agreement — so
 # it is recorded for display and audit only.
-PRIVACY_NOTICE_VERSION = "1.2"
+PRIVACY_NOTICE_VERSION = "1.3"
 
 # Age bands. 13 is the floor for an account at all; 18 is the line above which
 # the adult flow applies. Both come from the Children & Age-Appropriate Use
@@ -159,6 +159,7 @@ def health_consent_active(
     *,
     health_consent_at: Any,
     health_consent_withdrawn_at: Any,
+    health_data_consent: Any = None,
     health_consent_version: Any = None,
     required_version: str = HEALTH_CONSENT_VERSION,
 ) -> bool:
@@ -169,6 +170,11 @@ def health_consent_active(
     against a superseded consent version does not count either — re-consent is
     required when the wording changes.
     """
+    # New profile rows carry the direct boolean choice. ``None`` remains
+    # compatible with records read before that column was deployed; their
+    # timestamp evidence still gives the same verdict during rollout.
+    if health_data_consent is not None and health_data_consent is not True:
+        return False
     granted_at = _parse_timestamp(health_consent_at)
     if granted_at is None:
         return False
@@ -241,6 +247,7 @@ def evaluate_profile_compliance(profile: Any, *, reference: date | None = None) 
             terms_accepted_at=_read("terms_accepted_at"),
         ),
         health_consent_granted=health_consent_active(
+            health_data_consent=_read("health_data_consent"),
             health_consent_at=_read("health_consent_at"),
             health_consent_withdrawn_at=_read("health_consent_withdrawn_at"),
             health_consent_version=_read("health_consent_version"),

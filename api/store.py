@@ -1452,6 +1452,7 @@ class SupabaseAppStore:
             fields["terms_version"] = TERMS_VERSION
             fields["terms_accepted_at"] = now
         if health_data_consent is True:
+            fields["health_data_consent"] = True
             fields["health_consent_version"] = HEALTH_CONSENT_VERSION
             fields["health_consent_at"] = now
             # A fresh grant supersedes any earlier withdrawal. The withdrawal
@@ -1459,6 +1460,7 @@ class SupabaseAppStore:
             # withdrawal newer than the grant would read as "still withdrawn".
             fields["health_consent_withdrawn_at"] = None
         elif health_data_consent is False:
+            fields["health_data_consent"] = False
             fields["health_consent_withdrawn_at"] = now
 
         if not fields:

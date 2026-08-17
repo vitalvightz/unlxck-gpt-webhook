@@ -135,6 +135,7 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         terms_accepted_at=str(row.get("terms_accepted_at") or "") or None,
         terms_accepted=compliance.terms_accepted,
         health_consent_version=str(row.get("health_consent_version") or "") or None,
+        health_data_consent=row.get("health_data_consent") is True,
         health_consent_at=str(row.get("health_consent_at") or "") or None,
         health_consent_withdrawn_at=str(row.get("health_consent_withdrawn_at") or "") or None,
         health_consent_granted=compliance.health_consent_granted,

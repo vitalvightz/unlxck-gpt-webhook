@@ -263,8 +263,8 @@ export type ProfileRecord = {
   /**
    * Compliance state. Every field below is decided by the server: `is_minor`,
    * `age_band`, `terms_accepted` and `health_consent_granted` are derived from
-   * the stored date of birth and consent timestamps on each read, so the client
-   * displays them and never computes them.
+   * the stored date of birth and server-owned consent evidence on each read, so
+   * the client displays them and never computes them.
    */
   date_of_birth?: string | null;
   age_band?: string;
@@ -275,6 +275,7 @@ export type ProfileRecord = {
   terms_accepted?: boolean;
   health_consent_version?: string | null;
   health_consent_at?: string | null;
+  health_data_consent?: boolean;
   health_consent_withdrawn_at?: string | null;
   health_consent_granted?: boolean;
   created_at: string;

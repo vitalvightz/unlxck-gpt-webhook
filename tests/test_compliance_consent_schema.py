@@ -15,6 +15,12 @@ SCHEMA = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
 MIGRATION = (
     ROOT / "supabase" / "migrations" / "20260817120000_add_compliance_age_and_consent.sql"
 ).read_text(encoding="utf-8")
+BOOLEAN_MIGRATION = (
+    ROOT
+    / "supabase"
+    / "migrations"
+    / "20260817130000_add_health_data_consent_boolean.sql"
+).read_text(encoding="utf-8")
 
 CONSENT_COLUMNS = (
     "date_of_birth",
@@ -38,6 +44,14 @@ def test_the_runtime_schema_check_requires_the_consent_columns():
     # failing the deploy.
     for column in CONSENT_COLUMNS:
         assert column in REQUIRED_PROFILES_COLUMNS, column
+
+
+def test_current_health_consent_choice_is_stored_with_the_timestamps():
+    assert "health_data_consent boolean not null default false" in SCHEMA
+    assert "add column if not exists health_data_consent boolean not null default false" in BOOLEAN_MIGRATION
+    assert "health_data_consent" in REQUIRED_PROFILES_COLUMNS
+    assert "new.health_data_consent is distinct from old.health_data_consent" in SCHEMA
+    assert "new.health_data_consent is distinct from old.health_data_consent" in BOOLEAN_MIGRATION
 
 
 def test_the_migration_is_additive():

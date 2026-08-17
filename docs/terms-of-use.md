@@ -1,6 +1,6 @@
 # UNLXCK Terms of Use
 
-**Status: NOT READY FOR PUBLICATION.** Two details are outstanding and each is a legal requirement, not a formatting gap: the trading address and the contact email. UNLXCK trades as a sole trader, so the proprietor's own name and a geographic address must appear here before these Terms are used — required by reg. 6 of the Electronic Commerce (EC Directive) Regulations 2002 and Schedule 2 of the Consumer Contracts Regulations 2013. Do not publish while any bracketed placeholder below remains.
+**Status: NOT READY FOR PUBLICATION.** Two details are outstanding and each is a legal requirement, not a formatting gap: the trading address and the contact email. UNLXCK trades as a sole trader, so the proprietor's own name and a geographic address must appear here before these Terms are used, as required by reg. 6 of the Electronic Commerce (EC Directive) Regulations 2002 and Schedule 2 of the Consumer Contracts Regulations 2013. Do not publish while any bracketed placeholder below remains.
 
 ## 1. About these Terms
 These Terms govern use of UNLXCK, operated by **Michael Okafor**, a sole trader trading as Unlxck ("UNLXCK", "we", "us"), of **[TRADING ADDRESS]**. By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.
