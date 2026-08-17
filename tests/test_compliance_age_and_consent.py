@@ -429,6 +429,8 @@ def test_plan_generation_without_health_consent_allows_non_health_payload(plan_s
     [
         {"injuries": "sore knee"},
         {"fatigue_level": "high"},
+        {"guided_injury": {"area": "left knee", "severity": "moderate"}},
+        {"guided_injuries": [{"area": "left knee", "severity": "moderate"}]},
         {"athlete": {"weight_kg": 72}},
         {"athlete": {"target_weight_kg": 68}},
     ],
@@ -454,6 +456,48 @@ def test_plan_generation_without_health_consent_rejects_health_payload(override)
 
     assert response.status_code == 403
     assert response.json()["detail"]["code"] == CODE_HEALTH_CONSENT_REQUIRED
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"injuries": "sore knee"},
+        {"fatigue_level": "high"},
+        {"guided_injury": {"area": "left knee", "severity": "moderate"}},
+        {"athlete": {"weight_kg": 72}},
+        {"athlete": {"target_weight_kg": 68}},
+    ],
+)
+def test_plan_generation_with_active_health_consent_keeps_health_payload(override):
+    client, store, _ = _build_client()
+    payload = _build_request(
+        {
+            "fatigue_level": "",
+            "injuries": "",
+            "guided_injury": None,
+            "guided_injuries": None,
+            "athlete": {"weight_kg": None, "target_weight_kg": None},
+        }
+    ).model_dump(mode="json")
+    athlete_override = override.get("athlete")
+    payload.update({key: value for key, value in override.items() if key != "athlete"})
+    if athlete_override:
+        payload["athlete"].update(athlete_override)
+
+    response = client.post("/api/plans/generate", headers=ATHLETE, json=payload)
+
+    assert response.status_code == 202
+    job = store.get_generation_job(response.json()["job_id"])
+    assert job is not None
+    for key, value in override.items():
+        if key == "athlete":
+            for athlete_key, athlete_value in value.items():
+                assert job["request_payload"]["athlete"][athlete_key] == athlete_value
+        elif isinstance(value, dict):
+            for nested_key, nested_value in value.items():
+                assert job["request_payload"][key][nested_key] == nested_value
+        else:
+            assert job["request_payload"][key] == value
 
 
 @pytest.mark.parametrize(
