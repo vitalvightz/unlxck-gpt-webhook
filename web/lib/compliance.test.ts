@@ -301,15 +301,13 @@ test("signup wording is materially shorter than the Settings wording", () => {
   assert.equal(SIGNUP_TERMS_CONSENT_LABEL, TERMS_CONSENT_LABEL);
 });
 
-test("every age band gets the plain signup wording and names the categories inline", () => {
+test("every age band gets the same plain health-information signup wording", () => {
   const early = consentCopyForBand("13-15").signupHealthConsentLabel;
   const adult = consentCopyForBand("adult").signupHealthConsentLabel;
 
   assert.equal(early, adult);
-  // No athlete should have to follow a link to learn what "health data" covers.
-  for (const category of [/injur/i, /soreness/i, /sleep/i, /bodyweight/i]) {
-    assert.ok(category.test(early), `signup label should name ${category}`);
-  }
+  assert.match(early, /health information/i);
+  assert.match(early, /personalise my training/i);
   assert.ok(!/health data/i.test(early), "signup wording should avoid the abstract term");
 });
 

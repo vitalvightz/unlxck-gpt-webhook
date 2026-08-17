@@ -38,6 +38,7 @@ from support import (
     _planner,
     _start_generation,
     finalized_result,
+    grant_default_compliance,
     seed_default_profiles,
     stage1_result,
 )
@@ -4613,6 +4614,8 @@ def test_generate_plan_returns_queued_job_when_claim_is_temporarily_unavailable(
         metadata={},
     )
     store = ClaimTemporarilyUnavailableStore()
+    store.ensure_profile(athlete)
+    grant_default_compliance(store, athlete.user_id)
     client = TestClient(
         create_app(
             store=store,
@@ -4945,7 +4948,7 @@ def test_daily_generation_cap_exemptions_normalize_case_and_whitespace(monkeypat
 def test_generate_plan_daily_limit_allows_env_configured_exempt_email(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
     monkeypatch.setenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "test@example.com")
-    client, _, _ = _build_client()
+    client, store, _ = _build_client()
     exempt_user = AuthenticatedUser(
         user_id="athlete-exempt",
         email="test@example.com",
@@ -4953,6 +4956,8 @@ def test_generate_plan_daily_limit_allows_env_configured_exempt_email(monkeypatc
         metadata={},
     )
     client.app.state.auth_service.users_by_token["exempt-token"] = exempt_user
+    store.ensure_profile(exempt_user)
+    grant_default_compliance(store, exempt_user.user_id)
 
     first = client.post(
         "/api/plans/generate",
@@ -4971,7 +4976,7 @@ def test_generate_plan_daily_limit_allows_env_configured_exempt_email(monkeypatc
 def test_generate_plan_daily_limit_allows_env_configured_exempt_email_case_insensitive(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
     monkeypatch.setenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "test@example.com")
-    client, _, _ = _build_client()
+    client, store, _ = _build_client()
     exempt_user = AuthenticatedUser(
         user_id="athlete-exempt-upper",
         email="Test@Example.com",
@@ -4979,6 +4984,8 @@ def test_generate_plan_daily_limit_allows_env_configured_exempt_email_case_insen
         metadata={},
     )
     client.app.state.auth_service.users_by_token["exempt-token-upper"] = exempt_user
+    store.ensure_profile(exempt_user)
+    grant_default_compliance(store, exempt_user.user_id)
 
     first = client.post(
         "/api/plans/generate",
@@ -5071,6 +5078,8 @@ def test_generate_plan_deferred_write_failure_does_not_fail_main_response():
         metadata={},
     )
     store = FailingNonEssentialStore()
+    store.ensure_profile(athlete)
+    grant_default_compliance(store, athlete.user_id)
     stage2 = FakeStage2Automator(result=finalized_result())
     client = TestClient(
         create_app(
@@ -5302,6 +5311,7 @@ def test_retry_generation_job_rejects_non_owner_non_admin():
         metadata={},
     )
     store.ensure_profile(other_athlete)
+    grant_default_compliance(store, other_athlete.user_id)
     original = _seed_failed_job(store)
 
     client.app.state.auth_service.users_by_token["other-token"] = other_athlete
