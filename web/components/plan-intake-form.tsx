@@ -73,6 +73,8 @@ import {
   type PerformanceFocusGroup,
 } from "@/lib/days-out-policy";
 import type { PlanRequest } from "@/lib/types";
+import { hasHealthDataConsent } from "@/lib/compliance";
+import { HEALTH_CONSENT_BLOCKED_MESSAGE, withoutIntakeHealthData } from "@/lib/health-consent-ui";
 import {
   ATHLETE_FULL_NAME_MAX,
   MENTAL_BLOCKERS_MAX,
@@ -892,6 +894,7 @@ export function PlanIntakeForm() {
   const { me, session, replaceMe } = useAppSession();
   // Server-derived age band; the client never decides this.
   const isMinorAthlete = Boolean(me?.profile.is_minor);
+  const healthConsentGranted = hasHealthDataConsent(me);
   const [currentStep, setCurrentStep] = useState(0);
   const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
@@ -984,6 +987,15 @@ export function PlanIntakeForm() {
     setCurrentStep(Number.isFinite(savedStep) ? Math.min(Math.max(savedStep, 0), steps.length - 1) : 0);
     setHydrated(true);
   }, [hydrated, me]);
+
+  useEffect(() => {
+    if (!healthConsentGranted) {
+      setForm((current) => withoutIntakeHealthData(current));
+      setGuidedInjuries([]);
+      setNoRestrictions(true);
+      setActiveGuidedInjuryIndex(null);
+    }
+  }, [healthConsentGranted]);
 
   useEffect(() => {
     // Skip top-scroll when a validation focus is pending — the focus effect
@@ -1297,7 +1309,8 @@ export function PlanIntakeForm() {
         ...nextGuidedInjuryFields,
       }),
     };
-    return canonicalizePerformanceFocus(syncDeviceFields(applyNoScheduledFightSnapshot(withGuidedAndCollision, noScheduledFight)));
+    const safeForm = healthConsentGranted ? withGuidedAndCollision : withoutIntakeHealthData(withGuidedAndCollision);
+    return canonicalizePerformanceFocus(syncDeviceFields(applyNoScheduledFightSnapshot(safeForm, noScheduledFight)));
   }
 
   function syncGuidedInjuryFields(nextGuidedInjuries: GuidedInjuryState[], nextNoRestrictions: boolean) {
@@ -2490,8 +2503,8 @@ export function PlanIntakeForm() {
                   </div>
                   <div className="field">
                     <label htmlFor="weightKg">Weight (kg)</label>
-                    <input id="weightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.weight_kg ?? ""} onChange={(event) => updateAthlete("weight_kg", numberOrNull(event.target.value))} />
-                    <p className="muted">Use current walking-around weight.</p>
+                    <input id="weightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled={!healthConsentGranted} value={healthConsentGranted ? (form.athlete.weight_kg ?? "") : ""} onChange={(event) => updateAthlete("weight_kg", numberOrNull(event.target.value))} />
+                    <p className="muted">{healthConsentGranted ? "Use current walking-around weight." : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
                   </div>
                   <div className="field">
                     <label htmlFor="heightCm">Height (cm)</label>
@@ -2516,8 +2529,8 @@ export function PlanIntakeForm() {
                   {isMinorAthlete ? null : (
                     <div className="field">
                       <label htmlFor="targetWeightKg">Target weight (kg)</label>
-                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
-                      <p className="muted">Use realistic fight-week target, not an ideal someday number.</p>
+                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled={!healthConsentGranted} value={healthConsentGranted ? (form.athlete.target_weight_kg ?? "") : ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
+                      <p className="muted">{healthConsentGranted ? "Use realistic fight-week target, not an ideal someday number." : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
                     </div>
                   )}
                   <div className="field">
@@ -2686,6 +2699,7 @@ export function PlanIntakeForm() {
                 title="Fatigue"
                 hint="Defaults to Low. Change it only if you feel tired today."
               >
+                {healthConsentGranted ? (
                 <div className="field">
                   <label htmlFor="fatigueLevel">Fatigue level</label>
                   <LevelSlider
@@ -2696,6 +2710,7 @@ export function PlanIntakeForm() {
                   />
                   <p className="muted">Low = fresh. Moderate = tired. High = very run down.</p>
                 </div>
+                ) : <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>}
               </OptionalDetails>
             </div>
 
@@ -2945,8 +2960,12 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
-                <SafetyNote showRedFlags>{INJURY_INTAKE_SAFETY}</SafetyNote>
-                {noRestrictions ? (
+                {healthConsentGranted ? <SafetyNote showRedFlags>{INJURY_INTAKE_SAFETY}</SafetyNote> : null}
+                {!healthConsentGranted ? (
+                  <div className="support-panel gi-empty-state compact-gap" aria-disabled="true">
+                    <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
+                  </div>
+                ) : noRestrictions ? (
                   // Empty state — a single inline CTA reveals the body map and a
                   // first card, instead of asking the athlete to untick a box first.
                   <div className="support-panel gi-empty-state compact-gap">
