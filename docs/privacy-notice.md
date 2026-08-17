@@ -43,21 +43,11 @@ UNLXCK uses software rules and AI-assisted processing to help generate and adapt
 
 These systems may change, restrict or withhold training guidance. UNLXCK does not currently intend these decisions to produce legal or similarly significant effects about you.
 
-## Who we use
-UNLXCK currently uses service providers including:
-- **Supabase** — your account, database and private file storage, hosted in Paris, France;
-- **OpenAI** — AI-assisted plan generation; API data is not used to train OpenAI models by default;
-- **Vercel** — website and app hosting and routing;
-- **Hetzner** — backend and plan-generation servers, hosted in Nuremberg, Germany;
-- **Resend** — selected service and feedback email processing;
-- **Cloudflare Turnstile** — abuse and automated-signup prevention.
-
-We verify the relevant data-processing and transfer safeguards for these providers and aim to send each provider only the data required for its function. Health information should not be sent to email or anti-abuse providers unless genuinely necessary.
+## Service providers
+We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.
 
 ## International transfers
-Our main systems are hosted in the EU: Supabase in Paris and backend servers in Nuremberg, Germany.
-
-Some providers may process limited data outside the UK. Where this creates a restricted transfer, UNLXCK relies on the applicable approved safeguard, such as the UK Addendum to the Standard Contractual Clauses, and keeps a record of the mechanism used.
+Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies.
 
 ## How long we keep data
 We keep identifiable data only for as long as needed for the purpose for which it was collected, then delete it or irreversibly anonymise it where appropriate.

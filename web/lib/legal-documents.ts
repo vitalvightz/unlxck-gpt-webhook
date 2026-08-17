@@ -229,25 +229,15 @@ export const PRIVACY_NOTICE: LegalDocument = {
       ],
     },
     {
-      heading: "Who we use",
-      bullets: [
-        "Supabase — your account, the database and private file storage. Hosted in Paris, France.",
-        "OpenAI — AI-assisted plan generation. Your data is not used to train their models.",
-        "Vercel — hosting and routing for the website and app.",
-        "Hetzner — the backend and plan-generation servers. Hosted in Nuremberg, Germany.",
-        "Resend — service and feedback emails.",
-        "Cloudflare Turnstile — blocking automated sign-ups and abuse.",
-      ],
+      heading: "Service providers",
       paragraphs: [
-        "We check each provider's data-protection agreement and transfer safeguards before relying on it, and send each one only the data its function needs.",
-        "We keep health information out of our email and anti-abuse providers, and we do not send it to them unless it is genuinely necessary.",
+        "We use trusted service providers to run UNLXCK, including hosting, databases, AI processing, email and security services. We only share the information they need to provide those services and require appropriate data-protection safeguards.",
       ],
     },
     {
       heading: "International transfers",
       paragraphs: [
-        "Our main systems are hosted in the EU: Supabase in Paris and our backend servers in Nuremberg, Germany.",
-        "Some providers may process limited data outside the UK. Where they do, we rely on that provider's data-protection agreement together with the UK's approved transfer safeguards, such as the UK Addendum to the Standard Contractual Clauses, and we keep a record of the safeguard that applies.",
+        "Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies.",
       ],
     },
     {
