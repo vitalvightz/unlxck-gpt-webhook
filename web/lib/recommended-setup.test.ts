@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { buildDaysOutContext } from "@/lib/days-out-policy";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
+  EQUIPMENT_ACCESS_GROUPS,
   KEY_GOAL_OPTIONS,
   TRAINING_AVAILABILITY_OPTIONS,
   WEAK_AREA_OPTIONS,
@@ -49,6 +50,26 @@ test("every equipment preset value exists in EQUIPMENT_ACCESS_OPTIONS", () => {
       assert.ok(known.has(value), `${preset.key} -> "${value}" missing from EQUIPMENT_ACCESS_OPTIONS`);
     }
   }
+});
+
+test("equipment groups contain every supported option exactly once", () => {
+  const groupedValues = EQUIPMENT_ACCESS_GROUPS.flatMap((group) => group.options.map((option) => option.value));
+  const expectedGroups = {
+    "Weights & strength": ["dumbbells", "kettlebells", "barbell", "trap_bar", "plate", "bench", "cable", "landmine", "log", "atlas_stone"],
+    Conditioning: ["assault_bike", "rower", "treadmill", "step_mill", "pool", "sled", "battle_ropes", "tire", "sledgehammer", "weight_vest"],
+    Combat: ["heavy_bag", "thai_pads", "partner"],
+    "Plyometrics & movement": ["box", "agility_ladder", "hurdles", "jump_rope"],
+    "Functional & accessories": ["medicine_ball", "sandbag", "bulgarian_bag", "bands", "trx", "pullup_bar", "swiss_ball", "bosu_ball", "neck_harness", "weight_belt", "water_jug"],
+    Recovery: ["foam_roller", "towel"],
+  };
+
+  assert.deepEqual(
+    Object.fromEntries(EQUIPMENT_ACCESS_GROUPS.map((group) => [group.label, group.options.map((option) => option.value)])),
+    expectedGroups,
+  );
+  assert.equal(new Set(groupedValues).size, groupedValues.length, "equipment values must not appear in two groups");
+  assert.deepEqual(EQUIPMENT_ACCESS_OPTIONS.map((option) => option.value), groupedValues);
+  assert.ok(EQUIPMENT_ACCESS_GROUPS.every((group) => group.label && group.options.length > 0));
 });
 
 test("specialist exercise-bank equipment can be declared at intake", () => {
