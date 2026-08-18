@@ -840,7 +840,7 @@ function LatestPlanCard({
               {plan
                 ? "This plan controls Overview and Today."
                 : hasSavedIntake
-                  ? "No active plan is selected. Generate or set one active from saved plans."
+                  ? "No active plan is selected. Activate one of your saved plans."
                   : "Complete Intake or Quick Build to create your first active plan."}
             </p>
             {!plan ? (
@@ -997,9 +997,8 @@ export default function PlansPage() {
     const sourcePlans = localPlans ?? plans;
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
   }, [localPlans, plans]);
-  const latestEligiblePlan = visiblePlans.find(canSetActive) ?? null;
   const explicitActivePlan = activePlanId ? visiblePlans.find((plan) => plan.plan_id === activePlanId) ?? null : null;
-  const activePlan = explicitActivePlan && canSetActive(explicitActivePlan) ? explicitActivePlan : latestEligiblePlan;
+  const activePlan = explicitActivePlan && canSetActive(explicitActivePlan) ? explicitActivePlan : null;
   const intakeSource = getIntakeSource(me);
   const heldForReviewPlans = visiblePlans.filter(isHeldForAdminReviewPlan);
   const archivedPlans = getArchivedPlans(visiblePlans);

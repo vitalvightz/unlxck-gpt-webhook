@@ -1,20 +1,15 @@
-"""Active-plan resolution for Block 4.
+"""Authoritative active-plan resolution.
 
-Implementation note (PR #1800): active plan selection is centralized here.
-If ``profiles.active_plan_id`` exists, that explicit plan wins only when it
-belongs to the athlete, has an athlete-displayable status and has not passed its
-fight date in the athlete-local training day. When no valid explicit active plan
-is stored, the earliest upcoming fight camp wins; without one, the newest open
-plan wins. Archiving, a malformed scheduled date, or a passed fight date makes a
-plan ineligible without mutating its persisted status or the stored pointer.
-Deleted or unavailable active plans are treated the same. Overlapping saved
+``profiles.active_plan_id`` is the only active-plan pointer. The referenced plan
+is returned only when it belongs to the athlete, has an athlete-displayable
+status and has not passed its fight date in the athlete-local training day. A
+missing, invalid or unreadable pointer resolves to no active plan; this service
+never promotes another saved plan as a fallback. Overlapping saved
 or draft plans are allowed, but activating an overlapping second plan requires an
 explicit pause or replacement choice. ``pause`` preserves the previous plan row
 unchanged and switches the single active pointer to the selected plan, allowing
 the previous plan to be reactivated later. ``replace`` switches the pointer and
-archives the previous plan. When several ready plans exist, ordering is
-deterministic: explicit active first, otherwise latest eligible by ``created_at``
-then id. Eligible statuses are ``ready`` and
+archives the previous plan. Eligible statuses are ``ready`` and
 ``publishable_with_flags``. Generated, review, hold, failed, archived, missing,
 and deleted plans are never active. Overview and Today both call this resolver;
 UI code must not guess with “latest visible plan” logic.
@@ -25,9 +20,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 import json
+import logging
 from typing import Any, Literal, Mapping, Protocol
 
 from fastapi import HTTPException, status
+
+logger = logging.getLogger(__name__)
 
 ELIGIBLE_ACTIVE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 ACTIVE_PLAN_OVERLAP_ACTIONS = {"pause", "replace"}
@@ -86,10 +84,6 @@ def is_active_plan_eligible(
         row,
         current_training_day=current_training_day,
     ) == "eligible"
-
-
-def _created_sort_key(row: dict[str, Any]) -> tuple[str, str]:
-    return (str(row.get("created_at") or ""), str(row.get("id") or ""))
 
 
 def _explicit_active_plan_id(store: ActivePlanStore, athlete_id: str) -> str | None:
@@ -285,36 +279,39 @@ def resolve_active_plan(
     *,
     current_training_day: date | str | None = None,
 ) -> ActivePlanResolution:
-    explicit_id = _explicit_active_plan_id(store, athlete_id)
-    if explicit_id:
-        explicit = store.get_plan_for_athlete(explicit_id, athlete_id)
-        if is_active_plan_eligible(explicit, current_training_day=current_training_day):
-            return ActivePlanResolution(plan=explicit, source="explicit")
-
-    eligible = [
-        row
-        for row in store.list_user_plans(athlete_id)
-        if is_active_plan_eligible(row, current_training_day=current_training_day)
-    ]
-    if not eligible:
+    try:
+        explicit_id = _explicit_active_plan_id(store, athlete_id)
+    except Exception:  # noqa: BLE001 - authority reads must fail closed
+        logger.exception("[active-plan] pointer_read_failed athlete_id=%s", athlete_id)
+        return ActivePlanResolution(plan=None, source="read_failure")
+    if not explicit_id:
         return ActivePlanResolution(plan=None, source="none")
 
-    future_camps = [row for row in eligible if str(row.get("fight_date") or "").strip()]
-    if future_camps:
-        fight_dates = [_parse_date(row.get("fight_date")) for row in future_camps]
-        earliest_fight_date = min(parsed for parsed in fight_dates if parsed is not None)
-        earliest_camps = [
-            row for row in future_camps if _parse_date(row.get("fight_date")) == earliest_fight_date
-        ]
-        return ActivePlanResolution(
-            plan=max(earliest_camps, key=_created_sort_key),
-            source="auto_earliest_future_fight",
+    try:
+        explicit = store.get_plan_for_athlete(explicit_id, athlete_id)
+    except Exception:  # noqa: BLE001 - authority reads must fail closed
+        logger.exception(
+            "[active-plan] referenced_plan_read_failed athlete_id=%s plan_id=%s",
+            athlete_id,
+            explicit_id,
         )
-
-    return ActivePlanResolution(
-        plan=max(eligible, key=_created_sort_key),
-        source="auto_latest_open_plan",
-    )
+        return ActivePlanResolution(plan=None, source="read_failure")
+    if explicit is None:
+        logger.warning(
+            "[active-plan] referenced_plan_missing_or_not_owned athlete_id=%s plan_id=%s",
+            athlete_id,
+            explicit_id,
+        )
+        return ActivePlanResolution(plan=None, source="invalid_reference")
+    if not is_active_plan_eligible(explicit, current_training_day=current_training_day):
+        logger.warning(
+            "[active-plan] referenced_plan_unusable athlete_id=%s plan_id=%s status=%s",
+            athlete_id,
+            explicit_id,
+            normalize_plan_status(explicit),
+        )
+        return ActivePlanResolution(plan=None, source="unusable")
+    return ActivePlanResolution(plan=explicit, source="explicit")
 
 
 def set_active_plan(

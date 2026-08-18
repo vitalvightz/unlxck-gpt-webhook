@@ -86,15 +86,15 @@ def test_no_plans_no_active_plan():
     assert resolve_active_plan(Store([]), "ath").plan is None
 
 
-def test_one_ready_plan_is_active():
-    assert resolve_active_plan(Store([plan("p1")]), "ath").plan_id == "p1"
+def test_ready_plan_is_not_active_without_explicit_pointer():
+    assert resolve_active_plan(Store([plan("p1")]), "ath").plan is None
 
 
-def test_multiple_ready_plans_are_deterministic_latest_fallback():
+def test_multiple_ready_plans_are_not_fallback_candidates():
     store = Store([plan("old", created_at="2026-01-01"), plan("new", created_at="2026-02-01")])
     result = resolve_active_plan(store, "ath")
-    assert result.plan_id == "new"
-    assert result.source == "auto_latest_open_plan"
+    assert result.plan is None
+    assert result.source == "none"
 
 
 def test_explicit_active_plan_wins_over_newer_unrelated_ready_plan():
@@ -102,9 +102,9 @@ def test_explicit_active_plan_wins_over_newer_unrelated_ready_plan():
     assert resolve_active_plan(store, "ath").plan_id == "old"
 
 
-def test_archived_explicit_active_plan_is_not_active_and_falls_back():
+def test_archived_explicit_active_plan_fails_closed_without_fallback():
     store = Store([plan("old", "archived", "2026-02-01"), plan("next", "ready", "2026-01-01")], active="old")
-    assert resolve_active_plan(store, "ath").plan_id == "next"
+    assert resolve_active_plan(store, "ath").plan is None
 
 
 @pytest.mark.parametrize("status", ["review_required", "medical_hold", "generated", "failed", "archived"])
@@ -113,7 +113,7 @@ def test_non_displayable_statuses_cannot_be_active(status):
 
 
 def test_publishable_with_flags_can_be_active():
-    assert resolve_active_plan(Store([plan("p1", "publishable_with_flags")]), "ath").plan_id == "p1"
+    assert resolve_active_plan(Store([plan("p1", "publishable_with_flags")], active="p1"), "ath").plan_id == "p1"
 
 
 def test_overlapping_dates_do_not_block_selection():
@@ -121,7 +121,7 @@ def test_overlapping_dates_do_not_block_selection():
         {**plan("p1", created_at="2026-01-01"), "fight_date": "2026-07-01"},
         {**plan("p2", created_at="2026-02-01"), "fight_date": "2026-07-01"},
     ])
-    assert resolve_active_plan(store, "ath", current_training_day="2026-06-01").plan_id == "p2"
+    assert resolve_active_plan(store, "ath", current_training_day="2026-06-01").plan is None
 
 
 def test_set_active_blocks_overlapping_current_active_plan_without_choice():
@@ -325,35 +325,31 @@ def test_training_day_rollover_keeps_fight_camp_eligible_until_0300_local():
     assert get_plan_activation_state(camp, current_training_day=after_rollover) == "fight_date_passed"
 
 
-def test_expired_pointer_falls_back_to_earliest_future_fight_then_latest_open():
-    passed = {**plan("passed", created_at="2026-05-01"), "fight_date": "2026-06-01"}
-    later = {**plan("later", created_at="2026-06-03"), "fight_date": "2026-08-01"}
-    earliest_old = {**plan("earliest-old", created_at="2026-06-01"), "fight_date": "2026-07-01"}
-    earliest_new = {**plan("earliest-new", created_at="2026-06-02"), "fight_date": "2026-07-01"}
-    open_old = {**plan("open-old", created_at="2026-05-01"), "fight_date": ""}
-    open_new = {**plan("open-new", created_at="2026-05-02"), "fight_date": None}
-    store = Store(
-        [passed, later, earliest_old, earliest_new, open_old, open_new],
-        active="passed",
-    )
+def test_expired_pointer_does_not_fall_back_to_another_eligible_plan():
+    passed = {**plan("passed"), "fight_date": "2026-06-01"}
+    eligible = {**plan("eligible"), "fight_date": "2026-07-01"}
+    store = Store([passed, eligible], active="passed")
 
     resolved = resolve_active_plan(store, "ath", current_training_day="2026-06-02")
-    assert resolved.plan_id == "earliest-new"
-    assert resolved.source == "auto_earliest_future_fight"
+    assert resolved.plan is None
+    assert resolved.source == "unusable"
 
-    future_ids = {"later", "earliest-old", "earliest-new"}
-    open_only_store = Store(
-        [row for row in store.plans if row["id"] not in future_ids],
-        active="passed",
-    )
-    open_resolved = resolve_active_plan(
-        open_only_store,
-        "ath",
-        current_training_day="2026-06-02",
-    )
-    assert open_resolved.plan_id == "open-new"
-    assert open_resolved.source == "auto_latest_open_plan"
 
+def test_missing_and_cross_athlete_references_fail_closed():
+    missing = Store([plan("saved")], active="missing")
+    other = Store([plan("foreign", athlete_id="other")], active="foreign")
+    assert resolve_active_plan(missing, "ath").source == "invalid_reference"
+    assert resolve_active_plan(other, "ath").source == "invalid_reference"
+
+
+def test_active_plan_database_failures_fail_closed():
+    store = Store([plan("p1")], active="p1")
+    store.get_active_plan_id = lambda athlete_id: (_ for _ in ()).throw(RuntimeError("db down"))
+    assert resolve_active_plan(store, "ath").source == "read_failure"
+
+    store = Store([plan("p1")], active="p1")
+    store.get_plan_for_athlete = lambda *args: (_ for _ in ()).throw(RuntimeError("db down"))
+    assert resolve_active_plan(store, "ath").source == "read_failure"
 
 def test_passed_active_pointer_without_fallback_resolves_none_without_mutation():
     store = Store(

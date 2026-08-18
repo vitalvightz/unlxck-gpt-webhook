@@ -102,6 +102,7 @@ def test_timezone_boundary_and_invalid_timezone_fallback():
 @pytest.mark.parametrize("status", ["done", "modified"])
 def test_done_and_safety_modified_qualify_without_duplicate_increment(status):
     store = Store()
+    store.active_plan_id = "plan-1"
     store.plans = [plan([training_day(17, "a"), training_day(18, "b")])]
     store.completions = [completion(17, "a", status), completion(17, "a", status), completion(18, "b", status)]
     state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
@@ -110,6 +111,7 @@ def test_done_and_safety_modified_qualify_without_duplicate_increment(status):
 
 def test_rest_is_neutral_but_missed_or_skipped_prescribed_work_breaks():
     store = Store()
+    store.active_plan_id = "plan-1"
     store.plans = [plan([training_day(16, "a"), training_day(17, "rest", "rest"), training_day(18, "b"), training_day(19, "c")])]
     store.completions = [completion(16, "a"), completion(18, "b", "skipped"), completion(19, "c")]
     state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(19))
@@ -121,15 +123,43 @@ def test_inactive_plan_cannot_progress_or_farm_a_second_track():
     store = Store()
     active = plan([training_day(18, "active")])
     inactive = plan([training_day(18, "inactive")], plan_id="plan-2", status="archived")
+    store.active_plan_id = "plan-1"
     store.plans = [active, inactive]
     store.completions = [completion(18, "inactive", plan_id="plan-2")]
     state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
     assert state["adherence"]["current"] == 0
 
 
+def test_null_active_plan_clears_current_progress_without_using_saved_plan():
+    store = Store()
+    store.athlete_streaks["athlete-1"] = {"adherence_current": 4, "adherence_best": 6}
+    store.plans = [plan([training_day(18, "saved")])]
+    store.completions = [completion(18, "saved")]
+
+    state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
+
+    assert state["adherence"]["current"] == 0
+    assert state["adherence"]["best"] == 6
+
+
+def test_restored_active_plan_reconciles_existing_completion_history():
+    store = Store()
+    store.plans = [plan([training_day(17, "a"), training_day(18, "b")])]
+    store.completions = [completion(17, "a"), completion(18, "b", "modified")]
+    assert reconcile_adherence_streak(
+        store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18)
+    )["adherence"]["current"] == 0
+
+    store.active_plan_id = "plan-1"
+    state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
+
+    assert state["adherence"]["current"] == 2
+
+
 def test_read_failure_fails_closed_and_best_survives_reset():
     store = Store()
     store.athlete_streaks["athlete-1"] = {"adherence_current": 3, "adherence_best": 5}
+    store.active_plan_id = "plan-1"
     store.plans = [plan([training_day(17, "a")])]
     with pytest.raises(RuntimeError):
         store.list_plan_session_completions = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("database unavailable"))

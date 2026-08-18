@@ -101,6 +101,7 @@ def test_athlete_can_read_weekly_schedule_for_their_plan_and_latest_plan():
         request=_build_request(),
         result=finalized_result(planning_brief=_weekly_schedule_planning_brief()),
     )
+    store.set_active_plan_id("athlete-1", plan["id"])
 
     response = client.get(
         f"/api/plans/{plan['id']}/weekly-schedule",
@@ -497,7 +498,7 @@ def test_plan_detail_advisory_is_derived_from_structured_context_not_saved_plan_
     assert first_response.json()["advisories"] == second_response.json()["advisories"]
 
 
-def test_latest_plan_endpoint_returns_latest_saved_plan():
+def test_latest_plan_endpoint_does_not_promote_generated_saved_plan():
     client, store, _ = _build_client()
 
     response = client.post(
@@ -509,8 +510,8 @@ def test_latest_plan_endpoint_returns_latest_saved_plan():
     assert response.status_code == 202
     latest = client.get("/api/plans/latest", headers={"Authorization": "Bearer athlete-token"})
 
-    assert latest.status_code == 200
-    assert latest.json()["plan_id"] == next(iter(store.plans.values()))["id"]
+    assert latest.status_code == 404
+    assert store.get_active_plan_id("athlete-1") is None
 
 
 def test_set_active_endpoint_blocks_overlapping_active_plan_until_user_chooses():
@@ -714,6 +715,7 @@ def test_archived_plan_is_preview_only_for_athlete_history():
             stage2_status="admin_archived",
         ),
     )
+    store.set_active_plan_id("athlete-1", visible_plan["id"])
 
     list_response = client.get("/api/plans", headers={"Authorization": "Bearer athlete-token"})
     latest_response = client.get("/api/plans/latest", headers={"Authorization": "Bearer athlete-token"})

@@ -28,6 +28,14 @@ def test_plan_manager_renders_active_and_set_active_states():
     assert "plan.activation_state" in source
 
 
+def test_plan_manager_never_promotes_latest_saved_plan_to_active():
+    source = _read("web/app/plans/page.tsx")
+    assert "latestEligiblePlan" not in source
+    assert "explicitActivePlan && canSetActive(explicitActivePlan) ? explicitActivePlan : null" in source
+    assert '"No active plan"' in source
+    assert "Activate one of your saved plans." in source
+
+
 def test_plan_detail_uses_server_activation_state_for_completed_history():
     source = _read("web/components/plan-viewer.tsx")
     assert "isCompletedFightCamp(plan.activation_state)" in source
