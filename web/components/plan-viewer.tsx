@@ -21,6 +21,7 @@ import {
   setActivePlan,
   submitManualStage2,
 } from "@/lib/api";
+import { requestXpRefresh } from "@/lib/xp-events";
 import {
   ACTIVE_PLAN_OVERLAP_MESSAGE,
   type ActivePlanOverlapAction,
@@ -2196,6 +2197,7 @@ export function PlanViewer({
           current?.planId === plan.plan_id ? current.nextSessionFocusDate : undefined,
         planCompletions: current?.planId === plan.plan_id ? current.planCompletions : null,
       }));
+      requestXpRefresh();
       setShowActiveConflict(false);
     } catch (error) {
       if (!overlapAction && isActivePlanOverlapError(error)) {

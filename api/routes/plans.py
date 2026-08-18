@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
+import logging
 import uuid
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
@@ -33,6 +34,9 @@ from api.services.minor_plan_guard import apply_minor_plan_guard
 from api.services.plan_safety_copy import clarify_restricted_training_hold
 from api.store import AppStore, is_effective_admin_profile
 from api.services.active_plan import resolve_active_plan, set_active_plan
+from api.services.streaks import reconcile_adherence_streak
+
+logger = logging.getLogger(__name__)
 
 
 class PlanActivationRequest(BaseModel):
@@ -284,6 +288,21 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             overlap_action=activation.overlap_action if activation else None,
             current_training_day=training_day,
         )
+        # Activation can restore an existing plan whose completion history was
+        # already present. Rebuild the persisted adherence view from that
+        # history; this reconciliation is deliberately XP-free.
+        try:
+            reconcile_adherence_streak(
+                store,
+                athlete_id=profile.athlete_id,
+                athlete_timezone=profile.athlete_timezone,
+            )
+        except Exception:  # noqa: BLE001 - the active pointer remains authoritative
+            logger.exception(
+                "[streak] activation reconciliation failed athlete_id=%s plan_id=%s",
+                profile.athlete_id,
+                plan_id,
+            )
         return _map_plan_summary(plan_row, current_training_day=training_day)
 
     @router.patch("/api/plans/{plan_id}", response_model=PlanDetail)

@@ -14,6 +14,7 @@ def _seed_plan(store) -> None:
         "plan_name": "Camp A",
         "created_at": "2026-06-01T00:00:00+00:00",
     }
+    store.set_active_plan_id("athlete-1", PLAN_ID)
 
 
 def test_checkin_route_awards_first_and_daily_xp_once_for_repeated_same_day_saves():
