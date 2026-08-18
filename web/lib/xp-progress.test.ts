@@ -17,6 +17,10 @@ function response(overrides: Record<string, unknown> = {}) {
         },
       ],
     },
+    streaks: {
+      login: { current: 12, best: 27, last_active_date: "2026-08-18" },
+      adherence: { current: 8, best: 10, last_qualifying_day: "2026-08-18" },
+    },
     opportunities: [
       {
         code: "complete_today_session",
@@ -57,6 +61,7 @@ test("parses the full progress contract", () => {
   const parsed = parseXpProgressResponse(response());
 
   assert.equal(parsed.state.totalXp, 620);
+  assert.equal(parsed.streaks.adherence.current, 8);
   assert.equal(parsed.state.recentAwards[0]?.action, "planned_session_completed");
   assert.equal(parsed.opportunities[0]?.xp, 75);
   assert.equal(parsed.currentWeek?.plannedSessions, 3);

@@ -134,6 +134,23 @@
   font-weight: 600;
 }
 
+.xp-streaks {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.xp-streaks > div { display: grid; gap: 3px; }
+.xp-streaks span, .xp-streaks small { color: var(--muted); font-size: 0.72rem; }
+.xp-streaks strong { font-size: 1.35rem; line-height: 1; }
+.xp-streak-secondary strong { font-size: 1.05rem; color: var(--muted-strong); }
+.xp-streaks--page { padding: 18px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; }
+.xp-streaks--page .xp-streak-primary strong { font-size: 2rem; color: var(--progress-gold); }
+.xp-streaks--page p { margin: 3px 0 0; color: var(--progress-gold); font-size: 0.82rem; }
+
 .xp-progress-empty,
 .xp-page-empty,
 .xp-progress-error {

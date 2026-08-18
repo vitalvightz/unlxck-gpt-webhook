@@ -23,6 +23,7 @@ type ApiAward = {
 
 type FetchStub = {
   calls: Array<{ url: string; method: string; authorization: string | null }>;
+  activityCalls: Array<{ url: string; method: string; authorization: string | null }>;
   restore: () => void;
 };
 
@@ -40,6 +41,10 @@ function progressResponse(totalXp: number, awards: ApiAward[] = []): Response {
         total_xp: totalXp,
         last_daily_login_date: null,
         recent_awards: awards,
+      },
+      streaks: {
+        login: { current: 1, best: 1, last_active_date: "2026-08-18" },
+        adherence: { current: 0, best: 0, last_qualifying_day: null },
       },
       opportunities: [],
       current_week: null,
@@ -67,17 +72,24 @@ function installFetchStub(
 ): FetchStub {
   const originalFetch = globalThis.fetch;
   const calls: FetchStub["calls"] = [];
+  const activityCalls: FetchStub["activityCalls"] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(typeof input === "string" || input instanceof URL ? input : input.url);
-    calls.push({
+    const call = {
       url,
       method: init?.method ?? "GET",
       authorization: new Headers(init?.headers).get("authorization"),
-    });
+    };
+    if (url === "/api/xp/activity") {
+      activityCalls.push(call);
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    }
+    calls.push(call);
     return handler(calls.length - 1);
   }) as typeof fetch;
   return {
     calls,
+    activityCalls,
     restore: () => {
       globalThis.fetch = originalFetch;
     },
@@ -175,7 +187,7 @@ const sessionAwards: ApiAward[] = [
   },
 ];
 
-test("first athlete load is a read-only progress GET and does not replay history", async () => {
+test("first athlete load records activity explicitly before reading progress", async () => {
   const fetchStub = installFetchStub(() => progressResponse(620, sessionAwards));
   const harness = await mountProvider({ athleteId: "athlete-1", accessToken: "token-1" });
 
@@ -187,6 +199,8 @@ test("first athlete load is a read-only progress GET and does not replay history
       method: "GET",
       authorization: "Bearer token-1",
     });
+    assert.equal(fetchStub.activityCalls.length, 1);
+    assert.equal(fetchStub.activityCalls[0]?.method, "POST");
     assert.equal(harness.read().progress.state.totalXp, 620);
     assert.equal(harness.read().feedback, null);
   } finally {

@@ -15,6 +15,7 @@ from typing import Any, Literal
 from api.services.today_readiness_boundary import build_today_command_view
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import evaluate_week_completion, find_week_for_training_day
+from api.services.streaks import get_streak_state
 from api.services.xp_awards import profile_activation_complete
 from api.store import AppStore
 
@@ -534,7 +535,7 @@ def build_xp_progress(
     athlete_timezone: str | None,
     profile: object,
 ) -> dict[str, Any]:
-    """Build the athlete-scoped, mutation-free XP interface payload."""
+    """Build the athlete-scoped, read-only XP and streak payload."""
 
     state = _read_xp_state(store, athlete_id)
     latest_intake = _safe_latest_intake(store, athlete_id)
@@ -571,6 +572,11 @@ def build_xp_progress(
     )
     return {
         "state": state,
+        "streaks": get_streak_state(
+            store,
+            athlete_id=athlete_id,
+            athlete_timezone=athlete_timezone,
+        ),
         "opportunities": opportunities,
         "current_week": current_week,
         "major_milestones": milestones,

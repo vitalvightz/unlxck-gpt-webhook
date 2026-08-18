@@ -39,9 +39,21 @@ export type XpMilestone = {
 
 export type XpProgress = {
   state: XpState;
+  streaks: StreakState;
   opportunities: XpOpportunity[];
   currentWeek: XpWeekProgress | null;
   majorMilestones: XpMilestone[];
+};
+
+export type StreakValue = {
+  current: number;
+  best: number;
+  lastDate: string | null;
+};
+
+export type StreakState = {
+  login: StreakValue;
+  adherence: StreakValue;
 };
 
 const actionNames = new Set(Object.keys(XP_ACTIONS));
@@ -227,9 +239,38 @@ function parseMilestone(value: unknown): XpMilestone | null {
   };
 }
 
+function parseStreakValue(value: unknown, lastDateKey: string): StreakValue {
+  const candidate = record(value);
+  const current = candidate ? nonNegativeInteger(candidate.current) : null;
+  const best = candidate ? nonNegativeInteger(candidate.best) : null;
+  const rawLastDate = candidate?.[lastDateKey];
+  const lastDate = rawLastDate === null || rawLastDate === undefined
+    ? null
+    : typeof rawLastDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawLastDate)
+      ? rawLastDate
+      : undefined;
+  if (current === null || best === null || best < current || lastDate === undefined) {
+    throw new Error("Server returned invalid streak progress.");
+  }
+  return { current, best, lastDate };
+}
+
+function parseStreaks(value: unknown): StreakState {
+  const candidate = record(value);
+  if (!candidate) throw new Error("Server returned invalid streak progress.");
+  return {
+    login: parseStreakValue(candidate.login, "last_active_date"),
+    adherence: parseStreakValue(candidate.adherence, "last_qualifying_day"),
+  };
+}
+
 export function createFreshXpProgress(): XpProgress {
   return {
     state: createFreshXpState(),
+    streaks: {
+      login: { current: 0, best: 0, lastDate: null },
+      adherence: { current: 0, best: 0, lastDate: null },
+    },
     opportunities: [],
     currentWeek: null,
     majorMilestones: [],
@@ -257,6 +298,7 @@ export function parseXpProgressResponse(value: unknown): XpProgress {
   }
   return {
     state: parseState(candidate.state),
+    streaks: parseStreaks(candidate.streaks),
     opportunities: opportunities as XpOpportunity[],
     currentWeek: parseWeek(candidate.current_week),
     majorMilestones: milestones as XpMilestone[],
