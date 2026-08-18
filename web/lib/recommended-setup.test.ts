@@ -54,17 +54,19 @@ test("every equipment preset value exists in EQUIPMENT_ACCESS_OPTIONS", () => {
 
 test("equipment groups contain every supported option exactly once", () => {
   const groupedValues = EQUIPMENT_ACCESS_GROUPS.flatMap((group) => group.options.map((option) => option.value));
-  const expectedValues = [
-    "dumbbells", "kettlebells", "medicine_ball", "sandbag", "bulgarian_bag", "atlas_stone", "plate", "water_jug",
-    "barbell", "trap_bar", "pullup_bar", "cable", "landmine", "bench", "log",
-    "assault_bike", "rower", "pool", "step_mill", "treadmill",
-    "heavy_bag", "thai_pads", "partner",
-    "box", "agility_ladder", "jump_rope", "hurdles",
-    "sled", "battle_ropes", "sledgehammer", "tire", "weight_vest",
-    "bands", "bosu_ball", "foam_roller", "neck_harness", "swiss_ball", "towel", "trx", "weight_belt",
-  ];
+  const expectedGroups = {
+    "Weights & strength": ["dumbbells", "kettlebells", "barbell", "trap_bar", "plate", "bench", "cable", "landmine", "log", "atlas_stone"],
+    Conditioning: ["assault_bike", "rower", "treadmill", "step_mill", "pool", "sled", "battle_ropes", "tire", "sledgehammer", "weight_vest"],
+    Combat: ["heavy_bag", "thai_pads", "partner"],
+    "Plyometrics & movement": ["box", "agility_ladder", "hurdles", "jump_rope"],
+    "Functional & accessories": ["medicine_ball", "sandbag", "bulgarian_bag", "bands", "trx", "pullup_bar", "swiss_ball", "bosu_ball", "neck_harness", "weight_belt", "water_jug"],
+    Recovery: ["foam_roller", "towel"],
+  };
 
-  assert.deepEqual(groupedValues, expectedValues);
+  assert.deepEqual(
+    Object.fromEntries(EQUIPMENT_ACCESS_GROUPS.map((group) => [group.label, group.options.map((option) => option.value)])),
+    expectedGroups,
+  );
   assert.equal(new Set(groupedValues).size, groupedValues.length, "equipment values must not appear in two groups");
   assert.deepEqual(EQUIPMENT_ACCESS_OPTIONS.map((option) => option.value), groupedValues);
   assert.ok(EQUIPMENT_ACCESS_GROUPS.every((group) => group.label && group.options.length > 0));
