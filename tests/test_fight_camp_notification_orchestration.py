@@ -448,6 +448,7 @@ def test_quiet_hour_event_rehydrates_with_original_expiry() -> None:
         training_day="2026-08-10",
         timezone_name="UTC",
         now_utc=datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc),
+        active_plan_id="plan-1",
     )
     assert len(rehydrated) == 1
     assert rehydrated[0].intent == "plan_ready"
@@ -480,6 +481,7 @@ def test_selected_deferred_event_is_not_rebuilt_on_later_sweeps() -> None:
         training_day="2026-08-10",
         timezone_name="UTC",
         now_utc=due_time,
+        active_plan_id="plan-1",
     )
     assert (
         simulate_notification_delivery_decision(store, rehydrated, now_utc=due_time)
@@ -495,6 +497,7 @@ def test_selected_deferred_event_is_not_rebuilt_on_later_sweeps() -> None:
                 timezone_name="UTC",
                 now_utc=due_time + timedelta(minutes=10 * sweep),
                 observe_mode=True,
+                active_plan_id="plan-1",
             )
             == []
         )
@@ -508,6 +511,7 @@ def test_selected_deferred_event_is_not_rebuilt_on_later_sweeps() -> None:
         timezone_name="UTC",
         now_utc=due_time + timedelta(hours=4),
         observe_mode=False,
+        active_plan_id="plan-1",
     )
     assert [candidate.dedupe_key for candidate in send_candidates] == [
         "plan-ready:plan-1"
@@ -547,6 +551,14 @@ def test_successful_deferred_send_and_superseded_plan_are_terminal() -> None:
         timezone_name="UTC",
         now_utc=due_time,
         active_plan_id="plan-2",
+    ) == []
+    assert _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=due_time,
+        active_plan_id="",
     ) == []
 
     eligible = _deferred_event_candidates(

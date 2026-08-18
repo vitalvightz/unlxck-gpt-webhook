@@ -416,7 +416,6 @@ def _deferred_event_candidates(
         source_plan_id = str(metadata.get("plan_id") or "").strip()
         if (
             intent in {"plan_ready", "plan_updated"}
-            and active_plan_id
             and source_plan_id
             and source_plan_id != active_plan_id
         ):
