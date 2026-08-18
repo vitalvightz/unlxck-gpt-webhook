@@ -171,7 +171,14 @@ def reconcile_adherence_streak(
     resolution = resolve_active_plan(store, athlete_id, current_training_day=today)
     prior = _read_state(store, athlete_id)
     if resolution.plan is None:
-        return _public_state(prior)
+        if resolution.source == "read_failure":
+            return _public_state(prior)
+        row = _write_state(store, athlete_id, {
+            "adherence_current": 0,
+            "adherence_best": max(0, int(prior.get("adherence_best") or 0)),
+            "adherence_last_qualifying_day": None,
+        })
+        return _public_state(row)
     plan_id = str(resolution.plan.get("id") or "")
     completions = _rows(store.list_plan_session_completions(athlete_id, plan_id, limit=500))
     current = 0
