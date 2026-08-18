@@ -26,7 +26,7 @@ def build_xp_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> dict[str, Any]:
-        """Return athlete-scoped XP progress without creating an award."""
+        """Return progress and idempotently record today's app activity."""
 
         _require_athlete(profile)
         return build_xp_progress(
@@ -42,7 +42,7 @@ def build_xp_router(*, require_profile, get_store) -> APIRouter:
         store: AppStore = Depends(get_store),
     ) -> XpAwardResponse:
         # Retained for backwards compatibility only. Active clients use the
-        # mutation-free /progress endpoint.
+        # /progress endpoint, which records activity without awarding XP.
         _require_athlete(profile)
         result = claim_daily_login_reward(
             store,

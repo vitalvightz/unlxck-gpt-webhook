@@ -41,6 +41,10 @@ function progressResponse(totalXp: number, awards: ApiAward[] = []): Response {
         last_daily_login_date: null,
         recent_awards: awards,
       },
+      streaks: {
+        login: { current: 1, best: 1, last_active_date: "2026-08-18" },
+        adherence: { current: 0, best: 0, last_qualifying_day: null },
+      },
       opportunities: [],
       current_week: null,
       major_milestones: [],
@@ -175,7 +179,7 @@ const sessionAwards: ApiAward[] = [
   },
 ];
 
-test("first athlete load is a read-only progress GET and does not replay history", async () => {
+test("first athlete load uses the progress GET and does not replay XP history", async () => {
   const fetchStub = installFetchStub(() => progressResponse(620, sessionAwards));
   const harness = await mountProvider({ athleteId: "athlete-1", accessToken: "token-1" });
 

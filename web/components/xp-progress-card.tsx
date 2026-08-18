@@ -104,6 +104,14 @@ export function XpProgressCardView({
     : "Max level reached";
   const [primaryOpportunity, ...remainingOpportunities] = progress.opportunities;
   const interactiveActions = mode === "page";
+  const training = progress.streaks.adherence;
+  const app = progress.streaks.login;
+  const distanceToBest = training.best - training.current;
+  const bestMessage = training.current > 0 && distanceToBest === 0
+    ? "You’ve matched your best"
+    : distanceToBest > 0 && distanceToBest <= 3
+      ? `${distanceToBest} more to match your best`
+      : null;
 
   const card = (
     <article
@@ -146,6 +154,20 @@ export function XpProgressCardView({
         {ratio ? <span className="xp-progress-ratio">{ratio}</span> : null}
         <span>{progressRemaining}</span>
       </p>
+
+      <section className={`xp-streaks ${mode === "page" ? "xp-streaks--page" : ""}`} aria-label="Streaks">
+        <div className="xp-streak-primary">
+          <span>Training streak</span>
+          <strong>{numberFormatter.format(training.current)}</strong>
+          {mode === "page" ? <small>Best <b>{numberFormatter.format(training.best)}</b></small> : null}
+          {mode === "page" && bestMessage ? <p>{bestMessage}</p> : null}
+        </div>
+        <div className="xp-streak-secondary">
+          <span>App streak</span>
+          <strong>{numberFormatter.format(app.current)}</strong>
+          {mode === "page" ? <small>Best {numberFormatter.format(app.best)}</small> : null}
+        </div>
+      </section>
 
       <div className="xp-progress-details">
         <section className="xp-progress-detail" aria-labelledby={`${mode}-xp-next-label`}>

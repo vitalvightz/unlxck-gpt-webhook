@@ -61,6 +61,23 @@ test("Overview card restores the compact level, rank, total and action rail", ()
   assert.match(html, /aria-valuetext="130 XP to Level 3"/);
   assert.doesNotMatch(html, /↗|xp-progress-open/);
   assert.doesNotMatch(html, /daily reward|daily login|claimed/i);
+  assert.match(html, /Training streak/);
+  assert.match(html, /App streak/);
+});
+
+test("progress page gives near-best training feedback and keeps app streak secondary", () => {
+  const html = renderToStaticMarkup(
+    <XpProgressCardView mode="page" progress={progress({
+      streaks: {
+        adherence: { current: 8, best: 10, lastDate: "2026-08-18" },
+        login: { current: 12, best: 27, lastDate: "2026-08-18" },
+      },
+    })} />,
+  );
+  assert.match(html, /Training streak/);
+  assert.match(html, /2 more to match your best/);
+  assert.match(html, /App streak/);
+  assert.match(html, /Best 27/);
 });
 
 test("Progress-page card uses the same hierarchy without nesting action links", () => {
