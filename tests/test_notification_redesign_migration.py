@@ -7,6 +7,12 @@ MIGRATION = (
     / "migrations"
     / "20260812155956_redesign_fight_camp_notifications.sql"
 )
+THROTTLE_MIGRATION = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260818150000_throttle_notification_evaluations.sql"
+)
 
 
 def test_notification_redesign_migration_is_private_and_auditable() -> None:
@@ -56,3 +62,10 @@ def test_notification_templates_include_high_frequency_variants() -> None:
     for variant_id in ("pl-low-01", "pl-low-02", "fc-d14", "fc-d07", "fc-d03", "fc-d01"):
         assert f"'{variant_id}'" in sql
 
+
+def test_evaluation_throttle_rpc_remains_service_role_only() -> None:
+    sql = THROTTLE_MIGRATION.read_text(encoding="utf-8").lower()
+    assert "p_min_interval_seconds integer default 0" in sql
+    assert "make_interval(secs => p_min_interval_seconds)" in sql
+    assert ") from public, anon, authenticated" in sql
+    assert ") to service_role" in sql

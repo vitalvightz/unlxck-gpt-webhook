@@ -494,9 +494,24 @@ def test_selected_deferred_event_is_not_rebuilt_on_later_sweeps() -> None:
                 training_day="2026-08-10",
                 timezone_name="UTC",
                 now_utc=due_time + timedelta(minutes=10 * sweep),
+                observe_mode=True,
             )
             == []
         )
+
+    # Observe owns only a shadow lifecycle. Switching to send must expose the
+    # original deferred source for one real claim.
+    send_candidates = _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=due_time + timedelta(hours=4),
+        observe_mode=False,
+    )
+    assert [candidate.dedupe_key for candidate in send_candidates] == [
+        "plan-ready:plan-1"
+    ]
 
     rows = list_notification_evaluations(
         store,
@@ -506,6 +521,93 @@ def test_selected_deferred_event_is_not_rebuilt_on_later_sweeps() -> None:
     )
     assert sum(int(row["evaluation_count"]) for row in rows) == 1
     assert list_recent_notification_deliveries(store, profile_id="athlete-1") == []
+
+
+def test_successful_deferred_send_and_superseded_plan_are_terminal() -> None:
+    store = OrchestrationStore()
+    quiet_time = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    candidate = NotificationCandidate(
+        **{
+            **_foundation_candidate(
+                key="plan-ready:plan-1", at=quiet_time, notification_class="event"
+            ).__dict__,
+            "notification_type": "plan_ready",
+            "intent": "plan_ready",
+            "category": "plan_update_alerts",
+            "expires_at": quiet_time + timedelta(days=7),
+            "source_event_metadata": {"plan_id": "plan-1"},
+        }
+    )
+    assert prepare_notification_delivery(store, [candidate], now_utc=quiet_time) is None
+    due_time = datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc)
+    assert _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=due_time,
+        active_plan_id="plan-2",
+    ) == []
+
+    eligible = _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=due_time,
+        active_plan_id="plan-1",
+    )
+    selected = prepare_notification_delivery(store, eligible, now_utc=due_time)
+    assert selected is not None
+    finalize_notification_delivery(store, selected[1], status="sent", delivered_count=1)
+    assert _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=due_time + timedelta(minutes=10),
+        active_plan_id="plan-1",
+    ) == []
+
+
+def test_unchanged_diagnostics_are_throttled_but_state_changes_persist() -> None:
+    store = OrchestrationStore()
+    view = _view(injuries=[])
+    start = datetime(2026, 8, 9, 9, 0, tzinfo=timezone.utc)
+    build_fight_camp_candidates(
+        store, view, profile_id="athlete-1", timezone_name="UTC", now_utc=start
+    )
+    build_fight_camp_candidates(
+        store,
+        view,
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=start + timedelta(minutes=10),
+    )
+    rows = list_notification_evaluations(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-09",
+        intent="injury_recheck",
+    )
+    assert rows[0]["evaluation_count"] == 1
+
+    actionable = _view(
+        injuries=[{
+            "id": "injury-new",
+            "status": "open",
+            "severity": "severe",
+            "updated_at": "2026-08-08T12:00:00+00:00",
+        }]
+    )
+    candidates = build_fight_camp_candidates(
+        store,
+        actionable,
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=start + timedelta(minutes=20),
+    )
+    assert any(candidate.intent == "injury_recheck" for candidate in candidates)
 
 
 def test_deferred_event_keeps_failed_and_stale_pending_retries() -> None:

@@ -259,6 +259,7 @@ def record_notification_evaluation(
     candidate: NotificationCandidate | None = None,
     resulting_delivery_id: str | None = None,
     source_event_metadata: Mapping[str, Any] | None = None,
+    min_persist_interval: timedelta | None = None,
 ) -> dict[str, Any]:
     """Persist one auditable decision, coalescing only an identical state.
 
@@ -345,6 +346,13 @@ def record_notification_evaluation(
         key = (profile_id, evaluation_key)
         existing = bucket.get(key)
         if existing is not None:
+            last_evaluated = _parse_datetime(existing.get("last_evaluated_at"))
+            if (
+                min_persist_interval is not None
+                and last_evaluated is not None
+                and reference - last_evaluated < min_persist_interval
+            ):
+                return dict(existing)
             existing["evaluated_at"] = reference.isoformat()
             existing["last_evaluated_at"] = reference.isoformat()
             existing["evaluation_count"] = int(existing.get("evaluation_count") or 0) + 1
@@ -380,6 +388,9 @@ def record_notification_evaluation(
                 "p_source_event_metadata": metadata,
                 "p_resulting_delivery_id": resulting_delivery_id,
                 "p_evaluation_key": evaluation_key,
+                "p_min_interval_seconds": max(
+                    0, int(min_persist_interval.total_seconds())
+                ) if min_persist_interval is not None else 0,
             },
         ).execute()
         rows = _rows(response)
