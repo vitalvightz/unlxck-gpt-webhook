@@ -516,7 +516,9 @@ class AppStore(Protocol):
     def upsert_athlete_streaks(
         self, athlete_id: str, fields: dict[str, Any]
     ) -> dict[str, Any]: ...
-    def record_daily_activity(self, athlete_id: str, activity_date: str) -> None: ...
+    def record_daily_activity(
+        self, athlete_id: str, activity_date: str
+    ) -> dict[str, Any]: ...
     def list_daily_activity(self, athlete_id: str) -> list[dict[str, Any]]: ...
 
     # --- Durable, server-awarded account XP ---
@@ -4556,16 +4558,17 @@ class SupabaseAppStore:
             raise RuntimeError("failed to persist athlete streak")
         return rows[0]
 
-    def record_daily_activity(self, athlete_id: str, activity_date: str) -> None:
-        (
-            self.client.table("athlete_daily_activity")
-            .upsert(
-                {"athlete_id": athlete_id, "activity_date": activity_date},
-                on_conflict="athlete_id,activity_date",
-                ignore_duplicates=True,
-            )
-            .execute()
-        )
+    def record_daily_activity(
+        self, athlete_id: str, activity_date: str
+    ) -> dict[str, Any]:
+        response = self.client.rpc(
+            "record_athlete_daily_activity",
+            {"p_athlete_id": athlete_id, "p_activity_date": activity_date},
+        ).execute()
+        rows = getattr(response, "data", None) or []
+        if not rows:
+            raise RuntimeError("failed to record athlete activity")
+        return rows[0]
 
     def list_daily_activity(self, athlete_id: str) -> list[dict[str, Any]]:
         response = (

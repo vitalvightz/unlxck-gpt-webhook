@@ -535,7 +535,7 @@ def build_xp_progress(
     athlete_timezone: str | None,
     profile: object,
 ) -> dict[str, Any]:
-    """Build XP progress and record the authenticated app day idempotently."""
+    """Build the athlete-scoped, read-only XP and streak payload."""
 
     state = _read_xp_state(store, athlete_id)
     latest_intake = _safe_latest_intake(store, athlete_id)

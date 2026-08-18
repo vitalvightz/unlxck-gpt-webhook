@@ -4,7 +4,11 @@ from threading import Lock
 
 import pytest
 
-from api.services.streaks import get_streak_state, record_daily_activity
+from api.services.streaks import (
+    get_streak_state,
+    reconcile_adherence_streak,
+    record_daily_activity,
+)
 
 
 class Store:
@@ -19,6 +23,22 @@ class Store:
     def record_daily_activity(self, athlete_id, activity_date):
         with self.lock:
             self.athlete_daily_activity.add((athlete_id, activity_date))
+            cursor = datetime.fromisoformat(activity_date).date()
+            current = 0
+            while (athlete_id, cursor.isoformat()) in self.athlete_daily_activity:
+                current += 1
+                cursor = cursor.fromordinal(cursor.toordinal() - 1)
+            prior = self.athlete_streaks.get(athlete_id, {})
+            self.athlete_streaks[athlete_id] = {
+                "athlete_id": athlete_id,
+                **prior,
+                "login_current": current,
+                "login_best": max(int(prior.get("login_best") or 0), current),
+                "login_last_active_date": max(
+                    day for owner, day in self.athlete_daily_activity if owner == athlete_id
+                ),
+            }
+            return dict(self.athlete_streaks[athlete_id])
 
     def list_user_plans(self, athlete_id):
         return [row for row in self.plans if row["athlete_id"] == athlete_id]
@@ -84,7 +104,7 @@ def test_done_and_safety_modified_qualify_without_duplicate_increment(status):
     store = Store()
     store.plans = [plan([training_day(17, "a"), training_day(18, "b")])]
     store.completions = [completion(17, "a", status), completion(17, "a", status), completion(18, "b", status)]
-    state = get_streak_state(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
+    state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
     assert state["adherence"]["current"] == 2
 
 
@@ -92,7 +112,7 @@ def test_rest_is_neutral_but_missed_or_skipped_prescribed_work_breaks():
     store = Store()
     store.plans = [plan([training_day(16, "a"), training_day(17, "rest", "rest"), training_day(18, "b"), training_day(19, "c")])]
     store.completions = [completion(16, "a"), completion(18, "b", "skipped"), completion(19, "c")]
-    state = get_streak_state(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(19))
+    state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(19))
     assert state["adherence"]["current"] == 1
     assert state["adherence"]["best"] == 1
 
@@ -103,7 +123,7 @@ def test_inactive_plan_cannot_progress_or_farm_a_second_track():
     inactive = plan([training_day(18, "inactive")], plan_id="plan-2", status="archived")
     store.plans = [active, inactive]
     store.completions = [completion(18, "inactive", plan_id="plan-2")]
-    state = get_streak_state(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
+    state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
     assert state["adherence"]["current"] == 0
 
 
@@ -113,10 +133,29 @@ def test_read_failure_fails_closed_and_best_survives_reset():
     store.plans = [plan([training_day(17, "a")])]
     with pytest.raises(RuntimeError):
         store.list_plan_session_completions = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("database unavailable"))
-        get_streak_state(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
+        reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
     assert store.athlete_streaks["athlete-1"]["adherence_current"] == 3
 
     store.list_plan_session_completions = lambda *args, **kwargs: []
-    state = get_streak_state(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
+    state = reconcile_adherence_streak(store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18))
     assert state["adherence"]["current"] == 0
     assert state["adherence"]["best"] == 5
+
+
+def test_streak_state_read_does_not_record_or_reconcile_activity():
+    store = Store()
+    store.athlete_streaks["athlete-1"] = {
+        "login_current": 4,
+        "login_best": 7,
+        "login_last_active_date": "2026-08-17",
+    }
+    before_activity = set(store.athlete_daily_activity)
+    before_state = dict(store.athlete_streaks["athlete-1"])
+
+    state = get_streak_state(
+        store, athlete_id="athlete-1", athlete_timezone="UTC", now=instant(18)
+    )
+
+    assert state["login"]["current"] == 4
+    assert store.athlete_daily_activity == before_activity
+    assert store.athlete_streaks["athlete-1"] == before_state

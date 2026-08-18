@@ -12,7 +12,7 @@ import {
 
 import { useAppSession } from "@/components/auth-provider";
 import { XP_ACTIONS, resolveXpLevel, type XpAwardRecord } from "@/lib/xp";
-import { getXpProgress } from "@/lib/xp-api";
+import { getXpProgress, recordAppActivity } from "@/lib/xp-api";
 import { XP_REFRESH_EVENT } from "@/lib/xp-events";
 import { createFreshXpProgress, type XpProgress } from "@/lib/xp-progress";
 
@@ -228,7 +228,9 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   useEffect(() => {
     if (!athleteId || !accessToken) return;
-    void load();
+    // Only the explicit authenticated app/session start records activity.
+    // Progress polling, focus refreshes and widgets remain read-only.
+    void recordAppActivity(accessToken).then(load, load);
 
     const refresh = () => void load();
     const handleVisibility = () => {

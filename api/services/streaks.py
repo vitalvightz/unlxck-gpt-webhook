@@ -80,15 +80,17 @@ def _activity_dates(store: AppStore, athlete_id: str) -> set[date]:
     return result
 
 
-def _insert_activity(store: AppStore, athlete_id: str, activity_day: date) -> None:
+def _insert_activity(
+    store: AppStore, athlete_id: str, activity_day: date
+) -> Mapping[str, Any] | None:
     custom = getattr(store, "record_daily_activity", None)
     if callable(custom):
-        custom(athlete_id, activity_day.isoformat())
-        return
+        result = custom(athlete_id, activity_day.isoformat())
+        return result if isinstance(result, Mapping) else None
     activity = getattr(store, "athlete_daily_activity", None)
     if isinstance(activity, set):
         activity.add((athlete_id, activity_day.isoformat()))
-        return
+        return None
     (
         store.client.table("athlete_daily_activity")
         .upsert(
@@ -97,6 +99,7 @@ def _insert_activity(store: AppStore, athlete_id: str, activity_day: date) -> No
             ignore_duplicates=True,
         ).execute()
     )
+    return None
 
 
 def _public_state(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -135,7 +138,9 @@ def record_daily_activity(
 ) -> dict[str, Any]:
     """Record at most one activity row for the server-resolved effective day."""
     activity_day = date.fromisoformat(resolve_training_day(athlete_timezone, now=now))
-    _insert_activity(store, athlete_id, activity_day)
+    atomic_state = _insert_activity(store, athlete_id, activity_day)
+    if atomic_state is not None:
+        return _public_state(atomic_state)
     return _public_state(reconcile_login_streak(store, athlete_id=athlete_id, activity_day=activity_day))
 
 
@@ -200,10 +205,8 @@ def reconcile_adherence_streak(
 def get_streak_state(
     store: AppStore, *, athlete_id: str, athlete_timezone: str | None, now: datetime | None = None
 ) -> dict[str, Any]:
-    record_daily_activity(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now)
-    return reconcile_adherence_streak(
-        store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now
-    )
+    """Read persisted streak state without recording activity or writing counters."""
+    return _public_state(_read_state(store, athlete_id))
 
 
 __all__ = ["get_streak_state", "record_daily_activity", "reconcile_adherence_streak", "reconcile_login_streak"]

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.models import ProfileRecord, XpAwardResponse
 from api.services.xp_progress import build_xp_progress
+from api.services.streaks import record_daily_activity
 from api.store import AppStore
 from api.xp import claim_daily_login_reward
 
@@ -26,7 +27,7 @@ def build_xp_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> dict[str, Any]:
-        """Return progress and idempotently record today's app activity."""
+        """Return athlete-scoped progress without recording app activity."""
 
         _require_athlete(profile)
         return build_xp_progress(
@@ -36,13 +37,27 @@ def build_xp_router(*, require_profile, get_store) -> APIRouter:
             profile=profile,
         )
 
+    @router.post("/activity")
+    def record_activity(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> dict[str, Any]:
+        """Record one explicit authenticated app start for the effective day."""
+
+        _require_athlete(profile)
+        return record_daily_activity(
+            store,
+            athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
+        )
+
     @router.post("/daily-login", response_model=XpAwardResponse)
     def claim_daily_login(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> XpAwardResponse:
         # Retained for backwards compatibility only. Active clients use the
-        # /progress endpoint, which records activity without awarding XP.
+        # explicit /activity endpoint, which records activity without XP.
         _require_athlete(profile)
         result = claim_daily_login_reward(
             store,

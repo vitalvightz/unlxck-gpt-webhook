@@ -348,3 +348,39 @@ def test_progress_endpoint_is_athlete_only_and_read_only(monkeypatch):
     assert store.xp_accounts == before
     assert client.get("/api/xp/progress").status_code in (401, 403)
     assert client.get("/api/xp/progress", headers=ADMIN).status_code == 403
+
+
+def test_explicit_activity_endpoint_records_once_and_progress_does_not(monkeypatch):
+    recorded = []
+
+    def fake_activity(store, **kwargs):
+        recorded.append(kwargs)
+        return {
+            "login": {"current": 1, "best": 1, "last_active_date": "2026-08-18"},
+            "adherence": {"current": 0, "best": 0, "last_qualifying_day": None},
+        }
+
+    def fake_progress(store, **kwargs):
+        return {
+            "state": {"total_xp": 0, "last_daily_login_date": None, "recent_awards": []},
+            "streaks": {
+                "login": {"current": 1, "best": 1, "last_active_date": "2026-08-18"},
+                "adherence": {"current": 0, "best": 0, "last_qualifying_day": None},
+            },
+            "opportunities": [],
+            "current_week": None,
+            "major_milestones": [],
+        }
+
+    monkeypatch.setattr(xp_routes, "record_daily_activity", fake_activity)
+    monkeypatch.setattr(xp_routes, "build_xp_progress", fake_progress)
+    client, _store, _ = _build_client()
+
+    response = client.get("/api/xp/progress", headers=ATHLETE)
+    assert response.status_code == 200
+    assert recorded == []
+
+    activity = client.post("/api/xp/activity", headers=ATHLETE)
+    assert activity.status_code == 200
+    assert len(recorded) == 1
+    assert recorded[-1]["athlete_id"] == "athlete-1"
