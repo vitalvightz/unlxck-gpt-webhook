@@ -36,6 +36,14 @@ def test_plan_manager_never_promotes_latest_saved_plan_to_active():
     assert "Activate one of your saved plans." in source
 
 
+def test_successful_activation_refreshes_progress_and_streak_views():
+    for path in ("web/app/plans/page.tsx", "web/components/plan-viewer.tsx"):
+        source = _read(path)
+        activation_success = source.index("const active = await setActivePlan")
+        refresh = source.index("requestXpRefresh();", activation_success)
+        assert refresh > activation_success
+
+
 def test_plan_detail_uses_server_activation_state_for_completed_history():
     source = _read("web/components/plan-viewer.tsx")
     assert "isCompletedFightCamp(plan.activation_state)" in source

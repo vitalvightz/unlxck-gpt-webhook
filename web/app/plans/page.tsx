@@ -10,6 +10,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
 import { ApiError, archivePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
+import { requestXpRefresh } from "@/lib/xp-events";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
@@ -1082,6 +1083,7 @@ export default function PlansPage() {
       setOverlapConflictPlan(null);
       showToast("Active plan updated.", { tone: "success" });
       await loadPlans();
+      requestXpRefresh();
       router.refresh();
     } catch (activeError) {
       if (!overlapAction && isActivePlanOverlapError(activeError)) {

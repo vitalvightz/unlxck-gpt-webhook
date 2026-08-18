@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from api.auth import AuthenticatedUser
 from api.models import PlanRenameRequest
 from api.routes.generation_jobs import _validate_generation_job_id
+from api.routes import plans as plan_routes
 from support import advisory_planning_brief, _build_client, _build_request, finalized_result, stage1_result
 
 
@@ -632,6 +633,40 @@ def test_passed_camp_is_completed_history_and_cannot_be_activated():
     assert renamed.status_code == 200
     assert renamed.json()["activation_state"] == "fight_date_passed"
     assert archived.status_code in {200, 204}
+
+
+def test_activation_reconciles_adherence_without_awarding_xp(monkeypatch):
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_existing",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    calls = []
+    monkeypatch.setattr(
+        plan_routes,
+        "reconcile_adherence_streak",
+        lambda _store, **kwargs: calls.append(kwargs),
+    )
+    awards_before = list(store.xp_awards.get("athlete-1", []))
+
+    response = client.post(
+        f"/api/plans/{plan['id']}/set-active",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    assert store.get_active_plan_id("athlete-1") == plan["id"]
+    assert calls == [{"athlete_id": "athlete-1", "athlete_timezone": ""}]
+    assert store.xp_awards.get("athlete-1", []) == awards_before
 
 
 def test_athlete_can_rename_their_saved_plan():
