@@ -6,11 +6,158 @@ import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { Skeleton } from "@/components/skeleton";
 import { useXp } from "@/components/xp-provider";
 import { resolveXpLevel } from "@/lib/xp";
-import type { XpOpportunity, XpProgress } from "@/lib/xp-progress";
+import type { StreakState, StreakValue, XpOpportunity, XpProgress } from "@/lib/xp-progress";
 
 const numberFormatter = new Intl.NumberFormat("en-GB");
 
 type XpProgressCardMode = "overview" | "page";
+
+/** Streak icons follow the inline-SVG convention already used across the app
+    (currentColor stroke, decorative, no icon package) so nothing new is added to
+    the dependency tree for two glyphs. Stroke width is set for the 24-unit box
+    to match the optical weight of the 20-unit icons elsewhere. */
+function StreakFlameIcon() {
+  return (
+    <svg
+      className="xp-streak-icon"
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function StreakBoltIcon() {
+  return (
+    <svg
+      className="xp-streak-icon"
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M13.5 2.5 4.7 13.3a.6.6 0 0 0 .5 1h5.1l-.8 7.2 8.8-10.8a.6.6 0 0 0-.5-1h-5.1l.8-7.2Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Near-best copy. Returns null whenever the athlete has no established streak,
+    so a fresh account never reads "0 more to match your best". A current value
+    above the stored best is not treated as a new record: the payload cannot
+    prove the record was just broken rather than lagging reconciliation. */
+function streakBestMessage(streak: StreakValue): string | null {
+  if (streak.current <= 0 || streak.best <= 0) return null;
+  const distance = streak.best - streak.current;
+  if (distance === 0) return "You’ve matched your best";
+  if (distance > 0 && distance <= 3) return `${distance} more to match your best`;
+  return null;
+}
+
+function StreakColumn({
+  tone,
+  label,
+  labelId,
+  streak,
+  icon,
+  detailed,
+}: {
+  tone: "training" | "app";
+  label: string;
+  labelId: string;
+  streak: StreakValue;
+  icon: ReactNode;
+  detailed: boolean;
+}) {
+  const message = detailed ? streakBestMessage(streak) : null;
+  // Only meaningful while the best is still ahead: 0/0 and matched bests get no bar.
+  const showTrack =
+    detailed && streak.best > 0 && streak.current > 0 && streak.current < streak.best;
+
+  return (
+    <div className="xp-streak" data-streak={tone} role="group" aria-labelledby={labelId}>
+      <p className="xp-streak-label" id={labelId}>
+        {icon}
+        <span className="xp-streak-label-text">{label}</span>
+      </p>
+      <p className="xp-streak-value">{numberFormatter.format(streak.current)}</p>
+      <p className="xp-streak-best">Best {numberFormatter.format(streak.best)}</p>
+      {/* The optional copy shares one grid row so a column with a bar and a
+          column without still line their supporting text up. */}
+      {message || showTrack ? (
+        <div className="xp-streak-extras">
+          {message ? <p className="xp-streak-note">{message}</p> : null}
+          {showTrack ? (
+            <div
+              className="xp-streak-track"
+              role="progressbar"
+              aria-label={`${label} against personal best`}
+              aria-valuemin={0}
+              aria-valuemax={streak.best}
+              aria-valuenow={streak.current}
+              aria-valuetext={`${numberFormatter.format(streak.current)} of a best of ${numberFormatter.format(streak.best)}`}
+            >
+              <span
+                style={{ "--xp-streak-fill": `${(streak.current / streak.best) * 100}%` } as CSSProperties}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function StreakPanel({
+  streaks,
+  mode,
+}: {
+  streaks: StreakState;
+  mode: XpProgressCardMode;
+}) {
+  const detailed = mode === "page";
+  return (
+    <section
+      className={`xp-streak-panel${detailed ? " xp-streak-panel--page" : ""}`}
+      aria-label="Streaks"
+    >
+      <StreakColumn
+        tone="training"
+        label="Training streak"
+        labelId={`${mode}-training-streak-label`}
+        streak={streaks.adherence}
+        icon={<StreakFlameIcon />}
+        detailed={detailed}
+      />
+      <StreakColumn
+        tone="app"
+        label="App streak"
+        labelId={`${mode}-app-streak-label`}
+        streak={streaks.login}
+        icon={<StreakBoltIcon />}
+        detailed={detailed}
+      />
+    </section>
+  );
+}
 
 export type XpProgressCardViewProps = {
   progress: XpProgress;
@@ -104,14 +251,6 @@ export function XpProgressCardView({
     : "Max level reached";
   const [primaryOpportunity, ...remainingOpportunities] = progress.opportunities;
   const interactiveActions = mode === "page";
-  const training = progress.streaks.adherence;
-  const app = progress.streaks.login;
-  const distanceToBest = training.best - training.current;
-  const bestMessage = training.current > 0 && distanceToBest === 0
-    ? "You’ve matched your best"
-    : distanceToBest > 0 && distanceToBest <= 3
-      ? `${distanceToBest} more to match your best`
-      : null;
 
   const card = (
     <article
@@ -155,19 +294,7 @@ export function XpProgressCardView({
         <span>{progressRemaining}</span>
       </p>
 
-      <section className={`xp-streaks ${mode === "page" ? "xp-streaks--page" : ""}`} aria-label="Streaks">
-        <div className="xp-streak-primary">
-          <span>Training streak</span>
-          <strong>{numberFormatter.format(training.current)}</strong>
-          {mode === "page" ? <small>Best <b>{numberFormatter.format(training.best)}</b></small> : null}
-          {mode === "page" && bestMessage ? <p>{bestMessage}</p> : null}
-        </div>
-        <div className="xp-streak-secondary">
-          <span>App streak</span>
-          <strong>{numberFormatter.format(app.current)}</strong>
-          {mode === "page" ? <small>Best {numberFormatter.format(app.best)}</small> : null}
-        </div>
-      </section>
+      <StreakPanel streaks={progress.streaks} mode={mode} />
 
       <div className="xp-progress-details">
         <section className="xp-progress-detail" aria-labelledby={`${mode}-xp-next-label`}>
