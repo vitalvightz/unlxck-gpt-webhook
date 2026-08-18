@@ -60,6 +60,21 @@ ALL_ORCHESTRATED_INTENTS = (
     "coach_message",
 )
 
+# These decisions must still be recomputed on every worker sweep. Only the
+# persistence of an identical diagnostic fact is reduced. A changed decision,
+# reason, source, timing, or candidate produces a different evaluation key and
+# is therefore written immediately.
+HIGH_FREQUENCY_DIAGNOSTIC_INTENTS = frozenset({
+    "session_stop",
+    "session_modified",
+    "session_near",
+    "session_ready",
+    "session_preparation",
+    "post_session_log",
+    "injury_recheck",
+    "high_pain_followup",
+})
+
 
 @dataclass(frozen=True)
 class FightCampDispatchResult:
@@ -226,6 +241,11 @@ def _record_reason(
         rejection_reasons=(reason,),
         eligible=False,
         source_event_metadata=source_metadata,
+        min_persist_interval=(
+            timedelta(minutes=30)
+            if intent in HIGH_FREQUENCY_DIAGNOSTIC_INTENTS
+            else timedelta(hours=6)
+        ),
     )
 
 
@@ -308,6 +328,8 @@ def _deferred_event_candidates(
     training_day: str,
     timezone_name: str,
     now_utc: datetime,
+    observe_mode: bool = False,
+    active_plan_id: str = "",
 ) -> list[NotificationCandidate]:
     """Rehydrate quiet-hour-deferred source events without extending TTLs."""
 
@@ -373,10 +395,10 @@ def _deferred_event_candidates(
             continue
         delivery = deliveries_by_key.get(dedupe_key)
         if delivery is None:
-            # In observe mode a prior selection is the terminal lifecycle
-            # fact. Rebuilding it as a stale shadow claim every sweep only
-            # measures the rehydrator, not a new source event.
-            if dedupe_key in observed_selected_keys:
+            # Observation suppresses its own repeated shadow evaluation, but
+            # never consumes real send eligibility. Send mode deliberately
+            # rehydrates the source when no real delivery ledger row exists.
+            if observe_mode and dedupe_key in observed_selected_keys:
                 continue
         else:
             status = str(delivery.get("status") or "")
@@ -391,6 +413,13 @@ def _deferred_event_candidates(
             )
             if not retryable:
                 continue
+        source_plan_id = str(metadata.get("plan_id") or "").strip()
+        if (
+            intent in {"plan_ready", "plan_updated"}
+            and source_plan_id
+            and source_plan_id != active_plan_id
+        ):
+            continue
         candidates.append(
             NotificationCandidate(
                 profile_id=profile_id,
@@ -438,6 +467,7 @@ def build_fight_camp_candidates(
     profile_id: str,
     timezone_name: str,
     now_utc: datetime,
+    observe_mode: bool = False,
 ) -> list[NotificationCandidate]:
     preferences = get_notification_preferences(store, profile_id)
     reference = _aware_utc(now_utc)
@@ -949,6 +979,8 @@ def build_fight_camp_candidates(
             training_day=training_day,
             timezone_name=timezone_name,
             now_utc=reference,
+            observe_mode=observe_mode,
+            active_plan_id=str(view.active_plan.get("id") or "").strip(),
         )
     )
     if any(candidate.intent == "plan_ready" for candidate in candidates):
@@ -993,6 +1025,7 @@ def dispatch_fight_camp_notifications(
             profile_id=profile_id,
             timezone_name=timezone_name,
             now_utc=now_utc,
+            observe_mode=rollout_mode == "observe",
         )
         if rollout_mode == "observe":
             simulate_notification_delivery_decision(store, candidates, now_utc=now_utc)
