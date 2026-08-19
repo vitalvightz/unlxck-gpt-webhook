@@ -1,0 +1,215 @@
+{
+  "note": "Declared duplicate-drill debt in data/rehab_bank.json. Each row grandfathers a known-duplicate location/type/stage/drill combination that predates the rehab schema. They come from 15 group records that duplicate an earlier record exactly; collapsing them changes generated rehab blocks, so PR1 leaves them in place and declares them here instead. tools/validate_rehab_bank.py reports these as debt and still rejects any duplicate not listed, or any extra copy beyond the count below. PR3 resolves the duplicates and deletes the rows; only ever shrink this file.",
+  "duplicates": [
+    {
+      "location": "achilles",
+      "type": "pain",
+      "rehab_stage": null,
+      "name": "Banded Heel Push with Hold",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "achilles",
+      "type": "pain",
+      "rehab_stage": null,
+      "name": "Isometric Holds in Tip-Toe",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "achilles",
+      "type": "tendonitis",
+      "rehab_stage": null,
+      "name": "Eccentric Calf Drops on Step",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "achilles",
+      "type": "tendonitis",
+      "rehab_stage": null,
+      "name": "Massage Gun – Achilles Line",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "calf",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Active Band Calf Pumps",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "calf",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Double-Leg Calf Raises",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "calf",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Isometric Tip-Toe Wall Press",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "calf",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Isometric Wall Push Hold",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "calf",
+      "type": "tightness",
+      "rehab_stage": null,
+      "name": "Massage Gun Sweep – Soleus Line",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "calf",
+      "type": "tightness",
+      "rehab_stage": null,
+      "name": "Wall Calf Stretch (Bent Knee)",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "instability",
+      "rehab_stage": null,
+      "name": "Mini-Band Lateral Walks",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "instability",
+      "rehab_stage": null,
+      "name": "Reactive Knee Bounces (Foam Pad)",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "pain",
+      "rehab_stage": null,
+      "name": "Massage Gun – Quad Sweep to Patella",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "pain",
+      "rehab_stage": null,
+      "name": "Terminal Knee Extensions (TKEs)",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Band-Assisted Lateral Lunges",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Lateral Step-Downs",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Mini-Band Lateral Walks",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "strain",
+      "rehab_stage": null,
+      "name": "Wall Sit (Short Arc)",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "tightness",
+      "rehab_stage": null,
+      "name": "Massage Gun – Rectus Line",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "knee",
+      "type": "tightness",
+      "rehab_stage": null,
+      "name": "Quad & Hip Flexor Stretch",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "contusion",
+      "rehab_stage": null,
+      "name": "Foam Roller Circles – Mid-Shin",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "contusion",
+      "rehab_stage": null,
+      "name": "Light Shin Percussion",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "contusion",
+      "rehab_stage": null,
+      "name": "Tap-Drill with Soft Stick",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "contusion",
+      "rehab_stage": null,
+      "name": "Wall Shin Slides",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "pain",
+      "rehab_stage": null,
+      "name": "Heel Walks",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "pain",
+      "rehab_stage": null,
+      "name": "Isometric Toe Lift Holds",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "tendonitis",
+      "rehab_stage": null,
+      "name": "Massage Gun Sweep – Tibialis Line",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "tendonitis",
+      "rehab_stage": null,
+      "name": "Wall Toe Raises",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "tightness",
+      "rehab_stage": null,
+      "name": "Lacrosse Ball Glide – Tibialis",
+      "grandfathered_copies": 1
+    },
+    {
+      "location": "shin",
+      "type": "tightness",
+      "rehab_stage": null,
+      "name": "Seated Anterior Shin Stretch",
+      "grandfathered_copies": 1
+    }
+  ]
+}

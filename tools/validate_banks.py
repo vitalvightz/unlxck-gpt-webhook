@@ -21,6 +21,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from fightcamp.bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES  # noqa: E402
 from fightcamp.tagging import normalize_tag  # noqa: E402
+from tools.validate_rehab_bank import (  # noqa: E402
+    count_by_severity as rehab_issue_counts,
+    load_duplicate_debt,
+    validate_rehab_bank,
+)
 
 
 VALIDATION_MODES = {"audit", "strict", "runtime"}
@@ -33,11 +38,16 @@ OLD_VALIDATOR_SKIPPED = {
 NON_BANK_JSON = {
     "bank_inferred_tags.json",
     "regex_patterns.json",
+    # Ledger of grandfathered rehab duplicates, not a training bank. Read by
+    # tools/validate_rehab_bank.py.
+    "rehab_bank_duplicate_debt.json",
 }
 CONFIG_TARGETS = {
     "injury_exclusion_map.json",
     "tag_vocabulary.json",
 }
+REHAB_BANK_NAME = "rehab_bank.json"
+REHAB_SCHEMA_GROUP = "rehab bank schema"
 AUDIT_GROUP_ORDER = [
     "missing names",
     "missing tags",
@@ -53,6 +63,7 @@ AUDIT_GROUP_ORDER = [
     "duplicate names",
     "tags not in tag_vocabulary",
     "config schema issues",
+    REHAB_SCHEMA_GROUP,
 ]
 STRICT_ERROR_GROUPS = {
     "missing names",
@@ -65,6 +76,7 @@ STRICT_ERROR_GROUPS = {
     "unknown conditioning system",
     "tags not in tag_vocabulary",
     "config schema issues",
+    REHAB_SCHEMA_GROUP,
 }
 CONDITIONING_BANK_NAMES = {
     "conditioning_bank.json",
@@ -360,6 +372,47 @@ def validate_config_target(path: Path) -> list[BankIssue]:
     return issues
 
 
+def rehab_schema_issues(path: Path, *, emit=print) -> list[BankIssue]:
+    """Run the rehab data-contract validator and adapt its findings.
+
+    Only errors and warnings are carried into this report; the declared
+    duplicate debt and the not-yet-migrated findings are counted in a single
+    summary line so they do not drown the cross-bank audit.
+    ``tools/validate_rehab_bank.py`` prints them in full.
+    """
+    try:
+        data = _load_json(path)
+    except Exception as exc:
+        return [
+            BankIssue(
+                group=REHAB_SCHEMA_GROUP,
+                file=path.name,
+                entry=path.name,
+                detail=str(exc),
+                severity="error",
+            )
+        ]
+
+    debt = load_duplicate_debt(path.parent / "rehab_bank_duplicate_debt.json")
+    issues = validate_rehab_bank(data, duplicate_debt=debt)
+    counts = rehab_issue_counts(issues)
+    emit(
+        f"Rehab data contract: errors={counts['error']} warnings={counts['warning']} "
+        f"declared-debt-and-not-yet-migrated={counts['info']}"
+    )
+    return [
+        BankIssue(
+            group=REHAB_SCHEMA_GROUP,
+            file=path.name,
+            entry=issue.locator,
+            detail=f"{issue.code}: {issue.detail}",
+            severity=issue.severity,
+        )
+        for issue in issues
+        if issue.severity != "info"
+    ]
+
+
 def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str], list[BankIssue]]:
     """Validate one raw training bank and return compatibility summary data."""
     issues: list[BankIssue] = []
@@ -538,6 +591,11 @@ def run_validation(mode: str = "audit", data_dir: Path = DATA_DIR, *, emit=print
             total_entries += entry_count
             all_tags_seen.update(tags_seen)
             all_issues.extend(issues)
+            if target.name == REHAB_BANK_NAME:
+                schema_issues = rehab_schema_issues(target, emit=emit)
+                issues = [*issues, *schema_issues]
+                all_issues.extend(schema_issues)
+                success = success and not any(issue.severity == "error" for issue in schema_issues)
             status = "passed" if success else "issues found"
             emit(f"Entries inspected: {entry_count}; {status}; issues={len(issues)}\n")
         except Exception as exc:
