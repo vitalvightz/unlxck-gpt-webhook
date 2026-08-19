@@ -25,3 +25,13 @@ jobs:
       
       - name: Run bank validator
         run: python tools/validate_banks.py
+
+      # Blocking gate: the rehab bank must satisfy its data contract. Unlike the
+      # cross-bank audit above, this exits non-zero on any schema error.
+      - name: Validate rehab bank data contract
+        run: python tools/validate_rehab_bank.py
+
+      # The rehab bank's derived fields (drill ids, keyword-matched function
+      # classes) are generated, not hand-written. Fail if they drifted.
+      - name: Check rehab bank migration is up to date
+        run: python tools/migrate_rehab_bank_schema.py --check

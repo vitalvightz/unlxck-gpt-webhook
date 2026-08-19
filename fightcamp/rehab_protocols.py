@@ -13,6 +13,7 @@ from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
 from .injury_location_registry import build_location_region_map, get_rehab_location_candidates
+from .rehab_schema import split_phase_progression
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
@@ -88,8 +89,7 @@ def _entry_phases(entry: dict) -> list[str]:
 
 def _split_phase_progression(text: str) -> list[str]:
     """Return normalized phase tokens from either arrow encoding."""
-    normalized = (text or "").replace("\u00e2\u2020\u2019", "\u2192")
-    return [segment.strip().upper() for segment in normalized.split("\u2192") if segment.strip()]
+    return split_phase_progression(text)
 
 
 def _split_notes_by_phase(notes: str) -> list[tuple[str, str]]:
@@ -592,12 +592,36 @@ _HIGH_SEVERITY_SAFE_FALLBACKS = (
 )
 
 
+# Returned by classify_drill_function when no keyword matched. Kept explicit so
+# the ambiguous case is visible: bank *data* must never record this value on the
+# strength of a non-match — see match_drill_function.
+AMBIGUOUS_DRILL_FUNCTION = "control"
+
+
+def match_drill_function(name: str, notes: str = "") -> str | None:
+    """Return the keyword-matched function class, or ``None`` when ambiguous.
+
+    This is the honest half of :func:`classify_drill_function`: it reports "no
+    keyword matched" instead of falling back to a default, so migration tooling
+    and validation never let an unclassified drill masquerade as ``"control"``.
+    """
+    text = f"{name} {notes}".lower()
+    for bucket, keywords in REHAB_FUNCTION_BUCKETS.items():
+        if any(kw in text for kw in keywords):
+            return bucket
+    return None
+
+
 def classify_drill_function(name: str, notes: str = "") -> str:
     """Classify a rehab drill into one of the REHAB_FUNCTION_BUCKETS.
 
     Classification is keyword-based and is intended as *guidance* for the
     GPT/OpenAI planner — not a hard constraint.  When ambiguous, returns
     ``"control"`` as a safe default.
+
+    Retained as the runtime fallback for legacy and not-yet-migrated bank
+    entries; drills carrying explicit ``function`` metadata are read through
+    ``rehab_schema.resolve_drill_function`` instead.
 
     Parameters
     ----------
@@ -614,11 +638,7 @@ def classify_drill_function(name: str, notes: str = "") -> str:
         ``"isometric_analgesia"``, ``"tendon_loading"``, ``"activation"``,
         ``"control"``, ``"mobility"``, or ``"recovery_downregulation"``.
     """
-    text = f"{name} {notes}".lower()
-    for bucket, keywords in REHAB_FUNCTION_BUCKETS.items():
-        if any(kw in text for kw in keywords):
-            return bucket
-    return "control"
+    return match_drill_function(name, notes) or AMBIGUOUS_DRILL_FUNCTION
 
 
 def _normalize_rehab_severity(value: str | None) -> str:
@@ -879,6 +899,12 @@ def generate_rehab_protocols(
                 )
                 lines.append(f"- {loc_title} ({type_title}):")
                 for name, notes in selected:
+                    # PR1: the bank's explicit `function` metadata is a data
+                    # contract only. The rendered class stays keyword-derived
+                    # from the phase-specific note, which is what the stored
+                    # value cannot reproduce (one drill, one value, many
+                    # phases). rehab_schema.resolve_drill_function is the
+                    # forward path; PR3 switches this over.
                     fn = classify_drill_function(name, notes)
                     headline, annotations = _format_rehab_drill(
                         name, notes, current_phase, fn, day_type
