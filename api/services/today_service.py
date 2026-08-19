@@ -44,6 +44,7 @@ from api.contracts.injury_checkin import (
 )
 from api.contracts.injury_signal import derive_injury_signal
 from api.contracts.landing import LandingDecision, resolve_landing
+from api.contracts.rehab_stage import resolve_rehab_stages
 from api.contracts.readiness_message import (
     ReadinessAdjustment,
     ReadinessCheckin,
@@ -223,6 +224,23 @@ def _checked_recent_today_checkins(
     except Exception:
         logger.exception("[today] recent_checkins_read_failed athlete_id=%s", athlete_id)
         return [], False
+
+
+def _checked_today_checkin(
+    store: AppStore, athlete_id: str, plan_id: str | None, training_day: str
+) -> dict[str, Any] | None:
+    """Today's stored check-in row, or ``None``. Never raises.
+
+    Read for context only (the rehab-stage resolver's "current day"), so a
+    failure degrades to "no check-in today" rather than failing the caller.
+    """
+    if not plan_id:
+        return None
+    try:
+        return store.get_today_checkin(athlete_id, plan_id, training_day)
+    except Exception:
+        logger.exception("[today] today_checkin_read_failed athlete_id=%s", athlete_id)
+        return None
 
 
 def _checked_recent_session_completions(
@@ -474,6 +492,60 @@ def _with_surface_class(injuries: Sequence[Mapping[str, Any]]) -> list[dict[str,
             logger.exception("[today] surface_injury_classification_failed")
             row["surface_class"] = None
         rows.append(row)
+    return rows
+
+
+#: How much history the rehab-stage resolver is given. Wide enough for the
+#: evidence counts to mean something, bounded so a Today read stays cheap.
+_REHAB_STAGE_HISTORY_LIMIT = 14
+
+
+def _with_rehab_stage(
+    injuries: Sequence[Mapping[str, Any]],
+    *,
+    store: AppStore,
+    athlete_id: str,
+    current_checkin: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Stamp each open injury with its own resolved rehabilitation stage.
+
+    Rehab stage is per injury and derived from that injury's record plus the
+    athlete's check-in and session history — never from the camp phase, which is
+    not an input to the resolver at all. Computed server-side for the same reason
+    ``surface_class`` is: so no other layer re-derives it.
+
+    Degrades to no stamp on any failure. A missing stage reads as "not resolved"
+    everywhere downstream, which is the same thing every consumer already does
+    with PR1's not-yet-migrated metadata.
+    """
+    rows = [dict(injury) for injury in injuries or []]
+    if not rows:
+        return rows
+
+    checkins, _checkins_ok = _checked_recent_today_checkins(
+        store, athlete_id, limit=_REHAB_STAGE_HISTORY_LIMIT
+    )
+    completions, _completions_ok = _checked_recent_session_completions(
+        store, athlete_id, limit=_REHAB_STAGE_HISTORY_LIMIT
+    )
+    try:
+        decisions = resolve_rehab_stages(
+            rows,
+            current_checkin=current_checkin,
+            previous_checkins=checkins,
+            session_completions=completions,
+        )
+    except Exception:
+        logger.exception("[today] rehab_stage_resolution_failed athlete_id=%s", athlete_id)
+        return rows
+
+    for row in rows:
+        decision = decisions.get(str(row.get("id") or ""))
+        if decision is None:
+            continue
+        row["rehab_stage"] = decision.stage
+        row["rehab_stage_reasons"] = list(decision.reasons)
+        row["rehab_care_pathway"] = decision.care_pathway
     return rows
 
 
@@ -1251,8 +1323,13 @@ def submit_today_injury_checkin(
         fields.update(severity_provenance.get(update.flag_id, {}))
         store.update_injury_flag(update.flag_id, fields)
 
-    open_after = _with_surface_class(
-        store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or []
+    open_after = _with_rehab_stage(
+        _with_surface_class(
+            store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or []
+        ),
+        store=store,
+        athlete_id=athlete_id,
+        current_checkin=_checked_today_checkin(store, athlete_id, plan_id, training_day),
     )
     # Only a load-relevant injury reported worse escalates the day. A worsening
     # skin injury is routed by the surface evaluator instead (see
@@ -2312,15 +2389,20 @@ def build_today_command_view(
         structured_phase=structured_phase,
     )
 
-    open_injuries = _with_safe_session_context(
-        _with_surface_class(
-            _ensure_intake_injury_flags(
-                store,
-                athlete_id=athlete_id,
-                plan_row=plan_row,
-                open_flags=_open_injury_flags(store, athlete_id),
+    open_injuries = _with_rehab_stage(
+        _with_safe_session_context(
+            _with_surface_class(
+                _ensure_intake_injury_flags(
+                    store,
+                    athlete_id=athlete_id,
+                    plan_row=plan_row,
+                    open_flags=_open_injury_flags(store, athlete_id),
+                )
             )
-        )
+        ),
+        store=store,
+        athlete_id=athlete_id,
+        current_checkin=today_checkin,
     )
     # Attach a clean, athlete-facing label derived from the injury synonym logic
     # so the reminder text and the check-in card render the same normalized name

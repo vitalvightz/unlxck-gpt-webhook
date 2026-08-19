@@ -1034,43 +1034,23 @@ def _render_location_heading(location: str | None, merged_entry: dict | None) ->
     return canonical_location.title()
 
 
-def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
-    """Return drills covering GPP, SPP and TAPER for the location/type pair."""
-    phases = {"GPP": None, "SPP": None, "TAPER": None}
-    location_candidates = normalize_rehab_location(location)
-
-    def apply_entry(entry: dict) -> None:
-        progress = entry.get("phase_progression", "")
-        phase_list = _split_phase_progression(progress)
-        if len(phase_list) < 2:
-            return
-        drills = entry.get("drills", [])
-        if len(drills) < 2:
-            return
-        if phase_list[0] in phases and phases[phase_list[0]] is None:
-            phases[phase_list[0]] = drills[0]
-        if phase_list[1] in phases and phases[phase_list[1]] is None:
-            phases[phase_list[1]] = drills[1]
-
-    for entry in get_rehab_bank():
-        if entry.get("type") != injury_type:
-            continue
-        if entry.get("location") in location_candidates:
-            apply_entry(entry)
-            if all(phases.values()):
-                break
-    if not all(phases.values()):
-        for entry in get_rehab_bank():
-            if entry.get("type") != "unspecified":
-                continue
-            if entry.get("location") in location_candidates:
-                apply_entry(entry)
-                if all(phases.values()):
-                    break
-
-    if all(phases.values()):
-        return [phases["GPP"], phases["SPP"], phases["TAPER"]]
-    return []
+# ---------------------------------------------------------------------------
+# Camp phase is NOT rehabilitation progress
+#
+# ``phase_progression`` and the phase-keyed notes below are a SELECTION key: they
+# say which drill the bank offers during GPP/SPP/TAPER. They are not a statement
+# that the tissue has progressed, and nothing here may be read as one. What an
+# injury can currently tolerate is resolved separately, per injury, from the
+# athlete's own injury and check-in history — see ``api.contracts.rehab_stage``,
+# which deliberately takes no camp-phase argument.
+#
+# ``combine_three_phase_drills`` used to live here. It walked the bank's phase
+# arrow as if it were a rehab ladder, handing drill 1 to the first phase and
+# drill 2 to the second, which is exactly the conflation this separation removes.
+# It had no callers and was deleted rather than rewritten; PR3 migrates the bank
+# onto explicit ``rehab_stage`` values and PR4 makes them authoritative for
+# selection.
+# ---------------------------------------------------------------------------
 
 
 def generate_support_notes(injury_string: str) -> str:

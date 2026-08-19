@@ -25,6 +25,10 @@ from .contracts.injury_checkin import (
     FrictionOrContactProblem as _FrictionOrContactProblem,
     SkinIntegrity as _SkinIntegrity,
 )
+from .contracts.rehab_stage import (
+    CARE_PATHWAYS as _CARE_TYPES,
+    REHAB_STAGES as _REHAB_STAGES,
+)
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
 from .performance_focus import get_performance_focus_cap
 from .state_machine import GenerationJobStatus
@@ -1858,6 +1862,10 @@ SurfaceInjuryClass = Literal[
     "surface_no_contact",
     "surface_medical_review",
 ]
+# Rehabilitation stage vocabulary, derived from the canonical enum rather than
+# restated, so the API schema can never drift from fightcamp.rehab_schema.
+RehabStage = Literal[_REHAB_STAGES]  # type: ignore[valid-type]
+RehabCarePathway = Literal[_CARE_TYPES]  # type: ignore[valid-type]
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DAILY_NOTE_MAX_CHARS = 2000
 
@@ -1918,6 +1926,16 @@ class InjuryFlagRecord(BaseModel):
     # Canonical surface classification, computed server-side so the UI never
     # re-derives it (see fightcamp.injury_registry.classify_surface_injury).
     surface_class: SurfaceInjuryClass | None = None
+    # Resolved rehabilitation stage for THIS injury, derived server-side from the
+    # injury record plus the athlete's check-in/session history (see
+    # api.contracts.rehab_stage). It is independent of the camp phase: GPP/SPP/
+    # TAPER is fight-camp periodisation and cannot advance a rehab stage.
+    # ``None`` means either "not resolved" or, on the wound-care pathway, that the
+    # musculoskeletal ladder does not apply — ``rehab_care_pathway`` says which.
+    rehab_stage: RehabStage | None = None
+    # Machine-readable evidence codes behind the stage, never athlete-facing copy.
+    rehab_stage_reasons: list[str] = Field(default_factory=list)
+    rehab_care_pathway: RehabCarePathway | None = None
     resolved_at: str | None = None
     created_at: str = ""
     updated_at: str = ""

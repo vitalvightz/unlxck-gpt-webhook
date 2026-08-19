@@ -12,6 +12,7 @@ Modules:
 * ``command_view`` — normalized command-view read model + risk watch (§6, §7).
 * ``injury_checkin`` — daily per-injury check-in reconciliation + flag risks (§6).
 * ``injury_signal`` — derived injury-risk signal from logged pain history (§6).
+* ``rehab_stage`` — per-injury rehabilitation stage, independent of camp phase.
 * ``landing`` — state-dependent landing resolver (§1).
 """
 
@@ -61,6 +62,13 @@ from .landing import (
     LandingDecision,
     LandingTarget,
     resolve_landing,
+)
+from .rehab_stage import (
+    REHAB_STAGES,
+    RehabStageDecision,
+    RehabStageEvidence,
+    resolve_rehab_stage,
+    resolve_rehab_stages,
 )
 from .recommendation import (
     RecommendationState,
@@ -124,6 +132,12 @@ __all__ = [
     "reconcile_injury_checkin",
     # injury_signal
     "derive_injury_signal",
+    # rehab_stage
+    "REHAB_STAGES",
+    "RehabStageDecision",
+    "RehabStageEvidence",
+    "resolve_rehab_stage",
+    "resolve_rehab_stages",
     # landing
     "LandingCTA",
     "LandingDecision",
