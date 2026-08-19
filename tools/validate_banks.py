@@ -23,6 +23,7 @@ from fightcamp.bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES  # noqa: E402
 from fightcamp.tagging import normalize_tag  # noqa: E402
 from tools.validate_rehab_bank import (  # noqa: E402
     count_by_severity as rehab_issue_counts,
+    load_duplicate_debt,
     validate_rehab_bank,
 )
 
@@ -37,6 +38,9 @@ OLD_VALIDATOR_SKIPPED = {
 NON_BANK_JSON = {
     "bank_inferred_tags.json",
     "regex_patterns.json",
+    # Ledger of grandfathered rehab duplicates, not a training bank. Read by
+    # tools/validate_rehab_bank.py.
+    "rehab_bank_duplicate_debt.json",
 }
 CONFIG_TARGETS = {
     "injury_exclusion_map.json",
@@ -371,9 +375,10 @@ def validate_config_target(path: Path) -> list[BankIssue]:
 def rehab_schema_issues(path: Path, *, emit=print) -> list[BankIssue]:
     """Run the rehab data-contract validator and adapt its findings.
 
-    Only errors and warnings are carried into this report; the not-yet-migrated
-    findings are counted in a single summary line so they do not drown the
-    cross-bank audit. ``tools/validate_rehab_bank.py`` prints them in full.
+    Only errors and warnings are carried into this report; the declared
+    duplicate debt and the not-yet-migrated findings are counted in a single
+    summary line so they do not drown the cross-bank audit.
+    ``tools/validate_rehab_bank.py`` prints them in full.
     """
     try:
         data = _load_json(path)
@@ -388,11 +393,12 @@ def rehab_schema_issues(path: Path, *, emit=print) -> list[BankIssue]:
             )
         ]
 
-    issues = validate_rehab_bank(data)
+    debt = load_duplicate_debt(path.parent / "rehab_bank_duplicate_debt.json")
+    issues = validate_rehab_bank(data, duplicate_debt=debt)
     counts = rehab_issue_counts(issues)
     emit(
         f"Rehab data contract: errors={counts['error']} warnings={counts['warning']} "
-        f"not-yet-migrated={counts['info']}"
+        f"declared-debt-and-not-yet-migrated={counts['info']}"
     )
     return [
         BankIssue(

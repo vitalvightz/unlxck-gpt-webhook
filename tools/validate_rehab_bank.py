@@ -15,6 +15,12 @@ Two ideas drive the rules:
 * **Skin is not musculoskeletal.** Surface (wound-care) groups carry no loading
   metadata, and declaring any is an error rather than an omission.
 
+Duplicate drills are an error, with one narrow exception: the combinations
+listed in ``data/rehab_bank_duplicate_debt.json`` predate this schema and are
+grandfathered as declared migration debt. They are reported on every run, never
+silently, and the ledger only ever shrinks — a duplicate that is not listed, or
+an extra copy beyond the declared count, still fails.
+
 Exit codes: ``0`` when no errors were found, ``1`` otherwise, so CI can block a
 malformed rehab-bank change.
 """
@@ -57,6 +63,7 @@ from fightcamp.rehab_schema import (  # noqa: E402
 )
 
 DEFAULT_BANK = REPO_ROOT / "data" / "rehab_bank.json"
+DEFAULT_DUPLICATE_DEBT = REPO_ROOT / "data" / "rehab_bank_duplicate_debt.json"
 
 ERROR = "error"
 WARNING = "warning"
@@ -419,12 +426,100 @@ def validate_wound_care_drill(locator: str, drill: dict) -> list[RehabBankIssue]
 
 
 # ---------------------------------------------------------------------------
+# Declared duplicate debt
+# ---------------------------------------------------------------------------
+
+#: Ledger key: the location/type/stage/drill-name a duplicate is grandfathered on.
+DebtKey = tuple[str, str, str, str]
+
+
+def _debt_key(location: Any, injury_type: Any, stage: Any, name: Any) -> DebtKey:
+    return (_hashable(location), _hashable(injury_type), _hashable(stage), _hashable(name))
+
+
+def load_duplicate_debt(path: Path | None = DEFAULT_DUPLICATE_DEBT) -> dict[DebtKey, int]:
+    """Return the grandfathered duplicate counts keyed by location/type/stage/name.
+
+    A missing path (or ``None``) means no duplicate is grandfathered, which is
+    the strict reading used by unit tests.
+    """
+    if path is None or not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    debt: dict[DebtKey, int] = {}
+    for row in payload.get("duplicates", []):
+        key = _debt_key(row.get("location"), row.get("type"), row.get("rehab_stage"), row.get("name"))
+        debt[key] = debt.get(key, 0) + int(row.get("grandfathered_copies", 0))
+    return debt
+
+
+def _duplicate_issues(
+    combination_locations: dict[tuple, list[str]],
+    debt: dict[DebtKey, int],
+) -> list[RehabBankIssue]:
+    """Report duplicate drill combinations, spending the declared debt first."""
+    issues: list[RehabBankIssue] = []
+    remaining = dict(debt)
+
+    for combination, locators in combination_locations.items():
+        excess = len(locators) - 1
+        if excess < 1:
+            continue
+        location, injury_type, stage, name, _notes = (json.loads(part) for part in combination)
+        key = _debt_key(location, injury_type, stage, name)
+        grandfathered = min(excess, remaining.get(key, 0))
+        remaining[key] = remaining.get(key, 0) - grandfathered
+
+        if grandfathered:
+            issues.append(
+                _issue(
+                    "grandfathered_duplicate",
+                    INFO,
+                    locators[0],
+                    f"{location}/{injury_type}/stage={stage} repeats drill {name!r} "
+                    f"({grandfathered} declared copy/copies) — migration debt, see "
+                    f"{DEFAULT_DUPLICATE_DEBT.name}",
+                )
+            )
+        if excess > grandfathered:
+            issues.append(
+                _issue(
+                    "duplicate_drill_combination",
+                    ERROR,
+                    locators[0],
+                    f"{location}/{injury_type}/stage={stage} repeats drill {name!r} at: "
+                    f"{locators[1:]} ({excess - grandfathered} copy/copies not covered "
+                    f"by {DEFAULT_DUPLICATE_DEBT.name})",
+                )
+            )
+
+    for key, unspent in sorted(remaining.items()):
+        if unspent > 0:
+            location, injury_type, stage, name = (json.loads(part) for part in key)
+            issues.append(
+                _issue(
+                    "resolved_duplicate_debt",
+                    INFO,
+                    f"{DEFAULT_DUPLICATE_DEBT.name} {location}/{injury_type}",
+                    f"{unspent} declared duplicate(s) of {name!r} no longer exist; "
+                    "drop the row from the ledger",
+                )
+            )
+    return issues
+
+
+# ---------------------------------------------------------------------------
 # Whole-bank rules
 # ---------------------------------------------------------------------------
 
 
-def validate_rehab_bank(data: Any) -> list[RehabBankIssue]:
-    """Validate a parsed rehab bank and return every finding."""
+def validate_rehab_bank(data: Any, *, duplicate_debt: dict[DebtKey, int] | None = None) -> list[RehabBankIssue]:
+    """Validate a parsed rehab bank and return every finding.
+
+    ``duplicate_debt`` grandfathers the duplicate combinations declared in the
+    ledger. It defaults to none, so a caller that passes nothing gets the strict
+    reading in which every duplicate is an error.
+    """
     if not isinstance(data, list):
         return [
             _issue("invalid_root", ERROR, "rehab_bank", f"expected a list of groups, got {type(data).__name__}")
@@ -480,17 +575,7 @@ def validate_rehab_bank(data: Any) -> list[RehabBankIssue]:
                 _issue("duplicate_drill_id", ERROR, locators[0], f"id {drill_id!r} reused by: {locators[1:]}")
             )
 
-    for combination, locators in combination_locations.items():
-        if len(locators) > 1:
-            location, injury_type, stage, name, _notes = (json.loads(part) for part in combination)
-            issues.append(
-                _issue(
-                    "duplicate_drill_combination",
-                    ERROR,
-                    locators[0],
-                    f"{location}/{injury_type}/stage={stage} repeats drill {name!r} at: {locators[1:]}",
-                )
-            )
+    issues.extend(_duplicate_issues(combination_locations, duplicate_debt or {}))
 
     return issues
 
@@ -521,7 +606,13 @@ def report(issues: list[RehabBankIssue], *, emit=print, max_per_code: int = 20) 
             emit(f"  ... {len(found) - max_per_code} more")
 
 
-def run_validation(bank_path: Path = DEFAULT_BANK, *, emit=print, strict_migration: bool = False) -> int:
+def run_validation(
+    bank_path: Path = DEFAULT_BANK,
+    *,
+    emit=print,
+    strict_migration: bool = False,
+    duplicate_debt_path: Path | None = DEFAULT_DUPLICATE_DEBT,
+) -> int:
     """Validate the bank at ``bank_path``; return a process exit code."""
     emit(f"Validating rehab bank: {bank_path}")
     try:
@@ -533,7 +624,13 @@ def run_validation(bank_path: Path = DEFAULT_BANK, *, emit=print, strict_migrati
         emit(f"ERROR: {bank_path} is not valid JSON: {exc}")
         return 1
 
-    issues = validate_rehab_bank(data)
+    try:
+        debt = load_duplicate_debt(duplicate_debt_path)
+    except (json.JSONDecodeError, TypeError, ValueError) as exc:
+        emit(f"ERROR: {duplicate_debt_path} is not a valid duplicate-debt ledger: {exc}")
+        return 1
+
+    issues = validate_rehab_bank(data, duplicate_debt=debt)
     report(issues, emit=emit)
     counts = count_by_severity(issues)
 
@@ -545,9 +642,13 @@ def run_validation(bank_path: Path = DEFAULT_BANK, *, emit=print, strict_migrati
 
     failing = counts[ERROR]
     if strict_migration:
-        pending = sum(1 for issue in issues if issue.code in {"pending_migration", "unmigrated_function"})
+        pending = sum(
+            1
+            for issue in issues
+            if issue.code in {"pending_migration", "unmigrated_function", "grandfathered_duplicate"}
+        )
         failing += pending
-        emit(f"strict-migration: {pending} not-yet-migrated finding(s) treated as failures")
+        emit(f"strict-migration: {pending} outstanding migration-debt finding(s) treated as failures")
 
     if failing:
         emit("Rehab bank validation FAILED.")
@@ -559,6 +660,12 @@ def run_validation(bank_path: Path = DEFAULT_BANK, *, emit=print, strict_migrati
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bank", type=Path, default=DEFAULT_BANK, help="rehab bank JSON path")
+    parser.add_argument(
+        "--duplicate-debt",
+        type=Path,
+        default=DEFAULT_DUPLICATE_DEBT,
+        help="ledger of grandfathered duplicate drill combinations",
+    )
     parser.add_argument(
         "--strict-migration",
         action="store_true",
@@ -572,7 +679,11 @@ def main(argv: list[str] | None = None) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
     args = build_parser().parse_args(argv)
-    return run_validation(args.bank, strict_migration=args.strict_migration)
+    return run_validation(
+        args.bank,
+        strict_migration=args.strict_migration,
+        duplicate_debt_path=args.duplicate_debt,
+    )
 
 
 if __name__ == "__main__":

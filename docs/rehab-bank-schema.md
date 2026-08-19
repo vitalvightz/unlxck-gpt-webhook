@@ -12,6 +12,7 @@ are still incomplete so PR3 knows what it owns.
 | Finite value sets, sentinels, structural helpers | `fightcamp/rehab_schema.py` |
 | Strict validation, CI exit code | `tools/validate_rehab_bank.py` |
 | Deterministic (re)generation of derived fields | `tools/migrate_rehab_bank_schema.py` |
+| Grandfathered duplicate drills | `data/rehab_bank_duplicate_debt.json` |
 | Recognised injury types | `fightcamp/injury_taxonomy.py` via `injury_registry.REHAB_SAFE_TYPES` |
 | Recognised locations | injury parser vocabulary + `injury_location_registry.LOCATION_REGISTRY` |
 
@@ -92,29 +93,30 @@ the danger gates upstream) is untouched.
 
 ## What PR1 populated
 
-754 groups; 1404 musculoskeletal drills; 104 wound-care drills.
+769 groups; 1434 musculoskeletal drills; 104 wound-care drills. No group record
+was added, removed or reordered.
 
 | Field | Status |
 | --- | --- |
 | `id` | **Complete.** Deterministic `location_type_name` slug, numeric suffix on collision. |
-| `function` | **Partial — 963 of 1404 (69%).** Derived from the existing keyword classifier, and only where a keyword actually matched. |
+| `function` | **Partial — 979 of 1434 (68%).** Derived from the existing keyword classifier, and only where a keyword actually matched. |
 | everything else | **Not migrated.** `null` on every drill. |
 
 ### Why `function` is only 69% migrated
 
 The runtime classifier `classify_drill_function()` returns `"control"` when no
 keyword matches. That default is a *rendering* fallback, not evidence about the
-drill. Baking it into the data would make 441 unclassified drills indistinguishable
-from 153 genuinely control-classed ones.
+drill. Baking it into the data would make 455 unclassified drills indistinguishable
+from 154 genuinely control-classed ones.
 
 So migration used `match_drill_function()`, which returns `None` on a non-match,
-and wrote `null` for those 441 drills. The validator reports them as
+and wrote `null` for those 455 drills. The validator reports them as
 `unmigrated_function` (informational) — never as `"control"`, and never by
 consulting the keyword classifier itself.
 
 ### Fields PR3 owns
 
-For all 1404 musculoskeletal drills:
+For all 1434 musculoskeletal drills:
 
 - `rehab_stage`
 - `impact`, `load`, `velocity`
@@ -124,7 +126,8 @@ For all 1404 musculoskeletal drills:
 - `equipment`
 - `progress_when`, `regress_when`, `stop_when`
 
-Plus `function` for the 441 drills the keyword classifier could not place.
+Plus `function` for the 455 drills the keyword classifier could not place, and
+the 30 duplicate drills declared in the ledger below.
 
 Nothing above was guessed. Every one of these is clinical content, and PR1
 deliberately left it empty rather than inventing thresholds, doses or stop
@@ -138,12 +141,13 @@ python tools/validate_rehab_bank.py --strict-migration  # exits 1 while anything
 ```
 
 `--strict-migration` is the switch PR3 flips on in CI once the content migration
-completes.
+completes and the duplicate ledger is empty.
 
 ## What still drives selection
 
 Nothing in this schema. Rehab selection, severity filtering, the volume ceiling,
 the keyword safety filter and the red-flag gates all behave exactly as before.
+Every one of 27,027 generated rehab blocks is byte-identical to the pre-PR bank.
 `rehab_stage` is inert. `impact`/`load`/`velocity` are inert. The rendered
 function label is still derived at runtime from the phase-specific note, because
 a single stored `function` cannot reproduce a per-phase classification — a drill
@@ -156,22 +160,51 @@ musculoskeletal drill with metadata that would forbid it (stage `return`, high
 impact/load/velocity, a severity gate excluding the athlete, a zero pain ceiling)
 and asserts the generated rehab block is byte-identical.
 
-## The one data-level change
+## Duplicate drills: declared debt, not a silent pass
 
-Migration dropped 15 group records that were byte-identical duplicates of an
-earlier record (769 → 754 groups). They were the reason a handful of rehab blocks
-listed the same drill twice in a row. Across an exhaustive sweep of 27,027
-generated blocks (every location/type × phase × severity × day type, plus the
-string-parsed and three-phase paths), 21 changed, all in the same way:
+The bank contains 15 group records that duplicate an earlier record exactly.
+They are why a handful of rehab blocks list the same drill twice in a row:
 
 ```
-before:  • Heel Walks …
-         • Heel Walks …
-after:   • Heel Walks …
-         • Anterior Compartment Foam Rolling …
+• Heel Walks – …
+• Heel Walks – …
 ```
 
-No block lost a drill, and no other output changed.
+Collapsing them changes generated output — an exhaustive sweep of 27,027 blocks
+(every location/type × phase × severity × day type, plus the string-parsed,
+three-phase and `_rehab_drills_for_phase` paths) found 21 blocks where the
+repeated bullet becomes a different drill. That is a content change, so PR1 does
+not make it. The duplicates stay, byte-for-byte, and PR1 generates output
+identical to the pre-PR bank across all 27,027 blocks.
+
+Instead the 30 affected drill combinations are **declared** in
+`data/rehab_bank_duplicate_debt.json`:
+
+```json
+{
+  "location": "shin",
+  "type": "pain",
+  "rehab_stage": null,
+  "name": "Heel Walks",
+  "grandfathered_copies": 1
+}
+```
+
+The validator spends this ledger before reporting, which gives three behaviours:
+
+| Situation | Result |
+| --- | --- |
+| Duplicate declared in the ledger | `grandfathered_duplicate` — reported on **every** run as debt |
+| Duplicate not in the ledger | `duplicate_drill_combination` — **error**, CI fails |
+| More copies than the ledger declares | `duplicate_drill_combination` for the excess — **error** |
+| Ledger row whose duplicate is gone | `resolved_duplicate_debt` — informational; drop the row |
+
+So a newly introduced duplicate still fails, while the pre-existing ones are
+visible rather than silently tolerated. `--strict-migration` counts the declared
+debt as a failure, so PR3 can gate on the ledger reaching zero.
+
+There is no command that regenerates the ledger. Adding a row is a deliberate
+hand edit that shows up in review; the file should only ever shrink.
 
 ## CI
 
@@ -183,4 +216,5 @@ No block lost a drill, and no other output changed.
    schema error.
 3. `python tools/migrate_rehab_bank_schema.py --check` — **blocking**; fails if
    the derived fields (ids, keyword-matched functions) drifted from what the
-   deterministic migration produces.
+   deterministic migration produces. The migration adds fields only; it never
+   drops, merges or reorders a group record.

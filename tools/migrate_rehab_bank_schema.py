@@ -2,11 +2,14 @@
 """Migrate ``data/rehab_bank.json`` onto the formal rehab-bank schema.
 
 The migration is deterministic and idempotent: re-running it on an already
-migrated bank is a no-op. It does two things and nothing else.
+migrated bank is a no-op. It does one thing and nothing else — it adds the
+structured contract fields defined in :mod:`fightcamp.rehab_schema` to every
+drill.
 
-1. Drops byte-identical duplicate group records, keeping the first occurrence.
-2. Adds the structured contract fields defined in
-   :mod:`fightcamp.rehab_schema` to every drill.
+It adds, removes and reorders no group record. The bank contains 15 group
+records that duplicate an earlier record exactly; collapsing them would change
+generated rehab blocks, so they stay, and are carried as declared migration debt
+in ``data/rehab_bank_duplicate_debt.json`` for PR3 to resolve.
 
 It fabricates no clinical content. Only two fields carry derived values:
 
@@ -45,21 +48,6 @@ from fightcamp.rehab_schema import (  # noqa: E402
 )
 
 DEFAULT_BANK = REPO_ROOT / "data" / "rehab_bank.json"
-
-
-def drop_identical_entries(entries: list[dict]) -> tuple[list[dict], list[dict]]:
-    """Return ``(kept, dropped)`` with byte-identical group records collapsed."""
-    seen: set[str] = set()
-    kept: list[dict] = []
-    dropped: list[dict] = []
-    for entry in entries:
-        fingerprint = json.dumps(entry, sort_keys=True, ensure_ascii=False)
-        if fingerprint in seen:
-            dropped.append(entry)
-            continue
-        seen.add(fingerprint)
-        kept.append(entry)
-    return kept, dropped
 
 
 def _unique_id(base: str, used: set[str]) -> str:
@@ -151,8 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     original = args.bank.read_text(encoding="utf-8")
     entries = json.loads(original)
-    kept, dropped = drop_identical_entries(entries)
-    rendered = render(migrate_entries(kept))
+    rendered = render(migrate_entries(entries))
 
     if args.check:
         if rendered == original:
@@ -162,11 +149,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     args.bank.write_text(rendered, encoding="utf-8")
-    drill_count = sum(len(entry.get("drills", [])) for entry in kept)
-    print(
-        f"Migrated {args.bank.name}: {len(kept)} groups, {drill_count} drills, "
-        f"{len(dropped)} identical duplicate group(s) dropped."
-    )
+    drill_count = sum(len(entry.get("drills", [])) for entry in entries)
+    print(f"Migrated {args.bank.name}: {len(entries)} groups, {drill_count} drills.")
     return 0
 
 

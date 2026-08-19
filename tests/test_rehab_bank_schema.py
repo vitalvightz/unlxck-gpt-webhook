@@ -79,8 +79,15 @@ def _codes(issues, severity: str | None = None) -> set[str]:
     return {issue.code for issue in issues if severity is None or issue.severity == severity}
 
 
-def _errors(bank) -> list:
-    return [issue for issue in validator.validate_rehab_bank(bank) if issue.severity == ERROR]
+def _errors(bank, **kwargs) -> list:
+    """Errors under the strict reading: no duplicate is grandfathered."""
+    return [issue for issue in validator.validate_rehab_bank(bank, **kwargs) if issue.severity == ERROR]
+
+
+def _shipped_bank() -> list[dict]:
+    from fightcamp.config import DATA_DIR
+
+    return json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -133,10 +140,9 @@ def test_fully_migrated_drill_reports_nothing_pending():
 
 
 def test_shipped_rehab_bank_passes_validation():
-    from fightcamp.config import DATA_DIR
-
-    bank = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
-    assert _errors(bank) == []
+    bank = _shipped_bank()
+    issues = validator.validate_rehab_bank(bank, duplicate_debt=validator.load_duplicate_debt())
+    assert [issue for issue in issues if issue.severity == ERROR] == []
 
 
 def test_shipped_rehab_bank_matches_its_deterministic_migration():
@@ -440,9 +446,7 @@ def test_wound_care_drill_declaring_loading_metadata_fails(field, value):
 
 
 def test_shipped_surface_entries_carry_no_loading_metadata():
-    from fightcamp.config import DATA_DIR
-
-    bank = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
+    bank = _shipped_bank()
     surface_drills = [
         drill
         for entry in bank
@@ -452,6 +456,156 @@ def test_shipped_surface_entries_carry_no_loading_metadata():
     assert surface_drills
     for drill in surface_drills:
         assert not set(drill) & set(rehab_schema.MSK_DRILL_FIELDS)
+
+
+# ---------------------------------------------------------------------------
+# Declared duplicate debt
+# ---------------------------------------------------------------------------
+
+
+def _duplicated_bank() -> list[dict]:
+    """Two groups carrying the same drill — the pre-schema duplication pattern."""
+    return [_msk_entry(_msk_drill()), _msk_entry(_msk_drill(id="ankle_sprain_single_leg_balance_on_foam_pad_2"))]
+
+
+def _debt(copies: int = 1, **overrides) -> dict:
+    row = {
+        "location": "ankle",
+        "type": "sprain",
+        # Matches _msk_drill(); the ledger keys on the drill's declared stage.
+        "rehab_stage": "restore",
+        "name": "Single-Leg Balance on Foam Pad",
+        "grandfathered_copies": copies,
+    }
+    row.update(overrides)
+    return {"duplicates": [row]}
+
+
+def _debt_map(payload: dict, tmp_path) -> dict:
+    ledger = tmp_path / "rehab_bank_duplicate_debt.json"
+    ledger.write_text(json.dumps(payload), encoding="utf-8")
+    return validator.load_duplicate_debt(ledger)
+
+
+def test_undeclared_duplicate_fails():
+    assert "duplicate_drill_combination" in _codes(validator.validate_rehab_bank(_duplicated_bank()), ERROR)
+
+
+def test_declared_duplicate_is_reported_as_debt_not_as_an_error(tmp_path):
+    issues = validator.validate_rehab_bank(_duplicated_bank(), duplicate_debt=_debt_map(_debt(), tmp_path))
+
+    assert _codes(issues, ERROR) == set()
+    assert "grandfathered_duplicate" in _codes(issues, INFO)
+
+
+def test_declared_duplicate_is_never_reported_silently(tmp_path):
+    issues = validator.validate_rehab_bank(_duplicated_bank(), duplicate_debt=_debt_map(_debt(), tmp_path))
+    reported = [issue for issue in issues if issue.code == "grandfathered_duplicate"]
+
+    assert len(reported) == 1
+    assert "Single-Leg Balance on Foam Pad" in reported[0].detail
+    assert "rehab_bank_duplicate_debt.json" in reported[0].detail
+
+
+def test_extra_copy_beyond_the_declared_count_still_fails(tmp_path):
+    bank = [
+        *_duplicated_bank(),
+        _msk_entry(_msk_drill(id="ankle_sprain_single_leg_balance_on_foam_pad_3")),
+    ]
+    issues = validator.validate_rehab_bank(bank, duplicate_debt=_debt_map(_debt(), tmp_path))
+
+    assert "duplicate_drill_combination" in _codes(issues, ERROR)
+    assert any("not covered by" in issue.detail for issue in issues if issue.severity == ERROR)
+
+
+def test_debt_does_not_grandfather_a_different_drill(tmp_path):
+    debt = _debt_map(_debt(name="Some Other Drill"), tmp_path)
+    issues = validator.validate_rehab_bank(_duplicated_bank(), duplicate_debt=debt)
+    assert "duplicate_drill_combination" in _codes(issues, ERROR)
+
+
+def test_a_resolved_duplicate_leaves_a_stale_ledger_row_without_failing(tmp_path):
+    issues = validator.validate_rehab_bank([_msk_entry()], duplicate_debt=_debt_map(_debt(), tmp_path))
+
+    assert _codes(issues, ERROR) == set()
+    assert "resolved_duplicate_debt" in _codes(issues, INFO)
+
+
+def test_missing_ledger_means_nothing_is_grandfathered(tmp_path):
+    assert validator.load_duplicate_debt(tmp_path / "absent.json") == {}
+    assert validator.load_duplicate_debt(None) == {}
+
+
+def test_shipped_ledger_declares_exactly_the_duplicates_the_bank_still_has():
+    """No stale rows, and no duplicate the ledger forgot to declare."""
+    issues = validator.validate_rehab_bank(_shipped_bank(), duplicate_debt=validator.load_duplicate_debt())
+    codes = _codes(issues)
+
+    assert "duplicate_drill_combination" not in codes
+    assert "resolved_duplicate_debt" not in codes
+    assert "grandfathered_duplicate" in codes
+
+
+def test_shipped_ledger_only_declares_duplicates_never_new_drills():
+    """Every ledger row must name a drill the bank actually carries."""
+    bank_names = {
+        (entry["location"], entry["type"], drill.get("name"))
+        for entry in _shipped_bank()
+        for drill in entry.get("drills", [])
+    }
+    from fightcamp.config import DATA_DIR
+
+    ledger = json.loads((DATA_DIR / "rehab_bank_duplicate_debt.json").read_text(encoding="utf-8"))
+    assert ledger["duplicates"]
+    for row in ledger["duplicates"]:
+        assert (row["location"], row["type"], row["name"]) in bank_names
+        assert row["grandfathered_copies"] >= 1
+
+
+def test_strict_migration_mode_fails_while_duplicate_debt_remains(tmp_path):
+    bank = tmp_path / "rehab_bank.json"
+    bank.write_text(json.dumps(_duplicated_bank()), encoding="utf-8")
+    ledger = tmp_path / "rehab_bank_duplicate_debt.json"
+    ledger.write_text(json.dumps(_debt()), encoding="utf-8")
+
+    assert validator.run_validation(bank, emit=lambda _m: None, duplicate_debt_path=ledger) == 0
+    assert (
+        validator.run_validation(bank, emit=lambda _m: None, duplicate_debt_path=ledger, strict_migration=True) == 1
+    )
+
+
+def test_migration_removes_no_group_record():
+    """PR1 adds fields. It never drops, merges or reorders a group."""
+    from tools.migrate_rehab_bank_schema import migrate_entries
+
+    original = [
+        {
+            "location": "ankle",
+            "type": "sprain",
+            "phase_progression": "GPP → SPP",
+            "drills": [{"name": "Single-Leg Balance on Foam Pad", "notes": "GPP: Rebuild proprioception"}],
+        }
+    ]
+    duplicated = [*original, json.loads(json.dumps(original[0]))]
+    migrated = migrate_entries(duplicated)
+
+    assert len(migrated) == 2
+    assert [entry["location"] for entry in migrated] == ["ankle", "ankle"]
+    assert [drill["name"] for entry in migrated for drill in entry["drills"]] == [
+        "Single-Leg Balance on Foam Pad",
+        "Single-Leg Balance on Foam Pad",
+    ]
+    # Ids still have to be unique, so the second copy is suffixed.
+    ids = [drill["id"] for entry in migrated for drill in entry["drills"]]
+    assert len(set(ids)) == 2
+
+
+def test_duplicate_debt_ledger_is_not_treated_as_a_training_bank():
+    from tools import validate_banks
+
+    discovered = {path.name for path in validate_banks.discover_validation_targets()}
+    assert "rehab_bank.json" in discovered
+    assert "rehab_bank_duplicate_debt.json" not in discovered
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +625,17 @@ def test_cli_returns_zero_on_a_valid_bank(tmp_path):
     bank.write_text(json.dumps([_msk_entry(), _wound_entry()]), encoding="utf-8")
 
     assert validator.main(["--bank", str(bank)]) == 0
+
+
+def test_cli_returns_non_zero_on_an_undeclared_duplicate(tmp_path):
+    bank = tmp_path / "rehab_bank.json"
+    bank.write_text(json.dumps(_duplicated_bank()), encoding="utf-8")
+
+    assert validator.main(["--bank", str(bank), "--duplicate-debt", str(tmp_path / "absent.json")]) == 1
+
+
+def test_cli_accepts_the_repo_bank_and_ledger():
+    assert validator.main([]) == 0
 
 
 def test_cli_returns_non_zero_on_invalid_json(tmp_path):
