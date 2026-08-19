@@ -244,6 +244,10 @@ def test_open_plan_before_start_surfaces_monday_as_next_not_future_saturday_as_t
     }
     store = FakeStore()
     store.plans[PLAN_ID] = plan_row
+    # The active-plan pointer is authoritative (see api/services/active_plan.py):
+    # seeding plans[...] alone leaves the athlete with no active plan, so the
+    # command view degrades to the no-plan shape.
+    store.set_active_plan_id("athlete-1", PLAN_ID)
 
     view = build_today_command_view(
         store,

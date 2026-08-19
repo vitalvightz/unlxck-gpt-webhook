@@ -19,7 +19,7 @@ That is wrong in both directions:
 | Situation | Old reading | Actual state |
 | --- | --- | --- |
 | Ankle sprained in fight week | TAPER — late, advanced | Brand new. `calm`. |
-| Six-week-old ankle, trained on without complaint, early camp | GPP — early, basic | Well tolerated. `load` or beyond. |
+| Six-week-old ankle the athlete keeps reporting as improving, early camp | GPP — early, basic | Settling. `restore`. |
 
 After, they are two independent axes:
 
@@ -56,55 +56,78 @@ so the API schema cannot drift from the enum either.
 deterministic logic over plain mappings (`injury_checkin`, `injury_signal`,
 `recommendation`), which is exactly what this is.
 
-## Evidence the resolver uses
+## Two kinds of evidence, and only one may progress
 
 Everything comes from records that already exist. No new representation of pain,
-severity, injury status or history was introduced.
+severity, injury status or history was introduced. But those records fall into
+two categories that must never be confused.
+
+**Injury-specific** — facts about *this* injury, from its own flag row. Only
+these may move a stage **up**.
 
 | Source | Fields | Used for |
 | --- | --- | --- |
-| `injury_flags` | `severity`, `status`, `latest_reported_status`, `created_at`, `body_area`/`description` | per-injury state, onset, urgency, surface routing |
+| `injury_flags` | `severity`, `status`, `latest_reported_status`, `created_at`, `updated_at`, `body_area`/`description` | per-injury state, onset, follow-up, urgency, surface routing |
 | prior `injury_flags` | `status`, `resolved_at`, `body_area` | detecting a cleared injury that has been re-reported |
-| `today_checkins` | `active_injury`, `pain`, `recommendation_state`, the seven `SAFETY_FLAGS` | tolerated vs. worsening days, red-flag gate |
-| `session_completions` | `status`, `pain_after` | the only record of tolerated load |
+
+**Whole-athlete** — nothing here can say *which* injury it belongs to. A
+comfortable shoulder session is not evidence that an ankle tolerated load. These
+may only ever move a stage **down**, or gate it on medical grounds.
+
+| Source | Fields | Used for |
+| --- | --- | --- |
+| `today_checkins` | `active_injury`, `pain`, `recommendation_state`, the seven `SAFETY_FLAGS` | red-flag gate, worsening days |
+| `session_completions` | `status`, `pain_after` | high post-session pain as a worsening day |
 | `today_checkins.phase` | — | **deliberately never read** |
+
+That split is enforced structurally, not by convention. Progression is computed
+by `_progress`, which takes an `InjuryEvidence` and has no access to
+`AthleteDayContext` at all — the same trick that keeps camp phase out. A test
+asserts the signature, and another asserts that adding *any* amount of
+whole-athlete history can never raise a resolved stage.
 
 Red-flag toggles come from `api.contracts.checkin_decision.SAFETY_FLAGS`, urgent
 injury vocabulary from `fightcamp.injury_taxonomy.derive_urgent_injury_tokens()`,
-surface routing from `classify_injury_surface`, and the tolerated-pain floor from
-`injury_signal.ELEVATED_PAIN_AFTER`. Every one is the project's existing
+surface routing from `classify_injury_surface`, and the high post-session pain
+mark from `injury_signal.HIGH_PAIN_AFTER`. Every one is the project's existing
 canonical source.
 
-## Progression
+## Progression, and where the ladder stops
 
 The ladder is cumulative: each rung is only tested once every rung beneath it is
 met, which is what makes skipping a stage structurally impossible rather than
 merely discouraged.
 
-| Rung | Requires |
-| --- | --- |
-| `restore` | ≥1 tolerated check-in day after onset |
-| `load` | severity not `severe`, ≥3 tolerated days, ≥1 tolerated session |
-| `dynamic` | severity `mild`, reported improving/resolved, ≥6 tolerated days, ≥3 tolerated sessions |
-| `return` | reported resolved, ≥5 tolerated sessions |
+| Rung | Requires | Reachable in PR2 |
+| --- | --- | --- |
+| `restore` | this injury reported on again since onset, not worsening, not `severe` | yes |
+| `load` | that *this tissue* tolerated progressive load | no |
+| `dynamic` | that *this tissue* tolerated speed and impact | no |
+| `return` | that *this tissue* is near unrestricted sport | no |
 
-A *tolerated day* is a submitted check-in with no worsening signal on it. A
-*tolerated session* is a completed session with a recorded `pain_after` below the
-elevated mark.
+**There are no count thresholds.** A number of "good days" or "good sessions"
+required before an injury may be loaded is a rehabilitation criterion, and PR2
+does not write those. Reaching `restore` needs a per-injury follow-up report —
+either the flag sits in `monitoring`/`resolved` (a status only an
+`improving`/`resolved` report produces) or it was written again on a later day.
+
+`load`, `dynamic` and `return` all assert that the injured tissue tolerated
+something, and **no such record exists**: nothing in the system ties an exposure
+to a body area. So the ladder stops at `MAX_RESOLVABLE_STAGE` (`restore`) and
+says why, with `insufficient_injury_specific_progression_evidence`. PR4 raises
+that ceiling once a per-injury exposure record exists.
 
 The rules the spec asked for fall out of that shape:
 
-* **Time alone never progresses.** The counters count submitted reports, not
-  days elapsed. A 60-day-old injury with no check-ins is `calm`.
+* **Time alone never progresses.** A 60-day-old injury nobody has reported on is
+  `calm`.
 * **Camp phase never progresses.** It is not an input.
-* **No multi-stage jumps.** You cannot have six tolerated days without having had
-  three.
-* **One good day is not capacity.** `restore` is the most a single day buys.
-* **Silence is not tolerance.** Days without a check-in are not counted; a
-  completed session with no pain reading is not counted; a *failed history read*
-  falls back to `calm` rather than to "nothing bad reported".
-* **The onset day does not count.** A check-in filed the day an injury is
-  reported says nothing about how it has since held up.
+* **A comfortable athlete never progresses an injury.** Thirty days of perfect
+  check-ins and pain-free sessions leave an unreported ankle at `calm`.
+* **No multi-stage jumps.** `restore` is the most any evidence currently buys.
+* **Silence is not tolerance.** A same-day edit is not a follow-up; a session
+  with no pain reading proves nothing; a *failed history read* falls back to
+  `calm` rather than to "nothing bad reported".
 
 ## Regression
 
@@ -115,12 +138,21 @@ a stage down, so a worsening report can never be the reason an injury moves up.
 | --- | --- |
 | `latest_reported_status == "worse"`, or one worsening day in the recent window | `restore` |
 | Two or more worsening days in the recent window | `calm` |
-| Any of the above with `severity == "severe"` | `calm` |
+| Either of the above with `severity == "severe"` | `calm` |
+| `severity == "severe"` on its own | `calm` |
 | Cleared and re-reported within 14 days | `calm` |
 
 A worsening day is a check-in reporting `active_injury: worse`, `pain: high`, a
-`pull_back` recommendation, or any red-flag toggle — deliberately broad, because
-over-including in the *regression* direction is the safe error.
+`pull_back` recommendation, or any red-flag toggle — or a completed session
+logged at or above `HIGH_PAIN_AFTER`. Deliberately broad, because over-including
+in the *regression* direction is the safe error, and because a cap can only ever
+hold a stage down. That is exactly what makes it safe to read a whole-athlete
+worsening against every open injury: the worst it can do is be over-protective.
+
+The windows this uses (three most recent reported days, two of them worsening to
+count as repeated, a fourteen-day re-report window) govern regression and
+identity only. None of them can raise a stage, so none functions as a
+rehabilitation criterion.
 
 When the cap bites, it becomes the whole explanation: the rungs the evidence had
 reached are no longer why the athlete is where they are, and
@@ -142,14 +174,15 @@ and none of them were invented:
   professional cleared a return.
 
 Where evidence is absent the resolver stays at the safest defensible stage and
-says so, in machine-readable codes: `insufficient_progression_evidence`,
-`no_checkin_history_since_onset`, `no_session_tolerance_recorded`,
+says so, in machine-readable codes:
+`insufficient_injury_specific_progression_evidence`,
+`no_injury_specific_followup_report`, `newly_reported_injury`,
 `injury_onset_unknown`.
 
-The evidence floors (3 days, 6 days, 1/3/5 sessions) are **architectural
-minimums, not clinical criteria** — how many independent reports the system
-insists on seeing before it will describe tissue as tolerating more. Nothing
-asserts a healing timeline or a return-to-sport clearance.
+An earlier revision of this PR bridged that gap with day and session counts
+drawn from whole-athlete history. That was wrong twice over: it manufactured
+tissue-specific evidence out of records that carry no body area, and the counts
+themselves were de facto rehabilitation criteria. Both are gone.
 
 ## Safety precedence
 
@@ -174,11 +207,15 @@ carries no permission to train.
 ## Multiple injuries
 
 There is no athlete-level stage. `resolve_rehab_stages` returns one decision per
-flag id, and a left ankle at `restore` and a right shoulder at `load` are both
-true at once. Each decision reads only its own flag's facts; the shared
-day-level history applies identically to all of them, so clearing one injury
-changes nothing about another, and a worsening shoulder does not gate a separate
-ankle.
+flag id, and a left ankle at `restore` and a right shoulder at `calm` are both
+true at once.
+
+Isolation is the point. Each decision reads progression evidence only from its
+own flag, so a settled shoulder cannot lift an unreported ankle — not even six
+settled injuries can out-vote one unsettled one. The whole-athlete context is
+shared, and safely so: it can only gate or lower a stage, never raise one.
+Clearing one injury changes nothing about another, and a worsening shoulder does
+not gate a separate settled ankle.
 
 ## Surface injuries
 
@@ -202,7 +239,9 @@ pure function cannot accumulate progression.
 
 * **PR3** migrates the rehab bank's clinical content, including the drill-level
   `rehab_stage` values PR1 left `null`.
-* **PR4** makes stage-aware candidate scoring authoritative for selection.
+* **PR4** adds the per-injury exposure record that `load`, `dynamic` and
+  `return` require, and makes stage-aware candidate scoring authoritative for
+  selection.
 
 Until then, rehab drill selection is exactly what it was. Null drill stages do
 not filter anything out, `rehab_protocols` does not import the resolver, and a

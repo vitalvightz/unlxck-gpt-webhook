@@ -66,6 +66,10 @@ def _store_with_plan(store_type=FakeStore, *, intake_id: str | None = None) -> F
         "created_at": "2026-06-01T00:00:00+00:00",
         **({"intake_id": intake_id} if intake_id else {}),
     }
+    # The active-plan pointer is authoritative (see api/services/active_plan.py):
+    # seeding plans[...] alone leaves the athlete with no active plan, so the
+    # command view degrades to the no-plan shape.
+    store.set_active_plan_id(ATHLETE, PLAN)
     return store
 
 

@@ -7,32 +7,47 @@ the first one.
 
 The separation matters because the two used to be conflated. An ankle sprained
 in fight week is a brand-new injury that has earned nothing, yet TAPER reads as
-"late in the plan"; a six-week-old ankle that has been trained on without
-complaint may deserve real loading, yet GPP reads as "early". Camp phase is
-therefore **not an argument to this resolver** — it cannot be, so it cannot
-advance or regress a stage. It stays where it belongs: modifying dose and
-fatigue exposure downstream.
+"late in the plan"; a six-week-old ankle may have settled, yet GPP reads as
+"early". Camp phase is therefore **not an argument to this resolver** — it cannot
+be, so it cannot advance or regress a stage. It stays where it belongs:
+modifying dose and fatigue exposure downstream.
 
 Stage vocabulary is :data:`fightcamp.rehab_schema.REHAB_STAGES` — the canonical
 PR1 enum, not a second one::
 
     calm -> restore -> load -> dynamic -> return
 
-Evidence
---------
-Everything is derived from records that already exist. This module defines no
-new representation of pain, severity, injury status or history:
+Two kinds of evidence, and only one of them may progress
+-------------------------------------------------------
+Everything is derived from records that already exist; this module defines no
+new representation of pain, severity, injury status or history. But those
+records fall into two categories that must never be confused:
 
-* ``injury_flags`` — severity, status, ``latest_reported_status``, onset
-  (``created_at``), and the structured surface answers.
-* prior ``injury_flags`` rows for the same body area — a cleared injury that is
-  re-reported starts over rather than inheriting what the old one earned.
-* ``today_checkins`` — ``active_injury``, ``pain``, the canonical
-  :data:`~api.contracts.checkin_decision.SAFETY_FLAGS` red-flag toggles, and
-  ``recommendation_state``. The ``phase`` column on these rows is deliberately
-  never read.
-* ``session_completions`` — ``status`` and ``pain_after``, the only record of
-  what the athlete actually tolerated under load.
+**Injury-specific** — facts about *this* injury, from its own ``injury_flags``
+row: ``severity``, ``status``, ``latest_reported_status``, onset
+(``created_at``), whether it has been reported on again since onset, and whether
+a matching flag was cleared and re-reported. Only these may move a stage *up*.
+
+**Whole-athlete** — ``today_checkins`` (``active_injury``, ``pain``, the
+canonical :data:`~api.contracts.checkin_decision.SAFETY_FLAGS`,
+``recommendation_state``) and ``session_completions`` (``status``,
+``pain_after``). None of it can say *which* injury it belongs to. A comfortable
+shoulder session is not evidence that an ankle tolerated load. These may
+therefore only ever move a stage *down*, or gate it on medical grounds.
+
+That is enforced structurally, not by convention: progression is computed by
+:func:`_progress`, which takes an :class:`InjuryEvidence` and has no access to
+:class:`AthleteDayContext` at all — the same trick that keeps camp phase out.
+
+Where the ladder stops
+----------------------
+``load``, ``dynamic`` and ``return`` each assert that the injured tissue
+tolerated something — progressive load, then speed and impact, then near
+unrestricted sport. **No such record exists.** Nothing in the system ties an
+exposure to a body area. So the ladder stops at :data:`MAX_RESOLVABLE_STAGE` and
+says why, with :data:`REASON_INSUFFICIENT_INJURY_SPECIFIC`. Inventing day counts
+or session counts to bridge that gap would be writing rehabilitation criteria,
+which is not this PR's job.
 
 Derived, not stored
 -------------------
@@ -49,8 +64,8 @@ compares. No transition log required.
 Scope note (PR2)
 ----------------
 This module resolves the stage. It does not select drills: PR1's bank metadata
-is still mostly ``null``, so rehab selection stays exactly as it is until PR3
-migrates the bank content and PR4 makes stage-aware scoring authoritative.
+is still ``null``, so rehab selection stays exactly as it is until PR3 migrates
+the bank content and PR4 makes stage-aware scoring authoritative.
 """
 
 from __future__ import annotations
@@ -68,7 +83,7 @@ from fightcamp.rehab_schema import (
 )
 
 from .checkin_decision import SAFETY_FLAGS
-from .injury_signal import ELEVATED_PAIN_AFTER
+from .injury_signal import HIGH_PAIN_AFTER
 from .readiness_message import classify_injury_surface
 
 # ---------------------------------------------------------------------------
@@ -81,8 +96,21 @@ STAGE_CALM, STAGE_RESTORE, STAGE_LOAD, STAGE_DYNAMIC, STAGE_RETURN = REHAB_STAGE
 #: string comparisons. Sourced from the canonical enum's own order.
 STAGE_RANK: dict[str, int] = {stage: index for index, stage in enumerate(REHAB_STAGES)}
 
-#: Reported day-states that count as evidence the injury is settling.
+#: The highest stage the current record can justify. Everything above it asserts
+#: injury-specific exposure tolerance, which nothing in the system records — see
+#: the module docstring. PR4 raises this once that evidence exists.
+MAX_RESOLVABLE_STAGE = STAGE_RESTORE
+
+#: Reported day-states that mean this injury is not getting worse.
+NON_WORSENING_REPORTS: frozenset[str] = frozenset({"ongoing", "improving", "resolved"})
+
+#: Reported day-states that are this injury's own statement that it is settling.
 IMPROVING_REPORTS: frozenset[str] = frozenset({"improving", "resolved"})
+
+#: Flag statuses that only an ``improving`` / ``resolved`` report can produce
+#: (see ``injury_checkin._FLAG_STATUS_BY_REPORT``), which makes them per-injury
+#: proof that the athlete filed a follow-up on this specific injury.
+FOLLOWUP_FLAG_STATUSES: frozenset[str] = frozenset({"monitoring", "resolved"})
 
 #: Completion statuses that mean the athlete actually did the session.
 COMPLETED_SESSION_STATUSES: frozenset[str] = frozenset({"done", "modified"})
@@ -110,80 +138,112 @@ REASON_REPORTED_WORSE = "injury_reported_worse"
 REASON_REPEATED_WORSENING = "repeated_worsening_reported"
 REASON_RECENT_WORSENING = "recent_worsening_reported"
 REASON_NOT_WORSENING = "symptoms_not_worsening"
-REASON_BASIC_TOLERANCE = "basic_activity_tolerated"
-REASON_LOADING_TOLERANCE = "loading_tolerated_in_session"
-REASON_DYNAMIC_TOLERANCE = "sustained_loading_tolerated"
+REASON_FOLLOWUP_REPORT = "injury_specific_followup_report"
+REASON_NO_FOLLOWUP_REPORT = "no_injury_specific_followup_report"
 REASON_REPORTED_RESOLVED = "injury_reported_resolved"
-REASON_INSUFFICIENT_EVIDENCE = "insufficient_progression_evidence"
-REASON_NO_CHECKIN_HISTORY = "no_checkin_history_since_onset"
-REASON_NO_SESSION_HISTORY = "no_session_tolerance_recorded"
 REASON_UNKNOWN_ONSET = "injury_onset_unknown"
 
+#: The ladder's ceiling reason: this injury has no record of what *it* tolerated.
+REASON_INSUFFICIENT_INJURY_SPECIFIC = "insufficient_injury_specific_progression_evidence"
+
 
 # ---------------------------------------------------------------------------
-# Evidence floors
+# Regression windows
 #
-# These are ARCHITECTURAL minimums — how many independent reports the system
-# insists on seeing before it will describe tissue as tolerating more. They are
-# not clinical criteria and are not claimed to be: nothing here asserts a
-# healing timeline or a return-to-sport clearance. They exist so that a single
-# good day, or a run of days with no training in them, cannot walk an injury up
-# the ladder. PR3/PR4 may tighten them against migrated bank content.
-#
-# The pain floor is deliberately NOT a new number: it reuses the project's
-# existing post-session pain vocabulary from ``injury_signal``.
+# Every number below governs REGRESSION or identity, never progression. Nothing
+# here can raise a stage, so none of it functions as a rehabilitation criterion:
+# the worst a wrong value does is hold an injury more protectively than needed.
+# Progression deliberately has no thresholds at all — see ``_progress``.
 # ---------------------------------------------------------------------------
 
-#: A logged session counts as tolerated only below the existing "elevated" mark.
-TOLERATED_PAIN_AFTER_BELOW = ELEVATED_PAIN_AFTER
+#: A logged session at or above the project's existing "high" post-session pain
+#: mark reads as a bad day. Reused from ``injury_signal``, not a new number.
+SETBACK_PAIN_AFTER_AT_LEAST = HIGH_PAIN_AFTER
 
-MIN_TOLERATED_DAYS_FOR_RESTORE = 1
-MIN_TOLERATED_DAYS_FOR_LOAD = 3
-MIN_TOLERATED_SESSIONS_FOR_LOAD = 1
-MIN_TOLERATED_DAYS_FOR_DYNAMIC = 6
-MIN_TOLERATED_SESSIONS_FOR_DYNAMIC = 3
-MIN_TOLERATED_SESSIONS_FOR_RETURN = 5
-
-#: Worsening reported within this many of the most recent check-in days blocks
-#: progression outright, whatever the longer-run counts say.
+#: How many of the most recent reported days are inspected for a setback.
 RECENT_WORSENING_WINDOW_DAYS = 3
 
-#: Two or more worsening days inside the recent window is a setback, not a blip.
+#: Two or more worsening days inside that window is a setback, not a blip.
 REPEATED_WORSENING_COUNT = 2
 
 #: An injury is only described as "newly reported" while this few days have
-#: passed since onset. Beyond it, an injury with no reports is unobserved rather
-#: than new, and says so.
+#: passed since onset. Beyond it, an injury with no follow-up is unobserved
+#: rather than new, and says so.
 NEW_INJURY_OBSERVATION_DAYS = 1
 
 #: A flag cleared this recently and then re-reported starts from scratch.
 RE_REPORT_WINDOW_DAYS = 14
 
-#: How far back evidence is counted at all, so a months-old streak cannot be
-#: reassembled from sporadic check-ins.
+#: How far back day-level context is read at all, so a months-old bad patch
+#: cannot be reassembled from sporadic check-ins.
 EVIDENCE_LOOKBACK_DAYS = 90
 
 
 # ---------------------------------------------------------------------------
-# Decision
+# Evidence
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
-class RehabStageEvidence:
-    """The counts a decision was actually built from.
+class InjuryEvidence:
+    """Facts about ONE injury, read from its own flag record.
 
-    Exposed so a decision can be explained and tested without re-deriving it,
-    and so a reviewer can see *why* a stage did not advance.
+    This is the only evidence permitted to progress a stage, because it is the
+    only evidence that is actually about this injury.
     """
 
-    tolerated_checkin_days: int = 0
-    worsening_checkin_days: int = 0
-    recent_worsening_days: int = 0
-    tolerated_sessions: int = 0
-    has_checkin_history: bool = False
-    has_session_history: bool = False
+    reported: str = "ongoing"
+    status: str = "open"
+    severity: str = "moderate"
     onset_known: bool = False
+    #: The athlete filed a further report on THIS injury after it opened.
+    followup_reported: bool = False
+    #: A matching flag was cleared shortly before this one opened.
+    recently_re_reported: bool = False
+    #: Days between onset and the most recent reported day, when both are known.
+    observed_days: int | None = None
+
+    @property
+    def is_worsening(self) -> bool:
+        return self.reported == "worse"
+
+    @property
+    def is_improving(self) -> bool:
+        return self.reported in IMPROVING_REPORTS
+
+
+@dataclass(frozen=True)
+class AthleteDayContext:
+    """Whole-athlete day context. Regression and medical gating ONLY.
+
+    Nothing here knows which injury it belongs to: ``today_checkins`` carries one
+    ``active_injury`` answer for the whole day, and a ``session_completions``
+    pain reading belongs to a session, not a body area. Letting any of it
+    progress a stage would let one comfortable body part vouch for another.
+
+    It is never passed to :func:`_progress`.
+    """
+
+    red_flags: tuple[str, ...] = ()
+    worsening_days: int = 0
+    recent_worsening_days: int = 0
+    reported_days: int = 0
+
+    @property
+    def has_red_flag(self) -> bool:
+        return bool(self.red_flags)
+
+    @property
+    def is_repeated_setback(self) -> bool:
+        return self.recent_worsening_days >= REPEATED_WORSENING_COUNT
+
+
+@dataclass(frozen=True)
+class RehabStageEvidence:
+    """Both halves of what a decision was built from, kept visibly apart."""
+
+    injury: InjuryEvidence = field(default_factory=InjuryEvidence)
+    athlete: AthleteDayContext = field(default_factory=AthleteDayContext)
 
 
 @dataclass(frozen=True)
@@ -229,6 +289,11 @@ class RehabStageDecision:
 # ---------------------------------------------------------------------------
 
 
+def _dedupe(reasons: Sequence[str]) -> list[str]:
+    """First occurrence wins, so a code cannot be reported twice."""
+    return list(dict.fromkeys(reasons))
+
+
 def _clean(value: Any) -> str:
     return str(value or "").strip()
 
@@ -268,11 +333,6 @@ def _pain_after(value: Any) -> int | None:
     return score if 0 <= score <= 10 else None
 
 
-def _has_safety_flag(row: Mapping[str, Any]) -> bool:
-    """True when the row carries any canonical red-flag toggle."""
-    return any(bool(row.get(flag)) for flag in SAFETY_FLAGS)
-
-
 def _active_safety_flags(row: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(flag for flag in SAFETY_FLAGS if bool(row.get(flag)))
 
@@ -285,8 +345,7 @@ def _urgent_token_patterns() -> tuple[re.Pattern[str], ...]:
 
     Built from :func:`fightcamp.injury_taxonomy.derive_urgent_injury_tokens`, so
     this module holds no urgent-injury list of its own. Boundaries matter: a bare
-    ``in`` test makes "graze" match "grazed rib fracture" but also makes short
-    tokens fire inside unrelated words.
+    substring test lets short tokens fire inside unrelated words.
     """
     global _URGENT_TOKEN_PATTERNS
     if _URGENT_TOKEN_PATTERNS is None:
@@ -321,199 +380,27 @@ def _is_surface_injury(injury: Mapping[str, Any]) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Evidence gathering
+# Injury-specific evidence
 # ---------------------------------------------------------------------------
 
 
-def _checkin_day_is_worsening(row: Mapping[str, Any]) -> bool:
-    """True when a check-in day reads as the injury going backwards.
+def _followup_reported(injury: Mapping[str, Any], *, onset: date | None) -> bool:
+    """True when the athlete filed a further report on THIS injury after onset.
 
-    Deliberately broad: worsening drives *regression*, and over-including there
-    is the safe direction. Mirrors the readiness engine's own poor-day signals
-    (declared worse, high pain, any red-flag toggle, a pull-back decision).
+    Two per-injury signals, either of which is sufficient:
+
+    * ``status`` is ``monitoring`` or ``resolved`` — only an ``improving`` or
+      ``resolved`` report produces those, so the flag has been spoken about
+      again since it opened;
+    * the flag was written on a later day than it was created.
+
+    Deliberately conservative. Same-day edits do not count, and a flag nobody
+    has touched since onset counts for nothing at all: silence is not tolerance.
     """
-    if _lower(row.get("active_injury")) == "worse":
+    if _lower(injury.get("status")) in FOLLOWUP_FLAG_STATUSES:
         return True
-    if _lower(row.get("pain")) == "high":
-        return True
-    if _lower(row.get("recommendation_state") or row.get("decision")) == "pull_back":
-        return True
-    return _has_safety_flag(row)
-
-
-def _checkin_day_is_tolerated(row: Mapping[str, Any]) -> bool:
-    """True when a check-in day is positive evidence rather than merely not bad.
-
-    A day only counts once it is free of every worsening signal. Silence is not
-    tolerance: a row with no check-in never reaches this function at all.
-    """
-    return not _checkin_day_is_worsening(row)
-
-
-def _relevant_days(
-    rows: Sequence[Mapping[str, Any]],
-    *,
-    onset: date | None,
-    as_of: date | None,
-) -> list[tuple[date, Mapping[str, Any]]]:
-    """One row per day, newest first, inside the evidence window after onset.
-
-    Deduplicated by day so several rows for one day cannot inflate a count, and
-    bounded by ``onset`` so evidence an injury never lived through is not spent
-    on it. The onset day is excluded too: a check-in filed the day an injury is
-    reported says nothing about how that injury has since held up.
-    """
-    best_by_day: dict[date, Mapping[str, Any]] = {}
-    for row in rows or ():
-        if not isinstance(row, Mapping):
-            continue
-        day = _row_day(row)
-        if day is None:
-            continue
-        if onset is not None and day <= onset:
-            continue
-        if as_of is not None:
-            delta = (as_of - day).days
-            if delta < 0 or delta > EVIDENCE_LOOKBACK_DAYS:
-                continue
-        # A worsening row wins its day: if the athlete reported a setback at any
-        # point that day, the day is not tolerance evidence.
-        existing = best_by_day.get(day)
-        if existing is None or (_checkin_day_is_worsening(row) and not _checkin_day_is_worsening(existing)):
-            best_by_day[day] = row
-    return sorted(best_by_day.items(), key=lambda item: item[0], reverse=True)
-
-
-def _session_is_tolerated(row: Mapping[str, Any]) -> bool:
-    """True when a logged session is evidence of tolerated load.
-
-    Requires both that the session actually happened and that a pain reading was
-    recorded below the project's existing "elevated" mark. A completion with no
-    ``pain_after`` proves nothing about tolerance and is not counted — missing
-    evidence never reads as success.
-    """
-    if _lower(row.get("status")) not in COMPLETED_SESSION_STATUSES:
-        return False
-    pain = _pain_after(row.get("pain_after"))
-    return pain is not None and pain < TOLERATED_PAIN_AFTER_BELOW
-
-
-def _gather_evidence(
-    *,
-    onset: date | None,
-    as_of: date | None,
-    checkins: Sequence[Mapping[str, Any]],
-    session_completions: Sequence[Mapping[str, Any]],
-) -> RehabStageEvidence:
-    days = _relevant_days(checkins, onset=onset, as_of=as_of)
-    tolerated = sum(1 for _day, row in days if _checkin_day_is_tolerated(row))
-    worsening = sum(1 for _day, row in days if _checkin_day_is_worsening(row))
-
-    recent_worsening = 0
-    for day, row in days[:RECENT_WORSENING_WINDOW_DAYS]:
-        if as_of is not None and (as_of - day).days > RECENT_WORSENING_WINDOW_DAYS:
-            continue
-        if _checkin_day_is_worsening(row):
-            recent_worsening += 1
-
-    session_days = _relevant_days(session_completions, onset=onset, as_of=as_of)
-    tolerated_sessions = sum(1 for _day, row in session_days if _session_is_tolerated(row))
-
-    return RehabStageEvidence(
-        tolerated_checkin_days=tolerated,
-        worsening_checkin_days=worsening,
-        recent_worsening_days=recent_worsening,
-        tolerated_sessions=tolerated_sessions,
-        has_checkin_history=bool(days),
-        has_session_history=bool(session_days),
-        onset_known=onset is not None,
-    )
-
-
-# ---------------------------------------------------------------------------
-# The ladder
-# ---------------------------------------------------------------------------
-
-
-def _restore_unmet(evidence: RehabStageEvidence, _injury_state: Mapping[str, Any]) -> str | None:
-    # The "nothing reported yet" gate above already guarantees both of these, so
-    # in practice this rung always passes. It is stated anyway so the ladder is
-    # total: every rung declares what it needs, and reading one does not require
-    # knowing which caller filtered what.
-    if not evidence.has_checkin_history:
-        return REASON_NO_CHECKIN_HISTORY
-    if evidence.tolerated_checkin_days < MIN_TOLERATED_DAYS_FOR_RESTORE:
-        return REASON_INSUFFICIENT_EVIDENCE
-    return None
-
-
-def _load_unmet(evidence: RehabStageEvidence, injury_state: Mapping[str, Any]) -> str | None:
-    if injury_state["severity"] == "severe":
-        return REASON_SEVERE_SEVERITY
-    if evidence.tolerated_checkin_days < MIN_TOLERATED_DAYS_FOR_LOAD:
-        return REASON_INSUFFICIENT_EVIDENCE
-    if not evidence.has_session_history:
-        return REASON_NO_SESSION_HISTORY
-    if evidence.tolerated_sessions < MIN_TOLERATED_SESSIONS_FOR_LOAD:
-        return REASON_INSUFFICIENT_EVIDENCE
-    return None
-
-
-def _dynamic_unmet(evidence: RehabStageEvidence, injury_state: Mapping[str, Any]) -> str | None:
-    if injury_state["severity"] != "mild":
-        return REASON_INSUFFICIENT_EVIDENCE
-    if injury_state["reported"] not in IMPROVING_REPORTS:
-        return REASON_INSUFFICIENT_EVIDENCE
-    if evidence.tolerated_checkin_days < MIN_TOLERATED_DAYS_FOR_DYNAMIC:
-        return REASON_INSUFFICIENT_EVIDENCE
-    if evidence.tolerated_sessions < MIN_TOLERATED_SESSIONS_FOR_DYNAMIC:
-        return REASON_INSUFFICIENT_EVIDENCE
-    return None
-
-
-def _return_unmet(evidence: RehabStageEvidence, injury_state: Mapping[str, Any]) -> str | None:
-    if injury_state["reported"] != "resolved":
-        return REASON_INSUFFICIENT_EVIDENCE
-    if evidence.tolerated_sessions < MIN_TOLERATED_SESSIONS_FOR_RETURN:
-        return REASON_INSUFFICIENT_EVIDENCE
-    return None
-
-
-#: The ladder, in order. Each rung is only tested once every rung below it has
-#: been met, which is what makes skipping a stage structurally impossible.
-_LADDER: tuple[tuple[str, Any, str], ...] = (
-    (STAGE_RESTORE, _restore_unmet, REASON_NOT_WORSENING),
-    (STAGE_LOAD, _load_unmet, REASON_BASIC_TOLERANCE),
-    (STAGE_DYNAMIC, _dynamic_unmet, REASON_LOADING_TOLERANCE),
-    (STAGE_RETURN, _return_unmet, REASON_DYNAMIC_TOLERANCE),
-)
-
-
-def _climb(evidence: RehabStageEvidence, injury_state: Mapping[str, Any]) -> tuple[str, list[str]]:
-    """Walk the ladder from CALM, stopping at the first unmet requirement."""
-    stage = STAGE_CALM
-    reasons: list[str] = []
-    for candidate, unmet_check, met_reason in _LADDER:
-        unmet = unmet_check(evidence, injury_state)
-        if unmet is not None:
-            reasons.append(unmet)
-            break
-        stage = candidate
-        reasons.append(met_reason)
-    return stage, reasons
-
-
-# ---------------------------------------------------------------------------
-# Resolution
-# ---------------------------------------------------------------------------
-
-
-def _injury_state(injury: Mapping[str, Any]) -> dict[str, Any]:
-    return {
-        "severity": _lower(injury.get("severity")) or "moderate",
-        "status": _lower(injury.get("status")) or "open",
-        "reported": _lower(injury.get("latest_reported_status")) or "ongoing",
-    }
+    updated = _parse_day(injury.get("updated_at"))
+    return bool(onset is not None and updated is not None and updated > onset)
 
 
 def _was_recently_re_reported(
@@ -546,18 +433,228 @@ def _was_recently_re_reported(
         resolved_at = _parse_day(prior.get("resolved_at")) or _parse_day(prior.get("updated_at"))
         if resolved_at is None:
             continue
-        gap = (onset - resolved_at).days
-        if 0 <= gap <= RE_REPORT_WINDOW_DAYS:
+        if 0 <= (onset - resolved_at).days <= RE_REPORT_WINDOW_DAYS:
             return True
     return False
 
 
-def _confidence(evidence: RehabStageEvidence) -> str:
-    if not evidence.has_checkin_history or not evidence.onset_known:
+def _injury_evidence(
+    injury: Mapping[str, Any],
+    injury_history: Sequence[Mapping[str, Any]],
+    *,
+    onset: date | None,
+    as_of: date | None,
+) -> InjuryEvidence:
+    observed_days = (as_of - onset).days if (as_of is not None and onset is not None) else None
+    return InjuryEvidence(
+        reported=_lower(injury.get("latest_reported_status")) or "ongoing",
+        status=_lower(injury.get("status")) or "open",
+        severity=_lower(injury.get("severity")) or "moderate",
+        onset_known=onset is not None,
+        followup_reported=_followup_reported(injury, onset=onset),
+        recently_re_reported=_was_recently_re_reported(injury, injury_history, onset=onset),
+        observed_days=observed_days,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Whole-athlete day context (regression and gating only)
+# ---------------------------------------------------------------------------
+
+
+def _checkin_day_is_worsening(row: Mapping[str, Any]) -> bool:
+    """True when a day reads as things going backwards for the athlete.
+
+    Deliberately broad: this only ever drives *regression*, where
+    over-including is the safe error.
+    """
+    if _lower(row.get("active_injury")) == "worse":
+        return True
+    if _lower(row.get("pain")) == "high":
+        return True
+    if _lower(row.get("recommendation_state") or row.get("decision")) == "pull_back":
+        return True
+    return bool(_active_safety_flags(row))
+
+
+def _session_day_is_worsening(row: Mapping[str, Any]) -> bool:
+    """True when a logged session came back at high post-session pain.
+
+    Only a *completed* session with an explicitly high reading counts. A missing
+    reading is not a bad day — and, just as importantly, a good reading is not a
+    good one for any particular injury, which is why nothing here can progress.
+    """
+    if _lower(row.get("status")) not in COMPLETED_SESSION_STATUSES:
+        return False
+    pain = _pain_after(row.get("pain_after"))
+    return pain is not None and pain >= SETBACK_PAIN_AFTER_AT_LEAST
+
+
+def _worsening_days(
+    checkins: Sequence[Mapping[str, Any]],
+    session_completions: Sequence[Mapping[str, Any]],
+    *,
+    as_of: date | None,
+) -> tuple[set[date], set[date]]:
+    """Return ``(reported_days, worsening_days)`` inside the lookback window.
+
+    One entry per day, so several rows for one day cannot inflate a count.
+    """
+    reported: set[date] = set()
+    worsening: set[date] = set()
+    sources = (
+        (checkins, _checkin_day_is_worsening),
+        (session_completions, _session_day_is_worsening),
+    )
+    for rows, is_worsening in sources:
+        for row in rows or ():
+            if not isinstance(row, Mapping):
+                continue
+            day = _row_day(row)
+            if day is None:
+                continue
+            if as_of is not None:
+                delta = (as_of - day).days
+                if delta < 0 or delta > EVIDENCE_LOOKBACK_DAYS:
+                    continue
+            reported.add(day)
+            if is_worsening(row):
+                worsening.add(day)
+    return reported, worsening
+
+
+def _athlete_context(
+    *,
+    current_checkin: Mapping[str, Any] | None,
+    checkins: Sequence[Mapping[str, Any]],
+    session_completions: Sequence[Mapping[str, Any]],
+    as_of: date | None,
+) -> AthleteDayContext:
+    reported, worsening = _worsening_days(checkins, session_completions, as_of=as_of)
+    recent = sorted(reported, reverse=True)[:RECENT_WORSENING_WINDOW_DAYS]
+    recent_worsening = sum(
+        1
+        for day in recent
+        if day in worsening
+        and (as_of is None or (as_of - day).days <= RECENT_WORSENING_WINDOW_DAYS)
+    )
+    red_flags = (
+        _active_safety_flags(current_checkin) if isinstance(current_checkin, Mapping) else ()
+    )
+    return AthleteDayContext(
+        red_flags=red_flags,
+        worsening_days=len(worsening),
+        recent_worsening_days=recent_worsening,
+        reported_days=len(reported),
+    )
+
+
+# ---------------------------------------------------------------------------
+# The ladder
+# ---------------------------------------------------------------------------
+
+
+def _restore_unmet(injury: InjuryEvidence) -> str | None:
+    """RESTORE: this injury itself has been reported on, and is not worsening.
+
+    That is a genuinely injury-specific statement — the athlete looked at this
+    body area again and did not say it had got worse. A severity the athlete
+    themselves called ``severe`` holds at CALM regardless: holding an injury
+    more protectively is the safe direction, and the severity is per-injury.
+    """
+    if injury.reported not in NON_WORSENING_REPORTS:
+        return REASON_REPORTED_WORSE
+    if injury.severity == "severe":
+        return REASON_SEVERE_SEVERITY
+    if not injury.followup_reported:
+        return REASON_NO_FOLLOWUP_REPORT
+    return None
+
+
+def _needs_injury_specific_exposure(_injury: InjuryEvidence) -> str | None:
+    """LOAD, DYNAMIC and RETURN all require what PR2 cannot supply.
+
+    Each asserts that *this injured tissue* tolerated something: progressive
+    load, then speed and impact, then near unrestricted sport. The only
+    tolerance the system records is whole-athlete — a session completion and a
+    pain reading that belong to the athlete's day, not to one ankle. Spending it
+    here would let a comfortable shoulder session progress an ankle, which is
+    exactly the false evidence this ladder must not manufacture.
+
+    So every rung above :data:`MAX_RESOLVABLE_STAGE` reports the same honest
+    gap. PR4 replaces this with a real per-injury exposure record.
+    """
+    return REASON_INSUFFICIENT_INJURY_SPECIFIC
+
+
+#: The ladder, in order. Each rung is only tested once every rung below it has
+#: been met, which is what makes skipping a stage structurally impossible.
+_LADDER: tuple[tuple[str, Any, str], ...] = (
+    (STAGE_RESTORE, _restore_unmet, REASON_NOT_WORSENING),
+    (STAGE_LOAD, _needs_injury_specific_exposure, REASON_FOLLOWUP_REPORT),
+    (STAGE_DYNAMIC, _needs_injury_specific_exposure, REASON_FOLLOWUP_REPORT),
+    (STAGE_RETURN, _needs_injury_specific_exposure, REASON_FOLLOWUP_REPORT),
+)
+
+
+def _progress(injury: InjuryEvidence) -> tuple[str, list[str]]:
+    """Climb the ladder from CALM using ONLY this injury's own evidence.
+
+    Takes an :class:`InjuryEvidence` and nothing else. Whole-athlete context is
+    not a parameter, so — exactly as with camp phase — it cannot contribute to a
+    progression even by mistake.
+
+    There are no count thresholds here on purpose. A number of "good days" or
+    "good sessions" required before an injury may be loaded is a rehabilitation
+    criterion, and PR2 does not write those.
+    """
+    stage = STAGE_CALM
+    reasons: list[str] = []
+    for candidate, unmet_check, met_reason in _LADDER:
+        unmet = unmet_check(injury)
+        if unmet is not None:
+            reasons.append(unmet)
+            # Every stop that is not a reported setback is an evidence gap, and
+            # says so in one consistent code whatever rung it happened on.
+            if unmet != REASON_REPORTED_WORSE:
+                reasons.append(REASON_INSUFFICIENT_INJURY_SPECIFIC)
+            break
+        stage = candidate
+        reasons.append(met_reason)
+    return stage, _dedupe(reasons)
+
+
+# ---------------------------------------------------------------------------
+# Resolution
+# ---------------------------------------------------------------------------
+
+
+def _confidence(injury: InjuryEvidence) -> str:
+    """How much this injury's OWN record says — not how far up the ladder it got."""
+    if not injury.onset_known or not injury.followup_reported:
         return CONFIDENCE_LOW
-    if not evidence.has_session_history:
-        return CONFIDENCE_MODERATE
-    return CONFIDENCE_HIGH
+    return CONFIDENCE_HIGH if injury.is_improving else CONFIDENCE_MODERATE
+
+
+def _setback_cap(
+    injury: InjuryEvidence, athlete: AthleteDayContext
+) -> tuple[str | None, list[str]]:
+    """Return ``(cap, reasons)``: the most a setback will allow, and why.
+
+    A cap is a ceiling and never a floor, so whole-athlete signals can only ever
+    hold a stage down. That is what makes it safe to read a day-level worsening
+    against every open injury: the worst it can do is be over-protective.
+    """
+    if not (injury.is_worsening or athlete.recent_worsening_days):
+        return None, []
+
+    reasons = [REASON_REPORTED_WORSE if injury.is_worsening else REASON_RECENT_WORSENING]
+    repeated = athlete.is_repeated_setback
+    if repeated:
+        reasons.append(REASON_REPEATED_WORSENING)
+    if injury.severity == "severe":
+        reasons.append(REASON_SEVERE_SEVERITY)
+    return (STAGE_CALM if (repeated or injury.severity == "severe") else STAGE_RESTORE), reasons
 
 
 def _decide(
@@ -589,92 +686,70 @@ def _decide(
     onset = _parse_day(injury.get("created_at"))
     as_of = _row_day(current_checkin) if isinstance(current_checkin, Mapping) else None
     if as_of is None:
-        as_of = max((day for day, _row in _relevant_days(checkins, onset=None, as_of=None)), default=None)
+        days = [day for day in (_row_day(row) for row in checkins) if day is not None]
+        as_of = max(days, default=None)
 
-    evidence = _gather_evidence(
-        onset=onset,
-        as_of=as_of,
+    injury_evidence = _injury_evidence(injury, injury_history, onset=onset, as_of=as_of)
+    athlete = _athlete_context(
+        current_checkin=current_checkin,
         checkins=checkins,
         session_completions=session_completions,
+        as_of=as_of,
     )
-    state = _injury_state(injury)
-    confidence = _confidence(evidence)
+    evidence = RehabStageEvidence(injury=injury_evidence, athlete=athlete)
+    confidence = _confidence(injury_evidence)
 
-    # 2. Medical gates. These sit ABOVE the ladder: an urgent injury or a
-    #    red-flag day pins the stage to the most protective value, and the
-    #    existing urgent handling — not this stage — decides what happens next.
+    def _decision(stage: str | None, reasons: Sequence[str], *, medical_gate: bool = False):
+        return RehabStageDecision(
+            stage=stage,
+            care_pathway=CARE_TYPE_MUSCULOSKELETAL,
+            reasons=tuple(_dedupe(reasons)),
+            confidence=confidence,
+            medical_gate=medical_gate,
+            evidence=evidence,
+        )
+
+    # 2. Medical gates sit ABOVE the ladder: an urgent injury or a red-flag day
+    #    pins the stage to the most protective value, and the existing urgent
+    #    handling — not this stage — decides what happens next.
     gate_reasons: list[str] = []
     if _is_urgent_injury(injury):
         gate_reasons.append(REASON_URGENT_INJURY_TYPE)
-    if isinstance(current_checkin, Mapping) and _active_safety_flags(current_checkin):
+    if athlete.has_red_flag:
         gate_reasons.append(REASON_RED_FLAG_GATE)
     if gate_reasons:
-        return RehabStageDecision(
-            stage=STAGE_CALM,
-            care_pathway=CARE_TYPE_MUSCULOSKELETAL,
-            reasons=tuple(gate_reasons),
-            confidence=confidence,
-            medical_gate=True,
-            evidence=evidence,
-        )
+        return _decision(STAGE_CALM, gate_reasons, medical_gate=True)
 
-    # 3. Setbacks cap the ladder. A cap never RAISES a stage — a worsening
-    #    report cannot be the reason an injury moves up — so it is applied to
-    #    whatever the evidence earns rather than replacing it.
-    cap: str | None = None
-    setback_reasons: list[str] = []
-    if state["reported"] == "worse" or evidence.recent_worsening_days:
-        setback_reasons.append(
-            REASON_REPORTED_WORSE if state["reported"] == "worse" else REASON_RECENT_WORSENING
-        )
-        repeated = evidence.recent_worsening_days >= REPEATED_WORSENING_COUNT
-        if repeated:
-            setback_reasons.append(REASON_REPEATED_WORSENING)
-        if state["severity"] == "severe":
-            setback_reasons.append(REASON_SEVERE_SEVERITY)
-        cap = STAGE_CALM if (repeated or state["severity"] == "severe") else STAGE_RESTORE
+    cap, setback_reasons = _setback_cap(injury_evidence, athlete)
 
-    # 4. A freshly re-reported injury starts over. Whatever the cleared flag
+    # 3. A freshly re-reported injury starts over. Whatever the cleared flag
     #    earned belonged to that episode, not this one.
-    if _was_recently_re_reported(injury, injury_history, onset=onset):
-        return RehabStageDecision(
-            stage=STAGE_CALM,
-            care_pathway=CARE_TYPE_MUSCULOSKELETAL,
-            reasons=(REASON_RE_REPORTED, REASON_INSUFFICIENT_EVIDENCE, *setback_reasons),
-            confidence=confidence,
-            evidence=evidence,
+    if injury_evidence.recently_re_reported:
+        return _decision(
+            STAGE_CALM,
+            [REASON_RE_REPORTED, REASON_INSUFFICIENT_INJURY_SPECIFIC, *setback_reasons],
         )
 
-    # 5. Nothing reported since the injury opened: it is new, and new earns
-    #    nothing. Silence is never read as tolerance.
-    if not evidence.has_checkin_history or evidence.tolerated_checkin_days < MIN_TOLERATED_DAYS_FOR_RESTORE:
-        observed_days = (as_of - onset).days if (as_of is not None and onset is not None) else None
-        new_reasons: list[str] = []
-        if not evidence.onset_known:
-            new_reasons.append(REASON_UNKNOWN_ONSET)
-        elif observed_days is not None and observed_days <= NEW_INJURY_OBSERVATION_DAYS:
-            new_reasons.append(REASON_NEWLY_REPORTED)
-        if not evidence.has_checkin_history:
-            new_reasons.append(REASON_NO_CHECKIN_HISTORY)
-        new_reasons.append(REASON_INSUFFICIENT_EVIDENCE)
-        return RehabStageDecision(
-            stage=STAGE_CALM,
-            care_pathway=CARE_TYPE_MUSCULOSKELETAL,
-            reasons=(*new_reasons, *setback_reasons),
-            confidence=confidence,
-            evidence=evidence,
-        )
+    # 4. Climb on injury-specific evidence alone, then apply any setback cap.
+    stage, reasons = _progress(injury_evidence)
 
-    # 6. Climb the ladder on evidence alone, then apply any setback cap.
-    stage, reasons = _climb(evidence, state)
-    if state["reported"] == "resolved" and stage == STAGE_RETURN:
+    if stage == STAGE_CALM and not injury_evidence.is_worsening:
+        # Name *why* nothing has been earned yet, rather than only the rung.
+        if not injury_evidence.onset_known:
+            reasons.insert(0, REASON_UNKNOWN_ONSET)
+        elif (
+            injury_evidence.observed_days is None
+            or injury_evidence.observed_days <= NEW_INJURY_OBSERVATION_DAYS
+        ):
+            reasons.insert(0, REASON_NEWLY_REPORTED)
+    if stage == MAX_RESOLVABLE_STAGE and injury_evidence.reported == "resolved":
         reasons.append(REASON_REPORTED_RESOLVED)
+
     if cap is not None:
         if STAGE_RANK[cap] < STAGE_RANK[stage]:
             # The cap, not the ladder, decides — so the rungs the evidence had
-            # reached are no longer why the athlete is here. The setback is the
-            # whole explanation.
-            stage, reasons = cap, list(setback_reasons)
+            # reached are no longer why the athlete is here.
+            stage, reasons = cap, setback_reasons
         else:
             # The cap did not bite, but it still contradicts the "not worsening"
             # rung, which must never be reported next to a setback.
@@ -682,13 +757,7 @@ def _decide(
                 *setback_reasons,
                 *(reason for reason in reasons if reason != REASON_NOT_WORSENING),
             ]
-    return RehabStageDecision(
-        stage=stage,
-        care_pathway=CARE_TYPE_MUSCULOSKELETAL,
-        reasons=tuple(reasons),
-        confidence=confidence,
-        evidence=evidence,
-    )
+    return _decision(stage, reasons)
 
 
 def resolve_rehab_stage(
@@ -703,16 +772,15 @@ def resolve_rehab_stage(
     Parameters
     ----------
     injury:
-        The ``injury_flags`` row being staged.
+        The ``injury_flags`` row being staged. The only source of progression
+        evidence.
     injury_history:
         Other flags for this athlete, used only to notice that a cleared injury
         has been re-reported.
-    current_checkin:
-        Today's ``today_checkins`` row, when one exists.
-    previous_checkins:
-        Earlier ``today_checkins`` rows, any order.
-    session_completions:
-        ``session_completions`` rows, the record of tolerated load.
+    current_checkin, previous_checkins, session_completions:
+        Whole-athlete context. Used for medical gating and for regression only —
+        never to progress a stage, because none of it can say which injury it
+        belongs to.
 
     There is deliberately **no camp-phase parameter**. GPP/SPP/TAPER describes
     fight preparation, not tissue state, so it cannot reach this decision even by
@@ -725,7 +793,7 @@ def resolve_rehab_stage(
         return RehabStageDecision(
             stage=STAGE_CALM,
             care_pathway=CARE_TYPE_MUSCULOSKELETAL,
-            reasons=(REASON_INSUFFICIENT_EVIDENCE,),
+            reasons=(REASON_INSUFFICIENT_INJURY_SPECIFIC,),
         )
 
     decision = _decide(
@@ -781,9 +849,12 @@ def resolve_rehab_stages(
     """Resolve every injury independently, keyed by flag id.
 
     There is no athlete-level stage. A left ankle at ``restore`` and a right
-    shoulder at ``load`` are both true at once, and clearing one changes nothing
-    about the other: each decision only ever reads its own flag's facts, with the
-    shared day-level history applied identically to all of them.
+    shoulder at ``calm`` are both true at once, and clearing one changes nothing
+    about the other.
+
+    The whole-athlete context passed here is shared, and deliberately so: it can
+    only gate or lower a stage, never raise one, so sharing it cannot let one
+    body area's good day vouch for another's.
     """
     rows = [row for row in (injuries or ()) if isinstance(row, Mapping)]
     decisions: dict[str, RehabStageDecision] = {}
