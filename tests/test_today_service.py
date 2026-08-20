@@ -48,6 +48,10 @@ def _store_with_plan(
         "plan_name": "Camp A",
         "created_at": "2026-06-01T00:00:00+00:00",
     }
+    # The active-plan pointer is authoritative (see api/services/active_plan.py):
+    # seeding plans[...] alone leaves the athlete with no active plan, so the
+    # command view degrades to the no-plan shape.
+    store.set_active_plan_id(athlete_id, plan_id)
     return store
 
 
@@ -1230,6 +1234,7 @@ class TestCommandView:
 
         store = FailingBootstrapStore()
         store.plans[PLAN] = _store_with_plan().plans[PLAN]
+        store.set_active_plan_id(ATHLETE, PLAN)
         _attach_intake(
             store,
             {
@@ -2637,6 +2642,7 @@ class TestCommandView:
             "created_at": "2026-06-01T00:00:00+00:00",
             "structured_plan": _monday_strength_structured_plan(),
         }
+        store.set_active_plan_id(ATHLETE, PLAN)
 
         view = build_today_command_view(
             store,

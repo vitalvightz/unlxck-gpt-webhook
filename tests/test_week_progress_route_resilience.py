@@ -13,6 +13,10 @@ def test_week_plan_lookup_failure_does_not_break_saved_completion():
         "plan_name": "Camp A",
         "created_at": "2026-06-01T00:00:00+00:00",
     }
+    # The active-plan pointer is authoritative (see api/services/active_plan.py):
+    # seeding plans[...] alone leaves the athlete with no active plan, so the
+    # command view degrades to the no-plan shape.
+    store.set_active_plan_id("athlete-1", PLAN_ID)
 
     original_get_plan = store.get_plan_for_athlete
     calls = 0
