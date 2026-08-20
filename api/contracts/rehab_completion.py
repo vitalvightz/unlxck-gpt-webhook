@@ -113,6 +113,7 @@ class RehabExposureCandidate:
     """
 
     drill_id: str
+    rehab_occurrence_key: str
     eligible: bool
     reasons: tuple[str, ...] = ()
     injury_id: str | None = None
@@ -286,22 +287,23 @@ def completed_dose_from_session(
 ) -> ExposureDose:
     """The clearest defensible statement of what was actually done.
 
-    The session model records completion, not per-drill dose editing. So a
-    "done" marking becomes ``completed_fraction=1.0`` — the athlete confirmed
-    the prescribed work — and a "modified" marking becomes a partial completion
-    that is left *unquantified* rather than guessed.
+    The session model records completion, not per-drill dose editing. Both
+    "done" and "modified" therefore record that the exposure happened while
+    leaving the amount unquantified. Modified stays distinct as an altered or
+    partial exposure, without inventing how much changed.
 
     A prescribed ``3x10`` is deliberately never echoed back as a completed
     ``3x10``. Marking a session done is not the athlete confirming every rep,
     and the dose the tissue actually saw is not something this layer knows.
     """
     status = _lower((completion or {}).get("status"))
-    stopped_early = bool((completion or {}).get("stopped_early")) or status == "modified"
     if status == "modified":
-        # Something changed, and nothing records what. Say only that it was
-        # not the full prescription.
-        return ExposureDose(stopped_early=True)
-    return ExposureDose(completed_fraction=1.0, stopped_early=stopped_early)
+        return ExposureDose(completion_state="partial_amount_unknown")
+    stopped_early = (completion or {}).get("stopped_early")
+    return ExposureDose(
+        completion_state="performed_amount_unknown",
+        stopped_early=stopped_early if isinstance(stopped_early, bool) else None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -339,18 +341,25 @@ def resolve_rehab_exposure_candidate(
     the first, so the gap is visible in one pass instead of one PR at a time.
     """
     drill_id = _clean(drill.get("id"))
+    rehab_occurrence_key = _clean(drill.get("rehab_occurrence_key")) or f"drill:{drill_id}"
     reasons: list[str] = []
 
     if not drill_id or not _drill_regions(drill):
         # Without a canonical id there is nothing stable to attribute, and
         # matching on the display name is exactly what this avoids.
         return RehabExposureCandidate(
-            drill_id=drill_id, eligible=False, reasons=(REASON_NOT_REHAB_WORK,)
+            drill_id=drill_id,
+            rehab_occurrence_key=rehab_occurrence_key,
+            eligible=False,
+            reasons=(REASON_NOT_REHAB_WORK,),
         )
 
     if _lower((completion or {}).get("status")) not in COMPLETED_STATUSES:
         return RehabExposureCandidate(
-            drill_id=drill_id, eligible=False, reasons=(REASON_NOT_COMPLETED,)
+            drill_id=drill_id,
+            rehab_occurrence_key=rehab_occurrence_key,
+            eligible=False,
+            reasons=(REASON_NOT_COMPLETED,),
         )
 
     regions = _drill_regions(drill)
@@ -359,13 +368,17 @@ def resolve_rehab_exposure_candidate(
 
     if not matches:
         return RehabExposureCandidate(
-            drill_id=drill_id, eligible=False, reasons=(REASON_ATTRIBUTION_UNKNOWN,)
+            drill_id=drill_id,
+            rehab_occurrence_key=rehab_occurrence_key,
+            eligible=False,
+            reasons=(REASON_ATTRIBUTION_UNKNOWN,),
         )
     if len(matches) > 1:
         # Two open injuries in the same region. Nothing in the record says which
         # the work was for, and picking one would invent the attribution.
         return RehabExposureCandidate(
             drill_id=drill_id,
+            rehab_occurrence_key=rehab_occurrence_key,
             eligible=False,
             reasons=(REASON_MULTIPLE_POSSIBLE_INJURIES,),
             candidate_injury_ids=candidate_ids,
@@ -387,6 +400,7 @@ def resolve_rehab_exposure_candidate(
     if reasons:
         return RehabExposureCandidate(
             drill_id=drill_id,
+            rehab_occurrence_key=rehab_occurrence_key,
             eligible=False,
             reasons=tuple(reasons),
             injury_id=_clean(injury.get("id")) or None,
@@ -399,6 +413,7 @@ def resolve_rehab_exposure_candidate(
 
     return RehabExposureCandidate(
         drill_id=drill_id,
+        rehab_occurrence_key=rehab_occurrence_key,
         eligible=True,
         injury_id=_clean(injury.get("id")),
         injury_episode_id=episode_id,
@@ -567,12 +582,14 @@ EXPOSURE_ID_NAMESPACE = UUID("6f1a9d52-1f7e-5b4c-9c0e-3f6a2d18b7c4")
 def build_exposure_id(
     *,
     athlete_id: str,
+    plan_id: str,
     injury_episode_id: str,
     drill_id: str,
     session_id: str,
     training_day: str,
+    rehab_occurrence_key: str,
 ) -> UUID:
-    """A stable id for one drill, one injury episode, one session, one day.
+    """A stable id for one stored rehab occurrence in one plan and episode.
 
     Derived rather than random so a retry, a double tap or a replayed request
     lands on the same row. PR3's RPC is idempotent for an identical payload
@@ -580,7 +597,17 @@ def build_exposure_id(
     which is why the timestamps below come from the training day and not the
     clock.
     """
-    key = "|".join((athlete_id, injury_episode_id, drill_id, session_id, training_day))
+    key = "|".join(
+        (
+            athlete_id,
+            plan_id,
+            injury_episode_id,
+            session_id,
+            training_day,
+            rehab_occurrence_key,
+            drill_id,
+        )
+    )
     return uuid5(EXPOSURE_ID_NAMESPACE, key)
 
 
@@ -599,6 +626,7 @@ def build_rehab_exposure_event(
     candidate: RehabExposureCandidate,
     *,
     athlete_id: str,
+    plan_id: str,
     session_id: str,
     training_day: str,
     completion: Mapping[str, Any] | None = None,
@@ -617,21 +645,25 @@ def build_rehab_exposure_event(
     dose = completed_dose_from_session(completion)
     stopped_early = completed_dose_stopped_early(limit)
     if stopped_early is not None:
-        dose = dose.model_copy(update={"stopped_early": stopped_early})
-        if stopped_early and dose.completed_fraction == 1.0:
-            # The athlete says they cut it short, so the completion marking's
-            # "all of it" no longer holds. Drop the claim rather than invent a
-            # smaller fraction nobody reported.
-            dose = dose.model_copy(update={"completed_fraction": None})
+        dose = dose.model_copy(
+            update={
+                "completion_state": (
+                    "partial_amount_unknown" if stopped_early else dose.completion_state
+                ),
+                "stopped_early": stopped_early,
+            }
+        )
 
     instant = _training_day_instant(training_day)
     return RehabExposureEvent(
         exposure_id=build_exposure_id(
             athlete_id=athlete_id,
+            plan_id=plan_id,
             injury_episode_id=str(candidate.injury_episode_id),
             drill_id=candidate.drill_id,
             session_id=session_id,
             training_day=training_day,
+            rehab_occurrence_key=candidate.rehab_occurrence_key,
         ),
         injury_id=UUID(str(candidate.injury_id)),
         injury_episode_id=UUID(str(candidate.injury_episode_id)),

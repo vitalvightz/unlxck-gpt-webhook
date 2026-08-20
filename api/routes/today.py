@@ -394,6 +394,11 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="no session completion to attach this response to",
             )
+        if str(completion.get("plan_id") or "") != request_body.plan_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="session completion belongs to another plan",
+            )
 
         events = record_rehab_exposures(
             store,

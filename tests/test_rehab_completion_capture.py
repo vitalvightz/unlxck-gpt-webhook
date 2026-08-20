@@ -40,6 +40,7 @@ from fightcamp.rehab_protocols import rehab_drill_options_for_phase
 
 DONE = {"status": "done"}
 ATHLETE = "8f14e45f-ceea-4a1a-9d2b-1c3a5e7b9d01"
+PLAN_ID = "77777777-7777-7777-7777-777777777777"
 DAY = "2026-08-20"
 
 
@@ -147,7 +148,12 @@ def test_unknown_demand_is_flagged_as_non_qualifying_evidence():
     """Recordable, but never positive evidence of capacity."""
     candidate = resolve_rehab_exposure_candidate(_bank_drill(), [_injury()], completion=DONE)
     event = build_rehab_exposure_event(
-        candidate, athlete_id=ATHLETE, session_id="s1", training_day=DAY, completion=DONE
+        candidate,
+        athlete_id=ATHLETE,
+        plan_id=PLAN_ID,
+        session_id="s1",
+        training_day=DAY,
+        completion=DONE,
     )
     assert event.has_unknown_demand is True
     assert event.demand.has_unknown_level is True
@@ -156,7 +162,12 @@ def test_unknown_demand_is_flagged_as_non_qualifying_evidence():
 def test_a_fully_reviewed_demand_is_not_flagged():
     candidate = resolve_rehab_exposure_candidate(_reviewed_drill(), [_injury()], completion=DONE)
     event = build_rehab_exposure_event(
-        candidate, athlete_id=ATHLETE, session_id="s1", training_day=DAY, completion=DONE
+        candidate,
+        athlete_id=ATHLETE,
+        plan_id=PLAN_ID,
+        session_id="s1",
+        training_day=DAY,
+        completion=DONE,
     )
     assert event.has_unknown_demand is False
 
@@ -303,10 +314,11 @@ def test_a_missing_completion_is_not_an_exposure():
 # ---------------------------------------------------------------------------
 
 
-def test_marking_done_records_a_fraction_not_a_fabricated_dose():
-    """A prescribed 3x10 is never echoed back as a completed 3x10."""
+def test_marking_done_records_performed_with_amount_unknown():
+    """A session completion proves exposure, not every prescribed rep."""
     dose = completed_dose_from_session(DONE)
-    assert dose.completed_fraction == 1.0
+    assert dose.completion_state == "performed_amount_unknown"
+    assert dose.completed_fraction is None
     assert dose.sets is None
     assert dose.reps is None
     assert dose.duration_seconds is None
@@ -314,8 +326,9 @@ def test_marking_done_records_a_fraction_not_a_fabricated_dose():
 
 def test_a_modified_session_does_not_claim_a_completed_fraction():
     dose = completed_dose_from_session({"status": "modified"})
+    assert dose.completion_state == "partial_amount_unknown"
     assert dose.completed_fraction is None
-    assert dose.stopped_early is True
+    assert dose.stopped_early is None
 
 
 def test_the_prescription_is_carried_only_where_the_session_states_it():
@@ -504,6 +517,7 @@ def _event(**kwargs):
     candidate = resolve_rehab_exposure_candidate(_bank_drill(), [_injury()], completion=DONE)
     payload = {
         "athlete_id": ATHLETE,
+        "plan_id": PLAN_ID,
         "session_id": "session-1",
         "training_day": DAY,
         "completion": DONE,
@@ -524,17 +538,21 @@ def test_the_whole_event_is_deterministic_so_a_retry_cannot_conflict():
 def test_a_different_drill_gets_a_different_exposure_id():
     base = build_exposure_id(
         athlete_id=ATHLETE,
+        plan_id=PLAN_ID,
         injury_episode_id="22222222-2222-2222-2222-222222222222",
         drill_id="drill_a",
         session_id="session-1",
         training_day=DAY,
+        rehab_occurrence_key="block:rehab-1",
     )
     other = build_exposure_id(
         athlete_id=ATHLETE,
+        plan_id=PLAN_ID,
         injury_episode_id="22222222-2222-2222-2222-222222222222",
         drill_id="drill_b",
         session_id="session-1",
         training_day=DAY,
+        rehab_occurrence_key="block:rehab-1",
     )
     assert base != other
 
@@ -543,18 +561,22 @@ def test_a_different_drill_gets_a_different_exposure_id():
     "field,value",
     [
         ("athlete_id", "99999999-9999-9999-9999-999999999999"),
+        ("plan_id", "88888888-8888-8888-8888-888888888888"),
         ("injury_episode_id", "55555555-5555-5555-5555-555555555555"),
         ("session_id", "session-2"),
         ("training_day", "2026-08-21"),
+        ("rehab_occurrence_key", "block:rehab-2"),
     ],
 )
 def test_every_identity_part_changes_the_exposure_id(field, value):
     args = {
         "athlete_id": ATHLETE,
+        "plan_id": PLAN_ID,
         "injury_episode_id": "22222222-2222-2222-2222-222222222222",
         "drill_id": "drill_a",
         "session_id": "session-1",
         "training_day": DAY,
+        "rehab_occurrence_key": "block:rehab-1",
     }
     assert build_exposure_id(**args) != build_exposure_id(**{**args, field: value})
 
@@ -563,9 +585,11 @@ def test_a_new_episode_does_not_reuse_the_previous_episodes_exposure_id():
     """Episode rotation must not collide with stale evidence."""
     args = {
         "athlete_id": ATHLETE,
+        "plan_id": PLAN_ID,
         "drill_id": "drill_a",
         "session_id": "session-1",
         "training_day": DAY,
+        "rehab_occurrence_key": "block:rehab-1",
     }
     first = build_exposure_id(injury_episode_id="22222222-2222-2222-2222-222222222222", **args)
     rotated = build_exposure_id(injury_episode_id="66666666-6666-6666-6666-666666666666", **args)
@@ -589,14 +613,21 @@ def test_the_event_records_the_athletes_answers():
     assert event.dose_completed.stopped_early is True
 
 
-def test_cutting_the_work_short_withdraws_the_full_completion_claim():
-    """"Done" plus "I reduced it" cannot both mean the whole prescription."""
+def test_reduced_and_stopped_remain_distinct_without_inventing_a_fraction():
     full = _event(during="same", limit="no")
     reduced = _event(during="same", limit="reduced")
+    stopped = _event(during="same", limit="stopped")
 
-    assert full.dose_completed.completed_fraction == 1.0
+    assert full.dose_completed.completion_state == "performed_amount_unknown"
+    assert full.dose_completed.completed_fraction is None
+    assert reduced.dose_completed.completion_state == "partial_amount_unknown"
     assert reduced.dose_completed.completed_fraction is None
     assert reduced.dose_completed.stopped_early is True
+    assert reduced.response.stopped_due_to_symptoms is False
+    assert stopped.dose_completed.completion_state == "partial_amount_unknown"
+    assert stopped.dose_completed.completed_fraction is None
+    assert stopped.dose_completed.stopped_early is True
+    assert stopped.response.stopped_due_to_symptoms is True
 
 
 def test_provenance_marks_the_athlete_as_the_source():
@@ -609,5 +640,10 @@ def test_an_ineligible_candidate_is_refused_rather_than_filled_in():
     )
     with pytest.raises(ValueError, match="not eligible"):
         build_rehab_exposure_event(
-            candidate, athlete_id=ATHLETE, session_id="s1", training_day=DAY, completion=DONE
+            candidate,
+            athlete_id=ATHLETE,
+            plan_id=PLAN_ID,
+            session_id="s1",
+            training_day=DAY,
+            completion=DONE,
         )

@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from api.contracts.rehab_exposure import RehabExposureEvent
+from api.contracts.rehab_exposure import ExposureDose, RehabExposureEvent
 
 
 def _event(**overrides):
@@ -92,6 +92,25 @@ def test_malformed_pain_fails(pain):
 def test_malformed_completed_dose_fails(dose):
     with pytest.raises(ValidationError):
         RehabExposureEvent.model_validate(_event(dose_completed=dose))
+
+
+def test_unquantified_performed_state_is_an_honest_observation():
+    dose = ExposureDose(completion_state="performed_amount_unknown")
+    assert dose.completed_fraction is None
+    assert dose.sets is None
+
+
+@pytest.mark.parametrize(
+    "dose",
+    [
+        {"completion_state": "performed_amount_unknown", "reps": 10},
+        {"completion_state": "partial_amount_unknown", "completed_fraction": 0.5},
+        {"completion_state": "quantified"},
+    ],
+)
+def test_completion_state_cannot_contradict_the_observed_amount(dose):
+    with pytest.raises(ValidationError):
+        ExposureDose.model_validate(dose)
 
 
 def test_invalid_or_mismatched_demand_region_fails():

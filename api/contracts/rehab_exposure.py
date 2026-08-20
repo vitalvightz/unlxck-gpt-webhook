@@ -47,6 +47,11 @@ NextDayResponse = Literal["better", "same", "worse", "not_yet_known", "not_sure"
 #: wrong".
 DuringResponse = Literal["better", "same", "worse", "not_sure", "not_reported"]
 PainObservation = StrictInt | Literal["not_sure"] | None
+DoseCompletionState = Literal[
+    "performed_amount_unknown",
+    "partial_amount_unknown",
+    "quantified",
+]
 
 
 def injury_evidence_identity(body_area: str, description: str) -> dict[str, str | None]:
@@ -91,11 +96,29 @@ class ExposureDose(BaseModel):
     hold_seconds: float | None = Field(default=None, ge=0)
     completed_fraction: float | None = Field(default=None, ge=0, le=1)
     stopped_early: bool | None = None
+    completion_state: DoseCompletionState | None = None
 
     @model_validator(mode="after")
     def _require_one_observation(self) -> "ExposureDose":
         if not any(getattr(self, name) is not None for name in type(self).model_fields):
             raise ValueError("dose must contain at least one observed value")
+        measured_fields = (
+            "sets",
+            "reps",
+            "duration_seconds",
+            "external_load_kg",
+            "distance_metres",
+            "hold_seconds",
+            "completed_fraction",
+        )
+        has_measurement = any(getattr(self, name) is not None for name in measured_fields)
+        if self.completion_state == "quantified" and not has_measurement:
+            raise ValueError("quantified dose must contain a measured amount")
+        if self.completion_state in {
+            "performed_amount_unknown",
+            "partial_amount_unknown",
+        } and has_measurement:
+            raise ValueError("unquantified dose cannot contain a measured amount")
         return self
 
 

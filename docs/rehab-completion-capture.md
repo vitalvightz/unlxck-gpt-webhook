@@ -20,7 +20,7 @@ programming feedback; it is not injury evidence and cannot become any.
 plan generation
     ↓  reconcile_rehab_drill_ids()          stamps the canonical bank id on rehab blocks
 session marked done / modified
-    ↓  session_rehab_items()                reads those ids back; never a display name
+    ↓  session_rehab_items()                reads ids + stable block occurrence; never a display name
 resolve canonical injury_id + episode_id
     ↓  resolve_rehab_exposure_candidate()   refuses rather than guesses
 capture actual completed dose
@@ -107,15 +107,18 @@ The session model records completion, not per-drill dose editing. So:
 
 | Completion | Recorded |
 | --- | --- |
-| `done` | `completed_fraction: 1.0` |
-| `modified` | `stopped_early: true`, fraction left unstated |
-| athlete says "reduced" / "stopped" | `stopped_early: true`, and any `1.0` claim dropped |
+| `done` | `completion_state: performed_amount_unknown` |
+| `modified` | `completion_state: partial_amount_unknown` |
+| athlete says "reduced" | partial amount unknown, `stopped_early: true`, not stopped due to symptoms |
+| athlete says "stopped" | partial amount unknown, `stopped_early: true`, stopped due to symptoms |
 
 A prescribed `3x10` is **never** echoed back as a completed `3x10`. Marking a
 session done is not the athlete confirming every rep, and the dose the tissue
 actually saw is not something this layer knows. The prescription is carried
 separately in `prescribed_dose`, read from the block and only where it states a
 plain number — a rep range is dropped rather than collapsed to one of its ends.
+`completed_fraction` remains unset unless a future drill-level capture explicitly
+quantifies it.
 
 ## The injury-specific question
 
@@ -176,9 +179,20 @@ athlete's injury record, by the same resolution that produced the prompts. A
 client cannot assert an attribution it was not given, and an answer for an
 injury the session had no attributable rehab for is ignored rather than stored.
 
-Exposure ids are derived from (athlete, episode, drill, session, training day),
-and `occurred_at` / `recorded_at` come from the training day rather than the
-clock, so the whole event is a pure function of its inputs. A retry or a double
+The completion is also bound to that exact plan before resolution. A completion
+whose `plan_id` differs from the requested, athlete-owned plan is rejected with
+no evidence write, even if `session_id` and `training_day` happen to match.
+
+Exposure ids are derived from (athlete, plan, episode, session, training day,
+rehab occurrence, drill). The preferred occurrence key is the structured
+block's stable `block_id`. Legacy blocks without one use a content fingerprint
+that excludes presentation order, with deterministic suffixes for exact stored
+duplicates. Two blocks may therefore use the same drill and still produce two
+exposures, while retrying either block reuses its original id. Reordering blocks
+does not change identity when `block_id` is stable.
+
+`occurred_at` / `recorded_at` come from the training day rather than the clock,
+so the whole event remains a pure function of its inputs. A retry or a double
 submit re-sends an identical payload under an identical id, and PR3's RPC
 returns the existing row instead of appending a second observation.
 

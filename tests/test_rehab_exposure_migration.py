@@ -97,3 +97,31 @@ def test_the_during_response_migration_keeps_every_earlier_guarantee():
         assert guarantee in DURING_SQL
     assert "grant execute on function public.record_rehab_exposure(uuid, jsonb) to service_role" in DURING_SQL
     assert "revoke all on function public.record_rehab_exposure(uuid, jsonb) from public, anon, authenticated" in DURING_SQL
+
+
+FINAL_SQL = Path(
+    "supabase/migrations/20260820160000_validate_rehab_dose_completion_state.sql"
+).read_text().lower()
+
+
+def test_unquantified_completion_state_is_validated_at_the_database_boundary():
+    assert "'completion_state'" in FINAL_SQL
+    assert "'performed_amount_unknown','partial_amount_unknown','quantified'" in FINAL_SQL
+    assert "unquantified completion state contains a measured amount" in FINAL_SQL
+    assert "quantified completion state lacks a measured amount" in FINAL_SQL
+
+
+def test_final_rpc_revision_keeps_every_earlier_guarantee():
+    for guarantee in (
+        "exposure does not match injury episode, region and side",
+        "invalid injury-specific pain response",
+        "invalid next-day response",
+        "invalid during-work response",
+        "invalid exposure demand",
+        "completed dose is empty",
+        "exposure id already used with different evidence",
+        "has_unknown_demand",
+    ):
+        assert guarantee in FINAL_SQL
+    assert "grant execute on function public.record_rehab_exposure(uuid, jsonb) to service_role" in FINAL_SQL
+    assert "revoke all on function public.record_rehab_exposure(uuid, jsonb) from public, anon, authenticated" in FINAL_SQL

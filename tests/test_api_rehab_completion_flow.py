@@ -17,6 +17,7 @@ from tests.support import _build_client, withdraw_health_consent
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
 PLAN_ID = "11111111-1111-1111-1111-111111111111"
+OTHER_PLAN_ID = "22222222-2222-2222-2222-222222222222"
 SESSION_ID = "s-rehab"
 
 # A real bank drill, so the id resolves through the shipped rehab bank exactly as
@@ -52,16 +53,24 @@ def _rehab_block(drill_id: str, *, name: str = "Rehab drill", **extra) -> dict:
     }
 
 
-def _seed_plan(store, *, blocks: list[dict], training_day: str) -> None:
-    store.plans[PLAN_ID] = {
-        "id": PLAN_ID,
+def _seed_plan(
+    store,
+    *,
+    blocks: list[dict],
+    training_day: str,
+    plan_id: str = PLAN_ID,
+    activate: bool = True,
+) -> None:
+    store.plans[plan_id] = {
+        "id": plan_id,
         "athlete_id": "athlete-1",
         "status": "ready",
         "plan_name": "Camp A",
         "created_at": "2026-06-01T00:00:00+00:00",
         "structured_plan": _structured_plan(training_day, blocks=blocks),
     }
-    store.set_active_plan_id("athlete-1", PLAN_ID)
+    if activate:
+        store.set_active_plan_id("athlete-1", plan_id)
 
 
 def _seed_injury(store, *, region: str = "ankle", side: str = "left", **extra) -> dict:
@@ -90,8 +99,8 @@ def _today(client) -> str:
     return resp.json()["completion"]["training_day"]
 
 
-def _complete(client, *, status: str = "done", **overrides):
-    body = {"plan_id": PLAN_ID, "session_id": SESSION_ID, "status": status, **overrides}
+def _complete(client, *, status: str = "done", plan_id: str = PLAN_ID, **overrides):
+    body = {"plan_id": plan_id, "session_id": SESSION_ID, "status": status, **overrides}
     return client.post("/api/today/session-completion", headers=ATHLETE, json=body)
 
 
@@ -269,7 +278,8 @@ class TestAnsweringStoresEvidence:
         # The athlete marked the session done; they never confirmed every rep.
         assert event["dose_completed"]["sets"] is None
         assert event["dose_completed"]["reps"] is None
-        assert event["dose_completed"]["completed_fraction"] == 1.0
+        assert event["dose_completed"]["completed_fraction"] is None
+        assert event["dose_completed"]["completion_state"] == "performed_amount_unknown"
 
     def test_reduced_answer_drops_the_full_completion_claim(self, rehab_day):
         client, store, _day, injury = rehab_day
@@ -280,6 +290,7 @@ class TestAnsweringStoresEvidence:
         dose = next(iter(store.rehab_exposures.values()))["event_json"]["dose_completed"]
         assert dose["stopped_early"] is True
         assert dose["completed_fraction"] is None
+        assert dose["completion_state"] == "partial_amount_unknown"
 
     def test_resubmitting_cannot_duplicate_the_evidence(self, rehab_day):
         client, store, training_day, injury = rehab_day
@@ -294,13 +305,122 @@ class TestAnsweringStoresEvidence:
             str(
                 build_exposure_id(
                     athlete_id="athlete-1",
+                    plan_id=PLAN_ID,
                     injury_episode_id=injury["episode_id"],
                     drill_id=ANKLE_DRILL,
                     session_id=SESSION_ID,
                     training_day=training_day,
+                    rehab_occurrence_key=f"block:b-{ANKLE_DRILL}",
                 )
             )
         ]
+
+
+class TestPlanAndOccurrenceBinding:
+    @staticmethod
+    def _answer(client, *, plan_id: str, injury_id: str):
+        return client.post(
+            "/api/today/rehab-responses",
+            headers=ATHLETE,
+            json={
+                "plan_id": plan_id,
+                "session_id": SESSION_ID,
+                "answers": [
+                    {
+                        "injury_id": injury_id,
+                        "during_response": "same",
+                        "limit_response": "no",
+                    }
+                ],
+            },
+        )
+
+    def test_completion_from_plan_a_cannot_authorize_plan_b(self, rehab_day):
+        client, store, training_day, injury = rehab_day
+        _complete(client, plan_id=PLAN_ID)
+        _seed_plan(
+            store,
+            plan_id=OTHER_PLAN_ID,
+            blocks=[_rehab_block(ANKLE_DRILL, block_id="other-plan-rehab")],
+            training_day=training_day,
+            activate=False,
+        )
+
+        response = self._answer(client, plan_id=OTHER_PLAN_ID, injury_id=injury["id"])
+
+        assert response.status_code == 409
+        assert store.rehab_exposures == {}
+
+    def test_only_the_matching_plan_completion_authorizes_same_session_and_day(
+        self, rehab_day
+    ):
+        client, store, training_day, injury = rehab_day
+        _complete(client, plan_id=PLAN_ID)
+        _seed_plan(
+            store,
+            plan_id=OTHER_PLAN_ID,
+            blocks=[_rehab_block(ANKLE_DRILL, block_id="other-plan-rehab")],
+            training_day=training_day,
+            activate=False,
+        )
+        _complete(client, plan_id=OTHER_PLAN_ID)
+
+        refused = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+        accepted = self._answer(client, plan_id=OTHER_PLAN_ID, injury_id=injury["id"])
+
+        assert refused.status_code == 409
+        assert accepted.status_code == 201
+        assert len(store.rehab_exposures) == 1
+
+    def test_same_drill_in_two_blocks_creates_two_idempotent_exposures(self):
+        client, store, _ = _build_client()
+        _seed_plan(store, blocks=[], training_day="1970-01-01")
+        training_day = _today(client)
+        blocks = [
+            _rehab_block(ANKLE_DRILL, block_id="rehab-1"),
+            _rehab_block(ANKLE_DRILL, block_id="rehab-2"),
+        ]
+        _seed_plan(store, blocks=blocks, training_day=training_day)
+        injury = _seed_injury(store)
+        _complete(client)
+
+        first = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+        first_ids = set(first.json()["recorded_exposure_ids"])
+        retry = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+
+        assert first.status_code == 201
+        assert len(first_ids) == 2
+        assert set(retry.json()["recorded_exposure_ids"]) == first_ids
+        assert len(store.rehab_exposures) == 2
+
+        _seed_plan(store, blocks=list(reversed(blocks)), training_day=training_day)
+        reordered = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+        assert set(reordered.json()["recorded_exposure_ids"]) == first_ids
+        assert len(store.rehab_exposures) == 2
+
+    def test_same_occurrence_on_two_plans_has_different_exposure_ids(self):
+        client, store, _ = _build_client()
+        _seed_plan(store, blocks=[], training_day="1970-01-01")
+        training_day = _today(client)
+        block = _rehab_block(ANKLE_DRILL, block_id="rehab-1")
+        _seed_plan(store, blocks=[block], training_day=training_day)
+        injury = _seed_injury(store)
+        _complete(client, plan_id=PLAN_ID)
+        first = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+
+        _seed_plan(
+            store,
+            plan_id=OTHER_PLAN_ID,
+            blocks=[block],
+            training_day=training_day,
+            activate=False,
+        )
+        _complete(client, plan_id=OTHER_PLAN_ID)
+        second = self._answer(client, plan_id=OTHER_PLAN_ID, injury_id=injury["id"])
+
+        assert first.status_code == second.status_code == 201
+        assert first.json()["recorded_exposure_ids"] != second.json()["recorded_exposure_ids"]
+        assert len(store.rehab_exposures) == 2
 
 
 class TestTheClientCannotAssertAttribution:
@@ -348,6 +468,8 @@ class TestTheClientCannotAssertAttribution:
                 ],
                 "drill_id": KNEE_DRILL,
                 "side": "right",
+                "episode_id": "33333333-3333-3333-3333-333333333333",
+                "demand": {"load": "low", "impact": "none", "velocity": "low"},
             },
         )
 

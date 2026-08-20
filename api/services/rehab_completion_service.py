@@ -29,6 +29,8 @@ injury and one exposure, and the two are not interchangeable.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any, Iterable, Mapping
 
 from fastapi import HTTPException, status
@@ -107,6 +109,27 @@ def _prescribed_dose_from_block(block: Mapping[str, Any]) -> dict[str, Any]:
     return dose
 
 
+def _legacy_occurrence_base(block: Mapping[str, Any], drill_id: str) -> str:
+    """Stable identity for an older block that has no ``block_id``.
+
+    Current structured plans require a block id. For legacy rows, hash the
+    stored block content while excluding only presentation order. Exact legacy
+    duplicates receive deterministic occurrence suffixes in
+    :func:`session_rehab_items`; reordering therefore preserves the same set of
+    identities instead of turning array position into evidence identity.
+    """
+    stable_block = {key: value for key, value in block.items() if key != "order_index"}
+    encoded = json.dumps(
+        stable_block,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        default=str,
+    ).encode("utf-8")
+    digest = hashlib.sha256(encoded).hexdigest()[:24]
+    return f"legacy:{drill_id}:{digest}"
+
+
 def _structured_weeks(
     plan_row: Mapping[str, Any], *, training_day: str
 ) -> list[Mapping[str, Any]]:
@@ -159,25 +182,36 @@ def session_rehab_items(
     to refuse. Non-rehab blocks are never considered: a hard session is not
     rehab evidence however it felt.
 
-    One drill listed twice in a session yields one item. The exposure id keys on
-    (athlete, episode, drill, session, day), so a second copy could not be
-    stored separately anyway, and counting it twice would only overstate how
-    much of the session was rehab. The first block's prescription is the one
-    carried, since it is the one the athlete met first.
+    Each stored block occurrence yields one item. Repeated uses of the same
+    drill remain distinct when their stable ``block_id`` values differ. A
+    duplicated block id is treated as the same stored occurrence, while older
+    blocks without ids use a content-derived key plus a deterministic duplicate
+    suffix. Array position alone is never identity.
     """
     items: list[dict[str, Any]] = []
-    seen: set[str] = set()
+    seen_occurrences: set[str] = set()
+    legacy_counts: dict[str, int] = {}
     for block in _session_blocks(plan_row, training_day=training_day, session_id=session_id):
         if _clean(block.get("block_type")) != "rehab":
             continue
         drill_id = _clean(block.get("rehab_drill_id"))
-        if not drill_id or drill_id in seen:
+        if not drill_id:
             continue
         drill = rehab_drill_by_id(drill_id)
         if not isinstance(drill, Mapping):
             continue
-        seen.add(drill_id)
+        block_id = _clean(block.get("block_id"))
+        if block_id:
+            occurrence_key = f"block:{block_id}"
+        else:
+            base = _legacy_occurrence_base(block, drill_id)
+            legacy_counts[base] = legacy_counts.get(base, 0) + 1
+            occurrence_key = f"{base}:{legacy_counts[base]}"
+        if occurrence_key in seen_occurrences:
+            continue
+        seen_occurrences.add(occurrence_key)
         item = dict(drill)
+        item["rehab_occurrence_key"] = occurrence_key
         prescribed = _prescribed_dose_from_block(block)
         if prescribed:
             item["prescribed_dose"] = prescribed
@@ -207,6 +241,10 @@ def resolve_completed_session_rehab(
     the gate used — re-reading it would risk asking about one set of injuries
     and recording against another.
     """
+    plan_id = _clean(plan_row.get("id"))
+    completion_plan_id = _clean((completion or {}).get("plan_id"))
+    if not plan_id or completion_plan_id != plan_id:
+        return RehabCompletionResolution(), []
     if _clean((completion or {}).get("status")).lower() not in COMPLETED_STATUSES:
         return RehabCompletionResolution(), []
     items = session_rehab_items(plan_row, training_day=training_day, session_id=session_id)
@@ -262,9 +300,9 @@ def record_rehab_exposures(
     injury this session had no attributable rehab for is ignored rather than
     stored, because the client does not get to assert that the work happened.
 
-    Exposure ids are derived (athlete, episode, drill, session, day), so a retry
-    or a double submit re-sends an identical payload under an identical id and
-    PR3's RPC returns the existing row instead of appending a second one.
+    Exposure ids include the stored plan and rehab-block occurrence, so a retry
+    of one block is idempotent while two real uses of the same drill remain two
+    observations.
     """
     resolution, injuries = resolve_completed_session_rehab(
         store,
@@ -283,6 +321,7 @@ def record_rehab_exposures(
         event = build_rehab_exposure_event(
             candidate,
             athlete_id=athlete_id,
+            plan_id=_clean(plan_row.get("id")),
             session_id=session_id,
             training_day=training_day,
             completion=completion,
