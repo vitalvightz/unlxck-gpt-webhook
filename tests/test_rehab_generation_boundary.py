@@ -328,6 +328,125 @@ def test_two_same_location_episodes_select_without_cross_contamination(monkeypat
 
 
 # --------------------------------------------------------------------------- #
+# Mixed staged / unresolved at one location — the unresolved must survive
+# --------------------------------------------------------------------------- #
+
+
+def _mixed_bank():
+    return [
+        {
+            "location": "ankle",
+            "type": "sprain",
+            "phase_progression": "GPP",
+            "drills": [
+                _bank_drill("sprain_restore", "Sprain Restore Drill", "restore"),
+                _bank_drill("sprain_load", "Sprain Load Drill", "load"),
+            ],
+        },
+        {
+            "location": "ankle",
+            "type": "tendinopathy",
+            "phase_progression": "GPP",
+            # Unmigrated (stage-less) bank content — the legacy fallback renders
+            # it regardless of stage.
+            "drills": [_bank_drill("tendon_legacy", "Tendinopathy Legacy Drill", None)],
+        },
+        {
+            "location": "ankle",
+            "type": "strain",
+            "phase_progression": "GPP",
+            "drills": [_bank_drill("strain_legacy", "Strain Legacy Drill", None)],
+        },
+    ]
+
+
+def test_mixed_staged_and_unresolved_keeps_both(monkeypatch):
+    """A RESTORE sprain beside an unresolved tendinopathy at the same location.
+
+    The staged injury goes through the stage-aware selector; the unresolved one
+    keeps its legacy behaviour. Neither is dropped, and the unresolved injury is
+    never coerced into the staged injury's RESTORE stage.
+    """
+    monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
+    sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", STAGE_RESTORE)
+    tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", None)
+
+    block, _ = rehab_protocols.generate_rehab_protocols(
+        injury_string="left ankle pain",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[sprain, tendon],
+    )
+
+    assert "Sprain Restore Drill" in block  # sprain, stage-aware
+    assert "Tendinopathy Legacy Drill" in block  # unresolved, legacy — not dropped
+    assert "Sprain Load Drill" not in block  # RESTORE never gets LOAD
+
+
+def test_reverse_mixed_unresolved_and_calm_keeps_both(monkeypatch):
+    """The mirror: an unresolved sprain beside a CALM tendinopathy.
+
+    CALM is programmed stage-aware (and cannot receive LOAD); the unresolved
+    sprain falls back to legacy independently and is not forced into CALM.
+    Parsed order must not change this.
+    """
+    monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
+    sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", None)
+    tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", STAGE_CALM)
+
+    for parsed in ([sprain, tendon], [tendon, sprain]):
+        block, _ = rehab_protocols.generate_rehab_protocols(
+            injury_string="left ankle pain",
+            exercise_data=[],
+            current_phase="GPP",
+            parsed_entries=parsed,
+        )
+        assert "Sprain Restore Drill" in block  # unresolved sprain, legacy
+        assert "Tendinopathy Legacy Drill" in block  # CALM tendinopathy, stage-aware
+        assert "Sprain Load Drill" not in block
+
+
+def test_many_unresolved_and_one_staged_none_starved(monkeypatch):
+    """One RESTORE sprain plus two unresolved injuries at one location.
+
+    Every episode is programmed independently and the fair round-robin keeps at
+    least one drill from each within the volume ceiling — no injury disappears
+    merely because another has a stage.
+    """
+    monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
+    monkeypatch.setattr(rehab_protocols, "_DEFAULT_DRILL_LIMIT", 3)
+    sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", STAGE_RESTORE)
+    tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", None)
+    strain = _ankle_entry("inj-strain", "ep-strain", "strain", None)
+
+    block, _ = rehab_protocols.generate_rehab_protocols(
+        injury_string="left ankle pain",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[sprain, tendon, strain],
+    )
+
+    assert "Sprain Restore Drill" in block
+    assert "Tendinopathy Legacy Drill" in block
+    assert "Strain Legacy Drill" in block
+    assert "Sprain Load Drill" not in block
+
+
+def test_fully_unresolved_still_renders_legacy(monkeypatch):
+    """No injury has a resolved stage: the legacy rehab still renders."""
+    monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
+    tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", None)
+
+    block, _ = rehab_protocols.generate_rehab_protocols(
+        injury_string="left ankle pain",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[tendon],
+    )
+    assert "Tendinopathy Legacy Drill" in block
+
+
+# --------------------------------------------------------------------------- #
 # Stage-safe primary AND alternates
 # --------------------------------------------------------------------------- #
 
