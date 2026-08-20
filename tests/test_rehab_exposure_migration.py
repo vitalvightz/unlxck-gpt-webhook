@@ -67,6 +67,23 @@ def test_during_response_defaults_to_not_reported_not_to_an_answer():
     assert "coalesce(v_response->>'during_response','not_reported')" in DURING_SQL
 
 
+def test_unknown_is_an_accepted_demand_level_at_the_database_boundary():
+    """A drill whose demand is unreviewed still produces a storable observation.
+
+    The RPC is the only write path, so if it rejected ``'unknown'`` the whole
+    athlete flow would stop at the database however permissive the Python
+    contract is.
+    """
+    assert "'unknown','minimal','low','moderate','high'" in DURING_SQL  # load
+    assert "'unknown','none','low','moderate','high'" in DURING_SQL  # impact
+    assert "'unknown','low','moderate','high'" in DURING_SQL  # velocity
+
+
+def test_the_sql_says_why_unknown_demand_is_not_capacity_evidence():
+    """The rule lives in three languages; the SQL must not read as a blank cheque."""
+    assert "has_unknown_demand" in DURING_SQL
+
+
 def test_the_during_response_migration_keeps_every_earlier_guarantee():
     """It replaces the whole RPC, so the PR3 checks must all still be present."""
     for guarantee in (
