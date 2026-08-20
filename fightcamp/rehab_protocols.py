@@ -1116,6 +1116,7 @@ def _merge_injuries_by_location(parsed_entries: list[dict]) -> list[dict]:
                 "athlete_id": None,
                 "injury_id": None,
                 "episode_id": None,
+                "rehab_care_pathway": None,
                 "available_equipment": None,
                 "rehab_exposures": [],
             },
@@ -1150,34 +1151,49 @@ def _merge_injuries_by_location(parsed_entries: list[dict]) -> list[dict]:
 
 
 def _merge_live_rehab_context(group: dict, entry: dict) -> None:
-    """Fold one entry's live rehab context into its merged location group.
+    """Adopt one entry's live rehab context into its location group, atomically.
 
-    Two injuries can share a location group, and they can carry different
-    resolved stages. The group gets the *most protective* of them: a group
-    containing anything still calming down is programmed as calm, never as the
-    more demanding sibling's restore. Identity and exposures are first-writer
-    -wins so a second entry cannot overwrite the evidence trail of the first.
+    Two distinct injuries can share a location group — a sprained left ankle and
+    a left-ankle tendinopathy both canonicalise to "ankle". They are separate
+    injury episodes with separate evidence, and their rehab context must never
+    be blended: pairing one episode's exposure trail or identity with another
+    episode's stage would attribute one injury's tolerance to the other.
+
+    So the group adopts the context of exactly ONE episode — the most protective
+    (lowest resolved stage), ties broken deterministically by episode then
+    injury id — and replaces stage, identity and exposures together as a single
+    unit (never field-by-field). The selector is then keyed on a real, internally
+    consistent ``(athlete_id, injury_id, episode_id, body_region, side)`` rather
+    than a synthetic composite of several injuries.
     """
     stage = str(entry.get("rehab_stage") or "").strip().lower()
-    if stage in REHAB_STAGES:
-        current = group.get("rehab_stage")
-        if current not in REHAB_STAGES or REHAB_STAGES.index(stage) < REHAB_STAGES.index(current):
-            group["rehab_stage"] = stage
+    if stage not in REHAB_STAGES:
+        return
 
-    for source_key, group_key in (
-        ("athlete_id", "athlete_id"),
-        ("id", "injury_id"),
-        ("injury_id", "injury_id"),
-        ("episode_id", "episode_id"),
-        ("injury_episode_id", "episode_id"),
-        ("available_equipment", "available_equipment"),
-    ):
-        if group.get(group_key) is None and entry.get(source_key) is not None:
-            group[group_key] = entry[source_key]
+    entry_episode = str(entry.get("episode_id") or entry.get("injury_episode_id") or "")
+    entry_injury = str(entry.get("injury_id") or entry.get("id") or "")
+    challenger = (REHAB_STAGES.index(stage), entry_episode, entry_injury)
+
+    current_stage = group.get("rehab_stage")
+    if current_stage in REHAB_STAGES:
+        incumbent = (
+            REHAB_STAGES.index(current_stage),
+            str(group.get("episode_id") or ""),
+            str(group.get("injury_id") or ""),
+        )
+        if incumbent <= challenger:
+            return
 
     exposures = entry.get("rehab_exposures")
-    if isinstance(exposures, (list, tuple)) and not group["rehab_exposures"]:
-        group["rehab_exposures"] = list(exposures)
+    equipment = entry.get("available_equipment")
+    # Replace the whole block at once so no field survives from a losing episode.
+    group["rehab_stage"] = stage
+    group["injury_id"] = entry_injury or None
+    group["episode_id"] = entry_episode or None
+    group["athlete_id"] = entry.get("athlete_id")
+    group["rehab_care_pathway"] = entry.get("rehab_care_pathway")
+    group["available_equipment"] = list(equipment) if isinstance(equipment, (list, tuple)) else None
+    group["rehab_exposures"] = list(exposures) if isinstance(exposures, (list, tuple)) else []
 
 
 def _build_red_flag_block(entry: dict) -> str:

@@ -28,6 +28,7 @@ from ..generation_health import (
     non_health_planner_payload,
 )
 from ..minor_safety import minor_safe_stage1_payload
+from ..services.rehab_stage_snapshot import annotate_payload_with_rehab_stage
 from ..models import (
     PROFILE_REFRESH_FAILED_WARNING as _PROFILE_REFRESH_FAILED_WARNING,
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY as _PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
@@ -465,6 +466,17 @@ async def run_generation_job(
                 triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
                 if isinstance(triage_override, dict):
                     planner_payload[_TRIAGE_RESUME_OVERRIDE_KEY] = triage_override
+            # Resolve each injury's CURRENT rehab stage server-side and stamp it
+            # onto the payload as ephemeral generation context, so Stage 1 selects
+            # stage-safe rehab drills from today's tissue tolerance rather than
+            # from the intake it was created with. Best-effort: a failure leaves
+            # the payload untouched and generation proceeds stage-unaware.
+            planner_payload = await _to_thread_with_heartbeat(
+                annotate_payload_with_rehab_stage,
+                planner_payload,
+                store=store,
+                athlete_id=athlete_id,
+            )
             _emit_milestone(
                 "stage1_planner_starting",
                 "Stage 1 planner starting",
