@@ -31,6 +31,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping
 
+from fastapi import HTTPException, status
+
 from fightcamp.rehab_protocols import rehab_drill_by_id
 
 from api.contracts.rehab_completion import (
@@ -258,7 +260,7 @@ def record_rehab_exposures(
     or a double submit re-sends an identical payload under an identical id and
     PR3's RPC returns the existing row instead of appending a second one.
     """
-    resolution, _injuries = resolve_completed_session_rehab(
+    resolution, injuries = resolve_completed_session_rehab(
         store,
         athlete_id=athlete_id,
         plan_row=plan_row,
@@ -266,6 +268,7 @@ def record_rehab_exposures(
         session_id=session_id,
         completion=completion,
     )
+    injuries_by_id = {_clean(injury.get("id")): injury for injury in injuries}
     recorded: list[RehabExposureEvent] = []
     for candidate in resolution.eligible:
         answer = answers.get(_clean(candidate.injury_id))
@@ -281,6 +284,17 @@ def record_rehab_exposures(
             limit=answer.get("limit_response"),
             source=source,
         )
+        injury = injuries_by_id.get(_clean(candidate.injury_id))
+        if injury is None or not event.is_attributable_to(injury):
+            # The same identity check `POST /api/rehab-exposures` applies, so
+            # both write paths agree. Reaching it means this module's own
+            # resolution disagrees with the injury row it came from, which is a
+            # bug rather than a client error — refuse loudly instead of writing
+            # an observation nobody can trust.
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="exposure does not match the injury episode, region and side",
+            )
         store.create_rehab_exposure(athlete_id, event.model_dump(mode="json"))
         recorded.append(event)
     return recorded

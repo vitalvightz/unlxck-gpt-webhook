@@ -12,6 +12,7 @@ from datetime import date, timedelta
 import pytest
 
 from api.contracts.rehab_completion import build_exposure_id
+from api.contracts.rehab_exposure import RehabExposureEvent
 from tests.support import _build_client, withdraw_health_consent
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -465,6 +466,41 @@ class TestTheClientCannotAssertAttribution:
             "/api/today/rehab-responses",
             headers=ATHLETE,
             json={"plan_id": PLAN_ID, "session_id": SESSION_ID, "answers": [answer, answer]},
+        )
+
+        assert resp.status_code == 422
+        assert store.rehab_exposures == {}
+
+    def test_an_event_that_does_not_match_its_injury_never_reaches_the_store(
+        self, rehab_day, monkeypatch
+    ):
+        """The same identity check `POST /api/rehab-exposures` applies.
+
+        Both write paths run `RehabExposureEvent.is_attributable_to` against the
+        injury row the event claims. Forcing it to disagree stands in for any
+        future drift between the resolution and the record: the write must be
+        refused, not stored and reconciled later.
+        """
+        client, store, _day, injury = rehab_day
+        _complete(client)
+        monkeypatch.setattr(
+            RehabExposureEvent, "is_attributable_to", lambda self, injury: False
+        )
+
+        resp = client.post(
+            "/api/today/rehab-responses",
+            headers=ATHLETE,
+            json={
+                "plan_id": PLAN_ID,
+                "session_id": SESSION_ID,
+                "answers": [
+                    {
+                        "injury_id": injury["id"],
+                        "during_response": "same",
+                        "limit_response": "no",
+                    }
+                ],
+            },
         )
 
         assert resp.status_code == 422
