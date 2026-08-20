@@ -38,6 +38,13 @@ def _msk_drill(**overrides) -> dict:
         "progress_when": ["30s hold is steady and pain-free"],
         "regress_when": ["symptoms flare the morning after"],
         "stop_when": ["sharp pain at the joint line"],
+        "target_regions": ["ankle"],
+        "laterality_applicability": "side_specific",
+        "target_tissues": None,
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Classification reviewed from the stated exercise demand.",
     }
     drill.update(overrides)
     return drill
@@ -216,6 +223,20 @@ def test_invalid_location_fails():
 
 def test_invalid_injury_type_fails():
     assert "unknown_type" in _codes(validator.validate_rehab_bank([_msk_entry(type="mystery_ache")]), ERROR)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "code"),
+    [
+        ("target_regions", ["made_up_joint"], "invalid_target_regions"),
+        ("laterality_applicability", "bothish", "invalid_laterality_applicability"),
+        ("contraction_type", "ballistic", "invalid_contraction_type"),
+        ("sport_specificity", "boxing-ish", "invalid_sport_specificity"),
+        ("contact_level", "maybe", "invalid_contact_level"),
+    ],
+)
+def test_extended_clinical_metadata_rejects_unknown_values(field, value, code):
+    assert code in _codes(validator.validate_rehab_bank([_msk_entry(_msk_drill(**{field: value}))]), ERROR)
 
 
 def test_clinically_blocked_injury_type_cannot_own_bank_entries():

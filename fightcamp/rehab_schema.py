@@ -70,6 +70,21 @@ REHAB_FUNCTIONS: tuple[str, ...] = (
 IMPACT_VALUES: tuple[str, ...] = ("none", "low", "moderate", "high")
 LOAD_VALUES: tuple[str, ...] = ("minimal", "low", "moderate", "high")
 VELOCITY_VALUES: tuple[str, ...] = ("low", "moderate", "high")
+LATERALITY_APPLICABILITY_VALUES: tuple[str, ...] = (
+    "side_specific",
+    "bilateral_only",
+    "not_applicable",
+    "unknown",
+)
+CONTRACTION_TYPE_VALUES: tuple[str, ...] = (
+    "isometric",
+    "concentric",
+    "eccentric",
+    "mixed",
+    "unknown",
+)
+SPORT_SPECIFICITY_VALUES: tuple[str, ...] = ("general_rehab", "combat_sport", "unknown")
+CONTACT_LEVEL_VALUES: tuple[str, ...] = ("none", "controlled", "full", "unknown")
 
 #: Injury severities a drill may be gated on. Mirrors the buckets that
 #: ``rehab_protocols._normalize_rehab_severity`` collapses raw severities into.
@@ -107,10 +122,20 @@ MSK_DRILL_FIELDS: tuple[str, ...] = (
     "progress_when",
     "regress_when",
     "stop_when",
+    "target_regions",
+    "laterality_applicability",
+    "target_tissues",
+    "contraction_type",
+    "sport_specificity",
+    "contact_level",
+    "evidence_notes",
 )
 
 #: Fields subject to the migrated/unmigrated distinction.
-CONTRACT_FIELDS: tuple[str, ...] = MSK_DRILL_FIELDS
+# ``target_tissues`` is nullable by design: a region can be defensibly known
+# without asserting a diagnosis or tissue. Its null therefore means unknown,
+# not unfinished migration.
+CONTRACT_FIELDS: tuple[str, ...] = tuple(field for field in MSK_DRILL_FIELDS if field != "target_tissues")
 
 #: List-valued rule fields. ``[]`` is a deliberate "no criteria" value.
 RULE_LIST_FIELDS: tuple[str, ...] = ("progress_when", "regress_when", "stop_when")

@@ -43,6 +43,7 @@ from api.contracts.injury_checkin import (
     reconcile_injury_checkin,
 )
 from api.contracts.injury_signal import derive_injury_signal
+from api.contracts.rehab_exposure import injury_evidence_identity
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.rehab_stage import resolve_rehab_stages
 from api.contracts.readiness_message import (
@@ -1269,8 +1270,9 @@ def submit_today_injury_checkin(
     Validates each declaration via the ``DeclaredInjury`` contract, then applies
     the deterministic create/update plan: new injuries open a flag, easing ones
     move to ``monitoring``, resolved ones close (stamping ``resolved_at``), and a
-    reopened flag clears its ``resolved_at``. Foreign/stale ``flag_id``s can't be
-    updated — only ids in the athlete's own open set are honoured. Returns the
+    reopened flag clears its ``resolved_at`` and the database rotates its
+    evidence episode. Foreign ``flag_id``s can't be updated — only ids belonging
+    to the athlete are honoured. Returns the
     refreshed open-injury list and the exact existing flag ids successfully
     updated by this request.
     """
@@ -1283,11 +1285,17 @@ def submit_today_injury_checkin(
             detail=f"invalid injury check-in: {exc.errors()[0]['msg']}",
         ) from exc
 
-    open_flags = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
+    all_flags = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring", "resolved")) or [])
+    open_flags = [flag for flag in all_flags if flag.get("status") in ("open", "monitoring")]
+    resolved_flag_ids = [str(flag.get("id")) for flag in all_flags if flag.get("status") == "resolved" and flag.get("id")]
     open_flag_ids = [str(flag.get("id")) for flag in open_flags if flag.get("id")]
     declared, severity_provenance = _sync_surface_severity_from_checkin(declared, open_flags)
     try:
-        plan = reconcile_injury_checkin(declared=declared, open_flag_ids=open_flag_ids)
+        plan = reconcile_injury_checkin(
+            declared=declared,
+            open_flag_ids=open_flag_ids,
+            resolved_flag_ids=resolved_flag_ids,
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -1310,7 +1318,8 @@ def submit_today_injury_checkin(
                 active_plan_row = full_plan_row
 
     for fields in plan.creates:
-        store.create_injury_flag(athlete_id, {**fields, "plan_id": plan_id})
+        identity = injury_evidence_identity(str(fields.get("body_area") or ""), str(fields.get("description") or ""))
+        store.create_injury_flag(athlete_id, {**fields, **identity, "plan_id": plan_id})
 
     for update in plan.updates:
         fields = dict(update.fields)

@@ -1901,6 +1901,9 @@ class InjuryFlagRecord(BaseModel):
     athlete_id: str
     plan_id: str | None = None
     source: str = "checkin"
+    episode_id: str | None = None
+    body_region: str | None = None
+    side: Literal["left", "right", "bilateral", "unknown"] = "unknown"
     body_area: str = ""
     description: str
     severity: InjuryFlagSeverity = "moderate"
