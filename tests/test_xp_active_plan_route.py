@@ -71,3 +71,42 @@ def test_owned_inactive_plan_completion_is_accepted_but_cannot_trigger_xp(monkey
         award["calendar_date"] for award in store.xp_awards["athlete-1"]
     } == {"2026-08-03"}
     assert [call[2]["plan_id"] for call in captured] == [INACTIVE_PLAN, ACTIVE_PLAN]
+
+
+def test_xp_rejection_does_not_prevent_adherence_reconciliation(monkeypatch):
+    client, store, _ = _build_client()
+    store.plans[ACTIVE_PLAN] = _plan(ACTIVE_PLAN, created_at="2026-07-01T00:00:00Z")
+    store.set_active_plan_id("athlete-1", ACTIVE_PLAN)
+    calls = []
+
+    monkeypatch.setattr(today_routes, "plan_completion_xp_eligible", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        today_routes,
+        "reconcile_adherence_streak",
+        lambda *args, **kwargs: calls.append(kwargs["athlete_id"]),
+    )
+
+    response = _complete(client, ACTIVE_PLAN, "scheduled-session")
+
+    assert response.status_code == 201
+    assert response.json()["completion"]["status"] == "done"
+    assert calls == ["athlete-1"]
+    assert store.xp_awards.get("athlete-1", []) == []
+
+
+def test_adherence_reconciliation_failure_does_not_rollback_completion(monkeypatch):
+    client, store, _ = _build_client()
+    store.plans[ACTIVE_PLAN] = _plan(ACTIVE_PLAN, created_at="2026-07-01T00:00:00Z")
+    store.set_active_plan_id("athlete-1", ACTIVE_PLAN)
+    monkeypatch.setattr(today_routes, "plan_completion_xp_eligible", lambda *args, **kwargs: False)
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("streak store unavailable")
+
+    monkeypatch.setattr(today_routes, "reconcile_adherence_streak", fail)
+
+    response = _complete(client, ACTIVE_PLAN, "scheduled-session")
+
+    assert response.status_code == 201
+    assert response.json()["completion"]["status"] == "done"
+    assert store.session_completions["athlete-1"][0]["session_id"] == "scheduled-session"

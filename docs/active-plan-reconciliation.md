@@ -34,3 +34,18 @@ archived, ended, unavailable, or foreign plan.
 
 This process never deletes completion rows and never treats recency alone as
 proof of activation.
+## Adherence streak repair
+
+`session_completions` is the authoritative training history. The persisted
+`athlete_streaks.adherence_*` columns are a derived view. A terminal completion
+(`done`, `modified`, or `skipped`) now triggers `reconcile_adherence_streak`
+independently of XP eligibility. Activating a plan also runs the same
+reconciliation, so re-activating the existing active plan is the supported,
+deterministic repair path for stale rows after deployment. It replays the active
+plan's prescribed days against completion history; it does not edit counters or
+award XP directly.
+
+For a deployment-wide repair, invoke that same service reconciliation once for
+each athlete with an active plan (for example from an authenticated maintenance
+job). Do not update `athlete_streaks` counters in SQL: doing so bypasses required
+multi-session, skipped-day, current-day-neutral, and active-plan rules.

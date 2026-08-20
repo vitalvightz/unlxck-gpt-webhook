@@ -512,10 +512,8 @@ export function primarySessionOf(
 }
 
 /**
- * The backend id a completion row would carry for this session, or null when
- * the session can never be logged. Mirrors the server fallback
- * `session_id = session.session_id || day_date` — which applies to the day's
- * primary session only; a secondary id-less session has no completion identity.
+ * The canonical scheduled id for this session, or null when the plan omitted
+ * one. Dates describe placement and must not be promoted into session identity.
  */
 export function completionSessionId(
   day: StructuredDay | null | undefined,
@@ -525,11 +523,7 @@ export function completionSessionId(
   if (explicit) {
     return explicit;
   }
-  const iso = dayISO(day);
-  if (!iso) {
-    return null;
-  }
-  return session == null || session === primarySessionOf(day) ? iso : null;
+  return null;
 }
 
 /** The live completion row for one plan-card session, if any. */
