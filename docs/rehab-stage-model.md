@@ -67,7 +67,7 @@ these may move a stage **up**.
 
 | Source | Fields | Used for |
 | --- | --- | --- |
-| `injury_flags` | `severity`, `status`, `latest_reported_status`, `created_at`, `updated_at`, `body_area`/`description` | per-injury state, onset, follow-up, urgency, surface routing |
+| `injury_flags` | `severity`, `status`, `latest_reported_status`, `created_at`, `body_area`/`description` | per-injury state, onset, follow-up, urgency, surface routing |
 | prior `injury_flags` | `status`, `resolved_at`, `body_area` | detecting a cleared injury that has been re-reported |
 
 **Whole-athlete** — nothing here can say *which* injury it belongs to. **It
@@ -130,14 +130,17 @@ The rules the spec asked for fall out of that shape:
 * **A comfortable athlete never progresses an injury.** Thirty days of perfect
   check-ins and pain-free sessions leave an unreported ankle at `calm`.
 * **No multi-stage jumps.** `restore` is the most any evidence currently buys.
-* **Silence is not tolerance.** A same-day edit is not a follow-up; a session
-  with no pain reading proves nothing; a *failed history read* falls back to
-  `calm` rather than to "nothing bad reported".
+* **Silence is not tolerance.** A follow-up is proven only by a non-default
+  `latest_reported_status` (`improving`/`worse`/`resolved`) — the athlete's own
+  per-injury daily report. A generic `updated_at` bump is not one, nor is an
+  intake-seeded `monitoring` status; both can happen without the athlete
+  reassessing the tissue.
 
-## Regression
+## Holding at `calm`, and the `regressed` flag
 
-Downward movement needs injury-attributable evidence for exactly the reason
-upward movement does. Every signal below is read off the injury's own flag row:
+Some injury-attributable signals hold an injury at `calm` — the most protective
+stage — instead of letting it reach `restore`. Every one is read off the
+injury's own flag row:
 
 | Signal | Stage |
 | --- | --- |
@@ -149,7 +152,14 @@ upward movement does. Every signal below is read off the injury's own flag row:
 There is no whole-athlete setback path. An earlier revision let a count of bad
 *days* cap every open injury, which meant a flaring shoulder could drag a
 settled ankle backwards — the same contamination as the progression bug, in the
-other direction. It is gone.
+other direction. It is gone: whole-athlete context moves no stage at all.
+
+**A hold at `calm` is not reported as a regression.** The record stores no prior
+rehab stage, so a first `worse` or `severe` follow-up that leaves an injury at
+`calm` is `calm → calm` — nothing proves the tissue was ever above `calm`, and a
+`worse` report cannot even reconstruct its own prior state (it resets `status`
+to `open`). So `regressed` is never inferred in PR2; PR4, which stores a
+per-injury stage, is where a real `restore → calm` step down becomes provable.
 
 `symptoms_not_worsening` is never reported next to `injury_reported_worse`, and
 an injury that has been followed up is never called `newly_reported_injury`
@@ -236,15 +246,13 @@ There is no rehab-stage column, deliberately: a stored stage is a second source
 of truth that drifts from the injury record the moment a flag is edited, cleared
 or re-reported. Every call recomputes from the authoritative history.
 
-`progressed` / `regressed` are derived too, and honestly bounded. There is no
-per-injury status timeline in the record, so "changed since yesterday" is not
-derivable. What is derivable, and attributable to the injury alone, is movement
-relative to where every injury starts — `calm`, with nothing reported since
-onset. A follow-up that lifted the injury off `calm` reads as progression; a
-follow-up that left it there, because it came back `worse` or the severity is
-`severe`, reads as regression. An injury nobody has reported on again has not
-moved. No transition log, no migration, and refresh/retry is idempotent by
-construction: a pure function cannot accumulate progression.
+`progressed` / `regressed` are derived too, and honestly bounded by what the
+record can prove. The floor is definitional: every injury starts at `calm` with
+nothing reported since onset, and a follow-up that lifts it off `calm` is a
+provable move up from that floor. A move *down* is not — it would need a prior
+higher stage, and nothing in the record stores one — so `regressed` is never
+inferred here. No transition log, no migration, and refresh/retry is idempotent
+by construction: a pure function cannot accumulate progression.
 
 ## Not in this PR
 

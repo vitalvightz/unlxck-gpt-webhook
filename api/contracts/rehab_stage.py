@@ -66,9 +66,11 @@ cleared or re-reported. Every call recomputes from the authoritative history, so
 the resolver is pure, deterministic and idempotent — refreshing or retrying can
 never advance a stage.
 
-``progressed`` / ``regressed`` are reported the same way: the resolver runs
-itself a second time over the evidence *as it stood before today's check-in* and
-compares. No transition log required.
+``progressed`` and ``regressed`` follow from the same principle. There is no
+stored prior stage, so only progression off the definitional CALM floor is
+provable; a step *down* would need a prior higher stage that nothing records, so
+``regressed`` is never inferred here (see :func:`_transition`). PR4 introduces
+the stored stage that makes a real step down provable.
 
 Scope note (PR2)
 ----------------
@@ -116,10 +118,15 @@ NON_WORSENING_REPORTS: frozenset[str] = frozenset({"ongoing", "improving", "reso
 #: Reported day-states that are this injury's own statement that it is settling.
 IMPROVING_REPORTS: frozenset[str] = frozenset({"improving", "resolved"})
 
-#: Flag statuses that only an ``improving`` / ``resolved`` report can produce
-#: (see ``injury_checkin._FLAG_STATUS_BY_REPORT``), which makes them per-injury
-#: proof that the athlete filed a follow-up on this specific injury.
-FOLLOWUP_FLAG_STATUSES: frozenset[str] = frozenset({"monitoring", "resolved"})
+#: ``latest_reported_status`` values that prove the athlete filed a per-injury
+#: daily report reassessing THIS injury. Everything except the ``ongoing``
+#: default is written only by the check-in reconciliation from the athlete's own
+#: per-injury report (``injury_checkin.reconcile_injury_checkin``); no system
+#: path — not intake seeding, not the surface-severity sync, not a dedup write —
+#: ever produces them. ``ongoing`` is excluded because it is both the default of
+#: a brand-new flag and a legitimate "still the same" re-report, so it cannot
+#: distinguish a follow-up from silence.
+FOLLOWUP_REPORTED_STATUSES: frozenset[str] = frozenset({"improving", "worse", "resolved"})
 
 #: Completion statuses that mean the athlete actually did the session.
 COMPLETED_SESSION_STATUSES: frozenset[str] = frozenset({"done", "modified"})
@@ -391,23 +398,28 @@ def _is_surface_injury(injury: Mapping[str, Any]) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _followup_reported(injury: Mapping[str, Any], *, onset: date | None) -> bool:
-    """True when the athlete filed a further report on THIS injury after onset.
+def _followup_reported(injury: Mapping[str, Any]) -> bool:
+    """True when the athlete filed a per-injury daily report reassessing THIS injury.
 
-    Two per-injury signals, either of which is sufficient:
+    The only proof is ``latest_reported_status`` carrying a non-default value:
+    ``improving`` / ``worse`` / ``resolved``. Those are written solely by the
+    check-in reconciliation from the athlete's own per-injury report, so each one
+    is an actual reassessment of this specific tissue.
 
-    * ``status`` is ``monitoring`` or ``resolved`` — only an ``improving`` or
-      ``resolved`` report produces those, so the flag has been spoken about
-      again since it opened;
-    * the flag was written on a later day than it was created.
+    Deliberately NOT proof:
 
-    Deliberately conservative. Same-day edits do not count, and a flag nobody
-    has touched since onset counts for nothing at all: silence is not tolerance.
+    * ``updated_at`` — a generic row-write timestamp. A severity-provenance
+      write, a surface-safety-field update, an admin edit or a ``plan_id`` change
+      all bump it without the athlete reassessing anything.
+    * ``status == "monitoring"`` — intake seeding sets it from the initial intake
+      ``trend`` (``today_service._flag_status_from_guided_injury``), so it can be
+      the first declaration rather than a follow-up.
+
+    ``ongoing`` counts for nothing: it is both the default of a fresh flag and a
+    "still the same" re-report, and the two are indistinguishable. Silence is not
+    tolerance.
     """
-    if _lower(injury.get("status")) in FOLLOWUP_FLAG_STATUSES:
-        return True
-    updated = _parse_day(injury.get("updated_at"))
-    return bool(onset is not None and updated is not None and updated > onset)
+    return _lower(injury.get("latest_reported_status")) in FOLLOWUP_REPORTED_STATUSES
 
 
 def _was_recently_re_reported(
@@ -458,22 +470,24 @@ def _injury_evidence(
         status=_lower(injury.get("status")) or "open",
         severity=_lower(injury.get("severity")) or "moderate",
         onset_known=onset is not None,
-        followup_reported=_followup_reported(injury, onset=onset),
+        followup_reported=_followup_reported(injury),
         recently_re_reported=_was_recently_re_reported(injury, injury_history, onset=onset),
         observed_days=observed_days,
     )
 
 
 # ---------------------------------------------------------------------------
-# Whole-athlete day context (regression and gating only)
+# Whole-athlete day context (medical gating and explainability only)
 # ---------------------------------------------------------------------------
 
 
 def _checkin_day_is_worsening(row: Mapping[str, Any]) -> bool:
     """True when a day reads as things going backwards for the athlete.
 
-    Deliberately broad: this only ever drives *regression*, where
-    over-including is the safe error.
+    This feeds only the explainability counts on :class:`AthleteDayContext`; it
+    moves no stage (a whole-athlete bad day cannot say which injury it belongs
+    to). Deliberately broad, because over-counting a reported-but-unattributable
+    signal costs nothing once it can no longer touch the stage.
     """
     if _lower(row.get("active_injury")) == "worse":
         return True
@@ -487,9 +501,9 @@ def _checkin_day_is_worsening(row: Mapping[str, Any]) -> bool:
 def _session_day_is_worsening(row: Mapping[str, Any]) -> bool:
     """True when a logged session came back at high post-session pain.
 
-    Only a *completed* session with an explicitly high reading counts. A missing
-    reading is not a bad day — and, just as importantly, a good reading is not a
-    good one for any particular injury, which is why nothing here can progress.
+    Only a *completed* session with an explicitly high reading counts. Like the
+    check-in signal, it feeds the explainability counts alone and moves no
+    stage: a session's pain belongs to the athlete's day, not to a body area.
     """
     if _lower(row.get("status")) not in COMPLETED_SESSION_STATUSES:
         return False
@@ -644,23 +658,30 @@ def _confidence(injury: InjuryEvidence) -> str:
 
 
 def _transition(injury: InjuryEvidence, stage: str) -> tuple[bool, bool]:
-    """Whether this injury has moved off its starting point, and which way.
+    """Return ``(progressed, regressed)`` — only what is actually provable.
 
-    ``injury_flags`` keeps a single overwritten ``latest_reported_status``, so
-    there is no per-injury timeline and "changed since yesterday" is simply not
-    derivable. What IS derivable, and attributable to this injury alone, is
-    movement relative to where every injury starts: CALM, with nothing reported
-    since onset.
+    ``injury_flags`` stores no prior rehab stage. It keeps one overwritten
+    ``latest_reported_status`` and no stage snapshot, so the resolver cannot see
+    where this injury sat yesterday.
 
-    So a follow-up report that lifted this injury off CALM reads as progression,
-    and a follow-up that left it there — because it came back ``worse``, or the
-    severity is ``severe`` — reads as regression. An injury nobody has reported
-    on again has not moved at all.
+    That asymmetry is the whole point:
+
+    * **Progression is provable.** Every injury starts at the definitional floor
+      — CALM, nothing reported since onset. A follow-up report that lifts this
+      injury above CALM is a move up *from that floor*, and the floor needs no
+      history to know.
+    * **Regression is not.** It would need a prior HIGHER stage to have existed,
+      and nothing in the record proves one did. A first ``worse`` or ``severe``
+      follow-up that leaves the injury at CALM is CALM -> CALM, not a step down:
+      there is no evidence it was ever above CALM. And a ``worse`` report cannot
+      even reconstruct its own prior stage, because reporting worse resets
+      ``status`` to ``open`` and overwrites ``latest_reported_status``.
+
+    So ``regressed`` is never inferred in PR2. PR4, which introduces a stored
+    per-injury stage, is where a real RESTORE -> CALM step down becomes provable.
     """
-    if not injury.followup_reported:
-        return False, False
-    progressed = STAGE_RANK[stage] > STAGE_RANK[STAGE_CALM]
-    return progressed, not progressed
+    progressed = injury.followup_reported and STAGE_RANK[stage] > STAGE_RANK[STAGE_CALM]
+    return progressed, False
 
 
 def _decide(
@@ -797,9 +818,10 @@ def resolve_rehab_stage(
         Other flags for this athlete, used only to notice that a cleared injury
         has been re-reported.
     current_checkin, previous_checkins, session_completions:
-        Whole-athlete context. Used for medical gating and for regression only —
-        never to progress a stage, because none of it can say which injury it
-        belongs to.
+        Whole-athlete context. A red-flag check-in raises ``medical_gate``; the
+        rest is summarised onto ``decision.evidence.athlete`` for explainability.
+        None of it moves the stage in either direction, because none of it can
+        say which injury it belongs to.
 
     There is deliberately **no camp-phase parameter**. GPP/SPP/TAPER describes
     fight preparation, not tissue state, so it cannot reach this decision even by
@@ -836,9 +858,10 @@ def resolve_rehab_stages(
     shoulder at ``calm`` are both true at once, and clearing one changes nothing
     about the other.
 
-    The whole-athlete context passed here is shared, and deliberately so: it can
-    only gate or lower a stage, never raise one, so sharing it cannot let one
-    body area's good day vouch for another's.
+    The whole-athlete context passed here is shared, and deliberately so: it
+    only raises ``medical_gate`` and fills the explainability counts — it moves
+    no stage in either direction — so sharing it can neither let one body area's
+    good day vouch for another's nor let one's bad day drag another's down.
     """
     rows = [row for row in (injuries or ()) if isinstance(row, Mapping)]
     decisions: dict[str, RehabStageDecision] = {}

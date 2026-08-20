@@ -335,18 +335,42 @@ def test_a_followup_report_is_what_reaches_restore():
     assert resolve_rehab_stage(_followed_up()).stage == STAGE_RESTORE
 
 
-def test_a_later_write_on_the_flag_counts_as_a_followup():
+@pytest.mark.parametrize("reported", ["improving", "worse", "resolved"])
+def test_a_non_default_reported_status_is_a_followup(reported):
+    """Only the athlete's per-injury daily report writes these values."""
+    assert resolve_rehab_stage(_injury(latest_reported_status=reported)).evidence.injury.followup_reported
+
+
+def test_an_unrelated_later_update_cannot_move_calm_to_restore():
+    """A generic updated_at bump is not proof the athlete reassessed the injury.
+
+    A severity-provenance write, a surface-safety update, an admin edit or a
+    plan_id change all bump updated_at while latest_reported_status stays at its
+    ongoing default. None of them may progress the tissue.
+    """
     decision = resolve_rehab_stage(
-        _injury(updated_at=(ONSET + timedelta(days=3)).isoformat())
+        _injury(updated_at=(ONSET + timedelta(days=5)).isoformat())
     )
-    assert decision.stage == STAGE_RESTORE
-    assert REASON_NOT_WORSENING in decision.reasons
-
-
-def test_a_same_day_edit_is_not_a_followup():
-    decision = resolve_rehab_stage(_injury(updated_at=ONSET.isoformat()))
     assert decision.stage == STAGE_CALM
     assert REASON_NO_FOLLOWUP_REPORT in decision.reasons
+
+
+def test_intake_seeded_monitoring_is_not_a_followup():
+    """status=monitoring can come from the initial intake trend, not a report.
+
+    ``today_service._flag_status_from_guided_injury`` maps intake trend
+    "improving" to a monitoring flag whose latest_reported_status is still the
+    ongoing default. That is a first declaration, not a reassessment.
+    """
+    decision = resolve_rehab_stage(_injury(status="monitoring"))
+    assert decision.stage == STAGE_CALM
+    assert REASON_NO_FOLLOWUP_REPORT in decision.reasons
+
+
+def test_a_genuine_improving_report_is_what_reaches_restore():
+    decision = resolve_rehab_stage(_injury(status="monitoring", latest_reported_status="improving"))
+    assert decision.stage == STAGE_RESTORE
+    assert REASON_NOT_WORSENING in decision.reasons
 
 
 def test_one_improved_checkin_does_not_jump_multiple_stages():
@@ -365,19 +389,20 @@ def test_severe_severity_holds_the_stage_at_calm():
 # ---------------------------------------------------------------------------
 
 
-def test_a_worsening_report_regresses_the_stage():
-    """The injury's own report is what regresses it."""
+def test_an_injury_reporting_worse_is_held_at_calm():
+    """The injury's own worse report holds it at CALM (down from RESTORE it would
+    otherwise reach). The hold is injury-attributable; the reporting of it as a
+    *transition* is covered separately below."""
     settled = resolve_rehab_stage(_followed_up())
-    worse = resolve_rehab_stage(_followed_up(latest_reported_status="worse"))
+    worse = resolve_rehab_stage(_injury(latest_reported_status="worse"))
 
     assert settled.stage == STAGE_RESTORE
     assert worse.stage == STAGE_CALM
     assert REASON_REPORTED_WORSE in worse.reasons
-    assert worse.regressed is True
 
 
-def test_severe_severity_regresses_the_stage():
-    decision = resolve_rehab_stage(_followed_up(severity="severe"))
+def test_severe_severity_holds_at_calm():
+    decision = resolve_rehab_stage(_injury(latest_reported_status="improving", severity="severe"))
     assert decision.stage == STAGE_CALM
     assert REASON_SEVERE_SEVERITY in decision.reasons
 
@@ -398,6 +423,63 @@ def test_a_setback_is_never_reported_alongside_not_worsening():
 def test_a_followed_up_injury_held_at_calm_is_not_called_newly_reported():
     decision = resolve_rehab_stage(_followed_up(severity="severe"))
     assert REASON_NEWLY_REPORTED not in decision.reasons
+
+
+# ---------------------------------------------------------------------------
+# Transition reporting: only what is provable
+#
+# There is no stored prior stage, so only progression off the definitional CALM
+# floor can be proven. A step DOWN would need a prior higher stage the record
+# never keeps, so regressed is never inferred in PR2.
+# ---------------------------------------------------------------------------
+
+
+def test_progression_off_the_calm_floor_is_reported():
+    decision = resolve_rehab_stage(_followed_up())
+    assert decision.stage == STAGE_RESTORE
+    assert decision.progressed is True
+    assert decision.regressed is False
+
+
+def test_a_first_worsening_followup_at_calm_is_not_a_regression():
+    """CALM -> CALM. Nothing proves this injury was ever above CALM."""
+    decision = resolve_rehab_stage(_injury(latest_reported_status="worse"))
+    assert decision.stage == STAGE_CALM
+    assert decision.regressed is False
+    assert decision.progressed is False
+
+
+def test_a_first_severe_followup_at_calm_is_not_a_regression():
+    decision = resolve_rehab_stage(_injury(latest_reported_status="improving", severity="severe"))
+    assert decision.stage == STAGE_CALM
+    assert decision.regressed is False
+    assert decision.progressed is False
+
+
+def test_regression_is_never_inferred_from_a_followup_without_progression():
+    """The explicit invariant: a follow-up that does not lift the injury off CALM
+    must never be reported as a regression, whatever held it there."""
+    for injury in (
+        _injury(latest_reported_status="worse"),
+        _injury(latest_reported_status="worse", severity="severe"),
+        _injury(latest_reported_status="improving", severity="severe"),
+        _injury(latest_reported_status="resolved", severity="severe"),
+    ):
+        decision = resolve_rehab_stage(injury)
+        assert decision.stage == STAGE_CALM, injury
+        assert decision.regressed is False, injury
+
+
+def test_no_input_ever_reports_a_regression_in_pr2():
+    """Regression needs a stored prior stage, which PR2 does not have."""
+    scenarios = [
+        resolve_rehab_stage(_injury()),
+        resolve_rehab_stage(_followed_up()),
+        resolve_rehab_stage(_injury(latest_reported_status="worse"), **_rich_history(days=30)),
+        resolve_rehab_stage(_followed_up(severity="severe"), **_rich_history(days=30)),
+        resolve_rehab_stage(_injury(latest_reported_status="resolved")),
+    ]
+    assert all(decision.regressed is False for decision in scenarios)
 
 
 # --- whole-athlete signals must not regress anything -----------------------
@@ -607,13 +689,10 @@ def test_an_unknown_onset_is_reported_rather_than_guessed():
 
 
 def test_confidence_tracks_what_the_injury_record_itself_says():
+    # No follow-up -> LOW; a worse follow-up is a per-injury report but not an
+    # improving one -> MODERATE; an improving follow-up -> HIGH.
     assert resolve_rehab_stage(_injury()).confidence == CONFIDENCE_LOW
-    assert (
-        resolve_rehab_stage(
-            _injury(updated_at=(ONSET + timedelta(days=3)).isoformat())
-        ).confidence
-        == CONFIDENCE_MODERATE
-    )
+    assert resolve_rehab_stage(_injury(latest_reported_status="worse")).confidence == CONFIDENCE_MODERATE
     assert resolve_rehab_stage(_followed_up()).confidence == CONFIDENCE_HIGH
 
 
