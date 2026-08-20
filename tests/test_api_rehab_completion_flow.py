@@ -296,7 +296,7 @@ class TestPendingPromptRehydration:
         assert self._answer(client, prompt).status_code == 201
         assert _pending(client).json()["response_sets"] == []
 
-    def test_partial_write_keeps_one_injury_prompt_recoverable(self):
+    def test_partial_write_reuses_the_first_answer_after_reload(self):
         client, store, _ = _build_client()
         _seed_plan(store, blocks=[], training_day="1970-01-01")
         training_day = _today(client)
@@ -331,9 +331,36 @@ class TestPendingPromptRehydration:
             prompt["injury_id"]
         ]
 
-        retry = self._answer(client, prompt)
+        # A hard refresh loses local answer state. If the athlete now chooses a
+        # different answer, the already-persisted member remains authoritative
+        # for this deterministic response group and only the missing exposure
+        # is written with those original semantics.
+        retry_writes = 0
+
+        def count_retry_writes(athlete_id, payload):
+            nonlocal retry_writes
+            retry_writes += 1
+            return original(athlete_id, payload)
+
+        store.create_rehab_exposure = count_retry_writes
+        retry = self._answer(client, prompt, during="worse", limit="stopped")
+        store.create_rehab_exposure = original
         assert retry.status_code == 201
+        assert retry_writes == 1
         assert len(store.rehab_exposures) == 2
+        events = [row["event_json"] for row in store.rehab_exposures.values()]
+        assert len({event["response_group_id"] for event in events}) == 1
+        assert {event["response"]["during_response"] for event in events} == {"same"}
+        assert {event["response"]["stopped_due_to_symptoms"] for event in events} == {
+            False
+        }
+        assert {event["dose_completed"]["stopped_early"] for event in events} == {
+            False
+        }
+        assert {event["dose_completed"]["completion_state"] for event in events} == {
+            "performed_amount_unknown"
+        }
+        assert len(retry.json()["recorded_exposure_ids"]) == 2
         assert _pending(client).json()["response_sets"] == []
 
     def test_context_failure_does_not_rollback_completion_or_return_volatile_prompt(

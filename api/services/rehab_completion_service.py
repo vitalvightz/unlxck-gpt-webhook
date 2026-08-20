@@ -36,6 +36,7 @@ import logging
 from typing import Any, Iterable, Mapping
 
 from fastapi import HTTPException, status
+from pydantic import ValidationError
 
 from fightcamp.rehab_protocols import rehab_drill_by_id
 
@@ -436,6 +437,55 @@ def _event_satisfies_context(row: Mapping[str, Any], context: Mapping[str, Any])
     )
 
 
+def _canonical_stored_event(
+    row: Mapping[str, Any], context: Mapping[str, Any]
+) -> RehabExposureEvent:
+    """Return one context-bound canonical event or reject corrupted identity."""
+    event_payload = row.get("event_json")
+    if not isinstance(event_payload, Mapping) or not _event_satisfies_context(row, context):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="stale_rehab_response_context",
+        )
+    try:
+        return RehabExposureEvent.model_validate(event_payload)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="invalid_persisted_rehab_exposure",
+        ) from exc
+
+
+def _response_semantics(event: RehabExposureEvent) -> str:
+    """Stable injury-level answer semantics copied across one response group."""
+    return json.dumps(
+        {
+            "response": event.response.model_dump(mode="json"),
+            "completion_state": event.dose_completed.completion_state,
+            "stopped_early": event.dose_completed.stopped_early,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _with_response_semantics(
+    event: RehabExposureEvent, canonical: RehabExposureEvent
+) -> RehabExposureEvent:
+    """Use an already-persisted injury answer for a missing group exposure."""
+    return event.model_copy(
+        update={
+            "response": canonical.response.model_copy(deep=True),
+            "dose_completed": event.dose_completed.model_copy(
+                update={
+                    "completion_state": canonical.dose_completed.completion_state,
+                    "stopped_early": canonical.dose_completed.stopped_early,
+                }
+            ),
+        }
+    )
+
+
 def _prompt_from_context(
     context: Mapping[str, Any], injury: Mapping[str, Any]
 ) -> RehabResponsePrompt:
@@ -659,8 +709,67 @@ def record_rehab_exposures(
                     detail="stale_rehab_response_context",
                 )
 
+    existing_by_id: dict[str, RehabExposureEvent] = {}
+    canonical_by_injury: dict[str, RehabExposureEvent] = {}
+    if expected_contexts is not None:
+        contexts_by_exposure_id = {
+            exposure_id: expected_contexts[injury_id]
+            for injury_id in answers
+            for exposure_id in _expected_exposure_ids(expected_contexts[injury_id])
+        }
+        reader = getattr(store, "list_rehab_exposures_by_ids", None)
+        if not callable(reader):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="rehab exposure recovery unavailable",
+            )
+        stored_rows = reader(athlete_id, list(contexts_by_exposure_id))
+        for row in stored_rows or []:
+            if not isinstance(row, Mapping):
+                continue
+            stored_payload = row.get("event_json")
+            payload_exposure_id = (
+                stored_payload.get("exposure_id")
+                if isinstance(stored_payload, Mapping)
+                else None
+            )
+            exposure_id = _clean(row.get("id") or payload_exposure_id)
+            context = contexts_by_exposure_id.get(exposure_id)
+            if context is None or exposure_id in existing_by_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="stale_rehab_response_context",
+                )
+            existing_by_id[exposure_id] = _canonical_stored_event(row, context)
+
+        for injury_id in answers:
+            existing_group = [
+                existing_by_id[exposure_id]
+                for exposure_id in _expected_exposure_ids(expected_contexts[injury_id])
+                if exposure_id in existing_by_id
+            ]
+            if not existing_group:
+                continue
+            if len({_response_semantics(event) for event in existing_group}) != 1:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="rehab_response_group_conflict",
+                )
+            canonical_by_injury[injury_id] = existing_group[0]
+
     recorded: list[RehabExposureEvent] = []
-    for event in pending_events:
+    for proposed_event in pending_events:
+        exposure_id = str(proposed_event.exposure_id)
+        existing = existing_by_id.get(exposure_id)
+        if existing is not None:
+            recorded.append(existing)
+            continue
+        canonical = canonical_by_injury.get(str(proposed_event.injury_id))
+        event = (
+            _with_response_semantics(proposed_event, canonical)
+            if canonical is not None
+            else proposed_event
+        )
         store.create_rehab_exposure(athlete_id, event.model_dump(mode="json"))
         recorded.append(event)
     return recorded
