@@ -13,6 +13,7 @@ Modules:
 * ``injury_checkin`` — daily per-injury check-in reconciliation + flag risks (§6).
 * ``injury_signal`` — derived injury-risk signal from logged pain history (§6).
 * ``rehab_stage`` — per-injury rehabilitation stage, independent of camp phase.
+* ``rehab_completion`` — which completed rehab work may become injury evidence.
 * ``landing`` — state-dependent landing resolver (§1).
 """
 
@@ -62,6 +63,17 @@ from .landing import (
     LandingDecision,
     LandingTarget,
     resolve_landing,
+)
+from .rehab_completion import (
+    RehabCompletionResolution,
+    RehabExposureCandidate,
+    RehabResponsePrompt,
+    build_rehab_response_prompts,
+    completed_dose_from_session,
+    completed_dose_stopped_early,
+    exposure_response_from_answers,
+    resolve_rehab_completion,
+    resolve_rehab_exposure_candidate,
 )
 from .rehab_stage import (
     REHAB_STAGES,
@@ -132,6 +144,16 @@ __all__ = [
     "reconcile_injury_checkin",
     # injury_signal
     "derive_injury_signal",
+    # rehab_completion
+    "RehabCompletionResolution",
+    "RehabExposureCandidate",
+    "RehabResponsePrompt",
+    "build_rehab_response_prompts",
+    "completed_dose_from_session",
+    "completed_dose_stopped_early",
+    "exposure_response_from_answers",
+    "resolve_rehab_completion",
+    "resolve_rehab_exposure_candidate",
     # rehab_stage
     "REHAB_STAGES",
     "RehabStageDecision",

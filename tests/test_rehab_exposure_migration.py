@@ -50,3 +50,33 @@ def test_generic_context_is_not_persisted_as_local_evidence():
     assert "session_rpe" not in SQL
     assert "pain_after" not in SQL
     assert "updated_at" not in SQL
+
+
+DURING_SQL = Path(
+    "supabase/migrations/20260820150000_add_rehab_exposure_during_response.sql"
+).read_text().lower()
+
+
+def test_during_response_is_validated_at_the_database_boundary():
+    assert "invalid during-work response" in DURING_SQL
+    assert "'better','same','worse','not_sure','not_reported'" in DURING_SQL
+
+
+def test_during_response_defaults_to_not_reported_not_to_an_answer():
+    """An exposure logged without asking must not read as "nothing was wrong"."""
+    assert "coalesce(v_response->>'during_response','not_reported')" in DURING_SQL
+
+
+def test_the_during_response_migration_keeps_every_earlier_guarantee():
+    """It replaces the whole RPC, so the PR3 checks must all still be present."""
+    for guarantee in (
+        "exposure does not match injury episode, region and side",
+        "invalid injury-specific pain response",
+        "invalid next-day response",
+        "invalid exposure demand",
+        "completed dose is empty",
+        "exposure id already used with different evidence",
+    ):
+        assert guarantee in DURING_SQL
+    assert "grant execute on function public.record_rehab_exposure(uuid, jsonb) to service_role" in DURING_SQL
+    assert "revoke all on function public.record_rehab_exposure(uuid, jsonb) from public, anon, authenticated" in DURING_SQL

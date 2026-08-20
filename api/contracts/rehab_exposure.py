@@ -22,6 +22,12 @@ DemandLevel = Literal["minimal", "low", "moderate", "high"]
 ImpactLevel = Literal["none", "low", "moderate", "high"]
 VelocityLevel = Literal["low", "moderate", "high"]
 NextDayResponse = Literal["better", "same", "worse", "not_yet_known", "not_sure"]
+#: How the injury felt *during* the rehab work. Mirrors NextDayResponse, minus
+#: "not_yet_known" (which cannot apply to something already done) and plus
+#: "not_reported" — the default for an exposure logged without the athlete being
+#: asked, so "we did not ask" is never stored as "the athlete said nothing was
+#: wrong".
+DuringResponse = Literal["better", "same", "worse", "not_sure", "not_reported"]
 PainObservation = StrictInt | Literal["not_sure"] | None
 
 
@@ -67,6 +73,11 @@ class ExposureDose(BaseModel):
 
 class ExposureResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    #: The athlete's categorical answer to "how did it feel during the rehab
+    #: work?". Deliberately separate from ``pain_during``: a 0-10 score is a
+    #: different observation, and inventing one from a better/same/worse answer
+    #: would fabricate precision the athlete never gave.
+    during_response: DuringResponse = "not_reported"
     pain_during: PainObservation = Field(default=None)
     pain_immediate_after: PainObservation = Field(default=None)
     next_day_response: NextDayResponse = "not_yet_known"
