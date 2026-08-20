@@ -14,6 +14,7 @@ from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
 from .injury_location_registry import build_location_region_map, get_rehab_location_candidates
 from .rehab_schema import split_phase_progression
+from .rehab_selector import select_rehab_candidate
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
@@ -884,9 +885,47 @@ def generate_rehab_protocols(
             and current_phase.upper() in _entry_phases(entry)
         ]
         if matches:
+            merged = merged_by_key.get(group_key) if group_key else None
+            live_stage = str((merged or {}).get("rehab_stage") or "").strip().lower()
+            selected_drill_id = ""
+            if live_stage:
+                stage_candidates = []
+                for match in matches:
+                    for bank_drill in match.get("drills", []):
+                        candidate = dict(bank_drill)
+                        candidate.setdefault("injury_type", match.get("type"))
+                        candidate.setdefault("care_pathway", "msk")
+                        stage_candidates.append(candidate)
+                selection = select_rehab_candidate(
+                    injury={
+                        **(merged or {}),
+                        "body_region": loc,
+                        "injury_type": itype,
+                    },
+                    rehab_stage=live_stage,
+                    candidates=stage_candidates,
+                    available_equipment=(merged or {}).get("available_equipment"),
+                    exposures=(merged or {}).get("rehab_exposures") or (),
+                )
+                selected_drill_id = selection.selected_drill_id or ""
+                logger.info(
+                    "rehab_selector athlete_id=%s injury_id=%s injury_episode_id=%s "
+                    "rehab_stage=%s selected_drill_id=%s eligible_candidate_count=%s "
+                    "reason_codes=%s selector_version=%s",
+                    (merged or {}).get("athlete_id", ""),
+                    selection.injury_id,
+                    selection.injury_episode_id,
+                    selection.rehab_stage,
+                    selection.selected_drill_id or "",
+                    selection.eligible_candidate_count,
+                    [selection.selection_reason],
+                    selection.selector_version,
+                )
             drills: list[tuple[str, str]] = []  # (name, notes_for_phase)
             for m in matches:
                 for d in m.get("drills", []):
+                    if live_stage and str(d.get("id") or "") != selected_drill_id:
+                        continue
                     name = d.get("name")
                     notes = d.get("notes", "")
                     if not name:
@@ -1298,7 +1337,15 @@ def build_coach_review_entries(
 
 
 def rehab_drill_options_for_phase(
-    itype: str, loc: str | None, phase: str, limit: int = 4
+    itype: str,
+    loc: str | None,
+    phase: str,
+    limit: int = 4,
+    *,
+    injury: dict | None = None,
+    rehab_stage: str | None = None,
+    available_equipment: Iterable[str] | None = None,
+    exposures: Iterable[dict] = (),
 ) -> list[dict]:
     """Return the phase's rehab options, each keeping its canonical bank identity.
 
@@ -1326,6 +1373,7 @@ def rehab_drill_options_for_phase(
             )
         return options[:limit]
     phase = phase.upper()
+    collection_limit = 10_000 if rehab_stage and injury else limit
     options = []
     seen_lines: set[str] = set()
 
@@ -1363,7 +1411,7 @@ def rehab_drill_options_for_phase(
                             "type": entry.get("type"),
                         }
                     )
-            if len(options) >= limit:
+            if len(options) >= collection_limit:
                 return
 
     loc_candidates = normalize_rehab_location(loc)
@@ -1382,9 +1430,27 @@ def rehab_drill_options_for_phase(
                 if phase not in _entry_phases(entry):
                     continue
                 _append_drills(entry)
-                if len(options) >= limit:
-                    return options[:limit]
-    return options[:limit]
+                if len(options) >= collection_limit:
+                    return options[:collection_limit]
+    if rehab_stage and injury:
+        candidates = []
+        option_by_id = {}
+        for option in options:
+            drill = dict(option.get("drill") or {})
+            drill.setdefault("injury_type", option.get("type"))
+            drill.setdefault("care_pathway", "msk")
+            candidates.append(drill)
+            option_by_id[str(drill.get("id") or "")] = option
+        result = select_rehab_candidate(
+            injury=injury,
+            rehab_stage=rehab_stage,
+            candidates=candidates,
+            available_equipment=available_equipment,
+            exposures=exposures,
+        )
+        selected = option_by_id.get(result.selected_drill_id or "")
+        return [selected] if selected else []
+    return options[:collection_limit]
 
 
 def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:
