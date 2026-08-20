@@ -33,6 +33,7 @@ from api.models import (
 )
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
+from api.contracts.rehab_completion import COMPLETED_STATUSES
 from api.services.progress_notifications import award_session_progress
 from api.services.rehab_completion_service import (
     collect_rehab_response_prompts,
@@ -330,6 +331,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         about an injury, and a resolution failure must never take the completion
         down with it — the session is logged either way.
         """
+        if completion_status_of(completion) not in COMPLETED_STATUSES:
+            # Checked before the plan read: starting and skipping a session are
+            # the common taps, and neither can produce an exposure.
+            return []
         if not evaluate_profile_compliance(profile).health_consent_granted:
             return []
         try:
