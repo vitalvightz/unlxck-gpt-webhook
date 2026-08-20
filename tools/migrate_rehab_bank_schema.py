@@ -82,6 +82,21 @@ def migrate_drill(
 
     for field in MSK_DRILL_FIELDS:
         migrated[field] = drill.get(field)
+    # A bank group already owns its canonical anatomical region. Carrying that
+    # identity onto the drill is defensible; all more specific clinical fields
+    # stay explicitly unknown until reviewed.
+    if migrated["target_regions"] is None:
+        migrated["target_regions"] = [location]
+    if migrated["laterality_applicability"] is None:
+        migrated["laterality_applicability"] = "unknown"
+    if migrated["contraction_type"] is None:
+        migrated["contraction_type"] = "unknown"
+    if migrated["sport_specificity"] is None:
+        migrated["sport_specificity"] = "unknown"
+    if migrated["contact_level"] is None:
+        migrated["contact_level"] = "unknown"
+    if migrated["evidence_notes"] is None:
+        migrated["evidence_notes"] = "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
     if migrated["function"] is None:
         migrated["function"] = match_drill_function(name or "", migrated["notes"])
     return migrated

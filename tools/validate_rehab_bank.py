@@ -41,10 +41,13 @@ if str(REPO_ROOT) not in sys.path:
 
 from fightcamp.rehab_schema import (  # noqa: E402
     CARE_TYPE_WOUND_CARE,
+    CONTACT_LEVEL_VALUES,
+    CONTRACTION_TYPE_VALUES,
     DOSE_FIELDS,
     DRILL_ID_PATTERN,
     IMPACT_VALUES,
     LOAD_VALUES,
+    LATERALITY_APPLICABILITY_VALUES,
     MSK_DRILL_FIELDS,
     PAIN_CEILING_MAX,
     PAIN_CEILING_MIN,
@@ -54,6 +57,7 @@ from fightcamp.rehab_schema import (  # noqa: E402
     REHAB_STAGES,
     RULE_LIST_FIELDS,
     SEVERITY_VALUES,
+    SPORT_SPECIFICITY_VALUES,
     VELOCITY_VALUES,
     canonical_rehab_locations,
     canonical_rehab_types,
@@ -391,6 +395,31 @@ def validate_msk_drill(locator: str, drill: dict) -> list[RehabBankIssue]:
     issues.extend(_validate_enum(locator, "impact", drill.get("impact"), IMPACT_VALUES))
     issues.extend(_validate_enum(locator, "load", drill.get("load"), LOAD_VALUES))
     issues.extend(_validate_enum(locator, "velocity", drill.get("velocity"), VELOCITY_VALUES))
+    issues.extend(
+        _validate_enum(
+            locator,
+            "laterality_applicability",
+            drill.get("laterality_applicability"),
+            LATERALITY_APPLICABILITY_VALUES,
+        )
+    )
+    issues.extend(_validate_enum(locator, "contraction_type", drill.get("contraction_type"), CONTRACTION_TYPE_VALUES))
+    issues.extend(_validate_enum(locator, "sport_specificity", drill.get("sport_specificity"), SPORT_SPECIFICITY_VALUES))
+    issues.extend(_validate_enum(locator, "contact_level", drill.get("contact_level"), CONTACT_LEVEL_VALUES))
+    target_regions = drill.get("target_regions")
+    if target_regions is not None:
+        if not _is_text_list(target_regions) or not target_regions:
+            issues.append(_issue("invalid_target_regions", ERROR, locator, "target_regions must be a non-empty list or null"))
+        else:
+            unknown = sorted(set(target_regions) - canonical_rehab_locations())
+            if unknown:
+                issues.append(_issue("invalid_target_regions", ERROR, locator, f"unknown target region(s) {unknown}"))
+    target_tissues = drill.get("target_tissues")
+    if target_tissues is not None and not _is_text_list(target_tissues):
+        issues.append(_issue("invalid_target_tissues", ERROR, locator, "target_tissues must be a text list or null"))
+    evidence_notes = drill.get("evidence_notes")
+    if evidence_notes is not None and (not isinstance(evidence_notes, str) or not evidence_notes.strip()):
+        issues.append(_issue("invalid_evidence_notes", ERROR, locator, "evidence_notes must be non-empty text or null"))
     issues.extend(validate_dose(locator, drill.get("dose")))
     issues.extend(validate_equipment(locator, drill.get("equipment")))
     issues.extend(validate_pain_ceiling(locator, drill.get("pain_ceiling")))
