@@ -296,6 +296,7 @@ _GAS_TANK_MACHINE_EQUIPMENT = {
 from .conditioning_boxing import (  # noqa: E402
     BOXING_NAME_MAP,
     _alactic_maintenance_fallback,
+    _boxing_aerobic_context_flags,
     _boxing_aerobic_preference_rank,
     _boxing_aerobic_priority_adjustment,
     _is_pool_treading_drill,
@@ -3060,10 +3061,51 @@ def generate_conditioning_block(flags):
 
         return _append_drill(system, drill, reasons)
         
+    _pool_treading_strong_case: bool | None = None
+
+    def _base_head_is_priority_pool_treading(system: str) -> bool:
+        """Whether the leading base aerobic drill is a strong-case pool tread.
+
+        For an impact-restricted boxer with pool access, pool treading is the
+        clinically-preferred zero-impact aerobic option — ``_boxing_sort_key``
+        already ranks it to the head of the base list. Left to the default blend,
+        a style shadow-drill takes the slot ahead of it and the injury guard then
+        swaps that style pick out for a generic mobility drill, burying the pool
+        option a rank down. Letting the strong-case pool drill lead keeps the
+        athlete on the option their restriction actually calls for.
+        """
+        nonlocal _pool_treading_strong_case
+        if system != "aerobic" or selection_format != "boxing" or general_remaining <= 0:
+            return False
+        head = next(
+            (
+                drill
+                for drill, _score, _reasons in system_drills.get(system, [])
+                if drill.get("name") not in selected_drill_names
+            ),
+            None,
+        )
+        if head is None or not _is_pool_treading_drill(head):
+            return False
+        if _pool_treading_strong_case is None:
+            _pool_treading_strong_case = _boxing_aerobic_context_flags(
+                injuries=injuries,
+                weaknesses=weaknesses,
+                goals=goals,
+                restrictions=restrictions,
+                equipment_access_set=equipment_access_set,
+            )["pool_treading_strong_case"]
+        return _pool_treading_strong_case
+
     def blended_pick(system: str):
         nonlocal style_remaining, general_remaining
         drill = None
         reasons = None
+        if _base_head_is_priority_pool_treading(system):
+            drill, reasons = pop_drill(system_drills, system)
+            if drill:
+                general_remaining -= 1
+                return drill, reasons
         if style_remaining > 0:
             drill, reasons = pop_style_drill(system)
             if drill:
