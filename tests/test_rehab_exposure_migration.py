@@ -125,3 +125,20 @@ def test_final_rpc_revision_keeps_every_earlier_guarantee():
         assert guarantee in FINAL_SQL
     assert "grant execute on function public.record_rehab_exposure(uuid, jsonb) to service_role" in FINAL_SQL
     assert "revoke all on function public.record_rehab_exposure(uuid, jsonb) from public, anon, authenticated" in FINAL_SQL
+
+
+GROUP_SQL = Path(
+    "supabase/migrations/20260820170000_add_rehab_response_group_identity.sql"
+).read_text().lower()
+
+
+def test_response_group_identity_is_required_and_queryable():
+    assert "response_group_id uuid" in GROUP_SQL
+    assert "generated always as ((event_json->>'response_group_id')::uuid) stored" in GROUP_SQL
+    assert "alter column response_group_id set not null" in GROUP_SQL
+    assert "(athlete_id, response_group_id)" in GROUP_SQL
+
+
+def test_legacy_exposures_are_conservatively_backfilled_as_separate_groups():
+    assert "'{response_group_id}'" in GROUP_SQL
+    assert "to_jsonb(id::text)" in GROUP_SQL

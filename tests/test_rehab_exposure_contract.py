@@ -12,6 +12,7 @@ def _event(**overrides):
     episode_id = overrides.pop("injury_episode_id", uuid4())
     payload = {
         "exposure_id": uuid4(),
+        "response_group_id": uuid4(),
         "injury_id": injury_id,
         "injury_episode_id": episode_id,
         "drill_id": "single_leg_calf_raise",
@@ -42,6 +43,12 @@ def test_exposure_requires_injury_and_episode_identity():
         del payload[field]
         with pytest.raises(ValidationError):
             RehabExposureEvent.model_validate(payload)
+
+
+def test_legacy_unpersisted_exposure_can_be_read_without_response_group_identity():
+    payload = _event()
+    del payload["response_group_id"]
+    assert RehabExposureEvent.model_validate(payload).response_group_id is None
 
 
 def test_region_and_laterality_are_preserved_and_attributed_together():

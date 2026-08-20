@@ -256,6 +256,10 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
     ) -> RehabExposureEvent:
         """Validate and append one immutable injury-specific observation."""
         require_health_feature_access(profile)
+        # This lower-level/manual path captures one exposure per request, so it
+        # is conservatively its own response group. Never trust a client to
+        # group independent answers together.
+        event = event.model_copy(update={"response_group_id": event.exposure_id})
         injury = store.get_injury_flag_for_athlete(str(event.injury_id), profile.athlete_id)
         if injury is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="injury not found")

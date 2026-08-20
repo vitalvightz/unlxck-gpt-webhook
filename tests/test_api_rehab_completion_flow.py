@@ -233,6 +233,7 @@ class TestAnsweringStoresEvidence:
         event = next(iter(store.rehab_exposures.values()))["event_json"]
         assert event["injury_id"] == injury["id"]
         assert event["injury_episode_id"] == injury["episode_id"]
+        assert event["response_group_id"]
         assert event["drill_id"] == ANKLE_DRILL
         assert event["body_region"] == "ankle"
         assert event["side"] == "left"
@@ -390,6 +391,12 @@ class TestPlanAndOccurrenceBinding:
 
         assert first.status_code == 201
         assert len(first_ids) == 2
+        assert len(
+            {
+                row["event_json"]["response_group_id"]
+                for row in store.rehab_exposures.values()
+            }
+        ) == 1
         assert set(retry.json()["recorded_exposure_ids"]) == first_ids
         assert len(store.rehab_exposures) == 2
 
@@ -470,6 +477,7 @@ class TestTheClientCannotAssertAttribution:
                 "side": "right",
                 "episode_id": "33333333-3333-3333-3333-333333333333",
                 "demand": {"load": "low", "impact": "none", "velocity": "low"},
+                "response_group_id": "44444444-4444-4444-4444-444444444444",
             },
         )
 

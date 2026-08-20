@@ -101,6 +101,8 @@ class TestInjuryFlags:
         retry = client.post("/api/rehab-exposures", headers=ATHLETE, json=event)
         assert first.status_code == retry.status_code == 201
         assert len(store.rehab_exposures) == 1
+        stored = next(iter(store.rehab_exposures.values()))["event_json"]
+        assert stored["response_group_id"] == event["exposure_id"]
 
     def test_rehab_exposure_rejects_cross_region_and_side(self):
         client, store, _ = _build_client()

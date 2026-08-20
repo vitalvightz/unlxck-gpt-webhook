@@ -577,6 +577,29 @@ def completed_dose_stopped_early(limit: str | None) -> bool | None:
 #: Namespace for deterministic exposure ids. Fixed forever: changing it would
 #: make every previously recorded exposure look like a new one.
 EXPOSURE_ID_NAMESPACE = UUID("6f1a9d52-1f7e-5b4c-9c0e-3f6a2d18b7c4")
+#: Separate forever-fixed namespace for the single injury-level answer shared
+#: by every exposure it describes.
+RESPONSE_GROUP_ID_NAMESPACE = UUID("c30265da-649a-5a29-94c7-a2de5cb68454")
+
+
+def build_response_group_id(
+    *,
+    athlete_id: str,
+    plan_id: str,
+    injury_episode_id: str,
+    session_id: str,
+    training_day: str,
+) -> UUID:
+    """Stable identity for one injury-level response to one completed session.
+
+    The UI asks once per injury, so every drill exposure produced from that
+    answer carries this same id. Drill and occurrence are deliberately absent:
+    they distinguish exposures, not athlete responses.
+    """
+    key = "|".join(
+        (athlete_id, plan_id, session_id, training_day, injury_episode_id)
+    )
+    return uuid5(RESPONSE_GROUP_ID_NAMESPACE, key)
 
 
 def build_exposure_id(
@@ -665,6 +688,13 @@ def build_rehab_exposure_event(
             training_day=training_day,
             rehab_occurrence_key=candidate.rehab_occurrence_key,
         ),
+        response_group_id=build_response_group_id(
+            athlete_id=athlete_id,
+            plan_id=plan_id,
+            injury_episode_id=str(candidate.injury_episode_id),
+            session_id=session_id,
+            training_day=training_day,
+        ),
         injury_id=UUID(str(candidate.injury_id)),
         injury_episode_id=UUID(str(candidate.injury_episode_id)),
         drill_id=candidate.drill_id,
@@ -695,8 +725,10 @@ __all__ = [
     "RehabCompletionResolution",
     "RehabExposureCandidate",
     "EXPOSURE_ID_NAMESPACE",
+    "RESPONSE_GROUP_ID_NAMESPACE",
     "RehabResponsePrompt",
     "build_exposure_id",
+    "build_response_group_id",
     "build_rehab_exposure_event",
     "build_rehab_response_prompts",
     "completed_dose_from_session",

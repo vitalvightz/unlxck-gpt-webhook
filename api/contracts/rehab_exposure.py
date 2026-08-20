@@ -153,6 +153,10 @@ class ExposureProvenance(BaseModel):
 class RehabExposureEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     exposure_id: UUID
+    #: One athlete answer may describe several drill exposures for the same
+    #: injury. This shared identity prevents downstream readers from counting
+    #: copied response fields as independently assessed responses.
+    response_group_id: UUID | None = None
     injury_id: UUID
     injury_episode_id: UUID
     drill_id: str = Field(min_length=1, pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")

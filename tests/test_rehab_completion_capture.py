@@ -21,6 +21,7 @@ from api.contracts.rehab_completion import (
     LIMIT_ANSWERS,
     REASON_ATTRIBUTION_UNKNOWN,
     build_exposure_id,
+    build_response_group_id,
     build_rehab_exposure_event,
     REASON_EPISODE_UNKNOWN,
     REASON_LATERALITY_UNKNOWN,
@@ -533,6 +534,42 @@ def test_the_same_completion_always_builds_the_same_exposure_id():
 def test_the_whole_event_is_deterministic_so_a_retry_cannot_conflict():
     """PR3's RPC is idempotent only for an identical payload under a known id."""
     assert _event().model_dump(mode="json") == _event().model_dump(mode="json")
+
+
+def test_one_injury_answer_has_one_deterministic_response_group():
+    first = _event()
+    retry = _event()
+    assert first.response_group_id == retry.response_group_id
+    assert first.response_group_id == build_response_group_id(
+        athlete_id=ATHLETE,
+        plan_id=PLAN_ID,
+        injury_episode_id="22222222-2222-2222-2222-222222222222",
+        session_id="session-1",
+        training_day=DAY,
+    )
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("athlete_id", "99999999-9999-9999-9999-999999999999"),
+        ("plan_id", "88888888-8888-8888-8888-888888888888"),
+        ("injury_episode_id", "55555555-5555-5555-5555-555555555555"),
+        ("session_id", "session-2"),
+        ("training_day", "2026-08-21"),
+    ],
+)
+def test_every_response_scope_part_changes_the_group_id(field, value):
+    args = {
+        "athlete_id": ATHLETE,
+        "plan_id": PLAN_ID,
+        "injury_episode_id": "22222222-2222-2222-2222-222222222222",
+        "session_id": "session-1",
+        "training_day": DAY,
+    }
+    assert build_response_group_id(**args) != build_response_group_id(
+        **{**args, field: value}
+    )
 
 
 def test_a_different_drill_gets_a_different_exposure_id():

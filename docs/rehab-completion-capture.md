@@ -196,6 +196,16 @@ so the whole event remains a pure function of its inputs. A retry or a double
 submit re-sends an identical payload under an identical id, and PR3's RPC
 returns the existing row instead of appending a second observation.
 
+## One answer, several exposures
+
+The UI still asks once per injury. When that answer covers several rehab blocks,
+each drill remains its own exposure but every resulting event carries the same
+server-owned `response_group_id`. The group is derived from athlete, plan,
+session, training day and injury episode; drill and block occurrence are omitted
+because they identify exposures, not separate athlete assessments. Downstream
+logic can therefore read three drill exposures as one assessed response group,
+while retries reproduce both the exposure ids and the shared group id.
+
 ## Not in this PR
 
 Nothing here interprets an observation. No code decides whether an exposure was
