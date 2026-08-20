@@ -4731,11 +4731,18 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .eq("injury_id", injury_id)
             .eq("injury_episode_id", injury_episode_id)
-            .order("occurred_at")
+            .order("occurred_at", desc=True)
             .limit(max(1, min(limit, 500)))
             .execute()
         )
-        return getattr(response, "data", None) or []
+        rows = getattr(response, "data", None) or []
+        rows.sort(
+            key=lambda row: (
+                str(row.get("occurred_at") or ""),
+                str(row.get("id") or ""),
+            )
+        )
+        return rows
 
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(

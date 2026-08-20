@@ -4,10 +4,11 @@ This module interprets immutable :class:`RehabExposureEvent` observations for
 one exact athlete/injury/episode.  It never mutates a rehabilitation stage and
 is not imported by drill or session selection.
 
-The registry intentionally supports only taxonomy families whose existing
-types describe a musculoskeletal condition rather than a symptom alone.  An
-unsupported type is an evidence gap, not an invitation to invent a generic
-day, pain, session-count or diagnosis rule.
+The registry is intentionally empty until the rehab bank or another reviewed
+repository source supplies condition-specific progression capabilities with
+provenance. A taxonomy label alone is not a LOAD rule. Unsupported types are an
+evidence gap, not an invitation to invent a generic day, pain, session-count or
+diagnosis rule.
 """
 
 from __future__ import annotations
@@ -20,7 +21,6 @@ from typing import Any, Literal, Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from fightcamp.injury_scoring import score_injury_phrase
 from fightcamp.injury_taxonomy import INJURY_TAXONOMY
 from .rehab_exposure import RehabExposureEvent
 from .rehab_stage import (
@@ -60,6 +60,9 @@ INSUFFICIENT_UNQUANTIFIED_EXPOSURE = "insufficient_unquantified_exposure"
 INSUFFICIENT_NO_COMPLETED_DOSE = "insufficient_no_completed_dose"
 INSUFFICIENT_RESPONSE = "insufficient_injury_response"
 INSUFFICIENT_RESPONSE_GROUP = "insufficient_response_group_identity"
+INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE = (
+    "insufficient_unresolved_historical_negative_evidence"
+)
 BLOCKED_RED_FLAG = "blocked_red_flag"
 BLOCKED_MEDICAL_REVIEW = "blocked_medical_review"
 BLOCKED_ACTIVE_WORSENING = "blocked_active_worsening"
@@ -67,7 +70,6 @@ FAIL_STOPPED_DUE_TO_SYMPTOMS = "fail_stopped_due_to_symptoms"
 FAIL_DURING_RESPONSE_WORSE = "fail_during_response_worse"
 FAIL_NEXT_DAY_RESPONSE_WORSE = "fail_next_day_response_worse"
 FAIL_WORSENING_REPORTED = "fail_worsening_reported"
-FAIL_REQUIRED_CRITERION = "fail_required_criterion"
 NOT_APPLICABLE_SURFACE_PATHWAY = "not_applicable_surface_pathway"
 NOT_APPLICABLE_CURRENT_STAGE = "not_applicable_current_stage"
 
@@ -83,58 +85,33 @@ IGNORED_DUPLICATE_EXPOSURE = "ignored_duplicate_exposure"
 
 @dataclass(frozen=True)
 class LoadCriteria:
-    """Capabilities required by one existing injury-taxonomy family.
+    """A condition-specific capability rule with explicit repository provenance.
 
-    No counts or elapsed-time values belong here.  A qualifying observation has
-    to demonstrate actual, known tissue loading and a usable injury response.
+    A taxonomy family is not itself progression evidence. Each future entry
+    must name one exact structured injury type and the reviewed repo source that
+    justifies its capabilities. No counts or elapsed-time values belong here.
     """
 
-    family: str
-    injury_types: frozenset[str]
+    injury_type: str
+    taxonomy_family: str
+    provenance: str
     qualifying_loads: frozenset[str]
     requires_quantified_dose: bool
     allowed_during_responses: frozenset[str]
     requires_delayed_response: bool
     allowed_delayed_responses: frozenset[str]
+    historical_negative_resolution_rule: str | None
 
 
-_KNOWN_LOADING_LEVELS = frozenset({"low", "moderate", "high"})
 _NON_WORSENING_RESPONSES = frozenset({"better", "same"})
 
-# Keys come directly from INJURY_TAXONOMY.category.  Symptom, unknown, surface,
-# structural, neurological, post-op and medical categories are deliberately not
-# given ordinary LOAD criteria.
-LOAD_CRITERIA_REGISTRY: Mapping[str, LoadCriteria] = MappingProxyType(
-    {
-        "soft_tissue": LoadCriteria(
-            family="soft_tissue",
-            injury_types=frozenset({"sprain", "strain", "contusion", "hyperextension"}),
-            qualifying_loads=_KNOWN_LOADING_LEVELS,
-            requires_quantified_dose=True,
-            allowed_during_responses=_NON_WORSENING_RESPONSES,
-            requires_delayed_response=False,
-            allowed_delayed_responses=_NON_WORSENING_RESPONSES,
-        ),
-        "overuse": LoadCriteria(
-            family="overuse",
-            injury_types=frozenset({"tendonitis"}),
-            qualifying_loads=_KNOWN_LOADING_LEVELS,
-            requires_quantified_dose=True,
-            allowed_during_responses=_NON_WORSENING_RESPONSES,
-            requires_delayed_response=False,
-            allowed_delayed_responses=_NON_WORSENING_RESPONSES,
-        ),
-        "mechanical": LoadCriteria(
-            family="mechanical",
-            injury_types=frozenset({"impingement", "instability"}),
-            qualifying_loads=_KNOWN_LOADING_LEVELS,
-            requires_quantified_dose=True,
-            allowed_during_responses=_NON_WORSENING_RESPONSES,
-            requires_delayed_response=False,
-            allowed_delayed_responses=_NON_WORSENING_RESPONSES,
-        ),
-    }
-)
+# No existing rehab-bank or taxonomy record currently supplies a reviewed,
+# condition-specific RESTORE -> LOAD capability rule with provenance. In
+# particular, the bank's progression/demand metadata remains pending migration.
+# An empty registry is therefore the only honest production configuration.
+# Future entries must be keyed by an exact structured taxonomy type (not a broad
+# family label) and cite their reviewed source in ``provenance``.
+LOAD_CRITERIA_REGISTRY: Mapping[str, LoadCriteria] = MappingProxyType({})
 
 
 class CriterionResult(BaseModel):
@@ -205,40 +182,25 @@ def _canonical_token(value: Any) -> str:
 
 
 def resolve_injury_type(injury: Mapping[str, Any]) -> str:
-    """Resolve the existing taxonomy key used only to select criteria.
+    """Read a structured taxonomy key used to select progression criteria.
 
-    Structured taxonomy fields win.  Older injury flags do not store one, so
-    the repository's existing deterministic injury scorer is the conservative
-    compatibility path.  It cannot create a new category: only exact keys from
-    ``INJURY_TAXONOMY`` are accepted, otherwise ``unspecified`` is returned.
+    Free text is deliberately not scored here. A triage/display parser may
+    suggest an injury elsewhere, but prose is not progression authority. If no
+    exact structured taxonomy field exists, the result is ``unspecified`` and
+    LOAD eligibility remains insufficient.
     """
 
     for field_name in ("triage_category", "injury_type", "rehab_type", "surface_type"):
         candidate = _canonical_token(injury.get(field_name))
         if candidate in INJURY_TAXONOMY:
             return candidate
-    text = " ".join(
-        part
-        for part in (
-            _clean(injury.get("body_area")),
-            _clean(injury.get("description")),
-            _clean(injury.get("label")),
-        )
-        if part
-    )
-    scored = score_injury_phrase(text) if text else {}
-    for field_name in ("triage_category", "injury_type", "rehab_type"):
-        candidate = _canonical_token(scored.get(field_name))
-        if candidate in INJURY_TAXONOMY:
-            return candidate
     return "unspecified"
 
 
 def criteria_for_injury_type(injury_type: str) -> LoadCriteria | None:
-    rule = INJURY_TAXONOMY.get(_canonical_token(injury_type))
-    family = _clean((rule or {}).get("category"))
-    criteria = LOAD_CRITERIA_REGISTRY.get(family)
-    if criteria is None or _canonical_token(injury_type) not in criteria.injury_types:
+    normalized = _canonical_token(injury_type)
+    criteria = LOAD_CRITERIA_REGISTRY.get(normalized)
+    if criteria is None or criteria.injury_type != normalized or not criteria.provenance:
         return None
     return criteria
 
@@ -623,6 +585,70 @@ def resolve_load_eligibility(
         )
 
     criteria = criteria_for_injury_type(injury_type)
+
+    # A negative in the newest independently reported response group is current
+    # negative evidence and prevents eligibility. An older negative followed by
+    # newer evidence is different: it cannot be a permanent episode-wide veto,
+    # but neither may a generic time/count rule clear it. Until this exact injury
+    # type has a sourced resolution rule, report the uncertainty explicitly.
+    negative_groups = [group for group in groups if group.negative_reasons]
+    if negative_groups and groups and groups[-1].negative_reasons:
+        latest_negative_events = list(groups[-1].events)
+        latest_negative_reasons = list(groups[-1].negative_reasons)
+        return _result(
+            injury=injury,
+            stage_decision=stage_decision,
+            injury_type=injury_type,
+            injury_family=injury_family,
+            decision="not_eligible",
+            reasons=latest_negative_reasons,
+            criteria_results=[
+                _criterion(
+                    "latest_injury_response_not_negative",
+                    "fail",
+                    latest_negative_reasons[0],
+                    latest_negative_events,
+                )
+            ],
+            evidence_summary=_summary(
+                events=events, groups=groups, criteria=criteria, ignored=ignored
+            ),
+            evaluated_at=evaluated_at,
+        )
+    if negative_groups:
+        historical_negative_events = [
+            event for group in negative_groups for event in group.events
+        ]
+        historical_reasons = list(
+            dict.fromkeys(
+                reason for group in negative_groups for reason in group.negative_reasons
+            )
+        )
+        # No current condition-specific rule defines how historical negatives
+        # become resolved. Adding a registry entry alone must not silently clear
+        # them; a future implementation must explicitly evaluate that entry's
+        # sourced resolution rule here.
+        return _result(
+            injury=injury,
+            stage_decision=stage_decision,
+            injury_type=injury_type,
+            injury_family=injury_family,
+            decision="insufficient_evidence",
+            reasons=[INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE, *historical_reasons],
+            criteria_results=[
+                _criterion(
+                    "historical_negative_evidence_resolved",
+                    "unknown",
+                    INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE,
+                    historical_negative_events,
+                )
+            ],
+            evidence_summary=_summary(
+                events=events, groups=groups, criteria=criteria, ignored=ignored
+            ),
+            evaluated_at=evaluated_at,
+        )
+
     if criteria is None:
         return _result(
             injury=injury,
@@ -633,7 +659,7 @@ def resolve_load_eligibility(
             reasons=[INSUFFICIENT_UNSUPPORTED_INJURY_TYPE],
             criteria_results=[
                 _criterion(
-                    "injury_family_supported",
+                    "injury_type_criteria_supported",
                     "unknown",
                     INSUFFICIENT_UNSUPPORTED_INJURY_TYPE,
                 )
@@ -648,7 +674,7 @@ def resolve_load_eligibility(
             injury=injury,
             stage_decision=stage_decision,
             injury_type=injury_type,
-            injury_family=criteria.family,
+            injury_family=criteria.taxonomy_family,
             decision="insufficient_evidence",
             reasons=[INSUFFICIENT_INJURY_IDENTITY],
             criteria_results=[
@@ -662,7 +688,7 @@ def resolve_load_eligibility(
             injury=injury,
             stage_decision=stage_decision,
             injury_type=injury_type,
-            injury_family=criteria.family,
+            injury_family=criteria.taxonomy_family,
             decision="insufficient_evidence",
             reasons=[INSUFFICIENT_LATERALITY],
             criteria_results=[
@@ -674,7 +700,11 @@ def resolve_load_eligibility(
 
     criteria_results: list[CriterionResult] = [
         _criterion("current_stage_restore", "pass", "current_stage_restore"),
-        _criterion("injury_family_supported", "pass", f"supported_{criteria.family}"),
+        _criterion(
+            "injury_type_criteria_supported",
+            "pass",
+            f"supported_{criteria.injury_type}",
+        ),
     ]
     if not events:
         criteria_results.append(
@@ -684,7 +714,7 @@ def resolve_load_eligibility(
             injury=injury,
             stage_decision=stage_decision,
             injury_type=injury_type,
-            injury_family=criteria.family,
+            injury_family=criteria.taxonomy_family,
             decision="insufficient_evidence",
             reasons=[INSUFFICIENT_NO_EXPOSURES],
             criteria_results=criteria_results,
@@ -694,32 +724,6 @@ def resolve_load_eligibility(
             evaluated_at=evaluated_at,
         )
 
-    negative_events = [event for event in events if _negative_reasons(event)]
-    negative_reasons = list(
-        dict.fromkeys(reason for event in negative_events for reason in _negative_reasons(event))
-    )
-    if negative_events:
-        criteria_results.append(
-            _criterion(
-                "no_negative_injury_response",
-                "fail",
-                negative_reasons[0],
-                negative_events,
-            )
-        )
-        return _result(
-            injury=injury,
-            stage_decision=stage_decision,
-            injury_type=injury_type,
-            injury_family=criteria.family,
-            decision="not_eligible",
-            reasons=negative_reasons,
-            criteria_results=criteria_results,
-            evidence_summary=_summary(
-                events=events, groups=groups, criteria=criteria, ignored=ignored
-            ),
-            evaluated_at=evaluated_at,
-        )
     criteria_results.append(
         _criterion("no_negative_injury_response", "pass", "no_negative_injury_response", events)
     )
@@ -746,7 +750,7 @@ def resolve_load_eligibility(
             injury=injury,
             stage_decision=stage_decision,
             injury_type=injury_type,
-            injury_family=criteria.family,
+            injury_family=criteria.taxonomy_family,
             decision="insufficient_evidence",
             reasons=[reason],
             criteria_results=criteria_results,
@@ -776,7 +780,7 @@ def resolve_load_eligibility(
             injury=injury,
             stage_decision=stage_decision,
             injury_type=injury_type,
-            injury_family=criteria.family,
+            injury_family=criteria.taxonomy_family,
             decision="insufficient_evidence",
             reasons=[reason],
             criteria_results=criteria_results,
@@ -807,7 +811,7 @@ def resolve_load_eligibility(
             injury=injury,
             stage_decision=stage_decision,
             injury_type=injury_type,
-            injury_family=criteria.family,
+            injury_family=criteria.taxonomy_family,
             decision="insufficient_evidence",
             reasons=[INSUFFICIENT_RESPONSE],
             criteria_results=criteria_results,
@@ -844,7 +848,7 @@ def resolve_load_eligibility(
                 injury=injury,
                 stage_decision=stage_decision,
                 injury_type=injury_type,
-                injury_family=criteria.family,
+                injury_family=criteria.taxonomy_family,
                 decision="insufficient_evidence",
                 reasons=[INSUFFICIENT_DELAYED_RESPONSE],
                 criteria_results=criteria_results,
@@ -876,7 +880,7 @@ def resolve_load_eligibility(
         injury=injury,
         stage_decision=stage_decision,
         injury_type=injury_type,
-        injury_family=criteria.family,
+        injury_family=criteria.taxonomy_family,
         decision="eligible",
         reasons=[ELIGIBLE_LOAD_CRITERIA_MET],
         criteria_results=criteria_results,
@@ -904,6 +908,7 @@ __all__ = [
     "INSUFFICIENT_NO_EXPOSURES",
     "INSUFFICIENT_NO_QUALIFYING_DEMAND",
     "INSUFFICIENT_UNQUANTIFIED_EXPOSURE",
+    "INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE",
     "INSUFFICIENT_UNSUPPORTED_INJURY_TYPE",
     "LOAD_CRITERIA_REGISTRY",
     "LOAD_ELIGIBILITY_ENGINE_VERSION",

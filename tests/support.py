@@ -1732,9 +1732,17 @@ class FakeStore:
             key=lambda row: (
                 str((row.get("event_json") or {}).get("occurred_at") or ""),
                 str(row.get("id") or ""),
+            ),
+            reverse=True,
+        )
+        rows = rows[: max(1, min(limit, 500))]
+        rows.sort(
+            key=lambda row: (
+                str((row.get("event_json") or {}).get("occurred_at") or ""),
+                str(row.get("id") or ""),
             )
         )
-        return rows[: max(1, min(limit, 500))]
+        return rows
 
     def create_adaptation_note(self, athlete_id: str, fields: dict) -> dict:
         row = {

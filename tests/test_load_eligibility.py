@@ -24,10 +24,7 @@ from api.contracts.load_eligibility import (
     IGNORED_INJURY_MISMATCH,
     IGNORED_REGION_MISMATCH,
     IGNORED_SIDE_MISMATCH,
-    INSUFFICIENT_NO_EXPOSURES,
-    INSUFFICIENT_NO_QUALIFYING_DEMAND,
-    INSUFFICIENT_RESPONSE,
-    INSUFFICIENT_UNQUANTIFIED_EXPOSURE,
+    INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE,
     INSUFFICIENT_UNSUPPORTED_INJURY_TYPE,
     LOAD_CRITERIA_REGISTRY,
     LOAD_ELIGIBILITY_ENGINE_VERSION,
@@ -35,6 +32,7 @@ from api.contracts.load_eligibility import (
     NOT_APPLICABLE_SURFACE_PATHWAY,
     LoadCriteria,
     criteria_for_injury_type,
+    resolve_injury_type,
     resolve_load_eligibility,
 )
 from api.contracts.rehab_exposure import RehabExposureEvent
@@ -49,6 +47,7 @@ from api.contracts.rehab_stage import (
     RehabStageDecision,
 )
 from api.services import today_service as today_service_module
+from api.store import SupabaseAppStore
 from fightcamp.rehab_schema import CARE_TYPE_MUSCULOSKELETAL, CARE_TYPE_WOUND_CARE
 from tests.support import FakeStore
 
@@ -191,24 +190,25 @@ def _criterion(result, name: str):
 )
 def test_01_to_04_other_identity_evidence_is_ignored(irrelevant, ignored_reason):
     result = _resolve(irrelevant, _event(1))
-    assert result.decision == "eligible"
+    assert result.decision == "insufficient_evidence"
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
     assert result.evidence_summary.exposure_count == 1
     assert result.evidence_summary.ignored_reason_counts[ignored_reason] == 1
 
 
 def test_05_copied_exposures_share_one_independent_response_group():
     result = _resolve(_event(1), _event(2), _event(3))
-    assert result.decision == "eligible"
+    assert result.decision == "insufficient_evidence"
     assert result.evidence_summary.exposure_count == 3
     assert result.evidence_summary.independent_response_group_count == 1
-    assert result.evidence_summary.qualifying_response_group_ids == [GROUP]
+    assert result.evidence_summary.qualifying_response_group_ids == []
 
 
 def test_06_separate_response_groups_remain_separate():
     second_group = "66666666-6666-6666-6666-666666666666"
     result = _resolve(_event(1), _event(2, response_group_id=second_group))
     assert result.evidence_summary.independent_response_group_count == 2
-    assert result.evidence_summary.qualifying_response_group_ids == [GROUP, second_group]
+    assert result.evidence_summary.qualifying_response_group_ids == []
 
 
 def test_34_duplicate_retry_rows_do_not_increase_evidence_count():
@@ -219,6 +219,75 @@ def test_34_duplicate_retry_rows_do_not_increase_evidence_count():
     assert result.evidence_summary.ignored_reason_counts[IGNORED_DUPLICATE_EXPOSURE] == 1
 
 
+def test_bounded_reader_keeps_newest_200_and_newest_negative_cannot_be_excluded():
+    store = FakeStore()
+    for number in range(1, 202):
+        group_id = str(UUID(int=10_000 + number))
+        row = _event(
+            number,
+            response_group_id=group_id,
+            during_response="worse" if number == 201 else "same",
+        )
+        store.create_rehab_exposure(ATHLETE, row["event_json"])
+
+    rows = store.list_rehab_exposures(
+        ATHLETE,
+        injury_id=INJURY,
+        injury_episode_id=EPISODE,
+        limit=200,
+    )
+    assert len(rows) == 200
+    assert rows[0]["event_json"]["drill_id"] == "test_drill_2"
+    assert rows[-1]["event_json"]["drill_id"] == "test_drill_201"
+
+    result = _resolve(*rows)
+    assert result.decision == "not_eligible"
+    assert FAIL_DURING_RESPONSE_WORSE in result.reason_codes
+
+
+def test_supabase_reader_fetches_descending_then_returns_chronology():
+    class Query:
+        def __init__(self):
+            self.order_call = None
+
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def order(self, column, *, desc=False):
+            self.order_call = (column, desc)
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type(
+                "Response",
+                (),
+                {
+                    "data": [
+                        {"id": "3", "occurred_at": "2026-08-20T03:00:00+00:00"},
+                        {"id": "2", "occurred_at": "2026-08-20T02:00:00+00:00"},
+                    ]
+                },
+            )()
+
+    query = Query()
+    store = object.__new__(SupabaseAppStore)
+    store.client = type("Client", (), {"table": lambda _self, _name: query})()
+    rows = store.list_rehab_exposures(
+        ATHLETE,
+        injury_id=INJURY,
+        injury_episode_id=EPISODE,
+        limit=200,
+    )
+    assert query.order_call == ("occurred_at", True)
+    assert [row["id"] for row in rows] == ["2", "3"]
+
+
 # ---------------------------------------------------------------------------
 # Uncertainty and honest completion semantics (acceptance tests 7-14)
 # ---------------------------------------------------------------------------
@@ -227,7 +296,8 @@ def test_34_duplicate_retry_rows_do_not_increase_evidence_count():
 def test_07_no_exposures_is_insufficient_not_a_failure_or_success():
     result = _resolve()
     assert result.decision == "insufficient_evidence"
-    assert result.reason_codes == [INSUFFICIENT_NO_EXPOSURES]
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
+    assert result.evidence_summary.exposure_count == 0
     assert result.eligible_for_load is False
 
 
@@ -239,7 +309,7 @@ def test_08_and_31_any_unknown_demand_dimension_cannot_qualify(field, unknown):
     kwargs = {field: unknown}
     result = _resolve(_event(1, **kwargs))
     assert result.decision == "insufficient_evidence"
-    assert result.reason_codes == [INSUFFICIENT_NO_QUALIFYING_DEMAND]
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
     assert result.evidence_summary.classification_counts == {"unusable_for_capacity": 1}
 
 
@@ -253,31 +323,30 @@ def test_09_unknown_demand_with_worse_response_is_still_negative():
 def test_10_not_sure_does_not_count_as_positive():
     result = _resolve(_event(1, during_response="not_sure"))
     assert result.decision == "insufficient_evidence"
-    assert result.reason_codes == [INSUFFICIENT_RESPONSE]
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
+    assert result.evidence_summary.classification_counts == {"incomplete_unknown": 1}
 
 
 def test_11_not_yet_known_is_not_a_favourable_delayed_response():
     result = _resolve(_event(1, next_day_response="not_yet_known"))
-    delayed = _criterion(result, "delayed_response_when_required")
-    # This supported family has no justified delayed-response requirement. The
-    # unknown answer is therefore neither a pass nor a universal blocker.
-    assert result.decision == "eligible"
-    assert delayed.status == "not_applicable"
-    assert delayed.evidence_ids == []
+    assert result.decision == "insufficient_evidence"
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
+    assert result.evidence_summary.qualifying_exposure_ids == []
 
 
 @pytest.mark.parametrize("completion_state", ["partial_amount_unknown", "performed_amount_unknown"])
 def test_12_and_13_unquantified_work_never_becomes_full_dose(completion_state):
     result = _resolve(_event(1, completion_state=completion_state))
     assert result.decision == "insufficient_evidence"
-    assert result.reason_codes == [INSUFFICIENT_UNQUANTIFIED_EXPOSURE]
-    assert _criterion(result, "completed_dose_quantified").status == "unknown"
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
+    assert result.evidence_summary.classification_counts == {"incomplete_unknown": 1}
 
 
 def test_14_missing_response_is_not_treated_as_same_or_no_symptoms():
     result = _resolve(_event(1, include_response=False))
     assert result.decision == "insufficient_evidence"
-    assert result.reason_codes == [INSUFFICIENT_RESPONSE]
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
+    assert result.evidence_summary.classification_counts == {"incomplete_unknown": 1}
 
 
 def test_missing_response_group_identity_cannot_inflate_positive_evidence():
@@ -352,6 +421,34 @@ def test_19_urgent_gate_precedes_apparently_positive_evidence():
     assert ELIGIBLE_LOAD_CRITERIA_MET not in result.reason_codes
 
 
+def test_latest_negative_response_is_current_not_eligible_evidence():
+    older_group = "66666666-6666-6666-6666-666666666666"
+    latest_group = "77777777-7777-7777-7777-777777777777"
+    result = _resolve(
+        _event(1, response_group_id=older_group, during_response="same"),
+        _event(2, response_group_id=latest_group, during_response="worse"),
+    )
+    assert result.decision == "not_eligible"
+    assert result.reason_codes == [FAIL_DURING_RESPONSE_WORSE]
+
+
+def test_historical_negative_followed_by_newer_evidence_is_unresolved_not_a_lifetime_veto():
+    older_group = "66666666-6666-6666-6666-666666666666"
+    latest_group = "77777777-7777-7777-7777-777777777777"
+    result = _resolve(
+        _event(1, response_group_id=older_group, during_response="worse"),
+        _event(2, response_group_id=latest_group, during_response="better"),
+    )
+    assert result.decision == "insufficient_evidence"
+    assert result.reason_codes == [
+        INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE,
+        FAIL_DURING_RESPONSE_WORSE,
+    ]
+    criterion = _criterion(result, "historical_negative_evidence_resolved")
+    assert criterion.status == "unknown"
+    assert criterion.response_group_ids == [older_group]
+
+
 # ---------------------------------------------------------------------------
 # Stage/camp isolation and shadow integration (tests 20-26)
 # ---------------------------------------------------------------------------
@@ -363,19 +460,20 @@ def test_20_calm_is_not_requalified_for_load():
     assert result.reason_codes == [NOT_APPLICABLE_CURRENT_STAGE]
 
 
-def test_21_restore_can_return_shadow_eligible():
+def test_21_restore_fails_closed_without_sourced_condition_criteria():
     result = _resolve(_event(1))
     assert result.current_stage == STAGE_RESTORE
-    assert result.decision == "eligible"
-    assert result.eligible_for_load is True
+    assert result.decision == "insufficient_evidence"
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
+    assert result.eligible_for_load is False
 
 
-def test_22_shadow_eligible_does_not_mutate_injury_or_stage_decision():
+def test_22_shadow_decision_does_not_mutate_injury_or_stage_decision():
     injury = _injury()
     original = dict(injury)
     stage = _stage()
     result = _resolve(_event(1), injury=injury, stage=stage)
-    assert result.decision == "eligible"
+    assert result.decision == "insufficient_evidence"
     assert injury == original
     assert stage.stage == STAGE_RESTORE
 
@@ -398,9 +496,9 @@ def test_25_and_26_camp_phase_has_zero_effect_and_is_not_an_engine_input():
         for phase in ("GPP", "SPP", "TAPER")
     ]
     assert "camp_phase" not in inspect.signature(resolve_load_eligibility).parameters
-    assert [result.decision for result in results] == ["eligible"] * 3
+    assert [result.decision for result in results] == ["insufficient_evidence"] * 3
     assert [result.reason_codes for result in results] == [
-        [ELIGIBLE_LOAD_CRITERIA_MET]
+        [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
     ] * 3
 
 
@@ -425,7 +523,7 @@ def test_today_shadow_log_does_not_change_live_stage_output(monkeypatch, caplog)
     assert "load_eligibility" not in stamped[0]
     record = next(record for record in caplog.records if "load_eligibility_shadow {" in record.message)
     payload = json.loads(record.message.split("load_eligibility_shadow ", 1)[1])
-    assert payload["result"] == "eligible"
+    assert payload["result"] == "insufficient_evidence"
     assert payload["engine_version"] == LOAD_ELIGIBILITY_ENGINE_VERSION
 
 
@@ -464,32 +562,44 @@ def test_27_unsupported_symptom_only_type_is_insufficient():
     assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
 
 
+def test_free_text_cannot_manufacture_progression_injury_type():
+    injury = _injury(description="ankle sprain?", body_area="left ankle")
+    injury.pop("injury_type")
+    assert resolve_injury_type(injury) == "unspecified"
+    result = _resolve(_event(1), injury=injury)
+    assert result.injury_type == "unspecified"
+    assert result.decision == "insufficient_evidence"
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
+
+
+def test_only_exact_structured_taxonomy_field_can_select_an_injury_type():
+    assert resolve_injury_type(_injury(injury_type="sprain")) == "sprain"
+    assert resolve_injury_type(_injury(injury_type="made_up", description="sprain")) == "unspecified"
+
+
 @pytest.mark.parametrize(
-    ("injury_type", "family"),
-    [
-        ("sprain", "soft_tissue"),
-        ("tendonitis", "overuse"),
-        ("instability", "mechanical"),
-    ],
+    "injury_type",
+    ["sprain", "strain", "tendonitis", "instability", "impingement"],
 )
-def test_28_registry_selects_the_existing_taxonomy_family(injury_type, family):
-    criteria = criteria_for_injury_type(injury_type)
-    assert criteria is LOAD_CRITERIA_REGISTRY[family]
-    assert criteria.family == family
+def test_28_taxonomy_label_without_progression_provenance_is_unsupported(injury_type):
+    assert criteria_for_injury_type(injury_type) is None
+    result = _resolve(_event(1), injury=_injury(injury_type=injury_type))
+    assert result.decision == "insufficient_evidence"
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
 
 
-def test_29_one_family_type_set_cannot_leak_into_another():
-    family_types = [criteria.injury_types for criteria in LOAD_CRITERIA_REGISTRY.values()]
-    for index, injury_types in enumerate(family_types):
-        others = set().union(*(types for i, types in enumerate(family_types) if i != index))
-        assert injury_types.isdisjoint(others)
-    assert criteria_for_injury_type("pain") is None
+def test_29_no_generic_family_rule_can_leak_across_injury_types():
+    assert dict(LOAD_CRITERIA_REGISTRY) == {}
+    assert all(
+        criteria_for_injury_type(injury_type) is None
+        for injury_type in ("sprain", "strain", "tendonitis", "instability", "pain")
+    )
 
 
 def test_30_minimal_mobility_demand_cannot_prove_loading_capacity():
     result = _resolve(_event(1, load="minimal"))
     assert result.decision == "insufficient_evidence"
-    assert result.reason_codes == [INSUFFICIENT_NO_QUALIFYING_DEMAND]
+    assert result.reason_codes == [INSUFFICIENT_UNSUPPORTED_INJURY_TYPE]
     assert result.evidence_summary.classification_counts == {"neutral_observation": 1}
 
 
