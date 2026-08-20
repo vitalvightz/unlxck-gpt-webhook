@@ -6,6 +6,8 @@ owns that surface now. Injury flagging is the remaining athlete-facing writer
 into the admin review queue, so it is what seeds the queue tests here.
 """
 
+from uuid import uuid4
+
 from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -70,6 +72,56 @@ class TestInjuryFlags:
         client, _, _ = _build_client()
         assert client.post("/api/injury-flags", json={"description": "tweak"}).status_code == 401
         assert client.get("/api/injury-flags").status_code == 401
+
+    def test_rehab_exposure_uses_validated_immutable_path(self):
+        client, store, _ = _build_client()
+        injury = client.post(
+            "/api/injury-flags",
+            headers=ATHLETE,
+            json={"body_area": "left ankle", "description": "left ankle sprain"},
+        )
+        assert injury.status_code == 201
+        assert injury.json()["episode_id"]
+        assert injury.json()["body_region"] == "ankle"
+        assert injury.json()["side"] == "left"
+        flag = store.injury_flags["athlete-1"][0]
+        event = {
+            "exposure_id": str(uuid4()),
+            "injury_id": flag["id"],
+            "injury_episode_id": flag["episode_id"],
+            "drill_id": "ankle_control",
+            "body_region": "ankle",
+            "side": "left",
+            "demand": {"target_regions": ["ankle"], "load": "low", "impact": "none", "velocity": "low"},
+            "dose_completed": {"reps": 8},
+            "occurred_at": "2026-08-20T12:00:00Z",
+            "provenance": {"source": "athlete_logged_rehab", "recorded_at": "2026-08-20T12:01:00Z"},
+        }
+        first = client.post("/api/rehab-exposures", headers=ATHLETE, json=event)
+        retry = client.post("/api/rehab-exposures", headers=ATHLETE, json=event)
+        assert first.status_code == retry.status_code == 201
+        assert len(store.rehab_exposures) == 1
+
+    def test_rehab_exposure_rejects_cross_region_and_side(self):
+        client, store, _ = _build_client()
+        client.post(
+            "/api/injury-flags",
+            headers=ATHLETE,
+            json={"body_area": "left ankle", "description": "left ankle sprain"},
+        )
+        flag = store.injury_flags["athlete-1"][0]
+        base = {
+            "exposure_id": str(uuid4()), "injury_id": flag["id"], "injury_episode_id": flag["episode_id"],
+            "drill_id": "ankle_control", "body_region": "ankle", "side": "right",
+            "demand": {"target_regions": ["ankle"], "load": "low", "impact": "none", "velocity": "low"},
+            "dose_completed": {"reps": 8}, "occurred_at": "2026-08-20T12:00:00Z",
+            "provenance": {"source": "athlete_logged_rehab", "recorded_at": "2026-08-20T12:01:00Z"},
+        }
+        assert client.post("/api/rehab-exposures", headers=ATHLETE, json=base).status_code == 422
+        base["side"] = "left"
+        base["body_region"] = "shoulder"
+        base["demand"]["target_regions"] = ["shoulder"]
+        assert client.post("/api/rehab-exposures", headers=ATHLETE, json=base).status_code == 422
 
 
 class TestAdminReviewQueue:

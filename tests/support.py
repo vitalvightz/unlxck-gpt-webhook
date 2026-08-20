@@ -123,6 +123,7 @@ class FakeStore:
         self.xp_accounts: dict[str, dict] = {}
         self.xp_awards: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
+        self.rehab_exposures: dict[str, dict] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
         self.push_subscriptions: dict[str, dict] = {}
@@ -1661,6 +1662,9 @@ class FakeStore:
             "severity": "moderate",
             "status": "open",
             "resolved_at": None,
+            "episode_id": str(uuid4()),
+            "body_region": None,
+            "side": "unknown",
             **fields,
             "created_at": _now(),
             "updated_at": _now(),
@@ -1683,10 +1687,30 @@ class FakeStore:
         for rows in self.injury_flags.values():
             for row in rows:
                 if row["id"] == flag_id:
+                    if row.get("status") == "resolved" and fields.get("status") in ("open", "monitoring"):
+                        # Mirrors the database's atomic evidence-episode trigger.
+                        row["episode_id"] = str(uuid4())
                     row.update(fields)
                     row["updated_at"] = _now()
                     return dict(row)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="injury flag not found")
+
+    def get_injury_flag_for_athlete(self, flag_id: str, athlete_id: str) -> dict | None:
+        return next(
+            (dict(row) for row in self.injury_flags.get(athlete_id, []) if row["id"] == flag_id),
+            None,
+        )
+
+    def create_rehab_exposure(self, athlete_id: str, payload: dict) -> dict:
+        exposure_id = payload["exposure_id"]
+        existing = self.rehab_exposures.get(exposure_id)
+        if existing is not None:
+            if existing["athlete_id"] != athlete_id or existing["event_json"] != payload:
+                raise HTTPException(status_code=409, detail="exposure id already used")
+            return dict(existing)
+        row = {"id": exposure_id, "athlete_id": athlete_id, "event_json": payload}
+        self.rehab_exposures[exposure_id] = row
+        return dict(row)
 
     def create_adaptation_note(self, athlete_id: str, fields: dict) -> dict:
         row = {

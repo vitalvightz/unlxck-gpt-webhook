@@ -106,6 +106,16 @@ def test_unknown_flag_id_without_identity_is_rejected_before_create():
         )
 
 
+def test_resolved_flag_re_report_is_an_owned_reopen_not_a_duplicate_create():
+    reopened = reconcile_injury_checkin(
+        declared=[_declare(flag_id="f1", status="ongoing")],
+        open_flag_ids=[],
+        resolved_flag_ids=["f1"],
+    )
+    assert [update.flag_id for update in reopened.updates] == ["f1"]
+    assert reopened.creates == []
+
+
 def test_new_injury_reported_already_resolved_is_a_noop():
     plan = reconcile_injury_checkin(
         declared=[_declare(body_area="ankle", status="resolved")],

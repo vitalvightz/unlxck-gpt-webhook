@@ -11,19 +11,30 @@ from datetime import datetime
 from typing import Literal, Mapping
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from fightcamp.rehab_schema import canonical_rehab_locations
+from fightcamp.injury_body_region import injury_body_region_context
+from fightcamp.injury_formatting import extract_laterality
 
 ExposureSide = Literal["left", "right", "bilateral", "unknown"]
 DemandLevel = Literal["minimal", "low", "moderate", "high"]
 ImpactLevel = Literal["none", "low", "moderate", "high"]
 VelocityLevel = Literal["low", "moderate", "high"]
 NextDayResponse = Literal["better", "same", "worse", "not_yet_known", "not_sure"]
-PainObservation = int | Literal["not_sure"] | None
+PainObservation = StrictInt | Literal["not_sure"] | None
+
+
+def injury_evidence_identity(body_area: str, description: str) -> dict[str, str | None]:
+    """Resolve the server-owned region and side stored with an injury flag."""
+    context = injury_body_region_context(body_area, description)
+    combined = " ".join(part for part in (body_area, description) if part)
+    side = "bilateral" if "bilateral" in combined.lower() else extract_laterality(combined)
+    return {"body_region": context.get("canonical_location"), "side": side or "unknown"}
 
 
 class ExposureDemand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     target_regions: list[str] = Field(min_length=1)
     target_tissues: list[str] | None = None
     load: DemandLevel
@@ -37,6 +48,7 @@ class ExposureDemand(BaseModel):
 
 
 class ExposureDose(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     sets: int | None = Field(default=None, ge=0)
     reps: int | None = Field(default=None, ge=0)
     duration_seconds: float | None = Field(default=None, ge=0)
@@ -54,6 +66,7 @@ class ExposureDose(BaseModel):
 
 
 class ExposureResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     pain_during: PainObservation = Field(default=None)
     pain_immediate_after: PainObservation = Field(default=None)
     next_day_response: NextDayResponse = "not_yet_known"
@@ -70,11 +83,13 @@ class ExposureResponse(BaseModel):
 
 
 class ExposureProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     source: Literal["athlete_logged_rehab", "clinician_logged_rehab", "coach_logged_rehab"]
     recorded_at: datetime
 
 
 class RehabExposureEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     exposure_id: UUID
     injury_id: UUID
     injury_episode_id: UUID
@@ -112,4 +127,3 @@ class RehabExposureEvent(BaseModel):
         if injury_side in (None, "unknown") or self.side == "unknown":
             return False
         return self.side == "bilateral" or injury_side == "bilateral" or self.side == injury_side
-

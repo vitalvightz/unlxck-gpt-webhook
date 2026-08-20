@@ -558,6 +558,10 @@ class AppStore(Protocol):
 
     def update_injury_flag(self, flag_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
+    def get_injury_flag_for_athlete(self, flag_id: str, athlete_id: str) -> dict[str, Any] | None: ...
+
+    def create_rehab_exposure(self, athlete_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
@@ -4666,6 +4670,40 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"update_injury_flag flag_id={flag_id}",
                 detail="failed to update injury flag",
+                exc=exc,
+            )
+
+    def get_injury_flag_for_athlete(self, flag_id: str, athlete_id: str) -> dict[str, Any] | None:
+        response = (
+            self.client.table("injury_flags")
+            .select("*")
+            .eq("id", flag_id)
+            .eq("athlete_id", athlete_id)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(response, "data", None) or []
+        return rows[0] if rows else None
+
+    def create_rehab_exposure(self, athlete_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Use the sole database write path; the RPC is immutable/idempotent."""
+        try:
+            response = self.client.rpc(
+                "record_rehab_exposure",
+                {"p_athlete_id": athlete_id, "p_event": payload},
+            ).execute()
+            row = getattr(response, "data", None)
+            if isinstance(row, list):
+                row = row[0] if row else None
+            if not isinstance(row, dict):
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="rehab exposure unavailable")
+            return row
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"create_rehab_exposure athlete_id={athlete_id}",
+                detail="failed to persist rehab exposure",
                 exc=exc,
             )
 

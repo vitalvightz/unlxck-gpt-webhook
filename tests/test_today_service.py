@@ -9,6 +9,7 @@ import copy
 from datetime import date, datetime, timedelta, timezone
 from types import MappingProxyType, SimpleNamespace
 from unittest import mock
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -1567,6 +1568,56 @@ class TestCommandView:
         assert view.open_injuries == []
         injury_categories = {"active_injury_worse", "reminder"}
         assert not (injury_categories & {risk.category for risk in view.risk_watch})
+
+    def test_resolved_injury_re_report_rotates_episode_once(self):
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "left ankle", "status": "ongoing"}]},
+        )
+        flag = opened["open_injuries"][0]
+        episode_a = next(row for row in store.injury_flags[ATHLETE] if row["id"] == flag["id"])["episode_id"]
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag["id"], "status": "resolved"}]},
+        )
+
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag["id"], "status": "ongoing"}]},
+        )
+        episode_b = next(row for row in store.injury_flags[ATHLETE] if row["id"] == flag["id"])["episode_id"]
+        assert episode_b != episode_a
+
+        # A refresh/retry sees an open flag, so it does not rotate again.
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag["id"], "status": "ongoing"}]},
+        )
+        assert next(row for row in store.injury_flags[ATHLETE] if row["id"] == flag["id"])["episode_id"] == episode_b
+
+        from api.contracts.rehab_exposure import RehabExposureEvent
+
+        old_event = RehabExposureEvent.model_validate(
+            {
+                "exposure_id": str(uuid4()),
+                "injury_id": flag["id"],
+                "injury_episode_id": episode_a,
+                "drill_id": "ankle_control",
+                "body_region": "ankle",
+                "side": "left",
+                "demand": {"target_regions": ["ankle"], "load": "low", "impact": "none", "velocity": "low"},
+                "dose_completed": {"reps": 8},
+                "occurred_at": "2026-06-18T12:00:00Z",
+                "provenance": {"source": "athlete_logged_rehab", "recorded_at": "2026-06-18T12:01:00Z"},
+            }
+        )
+        current = next(row for row in store.injury_flags[ATHLETE] if row["id"] == flag["id"])
+        assert not old_event.is_attributable_to(current)
 
     def test_injury_checkin_status_update_preserves_existing_severity(self):
         store = _store_with_plan()

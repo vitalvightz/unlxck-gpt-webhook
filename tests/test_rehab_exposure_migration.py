@@ -13,11 +13,31 @@ def test_exposure_is_bound_to_athlete_injury_and_episode():
     assert "references public.injury_flags (id, athlete_id, episode_id)" in SQL
 
 
+def test_resolved_to_active_transition_rotates_episode_atomically():
+    assert "create trigger rotate_injury_evidence_episode" in SQL
+    assert "old.status = 'resolved' and new.status in ('open', 'monitoring')" in SQL
+    assert "new.episode_id := gen_random_uuid()" in SQL
+
+
 def test_exposure_rls_is_owner_scoped():
     assert "alter table public.rehab_exposures enable row level security" in SQL
-    for operation in ("select", "insert", "update", "delete"):
-        assert f'"rehab_exposures_owner_{operation}"' in SQL
-    assert SQL.count("athlete_id = auth.uid()") >= 5
+    assert '"rehab_exposures_owner_select"' in SQL
+    assert "for select using (athlete_id = auth.uid())" in SQL
+
+
+def test_authenticated_clients_cannot_mutate_evidence_directly():
+    assert "revoke all on table public.rehab_exposures from anon, authenticated, service_role" in SQL
+    assert "grant select on table public.rehab_exposures to authenticated" in SQL
+    assert "grant select, insert" not in SQL
+    assert "for update" not in SQL
+    assert "for delete" not in SQL
+
+
+def test_validated_rpc_is_service_only_and_rejects_identity_mismatch():
+    assert "create or replace function public.record_rehab_exposure" in SQL
+    assert "grant execute on function public.record_rehab_exposure(uuid, jsonb) to service_role" in SQL
+    assert "exposure does not match injury episode, region and side" in SQL
+    assert "invalid injury-specific pain response" in SQL
 
 
 def test_persistence_keeps_prescribed_and_completed_dose_separate():

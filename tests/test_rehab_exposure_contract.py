@@ -105,3 +105,10 @@ def test_invalid_or_mismatched_demand_region_fails():
 def test_contract_has_no_generic_session_or_progression_evidence_fields():
     fields = RehabExposureEvent.model_fields
     assert not {"camp_phase", "session_completed", "session_rpe", "pain_after", "updated_at", "tolerated"} & set(fields)
+
+
+def test_unknown_contract_fields_cannot_bypass_validation():
+    payload = _event()
+    payload["response"]["tolerated"] = True
+    with pytest.raises(ValidationError):
+        RehabExposureEvent.model_validate(payload)

@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.compliance_guards import require_health_feature_access
 from api.contracts.injury_checkin import MAX_INFECTION_SIGNS
+from api.contracts.rehab_exposure import RehabExposureEvent, injury_evidence_identity
 from api.contracts.readiness_message import classify_injury_surface
 from api.models import (
     AdaptationNoteRecord,
@@ -95,6 +96,9 @@ def _map_injury_flag(row: dict[str, Any]) -> InjuryFlagRecord:
         athlete_id=str(row["athlete_id"]),
         plan_id=str(row["plan_id"]) if row.get("plan_id") else None,
         source=str(row.get("source") or "checkin"),
+        episode_id=str(row["episode_id"]) if row.get("episode_id") else None,
+        body_region=str(row["body_region"]) if row.get("body_region") else None,
+        side=str(row.get("side") or "unknown"),
         body_area=str(row.get("body_area") or ""),
         description=str(row.get("description") or ""),
         severity=str(row.get("severity") or "moderate"),
@@ -225,6 +229,7 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
                 "description": request_body.description,
                 "severity": request_body.severity,
                 "status": "open",
+                **injury_evidence_identity(request_body.body_area, request_body.description),
             },
         )
         decision = AdaptationDecision(
@@ -242,6 +247,25 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
             injury_flag_id=str(flag_row["id"]),
         )
         return _map_injury_flag(flag_row)
+
+    @router.post("/api/rehab-exposures", response_model=RehabExposureEvent, status_code=status.HTTP_201_CREATED)
+    def record_rehab_exposure(
+        event: RehabExposureEvent,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> RehabExposureEvent:
+        """Validate and append one immutable injury-specific observation."""
+        require_health_feature_access(profile)
+        injury = store.get_injury_flag_for_athlete(str(event.injury_id), profile.athlete_id)
+        if injury is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="injury not found")
+        if not event.is_attributable_to(injury):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="exposure does not match the injury episode, region and side",
+            )
+        store.create_rehab_exposure(profile.athlete_id, event.model_dump(mode="json"))
+        return event
 
     @router.get("/api/injury-flags", response_model=list[InjuryFlagRecord])
     def list_injury_flags(

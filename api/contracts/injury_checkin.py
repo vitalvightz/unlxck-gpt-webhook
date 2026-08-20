@@ -618,20 +618,23 @@ def reconcile_injury_checkin(
     *,
     declared: Sequence[DeclaredInjury],
     open_flag_ids: Iterable[str],
+    resolved_flag_ids: Iterable[str] = (),
 ) -> ReconciliationPlan:
     """Build the create/update plan for a day's declared injuries.
 
     A ``flag_id`` is only honoured when it belongs to the athlete's current open
-    flags (``open_flag_ids``) — anything else is treated as a new injury, so a
-    stale or foreign id can never mutate another athlete's flag.
+    or resolved flags. A resolved flag reported active is a genuine reopen; the
+    database rotates its evidence episode atomically. Anything foreign is
+    treated as new, so it can never mutate another athlete's flag.
     """
     known = {str(flag_id) for flag_id in open_flag_ids}
+    resolved = {str(flag_id) for flag_id in resolved_flag_ids}
     creates: list[dict[str, object]] = []
     updates: list[FlagUpdate] = []
 
     for injury in declared:
         flag_status = _FLAG_STATUS_BY_REPORT[injury.status]
-        if injury.flag_id and injury.flag_id in known:
+        if injury.flag_id and injury.flag_id in known | resolved:
             fields: dict[str, object] = {
                 "status": flag_status,
                 "latest_reported_status": injury.status,
