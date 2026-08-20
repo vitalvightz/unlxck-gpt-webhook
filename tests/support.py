@@ -1712,6 +1712,30 @@ class FakeStore:
         self.rehab_exposures[exposure_id] = row
         return dict(row)
 
+    def list_rehab_exposures(
+        self,
+        athlete_id: str,
+        *,
+        injury_id: str,
+        injury_episode_id: str,
+        limit: int = 200,
+    ) -> list[dict]:
+        rows = [
+            dict(row)
+            for row in self.rehab_exposures.values()
+            if row.get("athlete_id") == athlete_id
+            and str((row.get("event_json") or {}).get("injury_id") or "") == injury_id
+            and str((row.get("event_json") or {}).get("injury_episode_id") or "")
+            == injury_episode_id
+        ]
+        rows.sort(
+            key=lambda row: (
+                str((row.get("event_json") or {}).get("occurred_at") or ""),
+                str(row.get("id") or ""),
+            )
+        )
+        return rows[: max(1, min(limit, 500))]
+
     def create_adaptation_note(self, athlete_id: str, fields: dict) -> dict:
         row = {
             "id": str(uuid4()),

@@ -562,6 +562,15 @@ class AppStore(Protocol):
 
     def create_rehab_exposure(self, athlete_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
 
+    def list_rehab_exposures(
+        self,
+        athlete_id: str,
+        *,
+        injury_id: str,
+        injury_episode_id: str,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]: ...
+
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
@@ -4706,6 +4715,27 @@ class SupabaseAppStore:
                 detail="failed to persist rehab exposure",
                 exc=exc,
             )
+
+    def list_rehab_exposures(
+        self,
+        athlete_id: str,
+        *,
+        injury_id: str,
+        injury_episode_id: str,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        """Read one exact athlete/injury/episode in evidence chronology."""
+        response = (
+            self.client.table("rehab_exposures")
+            .select("id,athlete_id,event_json,occurred_at")
+            .eq("athlete_id", athlete_id)
+            .eq("injury_id", injury_id)
+            .eq("injury_episode_id", injury_episode_id)
+            .order("occurred_at")
+            .limit(max(1, min(limit, 500)))
+            .execute()
+        )
+        return getattr(response, "data", None) or []
 
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(

@@ -15,6 +15,7 @@ message engine.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import uuid
@@ -43,9 +44,10 @@ from api.contracts.injury_checkin import (
     reconcile_injury_checkin,
 )
 from api.contracts.injury_signal import derive_injury_signal
+from api.contracts.load_eligibility import resolve_load_eligibility
 from api.contracts.rehab_exposure import injury_evidence_identity
 from api.contracts.landing import LandingDecision, resolve_landing
-from api.contracts.rehab_stage import resolve_rehab_stages
+from api.contracts.rehab_stage import RehabStageDecision, resolve_rehab_stages
 from api.contracts.readiness_message import (
     ReadinessAdjustment,
     ReadinessCheckin,
@@ -500,6 +502,76 @@ def _with_surface_class(injuries: Sequence[Mapping[str, Any]]) -> list[dict[str,
 #: evidence counts to mean something, bounded so a Today read stays cheap.
 _REHAB_STAGE_HISTORY_LIMIT = 14
 
+#: A bounded history for the read-only PR4 shadow evaluator. There is no count
+#: threshold: the limit only protects the Today read from an unbounded query.
+_LOAD_ELIGIBILITY_EXPOSURE_LIMIT = 200
+
+
+def _log_load_eligibility_shadow(
+    *,
+    store: AppStore,
+    athlete_id: str,
+    injury: Mapping[str, Any],
+    stage_decision: RehabStageDecision,
+) -> None:
+    """Evaluate and log PR4 diagnostics without returning programming state."""
+
+    injury_id = str(injury.get("id") or "")
+    episode_id = str(injury.get("episode_id") or "")
+    try:
+        exposures = store.list_rehab_exposures(
+            athlete_id,
+            injury_id=injury_id,
+            injury_episode_id=episode_id,
+            limit=_LOAD_ELIGIBILITY_EXPOSURE_LIMIT,
+        )
+        result = resolve_load_eligibility(
+            athlete_id=athlete_id,
+            injury=injury,
+            stage_decision=stage_decision,
+            exposure_rows=exposures,
+        )
+    except Exception:
+        # An evidence-read or evaluator failure is not "no evidence" and cannot
+        # affect the live stage. Keep the diagnostic distinction in the log.
+        logger.exception(
+            "[today] load_eligibility_shadow_unavailable athlete_id=%s injury_id=%s episode_id=%s",
+            athlete_id,
+            injury_id,
+            episode_id,
+        )
+        return
+
+    summary = result.evidence_summary
+    rejected = [
+        {
+            "exposure_id": assessment.exposure_id,
+            "response_group_id": assessment.response_group_id,
+            "classification": assessment.classification,
+            "reason_codes": assessment.reason_codes,
+        }
+        for assessment in summary.assessments
+        if assessment.classification != "qualifying_positive_candidate"
+    ]
+    logger.info(
+        "[today] load_eligibility_shadow %s",
+        json.dumps(
+            {
+                "injury_id": result.injury_id,
+                "episode_id": result.injury_episode_id,
+                "result": result.decision,
+                "reason_codes": result.reason_codes,
+                "qualifying_evidence_ids": summary.qualifying_exposure_ids,
+                "qualifying_response_group_ids": summary.qualifying_response_group_ids,
+                "rejected_evidence": rejected,
+                "ignored_reason_counts": summary.ignored_reason_counts,
+                "engine_version": result.engine_version,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+    )
+
 
 def _with_rehab_stage(
     injuries: Sequence[Mapping[str, Any]],
@@ -547,6 +619,12 @@ def _with_rehab_stage(
         row["rehab_stage"] = decision.stage
         row["rehab_stage_reasons"] = list(decision.reasons)
         row["rehab_care_pathway"] = decision.care_pathway
+        _log_load_eligibility_shadow(
+            store=store,
+            athlete_id=athlete_id,
+            injury=row,
+            stage_decision=decision,
+        )
     return rows
 
 
