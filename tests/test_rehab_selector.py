@@ -1,14 +1,20 @@
 from copy import deepcopy
 
 from api.contracts.rehab_stage import MAX_RESOLVABLE_STAGE, STAGE_RESTORE
-from fightcamp.rehab_selector import select_rehab_candidate
 from fightcamp import rehab_protocols
+from fightcamp.rehab_schema import split_phase_progression
+from fightcamp.rehab_selector import select_rehab_candidate
 
 
 def injury(**overrides):
     value = {
-        "athlete_id": "athlete-a", "id": "injury-a", "episode_id": "episode-a",
-        "body_region": "ankle", "side": "left", "injury_type": "sprain", "severity": "mild",
+        "athlete_id": "athlete-a",
+        "id": "injury-a",
+        "episode_id": "episode-a",
+        "body_region": "ankle",
+        "side": "left",
+        "injury_type": "sprain",
+        "severity": "low",
     }
     value.update(overrides)
     return value
@@ -16,26 +22,74 @@ def injury(**overrides):
 
 def drill(identifier, stage="restore", **overrides):
     value = {
-        "id": identifier, "rehab_stage": stage, "target_regions": ["ankle"],
-        "injury_type": "sprain", "laterality_applicability": "any", "care_pathway": "msk",
-        "allowed_severities": ["mild", "moderate"], "load": "low", "impact": "none", "velocity": "low",
+        "id": identifier,
+        "rehab_stage": stage,
+        "target_regions": ["ankle"],
+        "injury_type": "sprain",
+        "laterality_applicability": "side_specific",
+        "care_pathway": "msk",
+        "allowed_severities": ["low", "moderate"],
+        "function": "control",
+        "load": "low",
+        "impact": "none",
+        "velocity": "low",
     }
     value.update(overrides)
     return value
 
 
+def exposure(
+    drill_id,
+    *,
+    during="same",
+    next_day="not_yet_known",
+    occurred_at="2026-08-20T10:00:00+00:00",
+    **overrides,
+):
+    event = {
+        "athlete_id": "athlete-a",
+        "injury_id": "injury-a",
+        "injury_episode_id": "episode-a",
+        "body_region": "ankle",
+        "side": "left",
+        "drill_id": drill_id,
+        "occurred_at": occurred_at,
+        "response": {
+            "during_response": during,
+            "next_day_response": next_day,
+            "stopped_due_to_symptoms": False,
+            "worsening_reported": False,
+        },
+    }
+    event.update(overrides)
+    return event
+
+
 def selected(candidates, **kwargs):
-    return select_rehab_candidate(injury=kwargs.pop("injury", injury()), rehab_stage=kwargs.pop("stage", "restore"), candidates=candidates, **kwargs)
+    return select_rehab_candidate(
+        injury=kwargs.pop("injury", injury()),
+        rehab_stage=kwargs.pop("stage", "restore"),
+        candidates=candidates,
+        **kwargs,
+    )
 
 
 def test_exact_stage_dominates_and_later_stage_is_rejected():
-    result = selected([drill("calm", "calm"), drill("load", "load"), drill("restore")])
+    result = selected(
+        [
+            drill("calm", "calm"),
+            drill("load", "load"),
+            drill("restore"),
+        ]
+    )
     assert result.selected_drill_id == "restore"
-    assert dict((r.drill_id, r.reason_codes) for r in result.rejected_candidates)["load"] == ("REJECT_STAGE_TOO_ADVANCED",)
+    rejected = {item.drill_id: item.reason_codes for item in result.rejected_candidates}
+    assert rejected["load"] == ("REJECT_STAGE_TOO_ADVANCED",)
 
 
 def test_calm_cannot_select_restore_or_load_and_restore_cannot_select_load():
-    assert selected([drill("restore"), drill("load", "load")], stage="calm").selected_drill_id is None
+    result = selected([drill("restore"), drill("load", "load")], stage="calm")
+    assert result.selected_drill_id is None
     assert selected([drill("load", "load")], stage="restore").selected_drill_id is None
 
 
@@ -47,42 +101,96 @@ def test_non_live_stages_are_unreachable_and_cap_is_unchanged():
 
 def test_surface_wrong_region_family_severity_and_equipment_are_hard_rejections():
     cases = [
-        (drill("surface", care_pathway="surface"), "REJECT_SURFACE_PATHWAY"),
+        (drill("surface", care_pathway="wound_care"), "REJECT_SURFACE_PATHWAY"),
         (drill("knee", target_regions=["knee"]), "REJECT_REGION_MISMATCH"),
         (drill("strain", injury_type="strain"), "REJECT_INJURY_FAMILY"),
-        (drill("severe", allowed_severities=["severe"]), "REJECT_SEVERITY"),
+        (drill("high", allowed_severities=["high"]), "REJECT_SEVERITY"),
     ]
     for candidate, reason in cases:
         result = selected([candidate])
         assert reason in result.rejected_candidates[0].reason_codes
-    result = selected([drill("band", equipment=["band"])], available_equipment=["bodyweight"])
+
+    result = selected(
+        [drill("band", equipment=["band"])],
+        available_equipment=["bodyweight"],
+    )
     assert "REJECT_EQUIPMENT_UNAVAILABLE" in result.rejected_candidates[0].reason_codes
 
 
+def test_severity_aliases_are_normalized_to_bank_contract():
+    low = drill("low", allowed_severities=["low"])
+    high = drill("high", allowed_severities=["high"])
+
+    assert selected([low], injury=injury(severity="low")).selected_drill_id == "low"
+    assert selected([low], injury=injury(severity="mild")).selected_drill_id == "low"
+    assert selected([high], injury=injury(severity="severe")).selected_drill_id == "high"
+
+    unknown = selected([low], injury=injury(severity="unknown"))
+    assert "REJECT_UNKNOWN_REQUIRED_SEVERITY" in unknown.rejected_candidates[0].reason_codes
+
+
 def test_exact_region_and_family_beat_generic_fallbacks():
-    generic = drill("a_generic", target_regions=["generic"], injury_type="unspecified")
+    generic = drill(
+        "a_generic",
+        target_regions=["generic"],
+        injury_type="unspecified",
+    )
     exact = drill("z_exact")
     assert selected([generic, exact]).selected_drill_id == "z_exact"
 
 
-def test_laterality_specificity_and_unknown_injury_side_fail_closed_when_required():
-    assert selected([drill("left", laterality_applicability="left"), drill("any")]).selected_drill_id == "left"
-    unknown = injury(side="unknown")
-    result = selected([drill("left", laterality_applicability="left")], injury=unknown)
-    assert "REJECT_LATERALITY_MISMATCH" in result.rejected_candidates[0].reason_codes
-    bilateral = selected([drill("both", laterality_applicability="bilateral")], injury=injury(side="bilateral"))
-    assert bilateral.selected_drill_id == "both"
+def test_canonical_laterality_contract_fails_closed_when_required():
+    side_specific = drill("side", laterality_applicability="side_specific")
+    bilateral_only = drill("both", laterality_applicability="bilateral_only")
+    not_applicable = drill("na", laterality_applicability="not_applicable")
+
+    assert selected([side_specific]).selected_drill_id == "side"
+
+    unknown = selected([side_specific], injury=injury(side="unknown"))
+    assert (
+        "REJECT_UNKNOWN_REQUIRED_LATERALITY"
+        in unknown.rejected_candidates[0].reason_codes
+    )
+
+    assert (
+        selected([bilateral_only], injury=injury(side="bilateral")).selected_drill_id
+        == "both"
+    )
+    unilateral = selected([bilateral_only], injury=injury(side="left"))
+    assert "REJECT_LATERALITY_MISMATCH" in unilateral.rejected_candidates[0].reason_codes
+
+    assert (
+        selected([not_applicable], injury=injury(side="unknown")).selected_drill_id
+        == "na"
+    )
+    unknown_candidate = selected(
+        [drill("unknown", laterality_applicability="unknown")]
+    )
+    assert (
+        "REJECT_UNKNOWN_REQUIRED_LATERALITY"
+        in unknown_candidate.rejected_candidates[0].reason_codes
+    )
 
 
 def test_unknown_stage_and_region_are_not_reinterpreted_as_compatible():
-    result = selected([drill("unknown", rehab_stage=None), drill("no_region", target_regions=None)])
+    result = selected(
+        [
+            drill("unknown", rehab_stage=None),
+            drill("no_region", target_regions=None),
+        ]
+    )
     reasons = {item.drill_id: item.reason_codes for item in result.rejected_candidates}
     assert "REJECT_UNKNOWN_REQUIRED_STAGE" in reasons["unknown"]
     assert "REJECT_UNKNOWN_REQUIRED_REGION" in reasons["no_region"]
 
 
 def test_known_demand_beats_unknown_only_after_clinical_dimensions_tie():
-    unknown = drill("a_unknown", load="unknown", impact="unknown", velocity="unknown")
+    unknown = drill(
+        "a_unknown",
+        load="unknown",
+        impact="unknown",
+        velocity="unknown",
+    )
     known = drill("z_known")
     assert selected([unknown, known]).selected_drill_id == "z_known"
 
@@ -95,22 +203,120 @@ def test_order_independence_and_canonical_id_tie_break():
     assert {selected(deepcopy(bank)).selected_drill_id for _ in range(10)} == {expected}
 
 
-def test_exact_episode_negative_excludes_drill_but_unrelated_evidence_has_no_effect():
-    negative = {
-        "athlete_id": "athlete-a", "injury_id": "injury-a", "injury_episode_id": "episode-a",
-        "drill_id": "alpha", "response": {"during_response": "worse"},
-    }
+def test_exact_episode_region_and_side_negative_evidence_is_isolated():
+    negative = exposure("alpha", during="worse")
     bank = [drill("alpha"), drill("beta")]
-    assert selected(bank, exposures=[negative]).selected_drill_id == "beta"
-    for changed in (
-        {"injury_id": "other"}, {"injury_episode_id": "old"}, {"athlete_id": "other"},
-    ):
+    result = selected(bank, exposures=[negative])
+    assert result.selected_drill_id == "beta"
+    rejected = {item.drill_id: item.reason_codes for item in result.rejected_candidates}
+    assert "REJECT_UNRESOLVED_NEGATIVE_EXPOSURE" in rejected["alpha"]
+
+    changed_identity = (
+        {"injury_id": "other"},
+        {"injury_episode_id": "old"},
+        {"athlete_id": "other"},
+        {"body_region": "knee"},
+        {"side": "right"},
+    )
+    for changed in changed_identity:
         event = {**negative, **changed}
         assert selected(bank, exposures=[event]).selected_drill_id == "alpha"
 
 
-def test_free_text_camp_phase_session_burden_and_shadow_load_fields_are_not_inputs():
-    noisy = injury(description="maybe torn Achilles", camp_phase="TAPER", global_rpe=10, session_pain=10, eligible_for_load=True)
+def test_historical_negative_is_uncertainty_not_permanent_blacklist():
+    adverse = exposure(
+        "alpha",
+        during="worse",
+        occurred_at="2026-08-20T10:00:00+00:00",
+    )
+    newer_non_adverse = exposure(
+        "alpha",
+        during="same",
+        occurred_at="2026-08-20T12:00:00+00:00",
+    )
+
+    clean_alternative = selected(
+        [drill("alpha"), drill("beta")],
+        exposures=[adverse, newer_non_adverse],
+    )
+    assert clean_alternative.selected_drill_id == "beta"
+
+    only_candidate = selected(
+        [drill("alpha")],
+        exposures=[adverse, newer_non_adverse],
+    )
+    assert only_candidate.selected_drill_id == "alpha"
+    assert (
+        only_candidate.selection_reason
+        == "SELECT_DETERMINISTIC_WITH_HISTORICAL_NEGATIVE_UNCERTAINTY"
+    )
+    factors = {factor.factor: factor.result for factor in only_candidate.ranking_factors}
+    assert factors["historical_negative"] == "uncertainty"
+    assert only_candidate.rehab_stage == "restore"
+    assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
+
+
+def test_not_sure_does_not_resolve_negative_exposure():
+    adverse = exposure(
+        "alpha",
+        during="worse",
+        occurred_at="2026-08-20T10:00:00+00:00",
+    )
+    uncertain = exposure(
+        "alpha",
+        during="not_sure",
+        occurred_at="2026-08-20T12:00:00+00:00",
+    )
+    result = selected([drill("alpha")], exposures=[adverse, uncertain])
+    assert result.selected_drill_id is None
+    assert (
+        "REJECT_UNRESOLVED_NEGATIVE_EXPOSURE"
+        in result.rejected_candidates[0].reason_codes
+    )
+
+
+def test_function_and_continuity_context_rank_without_overriding_safety():
+    control = drill("control", function="control")
+    mobility = drill("mobility", function="mobility")
+
+    function_result = selected(
+        [control, mobility],
+        injury=injury(session_rehab_function="mobility"),
+    )
+    assert function_result.selected_drill_id == "mobility"
+
+    continuity_result = selected(
+        [control, mobility],
+        injury=injury(current_rehab_drill_id="mobility"),
+    )
+    assert continuity_result.selected_drill_id == "mobility"
+
+    adverse = exposure(
+        "mobility",
+        during="worse",
+        occurred_at="2026-08-20T10:00:00+00:00",
+    )
+    newer_non_adverse = exposure(
+        "mobility",
+        during="same",
+        occurred_at="2026-08-20T12:00:00+00:00",
+    )
+    safety_first = selected(
+        [control, mobility],
+        injury=injury(current_rehab_drill_id="mobility"),
+        exposures=[adverse, newer_non_adverse],
+    )
+    assert safety_first.selected_drill_id == "control"
+
+
+def test_free_text_camp_phase_global_burden_and_shadow_load_are_not_inputs():
+    noisy = injury(
+        description="maybe torn Achilles",
+        camp_phase="TAPER",
+        global_rpe=10,
+        session_pain=10,
+        eligible_for_load=True,
+    )
     result = selected([drill("restore"), drill("load", "load")], injury=noisy)
     assert result.selected_drill_id == "restore"
     assert all("description" not in factor.factor for factor in result.ranking_factors)
@@ -118,31 +324,114 @@ def test_free_text_camp_phase_session_burden_and_shadow_load_fields_are_not_inpu
 
 def test_result_contract_is_auditable_and_identity_is_per_injury():
     result = selected([drill("restore")])
-    assert (result.injury_id, result.injury_episode_id, result.rehab_stage) == ("injury-a", "episode-a", "restore")
+    assert (result.injury_id, result.injury_episode_id, result.rehab_stage) == (
+        "injury-a",
+        "episode-a",
+        "restore",
+    )
     assert result.candidate_count == result.eligible_candidate_count == 1
-    assert result.selector_version == "1"
+    assert result.selector_version == "2"
 
 
-def test_authoritative_bank_option_path_returns_only_ranked_live_stage_drill(monkeypatch):
-    bank = [{
-        "location": "ankle", "type": "sprain", "phase_progression": "GPP → SPP → TAPER",
-        "drills": [drill("load", "load", name="Load", notes="later"), drill("restore", name="Restore", notes="now")],
-    }]
+def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypatch):
+    bank = [
+        {
+            "location": "ankle",
+            "type": "sprain",
+            "phase_progression": "GPP → SPP → TAPER",
+            "drills": [
+                drill("load", "load", name="Load", notes="later"),
+                drill("restore", name="Restore", notes="now"),
+            ],
+        }
+    ]
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
     monkeypatch.setattr(rehab_protocols, "get_rehab_locations", lambda: {"ankle"})
+
     options = rehab_protocols.rehab_drill_options_for_phase(
-        "sprain", "ankle", "TAPER", injury=injury(), rehab_stage="restore"
+        "sprain",
+        "ankle",
+        "TAPER",
+        injury=injury(),
+        rehab_stage="restore",
     )
     assert [option["drill"]["id"] for option in options] == ["restore"]
+    assert set(options[0]) == {"line", "drill", "location", "type"}
 
 
-def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(monkeypatch):
-    bank = [{
-        "location": "ankle", "type": "sprain", "phase_progression": "GPP",
-        "drills": [drill("one", name="One", notes="dose")],
-    }]
+def test_real_bank_live_stage_path_preserves_option_contract():
+    compatible = None
+    for entry in rehab_protocols.get_rehab_bank():
+        phases = split_phase_progression(entry.get("phase_progression"))
+        if not phases:
+            continue
+        for bank_drill in entry.get("drills", []) or []:
+            stage = str(bank_drill.get("rehab_stage") or "").strip().lower()
+            applicability = str(
+                bank_drill.get("laterality_applicability") or ""
+            ).strip().lower()
+            severities = bank_drill.get("allowed_severities") or []
+            regions = bank_drill.get("target_regions") or []
+            if stage not in {"calm", "restore"}:
+                continue
+            if applicability not in {
+                "side_specific",
+                "bilateral_only",
+                "not_applicable",
+            }:
+                continue
+            if not severities or entry.get("location") not in regions:
+                continue
+            compatible = (entry, bank_drill, phases[0], stage, applicability)
+            break
+        if compatible:
+            break
+
+    assert compatible is not None, "real rehab bank has no live-stage compatible drill"
+    entry, bank_drill, phase, stage, applicability = compatible
+    side = "bilateral" if applicability == "bilateral_only" else "left"
+    real_injury = injury(
+        body_region=entry["location"],
+        injury_type=entry["type"],
+        severity=bank_drill["allowed_severities"][0],
+        side=side,
+    )
+
+    options = rehab_protocols.rehab_drill_options_for_phase(
+        entry["type"],
+        entry["location"],
+        phase,
+        injury=real_injury,
+        rehab_stage=stage,
+    )
+
+    assert len(options) == 1
+    option = options[0]
+    assert set(option) == {"line", "drill", "location", "type"}
+    assert option["drill"]["id"]
+    assert rehab_protocols.rehab_drill_by_id(option["drill"]["id"]) is not None
+    assert option["drill"]["rehab_stage"] == stage
+    assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
+
+
+def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
+    monkeypatch,
+):
+    bank = [
+        {
+            "location": "ankle",
+            "type": "sprain",
+            "phase_progression": "GPP",
+            "drills": [drill("one", name="One", notes="dose")],
+        }
+    ]
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
     monkeypatch.setattr(rehab_protocols, "get_rehab_locations", lambda: {"ankle"})
-    option = rehab_protocols.rehab_drill_options_for_phase("sprain", "ankle", "GPP")[0]
+
+    option = rehab_protocols.rehab_drill_options_for_phase(
+        "sprain",
+        "ankle",
+        "GPP",
+    )[0]
     assert set(option) == {"line", "drill", "location", "type"}
     assert option["drill"]["id"] == "one"
