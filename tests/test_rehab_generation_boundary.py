@@ -174,72 +174,157 @@ def test_two_same_region_injuries_resolve_independently():
     assert settling_flag["episode_id"] != flaring_flag["episode_id"]
 
 
-def test_merge_keeps_one_episodes_context_atomic():
-    """A shared-location group adopts one episode whole — no field is blended."""
-    restore_entry = {
+def _ankle_entry(injury_id, episode_id, injury_type, stage, exposures=()):
+    return {
         "canonical_location": "ankle",
         "location": "ankle",
-        "injury_type": "sprain",
-        "rehab_type": "sprain",
+        "injury_type": injury_type,
+        "rehab_type": injury_type,
         "severity": "moderate",
         "laterality": "left",
         "athlete_id": ATHLETE,
-        "injury_id": "injury-restore",
-        "episode_id": "episode-restore",
-        "rehab_stage": STAGE_RESTORE,
-        "rehab_exposures": [{"drill_id": "restore-drill"}],
-    }
-    calm_entry = {
-        "canonical_location": "ankle",
-        "location": "ankle",
-        "injury_type": "tendinopathy",
-        "rehab_type": "tendinopathy",
-        "severity": "moderate",
-        "laterality": "left",
-        "athlete_id": ATHLETE,
-        "injury_id": "injury-calm",
-        "episode_id": "episode-calm",
-        "rehab_stage": STAGE_CALM,
-        "rehab_exposures": [{"drill_id": "calm-drill"}],
+        "injury_id": injury_id,
+        "episode_id": episode_id,
+        "rehab_stage": stage,
+        "rehab_exposures": list(exposures),
     }
 
-    merged = rehab_protocols._merge_injuries_by_location([restore_entry, calm_entry])
-    group = next(g for g in merged if g.get("rehab_stage"))
 
-    # The most-protective episode (CALM) wins, and every context field belongs
-    # to THAT episode. The RESTORE episode's exposures or identity must never
-    # ride along with the CALM stage.
-    assert group["rehab_stage"] == STAGE_CALM
-    assert group["injury_id"] == "injury-calm"
-    assert group["episode_id"] == "episode-calm"
-    assert group["rehab_exposures"] == [{"drill_id": "calm-drill"}]
+def test_merge_retains_every_episode_independently():
+    """A shared-location group keeps BOTH episodes whole, each with its own context.
 
+    The atomic fields are a most-protective presentation summary; the episode
+    list is what clinical selection reads, and it must carry each injury's own
+    identity, stage, type and exposure trail with nothing blended between them.
+    """
+    restore_entry = _ankle_entry(
+        "injury-restore", "episode-restore", "sprain", STAGE_RESTORE,
+        [{"drill_id": "restore-drill"}],
+    )
+    calm_entry = _ankle_entry(
+        "injury-calm", "episode-calm", "tendinopathy", STAGE_CALM,
+        [{"drill_id": "calm-drill"}],
+    )
 
-def test_merge_is_order_independent():
-    def entry(injury_id, episode_id, stage, drill):
-        return {
-            "canonical_location": "ankle",
-            "location": "ankle",
-            "injury_type": "sprain",
-            "rehab_type": "sprain",
-            "severity": "moderate",
-            "laterality": "left",
-            "injury_id": injury_id,
-            "episode_id": episode_id,
-            "rehab_stage": stage,
-            "rehab_exposures": [{"drill_id": drill}],
+    group = next(
+        g
+        for g in rehab_protocols._merge_injuries_by_location([restore_entry, calm_entry])
+        if g.get("rehab_episodes")
+    )
+    episodes = {e["injury_id"]: e for e in group["rehab_episodes"]}
+    assert set(episodes) == {"injury-restore", "injury-calm"}
+
+    # Each episode keeps its own stage, type and evidence — never the other's.
+    assert episodes["injury-restore"]["rehab_stage"] == STAGE_RESTORE
+    assert episodes["injury-restore"]["injury_type"] == "sprain"
+    assert episodes["injury-restore"]["rehab_exposures"] == [{"drill_id": "restore-drill"}]
+    assert episodes["injury-calm"]["rehab_stage"] == STAGE_CALM
+    assert episodes["injury-calm"]["injury_type"] == "tendinopathy"
+    assert episodes["injury-calm"]["rehab_exposures"] == [{"drill_id": "calm-drill"}]
+
+    # The atomic summary tracks the most-protective episode, order-independently.
+    reverse = next(
+        g
+        for g in rehab_protocols._merge_injuries_by_location([calm_entry, restore_entry])
+        if g.get("rehab_episodes")
+    )
+    for summary in (group, reverse):
+        assert summary["rehab_stage"] == STAGE_CALM
+        assert summary["injury_id"] == "injury-calm"
+        assert {e["injury_id"] for e in summary["rehab_episodes"]} == {
+            "injury-restore",
+            "injury-calm",
         }
 
-    a = entry("i-restore", "e-restore", STAGE_RESTORE, "restore-drill")
-    b = entry("i-calm", "e-calm", STAGE_CALM, "calm-drill")
 
-    forward = next(g for g in rehab_protocols._merge_injuries_by_location([a, b]) if g.get("rehab_stage"))
-    reverse = next(g for g in rehab_protocols._merge_injuries_by_location([b, a]) if g.get("rehab_stage"))
+def _bank_drill(drill_id, name, stage):
+    return {
+        "id": drill_id,
+        "name": name,
+        "notes": "controlled rehab work",
+        "rehab_stage": stage,
+        "target_regions": ["ankle"],
+        "laterality_applicability": "not_applicable",
+        "allowed_severities": None,
+    }
 
-    for group in (forward, reverse):
-        assert group["rehab_stage"] == STAGE_CALM
-        assert group["injury_id"] == "i-calm"
-        assert group["rehab_exposures"] == [{"drill_id": "calm-drill"}]
+
+def _negative_exposure(injury_id, episode_id, drill_id):
+    return {
+        # The storage envelope carries athlete ownership; the selector fails
+        # closed on identity, so a real exposure always supplies it.
+        "athlete_id": ATHLETE,
+        "event_json": {
+            "athlete_id": ATHLETE,
+            "injury_id": injury_id,
+            "injury_episode_id": episode_id,
+            "body_region": "ankle",
+            "side": "left",
+            "drill_id": drill_id,
+            "occurred_at": "2026-08-01T00:00:00Z",
+            "response": {"during_response": "worse"},
+        },
+    }
+
+
+def test_two_same_location_episodes_select_without_cross_contamination(monkeypatch):
+    """Two same-side ankle injuries, different types/stages/exposures.
+
+    Proves the clinical selector runs once per episode and that neither episode's
+    identity or evidence is ever used to select the other's drill:
+
+    * the RESTORE sprain rejects a drill only because of ITS OWN negative
+      exposure, and that rejection does not touch the tendinopathy episode;
+    * the CALM tendinopathy is programmed from the tendinopathy pool, at CALM,
+      and its stage never gates the sprain;
+    * a LOAD-stage drill reaches neither, because each episode is CALM/RESTORE.
+    """
+    bank = [
+        {
+            "location": "ankle",
+            "type": "sprain",
+            "phase_progression": "GPP",
+            "drills": [
+                _bank_drill("sprain_restore_a", "Sprain Restore A", "restore"),
+                _bank_drill("sprain_restore_b", "Sprain Restore B", "restore"),
+                _bank_drill("sprain_load", "Sprain Load Heavy", "load"),
+            ],
+        },
+        {
+            "location": "ankle",
+            "type": "tendinopathy",
+            "phase_progression": "GPP",
+            "drills": [
+                _bank_drill("tendon_calm_a", "Tendon Calm A", "calm"),
+                _bank_drill("tendon_load", "Tendon Load Heavy", "load"),
+            ],
+        },
+    ]
+    monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
+
+    sprain = _ankle_entry(
+        "inj-sprain", "ep-sprain", "sprain", STAGE_RESTORE,
+        # This episode's own bad experience with Restore A — must not touch the
+        # tendinopathy episode.
+        [_negative_exposure("inj-sprain", "ep-sprain", "sprain_restore_a")],
+    )
+    tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", STAGE_CALM)
+
+    block, _ = rehab_protocols.generate_rehab_protocols(
+        injury_string="left ankle pain",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[sprain, tendon],
+    )
+
+    # Both injuries are programmed — neither is dropped by the other's presence.
+    assert "Sprain Restore B" in block  # sprain avoided its own negative (A)
+    assert "Tendon Calm A" in block  # tendinopathy programmed from its own pool
+    # The sprain's negative exposure is scoped to the sprain episode only.
+    assert "Sprain Restore A" not in block
+    # No LOAD drill for a CALM/RESTORE injury, from either pool.
+    assert "Sprain Load Heavy" not in block
+    assert "Tendon Load Heavy" not in block
 
 
 # --------------------------------------------------------------------------- #

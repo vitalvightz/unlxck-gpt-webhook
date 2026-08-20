@@ -606,8 +606,12 @@ def _ranking_factors(
         ),
         RankingFactor(
             "laterality",
+            # >= 2 covers both the strongest exact side match (a ``side_specific``
+            # drill for a named left/right injury, which scores 3) and a
+            # ``side_specific`` drill for a bilateral injury (2). Testing ``== 2``
+            # alone mislabelled the strongest match as ``not_applicable``.
             "specific"
-            if _laterality_specificity(selected, side) == 2
+            if _laterality_specificity(selected, side) >= 2
             else "not_applicable",
         ),
         RankingFactor(
