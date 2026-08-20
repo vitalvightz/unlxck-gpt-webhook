@@ -158,6 +158,12 @@ def session_rehab_items(
     produces nothing at all — not a nameless item that the gate would then have
     to refuse. Non-rehab blocks are never considered: a hard session is not
     rehab evidence however it felt.
+
+    One drill listed twice in a session yields one item. The exposure id keys on
+    (athlete, episode, drill, session, day), so a second copy could not be
+    stored separately anyway, and counting it twice would only overstate how
+    much of the session was rehab. The first block's prescription is the one
+    carried, since it is the one the athlete met first.
     """
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
