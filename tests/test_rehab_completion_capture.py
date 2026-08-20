@@ -389,6 +389,7 @@ def test_the_prompt_names_the_injury():
 
     assert prompt.injury_label == "LEFT ANKLE"
     assert prompt.injury_id == "11111111-1111-1111-1111-111111111111"
+    assert prompt.injury_episode_id == "22222222-2222-2222-2222-222222222222"
     assert prompt.during_question == "How did it feel during the rehab work?"
     assert prompt.limit_question == "Did you have to reduce or stop because of it?"
 

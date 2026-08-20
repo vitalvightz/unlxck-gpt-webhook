@@ -371,10 +371,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
     ) -> RehabResponseResult:
         """Append the injury-specific evidence for one completed rehab session.
 
-        The request carries answers only. Which injury did which drill, on which
-        side, in which episode, at what demand is re-resolved here from the
-        stored plan and the athlete's injury record — the same resolution that
-        produced the prompts — so nothing a client asserts can become evidence.
+        The request returns the immutable injury episode context issued with each
+        prompt. The current episode must still match. Drill, side and demand are
+        re-resolved from the stored plan and injury record, so nothing the client
+        asserts can become evidence.
         """
         require_health_feature_access(profile)
         plan_row = _plan_row_for_completion(
@@ -409,6 +409,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             completion=completion,
             answers={
                 answer.injury_id: {
+                    "injury_episode_id": str(answer.injury_episode_id),
                     "during_response": answer.during_response,
                     "limit_response": answer.limit_response,
                 }

@@ -167,17 +167,22 @@ Three things it deliberately does not do:
 exposure logged without asking is never stored as "the athlete said nothing was
 wrong". Absence of an answer and an answer of "same" stay distinguishable.
 
-## The submission carries answers, and only answers
+## The submission preserves the server-issued injury episode
 
 `POST /api/today/rehab-responses` takes `plan_id`, `session_id`, an optional
-`training_day` and a list of `{injury_id, during_response, limit_response}`. It
-takes no drill, no episode, no side and no demand — the model forbids extra
+`training_day` and a list of
+`{injury_id, injury_episode_id, during_response, limit_response}`. The episode id
+is immutable response context issued by the server with the prompt, not client
+authority. The request takes no drill, side or demand; the model forbids extra
 fields outright.
 
-Every one of those is recomputed server-side from the stored plan and the
-athlete's injury record, by the same resolution that produced the prompts. A
-client cannot assert an attribution it was not given, and an answer for an
-injury the session had no attributable rehab for is ignored rather than stored.
+On submission, every returned episode id must still match the current server
+record. If an injury was resolved and reopened after the prompt was shown, the
+whole request is rejected with `409 stale_rehab_response` before any exposure is
+written. Drill, side and demand are recomputed server-side from the stored plan
+and injury record. A client cannot assert an attribution it was not given, and
+an answer for an injury the session had no attributable rehab for is ignored
+rather than stored.
 
 The completion is also bound to that exact plan before resolution. A completion
 whose `plan_id` differs from the requested, athlete-owned plan is rejected with

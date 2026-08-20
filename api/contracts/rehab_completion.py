@@ -472,6 +472,7 @@ class RehabResponsePrompt:
     """
 
     injury_id: str
+    injury_episode_id: str
     injury_label: str
     body_region: str
     side: str
@@ -512,6 +513,7 @@ def build_rehab_response_prompts(
         prompts.append(
             RehabResponsePrompt(
                 injury_id=injury_id,
+                injury_episode_id=_clean(injury.get("episode_id")),
                 injury_label=label.upper(),
                 body_region=region,
                 side=side,

@@ -2137,6 +2137,9 @@ class RehabResponsePromptResponse(BaseModel):
     """
 
     injury_id: str
+    # Immutable context captured when the server raised this prompt. The client
+    # returns it verbatim so a delayed answer cannot cross injury episodes.
+    injury_episode_id: UUID
     # "LEFT ANKLE" — the injury addressed by name, so the athlete knows which
     # one they are answering about when more than one is open.
     injury_label: str
@@ -2165,6 +2168,7 @@ class RehabResponseAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     injury_id: str = Field(min_length=1)
+    injury_episode_id: UUID
     during_response: RehabDuringResponse
     limit_response: RehabLimitResponse
 
@@ -2172,10 +2176,10 @@ class RehabResponseAnswer(BaseModel):
 class RehabResponseRequest(BaseModel):
     """The athlete's answers to the prompts one completion raised.
 
-    Deliberately carries no attribution: not the drill, not the episode, not the
-    side, not the demand. Those are recomputed server-side from the plan and the
-    injury record, so a client cannot log evidence against work it was never
-    prescribed.
+    Carries only the server-issued injury episode context alongside each answer.
+    Drill, side and demand remain server-resolved. The episode is not client
+    authority: a mismatch with the current server record rejects the entire
+    request before any exposure is written.
     """
 
     model_config = ConfigDict(extra="forbid")

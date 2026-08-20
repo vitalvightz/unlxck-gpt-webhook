@@ -126,6 +126,7 @@ export function RehabResponsePrompt({
         training_day: trainingDay ?? null,
         answers: complete.map(({ prompt, answer }) => ({
           injury_id: prompt.injury_id,
+          injury_episode_id: prompt.injury_episode_id,
           during_response: answer.during,
           limit_response: answer.limit,
         })),

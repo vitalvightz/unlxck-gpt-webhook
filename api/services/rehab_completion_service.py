@@ -16,11 +16,12 @@ athlete on a real day:
 5. The athlete answers, and :func:`record_rehab_exposures` re-resolves the same
    candidates server-side and appends the evidence.
 
-Step 5 re-resolves rather than trusting the client. The submission carries the
-athlete's *answers* and nothing else that matters: which injury, which episode,
-which drill, which side and what demand are all recomputed here from the plan
-and the injury record. A client cannot assert an attribution it was not given,
-and cannot log evidence against an injury the plan never targeted.
+Step 5 re-resolves rather than trusting the client. The submission returns the
+server-issued injury episode context with the athlete's answers. That episode
+must still match the current server record before any write; drill, side and
+demand are recomputed from the plan and injury record. A client cannot assert an
+attribution it was not given, and cannot log evidence against an injury the plan
+never targeted.
 
 General session feedback (RPE, pain-after, notes) stays exactly where it was.
 It is programming feedback about a session; this is an observation about one
@@ -296,9 +297,11 @@ def record_rehab_exposures(
     """Append one exposure per eligible candidate the athlete answered for.
 
     ``answers`` is keyed by injury id — the same grouping the athlete was asked
-    in. Everything else about the event is recomputed here; an answer for an
-    injury this session had no attributable rehab for is ignored rather than
-    stored, because the client does not get to assert that the work happened.
+    in. Its server-issued episode id is checked against the current injury row
+    before any write begins. Everything else about the event is recomputed here;
+    an answer for an injury this session had no attributable rehab for is ignored
+    rather than stored, because the client does not get to assert that the work
+    happened.
 
     Exposure ids include the stored plan and rehab-block occurrence, so a retry
     of one block is idempotent while two real uses of the same drill remain two
@@ -313,6 +316,19 @@ def record_rehab_exposures(
         completion=completion,
     )
     injuries_by_id = {_clean(injury.get("id")): injury for injury in injuries}
+    # Validate the whole batch first. A delayed prompt must never be silently
+    # rebound after the same injury flag rotates to a new evidence episode, and
+    # a stale answer in a multi-injury request must not leave partial writes.
+    for injury_id, answer in answers.items():
+        injury = injuries_by_id.get(_clean(injury_id))
+        expected_episode_id = _clean(answer.get("injury_episode_id"))
+        current_episode_id = _clean((injury or {}).get("episode_id"))
+        if not current_episode_id or current_episode_id != expected_episode_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="stale_rehab_response",
+            )
+
     recorded: list[RehabExposureEvent] = []
     for candidate in resolution.eligible:
         answer = answers.get(_clean(candidate.injury_id))
@@ -350,6 +366,7 @@ def prompts_as_payload(prompts: Iterable[RehabResponsePrompt]) -> list[dict[str,
     return [
         {
             "injury_id": prompt.injury_id,
+            "injury_episode_id": prompt.injury_episode_id,
             "injury_label": prompt.injury_label,
             "body_region": prompt.body_region,
             "side": prompt.side,

@@ -49,6 +49,7 @@ function chipInGroup(container: HTMLElement, groupId: string, label: string): HT
 function ankle(): RehabResponsePromptModel {
   return {
     injury_id: "injury-ankle",
+    injury_episode_id: "11111111-1111-1111-1111-111111111111",
     injury_label: "LEFT ANKLE",
     body_region: "ankle",
     side: "left",
@@ -64,6 +65,7 @@ function knee(): RehabResponsePromptModel {
   return {
     ...ankle(),
     injury_id: "injury-knee",
+    injury_episode_id: "22222222-2222-2222-2222-222222222222",
     injury_label: "RIGHT KNEE",
     body_region: "knee",
     side: "right",
@@ -154,7 +156,7 @@ test("save stays disabled until an injury is fully answered", async () => {
   cleanup(container, root);
 });
 
-test("answering posts the athlete's words and no attribution", async () => {
+test("answering returns the server-issued episode context with the athlete's words", async () => {
   const { calls, restore } = captureFetch();
   const { container, root } = mount();
   render(root, [ankle()]);
@@ -174,9 +176,14 @@ test("answering posts the athlete's words and no attribution", async () => {
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/api\/today\/rehab-responses$/);
   assert.deepEqual(calls[0].payload.answers, [
-    { injury_id: "injury-ankle", during_response: "worse", limit_response: "stopped" },
+    {
+      injury_id: "injury-ankle",
+      injury_episode_id: "11111111-1111-1111-1111-111111111111",
+      during_response: "worse",
+      limit_response: "stopped",
+    },
   ]);
-  // The drill, the episode and the side are the server's to resolve.
+  // Drill, side and demand remain the server's to resolve.
   assert.deepEqual(Object.keys(calls[0].payload).sort(), [
     "answers",
     "plan_id",
@@ -209,7 +216,12 @@ test("an unanswered injury is left out rather than defaulted", async () => {
   // The knee was never answered, so nothing is reported for the knee. A default
   // "same" would be an observation the athlete never made.
   assert.deepEqual(calls[0].payload.answers, [
-    { injury_id: "injury-ankle", during_response: "better", limit_response: "no" },
+    {
+      injury_id: "injury-ankle",
+      injury_episode_id: "11111111-1111-1111-1111-111111111111",
+      during_response: "better",
+      limit_response: "no",
+    },
   ]);
 
   restore();

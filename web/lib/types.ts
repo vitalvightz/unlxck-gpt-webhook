@@ -1099,6 +1099,8 @@ export type RehabLimitResponse = "no" | "reduced" | "stopped";
  */
 export type RehabResponsePrompt = {
   injury_id: string;
+  /** Server-issued immutable episode context; return verbatim with the answer. */
+  injury_episode_id: string;
   /** "LEFT ANKLE" — the injury named, so multiple open injuries stay distinct. */
   injury_label: string;
   body_region: string;
@@ -1116,10 +1118,11 @@ export type TodaySessionCompletionResponse = {
   rehab_response_prompts?: RehabResponsePrompt[];
 };
 
-/** The athlete's answers about one injury. Carries no attribution: which drill,
- *  which episode and which side are re-resolved server-side on submit. */
+/** The athlete's answers about one injury plus its server-issued episode context.
+ *  Drill, side and demand are still re-resolved server-side on submit. */
 export type RehabResponseAnswer = {
   injury_id: string;
+  injury_episode_id: string;
   during_response: RehabDuringResponse;
   limit_response: RehabLimitResponse;
 };

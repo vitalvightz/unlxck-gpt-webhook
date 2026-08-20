@@ -127,6 +127,7 @@ class TestPromptIsRaisedOnlyForAttributableRehab:
         prompts = _complete(client).json()["rehab_response_prompts"]
 
         assert [prompt["injury_id"] for prompt in prompts] == [injury["id"]]
+        assert prompts[0]["injury_episode_id"] == injury["episode_id"]
         assert prompts[0]["injury_label"] == "LEFT ANKLE"
         assert prompts[0]["drill_ids"] == [ANKLE_DRILL]
         # The server ships the vocabulary with the question, so the client never
@@ -206,13 +207,23 @@ class TestPromptIsRaisedOnlyForAttributableRehab:
 
 
 class TestAnsweringStoresEvidence:
-    def _answer(self, client, *, injury_id: str, during: str, limit: str, **overrides):
+    def _answer(
+        self,
+        client,
+        *,
+        injury_id: str,
+        injury_episode_id: str,
+        during: str,
+        limit: str,
+        **overrides,
+    ):
         body = {
             "plan_id": PLAN_ID,
             "session_id": SESSION_ID,
             "answers": [
                 {
                     "injury_id": injury_id,
+                    "injury_episode_id": injury_episode_id,
                     "during_response": during,
                     "limit_response": limit,
                 }
@@ -225,7 +236,13 @@ class TestAnsweringStoresEvidence:
         client, store, training_day, injury = rehab_day
         _complete(client)
 
-        resp = self._answer(client, injury_id=injury["id"], during="worse", limit="reduced")
+        resp = self._answer(
+            client,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+            during="worse",
+            limit="reduced",
+        )
 
         assert resp.status_code == 201
         assert resp.json()["recorded_injury_ids"] == [injury["id"]]
@@ -244,7 +261,13 @@ class TestAnsweringStoresEvidence:
         client, store, _day, injury = rehab_day
         _complete(client)
 
-        self._answer(client, injury_id=injury["id"], during="worse", limit="stopped")
+        self._answer(
+            client,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+            during="worse",
+            limit="stopped",
+        )
 
         response = next(iter(store.rehab_exposures.values()))["event_json"]["response"]
         assert response["during_response"] == "worse"
@@ -259,7 +282,13 @@ class TestAnsweringStoresEvidence:
         client, store, _day, injury = rehab_day
         _complete(client)
 
-        self._answer(client, injury_id=injury["id"], during="same", limit="no")
+        self._answer(
+            client,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+            during="same",
+            limit="no",
+        )
 
         demand = next(iter(store.rehab_exposures.values()))["event_json"]["demand"]
         assert demand["load"] == "unknown"
@@ -271,7 +300,13 @@ class TestAnsweringStoresEvidence:
         client, store, _day, injury = rehab_day
         _complete(client)
 
-        self._answer(client, injury_id=injury["id"], during="better", limit="no")
+        self._answer(
+            client,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+            during="better",
+            limit="no",
+        )
 
         event = next(iter(store.rehab_exposures.values()))["event_json"]
         assert event["prescribed_dose"]["sets"] == 3
@@ -286,7 +321,13 @@ class TestAnsweringStoresEvidence:
         client, store, _day, injury = rehab_day
         _complete(client)
 
-        self._answer(client, injury_id=injury["id"], during="same", limit="reduced")
+        self._answer(
+            client,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+            during="same",
+            limit="reduced",
+        )
 
         dose = next(iter(store.rehab_exposures.values()))["event_json"]["dose_completed"]
         assert dose["stopped_early"] is True
@@ -297,8 +338,20 @@ class TestAnsweringStoresEvidence:
         client, store, training_day, injury = rehab_day
         _complete(client)
 
-        first = self._answer(client, injury_id=injury["id"], during="same", limit="no")
-        second = self._answer(client, injury_id=injury["id"], during="same", limit="no")
+        first = self._answer(
+            client,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+            during="same",
+            limit="no",
+        )
+        second = self._answer(
+            client,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+            during="same",
+            limit="no",
+        )
 
         assert first.json() == second.json()
         assert len(store.rehab_exposures) == 1
@@ -319,7 +372,7 @@ class TestAnsweringStoresEvidence:
 
 class TestPlanAndOccurrenceBinding:
     @staticmethod
-    def _answer(client, *, plan_id: str, injury_id: str):
+    def _answer(client, *, plan_id: str, injury_id: str, injury_episode_id: str):
         return client.post(
             "/api/today/rehab-responses",
             headers=ATHLETE,
@@ -329,6 +382,7 @@ class TestPlanAndOccurrenceBinding:
                 "answers": [
                     {
                         "injury_id": injury_id,
+                        "injury_episode_id": injury_episode_id,
                         "during_response": "same",
                         "limit_response": "no",
                     }
@@ -347,7 +401,12 @@ class TestPlanAndOccurrenceBinding:
             activate=False,
         )
 
-        response = self._answer(client, plan_id=OTHER_PLAN_ID, injury_id=injury["id"])
+        response = self._answer(
+            client,
+            plan_id=OTHER_PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
 
         assert response.status_code == 409
         assert store.rehab_exposures == {}
@@ -366,8 +425,18 @@ class TestPlanAndOccurrenceBinding:
         )
         _complete(client, plan_id=OTHER_PLAN_ID)
 
-        refused = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
-        accepted = self._answer(client, plan_id=OTHER_PLAN_ID, injury_id=injury["id"])
+        refused = self._answer(
+            client,
+            plan_id=PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
+        accepted = self._answer(
+            client,
+            plan_id=OTHER_PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
 
         assert refused.status_code == 409
         assert accepted.status_code == 201
@@ -385,9 +454,19 @@ class TestPlanAndOccurrenceBinding:
         injury = _seed_injury(store)
         _complete(client)
 
-        first = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+        first = self._answer(
+            client,
+            plan_id=PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
         first_ids = set(first.json()["recorded_exposure_ids"])
-        retry = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+        retry = self._answer(
+            client,
+            plan_id=PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
 
         assert first.status_code == 201
         assert len(first_ids) == 2
@@ -401,7 +480,12 @@ class TestPlanAndOccurrenceBinding:
         assert len(store.rehab_exposures) == 2
 
         _seed_plan(store, blocks=list(reversed(blocks)), training_day=training_day)
-        reordered = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+        reordered = self._answer(
+            client,
+            plan_id=PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
         assert set(reordered.json()["recorded_exposure_ids"]) == first_ids
         assert len(store.rehab_exposures) == 2
 
@@ -413,7 +497,12 @@ class TestPlanAndOccurrenceBinding:
         _seed_plan(store, blocks=[block], training_day=training_day)
         injury = _seed_injury(store)
         _complete(client, plan_id=PLAN_ID)
-        first = self._answer(client, plan_id=PLAN_ID, injury_id=injury["id"])
+        first = self._answer(
+            client,
+            plan_id=PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
 
         _seed_plan(
             store,
@@ -423,11 +512,48 @@ class TestPlanAndOccurrenceBinding:
             activate=False,
         )
         _complete(client, plan_id=OTHER_PLAN_ID)
-        second = self._answer(client, plan_id=OTHER_PLAN_ID, injury_id=injury["id"])
+        second = self._answer(
+            client,
+            plan_id=OTHER_PLAN_ID,
+            injury_id=injury["id"],
+            injury_episode_id=injury["episode_id"],
+        )
 
         assert first.status_code == second.status_code == 201
         assert first.json()["recorded_exposure_ids"] != second.json()["recorded_exposure_ids"]
         assert len(store.rehab_exposures) == 2
+
+
+class TestPromptEpisodeBinding:
+    def test_old_prompt_is_rejected_after_the_injury_reopens(self, rehab_day):
+        client, store, _day, injury = rehab_day
+        prompt = _complete(client).json()["rehab_response_prompts"][0]
+        episode_a = prompt["injury_episode_id"]
+
+        store.update_injury_flag(injury["id"], {"status": "resolved"})
+        reopened = store.update_injury_flag(injury["id"], {"status": "open"})
+        assert reopened["episode_id"] != episode_a
+
+        response = client.post(
+            "/api/today/rehab-responses",
+            headers=ATHLETE,
+            json={
+                "plan_id": PLAN_ID,
+                "session_id": SESSION_ID,
+                "answers": [
+                    {
+                        "injury_id": prompt["injury_id"],
+                        "injury_episode_id": episode_a,
+                        "during_response": "same",
+                        "limit_response": "no",
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 409
+        assert response.json()["detail"] == "stale_rehab_response"
+        assert store.rehab_exposures == {}
 
 
 class TestTheClientCannotAssertAttribution:
@@ -445,6 +571,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": unrelated["id"],
+                        "injury_episode_id": unrelated["episode_id"],
                         "during_response": "better",
                         "limit_response": "no",
                     }
@@ -469,6 +596,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": injury["id"],
+                        "injury_episode_id": injury["episode_id"],
                         "during_response": "better",
                         "limit_response": "no",
                     }
@@ -496,6 +624,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": injury["id"],
+                        "injury_episode_id": injury["episode_id"],
                         "during_response": "agony",
                         "limit_response": "no",
                     }
@@ -519,6 +648,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": injury["id"],
+                        "injury_episode_id": injury["episode_id"],
                         "during_response": "better",
                         "limit_response": "no",
                     }
@@ -550,6 +680,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": injury["id"],
+                        "injury_episode_id": injury["episode_id"],
                         "during_response": "better",
                         "limit_response": "no",
                     }
@@ -573,6 +704,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": injury["id"],
+                        "injury_episode_id": injury["episode_id"],
                         "during_response": "better",
                         "limit_response": "no",
                     }
@@ -589,6 +721,7 @@ class TestTheClientCannotAssertAttribution:
 
         answer = {
             "injury_id": injury["id"],
+            "injury_episode_id": injury["episode_id"],
             "during_response": "better",
             "limit_response": "no",
         }
@@ -626,6 +759,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": injury["id"],
+                        "injury_episode_id": injury["episode_id"],
                         "during_response": "same",
                         "limit_response": "no",
                     }
@@ -646,6 +780,7 @@ class TestTheClientCannotAssertAttribution:
                 "answers": [
                     {
                         "injury_id": "x",
+                        "injury_episode_id": "11111111-1111-1111-1111-111111111111",
                         "during_response": "better",
                         "limit_response": "no",
                     }
@@ -682,6 +817,7 @@ class TestConcurrentInjuriesStayIsolated:
                 "answers": [
                     {
                         "injury_id": ankle["id"],
+                        "injury_episode_id": ankle["episode_id"],
                         "during_response": "worse",
                         "limit_response": "stopped",
                     }
@@ -739,6 +875,7 @@ class TestRetroLoggedSessions:
                 "answers": [
                     {
                         "injury_id": injury["id"],
+                        "injury_episode_id": injury["episode_id"],
                         "during_response": "same",
                         "limit_response": "no",
                     }
