@@ -1676,10 +1676,18 @@ create table if not exists public.session_completions (
   notes text not null default '',
   started_at timestamptz,
   completed_at timestamptz,
+  rehab_response_contexts jsonb
+    check (
+      rehab_response_contexts is null
+      or jsonb_typeof(rehab_response_contexts) = 'array'
+    ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint session_completions_athlete_session_day_key unique (athlete_id, session_id, training_day)
 );
+
+comment on column public.session_completions.rehab_response_contexts is
+  'Server-owned immutable rehab response identities. Pending state is derived from canonical rehab_exposures, never a client-controlled answered flag.';
 
 create index if not exists session_completions_athlete_day_idx
   on public.session_completions (athlete_id, training_day desc);

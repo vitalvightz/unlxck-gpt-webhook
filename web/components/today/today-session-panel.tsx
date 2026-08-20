@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
@@ -16,7 +16,7 @@ import {
 import { formatTrainingDay } from "@/components/today/format";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
 import { useToast } from "@/components/toast-provider";
-import { submitTodaySessionCompletion } from "@/lib/api";
+import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
@@ -41,7 +41,7 @@ import {
 } from "@/lib/today";
 import type {
   RehabLabelPolicy,
-  RehabResponsePrompt as RehabResponsePromptModel,
+  PendingRehabResponseSet,
   StructuredPlan,
   TodayCommandView,
   TodayCompletionStatus,
@@ -258,13 +258,10 @@ export function TodaySessionPanel({
   const [reviewableSession, setReviewableSession] = useState<
     { planId: string; sessionId: string } | null
   >(null);
-  // The injury-specific rehab questions the server raised for the session just
-  // logged, if any. Captured at write time for the same reason as the review
-  // above: the refresh can advance to tomorrow's card, and this evidence belongs
-  // to the session that was actually completed.
-  const [rehabResponses, setRehabResponses] = useState<
-    { planId: string; sessionId: string; prompts: RehabResponsePromptModel[] } | null
-  >(null);
+  // Interaction stays local, but existence comes from durable server context.
+  // This is an array so two completed sessions on one day cannot hide each
+  // other's independently pending injury response.
+  const [rehabResponses, setRehabResponses] = useState<PendingRehabResponseSet[]>([]);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -277,6 +274,32 @@ export function TodaySessionPanel({
   // and is resolved on every render so a long-lived tab follows the rollover
   // instead of sticking on a memoized day.
   const trainingDay = useTrainingDay();
+  const activePlanId = state.active_plan.id ?? "";
+  useEffect(() => {
+    if (!token || !activePlanId) {
+      return;
+    }
+    let cancelled = false;
+    void listPendingRehabResponses(token, activePlanId)
+      .then((pending) => {
+        if (!cancelled) {
+          setRehabResponses(pending.response_sets);
+          if (pending.history_truncated && process.env.NODE_ENV !== "production") {
+            console.warn("Pending rehab response history was truncated");
+          }
+        }
+      })
+      .catch((error: unknown) => {
+        // A read failure must not fabricate an answered state. Keep any prompt
+        // already in memory; a remount/retry can retrieve the durable context.
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Pending rehab responses could not be loaded", error);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePlanId, token]);
   // Center the structured blocks on whatever the backend command view targets:
   // today's day in the normal case, or the NEXT scheduled session's day once
   // today is logged / carries no app card (session_relation === "next"). Resolving
@@ -382,15 +405,24 @@ export function TodaySessionPanel({
       // rehab attributable to a known injury, so a normal session never shows
       // this block.
       const prompts = completion.rehab_response_prompts ?? [];
-      setRehabResponses(
-        prompts.length > 0
-          ? {
-              planId: state.active_plan.id,
-              sessionId: session.session_id,
-              prompts,
-            }
-          : null,
-      );
+      setRehabResponses((current) => {
+        const others = current.filter(
+          (item) => item.completion_id !== completion.completion.id,
+        );
+        if (prompts.length === 0) {
+          return others;
+        }
+        return [
+          ...others,
+          {
+            completion_id: completion.completion.id,
+            plan_id: completion.completion.plan_id,
+            session_id: completion.completion.session_id,
+            training_day: completion.completion.training_day,
+            rehab_response_prompts: prompts,
+          },
+        ];
+      });
       showToast(getCompletionLabel(nextStatus), { tone: "success" });
       // Order matters: the confirmation toast is already up and the refresh
       // below is what surfaces the XP award, so the review prompt is queued
@@ -595,16 +627,21 @@ export function TodaySessionPanel({
       {/* Above the session review on purpose: an injury observation is the more
           time-sensitive of the two, and the athlete should not have to get past
           a programming survey to report that something hurt. */}
-      {rehabResponses ? (
+      {rehabResponses.map((pending) => (
         <RehabResponsePrompt
-          key={`rehab-${rehabResponses.sessionId}`}
+          key={`rehab-${pending.completion_id}`}
           token={token}
-          planId={rehabResponses.planId}
-          sessionId={rehabResponses.sessionId}
-          prompts={rehabResponses.prompts}
-          onDismiss={() => setRehabResponses(null)}
+          planId={pending.plan_id}
+          sessionId={pending.session_id}
+          trainingDay={pending.training_day}
+          prompts={pending.rehab_response_prompts}
+          onDismiss={() =>
+            setRehabResponses((current) =>
+              current.filter((item) => item.completion_id !== pending.completion_id),
+            )
+          }
         />
-      ) : null}
+      ))}
 
       {reviewableSession ? (
         <SessionFeedbackPrompt

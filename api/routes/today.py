@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import logging
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -19,6 +20,8 @@ from api.compliance import evaluate_profile_compliance
 from api.models import (
     InjuryFlagRecord,
     LandingResponse,
+    PendingRehabResponseSetResponse,
+    PendingRehabResponsesResponse,
     ProfileRecord,
     RehabResponseRequest,
     RehabResponseResult,
@@ -36,8 +39,9 @@ from api.contracts.completion import completion_landing_state, completion_status
 from api.contracts.rehab_completion import COMPLETED_STATUSES
 from api.services.progress_notifications import award_session_progress
 from api.services.rehab_completion_service import (
-    collect_rehab_response_prompts,
-    prompts_as_payload,
+    build_rehab_response_contexts,
+    list_pending_rehab_response_sets,
+    rehab_response_contexts_by_injury,
     record_rehab_exposures,
 )
 from api.services.notification_foundation import invalidate_notification_action
@@ -59,6 +63,7 @@ from api.services.today_readiness_boundary import (
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
+PENDING_REHAB_COMPLETION_LIMIT = 500
 
 
 def _checkin_record(row: dict[str, Any]) -> TodayCheckinRecord:
@@ -351,26 +356,95 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         if not evaluate_profile_compliance(profile).health_consent_granted:
             return []
         try:
-            plan_row = _plan_row_for_completion(
-                store, profile=profile, plan_id=str(completion.get("plan_id") or "")
-            )
-            if not plan_row:
-                return []
-            prompts = collect_rehab_response_prompts(
+            # Existing context is immutable. Re-saving an old completion must
+            # never resolve it against whatever injury episode happens to be
+            # open now. Only the transition that first completes the row may
+            # initialize a NULL context field.
+            if completion.get("rehab_response_contexts") is None:
+                if not completion.get("_entered_completed_status"):
+                    return []
+                plan_row = _plan_row_for_completion(
+                    store, profile=profile, plan_id=str(completion.get("plan_id") or "")
+                )
+                if not plan_row:
+                    return []
+                _prompts, contexts = build_rehab_response_contexts(
+                    store,
+                    athlete_id=profile.athlete_id,
+                    plan_row=plan_row,
+                    training_day=str(completion.get("training_day") or ""),
+                    session_id=str(completion.get("session_id") or ""),
+                    completion=completion,
+                )
+                initializer = getattr(store, "initialize_session_completion_rehab_contexts", None)
+                if not callable(initializer):
+                    raise RuntimeError("rehab response context persistence is unavailable")
+                persisted = initializer(
+                    profile.athlete_id,
+                    completion_id=str(completion.get("id") or ""),
+                    plan_id=str(completion.get("plan_id") or ""),
+                    session_id=str(completion.get("session_id") or ""),
+                    training_day=str(completion.get("training_day") or ""),
+                    contexts=contexts,
+                )
+                if not persisted or persisted.get("rehab_response_contexts") is None:
+                    raise RuntimeError("rehab response context was not persisted")
+                completion.update(persisted)
+            pending = list_pending_rehab_response_sets(
                 store,
                 athlete_id=profile.athlete_id,
-                plan_row=plan_row,
-                training_day=str(completion.get("training_day") or ""),
-                session_id=str(completion.get("session_id") or ""),
-                completion=completion,
+                completions=[completion],
             )
         except Exception:  # noqa: BLE001 - the completion record is authoritative
             logger.exception(
-                "[rehab] response prompt resolution failed athlete_id=%s",
+                "[rehab] response context persistence failed athlete_id=%s completion_id=%s",
                 profile.athlete_id,
+                completion.get("id"),
             )
             return []
-        return prompts_as_payload(prompts)
+        return pending[0]["rehab_response_prompts"] if pending else []
+
+    @router.get(
+        "/api/today/rehab-responses/pending",
+        response_model=PendingRehabResponsesResponse,
+    )
+    def get_pending_rehab_responses(
+        plan_id: UUID = Query(),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> PendingRehabResponsesResponse:
+        """Rehydrate valid unanswered prompts across one exact active plan."""
+        require_health_feature_access(profile)
+        plan_id_value = str(plan_id)
+        if not _plan_row_for_completion(store, profile=profile, plan_id=plan_id_value):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        lister = getattr(store, "list_plan_session_completions", None)
+        if not callable(lister):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="pending rehab responses unavailable",
+            )
+        # Read one sentinel row beyond the bounded window. Omitted history is
+        # never treated as answered or mutated; the explicit flag lets clients
+        # and monitoring distinguish a complete read from a bounded one.
+        completions = lister(
+            profile.athlete_id,
+            plan_id_value,
+            limit=PENDING_REHAB_COMPLETION_LIMIT + 1,
+        )
+        history_truncated = len(completions) > PENDING_REHAB_COMPLETION_LIMIT
+        response_sets = [
+            PendingRehabResponseSetResponse(**item)
+            for item in list_pending_rehab_response_sets(
+                store,
+                athlete_id=profile.athlete_id,
+                completions=completions[:PENDING_REHAB_COMPLETION_LIMIT],
+            )
+        ]
+        return PendingRehabResponsesResponse(
+            response_sets=response_sets,
+            history_truncated=history_truncated,
+        )
 
     @router.post(
         "/api/today/rehab-responses",
@@ -413,6 +487,22 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 detail="session completion belongs to another plan",
             )
 
+        saved_contexts = rehab_response_contexts_by_injury(
+            completion, athlete_id=profile.athlete_id
+        )
+        for answer in request_body.answers:
+            context = saved_contexts.get(answer.injury_id)
+            if context is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="rehab_response_not_pending",
+                )
+            if str(context.get("injury_episode_id") or "") != str(answer.injury_episode_id):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="stale_rehab_response",
+                )
+
         events = record_rehab_exposures(
             store,
             athlete_id=profile.athlete_id,
@@ -428,6 +518,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 }
                 for answer in request_body.answers
             },
+            expected_contexts=saved_contexts,
         )
         return RehabResponseResult(
             recorded_exposure_ids=[str(event.exposure_id) for event in events],

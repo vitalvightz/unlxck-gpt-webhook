@@ -326,6 +326,7 @@ REQUIRED_SESSION_COMPLETIONS_COLUMNS: tuple[str, ...] = (
     "notes",
     "started_at",
     "completed_at",
+    "rehab_response_contexts",
     "created_at",
     "updated_at",
 )

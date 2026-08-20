@@ -1502,6 +1502,29 @@ class FakeStore:
                 return dict(row)
         return None
 
+    def initialize_session_completion_rehab_contexts(
+        self,
+        athlete_id: str,
+        *,
+        completion_id: str,
+        plan_id: str,
+        session_id: str,
+        training_day: str,
+        contexts: list[dict],
+    ) -> dict | None:
+        for row in self.session_completions.get(athlete_id, []):
+            if (
+                row["id"] == completion_id
+                and row.get("plan_id") == plan_id
+                and row["session_id"] == session_id
+                and row["training_day"] == training_day
+            ):
+                if row.get("rehab_response_contexts") is None:
+                    row["rehab_response_contexts"] = copy.deepcopy(contexts)
+                    row["updated_at"] = _now()
+                return copy.deepcopy(row)
+        return None
+
     def list_session_completions(self, athlete_id: str, *, limit: int = 30) -> list[dict]:
         rows = sorted(
             self.session_completions.get(athlete_id, []),
@@ -1712,6 +1735,16 @@ class FakeStore:
         row = {"id": exposure_id, "athlete_id": athlete_id, "event_json": payload}
         self.rehab_exposures[exposure_id] = row
         return dict(row)
+
+    def list_rehab_exposures_by_ids(
+        self, athlete_id: str, exposure_ids: list[str]
+    ) -> list[dict]:
+        return [
+            copy.deepcopy(row)
+            for exposure_id in exposure_ids
+            if (row := self.rehab_exposures.get(exposure_id)) is not None
+            and row.get("athlete_id") == athlete_id
+        ]
 
     def list_rehab_exposures(
         self,

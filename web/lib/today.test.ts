@@ -32,7 +32,11 @@ import {
 } from "./today.ts";
 import type { TodayDecisionTier } from "./today.ts";
 import type { InjuryFlagRecord } from "./types.ts";
-import { submitTodayCheckin, submitTodaySessionCompletion } from "./api.ts";
+import {
+  listPendingRehabResponses,
+  submitTodayCheckin,
+  submitTodaySessionCompletion,
+} from "./api.ts";
 import type { TodayCommandView, TodaySession } from "./types.ts";
 
 process.env.NEXT_PUBLIC_API_DEBUG = "false";
@@ -527,6 +531,26 @@ test("submit completion calls the Today completion endpoint", async () => {
     assert.equal(mock.calls.length, 1);
     assert.equal(mock.calls[0].input.endsWith("/api/today/session-completion"), true);
     assert.equal(mock.calls[0].init?.method, "POST");
+  } finally {
+    mock.restore();
+  }
+});
+
+test("pending rehab responses are read across the exact active plan", async () => {
+  const mock = installFetchMock({ response_sets: [], history_truncated: false });
+
+  try {
+    await listPendingRehabResponses(
+      "token",
+      "11111111-1111-1111-1111-111111111111",
+    );
+
+    assert.equal(mock.calls.length, 1);
+    const url = new URL(mock.calls[0].input);
+    assert.equal(url.pathname, "/api/today/rehab-responses/pending");
+    assert.equal(url.searchParams.get("plan_id"), "11111111-1111-1111-1111-111111111111");
+    assert.equal(url.searchParams.has("training_day"), false);
+    assert.equal(mock.calls[0].init?.method, undefined);
   } finally {
     mock.restore();
   }
