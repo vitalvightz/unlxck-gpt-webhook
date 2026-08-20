@@ -2162,6 +2162,16 @@ class SessionCompletionResponse(BaseModel):
     rehab_response_prompts: list[RehabResponsePromptResponse] = Field(default_factory=list)
 
 
+class PendingRehabResponseSetResponse(BaseModel):
+    """One exact completion whose injury response is not fully persisted yet."""
+
+    completion_id: UUID
+    plan_id: UUID
+    session_id: str
+    training_day: str
+    rehab_response_prompts: list[RehabResponsePromptResponse] = Field(default_factory=list)
+
+
 class RehabResponseAnswer(BaseModel):
     """What the athlete said about one injury after one rehab session."""
 

@@ -5,8 +5,13 @@ import "../test-dom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
+import { ToastProvider } from "@/components/toast-provider";
 import { RehabResponsePrompt } from "./rehab-response-prompt";
-import type { RehabResponsePrompt as RehabResponsePromptModel } from "@/lib/types";
+import { TodaySessionPanel } from "./today-session-panel";
+import type {
+  RehabResponsePrompt as RehabResponsePromptModel,
+  TodayCommandView,
+} from "@/lib/types";
 
 process.env.NEXT_PUBLIC_API_DEBUG = "false";
 
@@ -298,4 +303,86 @@ test("a failed save surfaces the error and keeps the answers editable", async ()
 
   restore();
   cleanup(container, root);
+});
+
+test("Today rehydrates a skipped unanswered prompt from durable server state", async () => {
+  const prompt = ankle();
+  const state: TodayCommandView = {
+    active_plan: {
+      id: "11111111-1111-1111-1111-111111111111",
+      name: "Camp",
+      phase: "SPP",
+    },
+    today: {
+      training_day: "2026-08-20",
+      recommendation_state: "train_as_planned",
+      recommendation_reason: "Ready.",
+      next_session: {
+        session_id: "next-session",
+        title: "Next session",
+        calendar_date: "2026-08-21",
+        session_relation: "next",
+      },
+      session_scope: "next",
+      session_label: "Next session",
+      completion_status: "done",
+      warnings: [],
+    },
+    risk_watch: [],
+    open_injuries: [],
+    week_summary: {},
+    quick_actions: [],
+  };
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    return new Response(
+      JSON.stringify([
+        {
+          completion_id: "33333333-3333-3333-3333-333333333333",
+          plan_id: state.active_plan.id,
+          session_id: "session-rehab",
+          training_day: state.today.training_day,
+          rehab_response_prompts: [prompt],
+        },
+      ]),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  function renderPanel(root: Root) {
+    act(() => {
+      root.render(
+        <ToastProvider>
+          <TodaySessionPanel
+            state={state}
+            structuredPlan={null}
+            token="test-token"
+            onRefresh={async () => {}}
+          />
+        </ToastProvider>,
+      );
+    });
+  }
+
+  const first = mount();
+  renderPanel(first.root);
+  await settle();
+  await settle();
+  assert.match(first.container.textContent ?? "", /LEFT ANKLE/);
+  act(() => buttonByText(first.container, "Skip").click());
+  await settle();
+  assert.doesNotMatch(first.container.textContent ?? "", /LEFT ANKLE/);
+  cleanup(first.container, first.root);
+
+  const reopened = mount();
+  renderPanel(reopened.root);
+  await settle();
+  await settle();
+  assert.match(reopened.container.textContent ?? "", /LEFT ANKLE/);
+  assert.equal(calls.filter((url) => url.includes("/api/today/rehab-responses/pending")).length, 2);
+
+  cleanup(reopened.container, reopened.root);
+  globalThis.fetch = originalFetch;
 });

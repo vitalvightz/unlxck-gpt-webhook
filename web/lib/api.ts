@@ -35,6 +35,7 @@ import type {
   TodayInjuryCheckinRequest,
   TodayInjuryCheckinResponse,
   TodaySessionCompletionRecord,
+  PendingRehabResponseSet,
   TodaySessionCompletionRequest,
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
@@ -1138,6 +1139,18 @@ export function submitTodaySessionCompletion(
     token,
     body: JSON.stringify(payload),
   });
+}
+
+export function listPendingRehabResponses(
+  token: string,
+  planId: string,
+  trainingDay: string,
+): Promise<PendingRehabResponseSet[]> {
+  const params = new URLSearchParams({ plan_id: planId, training_day: trainingDay });
+  return readJson<PendingRehabResponseSet[]>(
+    `/api/today/rehab-responses/pending?${params.toString()}`,
+    { token },
+  );
 }
 
 /**

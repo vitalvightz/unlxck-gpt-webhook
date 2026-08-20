@@ -1334,7 +1334,22 @@ def upsert_session_completion(
         "started_at": started_at,
         "completed_at": completed_at,
     }
-    return store.upsert_session_completion(athlete_id, fields)
+    row = store.upsert_session_completion(athlete_id, fields)
+    # Response-only transition marker. It is deliberately added after the
+    # database write so it can never become part of the completion schema. The
+    # rehab-response capture path uses it to initialize durable context exactly
+    # once, rather than retroactively resolving an old completion against a
+    # newly opened injury episode.
+    plan_changed = bool(existing.get("plan_id")) and str(existing.get("plan_id")) != plan_id
+    row["_completion_plan_changed"] = plan_changed
+    row["_entered_completed_status"] = (
+        status_value in {"done", "modified"}
+        and (
+            str(existing.get("status") or "not_started") not in {"done", "modified"}
+            or plan_changed
+        )
+    )
+    return row
 
 
 def submit_today_injury_checkin(

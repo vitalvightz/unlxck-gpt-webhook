@@ -1113,9 +1113,18 @@ export type RehabResponsePrompt = {
 };
 
 export type TodaySessionCompletionResponse = {
+  completion: TodaySessionCompletionRecord;
   completion_status: TodayCompletionStatus;
   landing_session_state: "none" | "resume" | "completed";
   rehab_response_prompts?: RehabResponsePrompt[];
+};
+
+export type PendingRehabResponseSet = {
+  completion_id: string;
+  plan_id: string;
+  session_id: string;
+  training_day: string;
+  rehab_response_prompts: RehabResponsePrompt[];
 };
 
 /** The athlete's answers about one injury plus its server-issued episode context.

@@ -506,6 +506,22 @@ class AppStore(Protocol):
         self, athlete_id: str, session_id: str, training_day: str
     ) -> dict[str, Any] | None: ...
 
+    def initialize_session_completion_rehab_contexts(
+        self,
+        athlete_id: str,
+        *,
+        completion_id: str,
+        plan_id: str,
+        session_id: str,
+        training_day: str,
+        contexts: list[dict[str, Any]],
+        replace_existing: bool = False,
+    ) -> dict[str, Any] | None: ...
+
+    def list_plan_session_completions_for_day(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> list[dict[str, Any]]: ...
+
     def list_session_completions(
         self, athlete_id: str, *, limit: int = 30
     ) -> list[dict[str, Any]]: ...
@@ -571,6 +587,10 @@ class AppStore(Protocol):
     def get_injury_flag_for_athlete(self, flag_id: str, athlete_id: str) -> dict[str, Any] | None: ...
 
     def create_rehab_exposure(self, athlete_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_rehab_exposures_by_ids(
+        self, athlete_id: str, exposure_ids: list[str]
+    ) -> list[dict[str, Any]]: ...
 
     def list_rehab_exposures(
         self,
@@ -4533,6 +4553,51 @@ class SupabaseAppStore:
             .eq("training_day", training_day)
         )
 
+    def initialize_session_completion_rehab_contexts(
+        self,
+        athlete_id: str,
+        *,
+        completion_id: str,
+        plan_id: str,
+        session_id: str,
+        training_day: str,
+        contexts: list[dict[str, Any]],
+        replace_existing: bool = False,
+    ) -> dict[str, Any] | None:
+        """Set immutable response context once on the exact completion row."""
+        query = (
+            self.client.table("session_completions")
+            .update({"rehab_response_contexts": contexts})
+            .eq("id", completion_id)
+            .eq("athlete_id", athlete_id)
+            .eq("plan_id", plan_id)
+            .eq("session_id", session_id)
+            .eq("training_day", training_day)
+        )
+        if not replace_existing:
+            query = query.is_("rehab_response_contexts", "null")
+        response = query.execute()
+        rows = getattr(response, "data", None) or []
+        if rows:
+            return rows[0]
+        # A concurrent identical completion may have initialized it first.
+        # Return the exact row so the caller can use that immutable winner.
+        return self.get_session_completion(athlete_id, session_id, training_day)
+
+    def list_plan_session_completions_for_day(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("plan_id", plan_id)
+            .eq("training_day", training_day)
+            .order("created_at")
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
     def list_session_completions(
         self, athlete_id: str, *, limit: int = 30
     ) -> list[dict[str, Any]]:
@@ -4737,6 +4802,20 @@ class SupabaseAppStore:
                 detail="failed to persist rehab exposure",
                 exc=exc,
             )
+
+    def list_rehab_exposures_by_ids(
+        self, athlete_id: str, exposure_ids: list[str]
+    ) -> list[dict[str, Any]]:
+        if not exposure_ids:
+            return []
+        response = (
+            self.client.table("rehab_exposures")
+            .select("id,athlete_id,event_json")
+            .eq("athlete_id", athlete_id)
+            .in_("id", exposure_ids)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
 
     def list_rehab_exposures(
         self,

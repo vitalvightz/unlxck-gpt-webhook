@@ -10,6 +10,7 @@ attribution in that exposure came from the server rather than the request.
 from datetime import date, timedelta
 
 import pytest
+from fastapi import HTTPException
 
 from api.contracts.rehab_completion import build_exposure_id
 from api.contracts.rehab_exposure import RehabExposureEvent
@@ -102,6 +103,14 @@ def _today(client) -> str:
 def _complete(client, *, status: str = "done", plan_id: str = PLAN_ID, **overrides):
     body = {"plan_id": plan_id, "session_id": SESSION_ID, "status": status, **overrides}
     return client.post("/api/today/session-completion", headers=ATHLETE, json=body)
+
+
+def _pending(client, training_day: str, *, plan_id: str = PLAN_ID):
+    return client.get(
+        "/api/today/rehab-responses/pending",
+        headers=ATHLETE,
+        params={"plan_id": plan_id, "training_day": training_day},
+    )
 
 
 @pytest.fixture()
@@ -204,6 +213,139 @@ class TestPromptIsRaisedOnlyForAttributableRehab:
         client, store, _day, _injury = rehab_day
         withdraw_health_consent(store)
         assert _complete(client).json()["rehab_response_prompts"] == []
+
+
+class TestPendingPromptRehydration:
+    @staticmethod
+    def _answer(client, prompt: dict, *, plan_id: str = PLAN_ID, **answers):
+        return client.post(
+            "/api/today/rehab-responses",
+            headers=ATHLETE,
+            json={
+                "plan_id": plan_id,
+                "session_id": SESSION_ID,
+                "answers": [
+                    {
+                        "injury_id": prompt["injury_id"],
+                        "injury_episode_id": prompt["injury_episode_id"],
+                        "during_response": answers.get("during", "same"),
+                        "limit_response": answers.get("limit", "no"),
+                    }
+                ],
+            },
+        )
+
+    def test_completion_persists_identity_and_rehydrates_the_same_prompt(self, rehab_day):
+        client, store, training_day, injury = rehab_day
+        completion = _complete(client).json()
+
+        row = store.get_session_completion("athlete-1", SESSION_ID, training_day)
+        assert row is not None
+        [context] = row["rehab_response_contexts"]
+        assert context["athlete_id"] == "athlete-1"
+        assert context["plan_id"] == PLAN_ID
+        assert context["session_id"] == SESSION_ID
+        assert context["training_day"] == training_day
+        assert context["session_completion_id"] == row["id"]
+        assert context["injury_id"] == injury["id"]
+        assert context["injury_episode_id"] == injury["episode_id"]
+        assert context["response_context_id"] == context["response_group_id"]
+        assert len(context["expected_exposures"]) == 1
+        serialized = str(context)
+        for forbidden in ("demand", "body_region", "side", "load", "impact", "velocity"):
+            assert forbidden not in serialized
+
+        response = _pending(client, training_day)
+        assert response.status_code == 200
+        [pending] = response.json()
+        assert pending["completion_id"] == row["id"]
+        assert pending["plan_id"] == PLAN_ID
+        assert pending["session_id"] == SESSION_ID
+        assert pending["training_day"] == training_day
+        assert pending["rehab_response_prompts"] == completion["rehab_response_prompts"]
+
+    def test_successful_answer_removes_prompt_using_canonical_exposures(self, rehab_day):
+        client, _store, training_day, _injury = rehab_day
+        prompt = _complete(client).json()["rehab_response_prompts"][0]
+
+        assert self._answer(client, prompt).status_code == 201
+        assert _pending(client, training_day).json() == []
+
+    def test_partial_write_keeps_one_injury_prompt_recoverable(self):
+        client, store, _ = _build_client()
+        _seed_plan(store, blocks=[], training_day="1970-01-01")
+        training_day = _today(client)
+        _seed_plan(
+            store,
+            blocks=[
+                _rehab_block(ANKLE_DRILL, block_id="rehab-1"),
+                _rehab_block(ANKLE_DRILL, block_id="rehab-2"),
+            ],
+            training_day=training_day,
+        )
+        _seed_injury(store)
+        prompt = _complete(client).json()["rehab_response_prompts"][0]
+        original = store.create_rehab_exposure
+        calls = 0
+
+        def fail_second(athlete_id, payload):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise HTTPException(status_code=503, detail="simulated partial write")
+            return original(athlete_id, payload)
+
+        store.create_rehab_exposure = fail_second
+        failed = self._answer(client, prompt)
+        store.create_rehab_exposure = original
+
+        assert failed.status_code == 503
+        assert len(store.rehab_exposures) == 1
+        [pending] = _pending(client, training_day).json()
+        assert [item["injury_id"] for item in pending["rehab_response_prompts"]] == [
+            prompt["injury_id"]
+        ]
+
+        retry = self._answer(client, prompt)
+        assert retry.status_code == 201
+        assert len(store.rehab_exposures) == 2
+        assert _pending(client, training_day).json() == []
+
+    def test_context_failure_does_not_rollback_completion_or_return_volatile_prompt(
+        self, rehab_day
+    ):
+        client, store, training_day, _injury = rehab_day
+
+        def fail_context(*_args, **_kwargs):
+            raise RuntimeError("context store unavailable")
+
+        store.initialize_session_completion_rehab_contexts = fail_context
+        response = _complete(client)
+
+        assert response.status_code == 201
+        assert response.json()["completion_status"] == "done"
+        assert response.json()["rehab_response_prompts"] == []
+        row = store.get_session_completion("athlete-1", SESSION_ID, training_day)
+        assert row is not None and row["status"] == "done"
+        assert row.get("rehab_response_contexts") is None
+
+    def test_answering_one_injury_rehydrates_only_the_other(self):
+        client, store, _ = _build_client()
+        _seed_plan(store, blocks=[], training_day="1970-01-01")
+        training_day = _today(client)
+        _seed_plan(
+            store,
+            blocks=[_rehab_block(ANKLE_DRILL), _rehab_block(KNEE_DRILL)],
+            training_day=training_day,
+        )
+        ankle = _seed_injury(store, region="ankle", side="left")
+        knee = _seed_injury(store, region="knee", side="right", injury_type="pain")
+        prompts = _complete(client).json()["rehab_response_prompts"]
+        ankle_prompt = next(item for item in prompts if item["injury_id"] == ankle["id"])
+
+        assert self._answer(client, ankle_prompt).status_code == 201
+        [pending] = _pending(client, training_day).json()
+        assert [item["injury_id"] for item in pending["rehab_response_prompts"]] == [knee["id"]]
 
 
 class TestAnsweringStoresEvidence:
@@ -526,13 +668,19 @@ class TestPlanAndOccurrenceBinding:
 
 class TestPromptEpisodeBinding:
     def test_old_prompt_is_rejected_after_the_injury_reopens(self, rehab_day):
-        client, store, _day, injury = rehab_day
+        client, store, training_day, injury = rehab_day
         prompt = _complete(client).json()["rehab_response_prompts"][0]
         episode_a = prompt["injury_episode_id"]
 
         store.update_injury_flag(injury["id"], {"status": "resolved"})
         reopened = store.update_injury_flag(injury["id"], {"status": "open"})
         assert reopened["episode_id"] != episode_a
+
+        # Reload suppresses the stale opportunity rather than rebinding it to
+        # the newly opened episode. The immutable saved identity remains A.
+        assert _pending(client, training_day).json() == []
+        completion = store.get_session_completion("athlete-1", SESSION_ID, training_day)
+        assert completion["rehab_response_contexts"][0]["injury_episode_id"] == episode_a
 
         response = client.post(
             "/api/today/rehab-responses",
@@ -557,7 +705,7 @@ class TestPromptEpisodeBinding:
 
 
 class TestTheClientCannotAssertAttribution:
-    def test_an_injury_the_session_did_not_target_is_ignored(self, rehab_day):
+    def test_an_injury_the_saved_context_did_not_target_is_rejected(self, rehab_day):
         client, store, _day, _injury = rehab_day
         unrelated = _seed_injury(store, region="shoulder", side="right")
         _complete(client)
@@ -579,8 +727,8 @@ class TestTheClientCannotAssertAttribution:
             },
         )
 
-        assert resp.status_code == 201
-        assert resp.json()["recorded_injury_ids"] == []
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == "rehab_response_not_pending"
         assert store.rehab_exposures == {}
 
     def test_attribution_fields_cannot_be_sent_at_all(self, rehab_day):
