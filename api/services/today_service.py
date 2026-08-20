@@ -1279,6 +1279,17 @@ def upsert_session_completion(
             )
 
     existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
+    existing_plan_id = str(existing.get("plan_id") or "")
+    if existing_plan_id and existing_plan_id != plan_id:
+        # A completion row is one immutable plan/session/day occurrence. Letting
+        # the upsert rebind that identity to another plan would also let old
+        # rehab work inherit whatever injury episode is open at the time of the
+        # rebind. A genuinely different occurrence needs a different completion
+        # identity instead.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="session_completion_plan_mismatch",
+        )
 
     # Stamp timestamps from the transition. started/done/modified carry
     # started_at; done/modified carry completed_at. Both are preserved once set
@@ -1340,14 +1351,9 @@ def upsert_session_completion(
     # rehab-response capture path uses it to initialize durable context exactly
     # once, rather than retroactively resolving an old completion against a
     # newly opened injury episode.
-    plan_changed = bool(existing.get("plan_id")) and str(existing.get("plan_id")) != plan_id
-    row["_completion_plan_changed"] = plan_changed
     row["_entered_completed_status"] = (
         status_value in {"done", "modified"}
-        and (
-            str(existing.get("status") or "not_started") not in {"done", "modified"}
-            or plan_changed
-        )
+        and str(existing.get("status") or "not_started") not in {"done", "modified"}
     )
     return row
 

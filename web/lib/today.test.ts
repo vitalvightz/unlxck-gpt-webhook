@@ -536,21 +536,20 @@ test("submit completion calls the Today completion endpoint", async () => {
   }
 });
 
-test("pending rehab responses are read from the exact server plan and training day", async () => {
-  const mock = installFetchMock([]);
+test("pending rehab responses are read across the exact active plan", async () => {
+  const mock = installFetchMock({ response_sets: [], history_truncated: false });
 
   try {
     await listPendingRehabResponses(
       "token",
       "11111111-1111-1111-1111-111111111111",
-      "2026-06-18",
     );
 
     assert.equal(mock.calls.length, 1);
     const url = new URL(mock.calls[0].input);
     assert.equal(url.pathname, "/api/today/rehab-responses/pending");
     assert.equal(url.searchParams.get("plan_id"), "11111111-1111-1111-1111-111111111111");
-    assert.equal(url.searchParams.get("training_day"), "2026-06-18");
+    assert.equal(url.searchParams.has("training_day"), false);
     assert.equal(mock.calls[0].init?.method, undefined);
   } finally {
     mock.restore();

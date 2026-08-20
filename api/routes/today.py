@@ -8,7 +8,7 @@ non-UI backend integration — no Today UI is built here.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 import logging
 from typing import Any
 from uuid import UUID
@@ -21,6 +21,7 @@ from api.models import (
     InjuryFlagRecord,
     LandingResponse,
     PendingRehabResponseSetResponse,
+    PendingRehabResponsesResponse,
     ProfileRecord,
     RehabResponseRequest,
     RehabResponseResult,
@@ -62,6 +63,7 @@ from api.services.today_readiness_boundary import (
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
+PENDING_REHAB_COMPLETION_LIMIT = 500
 
 
 def _checkin_record(row: dict[str, Any]) -> TodayCheckinRecord:
@@ -358,10 +360,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             # never resolve it against whatever injury episode happens to be
             # open now. Only the transition that first completes the row may
             # initialize a NULL context field.
-            if (
-                completion.get("rehab_response_contexts") is None
-                or completion.get("_completion_plan_changed")
-            ):
+            if completion.get("rehab_response_contexts") is None:
                 if not completion.get("_entered_completed_status"):
                     return []
                 plan_row = _plan_row_for_completion(
@@ -387,7 +386,6 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                     session_id=str(completion.get("session_id") or ""),
                     training_day=str(completion.get("training_day") or ""),
                     contexts=contexts,
-                    replace_existing=bool(completion.get("_completion_plan_changed")),
                 )
                 if not persisted or persisted.get("rehab_response_contexts") is None:
                     raise RuntimeError("rehab response context was not persisted")
@@ -408,42 +406,45 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
 
     @router.get(
         "/api/today/rehab-responses/pending",
-        response_model=list[PendingRehabResponseSetResponse],
+        response_model=PendingRehabResponsesResponse,
     )
     def get_pending_rehab_responses(
         plan_id: UUID = Query(),
-        training_day: str | None = Query(default=None),
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
-    ) -> list[PendingRehabResponseSetResponse]:
-        """Rehydrate valid unanswered prompts for one exact plan/day."""
+    ) -> PendingRehabResponsesResponse:
+        """Rehydrate valid unanswered prompts across one exact active plan."""
         require_health_feature_access(profile)
         plan_id_value = str(plan_id)
         if not _plan_row_for_completion(store, profile=profile, plan_id=plan_id_value):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        resolved_day = training_day or resolve_training_day(profile.athlete_timezone)
-        try:
-            date.fromisoformat(resolved_day)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="training_day must be a YYYY-MM-DD date",
-            ) from exc
-        lister = getattr(store, "list_plan_session_completions_for_day", None)
+        lister = getattr(store, "list_plan_session_completions", None)
         if not callable(lister):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="pending rehab responses unavailable",
             )
-        completions = lister(profile.athlete_id, plan_id_value, resolved_day)
-        return [
+        # Read one sentinel row beyond the bounded window. Omitted history is
+        # never treated as answered or mutated; the explicit flag lets clients
+        # and monitoring distinguish a complete read from a bounded one.
+        completions = lister(
+            profile.athlete_id,
+            plan_id_value,
+            limit=PENDING_REHAB_COMPLETION_LIMIT + 1,
+        )
+        history_truncated = len(completions) > PENDING_REHAB_COMPLETION_LIMIT
+        response_sets = [
             PendingRehabResponseSetResponse(**item)
             for item in list_pending_rehab_response_sets(
                 store,
                 athlete_id=profile.athlete_id,
-                completions=completions,
+                completions=completions[:PENDING_REHAB_COMPLETION_LIMIT],
             )
         ]
+        return PendingRehabResponsesResponse(
+            response_sets=response_sets,
+            history_truncated=history_truncated,
+        )
 
     @router.post(
         "/api/today/rehab-responses",

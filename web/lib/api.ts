@@ -35,7 +35,7 @@ import type {
   TodayInjuryCheckinRequest,
   TodayInjuryCheckinResponse,
   TodaySessionCompletionRecord,
-  PendingRehabResponseSet,
+  PendingRehabResponsesResponse,
   TodaySessionCompletionRequest,
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
@@ -1144,10 +1144,9 @@ export function submitTodaySessionCompletion(
 export function listPendingRehabResponses(
   token: string,
   planId: string,
-  trainingDay: string,
-): Promise<PendingRehabResponseSet[]> {
-  const params = new URLSearchParams({ plan_id: planId, training_day: trainingDay });
-  return readJson<PendingRehabResponseSet[]>(
+): Promise<PendingRehabResponsesResponse> {
+  const params = new URLSearchParams({ plan_id: planId });
+  return readJson<PendingRehabResponsesResponse>(
     `/api/today/rehab-responses/pending?${params.toString()}`,
     { token },
   );

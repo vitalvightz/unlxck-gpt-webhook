@@ -105,11 +105,11 @@ def _complete(client, *, status: str = "done", plan_id: str = PLAN_ID, **overrid
     return client.post("/api/today/session-completion", headers=ATHLETE, json=body)
 
 
-def _pending(client, training_day: str, *, plan_id: str = PLAN_ID):
+def _pending(client, *, plan_id: str = PLAN_ID):
     return client.get(
         "/api/today/rehab-responses/pending",
         headers=ATHLETE,
-        params={"plan_id": plan_id, "training_day": training_day},
+        params={"plan_id": plan_id},
     )
 
 
@@ -255,21 +255,46 @@ class TestPendingPromptRehydration:
         for forbidden in ("demand", "body_region", "side", "load", "impact", "velocity"):
             assert forbidden not in serialized
 
-        response = _pending(client, training_day)
+        response = _pending(client)
         assert response.status_code == 200
-        [pending] = response.json()
+        assert response.json()["history_truncated"] is False
+        [pending] = response.json()["response_sets"]
         assert pending["completion_id"] == row["id"]
         assert pending["plan_id"] == PLAN_ID
         assert pending["session_id"] == SESSION_ID
         assert pending["training_day"] == training_day
         assert pending["rehab_response_prompts"] == completion["rehab_response_prompts"]
 
+    def test_bounded_plan_history_reports_truncation_without_mutating_contexts(
+        self, rehab_day
+    ):
+        client, store, training_day, _injury = rehab_day
+        completion = _complete(client).json()["completion"]
+        bucket = store.session_completions["athlete-1"]
+        for index in range(500):
+            bucket.append(
+                {
+                    **completion,
+                    "id": f"00000000-0000-0000-0000-{index:012d}",
+                    "session_id": f"historical-{index}",
+                    "rehab_response_contexts": [],
+                }
+            )
+
+        before = store.get_session_completion("athlete-1", SESSION_ID, training_day)
+        response = _pending(client)
+        after = store.get_session_completion("athlete-1", SESSION_ID, training_day)
+
+        assert response.status_code == 200
+        assert response.json()["history_truncated"] is True
+        assert before["rehab_response_contexts"] == after["rehab_response_contexts"]
+
     def test_successful_answer_removes_prompt_using_canonical_exposures(self, rehab_day):
         client, _store, training_day, _injury = rehab_day
         prompt = _complete(client).json()["rehab_response_prompts"][0]
 
         assert self._answer(client, prompt).status_code == 201
-        assert _pending(client, training_day).json() == []
+        assert _pending(client).json()["response_sets"] == []
 
     def test_partial_write_keeps_one_injury_prompt_recoverable(self):
         client, store, _ = _build_client()
@@ -301,7 +326,7 @@ class TestPendingPromptRehydration:
 
         assert failed.status_code == 503
         assert len(store.rehab_exposures) == 1
-        [pending] = _pending(client, training_day).json()
+        [pending] = _pending(client).json()["response_sets"]
         assert [item["injury_id"] for item in pending["rehab_response_prompts"]] == [
             prompt["injury_id"]
         ]
@@ -309,7 +334,7 @@ class TestPendingPromptRehydration:
         retry = self._answer(client, prompt)
         assert retry.status_code == 201
         assert len(store.rehab_exposures) == 2
-        assert _pending(client, training_day).json() == []
+        assert _pending(client).json()["response_sets"] == []
 
     def test_context_failure_does_not_rollback_completion_or_return_volatile_prompt(
         self, rehab_day
@@ -344,7 +369,7 @@ class TestPendingPromptRehydration:
         ankle_prompt = next(item for item in prompts if item["injury_id"] == ankle["id"])
 
         assert self._answer(client, ankle_prompt).status_code == 201
-        [pending] = _pending(client, training_day).json()
+        [pending] = _pending(client).json()["response_sets"]
         assert [item["injury_id"] for item in pending["rehab_response_prompts"]] == [knee["id"]]
 
 
@@ -553,11 +578,10 @@ class TestPlanAndOccurrenceBinding:
         assert response.status_code == 409
         assert store.rehab_exposures == {}
 
-    def test_only_the_matching_plan_completion_authorizes_same_session_and_day(
-        self, rehab_day
-    ):
+    def test_completion_identity_cannot_be_rebound_to_another_plan(self, rehab_day):
         client, store, training_day, injury = rehab_day
-        _complete(client, plan_id=PLAN_ID)
+        original = _complete(client, plan_id=PLAN_ID)
+        original_prompt = original.json()["rehab_response_prompts"][0]
         _seed_plan(
             store,
             plan_id=OTHER_PLAN_ID,
@@ -565,24 +589,24 @@ class TestPlanAndOccurrenceBinding:
             training_day=training_day,
             activate=False,
         )
-        _complete(client, plan_id=OTHER_PLAN_ID)
+        rebound = _complete(client, plan_id=OTHER_PLAN_ID)
 
         refused = self._answer(
-            client,
-            plan_id=PLAN_ID,
-            injury_id=injury["id"],
-            injury_episode_id=injury["episode_id"],
-        )
-        accepted = self._answer(
             client,
             plan_id=OTHER_PLAN_ID,
             injury_id=injury["id"],
             injury_episode_id=injury["episode_id"],
         )
 
+        assert rebound.status_code == 409
+        assert rebound.json()["detail"] == "session_completion_plan_mismatch"
         assert refused.status_code == 409
-        assert accepted.status_code == 201
-        assert len(store.rehab_exposures) == 1
+        completion = store.get_session_completion("athlete-1", SESSION_ID, training_day)
+        assert completion["plan_id"] == PLAN_ID
+        assert completion["rehab_response_contexts"][0]["injury_episode_id"] == (
+            original_prompt["injury_episode_id"]
+        )
+        assert store.rehab_exposures == {}
 
     def test_same_drill_in_two_blocks_creates_two_idempotent_exposures(self):
         client, store, _ = _build_client()
@@ -631,7 +655,7 @@ class TestPlanAndOccurrenceBinding:
         assert set(reordered.json()["recorded_exposure_ids"]) == first_ids
         assert len(store.rehab_exposures) == 2
 
-    def test_same_occurrence_on_two_plans_has_different_exposure_ids(self):
+    def test_same_completion_occurrence_cannot_be_reused_on_two_plans(self):
         client, store, _ = _build_client()
         _seed_plan(store, blocks=[], training_day="1970-01-01")
         training_day = _today(client)
@@ -653,7 +677,7 @@ class TestPlanAndOccurrenceBinding:
             training_day=training_day,
             activate=False,
         )
-        _complete(client, plan_id=OTHER_PLAN_ID)
+        rebound = _complete(client, plan_id=OTHER_PLAN_ID)
         second = self._answer(
             client,
             plan_id=OTHER_PLAN_ID,
@@ -661,9 +685,10 @@ class TestPlanAndOccurrenceBinding:
             injury_episode_id=injury["episode_id"],
         )
 
-        assert first.status_code == second.status_code == 201
-        assert first.json()["recorded_exposure_ids"] != second.json()["recorded_exposure_ids"]
-        assert len(store.rehab_exposures) == 2
+        assert first.status_code == 201
+        assert rebound.status_code == 409
+        assert second.status_code == 409
+        assert len(store.rehab_exposures) == 1
 
 
 class TestPromptEpisodeBinding:
@@ -676,9 +701,20 @@ class TestPromptEpisodeBinding:
         reopened = store.update_injury_flag(injury["id"], {"status": "open"})
         assert reopened["episode_id"] != episode_a
 
+        _seed_plan(
+            store,
+            plan_id=OTHER_PLAN_ID,
+            blocks=[_rehab_block(ANKLE_DRILL)],
+            training_day=training_day,
+            activate=False,
+        )
+        rebound = _complete(client, plan_id=OTHER_PLAN_ID)
+        assert rebound.status_code == 409
+        assert rebound.json()["detail"] == "session_completion_plan_mismatch"
+
         # Reload suppresses the stale opportunity rather than rebinding it to
         # the newly opened episode. The immutable saved identity remains A.
-        assert _pending(client, training_day).json() == []
+        assert _pending(client).json()["response_sets"] == []
         completion = store.get_session_completion("athlete-1", SESSION_ID, training_day)
         assert completion["rehab_response_contexts"][0]["injury_episode_id"] == episode_a
 

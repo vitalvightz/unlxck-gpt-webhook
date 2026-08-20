@@ -1511,7 +1511,6 @@ class FakeStore:
         session_id: str,
         training_day: str,
         contexts: list[dict],
-        replace_existing: bool = False,
     ) -> dict | None:
         for row in self.session_completions.get(athlete_id, []):
             if (
@@ -1520,20 +1519,11 @@ class FakeStore:
                 and row["session_id"] == session_id
                 and row["training_day"] == training_day
             ):
-                if replace_existing or row.get("rehab_response_contexts") is None:
+                if row.get("rehab_response_contexts") is None:
                     row["rehab_response_contexts"] = copy.deepcopy(contexts)
                     row["updated_at"] = _now()
                 return copy.deepcopy(row)
         return None
-
-    def list_plan_session_completions_for_day(
-        self, athlete_id: str, plan_id: str, training_day: str
-    ) -> list[dict]:
-        return [
-            copy.deepcopy(row)
-            for row in self.session_completions.get(athlete_id, [])
-            if row.get("plan_id") == plan_id and row.get("training_day") == training_day
-        ]
 
     def list_session_completions(self, athlete_id: str, *, limit: int = 30) -> list[dict]:
         rows = sorted(

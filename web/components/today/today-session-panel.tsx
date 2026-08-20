@@ -275,16 +275,18 @@ export function TodaySessionPanel({
   // instead of sticking on a memoized day.
   const trainingDay = useTrainingDay();
   const activePlanId = state.active_plan.id ?? "";
-  const serverTrainingDay = state.today.training_day;
   useEffect(() => {
-    if (!token || !activePlanId || !serverTrainingDay) {
+    if (!token || !activePlanId) {
       return;
     }
     let cancelled = false;
-    void listPendingRehabResponses(token, activePlanId, serverTrainingDay)
+    void listPendingRehabResponses(token, activePlanId)
       .then((pending) => {
         if (!cancelled) {
-          setRehabResponses(pending);
+          setRehabResponses(pending.response_sets);
+          if (pending.history_truncated && process.env.NODE_ENV !== "production") {
+            console.warn("Pending rehab response history was truncated");
+          }
         }
       })
       .catch((error: unknown) => {
@@ -297,7 +299,7 @@ export function TodaySessionPanel({
     return () => {
       cancelled = true;
     };
-  }, [activePlanId, serverTrainingDay, token]);
+  }, [activePlanId, token]);
   // Center the structured blocks on whatever the backend command view targets:
   // today's day in the normal case, or the NEXT scheduled session's day once
   // today is logged / carries no app card (session_relation === "next"). Resolving

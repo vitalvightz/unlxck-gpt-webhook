@@ -2172,6 +2172,13 @@ class PendingRehabResponseSetResponse(BaseModel):
     rehab_response_prompts: list[RehabResponsePromptResponse] = Field(default_factory=list)
 
 
+class PendingRehabResponsesResponse(BaseModel):
+    """Bounded plan-wide pending response contexts plus read completeness."""
+
+    response_sets: list[PendingRehabResponseSetResponse] = Field(default_factory=list)
+    history_truncated: bool = False
+
+
 class RehabResponseAnswer(BaseModel):
     """What the athlete said about one injury after one rehab session."""
 

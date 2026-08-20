@@ -338,25 +338,26 @@ test("Today rehydrates a skipped unanswered prompt from durable server state", a
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     calls.push(String(input));
     return new Response(
-      JSON.stringify([
-        {
+      JSON.stringify({
+        response_sets: [{
           completion_id: "33333333-3333-3333-3333-333333333333",
           plan_id: state.active_plan.id,
           session_id: "session-rehab",
-          training_day: state.today.training_day,
+          training_day: "2026-08-20",
           rehab_response_prompts: [prompt],
-        },
-      ]),
+        }],
+        history_truncated: false,
+      }),
       { status: 200, headers: { "content-type": "application/json" } },
     );
   }) as typeof fetch;
 
-  function renderPanel(root: Root) {
+  function renderPanel(root: Root, currentState: TodayCommandView = state) {
     act(() => {
       root.render(
         <ToastProvider>
           <TodaySessionPanel
-            state={state}
+            state={currentState}
             structuredPlan={null}
             token="test-token"
             onRefresh={async () => {}}
@@ -376,12 +377,17 @@ test("Today rehydrates a skipped unanswered prompt from durable server state", a
   assert.doesNotMatch(first.container.textContent ?? "", /LEFT ANKLE/);
   cleanup(first.container, first.root);
 
+  const nextDayState: TodayCommandView = {
+    ...state,
+    today: { ...state.today, training_day: "2026-08-21" },
+  };
   const reopened = mount();
-  renderPanel(reopened.root);
+  renderPanel(reopened.root, nextDayState);
   await settle();
   await settle();
   assert.match(reopened.container.textContent ?? "", /LEFT ANKLE/);
   assert.equal(calls.filter((url) => url.includes("/api/today/rehab-responses/pending")).length, 2);
+  assert.equal(calls.some((url) => url.includes("training_day=")), false);
 
   cleanup(reopened.container, reopened.root);
   globalThis.fetch = originalFetch;

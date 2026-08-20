@@ -1127,6 +1127,11 @@ export type PendingRehabResponseSet = {
   rehab_response_prompts: RehabResponsePrompt[];
 };
 
+export type PendingRehabResponsesResponse = {
+  response_sets: PendingRehabResponseSet[];
+  history_truncated: boolean;
+};
+
 /** The athlete's answers about one injury plus its server-issued episode context.
  *  Drill, side and demand are still re-resolved server-side on submit. */
 export type RehabResponseAnswer = {

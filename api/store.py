@@ -515,12 +515,7 @@ class AppStore(Protocol):
         session_id: str,
         training_day: str,
         contexts: list[dict[str, Any]],
-        replace_existing: bool = False,
     ) -> dict[str, Any] | None: ...
-
-    def list_plan_session_completions_for_day(
-        self, athlete_id: str, plan_id: str, training_day: str
-    ) -> list[dict[str, Any]]: ...
 
     def list_session_completions(
         self, athlete_id: str, *, limit: int = 30
@@ -4562,7 +4557,6 @@ class SupabaseAppStore:
         session_id: str,
         training_day: str,
         contexts: list[dict[str, Any]],
-        replace_existing: bool = False,
     ) -> dict[str, Any] | None:
         """Set immutable response context once on the exact completion row."""
         query = (
@@ -4573,9 +4567,8 @@ class SupabaseAppStore:
             .eq("plan_id", plan_id)
             .eq("session_id", session_id)
             .eq("training_day", training_day)
+            .is_("rehab_response_contexts", "null")
         )
-        if not replace_existing:
-            query = query.is_("rehab_response_contexts", "null")
         response = query.execute()
         rows = getattr(response, "data", None) or []
         if rows:
@@ -4583,20 +4576,6 @@ class SupabaseAppStore:
         # A concurrent identical completion may have initialized it first.
         # Return the exact row so the caller can use that immutable winner.
         return self.get_session_completion(athlete_id, session_id, training_day)
-
-    def list_plan_session_completions_for_day(
-        self, athlete_id: str, plan_id: str, training_day: str
-    ) -> list[dict[str, Any]]:
-        response = (
-            self.client.table("session_completions")
-            .select("*")
-            .eq("athlete_id", athlete_id)
-            .eq("plan_id", plan_id)
-            .eq("training_day", training_day)
-            .order("created_at")
-            .execute()
-        )
-        return getattr(response, "data", None) or []
 
     def list_session_completions(
         self, athlete_id: str, *, limit: int = 30
