@@ -12,8 +12,9 @@ from typing import Iterable, Mapping, Sequence
 
 from .rehab_schema import (
     LATERALITY_APPLICABILITY_VALUES,
+    REHAB_FUNCTIONS,
     REHAB_STAGES,
-    SEVERITY_VALUES,
+    normalize_severity_bucket,
 )
 
 
@@ -55,6 +56,14 @@ class RehabSelectionResult:
         repr=False,
         compare=False,
     )
+    #: Every eligible drill in ranked order, best first. ``selected_drill`` is
+    #: position 0. Callers that render alternates alongside the chosen drill
+    #: read this instead of re-running the ranking themselves.
+    ranked_drills: tuple[Mapping[str, object], ...] = field(
+        default=(),
+        repr=False,
+        compare=False,
+    )
 
 
 def _clean(value: object) -> str:
@@ -71,16 +80,13 @@ def _values(value: object) -> set[str]:
 
 
 def _canonical_severity(value: object) -> str:
-    """Collapse accepted intake aliases onto the rehab-bank severity contract."""
-    normalized = _clean(value)
-    aliases = {
-        "mild": "low",
-        "low": "low",
-        "moderate": "moderate",
-        "high": "high",
-        "severe": "high",
-    }
-    return aliases.get(normalized, normalized if normalized in SEVERITY_VALUES else "")
+    """Collapse a raw injury severity onto the rehab-bank severity contract.
+
+    Selection never invents a severity: an unrecognised or absent one stays
+    ``""`` so a drill that gates on severity fails closed rather than being
+    silently treated as moderate.
+    """
+    return normalize_severity_bucket(value)
 
 
 def _canonical_side(value: object) -> str:
@@ -189,11 +195,11 @@ def _event_matches_injury(
     return True
 
 
-def _negative_exposure_state(
+def _exposure_state(
     exposures: Iterable[Mapping[str, object]],
     injury: Mapping[str, object],
-) -> tuple[set[str], set[str]]:
-    """Return unresolved-negative and historical-uncertainty drill IDs.
+) -> tuple[set[str], set[str], set[str]]:
+    """Return unresolved-negative, historical-uncertainty and safe drill IDs.
 
     A negative remains a hard selector rejection until a *newer explicit*
     non-adverse observation exists for the exact same injury episode, region
@@ -212,6 +218,7 @@ def _negative_exposure_state(
 
     unresolved: set[str] = set()
     historical_uncertainty: set[str] = set()
+    safe: set[str] = set()
 
     for drill_id, events in by_drill.items():
         def chronology(item: tuple[int, Mapping[str, object]]) -> tuple[object, ...]:
@@ -231,6 +238,14 @@ def _negative_exposure_state(
             if _is_negative_response(_response_mapping(event))
         ]
         if not negative_indexes:
+            # Never adverse in this episode. An explicit non-adverse response
+            # makes this drill known-tolerated *for this athlete*, which is the
+            # continuity signal ranking prefers. Silence is not tolerance.
+            if any(
+                _is_explicit_non_adverse_response(_response_mapping(event))
+                for _, event in ordered
+            ):
+                safe.add(drill_id)
             continue
 
         last_negative = negative_indexes[-1]
@@ -243,22 +258,97 @@ def _negative_exposure_state(
         else:
             unresolved.add(drill_id)
 
-    return unresolved, historical_uncertainty
+    return unresolved, historical_uncertainty, safe
+
+
+_OPEN_REGIONS = frozenset({"generic", "unspecified"})
+
+
+def _injury_regions(injury: Mapping[str, object]) -> set[str]:
+    """Return every name this injury's body region is known by.
+
+    The bank's ``target_regions`` and the parser's canonical location are two
+    vocabularies for the same anatomy — the parser says ``biceps`` where the
+    bank group says ``bicep``. Callers that already resolved the aliases (bank
+    lookup does it via ``rehab_protocols.normalize_rehab_location``) pass them
+    in as ``body_region_aliases`` so region matching cannot fail on wording
+    alone. Nothing is inferred here: an alias set is used only if given.
+    """
+    regions = _values(injury.get("body_region_aliases"))
+    for key in ("body_region", "canonical_location", "location"):
+        value = _clean(injury.get(key))
+        if value:
+            regions.add(value)
+            break
+    return {region for region in regions if region}
+
+
+def _regions_match(injury_regions: set[str], candidate_regions: set[str]) -> bool:
+    """True when a drill targets this region, or declares itself unrestricted."""
+    if candidate_regions & _OPEN_REGIONS:
+        return True
+    return bool(injury_regions & candidate_regions)
+
+
+_KNOWN_SIDES = frozenset({"left", "right", "bilateral"})
+_STAGE_MATCH_LABELS = {2: "exact", 1: "conservative_fallback", 0: "stage_unmigrated"}
+
+
+def _stage_rejection(candidate_stage: str, stage: str) -> str | None:
+    """Return a rejection code when a drill's stage is wrong for the live stage.
+
+    Only one direction is unsafe. A drill tagged *above* the live stage asserts
+    a tolerance the athlete has not earned, so it is rejected. A drill tagged
+    *below* it is more protective than required, which is always clinically
+    acceptable — it is admitted as a conservative fallback and ranked beneath an
+    exact match by :func:`_stage_specificity` rather than being thrown away.
+
+    A missing stage is PR1's "not migrated yet" marker, which is the state of
+    the entire live bank today. Rejecting it would reject every real drill and
+    empty the rehab block, so an unmigrated drill stays eligible and simply
+    cannot claim a stage match. A *stated but unrecognised* stage is different:
+    that is a data error, and it fails closed.
+    """
+    if not candidate_stage:
+        return None
+    if candidate_stage not in _STAGE_INDEX:
+        return "REJECT_UNKNOWN_REQUIRED_STAGE"
+    if stage in _STAGE_INDEX and _STAGE_INDEX[candidate_stage] > _STAGE_INDEX[stage]:
+        return "REJECT_STAGE_TOO_ADVANCED"
+    return None
+
+
+def _stage_specificity(candidate: Mapping[str, object], stage: str) -> int:
+    """Score a drill's stage fit: exact match, conservative fallback, unstated."""
+    candidate_stage = _clean(candidate.get("rehab_stage"))
+    if not candidate_stage:
+        return 0
+    if candidate_stage == stage:
+        return 2
+    return 1
 
 
 def _laterality_rejection(applicability: str, side: str) -> str | None:
+    """Return a rejection code when the bank's laterality contract forbids a drill.
+
+    The bank vocabulary is :data:`LATERALITY_APPLICABILITY_VALUES` —
+    ``side_specific``, ``bilateral_only``, ``not_applicable``, ``unknown``. It
+    describes *how the drill is performed*, not which side is hurt, so most of
+    it is a ranking signal rather than a gate. Exactly one combination is
+    genuinely unsatisfiable: a drill that must be performed on a named side
+    when nobody has recorded which side is injured.
+
+    ``unknown`` is the bank's "looked at, not defensibly stated" marker and a
+    missing value is "not migrated yet". Neither is evidence *against* a drill,
+    so neither rejects; both simply score zero specificity in
+    :func:`_laterality_specificity` and can never outrank a stated one.
+    """
+    if not applicability:
+        return None
     if applicability not in LATERALITY_APPLICABILITY_VALUES:
         return "REJECT_UNKNOWN_REQUIRED_LATERALITY"
-    if applicability == "unknown":
+    if applicability == "side_specific" and side not in _KNOWN_SIDES:
         return "REJECT_UNKNOWN_REQUIRED_LATERALITY"
-    if applicability == "not_applicable":
-        return None
-    if not side or side == "unknown":
-        return "REJECT_UNKNOWN_REQUIRED_LATERALITY"
-    if applicability == "bilateral_only" and side != "bilateral":
-        return "REJECT_LATERALITY_MISMATCH"
-    if applicability == "side_specific" and side not in {"left", "right", "bilateral"}:
-        return "REJECT_LATERALITY_MISMATCH"
     return None
 
 
@@ -272,16 +362,12 @@ def filter_rehab_candidates(
 ) -> tuple[list[Mapping[str, object]], list[RejectedCandidate]]:
     """Apply non-tradeable compatibility rules before any ranking."""
     stage = _clean(rehab_stage)
-    region = _clean(
-        injury.get("body_region")
-        or injury.get("canonical_location")
-        or injury.get("location")
-    )
+    regions = _injury_regions(injury)
     family = _clean(injury.get("injury_type") or injury.get("rehab_type"))
     side = _canonical_side(injury.get("side") or injury.get("laterality"))
     severity = _canonical_severity(injury.get("severity"))
     equipment = {_clean(item) for item in available_equipment or ()}
-    unresolved_negative, _ = _negative_exposure_state(exposures, injury)
+    unresolved_negative, _, _ = _exposure_state(exposures, injury)
     eligible: list[Mapping[str, object]] = []
     rejected: list[RejectedCandidate] = []
 
@@ -300,23 +386,13 @@ def filter_rehab_candidates(
             reasons.append("REJECT_SURFACE_PATHWAY")
         if stage not in _LIVE_STAGES:
             reasons.append("REJECT_STAGE_NOT_LIVE")
-        if candidate_stage not in _STAGE_INDEX:
-            reasons.append("REJECT_UNKNOWN_REQUIRED_STAGE")
-        elif stage in _STAGE_INDEX and _STAGE_INDEX[candidate_stage] > _STAGE_INDEX[stage]:
-            reasons.append("REJECT_STAGE_TOO_ADVANCED")
-        elif (
-            candidate_stage != stage
-            and not bool(candidate.get("allow_conservative_stage_fallback"))
-        ):
-            reasons.append("REJECT_STAGE_MISMATCH")
+        stage_reason = _stage_rejection(candidate_stage, stage)
+        if stage_reason:
+            reasons.append(stage_reason)
 
-        if not region or not candidate_regions:
+        if not regions or not candidate_regions:
             reasons.append("REJECT_UNKNOWN_REQUIRED_REGION")
-        elif (
-            region not in candidate_regions
-            and "generic" not in candidate_regions
-            and "unspecified" not in candidate_regions
-        ):
+        elif not _regions_match(regions, candidate_regions):
             reasons.append("REJECT_REGION_MISMATCH")
 
         if candidate_family and candidate_family not in {family, "unspecified"}:
@@ -348,6 +424,59 @@ def filter_rehab_candidates(
     return eligible, rejected
 
 
+#: Which rehab functions a given session type can absorb, keyed by the
+#: ``day_type`` vocabulary ``rehab_protocols.generate_rehab_protocols`` already
+#: takes. This is a restatement of the rationale the repo already ships in
+#: ``rehab_protocols._DAY_TYPE_REHAB_WHY`` — sparring days stay minimal and must
+#: not compete with readiness for contact, strength days prime the pattern under
+#: load, aerobic days can afford developmental tolerance/control/mobility work,
+#: and recovery days maintain movement quality and symptom control.
+#:
+#: It is a *preference*, applied only after every clinical dimension above it
+#: has tied, so it can reorder equally-safe drills but can never admit an unsafe
+#: one or reject a safe one. An unmapped or absent day type simply expresses no
+#: preference.
+_SESSION_CONTEXT_FUNCTIONS: dict[str, frozenset[str]] = {
+    "sparring": frozenset({"activation", "recovery_downregulation"}),
+    "strength": frozenset({"activation", "isometric_analgesia"}),
+    "aerobic": frozenset({"tendon_loading", "control", "mobility"}),
+    "recovery": frozenset({"recovery_downregulation", "mobility", "isometric_analgesia"}),
+}
+
+
+def _canonical_function(candidate: Mapping[str, object]) -> str:
+    """Return the drill's declared rehab function, or ``""`` if unmigrated."""
+    value = _clean(candidate.get("function"))
+    return value if value in REHAB_FUNCTIONS else ""
+
+
+def _preferred_functions(
+    injury: Mapping[str, object],
+    session_context: Mapping[str, object] | str | None,
+) -> frozenset[str]:
+    """Resolve which rehab functions today's session context favours.
+
+    An explicit function named by the caller wins over the day-type default:
+    it is a direct instruction, not an inference. Anything unrecognised
+    expresses no preference rather than guessing.
+    """
+    explicit = _clean(
+        injury.get("session_rehab_function")
+        or injury.get("preferred_rehab_function")
+        or injury.get("rehab_function")
+    )
+    if explicit in REHAB_FUNCTIONS:
+        return frozenset({explicit})
+
+    if isinstance(session_context, Mapping):
+        day_type = _clean(
+            session_context.get("day_type") or session_context.get("session_type")
+        )
+    else:
+        day_type = _clean(session_context)
+    return _SESSION_CONTEXT_FUNCTIONS.get(day_type, frozenset())
+
+
 def _known_demand(candidate: Mapping[str, object]) -> int:
     return sum(
         _clean(candidate.get(field)) not in {"", "unknown"}
@@ -356,11 +485,24 @@ def _known_demand(candidate: Mapping[str, object]) -> int:
 
 
 def _laterality_specificity(candidate: Mapping[str, object], side: str) -> int:
+    """Score how well a drill's laterality contract fits this injury.
+
+    Higher is more specific. ``unknown`` and a missing value both score 0: they
+    are not positive specificity and must never beat a drill that states its
+    applicability.
+    """
     applicability = _clean(candidate.get("laterality_applicability"))
+    if applicability == "side_specific" and side in {"left", "right"}:
+        return 3
     if applicability == "bilateral_only" and side == "bilateral":
+        return 3
+    if applicability == "side_specific" and side == "bilateral":
         return 2
-    if applicability == "side_specific" and side in {"left", "right", "bilateral"}:
-        return 2
+    if applicability == "bilateral_only":
+        # Performed on both sides. Still appropriate for a one-sided injury —
+        # it just cannot isolate the injured side, so it ranks below a drill
+        # that can.
+        return 1
     if applicability == "not_applicable":
         return 1
     return 0
@@ -372,43 +514,59 @@ def rank_rehab_candidates(
     injury: Mapping[str, object],
     rehab_stage: str,
     historical_negative_drill_ids: Iterable[str] = (),
+    safe_exposure_drill_ids: Iterable[str] = (),
+    session_context: Mapping[str, object] | str | None = None,
 ) -> list[Mapping[str, object]]:
-    """Return candidates in a documented deterministic clinical order."""
-    region = _clean(
-        injury.get("body_region")
-        or injury.get("canonical_location")
-        or injury.get("location")
-    )
+    """Return candidates in a documented deterministic clinical order.
+
+    Every candidate here has already passed :func:`filter_rehab_candidates`, so
+    ranking never decides safety — it decides which of several clinically
+    admissible drills is the better programming choice. The key is a plain
+    lexicographic tuple, read strictly left to right, with no weights and no
+    randomness. Two runs over the same inputs always produce the same order.
+
+    The order of the tuple is the priority claim, most clinical first:
+
+    1. stage fit — exact live-stage match, then a more protective drill, then
+       one that has not been stage-migrated
+    2. historical negative — a drill with a superseded adverse response sinks
+       below every drill without one
+    3. injury family, then region, then laterality specificity, then a stated
+       severity gate that this athlete satisfies
+    4. safe exposure continuity — this athlete already tolerated this drill in
+       this episode, so keeping it beats churning to something novel
+    5. session-context function fit — what today's session can absorb
+    6. known demand metadata, then canonical drill id as the final tie-break
+    """
+    injury_regions = _injury_regions(injury)
     family = _clean(injury.get("injury_type") or injury.get("rehab_type"))
     side = _canonical_side(injury.get("side") or injury.get("laterality"))
     severity = _canonical_severity(injury.get("severity"))
     stage = _clean(rehab_stage)
     historical = {_clean(value) for value in historical_negative_drill_ids}
+    safe_exposures = {_clean(value) for value in safe_exposure_drill_ids}
     continuity_id = _clean(
         injury.get("current_rehab_drill_id")
         or injury.get("continuity_rehab_drill_id")
     )
-    preferred_function = _clean(
-        injury.get("session_rehab_function")
-        or injury.get("preferred_rehab_function")
-        or injury.get("rehab_function")
-    )
+    preferred_functions = _preferred_functions(injury, session_context)
 
     def key(candidate: Mapping[str, object]) -> tuple[object, ...]:
         drill_id = _clean(candidate.get("id"))
         regions = _values(candidate.get("target_regions"))
         allowed = _values(candidate.get("allowed_severities"))
         candidate_family = _clean(candidate.get("injury_type") or candidate.get("type"))
-        candidate_function = _clean(candidate.get("function"))
+        candidate_function = _canonical_function(candidate)
         return (
-            -int(_clean(candidate.get("rehab_stage")) == stage),
+            -_stage_specificity(candidate, stage),
             int(drill_id in historical),
             -int(candidate_family == family),
-            -int(region in regions),
+            -int(bool(injury_regions & regions)),
             -_laterality_specificity(candidate, side),
             -int(bool(severity and severity in allowed)),
             -int(bool(continuity_id and drill_id == continuity_id)),
-            -int(bool(preferred_function and candidate_function == preferred_function)),
+            -int(drill_id in safe_exposures),
+            -int(bool(candidate_function and candidate_function in preferred_functions)),
             -_known_demand(candidate),
             drill_id,
         )
@@ -422,6 +580,8 @@ def _ranking_factors(
     injury: Mapping[str, object],
     rehab_stage: str,
     historical_negative_drill_ids: set[str],
+    safe_exposure_drill_ids: set[str] = frozenset(),
+    session_context: Mapping[str, object] | str | None = None,
 ) -> tuple[RankingFactor, ...]:
     selected_id = _clean(selected.get("id"))
     stage = _clean(rehab_stage)
@@ -431,21 +591,12 @@ def _ranking_factors(
         injury.get("current_rehab_drill_id")
         or injury.get("continuity_rehab_drill_id")
     )
-    preferred_function = _clean(
-        injury.get("session_rehab_function")
-        or injury.get("preferred_rehab_function")
-        or injury.get("rehab_function")
-    )
-    candidate_function = _clean(selected.get("function"))
+    preferred_functions = _preferred_functions(injury, session_context)
+    candidate_function = _canonical_function(selected)
     demand_known = _known_demand(selected)
 
     return (
-        RankingFactor(
-            "stage_match",
-            "exact"
-            if _clean(selected.get("rehab_stage")) == stage
-            else "conservative_fallback",
-        ),
+        RankingFactor("stage_match", _STAGE_MATCH_LABELS[_stage_specificity(selected, stage)]),
         RankingFactor("region_match", "compatible"),
         RankingFactor(
             "injury_family_match",
@@ -470,10 +621,16 @@ def _ranking_factors(
             else ("not_match" if continuity_id else "no_context"),
         ),
         RankingFactor(
+            "safe_exposure_continuity",
+            "prior_safe_exposure"
+            if selected_id in safe_exposure_drill_ids
+            else "no_prior_exposure",
+        ),
+        RankingFactor(
             "function",
             "match"
-            if preferred_function and candidate_function == preferred_function
-            else ("not_match" if preferred_function else "no_context"),
+            if preferred_functions and candidate_function in preferred_functions
+            else ("not_match" if preferred_functions else "no_context"),
         ),
         RankingFactor(
             "demand_metadata",
@@ -491,6 +648,7 @@ def select_rehab_candidate(
     candidates: Sequence[Mapping[str, object]],
     available_equipment: Iterable[str] | None = None,
     exposures: Iterable[Mapping[str, object]] = (),
+    session_context: Mapping[str, object] | str | None = None,
 ) -> RehabSelectionResult:
     exposure_rows = tuple(exposures)
     eligible, rejected = filter_rehab_candidates(
@@ -500,12 +658,14 @@ def select_rehab_candidate(
         available_equipment=available_equipment,
         exposures=exposure_rows,
     )
-    _, historical_negative = _negative_exposure_state(exposure_rows, injury)
+    _, historical_negative, safe_exposures = _exposure_state(exposure_rows, injury)
     ranked = rank_rehab_candidates(
         eligible,
         injury=injury,
         rehab_stage=rehab_stage,
         historical_negative_drill_ids=historical_negative,
+        safe_exposure_drill_ids=safe_exposures,
+        session_context=session_context,
     )
     selected = ranked[0] if ranked else None
     selected_id = _clean(selected.get("id")) if selected else None
@@ -515,6 +675,8 @@ def select_rehab_candidate(
             injury=injury,
             rehab_stage=rehab_stage,
             historical_negative_drill_ids=historical_negative,
+            safe_exposure_drill_ids=safe_exposures,
+            session_context=session_context,
         )
         if selected
         else ()
@@ -538,6 +700,7 @@ def select_rehab_candidate(
         ranking_factors=factors,
         rejected_candidates=tuple(rejected),
         selected_drill=selected,
+        ranked_drills=tuple(ranked),
     )
 
 

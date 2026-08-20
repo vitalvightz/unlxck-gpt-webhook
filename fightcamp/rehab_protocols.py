@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
@@ -13,7 +13,11 @@ from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
 from .injury_location_registry import build_location_region_map, get_rehab_location_candidates
-from .rehab_schema import split_phase_progression
+from .rehab_schema import (
+    REHAB_STAGES,
+    normalize_severity_bucket,
+    split_phase_progression,
+)
 from .rehab_selector import select_rehab_candidate
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
@@ -671,9 +675,15 @@ def classify_drill_function(name: str, notes: str = "") -> str:
 
 
 def _normalize_rehab_severity(value: str | None) -> str:
-    normalized = str(value or "").strip().lower()
-    mapping = {"mild": "low", "low": "low", "moderate": "moderate", "high": "high", "severe": "high"}
-    return mapping.get(normalized, "moderate")
+    """Collapse a raw severity onto the bank contract for rendering decisions.
+
+    The vocabulary lives in
+    :func:`fightcamp.rehab_schema.normalize_severity_bucket`.
+    Rendering keeps its historical ``"moderate"`` default for an unrecognised
+    severity: the drill list still has to be filtered by *something*, and the
+    middle bucket is the safe one to filter by.
+    """
+    return normalize_severity_bucket(value, default="moderate")
 
 
 def _drill_is_too_aggressive_for_severity(name: str, notes: str, severity: str) -> bool:
@@ -682,6 +692,42 @@ def _drill_is_too_aggressive_for_severity(name: str, notes: str, severity: str) 
     text = f"{name} {notes}".lower()
     terms = _HIGH_SEVERITY_BLOCK_TERMS if severity == "high" else _MODERATE_SEVERITY_BLOCK_TERMS
     return any(term in text for term in terms)
+
+
+def _phase_notes(drill: Mapping[str, object], current_phase: str) -> str | None:
+    """Return the notes this drill renders in ``current_phase``, else ``None``.
+
+    A drill whose notes are split by phase progression only appears in the
+    phases it names. One with unsplit notes appears in every phase.
+    """
+    name = str(drill.get("name") or "")
+    if not name:
+        return None
+    notes = str(drill.get("notes") or "")
+    parsed = _split_notes_by_phase(notes)
+    if not parsed:
+        return notes
+    for phase_label, text in parsed:
+        if phase_label == current_phase.upper():
+            return text
+    return None
+
+
+def _drill_is_prescribable(
+    drill: Mapping[str, object], current_phase: str, severity: str
+) -> bool:
+    """True when this drill would survive rendering for this phase and severity.
+
+    The stage-aware selector picks exactly one drill, so its candidate set has
+    to be the drills that can actually be prescribed. Anything the phase or
+    severity rules would strip afterwards is not a real candidate.
+    """
+    notes = _phase_notes(drill, current_phase)
+    if notes is None:
+        return False
+    return not _drill_is_too_aggressive_for_severity(
+        str(drill.get("name") or ""), notes, severity
+    )
 
 
 def _filter_drills_by_severity(drills: list[tuple[str, str]], severity: str) -> list[tuple[str, str]]:
@@ -889,9 +935,20 @@ def generate_rehab_protocols(
             live_stage = str((merged or {}).get("rehab_stage") or "").strip().lower()
             selected_drill_id = ""
             if live_stage:
+                # Only drills that this phase and severity would actually
+                # prescribe are candidates. Selecting first and filtering
+                # afterwards lets the selector pick a drill with no content for
+                # the current phase, which renders an empty rehab block.
+                group_severity = _normalize_rehab_severity(
+                    (merged or {}).get("severity")
+                )
                 stage_candidates = []
                 for match in matches:
                     for bank_drill in match.get("drills", []):
+                        if not _drill_is_prescribable(
+                            bank_drill, current_phase, group_severity
+                        ):
+                            continue
                         candidate = dict(bank_drill)
                         candidate.setdefault("injury_type", match.get("type"))
                         candidate.setdefault("care_pathway", "msk")
@@ -900,12 +957,22 @@ def generate_rehab_protocols(
                     injury={
                         **(merged or {}),
                         "body_region": loc,
+                        # The bank keyed this group by one of these names, and
+                        # it is not always the parser's canonical wording
+                        # ("bicep" in the bank, "biceps" from the parser).
+                        "body_region_aliases": loc_candidates,
                         "injury_type": itype,
+                        # The merge namespaces these so a group carrying two
+                        # injuries keeps one identity; the selector reads the
+                        # exposure-contract names.
+                        "id": (merged or {}).get("injury_id"),
+                        "side": (merged or {}).get("laterality"),
                     },
                     rehab_stage=live_stage,
                     candidates=stage_candidates,
                     available_equipment=(merged or {}).get("available_equipment"),
                     exposures=(merged or {}).get("rehab_exposures") or (),
+                    session_context=day_type,
                 )
                 selected_drill_id = selection.selected_drill_id or ""
                 logger.info(
@@ -1040,6 +1107,17 @@ def _merge_injuries_by_location(parsed_entries: list[dict]) -> list[dict]:
                 "severity": None,
                 "laterality": laterality,
                 "is_urgent": False,
+                # Live rehab context. These are resolved upstream (rehab stage
+                # by ``api.contracts.rehab_stage``, exposures by PR3) and are
+                # carried through the merge because the selector cannot ask for
+                # them: a whitelist that drops them silently disables
+                # stage-aware selection for the whole plan.
+                "rehab_stage": None,
+                "athlete_id": None,
+                "injury_id": None,
+                "episode_id": None,
+                "available_equipment": None,
+                "rehab_exposures": [],
             },
         )
         if not group.get("display_location"):
@@ -1067,7 +1145,39 @@ def _merge_injuries_by_location(parsed_entries: list[dict]) -> list[dict]:
         if laterality and (group["laterality"] is None or group["laterality"] == laterality):
             group["laterality"] = laterality
         group["is_urgent"] = bool(group["is_urgent"] or _entry_is_urgent(entry))
+        _merge_live_rehab_context(group, entry)
     return list(merged.values())
+
+
+def _merge_live_rehab_context(group: dict, entry: dict) -> None:
+    """Fold one entry's live rehab context into its merged location group.
+
+    Two injuries can share a location group, and they can carry different
+    resolved stages. The group gets the *most protective* of them: a group
+    containing anything still calming down is programmed as calm, never as the
+    more demanding sibling's restore. Identity and exposures are first-writer
+    -wins so a second entry cannot overwrite the evidence trail of the first.
+    """
+    stage = str(entry.get("rehab_stage") or "").strip().lower()
+    if stage in REHAB_STAGES:
+        current = group.get("rehab_stage")
+        if current not in REHAB_STAGES or REHAB_STAGES.index(stage) < REHAB_STAGES.index(current):
+            group["rehab_stage"] = stage
+
+    for source_key, group_key in (
+        ("athlete_id", "athlete_id"),
+        ("id", "injury_id"),
+        ("injury_id", "injury_id"),
+        ("episode_id", "episode_id"),
+        ("injury_episode_id", "episode_id"),
+        ("available_equipment", "available_equipment"),
+    ):
+        if group.get(group_key) is None and entry.get(source_key) is not None:
+            group[group_key] = entry[source_key]
+
+    exposures = entry.get("rehab_exposures")
+    if isinstance(exposures, (list, tuple)) and not group["rehab_exposures"]:
+        group["rehab_exposures"] = list(exposures)
 
 
 def _build_red_flag_block(entry: dict) -> str:
@@ -1346,6 +1456,7 @@ def rehab_drill_options_for_phase(
     rehab_stage: str | None = None,
     available_equipment: Iterable[str] | None = None,
     exposures: Iterable[dict] = (),
+    session_context: Mapping[str, object] | str | None = None,
 ) -> list[dict]:
     """Return the phase's rehab options, each keeping its canonical bank identity.
 
@@ -1447,9 +1558,21 @@ def rehab_drill_options_for_phase(
             candidates=candidates,
             available_equipment=available_equipment,
             exposures=exposures,
+            session_context=session_context,
         )
-        selected = option_by_id.get(result.selected_drill_id or "")
-        return [selected] if selected else []
+        # The card contract is "the chosen drill plus its alternates", so the
+        # stage-aware path returns the whole ranked list the selector chose
+        # from rather than collapsing it to one entry. Position 0 is the
+        # selection; everything after it is an alternate that also passed every
+        # hard clinical filter.
+        selected_options = [
+            option_by_id[drill_id]
+            for drill_id in (
+                str(drill.get("id") or "") for drill in result.ranked_drills
+            )
+            if drill_id in option_by_id
+        ]
+        return selected_options[:limit]
     return options[:collection_limit]
 
 

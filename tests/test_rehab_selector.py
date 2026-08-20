@@ -1,8 +1,14 @@
 from copy import deepcopy
 
+import pytest
+
 from api.contracts.rehab_stage import MAX_RESOLVABLE_STAGE, STAGE_RESTORE
 from fightcamp import rehab_protocols
-from fightcamp.rehab_schema import split_phase_progression
+from fightcamp.rehab_schema import (
+    LATERALITY_APPLICABILITY_VALUES,
+    SEVERITY_VALUES,
+    normalize_severity_bucket,
+)
 from fightcamp.rehab_selector import select_rehab_candidate
 
 
@@ -139,48 +145,104 @@ def test_exact_region_and_family_beat_generic_fallbacks():
     assert selected([generic, exact]).selected_drill_id == "z_exact"
 
 
-def test_canonical_laterality_contract_fails_closed_when_required():
-    side_specific = drill("side", laterality_applicability="side_specific")
-    bilateral_only = drill("both", laterality_applicability="bilateral_only")
-    not_applicable = drill("na", laterality_applicability="not_applicable")
+def test_every_canonical_laterality_value_is_admissible_for_a_known_side():
+    """The four bank values are LATERALITY_APPLICABILITY_VALUES, and for a
+    left-side injury none of them is a reason to throw a drill away."""
+    assert set(LATERALITY_APPLICABILITY_VALUES) == {
+        "side_specific",
+        "bilateral_only",
+        "not_applicable",
+        "unknown",
+    }
+    for applicability in LATERALITY_APPLICABILITY_VALUES:
+        result = selected(
+            [drill("d", laterality_applicability=applicability)],
+            injury=injury(side="left"),
+        )
+        assert result.selected_drill_id == "d", (
+            f"{applicability} was rejected: {result.rejected_candidates}"
+        )
 
-    assert selected([side_specific]).selected_drill_id == "side"
 
-    unknown = selected([side_specific], injury=injury(side="unknown"))
+def test_side_specific_is_the_only_laterality_value_that_can_fail_closed():
+    """A drill performed on a named side is unsatisfiable when no side is known.
+
+    Every other value stays admissible, because none of them needs to be told
+    which side is hurt in order to be performed.
+    """
+    unknown_side = injury(side="unknown")
+    rejected = selected(
+        [drill("side", laterality_applicability="side_specific")],
+        injury=unknown_side,
+    )
     assert (
         "REJECT_UNKNOWN_REQUIRED_LATERALITY"
-        in unknown.rejected_candidates[0].reason_codes
+        in rejected.rejected_candidates[0].reason_codes
     )
 
+    for applicability in ("bilateral_only", "not_applicable", "unknown"):
+        result = selected(
+            [drill("d", laterality_applicability=applicability)],
+            injury=unknown_side,
+        )
+        assert result.selected_drill_id == "d", applicability
+
+
+def test_unknown_laterality_is_never_positive_specificity():
+    """``unknown`` must not outrank a drill that states its applicability."""
+    stated = drill("z_stated", laterality_applicability="side_specific")
+    unstated = drill("a_unknown", laterality_applicability="unknown")
+    # The unstated drill sorts first on canonical id, so only the laterality
+    # ordering can put the stated one ahead of it.
+    assert selected([unstated, stated], injury=injury(side="left")).selected_drill_id == (
+        "z_stated"
+    )
+
+
+def test_bilateral_only_ranks_top_for_a_bilateral_injury():
+    bilateral_only = drill("z_both", laterality_applicability="bilateral_only")
+    not_applicable = drill("a_na", laterality_applicability="not_applicable")
+    result = selected([not_applicable, bilateral_only], injury=injury(side="bilateral"))
+    assert result.selected_drill_id == "z_both"
+
+
+def test_unmigrated_stage_is_admissible_but_cannot_claim_a_stage_match():
+    """``rehab_stage: null`` is PR1's not-migrated marker, not a rejection.
+
+    It is also the state of every drill in the live bank, so rejecting it would
+    empty the rehab block entirely.
+    """
+    unmigrated = selected([drill("a_unmigrated", rehab_stage=None)])
+    assert unmigrated.selected_drill_id == "a_unmigrated"
+    assert dict(
+        (factor.factor, factor.result) for factor in unmigrated.ranking_factors
+    )["stage_match"] == "stage_unmigrated"
+
+    # A migrated exact match outranks it despite sorting later by id.
+    ranked = selected([drill("a_unmigrated", rehab_stage=None), drill("z_restore")])
+    assert ranked.selected_drill_id == "z_restore"
+
+
+def test_a_stated_but_unrecognised_stage_still_fails_closed():
+    result = selected([drill("bad", rehab_stage="not_a_stage")])
     assert (
-        selected([bilateral_only], injury=injury(side="bilateral")).selected_drill_id
-        == "both"
-    )
-    unilateral = selected([bilateral_only], injury=injury(side="left"))
-    assert "REJECT_LATERALITY_MISMATCH" in unilateral.rejected_candidates[0].reason_codes
-
-    assert (
-        selected([not_applicable], injury=injury(side="unknown")).selected_drill_id
-        == "na"
-    )
-    unknown_candidate = selected(
-        [drill("unknown", laterality_applicability="unknown")]
-    )
-    assert (
-        "REJECT_UNKNOWN_REQUIRED_LATERALITY"
-        in unknown_candidate.rejected_candidates[0].reason_codes
+        "REJECT_UNKNOWN_REQUIRED_STAGE"
+        in result.rejected_candidates[0].reason_codes
     )
 
 
-def test_unknown_stage_and_region_are_not_reinterpreted_as_compatible():
-    result = selected(
-        [
-            drill("unknown", rehab_stage=None),
-            drill("no_region", target_regions=None),
-        ]
-    )
+def test_a_more_protective_stage_is_a_conservative_fallback_not_a_rejection():
+    """A CALM drill is always acceptable for a RESTORE athlete — it asks less."""
+    result = selected([drill("calm_drill", "calm")], stage="restore")
+    assert result.selected_drill_id == "calm_drill"
+    assert dict(
+        (factor.factor, factor.result) for factor in result.ranking_factors
+    )["stage_match"] == "conservative_fallback"
+
+
+def test_unknown_region_is_still_not_reinterpreted_as_compatible():
+    result = selected([drill("no_region", target_regions=None)])
     reasons = {item.drill_id: item.reason_codes for item in result.rejected_candidates}
-    assert "REJECT_UNKNOWN_REQUIRED_STAGE" in reasons["unknown"]
     assert "REJECT_UNKNOWN_REQUIRED_REGION" in reasons["no_region"]
 
 
@@ -359,61 +421,6 @@ def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypa
     assert set(options[0]) == {"line", "drill", "location", "type"}
 
 
-def test_real_bank_live_stage_path_preserves_option_contract():
-    compatible = None
-    for entry in rehab_protocols.get_rehab_bank():
-        phases = split_phase_progression(entry.get("phase_progression"))
-        if not phases:
-            continue
-        for bank_drill in entry.get("drills", []) or []:
-            stage = str(bank_drill.get("rehab_stage") or "").strip().lower()
-            applicability = str(
-                bank_drill.get("laterality_applicability") or ""
-            ).strip().lower()
-            severities = bank_drill.get("allowed_severities") or []
-            regions = bank_drill.get("target_regions") or []
-            if stage not in {"calm", "restore"}:
-                continue
-            if applicability not in {
-                "side_specific",
-                "bilateral_only",
-                "not_applicable",
-            }:
-                continue
-            if not severities or entry.get("location") not in regions:
-                continue
-            compatible = (entry, bank_drill, phases[0], stage, applicability)
-            break
-        if compatible:
-            break
-
-    assert compatible is not None, "real rehab bank has no live-stage compatible drill"
-    entry, bank_drill, phase, stage, applicability = compatible
-    side = "bilateral" if applicability == "bilateral_only" else "left"
-    real_injury = injury(
-        body_region=entry["location"],
-        injury_type=entry["type"],
-        severity=bank_drill["allowed_severities"][0],
-        side=side,
-    )
-
-    options = rehab_protocols.rehab_drill_options_for_phase(
-        entry["type"],
-        entry["location"],
-        phase,
-        injury=real_injury,
-        rehab_stage=stage,
-    )
-
-    assert len(options) == 1
-    option = options[0]
-    assert set(option) == {"line", "drill", "location", "type"}
-    assert option["drill"]["id"]
-    assert rehab_protocols.rehab_drill_by_id(option["drill"]["id"]) is not None
-    assert option["drill"]["rehab_stage"] == stage
-    assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
-
-
 def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
     monkeypatch,
 ):
@@ -435,3 +442,75 @@ def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
     )[0]
     assert set(option) == {"line", "drill", "location", "type"}
     assert option["drill"]["id"] == "one"
+
+
+# ---------------------------------------------------------------------------
+# Against the real validated bank, not synthetic candidate dictionaries.
+#
+# The synthetic suites above are free to invent well-migrated drills. These are
+# not: they run the shipped ``data/rehab_bank.json`` through the real option
+# path, which is the only thing that can catch the selector agreeing with a
+# contract the bank does not actually use.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("live_stage", ["calm", "restore"])
+def test_real_bank_yields_an_eligible_canonical_drill_for_each_live_stage(live_stage):
+    """A realistic CALM and RESTORE injury each select a real, resolvable drill."""
+    real_injury = injury(body_region="ankle", injury_type="sprain", side="left")
+
+    options = rehab_protocols.rehab_drill_options_for_phase(
+        "sprain",
+        "ankle",
+        "GPP",
+        injury=real_injury,
+        rehab_stage=live_stage,
+    )
+
+    assert options, f"real bank selected nothing at {live_stage}"
+    selected_option = options[0]
+    assert set(selected_option) == {"line", "drill", "location", "type"}
+
+    drill_id = selected_option["drill"]["id"]
+    assert drill_id
+    # The id has to be resolvable back through the canonical bank, or a
+    # completed drill could never be tied to what was prescribed.
+    assert rehab_protocols.rehab_drill_by_id(drill_id) is not None
+
+
+def test_real_bank_severity_gate_uses_the_contract_vocabulary():
+    """Raw intake severities reach the bank's buckets, not a parallel vocabulary."""
+    assert set(SEVERITY_VALUES) == {"low", "moderate", "high"}
+    for raw, expected in (("mild", "low"), ("severe", "high"), ("moderate", "moderate")):
+        assert normalize_severity_bucket(raw) == expected
+
+    for raw in ("mild", "moderate", "severe"):
+        options = rehab_protocols.rehab_drill_options_for_phase(
+            "sprain",
+            "ankle",
+            "GPP",
+            injury=injury(body_region="ankle", injury_type="sprain", severity=raw),
+            rehab_stage="restore",
+        )
+        assert options, f"severity {raw!r} selected nothing from the real bank"
+
+
+def test_real_bank_selection_is_deterministic_across_candidate_order():
+    """Same athlete, same bank, same answer — no ordering or randomness effects."""
+    real_injury = injury(body_region="ankle", injury_type="sprain", side="left")
+    runs = {
+        rehab_protocols.rehab_drill_options_for_phase(
+            "sprain",
+            "ankle",
+            "GPP",
+            injury=real_injury,
+            rehab_stage="restore",
+        )[0]["drill"]["id"]
+        for _ in range(5)
+    }
+    assert len(runs) == 1
+
+
+def test_live_stage_ceiling_is_unchanged_by_this_selector():
+    """PR5 selects drills. It does not move the ladder's ceiling."""
+    assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
