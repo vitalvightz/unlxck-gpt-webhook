@@ -16,7 +16,9 @@ from api.services.notification_foundation import (
     NOTIFICATION_STALE_CLAIM_AFTER,
     NotificationCandidate,
     candidate_is_allowed,
+    diagnostic_persist_interval,
     get_notification_preferences,
+    has_notification_evaluation_decision,
     list_notification_evaluations,
     list_recent_notification_deliveries,
     record_notification_evaluation,
@@ -59,21 +61,6 @@ ALL_ORCHESTRATED_INTENTS = (
     "fight_countdown",
     "coach_message",
 )
-
-# These decisions must still be recomputed on every worker sweep. Only the
-# persistence of an identical diagnostic fact is reduced. A changed decision,
-# reason, source, timing, or candidate produces a different evaluation key and
-# is therefore written immediately.
-HIGH_FREQUENCY_DIAGNOSTIC_INTENTS = frozenset({
-    "session_stop",
-    "session_modified",
-    "session_near",
-    "session_ready",
-    "session_preparation",
-    "post_session_log",
-    "injury_recheck",
-    "high_pain_followup",
-})
 
 
 @dataclass(frozen=True)
@@ -241,11 +228,7 @@ def _record_reason(
         rejection_reasons=(reason,),
         eligible=False,
         source_event_metadata=source_metadata,
-        min_persist_interval=(
-            timedelta(minutes=30)
-            if intent in HIGH_FREQUENCY_DIAGNOSTIC_INTENTS
-            else timedelta(hours=6)
-        ),
+        min_persist_interval=diagnostic_persist_interval(intent),
     )
 
 
@@ -321,6 +304,49 @@ def _fight_countdown(view: CommandView, training_day: str) -> int | None:
     return remaining if remaining in {14, 7, 3, 1} else None
 
 
+@dataclass(frozen=True)
+class _DeferredSource:
+    """One rehydratable deferred lifecycle, keyed by its original deferral."""
+
+    identity: dict[str, str]
+    row: dict[str, Any]
+    metadata: dict[str, Any]
+    snapshot: dict[str, Any]
+    expires_at: datetime
+    intent: str
+    category: str
+
+    @property
+    def order(self) -> tuple[str, str]:
+        return (self.identity["training_day"], self.identity["first_deferred_at"])
+
+
+def _deferred_source_identity(
+    row: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+) -> dict[str, str]:
+    """Resolve the original deferral a row descends from.
+
+    A row already carrying ``_deferred_source`` is a later copy of an existing
+    lifecycle, so its stored identity is preserved verbatim. Only a row without
+    one - the deferral written when the source event first met quiet hours -
+    establishes a new identity.
+    """
+
+    existing = metadata.get("_deferred_source")
+    if isinstance(existing, Mapping) and str(existing.get("training_day") or "").strip():
+        return {
+            "training_day": str(existing.get("training_day") or "").strip(),
+            "first_deferred_at": str(existing.get("first_deferred_at") or "").strip(),
+        }
+    return {
+        "training_day": str(row.get("training_day") or "").strip(),
+        "first_deferred_at": str(
+            row.get("first_evaluated_at") or row.get("evaluated_at") or ""
+        ).strip(),
+    }
+
+
 def _deferred_event_candidates(
     store: AppStore,
     *,
@@ -369,13 +395,12 @@ def _deferred_event_candidates(
         for row in delivery_rows
         if row.get("dedupe_key")
     }
-    observed_selected_keys = {
-        str(row.get("dedupe_key") or "")
-        for row in evaluation_rows
-        if row.get("decision") == "would_select" and row.get("dedupe_key")
-    }
     reference = _aware_utc(now_utc)
 
+    # One dedupe key resolves to exactly one authoritative source. A later
+    # deferral of an already-rehydrated candidate is a copy of that lifecycle,
+    # never a new generation to rehydrate alongside it.
+    sources: dict[str, _DeferredSource] = {}
     for row in deferred_rows:
         metadata = row.get("source_event_metadata")
         if not isinstance(metadata, Mapping):
@@ -386,19 +411,47 @@ def _deferred_event_candidates(
         if str(snapshot.get("notification_class") or "") != "event":
             continue
         expires_at = _parse_datetime(snapshot.get("expires_at"))
-        if expires_at is None or expires_at <= _aware_utc(now_utc):
+        if expires_at is None or expires_at <= reference:
             continue
         intent = str(row.get("intent") or "").strip()
         category = str(row.get("category") or "").strip()
         dedupe_key = str(row.get("dedupe_key") or "").strip()
         if not intent or not category or not dedupe_key:
             continue
+        identity = _deferred_source_identity(row, metadata)
+        source = _DeferredSource(
+            identity=identity,
+            row=dict(row),
+            metadata=dict(metadata),
+            snapshot=dict(snapshot),
+            expires_at=expires_at,
+            intent=intent,
+            category=category,
+        )
+        current = sources.get(dedupe_key)
+        if current is None or source.order < current.order:
+            sources[dedupe_key] = source
+
+    for dedupe_key, source in sorted(sources.items()):
+        row = source.row
+        metadata = source.metadata
+        snapshot = source.snapshot
+        expires_at = source.expires_at
+        intent = source.intent
+        category = source.category
         delivery = deliveries_by_key.get(dedupe_key)
         if delivery is None:
             # Observation suppresses its own repeated shadow evaluation, but
             # never consumes real send eligibility. Send mode deliberately
             # rehydrates the source when no real delivery ledger row exists.
-            if observe_mode and dedupe_key in observed_selected_keys:
+            # The lookup is durable and exact so a selection older than this
+            # sweep's evaluation window still ends the shadow lifecycle.
+            if observe_mode and has_notification_evaluation_decision(
+                store,
+                profile_id=profile_id,
+                dedupe_key=dedupe_key,
+                decision="would_select",
+            ):
                 continue
         else:
             status = str(delivery.get("status") or "")
@@ -442,9 +495,10 @@ def _deferred_event_candidates(
                 variant_id=str(row.get("variant_id") or "") or None,
                 source_event_metadata={
                     **dict(metadata),
-                    "deferred_from_training_day": str(
-                        row.get("training_day") or training_day
-                    ),
+                    "_deferred_source": dict(source.identity),
+                    # Stamped from the original deferral, not the carrier row,
+                    # so re-deferring never mints a fresh source generation.
+                    "deferred_from_training_day": source.identity["training_day"],
                 },
                 action_key=str(snapshot.get("action_key") or "") or None,
                 notification_class="event",

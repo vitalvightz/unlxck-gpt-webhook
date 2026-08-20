@@ -35,6 +35,32 @@ SAFETY_DAILY_CAP = 2
 EVENT_DAILY_CAP = 3
 ROUTINE_MIN_SPACING_MINUTES = 45
 
+# Repeated worker sweeps must keep *evaluating* every intent, but persisting an
+# unchanged diagnostic every ten minutes only churns the ledger. A changed
+# decision, reason, dedupe key, source, timing, or candidate produces a
+# different evaluation key and is therefore inserted immediately, so throttling
+# never delays a state change - including a safety state change.
+HIGH_FREQUENCY_DIAGNOSTIC_INTENTS = frozenset({
+    "session_stop",
+    "session_modified",
+    "session_near",
+    "session_ready",
+    "session_preparation",
+    "post_session_log",
+    "injury_recheck",
+    "high_pain_followup",
+})
+HIGH_FREQUENCY_PERSIST_INTERVAL = timedelta(minutes=30)
+STABLE_PERSIST_INTERVAL = timedelta(hours=6)
+
+
+def diagnostic_persist_interval(intent: str) -> timedelta:
+    """How long an identical diagnostic fact may go without being rewritten."""
+
+    if intent in HIGH_FREQUENCY_DIAGNOSTIC_INTENTS:
+        return HIGH_FREQUENCY_PERSIST_INTERVAL
+    return STABLE_PERSIST_INTERVAL
+
 DeliveryStatus = Literal["sent", "partial", "failed"]
 NotificationClass = Literal["routine", "safety", "event"]
 TimingConfidence = Literal["high", "medium", "low"]
@@ -435,6 +461,58 @@ def list_notification_evaluations(
         query = query.eq("intent", intent)
     response = query.order("last_evaluated_at", desc=True).limit(500).execute()
     return _rows(response)
+
+
+def has_notification_evaluation_decision(
+    store: Any,
+    *,
+    profile_id: str,
+    dedupe_key: str,
+    decision: str,
+) -> bool:
+    """Has this exact profile/dedupe key ever recorded this exact decision?
+
+    Deliberately a targeted, index-backed existence check rather than a
+    historical scan: the deferred-event sweep needs to know whether one source
+    event was already resolved, not to reload notification history.
+    """
+
+    profile_id = str(profile_id or "").strip()
+    dedupe_key = str(dedupe_key or "").strip()
+    decision = str(decision or "").strip()
+    if not profile_id or not dedupe_key or not decision:
+        return False
+    custom = getattr(store, "has_notification_evaluation_decision", None)
+    if callable(custom):
+        return bool(custom(profile_id, dedupe_key=dedupe_key, decision=decision))
+    client = _client(store)
+    if client is None:
+        return any(
+            row_profile_id == profile_id
+            and str(row.get("dedupe_key") or "") == dedupe_key
+            and str(row.get("decision") or "") == decision
+            for (row_profile_id, _), row in _MEMORY_EVALUATIONS.get(
+                _store_key(store), {}
+            ).items()
+        )
+    try:
+        response = (
+            client.table("notification_evaluations")
+            .select("id")
+            .eq("profile_id", profile_id)
+            .eq("dedupe_key", dedupe_key)
+            .eq("decision", decision)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:  # noqa: BLE001 - adapter normalizes backend clients
+        logger.warning(
+            "[notification] evaluation decision lookup failed profile_id=%s error_class=%s",
+            profile_id,
+            type(exc).__name__,
+        )
+        raise NotificationStoreError("notification evaluation ledger unavailable") from exc
+    return bool(_rows(response))
 
 
 def get_notification_preferences(store: Any, profile_id: str) -> NotificationPreferences:
@@ -1215,6 +1293,14 @@ def simulate_notification_delivery_decision(
                 rejection_reasons=reasons,
                 eligible=eligible,
                 candidate=candidate,
+                # A selection is the shadow claim itself: its freshness drives
+                # stale-claim and attempt accounting, so it is never throttled.
+                # Only repeated unchanged arbitration diagnostics are.
+                min_persist_interval=(
+                    None
+                    if decision == "would_select"
+                    else diagnostic_persist_interval(candidate.intent)
+                ),
             )
         return selected
     except NotificationStoreError:

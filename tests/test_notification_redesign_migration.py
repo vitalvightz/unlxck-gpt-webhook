@@ -13,6 +13,12 @@ THROTTLE_MIGRATION = (
     / "migrations"
     / "20260818150000_throttle_notification_evaluations.sql"
 )
+DEDUPE_LOOKUP_MIGRATION = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260820190000_index_notification_evaluation_dedupe_lookup.sql"
+)
 
 
 def test_notification_redesign_migration_is_private_and_auditable() -> None:
@@ -69,3 +75,14 @@ def test_evaluation_throttle_rpc_remains_service_role_only() -> None:
     assert "make_interval(secs => p_min_interval_seconds)" in sql
     assert ") from public, anon, authenticated" in sql
     assert ") to service_role" in sql
+
+
+def test_dedupe_decision_lookup_index_is_additive() -> None:
+    sql = DEDUPE_LOOKUP_MIGRATION.read_text(encoding="utf-8").lower()
+    assert (
+        "create index if not exists notification_evaluations_dedupe_decision_idx" in sql
+    )
+    assert "on public.notification_evaluations (profile_id, dedupe_key, decision)" in sql
+    # An index-only migration must not redefine tables, functions, or grants.
+    for forbidden in ("drop ", "alter table", "create or replace function", "grant ", "revoke "):
+        assert forbidden not in sql, forbidden
