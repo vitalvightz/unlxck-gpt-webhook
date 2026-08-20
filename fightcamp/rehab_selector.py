@@ -91,8 +91,32 @@ def _canonical_side(value: object) -> str:
 
 
 def _event_mapping(exposure: Mapping[str, object]) -> Mapping[str, object]:
+    """Flatten a persisted row without losing storage-envelope identity.
+
+    ``RehabExposureEvent`` intentionally does not carry ``athlete_id`` because
+    athlete ownership belongs to the database row. Supabase readers therefore
+    return an envelope containing athlete/injury identity plus ``event_json``.
+    Treat the envelope as authoritative for identity while taking response and
+    demand observations from the immutable event payload.
+    """
     event_json = exposure.get("event_json")
-    return event_json if isinstance(event_json, Mapping) else exposure
+    if not isinstance(event_json, Mapping):
+        return exposure
+
+    event = dict(event_json)
+    for key in (
+        "athlete_id",
+        "injury_id",
+        "injury_episode_id",
+        "body_region",
+        "side",
+        "drill_id",
+        "occurred_at",
+        "id",
+    ):
+        if exposure.get(key) is not None:
+            event[key] = exposure[key]
+    return event
 
 
 def _response_mapping(event: Mapping[str, object]) -> Mapping[str, object]:
