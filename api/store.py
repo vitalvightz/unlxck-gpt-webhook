@@ -265,6 +265,14 @@ def _raise_client_request_payload_mismatch_if_known(job: dict[str, Any], payload
         raise client_request_id_payload_mismatch_error()
 
 
+@dataclass(frozen=True)
+class RehabExposureWindow:
+    """Newest bounded evidence rows plus whether older episode history exists."""
+
+    rows: list[dict[str, Any]]
+    history_truncated: bool
+
+
 class AppStore(Protocol):
     def validate_runtime_schema(self) -> None: ...
 
@@ -561,6 +569,15 @@ class AppStore(Protocol):
     def get_injury_flag_for_athlete(self, flag_id: str, athlete_id: str) -> dict[str, Any] | None: ...
 
     def create_rehab_exposure(self, athlete_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_rehab_exposures(
+        self,
+        athlete_id: str,
+        *,
+        injury_id: str,
+        injury_episode_id: str,
+        limit: int = 200,
+    ) -> RehabExposureWindow: ...
 
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -4706,6 +4723,39 @@ class SupabaseAppStore:
                 detail="failed to persist rehab exposure",
                 exc=exc,
             )
+
+    def list_rehab_exposures(
+        self,
+        athlete_id: str,
+        *,
+        injury_id: str,
+        injury_episode_id: str,
+        limit: int = 200,
+    ) -> RehabExposureWindow:
+        """Read newest episode evidence and expose any bounded-history gap."""
+        bounded_limit = max(1, min(limit, 500))
+        response = (
+            self.client.table("rehab_exposures")
+            .select("id,athlete_id,event_json,occurred_at")
+            .eq("athlete_id", athlete_id)
+            .eq("injury_id", injury_id)
+            .eq("injury_episode_id", injury_episode_id)
+            .order("occurred_at", desc=True)
+            # One sentinel row makes truncation explicit; the window size is
+            # not allowed to become an implicit clinical-clearance threshold.
+            .limit(bounded_limit + 1)
+            .execute()
+        )
+        rows = getattr(response, "data", None) or []
+        history_truncated = len(rows) > bounded_limit
+        rows = rows[:bounded_limit]
+        rows.sort(
+            key=lambda row: (
+                str(row.get("occurred_at") or ""),
+                str(row.get("id") or ""),
+            )
+        )
+        return RehabExposureWindow(rows=rows, history_truncated=history_truncated)
 
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(
