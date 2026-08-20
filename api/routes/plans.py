@@ -34,7 +34,7 @@ from api.services.minor_plan_guard import apply_minor_plan_guard
 from api.services.plan_safety_copy import clarify_restricted_training_hold
 from api.store import AppStore, is_effective_admin_profile
 from api.services.active_plan import resolve_active_plan, set_active_plan
-from api.services.streaks import reconcile_adherence_streak
+from api.services.streaks import reconcile_adherence_streak, reconcile_training_streak
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +291,18 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         # Activation can restore an existing plan whose completion history was
         # already present. Rebuild the persisted adherence view from that
         # history; this reconciliation is deliberately XP-free.
+        try:
+            reconcile_training_streak(
+                store,
+                athlete_id=profile.athlete_id,
+                athlete_timezone=profile.athlete_timezone,
+            )
+        except Exception:  # noqa: BLE001 - the active pointer remains authoritative
+            logger.exception(
+                "[streak] activation training reconciliation failed athlete_id=%s plan_id=%s",
+                profile.athlete_id,
+                plan_id,
+            )
         try:
             reconcile_adherence_streak(
                 store,

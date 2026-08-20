@@ -82,7 +82,7 @@ def test_xp_rejection_does_not_prevent_adherence_reconciliation(monkeypatch):
     monkeypatch.setattr(today_routes, "plan_completion_xp_eligible", lambda *args, **kwargs: False)
     monkeypatch.setattr(
         today_routes,
-        "reconcile_adherence_streak",
+        "reconcile_training_streak",
         lambda *args, **kwargs: calls.append(kwargs["athlete_id"]),
     )
 
@@ -103,7 +103,7 @@ def test_adherence_reconciliation_failure_does_not_rollback_completion(monkeypat
     def fail(*args, **kwargs):
         raise RuntimeError("streak store unavailable")
 
-    monkeypatch.setattr(today_routes, "reconcile_adherence_streak", fail)
+    monkeypatch.setattr(today_routes, "reconcile_training_streak", fail)
 
     response = _complete(client, ACTIVE_PLAN, "scheduled-session")
 
