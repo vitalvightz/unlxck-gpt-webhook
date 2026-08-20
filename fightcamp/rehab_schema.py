@@ -92,9 +92,22 @@ CONTRACTION_TYPE_VALUES: tuple[str, ...] = (
 SPORT_SPECIFICITY_VALUES: tuple[str, ...] = ("general_rehab", "combat_sport", "unknown")
 CONTACT_LEVEL_VALUES: tuple[str, ...] = ("none", "controlled", "full", "unknown")
 
-#: Injury severities a drill may be gated on. Mirrors the buckets that
-#: ``rehab_protocols._normalize_rehab_severity`` collapses raw severities into.
+#: Injury severities a drill may be gated on. This module owns the buckets and
+#: the collapse; ``rehab_protocols._normalize_rehab_severity`` and the rehab
+#: selector both read :func:`normalize_severity_bucket` rather than keeping a second
+#: vocabulary of their own.
 SEVERITY_VALUES: tuple[str, ...] = ("low", "moderate", "high")
+
+#: Intake wording that maps onto a bank severity bucket. Intake collects an
+#: athlete-facing word; the bank gates on a bucket. This is the one place the
+#: two vocabularies meet.
+SEVERITY_ALIASES: dict[str, str] = {
+    "mild": "low",
+    "low": "low",
+    "moderate": "moderate",
+    "high": "high",
+    "severe": "high",
+}
 
 #: Structured dose slots. All three are optional *within* a migrated dose.
 DOSE_FIELDS: tuple[str, ...] = ("sets", "reps", "duration_seconds")
@@ -208,6 +221,26 @@ def is_surface_injury_type(injury_type: str | None) -> bool:
 def care_type_for_injury_type(injury_type: str | None) -> str:
     """Return the care pathway a group's drills belong to."""
     return CARE_TYPE_WOUND_CARE if is_surface_injury_type(injury_type) else CARE_TYPE_MUSCULOSKELETAL
+
+
+def normalize_severity_bucket(value: object, *, default: str = "") -> str:
+    """Collapse a raw injury severity onto the bank's severity contract.
+
+    The bank gates drills on :data:`SEVERITY_VALUES`; intake and the injury
+    flags speak a slightly wider vocabulary (``mild``, ``severe``). This is the
+    single collapse both of them go through — there is deliberately no second
+    severity vocabulary in the selector or in ``rehab_protocols``.
+
+    ``default`` is what an unrecognised or absent severity becomes, and callers
+    differ honestly on it. Rendering wants a safe middle bucket so a drill list
+    can still be filtered; selection wants ``""`` so "we do not know this
+    athlete's severity" stays distinguishable from "we know it is moderate" and
+    can fail closed against a drill that gates on severity.
+    """
+    normalized = str(value or "").strip().lower()
+    if normalized in SEVERITY_ALIASES:
+        return SEVERITY_ALIASES[normalized]
+    return normalized if normalized in SEVERITY_VALUES else default
 
 
 # ---------------------------------------------------------------------------

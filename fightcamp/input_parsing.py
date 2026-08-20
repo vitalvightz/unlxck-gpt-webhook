@@ -415,6 +415,14 @@ class GuidedInjury:
     infection_signs: list[str] = field(default_factory=list)
     impact_related: str = ""
     sensitive_area: str = ""
+    #: Ephemeral live rehab context resolved server-side at generation time and
+    #: attached to the payload just before planning (never persisted into intake
+    #: — intake is not the source of truth for rehab stage). Carries this exact
+    #: injury episode's ``rehab_stage`` plus the identity the fightcamp selector
+    #: keys on (athlete_id, injury_id, episode_id, side) and its exposure trail.
+    #: Empty for a plan generated with no resolved stage, which reads downstream
+    #: as "stage not resolved" — exactly the pre-stage-aware behaviour.
+    rehab_generation_context: dict[str, object] = field(default_factory=dict)
 
     def has_content(self) -> bool:
         return any(
@@ -472,7 +480,37 @@ def _build_guided_injury(raw_value: dict[str, object]) -> GuidedInjury:
         infection_signs=_coerce_guided_list(raw_value.get("infection_signs")),
         impact_related=_coerce_guided_text(raw_value.get("impact_related")),
         sensitive_area=_coerce_guided_text(raw_value.get("sensitive_area")),
+        rehab_generation_context=_coerce_rehab_generation_context(raw_value),
     )
+
+
+def _coerce_rehab_generation_context(raw_value: dict[str, object]) -> dict[str, object]:
+    """Read the server-attached ephemeral rehab context off a guided-injury dict.
+
+    The generation boundary (``api.services.rehab_stage_snapshot``) stamps a
+    ``rehab_generation_context`` mapping onto each guided injury it can resolve a
+    live stage for. Nothing else writes it, so an absent or malformed value
+    simply means "no live stage resolved" and yields an empty context.
+    """
+    context = raw_value.get("rehab_generation_context")
+    if not isinstance(context, dict):
+        return {}
+    stage = str(context.get("rehab_stage") or "").strip().lower()
+    if not stage:
+        return {}
+    exposures = context.get("rehab_exposures")
+    equipment = context.get("available_equipment")
+    return {
+        "rehab_stage": stage,
+        "injury_id": str(context.get("injury_id") or "") or None,
+        "episode_id": str(context.get("episode_id") or "") or None,
+        "athlete_id": str(context.get("athlete_id") or "") or None,
+        "rehab_care_pathway": str(context.get("rehab_care_pathway") or "") or None,
+        "rehab_exposures": list(exposures) if isinstance(exposures, (list, tuple)) else [],
+        "available_equipment": list(equipment)
+        if isinstance(equipment, (list, tuple))
+        else None,
+    }
 
 
 _GUIDED_TRIGGER_PREFIX = re.compile(
@@ -569,6 +607,7 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
             injury_entry["notes"] = guided_injury.notes
             if _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
                 injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
+        _apply_rehab_generation_context(injury_entry, guided_injury.rehab_generation_context)
         injuries.append(injury_entry)
 
     # A surface/skin injury's "avoid" is wound-care guidance (e.g. "avoid
@@ -597,6 +636,34 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
             restrictions.append(restriction)
 
     return injuries, restrictions
+
+
+def _apply_rehab_generation_context(
+    injury_entry: dict[str, object], context: dict[str, object]
+) -> None:
+    """Stamp one injury episode's live rehab context onto its parsed entry.
+
+    Keeps the stage, the identity the fightcamp rehab selector keys on
+    (``injury_id``, ``episode_id``, ``athlete_id``, ``side``) and the exposure
+    trail travelling together as one atomic unit, so no downstream merge can
+    pair one episode's evidence with another episode's stage.
+    """
+    if not context:
+        return
+    injury_entry["rehab_stage"] = context.get("rehab_stage")
+    for source_key, entry_key in (
+        ("injury_id", "injury_id"),
+        ("episode_id", "episode_id"),
+        ("athlete_id", "athlete_id"),
+        ("rehab_care_pathway", "rehab_care_pathway"),
+        ("available_equipment", "available_equipment"),
+    ):
+        value = context.get(source_key)
+        if value is not None:
+            injury_entry[entry_key] = value
+    exposures = context.get("rehab_exposures")
+    if isinstance(exposures, (list, tuple)):
+        injury_entry["rehab_exposures"] = list(exposures)
 
 
 def _parse_guided_injuries(

@@ -265,7 +265,15 @@ def test_conditioning_collision_reason_code_is_not_athlete_facing(monkeypatch):
     }
 
     output_lines, _, _, _, _, candidate_reservoir = conditioning.generate_conditioning_block(flags)
-    reasons = candidate_reservoir["aerobic"][0]["reasons"]
+    # Locate the collision drill by identity rather than reservoir position: a
+    # real exact-sport style drill can legitimately out-rank this synthetic one,
+    # and this test is about the reason code's *visibility*, not its ranking.
+    entry = next(
+        item
+        for item in candidate_reservoir["aerobic"]
+        if item["drill"]["name"] == "Power Priority Drill"
+    )
+    reasons = entry["reasons"]
 
     assert "priority_collision_goal_weakness:power" in reasons["reason_codes"]
     assert "priority_collision_goal_weakness:power" not in "\n".join(output_lines)

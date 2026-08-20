@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
@@ -13,7 +13,12 @@ from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
 from .injury_location_registry import build_location_region_map, get_rehab_location_candidates
-from .rehab_schema import split_phase_progression
+from .rehab_schema import (
+    REHAB_STAGES,
+    normalize_severity_bucket,
+    split_phase_progression,
+)
+from .rehab_selector import select_rehab_candidate
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
@@ -670,9 +675,15 @@ def classify_drill_function(name: str, notes: str = "") -> str:
 
 
 def _normalize_rehab_severity(value: str | None) -> str:
-    normalized = str(value or "").strip().lower()
-    mapping = {"mild": "low", "low": "low", "moderate": "moderate", "high": "high", "severe": "high"}
-    return mapping.get(normalized, "moderate")
+    """Collapse a raw severity onto the bank contract for rendering decisions.
+
+    The vocabulary lives in
+    :func:`fightcamp.rehab_schema.normalize_severity_bucket`.
+    Rendering keeps its historical ``"moderate"`` default for an unrecognised
+    severity: the drill list still has to be filtered by *something*, and the
+    middle bucket is the safe one to filter by.
+    """
+    return normalize_severity_bucket(value, default="moderate")
 
 
 def _drill_is_too_aggressive_for_severity(name: str, notes: str, severity: str) -> bool:
@@ -681,6 +692,42 @@ def _drill_is_too_aggressive_for_severity(name: str, notes: str, severity: str) 
     text = f"{name} {notes}".lower()
     terms = _HIGH_SEVERITY_BLOCK_TERMS if severity == "high" else _MODERATE_SEVERITY_BLOCK_TERMS
     return any(term in text for term in terms)
+
+
+def _phase_notes(drill: Mapping[str, object], current_phase: str) -> str | None:
+    """Return the notes this drill renders in ``current_phase``, else ``None``.
+
+    A drill whose notes are split by phase progression only appears in the
+    phases it names. One with unsplit notes appears in every phase.
+    """
+    name = str(drill.get("name") or "")
+    if not name:
+        return None
+    notes = str(drill.get("notes") or "")
+    parsed = _split_notes_by_phase(notes)
+    if not parsed:
+        return notes
+    for phase_label, text in parsed:
+        if phase_label == current_phase.upper():
+            return text
+    return None
+
+
+def _drill_is_prescribable(
+    drill: Mapping[str, object], current_phase: str, severity: str
+) -> bool:
+    """True when this drill would survive rendering for this phase and severity.
+
+    The stage-aware selector picks exactly one drill, so its candidate set has
+    to be the drills that can actually be prescribed. Anything the phase or
+    severity rules would strip afterwards is not a real candidate.
+    """
+    notes = _phase_notes(drill, current_phase)
+    if notes is None:
+        return False
+    return not _drill_is_too_aggressive_for_severity(
+        str(drill.get("name") or ""), notes, severity
+    )
 
 
 def _filter_drills_by_severity(drills: list[tuple[str, str]], severity: str) -> list[tuple[str, str]]:
@@ -750,6 +797,210 @@ def _format_rehab_drill(
         f"Why today: {why_today}.",
     ]
     return headline, annotations
+
+
+def _rehab_bank_matches(itype: str | None, loc_candidates, current_phase: str) -> list[dict]:
+    """Bank entries for this injury type + location that render in this phase."""
+    return [
+        entry
+        for entry in get_rehab_bank()
+        if (
+            entry.get("type") == itype
+            or entry.get("type") == "unspecified"
+            or itype is None
+        )
+        and (
+            entry.get("location") in loc_candidates
+            or entry.get("location") == "unspecified"
+        )
+        and current_phase.upper() in _entry_phases(entry)
+    ]
+
+
+def _phase_drill_line(drill: dict, current_phase: str) -> tuple[str, str] | None:
+    """This drill's ``(name, notes_for_phase)`` if it renders in the phase."""
+    name = drill.get("name")
+    if not name:
+        return None
+    notes = drill.get("notes", "")
+    parsed = _split_notes_by_phase(notes)
+    if not parsed:
+        return (name, notes)
+    for phase_label, text in parsed:
+        if phase_label == current_phase.upper():
+            return (name, text)
+    return None
+
+
+def _all_phase_drills(matches: list[dict], current_phase: str) -> list[tuple[str, str]]:
+    """Every matching drill's phase line — the stage-unaware legacy behaviour."""
+    drills: list[tuple[str, str]] = []
+    for match in matches:
+        for drill in match.get("drills", []):
+            line = _phase_drill_line(drill, current_phase)
+            if line is not None:
+                drills.append(line)
+    return drills
+
+
+def _log_episode_selection(
+    episode: dict, *, selection_mode: str, selected_id: str
+) -> None:
+    """Structured, machine-only trace of how one episode was programmed.
+
+    Distinguishes the stage-aware selector from the legacy unresolved-stage
+    fallback so the two paths are separable in logs. Carries identity only — no
+    free-text health description.
+    """
+    logger.info(
+        "rehab_selector athlete_id=%s injury_id=%s injury_episode_id=%s "
+        "rehab_stage=%s selection_mode=%s selected_drill_id=%s",
+        episode.get("athlete_id") or "",
+        episode.get("injury_id") or "",
+        episode.get("episode_id") or "",
+        episode.get("rehab_stage") or "",
+        selection_mode,
+        selected_id or "",
+    )
+
+
+def _stage_aware_drill_for_episode(
+    episode: dict,
+    *,
+    loc: str | None,
+    loc_candidates,
+    current_phase: str,
+    day_type: str | None,
+) -> tuple[str, str] | None:
+    """The one drill the stage-aware selector prescribes for a resolved episode."""
+    ep_type = episode.get("injury_type")
+    matches = _rehab_bank_matches(ep_type, loc_candidates, current_phase)
+    if not matches:
+        return None
+    ep_severity = _normalize_rehab_severity(episode.get("severity"))
+    stage_candidates: list[dict] = []
+    for match in matches:
+        for bank_drill in match.get("drills", []):
+            if not _drill_is_prescribable(bank_drill, current_phase, ep_severity):
+                continue
+            candidate = dict(bank_drill)
+            candidate.setdefault("injury_type", match.get("type"))
+            candidate.setdefault("care_pathway", "msk")
+            stage_candidates.append(candidate)
+    selection = select_rehab_candidate(
+        injury={
+            "body_region": loc,
+            "body_region_aliases": loc_candidates,
+            "injury_type": ep_type,
+            "id": episode.get("injury_id"),
+            "episode_id": episode.get("episode_id"),
+            "athlete_id": episode.get("athlete_id"),
+            "side": episode.get("side"),
+            "severity": episode.get("severity"),
+        },
+        rehab_stage=episode.get("rehab_stage"),
+        candidates=stage_candidates,
+        available_equipment=episode.get("available_equipment"),
+        exposures=episode.get("rehab_exposures") or (),
+        session_context=day_type,
+    )
+    selected_id = selection.selected_drill_id or ""
+    _log_episode_selection(episode, selection_mode="stage_aware", selected_id=selected_id)
+    if not selected_id:
+        return None
+    for match in matches:
+        for bank_drill in match.get("drills", []):
+            if str(bank_drill.get("id") or "") == selected_id:
+                return _phase_drill_line(bank_drill, current_phase)
+    return None
+
+
+def _legacy_rehab_drills_for_episode(
+    *,
+    episode: dict,
+    loc_candidates,
+    current_phase: str,
+    drill_limit: int,
+) -> list[tuple[str, str]]:
+    """The pre-stage-aware rehab drills for ONE episode whose stage is unresolved.
+
+    Absence of a resolved stage is never read as CALM or "no rehab": the episode
+    keeps the exact behaviour it had before stage-aware selection existed —
+    matched on its own injury type, location, phase and severity, in the same
+    deterministic bank order — scoped strictly to this injury.
+    """
+    matches = _rehab_bank_matches(episode.get("injury_type"), loc_candidates, current_phase)
+    if not matches:
+        return []
+    ep_severity = _normalize_rehab_severity(episode.get("severity"))
+    drills = _filter_drills_by_severity(_all_phase_drills(matches, current_phase), ep_severity)
+    result = drills[:drill_limit]
+    _log_episode_selection(
+        episode,
+        selection_mode="legacy_unresolved_stage",
+        selected_id=result[0][0] if result else "",
+    )
+    return result
+
+
+def _select_rehab_drills_per_episode(
+    *,
+    episodes: list[dict],
+    loc: str | None,
+    loc_candidates,
+    current_phase: str,
+    day_type: str | None,
+    drill_limit: int,
+) -> list[tuple[str, str]]:
+    """Programme every injury episode at this location independently, then consolidate.
+
+    Each episode drives its OWN candidate pool from its OWN injury type, and is
+    programmed by the stage-aware selector when its stage is resolved or by the
+    legacy fallback when it is not. Nothing about one episode — stage, evidence,
+    type, side, exposures — ever reaches another's selection.
+
+    The per-location block is then a fair, deterministic consolidation of those
+    independent prescriptions: a round-robin takes one drill from each episode
+    before any episode's second, so no injury is starved out of the block purely
+    because another was ordered first. Resolved episodes lead (most protective
+    first); the volume ceiling still caps the block.
+    """
+    per_episode: list[list[tuple[str, str]]] = []
+    for episode in sorted(episodes, key=_episode_sort_key):
+        if episode.get("stage_resolved"):
+            line = _stage_aware_drill_for_episode(
+                episode,
+                loc=loc,
+                loc_candidates=loc_candidates,
+                current_phase=current_phase,
+                day_type=day_type,
+            )
+            per_episode.append([line] if line is not None else [])
+        else:
+            per_episode.append(
+                _legacy_rehab_drills_for_episode(
+                    episode=episode,
+                    loc_candidates=loc_candidates,
+                    current_phase=current_phase,
+                    drill_limit=drill_limit,
+                )
+            )
+
+    chosen: list[tuple[str, str]] = []
+    seen_names: set[str] = set()
+    for position in range(max((len(lines) for lines in per_episode), default=0)):
+        for lines in per_episode:
+            if position >= len(lines):
+                continue
+            name, notes = lines[position]
+            key = str(name).strip().lower()
+            if key in seen_names:
+                continue
+            seen_names.add(key)
+            chosen.append((name, notes))
+            if len(chosen) >= drill_limit:
+                return chosen
+    return chosen
 
 
 def generate_rehab_protocols(
@@ -869,76 +1120,69 @@ def generate_rehab_protocols(
                 lines.append(f"- {loc_title} ({type_title}): {SURFACE_WOUND_CARE_NOTE}")
             continue
         loc_candidates = normalize_rehab_location(loc)
-        matches = [
-            entry
-            for entry in get_rehab_bank()
-            if (
-                entry.get("type") == itype
-                or entry.get("type") == "unspecified"
-                or itype is None
-            )
-            and (
-                entry.get("location") in loc_candidates
-                or entry.get("location") == "unspecified"
-            )
-            and current_phase.upper() in _entry_phases(entry)
-        ]
-        if matches:
-            drills: list[tuple[str, str]] = []  # (name, notes_for_phase)
-            for m in matches:
-                for d in m.get("drills", []):
-                    name = d.get("name")
-                    notes = d.get("notes", "")
-                    if not name:
-                        continue
+        merged = merged_by_key.get(group_key) if group_key else None
+        # Every MSK injury episode here — resolved stage or not. There is no
+        # group-wide stage-aware-vs-legacy switch: each episode chooses its own
+        # path, so an unresolved injury is never dropped just because a
+        # co-located one has a stage.
+        episodes = list((merged or {}).get("rehab_episodes") or [])
+        severity = _normalize_rehab_severity((merged or {}).get("severity"))
 
-                    parsed = _split_notes_by_phase(notes)
-                    if parsed:
-                        for phase_label, text in parsed:
-                            if phase_label == current_phase.upper():
-                                drills.append((name, text))
-                                break
-                    else:
-                        drills.append((name, notes))
+        def _render_high_severity_note() -> None:
+            loc_title = _render_location_heading(loc, merged)
+            lines.append(
+                f"- {loc_title}: High severity injury — use clinician-guided low-load mobility/isometrics only until symptoms settle."
+            )
 
-            severity = _normalize_rehab_severity((merged_by_key.get(group_key) or {}).get("severity") if group_key else None)
-            filtered_drills = _filter_drills_by_severity(drills, severity)
-            if severity == "high" and not filtered_drills:
-                merged = merged_by_key.get(group_key) if group_key else None
-                loc_title = _render_location_heading(loc, merged)
-                lines.append(
-                    f"- {loc_title}: High severity injury — use clinician-guided low-load mobility/isometrics only until symptoms settle."
-                )
+        if episodes:
+            selected = _select_rehab_drills_per_episode(
+                episodes=episodes,
+                loc=loc,
+                loc_candidates=loc_candidates,
+                current_phase=current_phase,
+                day_type=day_type,
+                drill_limit=drill_limit,
+            )
+            if not selected:
+                if severity == "high":
+                    _render_high_severity_note()
                 continue
-
-            # Apply volume ceiling.  Function classification is recorded as
-            # a tag but does NOT hard-block same-function drills — the model
-            # retains authority to include multiple drills of the same class
-            # when justified by the athlete's needs.
+        else:
+            # Defensive fallback: a location with no resolvable MSK episode (e.g.
+            # a bare injury string with no structured entry) keeps the legacy
+            # group-level rendering for the group's type.
+            matches = _rehab_bank_matches(itype, loc_candidates, current_phase)
+            if not matches:
+                continue
+            filtered_drills = _filter_drills_by_severity(
+                _all_phase_drills(matches, current_phase), severity
+            )
+            if severity == "high" and not filtered_drills:
+                _render_high_severity_note()
+                continue
             selected = filtered_drills[:drill_limit]
 
-            if selected:
-                merged = merged_by_key.get(group_key) if group_key else None
-                loc_title = _render_location_heading(loc, merged)
-                extra_types = merged.get("rehab_types", []) if merged else []
-                display_types = [t for t in extra_types if t != "unspecified"] or extra_types
-                type_title = " + ".join(t.title() for t in display_types) if display_types else (
-                    itype.title() if itype else "Unspecified"
+        if selected:
+            loc_title = _render_location_heading(loc, merged)
+            extra_types = merged.get("rehab_types", []) if merged else []
+            display_types = [t for t in extra_types if t != "unspecified"] or extra_types
+            type_title = " + ".join(t.title() for t in display_types) if display_types else (
+                itype.title() if itype else "Unspecified"
+            )
+            lines.append(f"- {loc_title} ({type_title}):")
+            for name, notes in selected:
+                # PR1: the bank's explicit `function` metadata is a data
+                # contract only. The rendered class stays keyword-derived
+                # from the phase-specific note, which is what the stored
+                # value cannot reproduce (one drill, one value, many
+                # phases). rehab_schema.resolve_drill_function is the
+                # forward path; PR3 switches this over.
+                fn = classify_drill_function(name, notes)
+                headline, annotations = _format_rehab_drill(
+                    name, notes, current_phase, fn, day_type
                 )
-                lines.append(f"- {loc_title} ({type_title}):")
-                for name, notes in selected:
-                    # PR1: the bank's explicit `function` metadata is a data
-                    # contract only. The rendered class stays keyword-derived
-                    # from the phase-specific note, which is what the stored
-                    # value cannot reproduce (one drill, one value, many
-                    # phases). rehab_schema.resolve_drill_function is the
-                    # forward path; PR3 switches this over.
-                    fn = classify_drill_function(name, notes)
-                    headline, annotations = _format_rehab_drill(
-                        name, notes, current_phase, fn, day_type
-                    )
-                    lines.append(f"  • {headline}")
-                    lines.extend([f"    {ann}" for ann in annotations])
+                lines.append(f"  • {headline}")
+                lines.extend([f"    {ann}" for ann in annotations])
 
     if not lines:
         return "\n⚠️ Consult with a healthcare professional for personalized rehab guidance.", seen_drills
@@ -1001,6 +1245,24 @@ def _merge_injuries_by_location(parsed_entries: list[dict]) -> list[dict]:
                 "severity": None,
                 "laterality": laterality,
                 "is_urgent": False,
+                # Live rehab context. These are resolved upstream (rehab stage
+                # by ``api.contracts.rehab_stage``, exposures by PR3) and are
+                # carried through the merge because the selector cannot ask for
+                # them: a whitelist that drops them silently disables
+                # stage-aware selection for the whole plan.
+                "rehab_stage": None,
+                "athlete_id": None,
+                "injury_id": None,
+                "episode_id": None,
+                "rehab_care_pathway": None,
+                "available_equipment": None,
+                "rehab_exposures": [],
+                # Every distinct live injury episode that mapped into this
+                # location, each keeping its OWN identity, stage, evidence and
+                # injury type. The atomic fields above describe only the most
+                # protective episode (for presentation); clinical selection reads
+                # this list so no episode's context can select another's drill.
+                "rehab_episodes": [],
             },
         )
         if not group.get("display_location"):
@@ -1028,7 +1290,132 @@ def _merge_injuries_by_location(parsed_entries: list[dict]) -> list[dict]:
         if laterality and (group["laterality"] is None or group["laterality"] == laterality):
             group["laterality"] = laterality
         group["is_urgent"] = bool(group["is_urgent"] or _entry_is_urgent(entry))
+        _merge_live_rehab_context(group, entry)
     return list(merged.values())
+
+
+def _episode_context(entry: dict) -> dict | None:
+    """Build one MSK injury episode's self-contained rehab context.
+
+    Everything the selector needs to programme THIS injury and nothing about any
+    other: its own identity, injury type, side, severity, equipment and exposure
+    trail, plus its resolved stage *if one exists*.
+
+    An episode is returned for every MSK injury entry, whether or not a live
+    stage resolved — an absent stage must never mean "drop this injury". The
+    ``stage_resolved`` flag distinguishes the two: a resolved episode is
+    programmed by the stage-aware selector; an unresolved one keeps the
+    pre-stage-aware behaviour. A missing stage stays ``None`` — it is never
+    inferred to CALM or anything else. Surface/wound injuries are handled by
+    their own pathway and never enter MSK rehab programming, so they return
+    ``None`` here.
+    """
+    injury_type = str(entry.get("rehab_type") or entry.get("injury_type") or "").strip().lower()
+    if injury_type and _is_surface_type(injury_type):
+        return None
+    stage = str(entry.get("rehab_stage") or "").strip().lower()
+    stage_resolved = stage in REHAB_STAGES
+    exposures = entry.get("rehab_exposures")
+    equipment = entry.get("available_equipment")
+    return {
+        "rehab_stage": stage if stage_resolved else None,
+        "stage_resolved": stage_resolved,
+        "injury_id": str(entry.get("injury_id") or entry.get("id") or "") or None,
+        "episode_id": str(entry.get("episode_id") or entry.get("injury_episode_id") or "") or None,
+        "athlete_id": entry.get("athlete_id"),
+        "rehab_care_pathway": entry.get("rehab_care_pathway"),
+        # The injury's OWN type governs its candidate pool — never the group's
+        # highest-risk type, which could belong to a different injury.
+        "injury_type": injury_type or None,
+        "side": entry.get("laterality") or entry.get("side"),
+        "severity": str(entry.get("severity") or "").strip().lower() or None,
+        "available_equipment": list(equipment) if isinstance(equipment, (list, tuple)) else None,
+        "rehab_exposures": list(exposures) if isinstance(exposures, (list, tuple)) else [],
+    }
+
+
+def _episode_sort_key(episode: dict) -> tuple[int, int, str, str, str]:
+    """Resolved episodes first (most protective first), then unresolved.
+
+    Resolved episodes sort by stage rank so the most protective leads the atomic
+    summary and the consolidation round-robin. Unresolved episodes sort after
+    them, deterministically by type and identity, never inheriting a stage rank.
+    """
+    stage = str(episode.get("rehab_stage") or "")
+    resolved = 0 if episode.get("stage_resolved") else 1
+    rank = REHAB_STAGES.index(stage) if stage in REHAB_STAGES else len(REHAB_STAGES)
+    return (
+        resolved,
+        rank,
+        str(episode.get("injury_type") or ""),
+        str(episode.get("episode_id") or ""),
+        str(episode.get("injury_id") or ""),
+    )
+
+
+def _merge_live_rehab_context(group: dict, entry: dict) -> None:
+    """Retain one entry's live rehab context on its location group, per episode.
+
+    Two distinct injuries can share a location group — a sprained left ankle and
+    a left-ankle tendinopathy both canonicalise to "ankle". They are separate
+    injury episodes with separate evidence, stage and injury type, and neither
+    may govern the other's rehab. So each episode is kept whole and independent
+    in ``group["rehab_episodes"]`` (deduped by identity); clinical selection then
+    runs once per episode against that episode's own candidate pool.
+
+    The atomic ``rehab_stage`` / ``injury_id`` / ``episode_id`` / exposure fields
+    are also maintained, describing the single MOST PROTECTIVE episode. They are
+    a presentation convenience only (headings, back-compatible readers); they
+    never stand in for the per-episode list at the selection boundary, so one
+    episode's stage can no longer be paired with another's identity or evidence.
+    """
+    episode = _episode_context(entry)
+    if episode is None:
+        return
+
+    episodes: list[dict] = group.setdefault("rehab_episodes", [])
+    # Identity includes type + side so two distinct injuries with no resolved
+    # identity yet (both id/episode None) are still kept apart, while a genuine
+    # duplicate of the same episode is folded once.
+    identity = (
+        episode.get("injury_id"),
+        episode.get("episode_id"),
+        episode.get("injury_type"),
+        episode.get("side"),
+    )
+
+    def _identity(e: dict) -> tuple:
+        return (e.get("injury_id"), e.get("episode_id"), e.get("injury_type"), e.get("side"))
+
+    if not any(_identity(e) == identity for e in episodes):
+        episodes.append(episode)
+    episodes.sort(key=_episode_sort_key)
+
+    # The atomic summary tracks the most protective RESOLVED episode only — an
+    # unresolved episode never becomes the group's live stage. If nothing has
+    # resolved yet the summary stays unresolved; a stage is never invented.
+    resolved = [e for e in episodes if e.get("stage_resolved")]
+    if not resolved:
+        group["rehab_stage"] = None
+        group["injury_id"] = None
+        group["episode_id"] = None
+        group["athlete_id"] = None
+        group["rehab_care_pathway"] = None
+        group["available_equipment"] = None
+        group["rehab_exposures"] = []
+        return
+    primary = resolved[0]
+    group["rehab_stage"] = primary["rehab_stage"]
+    group["injury_id"] = primary["injury_id"]
+    group["episode_id"] = primary["episode_id"]
+    group["athlete_id"] = primary["athlete_id"]
+    group["rehab_care_pathway"] = primary["rehab_care_pathway"]
+    group["available_equipment"] = (
+        list(primary["available_equipment"])
+        if isinstance(primary["available_equipment"], list)
+        else None
+    )
+    group["rehab_exposures"] = list(primary["rehab_exposures"])
 
 
 def _build_red_flag_block(entry: dict) -> str:
@@ -1298,7 +1685,16 @@ def build_coach_review_entries(
 
 
 def rehab_drill_options_for_phase(
-    itype: str, loc: str | None, phase: str, limit: int = 4
+    itype: str,
+    loc: str | None,
+    phase: str,
+    limit: int = 4,
+    *,
+    injury: dict | None = None,
+    rehab_stage: str | None = None,
+    available_equipment: Iterable[str] | None = None,
+    exposures: Iterable[dict] = (),
+    session_context: Mapping[str, object] | str | None = None,
 ) -> list[dict]:
     """Return the phase's rehab options, each keeping its canonical bank identity.
 
@@ -1326,6 +1722,7 @@ def rehab_drill_options_for_phase(
             )
         return options[:limit]
     phase = phase.upper()
+    collection_limit = 10_000 if rehab_stage and injury else limit
     options = []
     seen_lines: set[str] = set()
 
@@ -1363,7 +1760,7 @@ def rehab_drill_options_for_phase(
                             "type": entry.get("type"),
                         }
                     )
-            if len(options) >= limit:
+            if len(options) >= collection_limit:
                 return
 
     loc_candidates = normalize_rehab_location(loc)
@@ -1382,9 +1779,39 @@ def rehab_drill_options_for_phase(
                 if phase not in _entry_phases(entry):
                     continue
                 _append_drills(entry)
-                if len(options) >= limit:
-                    return options[:limit]
-    return options[:limit]
+                if len(options) >= collection_limit:
+                    return options[:collection_limit]
+    if rehab_stage and injury:
+        candidates = []
+        option_by_id = {}
+        for option in options:
+            drill = dict(option.get("drill") or {})
+            drill.setdefault("injury_type", option.get("type"))
+            drill.setdefault("care_pathway", "msk")
+            candidates.append(drill)
+            option_by_id[str(drill.get("id") or "")] = option
+        result = select_rehab_candidate(
+            injury=injury,
+            rehab_stage=rehab_stage,
+            candidates=candidates,
+            available_equipment=available_equipment,
+            exposures=exposures,
+            session_context=session_context,
+        )
+        # The card contract is "the chosen drill plus its alternates", so the
+        # stage-aware path returns the whole ranked list the selector chose
+        # from rather than collapsing it to one entry. Position 0 is the
+        # selection; everything after it is an alternate that also passed every
+        # hard clinical filter.
+        selected_options = [
+            option_by_id[drill_id]
+            for drill_id in (
+                str(drill.get("id") or "") for drill in result.ranked_drills
+            )
+            if drill_id in option_by_id
+        ]
+        return selected_options[:limit]
+    return options[:collection_limit]
 
 
 def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:

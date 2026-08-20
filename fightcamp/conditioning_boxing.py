@@ -95,7 +95,6 @@ PLAIN_CONDITIONING_NAME_MAP = {
     "Assault Bike Zone 2 Steady": "Easy Assault Bike",
     "Bike Zone 2 (Nasal Only)": "Easy Bike",
     "Sled Harness Backward Drag": "Backward Sled Drag",
-    "Dynamic Plank-to-Punch": "Plank Punch Reach",
     "Clinch-Fighter Neck Endurance": "Neck Endurance Circuit",
 }
 BOXING_NAME_MAP = {
