@@ -70,21 +70,26 @@ these may move a stage **up**.
 | `injury_flags` | `severity`, `status`, `latest_reported_status`, `created_at`, `updated_at`, `body_area`/`description` | per-injury state, onset, follow-up, urgency, surface routing |
 | prior `injury_flags` | `status`, `resolved_at`, `body_area` | detecting a cleared injury that has been re-reported |
 
-**Whole-athlete** — nothing here can say *which* injury it belongs to. A
-comfortable shoulder session is not evidence that an ankle tolerated load. These
-may only ever move a stage **down**, or gate it on medical grounds.
+**Whole-athlete** — nothing here can say *which* injury it belongs to. **It
+moves no stage, in either direction.**
 
 | Source | Fields | Used for |
 | --- | --- | --- |
-| `today_checkins` | `active_injury`, `pain`, `recommendation_state`, the seven `SAFETY_FLAGS` | red-flag gate, worsening days |
-| `session_completions` | `status`, `pain_after` | high post-session pain as a worsening day |
+| `today_checkins` | the seven `SAFETY_FLAGS` | raising `medical_gate` |
+| `today_checkins` | `active_injury`, `pain`, `recommendation_state` | reported on the decision for explainability; never applied to it |
+| `session_completions` | `status`, `pain_after` | same — reported, never applied |
 | `today_checkins.phase` | — | **deliberately never read** |
 
-That split is enforced structurally, not by convention. Progression is computed
-by `_progress`, which takes an `InjuryEvidence` and has no access to
-`AthleteDayContext` at all — the same trick that keeps camp phase out. A test
-asserts the signature, and another asserts that adding *any* amount of
-whole-athlete history can never raise a resolved stage.
+Both halves of that matter. A comfortable shoulder session is not evidence that
+an ankle tolerated load — and a flaring shoulder is not evidence that the ankle
+went backwards. Stage is tissue state, so every movement in it, up or down,
+needs evidence attributable to that tissue.
+
+The split is structural, not conventional: the stage is computed by `_progress`,
+which takes an `InjuryEvidence` and has no access to `AthleteDayContext` at all
+— the same trick that keeps camp phase out. Tests assert the signature, and
+assert that adding *any* amount of whole-athlete history — good or bad — leaves
+the resolved stage untouched.
 
 Red-flag toggles come from `api.contracts.checkin_decision.SAFETY_FLAGS`, urgent
 injury vocabulary from `fightcamp.injury_taxonomy.derive_urgent_injury_tokens()`,
@@ -131,32 +136,24 @@ The rules the spec asked for fall out of that shape:
 
 ## Regression
 
-A setback applies a **cap**. A cap is a ceiling, never a floor: it can only pull
-a stage down, so a worsening report can never be the reason an injury moves up.
+Downward movement needs injury-attributable evidence for exactly the reason
+upward movement does. Every signal below is read off the injury's own flag row:
 
-| Signal | Cap |
+| Signal | Stage |
 | --- | --- |
-| `latest_reported_status == "worse"`, or one worsening day in the recent window | `restore` |
-| Two or more worsening days in the recent window | `calm` |
-| Either of the above with `severity == "severe"` | `calm` |
-| `severity == "severe"` on its own | `calm` |
+| `latest_reported_status == "worse"` | `calm` |
+| `severity == "severe"` | `calm` |
 | Cleared and re-reported within 14 days | `calm` |
+| Urgent injury type in this flag's own text | `calm`, `medical_gate` |
 
-A worsening day is a check-in reporting `active_injury: worse`, `pain: high`, a
-`pull_back` recommendation, or any red-flag toggle — or a completed session
-logged at or above `HIGH_PAIN_AFTER`. Deliberately broad, because over-including
-in the *regression* direction is the safe error, and because a cap can only ever
-hold a stage down. That is exactly what makes it safe to read a whole-athlete
-worsening against every open injury: the worst it can do is be over-protective.
+There is no whole-athlete setback path. An earlier revision let a count of bad
+*days* cap every open injury, which meant a flaring shoulder could drag a
+settled ankle backwards — the same contamination as the progression bug, in the
+other direction. It is gone.
 
-The windows this uses (three most recent reported days, two of them worsening to
-count as repeated, a fourteen-day re-report window) govern regression and
-identity only. None of them can raise a stage, so none functions as a
-rehabilitation criterion.
-
-When the cap bites, it becomes the whole explanation: the rungs the evidence had
-reached are no longer why the athlete is where they are, and
-`symptoms_not_worsening` is never reported next to `injury_reported_worse`.
+`symptoms_not_worsening` is never reported next to `injury_reported_worse`, and
+an injury that has been followed up is never called `newly_reported_injury`
+however protectively it is being held.
 
 ## Missing data
 
@@ -198,11 +195,19 @@ REHAB EXERCISE SELECTION           ← unchanged in PR2 (PR3/PR4)
 CAMP-PHASE DOSE MODIFICATION
 ```
 
-An urgent injury or a red-flag check-in pins the stage to `calm` and sets
-`medical_gate=True`. A perfect tolerance history cannot talk a suspected fracture
-into `return`: the gate is evaluated before the ladder is ever consulted, and the
-existing urgent handling — not the stage — decides what happens next. The stage
-carries no permission to train.
+The two medical gates are not the same thing, and the difference is the point:
+
+* an **urgent injury type** is read off *this* flag's own text, so it is
+  attributable to this tissue and pins this injury to `calm` with
+  `medical_gate=True`. A perfect record cannot talk a suspected fracture into
+  training: the gate is evaluated before the ladder is consulted.
+* a **red-flag check-in** is whole-athlete. It raises `medical_gate=True`, which
+  blocks training and routes medical handling, but it leaves every stage at
+  whatever that injury's own record supports. A sprained ankle plus a headache
+  today is a gated day, not an ankle that suddenly went backwards.
+
+Either way the existing urgent handling — not the stage — decides what happens
+next. The stage carries no permission to train.
 
 ## Multiple injuries
 
@@ -210,12 +215,13 @@ There is no athlete-level stage. `resolve_rehab_stages` returns one decision per
 flag id, and a left ankle at `restore` and a right shoulder at `calm` are both
 true at once.
 
-Isolation is the point. Each decision reads progression evidence only from its
-own flag, so a settled shoulder cannot lift an unreported ankle — not even six
-settled injuries can out-vote one unsettled one. The whole-athlete context is
-shared, and safely so: it can only gate or lower a stage, never raise one.
-Clearing one injury changes nothing about another, and a worsening shoulder does
-not gate a separate settled ankle.
+Isolation is the point, and it runs both ways. Each decision reads stage
+evidence only from its own flag, so a settled shoulder cannot lift an unreported
+ankle, and a flaring shoulder cannot drag a settled ankle down — not even six
+injuries reported worse can out-vote one settled one. The whole-athlete context
+is shared, and safely so: it changes no stage at all. Clearing one injury
+changes nothing about another, and resolving an injury alone gives the same
+decision as resolving it in a crowd.
 
 ## Surface injuries
 
@@ -230,10 +236,15 @@ There is no rehab-stage column, deliberately: a stored stage is a second source
 of truth that drifts from the injury record the moment a flag is edited, cleared
 or re-reported. Every call recomputes from the authoritative history.
 
-`progressed` / `regressed` are derived the same way — the resolver replays itself
-over the evidence *as it stood before today's check-in* and compares ranks. No
-transition log, no migration, and refresh/retry is idempotent by construction: a
-pure function cannot accumulate progression.
+`progressed` / `regressed` are derived too, and honestly bounded. There is no
+per-injury status timeline in the record, so "changed since yesterday" is not
+derivable. What is derivable, and attributable to the injury alone, is movement
+relative to where every injury starts — `calm`, with nothing reported since
+onset. A follow-up that lifted the injury off `calm` reads as progression; a
+follow-up that left it there, because it came back `worse` or the severity is
+`severe`, reads as regression. An injury nobody has reported on again has not
+moved. No transition log, no migration, and refresh/retry is idempotent by
+construction: a pure function cannot accumulate progression.
 
 ## Not in this PR
 

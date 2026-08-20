@@ -28,9 +28,7 @@ from api.contracts.rehab_stage import (
     REASON_NO_FOLLOWUP_REPORT,
     REASON_NOT_WORSENING,
     REASON_RE_REPORTED,
-    REASON_RECENT_WORSENING,
     REASON_RED_FLAG_GATE,
-    REASON_REPEATED_WORSENING,
     REASON_REPORTED_WORSE,
     REASON_SEVERE_SEVERITY,
     REASON_SURFACE_PATHWAY,
@@ -182,11 +180,11 @@ def test_good_checkin_days_are_not_tissue_specific_evidence():
 
 
 @pytest.mark.parametrize("days", [0, 1, 3, 6, 10, 30])
-def test_global_context_is_monotonically_non_increasing_on_the_stage(days):
-    """Global data may lower a stage or leave it alone. Never raise it."""
+def test_whole_athlete_context_does_not_move_the_stage_at_all(days):
+    """Not "may only lower" — cannot move it, in either direction."""
     bare = resolve_rehab_stage(_followed_up())
     with_context = resolve_rehab_stage(_followed_up(), **_rich_history(days=days or 1))
-    assert module.STAGE_RANK[with_context.stage] <= module.STAGE_RANK[bare.stage]
+    assert with_context.stage == bare.stage
 
 
 def test_the_removed_progression_thresholds_are_gone():
@@ -363,33 +361,25 @@ def test_severe_severity_holds_the_stage_at_calm():
 
 
 # ---------------------------------------------------------------------------
-# Regression
+# Regression is injury-attributable too
 # ---------------------------------------------------------------------------
 
 
 def test_a_worsening_report_regresses_the_stage():
+    """The injury's own report is what regresses it."""
     settled = resolve_rehab_stage(_followed_up())
     worse = resolve_rehab_stage(_followed_up(latest_reported_status="worse"))
 
     assert settled.stage == STAGE_RESTORE
     assert worse.stage == STAGE_CALM
     assert REASON_REPORTED_WORSE in worse.reasons
+    assert worse.regressed is True
 
 
-def test_repeated_worsening_regresses_further_than_a_single_setback():
-    single = resolve_rehab_stage(
-        _followed_up(),
-        current_checkin=_checkin(4, active_injury="worse"),
-        previous_checkins=[_checkin(3), _checkin(2)],
-    )
-    repeated = resolve_rehab_stage(
-        _followed_up(),
-        current_checkin=_checkin(4, active_injury="worse"),
-        previous_checkins=[_checkin(3, active_injury="worse"), _checkin(2)],
-    )
-    assert single.stage == STAGE_RESTORE
-    assert repeated.stage == STAGE_CALM
-    assert REASON_REPEATED_WORSENING in repeated.reasons
+def test_severe_severity_regresses_the_stage():
+    decision = resolve_rehab_stage(_followed_up(severity="severe"))
+    assert decision.stage == STAGE_CALM
+    assert REASON_SEVERE_SEVERITY in decision.reasons
 
 
 def test_a_setback_never_raises_a_stage():
@@ -400,73 +390,84 @@ def test_a_setback_never_raises_a_stage():
 
 
 def test_a_setback_is_never_reported_alongside_not_worsening():
-    decision = resolve_rehab_stage(
-        _followed_up(),
-        current_checkin=_checkin(4, active_injury="worse"),
-        previous_checkins=[_checkin(3), _checkin(2)],
-    )
+    decision = resolve_rehab_stage(_followed_up(latest_reported_status="worse"))
     assert REASON_NOT_WORSENING not in decision.reasons
-    assert REASON_RECENT_WORSENING in decision.reasons
+    assert REASON_REPORTED_WORSE in decision.reasons
 
 
-def test_regression_is_reported_as_a_transition():
+def test_a_followed_up_injury_held_at_calm_is_not_called_newly_reported():
+    decision = resolve_rehab_stage(_followed_up(severity="severe"))
+    assert REASON_NEWLY_REPORTED not in decision.reasons
+
+
+# --- whole-athlete signals must not regress anything -----------------------
+
+
+def _global_setback(signal: dict) -> dict:
+    """Three consecutive whole-athlete bad days, however they are expressed."""
+    return {
+        "current_checkin": _checkin(5, **signal),
+        "previous_checkins": [_checkin(4, **signal), _checkin(3, **signal)],
+    }
+
+
+@pytest.mark.parametrize(
+    "signal",
+    [
+        {"active_injury": "worse"},
+        {"pain": "high"},
+        {"recommendation_state": "pull_back"},
+    ],
+    ids=["repeated_worsening", "high_pain", "pull_back"],
+)
+def test_whole_athlete_setbacks_do_not_regress_a_settled_injury(signal):
+    """A bad day for the athlete is not a bad day for every tissue they have."""
+    settled = resolve_rehab_stage(_followed_up())
+    with_setback = resolve_rehab_stage(_followed_up(), **_global_setback(signal))
+
+    assert settled.stage == STAGE_RESTORE
+    assert with_setback.stage == STAGE_RESTORE
+    assert with_setback.regressed is False
+
+
+def test_high_session_pain_does_not_regress_a_settled_injury():
     decision = resolve_rehab_stage(
         _followed_up(),
-        current_checkin=_checkin(4, active_injury="worse"),
-        previous_checkins=[_checkin(3, active_injury="worse"), _checkin(2)],
-    )
-    assert decision.regressed is True
-    assert decision.progressed is False
-
-
-def test_high_pain_day_regresses_even_without_a_worse_report():
-    decision = resolve_rehab_stage(
-        _followed_up(),
-        current_checkin=_checkin(4, pain="high"),
-        previous_checkins=[_checkin(3, pain="high")],
-    )
-    assert decision.stage == STAGE_CALM
-
-
-def test_a_pull_back_day_counts_as_worsening():
-    decision = resolve_rehab_stage(
-        _followed_up(),
-        current_checkin=_checkin(4, recommendation_state="pull_back"),
-        previous_checkins=[_checkin(3, recommendation_state="pull_back")],
-    )
-    assert decision.stage == STAGE_CALM
-
-
-def test_a_high_pain_session_counts_as_worsening():
-    decision = resolve_rehab_stage(
-        _followed_up(),
-        current_checkin=_checkin(4),
-        previous_checkins=[_checkin(3)],
+        current_checkin=_checkin(5),
         session_completions=[
-            _session(3, pain_after=module.SETBACK_PAIN_AFTER_AT_LEAST),
             _session(4, pain_after=module.SETBACK_PAIN_AFTER_AT_LEAST),
+            _session(5, pain_after=module.SETBACK_PAIN_AFTER_AT_LEAST),
         ],
     )
-    assert decision.stage == STAGE_CALM
+    assert decision.stage == STAGE_RESTORE
+    assert decision.regressed is False
 
 
-def test_a_session_without_a_pain_reading_is_not_a_setback():
+@pytest.mark.parametrize("days", [1, 3, 10, 30])
+def test_no_amount_of_whole_athlete_worsening_moves_a_stage(days):
+    """Symmetry with the progression guarantee: global data moves nothing."""
+    bad = [_checkin(offset, active_injury="worse", pain="high") for offset in range(1, days + 1)]
     decision = resolve_rehab_stage(
-        _followed_up(),
-        current_checkin=_checkin(4),
-        session_completions=[_session(3, pain_after=None), _session(4, pain_after=None)],
+        _followed_up(), current_checkin=bad[-1], previous_checkins=bad[:-1]
     )
+    assert decision.stage == resolve_rehab_stage(_followed_up()).stage
+
+
+def test_whole_athlete_counts_are_reported_but_not_applied():
+    """The day counts stay visible for explainability; they just do not bite."""
+    decision = resolve_rehab_stage(_followed_up(), **_global_setback({"active_injury": "worse"}))
+    assert decision.evidence.athlete.worsening_days == 3
+    assert decision.evidence.athlete.recent_worsening_days == 3
     assert decision.stage == STAGE_RESTORE
 
 
-def test_duplicate_rows_for_one_day_cannot_inflate_a_setback():
+def test_duplicate_rows_for_one_day_cannot_inflate_the_day_counts():
     worse_day = _checkin(4, active_injury="worse")
     decision = resolve_rehab_stage(
         _followed_up(),
         current_checkin=worse_day,
         previous_checkins=[worse_day, worse_day, worse_day],
     )
-    assert decision.stage == STAGE_RESTORE
     assert decision.evidence.athlete.recent_worsening_days == 1
 
 
@@ -475,20 +476,31 @@ def test_duplicate_rows_for_one_day_cannot_inflate_a_setback():
 # ---------------------------------------------------------------------------
 
 
-def test_a_new_red_flag_overrides_the_stage():
-    decision = resolve_rehab_stage(
+def test_a_new_red_flag_gates_training_without_rewriting_the_tissue_stage():
+    """A red-flag day blocks training; it does not mean the ankle went backwards."""
+    ungated = resolve_rehab_stage(_followed_up())
+    gated = resolve_rehab_stage(
         _followed_up(), current_checkin=_checkin(4, neurological_symptoms=True)
     )
-    assert decision.stage == STAGE_CALM
-    assert decision.medical_gate is True
-    assert REASON_RED_FLAG_GATE in decision.reasons
+    assert gated.medical_gate is True
+    assert REASON_RED_FLAG_GATE in gated.reasons
+    assert gated.stage == ungated.stage
+    assert gated.regressed is False
 
 
 @pytest.mark.parametrize("flag", module.SAFETY_FLAGS)
-def test_every_canonical_safety_flag_gates_the_stage(flag):
+def test_every_canonical_safety_flag_raises_the_medical_gate(flag):
     decision = resolve_rehab_stage(_followed_up(), current_checkin=_checkin(4, **{flag: True}))
+    assert decision.medical_gate is True
+    assert decision.stage == STAGE_RESTORE
+
+
+def test_an_urgent_injury_type_does_pin_its_own_stage():
+    """Attributable to this flag's own text, so it may hold this tissue."""
+    decision = resolve_rehab_stage(_followed_up(description="suspected fracture"))
     assert decision.stage == STAGE_CALM
     assert decision.medical_gate is True
+    assert REASON_URGENT_INJURY_TYPE in decision.reasons
 
 
 @pytest.mark.parametrize(
@@ -659,9 +671,13 @@ def _ankle(**overrides) -> dict:
 
 
 def _shoulder(**overrides) -> dict:
-    return _injury(
-        id="shoulder-1", body_area="right shoulder", description="shoulder strain", **overrides
-    )
+    defaults = {
+        "id": "shoulder-1",
+        "body_area": "right shoulder",
+        "description": "shoulder strain",
+    }
+    defaults.update(overrides)
+    return _injury(**defaults)
 
 
 def test_evidence_for_one_body_area_cannot_progress_another():
@@ -745,6 +761,118 @@ def test_a_worsening_shoulder_does_not_gate_a_separate_settled_ankle():
     assert decisions["ankle-1"].stage == STAGE_RESTORE
 
 
+# --- cross-injury regression isolation -------------------------------------
+
+
+def _settled_ankle() -> dict:
+    return _ankle(status="monitoring", latest_reported_status="improving")
+
+
+def test_repeated_shoulder_worsening_cannot_regress_a_settled_ankle():
+    """The headline case: one tissue flaring must not drag another backwards."""
+    flaring_shoulder = _shoulder(status="monitoring", latest_reported_status="worse")
+    worsening_days = {
+        "current_checkin": _checkin(5, active_injury="worse"),
+        "previous_checkins": [
+            _checkin(4, active_injury="worse"),
+            _checkin(3, active_injury="worse"),
+        ],
+    }
+    decisions = resolve_rehab_stages([flaring_shoulder, _settled_ankle()], **worsening_days)
+
+    assert decisions["shoulder-1"].stage == STAGE_CALM
+    assert REASON_REPORTED_WORSE in decisions["shoulder-1"].reasons
+    assert decisions["ankle-1"].stage == STAGE_RESTORE
+    assert decisions["ankle-1"].regressed is False
+    assert REASON_REPORTED_WORSE not in decisions["ankle-1"].reasons
+
+
+def test_global_high_pain_cannot_regress_a_settled_ankle():
+    alone = resolve_rehab_stages([_settled_ankle()])
+    with_pain = resolve_rehab_stages(
+        [_shoulder(status="monitoring", latest_reported_status="worse"), _settled_ankle()],
+        current_checkin=_checkin(5, pain="high"),
+        previous_checkins=[_checkin(4, pain="high"), _checkin(3, pain="high")],
+    )
+    assert with_pain["ankle-1"].stage == alone["ankle-1"].stage == STAGE_RESTORE
+    assert with_pain["ankle-1"].regressed is False
+
+
+def test_global_pull_back_cannot_regress_a_settled_ankle():
+    alone = resolve_rehab_stages([_settled_ankle()])
+    with_pull_back = resolve_rehab_stages(
+        [_shoulder(status="monitoring", latest_reported_status="worse"), _settled_ankle()],
+        current_checkin=_checkin(5, recommendation_state="pull_back"),
+        previous_checkins=[
+            _checkin(4, recommendation_state="pull_back"),
+            _checkin(3, recommendation_state="pull_back"),
+        ],
+    )
+    assert with_pull_back["ankle-1"].stage == alone["ankle-1"].stage == STAGE_RESTORE
+    assert with_pull_back["ankle-1"].regressed is False
+
+
+def test_global_high_session_pain_cannot_regress_a_settled_ankle():
+    decisions = resolve_rehab_stages(
+        [_shoulder(status="monitoring", latest_reported_status="worse"), _settled_ankle()],
+        current_checkin=_checkin(5),
+        session_completions=[
+            _session(4, pain_after=module.SETBACK_PAIN_AFTER_AT_LEAST),
+            _session(5, pain_after=module.SETBACK_PAIN_AFTER_AT_LEAST),
+        ],
+    )
+    assert decisions["ankle-1"].stage == STAGE_RESTORE
+    assert decisions["ankle-1"].regressed is False
+
+
+def test_many_flaring_injuries_cannot_out_vote_one_settled_injury():
+    flaring = [
+        _injury(
+            id=f"flaring-{index}",
+            body_area=f"region {index}",
+            description="strain",
+            status="monitoring",
+            latest_reported_status="worse",
+        )
+        for index in range(6)
+    ]
+    decisions = resolve_rehab_stages(
+        [*flaring, _settled_ankle()],
+        current_checkin=_checkin(5, active_injury="worse", pain="high"),
+        previous_checkins=[_checkin(4, active_injury="worse", pain="high")],
+    )
+    assert all(decisions[f"flaring-{index}"].stage == STAGE_CALM for index in range(6))
+    assert decisions["ankle-1"].stage == STAGE_RESTORE
+
+
+def test_an_urgent_shoulder_does_not_gate_or_regress_a_separate_ankle():
+    """Urgent-injury text belongs to its own flag, not to the athlete."""
+    decisions = resolve_rehab_stages(
+        [_shoulder(description="suspected fracture"), _settled_ankle()]
+    )
+    assert decisions["shoulder-1"].stage == STAGE_CALM
+    assert decisions["shoulder-1"].medical_gate is True
+    assert decisions["ankle-1"].stage == STAGE_RESTORE
+    assert decisions["ankle-1"].medical_gate is False
+
+
+def test_resolving_an_injury_alone_or_alongside_others_gives_the_same_stage():
+    """No sibling, settled or flaring, may change another injury's decision."""
+    ankle = _settled_ankle()
+    alone = resolve_rehab_stage(ankle)
+    crowd = [
+        _shoulder(status="monitoring", latest_reported_status="worse"),
+        _injury(id="knee-1", body_area="left knee", description="knee pain", severity="severe"),
+        _injury(id="wrist-1", body_area="right wrist", description="suspected fracture"),
+        ankle,
+    ]
+    together = resolve_rehab_stages(crowd, **_rich_history())
+
+    assert together["ankle-1"].stage == alone.stage
+    assert together["ankle-1"].reasons == alone.reasons
+    assert together["ankle-1"].medical_gate == alone.medical_gate
+
+
 def test_a_surface_injury_alongside_an_msk_injury_keeps_both_pathways():
     blister = _injury(id="blister-1", description="blister", injury_type="blister")
     decisions = resolve_rehab_stages([blister, _ankle()], **_rich_history())
@@ -764,14 +892,16 @@ def test_there_is_no_athlete_level_stage():
     assert len(decisions) == 2
 
 
-def test_a_shared_red_flag_gates_every_open_injury():
-    """Global signals still apply to all — but only ever to hold them back."""
-    decisions = resolve_rehab_stages(
-        [_shoulder(status="monitoring", latest_reported_status="improving"), _ankle()],
-        current_checkin=_checkin(4, neurological_symptoms=True),
-    )
-    assert all(decision.stage == STAGE_CALM for decision in decisions.values())
-    assert all(decision.medical_gate for decision in decisions.values())
+def test_a_shared_red_flag_gates_every_injury_without_moving_any_stage():
+    """The gate is athlete-wide; the stages stay whatever each record supports."""
+    injuries = [_shoulder(status="monitoring", latest_reported_status="improving"), _ankle()]
+    ungated = resolve_rehab_stages(injuries)
+    gated = resolve_rehab_stages(injuries, current_checkin=_checkin(4, neurological_symptoms=True))
+
+    assert all(decision.medical_gate for decision in gated.values())
+    assert {key: value.stage for key, value in gated.items()} == {
+        key: value.stage for key, value in ungated.items()
+    }
 
 
 # ---------------------------------------------------------------------------
