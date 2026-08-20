@@ -10,12 +10,14 @@ from api.services.fight_camp_notifications import (
     dispatch_fight_camp_notifications,
 )
 from api.services.notification_foundation import (
+    NOTIFICATION_MAX_ATTEMPTS,
     NotificationCandidate,
     finalize_notification_delivery,
     invalidate_notification_action,
     list_notification_evaluations,
     list_recent_notification_deliveries,
     prepare_notification_delivery,
+    record_notification_evaluation,
     simulate_notification_delivery_decision,
     update_notification_preferences,
 )
@@ -883,3 +885,380 @@ def test_observe_simulation_respects_completed_action_without_mutation() -> None
         store, profile_id="athlete-1", training_day="2026-08-09", intent="done-action"
     )
     assert rows[0]["rejection_reasons"] == ["user_action_already_done"]
+
+
+# --- Deferred plan-ready lifecycle -------------------------------------------
+# Regression coverage for the live failure on
+# plan-ready:113de307-84fa-451d-a907-4ed7029c89c1, where an observe selection
+# from 2026-08-16 stayed invisible to a two-day evaluation lookup while the
+# deferred source kept renewing itself into every later training day.
+
+PLAN_READY_DEDUPE = "plan-ready:plan-1"
+
+
+def _plan_ready_candidate(
+    at: datetime,
+    *,
+    plan_id: str = "plan-1",
+    training_day: str = "2026-08-09",
+    expires_at: datetime | None = None,
+) -> NotificationCandidate:
+    return NotificationCandidate(
+        profile_id="athlete-1",
+        notification_type="plan_ready",
+        intent="plan_ready",
+        category="plan_update_alerts",
+        priority=40,
+        title="YOUR CAMP IS LXCKED IN.",
+        body="Your final camp is live. Open it and see the full build.",
+        url=f"/plans/{plan_id}",
+        tag="plan-ready",
+        dedupe_key=f"plan-ready:{plan_id}",
+        expires_at=expires_at or (at + timedelta(days=7)),
+        timezone_name="UTC",
+        respect_quiet_hours=True,
+        training_day=training_day,
+        notification_class="event",
+        daily_cap=3,
+        min_spacing_minutes=30,
+        action_key=f"view-plan:{plan_id}",
+        source_event_metadata={"plan_id": plan_id, "event": "plan_published"},
+    )
+
+
+def _record_deferred_source(
+    store: OrchestrationStore,
+    candidate: NotificationCandidate,
+    *,
+    training_day: str,
+    at: datetime,
+) -> None:
+    """Persist a quiet-hour deferral exactly as the send path records one."""
+
+    record_notification_evaluation(
+        store,
+        profile_id=candidate.profile_id,
+        training_day=training_day,
+        intent=candidate.intent,
+        now_utc=at,
+        decision="deferred_until_quiet_end",
+        rejection_reasons=("quiet_hours",),
+        eligible=False,
+        candidate=candidate,
+    )
+
+
+def test_observe_selection_older_than_the_evaluation_window_still_blocks_rehydration() -> None:
+    store = OrchestrationStore()
+    published = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    candidate = _plan_ready_candidate(published)
+    assert prepare_notification_delivery(store, [candidate], now_utc=published) is None
+
+    selected_at = datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc)
+    rehydrated = _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=selected_at,
+        observe_mode=True,
+        active_plan_id="plan-1",
+    )
+    assert simulate_notification_delivery_decision(
+        store, rehydrated, now_utc=selected_at
+    ) == rehydrated[0]
+
+    # A live deferred source inside the two-day window four days later. The
+    # only thing that can stop it is a durable lookup of the 08-10 selection.
+    later = datetime(2026, 8, 14, 23, 30, tzinfo=timezone.utc)
+    _record_deferred_source(
+        store, candidate, training_day="2026-08-13", at=later - timedelta(hours=2)
+    )
+    assert (
+        _deferred_event_candidates(
+            store,
+            profile_id="athlete-1",
+            training_day="2026-08-14",
+            timezone_name="UTC",
+            now_utc=later,
+            observe_mode=True,
+            active_plan_id="plan-1",
+        )
+        == []
+    )
+
+
+def test_stale_observe_selection_never_consumes_real_send_eligibility() -> None:
+    store = OrchestrationStore()
+    published = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    candidate = _plan_ready_candidate(published)
+    assert prepare_notification_delivery(store, [candidate], now_utc=published) is None
+
+    selected_at = datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc)
+    observed = _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=selected_at,
+        observe_mode=True,
+        active_plan_id="plan-1",
+    )
+    assert simulate_notification_delivery_decision(store, observed, now_utc=selected_at)
+    assert list_recent_notification_deliveries(store, profile_id="athlete-1") == []
+
+    send_at = datetime(2026, 8, 14, 8, 0, tzinfo=timezone.utc)
+    _record_deferred_source(
+        store, candidate, training_day="2026-08-13", at=send_at - timedelta(hours=8)
+    )
+    sendable = _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-14",
+        timezone_name="UTC",
+        now_utc=send_at,
+        observe_mode=False,
+        active_plan_id="plan-1",
+    )
+    assert [item.dedupe_key for item in sendable] == [PLAN_READY_DEDUPE]
+    claim = prepare_notification_delivery(store, sendable, now_utc=send_at)
+    assert claim is not None
+    finalize_notification_delivery(store, claim[1], status="sent", delivered_count=1)
+
+    assert (
+        _deferred_event_candidates(
+            store,
+            profile_id="athlete-1",
+            training_day="2026-08-14",
+            timezone_name="UTC",
+            now_utc=send_at + timedelta(minutes=10),
+            observe_mode=False,
+            active_plan_id="plan-1",
+        )
+        == []
+    )
+
+
+def test_repeated_quiet_hour_sweeps_never_mint_a_new_deferred_source() -> None:
+    store = OrchestrationStore()
+    published = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    original_expiry = published + timedelta(days=7)
+    candidate = _plan_ready_candidate(published, expires_at=original_expiry)
+    assert prepare_notification_delivery(store, [candidate], now_utc=published) is None
+
+    identities: set[tuple[tuple[str, str], ...]] = set()
+    expiries: set[datetime] = set()
+    at = published + timedelta(minutes=10)
+    while at < original_expiry:
+        if at.hour >= 22 or at.hour < 7:  # quiet hours: always re-deferred
+            rehydrated = _deferred_event_candidates(
+                store,
+                profile_id="athlete-1",
+                training_day=at.date().isoformat(),
+                timezone_name="UTC",
+                now_utc=at,
+                observe_mode=False,
+                active_plan_id="plan-1",
+            )
+            assert len(rehydrated) <= 1, "a deferred copy became a second source"
+            for item in rehydrated:
+                source = item.source_event_metadata["_deferred_source"]
+                identities.add(tuple(sorted(source.items())))
+                expiries.add(item.expires_at)
+            if rehydrated:
+                assert prepare_notification_delivery(store, rehydrated, now_utc=at) is None
+        at += timedelta(minutes=10)
+
+    assert len(identities) == 1, f"deferred source identity advanced: {identities}"
+    assert dict(next(iter(identities)))["training_day"] == "2026-08-09"
+    assert expiries == {original_expiry}, "rehydration must not extend the original TTL"
+
+    day = published.date()
+    while day <= original_expiry.date():
+        rows = [
+            row
+            for row in list_notification_evaluations(
+                store,
+                profile_id="athlete-1",
+                training_day=day.isoformat(),
+                intent="plan_ready",
+            )
+            if row["decision"] == "deferred_until_quiet_end"
+        ]
+        # The origin day also holds the authoritative source row itself.
+        assert len(rows) <= (2 if day == published.date() else 1), (day, rows)
+        day += timedelta(days=1)
+
+    assert (
+        _deferred_event_candidates(
+            store,
+            profile_id="athlete-1",
+            training_day=original_expiry.date().isoformat(),
+            timezone_name="UTC",
+            now_utc=original_expiry + timedelta(minutes=1),
+            observe_mode=False,
+            active_plan_id="plan-1",
+        )
+        == []
+    ), "an expired lifecycle must not survive"
+
+
+def test_exhausted_delivery_retries_end_the_deferred_lifecycle() -> None:
+    store = OrchestrationStore()
+    published = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    candidate = _plan_ready_candidate(published)
+    assert prepare_notification_delivery(store, [candidate], now_utc=published) is None
+
+    at = datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc)
+    for attempt in range(NOTIFICATION_MAX_ATTEMPTS):
+        pending = _deferred_event_candidates(
+            store,
+            profile_id="athlete-1",
+            training_day="2026-08-10",
+            timezone_name="UTC",
+            now_utc=at,
+            active_plan_id="plan-1",
+        )
+        assert len(pending) == 1, f"attempt {attempt} lost its retry"
+        claim = prepare_notification_delivery(store, pending, now_utc=at)
+        assert claim is not None
+        finalize_notification_delivery(store, claim[1], status="failed", delivered_count=0)
+        at += timedelta(minutes=20)
+
+    assert (
+        _deferred_event_candidates(
+            store,
+            profile_id="athlete-1",
+            training_day="2026-08-10",
+            timezone_name="UTC",
+            now_utc=at,
+            active_plan_id="plan-1",
+        )
+        == []
+    )
+
+
+def test_repeated_duplicate_arbitration_is_throttled_until_the_decision_changes() -> None:
+    store = OrchestrationStore()
+    sent_at = datetime(2026, 8, 10, 8, 0, tzinfo=timezone.utc)
+    candidate = _plan_ready_candidate(sent_at, training_day="2026-08-10")
+    claim = prepare_notification_delivery(store, [candidate], now_utc=sent_at)
+    assert claim is not None
+    finalize_notification_delivery(store, claim[1], status="sent", delivered_count=1)
+
+    def duplicate_rows() -> list[dict]:
+        return [
+            row
+            for row in list_notification_evaluations(
+                store,
+                profile_id="athlete-1",
+                training_day="2026-08-10",
+                intent="plan_ready",
+            )
+            if row["rejection_reasons"] == ["duplicate_dedupe_key"]
+        ]
+
+    for minutes in (10, 20, 60, 5 * 60):
+        assert (
+            simulate_notification_delivery_decision(
+                store, [candidate], now_utc=sent_at + timedelta(minutes=minutes)
+            )
+            is None
+        )
+    assert [row["evaluation_count"] for row in duplicate_rows()] == [1]
+
+    # Six hours after the row was last written, not after the send.
+    simulate_notification_delivery_decision(
+        store, [candidate], now_utc=sent_at + timedelta(minutes=10 + 361)
+    )
+    assert [row["evaluation_count"] for row in duplicate_rows()] == [2]
+
+    # A changed arbitration outcome is a different fact and is never throttled.
+    changed_at = sent_at + timedelta(minutes=10 + 371)
+    winner = _foundation_candidate(
+        key="session-stop:2026-08-10", at=changed_at, priority=5, notification_class="safety"
+    )
+    assert (
+        simulate_notification_delivery_decision(
+            store, [candidate, winner], now_utc=changed_at
+        )
+        == winner
+    )
+    losing = [
+        row
+        for row in list_notification_evaluations(
+            store,
+            profile_id="athlete-1",
+            training_day="2026-08-10",
+            intent="plan_ready",
+        )
+        if row["rejection_reasons"] == ["higher_priority_selected"]
+    ]
+    assert [row["evaluation_count"] for row in losing] == [1]
+    assert [row["evaluation_count"] for row in duplicate_rows()] == [2]
+
+
+def test_safety_intents_keep_evaluating_on_every_sweep() -> None:
+    store = OrchestrationStore()
+    start = datetime(2026, 8, 9, 12, 0, tzinfo=timezone.utc)
+    stop_view = _view(decision_tier="stop", recommendation_state="pull_back")
+    for sweep in range(4):
+        intents = {
+            candidate.intent
+            for candidate in build_fight_camp_candidates(
+                store,
+                stop_view,
+                profile_id="athlete-1",
+                timezone_name="UTC",
+                now_utc=start + timedelta(minutes=10 * sweep),
+            )
+        }
+        assert "session_stop" in intents, f"sweep {sweep} stopped evaluating safety"
+
+    modified = {
+        candidate.intent
+        for candidate in build_fight_camp_candidates(
+            store,
+            _view(recommendation_state="modify", decision_tier="modify"),
+            profile_id="athlete-1",
+            timezone_name="UTC",
+            now_utc=start + timedelta(minutes=50),
+        )
+    }
+    assert "session_modified" in modified
+
+    injured = {
+        candidate.intent
+        for candidate in build_fight_camp_candidates(
+            store,
+            _view(injuries=[{
+                "id": "injury-1",
+                "status": "open",
+                "severity": "severe",
+                "updated_at": "2026-08-08T12:00:00+00:00",
+            }]),
+            profile_id="athlete-1",
+            timezone_name="UTC",
+            now_utc=start + timedelta(minutes=60),
+        )
+    }
+    assert "injury_recheck" in injured
+
+
+def test_current_active_plan_matching_the_source_never_suppresses_by_itself() -> None:
+    store = OrchestrationStore()
+    published = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    candidate = _plan_ready_candidate(published)
+    assert prepare_notification_delivery(store, [candidate], now_utc=published) is None
+
+    rehydrated = _deferred_event_candidates(
+        store,
+        profile_id="athlete-1",
+        training_day="2026-08-10",
+        timezone_name="UTC",
+        now_utc=datetime(2026, 8, 10, 7, 1, tzinfo=timezone.utc),
+        observe_mode=True,
+        active_plan_id="plan-1",
+    )
+    assert [item.dedupe_key for item in rehydrated] == [PLAN_READY_DEDUPE]
+    assert rehydrated[0].source_event_metadata["plan_id"] == "plan-1"
